@@ -33,6 +33,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'confluence',
     'google',
+    'cryo_grids',
     'projects',
     'django.contrib.admin',
     'django.contrib.auth',
