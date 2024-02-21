@@ -15,7 +15,7 @@ git clone https://github.com/czimaginginstitute/czii-umbrella-django.git _your_c
 3. install requirements (I use pip even in conda env)
 ```
 cd _your_clone_dir_
-pip install -f ./requirements.txt
+pip install -r ./requirements.txt
 ```
 4. create settings.py for yourself in the project directory
    
