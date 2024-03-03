@@ -2,6 +2,7 @@
 PROJECT_NAMES = [
     ('BD01','BD01 Human Organelle Library'),
     ('TRD05','TRD05 Data Integration'),
+    ('TRD??','TRD?? ML Challenge'),
 ]
 
 # There are more choices on google drive
@@ -48,3 +49,4 @@ GRID_BOX_NUMBERING = [
     ('uccw','U-counter-clockwise'),
     ('z','Z-top-left'),
 ]
+
