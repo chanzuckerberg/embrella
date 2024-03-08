@@ -33,6 +33,8 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'confluence',
     'google',
+    'tem',
+    'rest_framework',
     'cryo_grids',
     'projects',
     'django.contrib.admin',

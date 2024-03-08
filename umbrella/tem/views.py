@@ -7,6 +7,9 @@ from . import models
 from .models import Session, SessionPlan
 from projects.models import Project
 from cryo_grids.models import CryoGrid
+from django.core.serializers import serialize
+from django.http import JsonResponse
+import json
 
 def detail(request, session_id):
     session = get_object_or_404(Session, pk=session_id)
@@ -62,4 +65,12 @@ def create_session(request):
             session_instance.session_plan.add(plan_id)
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
+
+def get_all_sessions(request):
+    if not request.GET.get('valid', 'true') == 'true':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    session_list = Session.objects.all()
+    serialized_sessions = serialize('json', session_list)
+    session_data = json.loads(serialized_sessions)
+    return JsonResponse(session_data, safe=False)
 
