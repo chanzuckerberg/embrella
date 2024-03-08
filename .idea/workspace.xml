@@ -5,8 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c3e4aa21-6f90-4671-a603-09f8960e1174" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/umbrella/projects/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/umbrella/projects/urls.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/umbrella/projects/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/umbrella/projects/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/umbrella/tem/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/umbrella/tem/urls.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/umbrella/tem/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/umbrella/tem/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/umbrella/umbrella/settings.py.template" beforeDir="false" afterPath="$PROJECT_DIR$/umbrella/umbrella/settings.py.template" afterDir="false" />
