@@ -8,6 +8,7 @@ from .models import Session, SessionPlan, Software
 from projects.models import Project
 from cryo_grids.models import CryoGrid
 from django.core.serializers import serialize
+from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 import json
 
@@ -69,7 +70,7 @@ def create_session(request):
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
-
+@require_http_methods(["GET"])
 def get_all_sessions(request):
     if not request.GET.get('valid', 'true') == 'true':
         return JsonResponse({'error': 'Invalid request'}, status=400)
@@ -78,10 +79,27 @@ def get_all_sessions(request):
     session_data = json.loads(serialized_sessions)
     return JsonResponse(session_data, safe=False)
 
+@require_http_methods(["GET"])
 def get_all_image_paths(request):
-    if not request.GET.get('valid', 'true') == 'true':
+    # Check if the 'valid' parameter is present and set to 'true'
+    if request.GET.get('valid', 'true') != 'true':
         return JsonResponse({'error': 'Invalid request'}, status=400)
-    path_list = Software.objects.all()
-    serialized_paths= serialize('json', path_list)
-    session_data = json.loads(serialized_paths)
-    return JsonResponse(session_data, safe=False)
+
+    # Retrieve the 'name' parameter from the GET call, if it exists
+    name_param = request.GET.get('name')
+
+    software_query = Software.objects.all()
+
+    # Serialize the query set
+    serialized_paths = serialize('json', software_query)
+
+    if not name_param:
+        entire_result = json.loads(serialized_paths)
+        return JsonResponse(entire_result, safe=False)
+
+    for item in json.loads(serialized_paths):
+        name = item.get('fields').get('name')
+        if name_param.lower() == name.lower():
+            return JsonResponse(item, safe=False)
+
+    return JsonResponse({'error': 'No matching software found'}, status=404)

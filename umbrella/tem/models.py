@@ -52,16 +52,16 @@ class Software(models.Model):
     '''
     Software determines the paths of the output files
     '''
-    name = models.CharField(max_length=20, unique=True)
-    root_dir = models.CharField(max_length=80, unique=True, help_text='absolute path to access images from all sessions')
+    name = models.CharField(max_length=50, unique=True)
+    root_dir = models.CharField(max_length=200, unique=True, help_text='absolute path to access images from all sessions')
     add_user_dir = models.BooleanField(help_text='need to insert username division before session')
-    parent_image_dir = models.CharField(max_length=20, blank=True, null=True)
-    parent_image_pattern = models.CharField(max_length=20, blank=True, null=True)
-    sum_image_dir = models.CharField(max_length=20, blank=True, null=True)
-    sum_image_pattern = models.CharField(max_length=20, blank=True, null=True)
-    grid_atlas_image_dir = models.CharField(max_length=20, blank=True, null=True)
-    grid_atlas_image_pattern = models.CharField(max_length=20, blank=True, null=True)
-    frame_root_dir = models.CharField(max_length=80, blank=True, null=True,help_text='absolute path to access frame directory from all sessions')
+    parent_image_dir = models.CharField(max_length=150, blank=True, null=True)
+    parent_image_pattern = models.CharField(max_length=150, blank=True, null=True)
+    sum_image_dir = models.CharField(max_length=150, blank=True, null=True)
+    sum_image_pattern = models.CharField(max_length=150, blank=True, null=True)
+    grid_atlas_image_dir = models.CharField(max_length=150, blank=True, null=True)
+    grid_atlas_image_pattern = models.CharField(max_length=150, blank=True, null=True)
+    frame_root_dir = models.CharField(max_length=150, blank=True, null=True,help_text='absolute path to access frame directory from all sessions')
 
 
     def __str__(self):
