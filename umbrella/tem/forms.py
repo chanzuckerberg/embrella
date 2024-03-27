@@ -1,7 +1,6 @@
 from django.db import models
 from django.forms import ModelForm
 from .models import Session
-
 class ReserveSessionForm(ModelForm):
     class Meta:
         model = Session
