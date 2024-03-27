@@ -74,6 +74,8 @@ class Software(models.Model):
     grid_atlas_image_pattern = models.CharField(max_length=150, blank=True, null=True)
     frame_root_dir = models.CharField(max_length=150, blank=True, null=True,
                                       help_text='absolute path to access frame directory from all sessions')
+    frame_dir = models.CharField(max_length=80, blank=True, null=True,
+                                 help_text='relative path to access frames under session')
 
     def __str__(self):
         return self.name
