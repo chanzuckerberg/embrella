@@ -102,4 +102,4 @@ def get_all_image_paths(request):
         if name_param.lower() == name.lower():
             return JsonResponse(item, safe=False)
 
-    return JsonResponse({'error': 'No matching software found'}, status=404)
+    return JsonResponse({'No result found': 'No matching software found'}, status=200)

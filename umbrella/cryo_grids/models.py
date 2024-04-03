@@ -5,6 +5,7 @@ from umbrella.choices import CANE_COLORS, PUCK_COLORS
 from umbrella.choices import GRID_BOX_COLORS, GRID_BOX_NUMBERING
 
 class Site(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=20, default='3400Bridge', unique=True)
     address = models.CharField(max_length=100,default='')
 
@@ -12,6 +13,7 @@ class Site(models.Model):
         return self.name
 
 class Dewar(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=20, unique=True)
     site = models.ForeignKey(Site, on_delete=models.CASCADE)
     shipper = models.BooleanField(default=False,help_text="Is this a dry-shipper ?")
@@ -20,6 +22,7 @@ class Dewar(models.Model):
         return 'Dewar %s' % self.name
 
 class Cane(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=20)
     color = models.CharField(max_length=40, choices=CANE_COLORS, default='CF1E01')
     dewar = models.ForeignKey(Dewar, on_delete=models.CASCADE, null=True, blank=True)
@@ -32,6 +35,7 @@ class Cane(models.Model):
         return 'Cane %s in color %s' % (self.name, self.get_color_display())
 
 class Puck(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100)
     color = models.CharField(max_length=40, choices=PUCK_COLORS, default='CF1E01')
 
@@ -46,6 +50,7 @@ class Puck(models.Model):
         return 'Puck %s in color %s' % (self.name, self.get_color_display())
 
 class CryoGridBox(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)
     color = models.CharField(max_length=40, choices=GRID_BOX_COLORS, default='FFFFFF')
     # numbering format with notch at 12-oclock.
@@ -60,6 +65,7 @@ class CryoGridBox(models.Model):
         return 'Cryo grid box %s in color %s and %s numbering' % (self.name, self.get_color_display(), self.get_numbering_display())
 
 class PlungeFreezingDevice(models.Model):
+    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)
     maker_model = models.CharField(max_length=32, default='Leica GP2')
     site = models.ForeignKey(Site, on_delete=models.CASCADE,)
@@ -68,6 +74,7 @@ class PlungeFreezingDevice(models.Model):
         return self.name
 
 class PlungeFreezingSession(models.Model):
+    id = models.AutoField(primary_key=True)
     datetime = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True)
     device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE,)
@@ -86,6 +93,7 @@ class Sample(models.Model):
 
 class PlungeFreezingPlan(models.Model):
     # may be multiple samples that each needs history and metadata
+    id = models.AutoField(primary_key=True)
     sample = models.ManyToManyField(Sample,)
     sample_application_protocol = models.TextField(max_length=255, blank=True)
     blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
@@ -97,6 +105,7 @@ class PlungeFreezingPlan(models.Model):
         return '%s with %s, id=%d' % (sample_str, self.tag, self.pk)
 
 class CryoGrid(models.Model):
+    id = models.AutoField(primary_key=True)
     create_on = models.DateField(auto_now_add=True)
     name = models.CharField(max_length=32, default='Grid1')
     notes = models.TextField(max_length=255, blank=True, null=True,help_text='notes about freezing and grid condition on this grid')
