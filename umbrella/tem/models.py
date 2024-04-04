@@ -114,7 +114,7 @@ class Session(models.Model):
     grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    updated_at = models.DateTimeField(auto_now=True)
     def get_session_frame_glob(self):
         try:
             session_plan = self.session_plan.values()[0]
@@ -194,9 +194,16 @@ class SessionHistory(models.Model):
     version = models.UUIDField(default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def formatted_created_at(self):
+        # Formats the created_at datetime to a more readable format
+        # Example: "April 3, 2024, 4:41 PM"
+        return self.created_at.strftime("%B %d, %Y, %I:%M %p")
 
     def __str__(self):
-        return f"Session: {self.session.name}, Version: {self.version}"
+            return f"Session: {self.session.name} | Version: {self.version} | Created_at: {self.formatted_created_at()}"
 
 
 def suggest_name(prefix):
