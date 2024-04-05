@@ -28,7 +28,9 @@
         <td>{{ f }}</td>
     <!-- add link for grid -->
     {% if f == "grid" %}
-		<td><a href="http://127.0.0.1:8000/admin/cryo_grids/cryogrid/1/change/">{{ v }}</a></td> 
+		<td><a href="http://127.0.0.1:8000/admin/cryo_grids/cryogrid/1/change/">{{ v }}</a></td>
+    {% elif f == "session_plan" %}
+        <td><a href=http://127.0.0.1:8000/admin/tem/sessionplan/1/change/>{{ v }}</a></td>
     {% else %}
         <td>{{ v }}</td>
     {% endif %}

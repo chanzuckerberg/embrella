@@ -111,13 +111,14 @@ class Session(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
     session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
+    # session_plan = models.ManyToManyField(SessionPlan)
     grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def get_session_frame_glob(self):
         try:
-            session_plan = self.session_plan.values()[0]
+            session_plan = self.session_plan
         except IndexError:
             return self.name
             # raise ValueError('get_session_frame_glob failed because no session_plan is not assigned to the session')
@@ -134,7 +135,7 @@ class Session(models.Model):
 
     def get_session_sum_image_glob(self):
         try:
-            session_plan = self.session_plan.values()[0]
+            session_plan = self.session_plan
         except IndexError:
             return self.name
             # raise ValueError('get_session_frame_glob failed because no session_plan is not assigned to the session')
@@ -185,18 +186,28 @@ class Session(models.Model):
     def __str__(self):
         return self.get_session_parent_glob()
 
+# class SessionHistory(models.Model):
+#     '''
+#     Camera determines the path where frames are saved.
+#     '''
+#     id = models.AutoField(primary_key=True)
+#     session = models.ForeignKey(Session, on_delete=models.CASCADE)
+#     version = models.UUIDField(default=uuid.uuid4, editable=False)
+#     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+#     notes = models.TextField(max_length=255, blank=True, null=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
 class SessionHistory(models.Model):
-    '''
+    """
     Camera determines the path where frames are saved.
-    '''
+    """
     id = models.AutoField(primary_key=True)
-    session = models.ForeignKey(Session, on_delete=models.CASCADE)
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='histories')
     version = models.UUIDField(default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     def formatted_created_at(self):
         # Formats the created_at datetime to a more readable format
         # Example: "April 3, 2024, 4:41 PM"
