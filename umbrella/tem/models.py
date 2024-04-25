@@ -94,17 +94,12 @@ class Session(models.Model):
     name = models.CharField(max_length=20, unique=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True)
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
-    session_plan = models.ManyToManyField(SessionPlan,)
+    session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
     grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True)
 
     def get_session_frame_glob(self):
-        try:
-            session_plan = self.session_plan.values()[0]
-        except IndexError:
-            return self.name
-            #raise ValueError('get_session_frame_glob failed because no session_plan is not assigned to the session')
-        session_software = Software.objects.get(pk=session_plan['software_id'])
+        session_software = self.session_plan.software
         if not session_software.frame_dir:
             frame_dir = '.'
         else:
@@ -112,16 +107,11 @@ class Session(models.Model):
         return os.path.abspath(os.path.join(
                 session_software.frame_root_dir,
                 self.name,
-                frame_dir,'\w+.%s' % (session_plan['frame_format'])
+                frame_dir,'\w+.%s' % (self.session_plan.frame_format)
         ))
 
     def get_session_sum_image_glob(self):
-        try:
-            session_plan = self.session_plan.values()[0]
-        except IndexError:
-            return self.name
-            #raise ValueError('get_session_frame_glob failed because no session_plan is not assigned to the session')
-        session_software = Software.objects.get(pk=session_plan['software_id'])
+        session_software = self.session_plan.software
         if not session_software.sum_image_dir:
             sum_image_dir = '.'
         else:
@@ -133,12 +123,7 @@ class Session(models.Model):
             session_software.sum_image_pattern))
 
     def get_session_parent_glob(self):
-        try:
-            session_plan = self.session_plan.values()[0]
-        except IndexError:
-            return self.name
-            #raise ValueError('get_session_frame_glob failed because no session_plan is not assigned to the session')
-        session_software = Software.objects.get(pk=session_plan['software_id'])
+        session_software = self.session_plan.software
         if not session_software.parent_image_dir:
             parent_image_dir = '.'
         else:
@@ -150,12 +135,7 @@ class Session(models.Model):
             session_software.parent_image_pattern))
 
     def get_session_atlas_glob(self):
-        try:
-            session_plan = self.session_plan.values()[0]
-        except IndexError:
-            return self.name
-            #raise ValueError('get_session_frame_glob failed because no session_plan is not assigned to the session')
-        session_software = Software.objects.get(pk=session_plan['software_id'])
+        session_software = self.session_plan.software
         if not session_software.grid_atlas_image_dir:
             grid_atlas_image_dir = '.'
         else:
