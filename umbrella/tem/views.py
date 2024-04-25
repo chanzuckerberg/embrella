@@ -46,7 +46,7 @@ def reserve_session(request):
         return render(request, "tem/reserve.html", {"form": form})
 
 def create_session(request):
-    plan_ids=list(map((lambda x:int(x)),request.POST['session_plan']))
+    plan_id=int(request.POST['session_plan'])
     project_id=int(request.POST['project'])
     grid_id=int(request.POST['grid'])
     # TODO suggest name with prefix
@@ -56,10 +56,9 @@ def create_session(request):
                     name=name,
                     user=request.user,
                     project=Project.objects.get(pk=project_id),
-                    grid=CryoGrid.objects.get(pk=grid_id))
-        # manytomany add
-        for plan_id in plan_ids:
-            session_instance.session_plan.add(plan_id)
+                    grid=CryoGrid.objects.get(pk=grid_id),
+                    session_plan=SessionPlan.objects.get(pk=plan_id),
+        )
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
