@@ -8,17 +8,17 @@ import os
 import time
 import uuid
 TEM_CHOICES = {
-    'imaging mode': {
-        'tem': 'TEM',
-        'stem': 'STEM',
-    },
-    'workflow': {
-        'scrn': 'Grid Screening',
-        'sngl': 'Single Tilt SPA',
-        'tomo': 'Tomography',
-        'ptyc': 'Ptychography',
-        'idpc': 'iDPC',
-    }
+    'imaging_mode': [
+        ('tem', 'TEM'),
+        ('stem', 'STEM'),
+    ],
+    'workflow': [
+        ('scrn', 'Grid Screening'),
+        ('sngl', 'Single Tilt SPA'),
+        ('tomo', 'Tomography'),
+        ('ptyc', 'Ptychography'),
+        ('idpc', 'iDPC'),
+    ]
 }
 
 # This determines file structure
