@@ -21,6 +21,7 @@ TEM_CHOICES = {
     ]
 }
 
+
 # This determines file structure
 TEM_COLLECTION_SOFTWARE = [
     ('epu', 'TFS EPU'),
@@ -93,7 +94,7 @@ class Software(models.Model):
 
 class ImagingWorkflow(models.Model):
     id = models.AutoField(primary_key=True)
-    imaging_mode = models.CharField(max_length=20, choices=TEM_CHOICES['imaging mode'])
+    imaging_mode = models.CharField(max_length=20, choices=TEM_CHOICES['imaging_mode'])
     workflow = models.CharField(max_length=20, choices=TEM_CHOICES['workflow'])
 
     def __str__(self):
