@@ -57,6 +57,9 @@ class Camera(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        app_label = 'tem'
+
 
 class Software(models.Model):
     '''
@@ -85,7 +88,8 @@ class Software(models.Model):
 
     def __str__(self):
         return self.name
-
+    class Meta:
+        app_label = 'tem'
 
 class ImagingWorkflow(models.Model):
     id = models.AutoField(primary_key=True)
