@@ -100,6 +100,10 @@ class ImagingWorkflow(models.Model):
         return '%s %s' % (self.get_imaging_mode_display(), self.get_workflow_display())
 
 
+    class Meta:
+        app_label = 'tem'
+
+
 class SessionPlan(models.Model):
     id = models.AutoField(primary_key=True)
     scope = models.ForeignKey(Microscope, on_delete=models.CASCADE)
@@ -111,7 +115,8 @@ class SessionPlan(models.Model):
     def __str__(self):
         return '%s collected with %s on %s and %s' % (self.imaging_workflow, self.software, self.scope, self.camera)
 
-
+    class Meta:
+        app_label = 'tem'
 class Session(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=20, unique=True)
@@ -123,6 +128,11 @@ class Session(models.Model):
     notes = models.TextField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'tem'
+
+
     def get_session_frame_glob(self):
         try:
             session_plan = self.session_plan
@@ -215,6 +225,9 @@ class SessionHistory(models.Model):
     notes = models.TextField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = 'tem'
     def formatted_created_at(self):
         # Formats the created_at datetime to a more readable format
         # Example: "April 3, 2024, 4:41 PM"
