@@ -30,10 +30,11 @@ def detail(request, session_id):
             "data": session,
             "fields": fields,
             "paths": {
-                    'frame path pattern':session.get_session_frame_glob(),
-                    'sum image path pattern':session.get_session_sum_image_glob(),
-                    'parent path pattern':session.get_session_parent_glob(),
-                    'atlas image path pattern':session.get_session_atlas_glob(),
+                    'frame path pattern':session.get_session_frames_glob(),
+                    'sum image path pattern':session.get_session_sums_glob(),
+                    'mdoc path pattern':session.get_session_mdocs_glob(),
+                    #'parent path pattern':session.get_session_parent_glob(),
+                    #'atlas image path pattern':session.get_session_atlas_glob(),
             "update_notes": form,
             }
     }
@@ -63,6 +64,12 @@ def create_session(request):
                     grid=CryoGrid.objects.get(pk=grid_id),
                     session_plan=SessionPlan.objects.get(pk=plan_id),
         )
+        session_instance.save()
+        my_pk = session_instance.id
+        path_dicts = {}
+        session_instance.frames = session_instance.get_session_path('frames')
+        session_instance.sums = session_instance.get_session_path('sums')
+        session_instance.mdocs = session_instance.get_session_path('mdocs')
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
