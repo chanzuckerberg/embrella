@@ -63,4 +63,5 @@ def run():
     plan=create_tomo5_plan(grid)
     project=create_project()
 
-run()
+if __name__ == "__main__":
+    run()
