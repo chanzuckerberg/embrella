@@ -58,23 +58,20 @@ class Software(models.Model):
     '''
     Software determines the paths of the output files
     '''
-    name = models.CharField(max_length=50, unique=True)
-    root_dir = models.CharField(max_length=200, help_text='absolute path to access images from all sessions')
+    name = models.CharField(max_length=32, unique=True)
+    image_root_dir = models.CharField(max_length=80, unique=True,
+                                      help_text='absolute path to access images from all sessions')
     add_user_dir = models.BooleanField(help_text='need to insert username division before session')
-    base_path = models.CharField(max_length=200, blank=True, help_text='your base path')
-    parent_image_dir = models.CharField(max_length=150, blank=True, null=True)
-    # parent_image_pattern = models.CharField(max_length=150, blank=True, null=True)
-    parent_image_prefix = models.CharField(max_length=150, blank=True, null=True)
-    parent_image_suffix = models.CharField(max_length=150, blank=True, null=True)
-    parent_image_file_format = models.CharField(max_length=150, blank=True, null=True)
-    sum_image_dir = models.CharField(max_length=150, blank=True, null=True)
-    # sum_image_pattern = models.CharField(max_length=150, blank=True, null=True)
-    sum_image_prefix = models.CharField(max_length=150, blank=True, null=True)
-    sum_image_suffix = models.CharField(max_length=150, blank=True, null=True)
-    sum_image_file_format = models.CharField(max_length=150, blank=True, null=True)
-    grid_atlas_image_dir = models.CharField(max_length=150, blank=True, null=True)
-    grid_atlas_image_pattern = models.CharField(max_length=150, blank=True, null=True)
-    frame_root_dir = models.CharField(max_length=150, blank=True, null=True,
+    parent_image_dir = models.CharField(max_length=80, blank=True, null=True,
+                                        help_text='relative path to access parent images under session')
+    parent_image_pattern = models.CharField(max_length=32, blank=True, null=True)
+    sum_image_dir = models.CharField(max_length=80, blank=True, null=True,
+                                     help_text='relative path to access parent images under session')
+    sum_image_pattern = models.CharField(max_length=32, blank=True, null=True)
+    grid_atlas_image_dir = models.CharField(max_length=80, blank=True, null=True,
+                                            help_text='relative path to access grid atlas image under session')
+    grid_atlas_image_pattern = models.CharField(max_length=32, blank=True, null=True)
+    frame_root_dir = models.CharField(max_length=80, blank=True, null=True,
                                       help_text='absolute path to access frame directory from all sessions')
     frame_dir = models.CharField(max_length=80, blank=True, null=True,
                                  help_text='relative path to access frames under session')
@@ -86,7 +83,7 @@ class Software(models.Model):
         app_label = 'tem'
 
 class ImagingWorkflow(models.Model):
-    imaging_mode = models.CharField(max_length=20, choices=TEM_CHOICES['imaging mode'])
+    imaging_mode = models.CharField(max_length=20, choices=TEM_CHOICES['imaging_mode'])
     workflow = models.CharField(max_length=20, choices=TEM_CHOICES['workflow'])
 
     def __str__(self):

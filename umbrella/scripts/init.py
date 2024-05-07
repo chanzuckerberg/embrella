@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 import sys
 import django
+import os
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
