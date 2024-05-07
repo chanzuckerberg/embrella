@@ -61,3 +61,5 @@ def run():
     grid=create_grid(User.objects.get(pk=1))
     plan=create_tomo5_plan(grid)
     project=create_project()
+
+run()
