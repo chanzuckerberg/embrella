@@ -1,6 +1,9 @@
 from django.contrib.auth.models import User
 import sys
+import django
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
+django.setup()
 #from cryo_grids.models import Site, Dewar, Cane, Puck, CryoGridBox, Sample
 from cryo_grids.models import *
 from tem.models import *
