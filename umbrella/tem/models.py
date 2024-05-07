@@ -5,6 +5,7 @@ from projects.models import Project
 from cryo_grids.models import CryoGrid
 import os
 import time
+import string
 
 TEM_CHOICES = {
     'imaging_mode': [
