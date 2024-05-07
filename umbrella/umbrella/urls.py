@@ -22,3 +22,8 @@ urlpatterns = [
     path('projects/', include('projects.urls')),
     path('tem/', include('tem.urls')),
 ]
+
+
+# change header name
+admin.site.site_header = 'Lab auto workflow'
+admin.site.site_title = 'Lab auto workflow'
