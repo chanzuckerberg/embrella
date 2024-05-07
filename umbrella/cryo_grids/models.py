@@ -46,7 +46,6 @@ class Puck(models.Model):
         return 'Puck %s in color %s' % (self.name, self.get_color_display())
 
 class CryoGridBox(models.Model):
-    id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)
     color = models.CharField(max_length=40, choices=GRID_BOX_COLORS, default='FFFFFF')
     # numbering format with notch at 12-oclock.
