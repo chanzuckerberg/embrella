@@ -16,9 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from umbrella.ping import ping
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('projects/', include('projects.urls')),
     path('tem/', include('tem.urls')),
+    path('ping/', ping),
 ]
+
+
+# change header name
+admin.site.site_header = 'Lab auto workflow'
+admin.site.site_title = 'Lab auto workflow'
