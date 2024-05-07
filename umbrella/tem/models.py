@@ -59,7 +59,7 @@ class Software(models.Model):
     '''
     Software determines the paths of the output files
     '''
-    name = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=50, unique=True)
     image_root_dir = models.CharField(max_length=80, unique=True,
                                       help_text='absolute path to access images from all sessions')
     add_user_dir = models.BooleanField(help_text='need to insert username division before session')
