@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'cryo_grids',
     'projects',
     'tem',
+    'stores',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
