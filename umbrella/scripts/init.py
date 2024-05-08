@@ -11,6 +11,7 @@ from tem.models import *
 from google.models import DriveFolder
 from confluence.models import Space
 from projects.models import Project
+from stores.models import PathType, fill_place_holders
 
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
@@ -36,21 +37,37 @@ def create_grid(user):
     return cryo_grid
 
 def create_tomo5_plan(grid):
-    camera = Camera.objects.create(name='Falcon4i',root_dir='/hpc/instruments/czii.krios1/OffloadData/',frame_format='eer',initial_frame_base_dir='/OffloadData/')
-    scope = Microscope.objects.create(name='Krios1')
+    camera = Camera.objects.create(name='Falcon4i',root_dir='/hpc/instruments/czii.krios1/OffloadData/',initial_frame_base_dir='/OffloadData/')
+    scope = Microscope.objects.create(name='czii-krios1')
     workflow = ImagingWorkflow.objects.create(imaging_mode='tem',workflow='tomo')
-    software = Software.objects.create(name='tom5',
-                image_root_dir='/hpc/instruments/czii.krios1/OffloadData/',
-                frame_root_dir='/hpc/instruments/czii.krios1/OffloadData/',
-                parent_image_dir='Batch/',
-                sum_image_dir='Batch/',
-                sum_image_pattern='*_Exposure.mrc',
-                parent_image_pattern='*_Search.mrc',
-                grid_atlas_image_pattern='SearchMap*.mrc',
-                grid_atlas_image_dir='SearchMaps/',
-                add_user_dir=False,
+    frame_path_type = PathType.objects.create(
+                static_path='/tem/{session}/{run}/frames',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/{run}_{sequence}_{tilt}_*.eer',
     )
-    plan= SessionPlan.objects.create(scope=scope,camera=camera,imaging_workflow=workflow,software=software,frame_format='eer')
+    sum_path_type = PathType.objects.create(
+                static_path='/tem/{session}/{run}/sums',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/Batch/{run}_Exposure.mrc',
+    )
+    mdoc_path_type = PathType.objects.create(
+                static_path='/tem/{session}/{run}/mdoc',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/{run}.mdoc',
+    )
+    parent_path_type = PathType.objects.create(
+                static_path='/tem/{session}/{run}/parents',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/Batch/{run}_Search.mrc',
+    )
+    atlas_path_type = PathType.objects.create(
+                static_path='/tem/{session}/{run}/atlas',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/SearchMaps/{SearchMap_{date}_{timestamp}.mrc',
+    )
+    software = Software.objects.create(name='tom5',
+                frames=frame_path_type,
+                sums=sum_path_type,
+                mdocs=mdoc_path_type,
+                parents=parent_path_type,
+                atlas=atlas_path_type,
+    )
+    plan= SessionPlan.objects.create(scope=scope,camera=camera,imaging_workflow=workflow,software=software)
     return plan
 
 def run():
