@@ -91,18 +91,48 @@ def get_all_image_paths(request):
     # Retrieve the 'name' parameter from the GET call, if it exists
     name_param = request.GET.get('name')
 
-    software_query = Software.objects.all()
+    # Fetch Software objects and preload related PathType objects to minimize database queries
+    software_query = Software.objects.select_related(
+        'frames', 'sums', 'mdocs', 'parents', 'atlas'
+    ).all()
 
-    # Serialize the query set
-    serialized_paths = serialize('json', software_query)
+    # Build custom JSON
+    result_list = []
+    for software in software_query:
+        result_dict = {
+            "model": "tem.software",
+            "pk": software.pk,
+            "fields": {
+                "name": software.name,
+                "frames": {
+                    "static_path": software.frames.static_path if software.frames else None,
+                    "overlay_path": software.frames.overlay_path if software.frames else None,
+                },
+                "sums": {
+                    "static_path": software.sums.static_path if software.sums else None,
+                    "overlay_path": software.sums.overlay_path if software.sums else None,
+                },
+                "mdocs": {
+                    "static_path": software.mdocs.static_path if software.mdocs else None,
+                    "overlay_path": software.mdocs.overlay_path if software.mdocs else None,
+                },
+                "parents": {
+                    "static_path": software.parents.static_path if software.parents else None,
+                    "overlay_path": software.parents.overlay_path if software.parents else None,
+                },
+                "atlas": {
+                    "static_path": software.atlas.static_path if software.atlas else None,
+                    "overlay_path": software.atlas.overlay_path if software.atlas else None,
+                }
+            }
+        }
+        result_list.append(result_dict)
 
     if not name_param:
-        entire_result = json.loads(serialized_paths)
-        return JsonResponse(entire_result, safe=False)
+        return JsonResponse(result_list, safe=False)
 
-    for item in json.loads(serialized_paths):
-        name = item.get('fields').get('name')
-        if name_param.lower() == name.lower():
-            return JsonResponse(item, safe=False)
+    filtered_results = [item for item in result_list if item['fields']['name'].lower() == name_param.lower()]
+    if filtered_results:
+        return JsonResponse(filtered_results[0], safe=False)
 
     return JsonResponse({'No result found': 'No matching software found'}, status=200)
