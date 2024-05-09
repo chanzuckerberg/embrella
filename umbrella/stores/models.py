@@ -34,3 +34,4 @@ class PathType(models.Model):
 
     def __str__(self):
         return self.static_path
+
