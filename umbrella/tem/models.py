@@ -67,7 +67,7 @@ class Software(models.Model):
     Software determines the paths of the output files
     '''
     name = models.CharField(max_length=50, unique=True)
-    frames = models.ForeignKey(PathFrame, related_name='frames_type', on_delete=models.SET_NULL, null=True,
+    frames = models.ForeignKey(PathType, related_name='frames_type', on_delete=models.SET_NULL, null=True,
                                help_text='path pattern to access frames')
     sums = models.ForeignKey(PathType, related_name='sums_type', on_delete=models.SET_NULL, null=True,
                              help_text='path pattern to access 0 tilt projection thumbnail image')
