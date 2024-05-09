@@ -35,3 +35,31 @@ class PathType(models.Model):
     def __str__(self):
         return self.static_path
 
+
+class PathFrame(models.Model):
+    static_path = models.CharField(max_length=255, help_text="path referenced in program")
+    overlay_path = models.CharField(max_length=255, help_text="filesystem path with placeholder")
+
+    class Meta:
+        app_label = 'stores'
+
+    def fill_place_holders(self, input_str, key_values):
+        return fill_place_holders(input_str, key_values)
+
+    def __str__(self):
+        return self.static_path
+
+
+class PathMdocs(models.Model):
+    static_path = models.CharField(max_length=255, help_text="path referenced in program")
+    overlay_path = models.CharField(max_length=255, help_text="filesystem path with placeholder")
+
+    class Meta:
+        app_label = 'stores'
+
+    def fill_place_holders(self, input_str, key_values):
+        return fill_place_holders(input_str, key_values)
+
+    def __str__(self):
+        return self.static_path
+
