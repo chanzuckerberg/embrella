@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from projects.models import Project
 from cryo_grids.models import CryoGrid
-from stores.models import Path, PathType, fill_place_holders, PathMdocs, PathFrame
+from stores.models import Path, PathType, fill_place_holders
 import os
 import time
 import string
