@@ -7,6 +7,8 @@ from stores.models import Path, PathType, fill_place_holders
 import os
 import time
 import string
+from pydantic import BaseModel
+from typing import List, Union, Optional
 
 TEM_CHOICES = {
     'imaging_mode': [
@@ -24,11 +26,13 @@ TEM_CHOICES = {
 
 # This determines file structure
 TEM_COLLECTION_SOFTWARE = [
-    ('epu','TFS EPU'),
-    ('ser','SerialEM'),
-    ('tom5','TFS Tomo5'),
-    ('legn','Leginon'),
+    ('epu', 'TFS EPU'),
+    ('ser', 'SerialEM'),
+    ('tom5', 'TFS Tomo5'),
+    ('legn', 'Leginon'),
 ]
+
+
 class Microscope(models.Model):
     '''
     Microscope determines what camera is available.
@@ -40,6 +44,7 @@ class Microscope(models.Model):
 
     class Meta:
         app_label = 'tem'
+
 
 class Camera(models.Model):
     '''
@@ -56,35 +61,38 @@ class Camera(models.Model):
     class Meta:
         app_label = 'tem'
 
+
 class Software(models.Model):
     '''
     Software determines the paths of the output files
     '''
     name = models.CharField(max_length=50, unique=True)
-    frames = models.ForeignKey(PathType,related_name='frames_type',on_delete=models.SET_NULL, null=True,
-                                        help_text='path pattern to access frames')
-    sums = models.ForeignKey(PathType,related_name='sums_type',on_delete=models.SET_NULL, null=True,
-                                        help_text='path pattern to access 0 tilt projection thumbnail image')
-    mdocs = models.ForeignKey(PathType,related_name='mdocs_type',on_delete=models.SET_NULL, null=True,
-                                        help_text='path pattern to access mdocs')
+    frames = models.ForeignKey(PathType, related_name='frames_type', on_delete=models.SET_NULL, null=True,
+                               help_text='path pattern to access frames')
+    sums = models.ForeignKey(PathType, related_name='sums_type', on_delete=models.SET_NULL, null=True,
+                             help_text='path pattern to access 0 tilt projection thumbnail image')
+    mdocs = models.ForeignKey(PathType, related_name='mdocs_type', on_delete=models.SET_NULL, null=True,
+                              help_text='path pattern to access mdocs')
 
-    parents = models.ForeignKey(PathType,related_name='parents_type',on_delete=models.SET_NULL, null=True,
-                                        help_text='path pattern to access parent images for viewing')
-    atlas = models.ForeignKey(PathType,related_name='atlas_type',on_delete=models.SET_NULL, null=True,
-                                        help_text='path pattern to access grid atlas image for viewing')
- 
+    parents = models.ForeignKey(PathType, related_name='parents_type', on_delete=models.SET_NULL, null=True,
+                                help_text='path pattern to access parent images for viewing')
+    atlas = models.ForeignKey(PathType, related_name='atlas_type', on_delete=models.SET_NULL, null=True,
+                              help_text='path pattern to access grid atlas image for viewing')
+
     def __str__(self):
         return self.name
 
     class Meta:
         app_label = 'tem'
 
+
 class ImagingWorkflow(models.Model):
     imaging_mode = models.CharField(max_length=20, choices=TEM_CHOICES['imaging_mode'])
     workflow = models.CharField(max_length=20, choices=TEM_CHOICES['workflow'])
 
     def __str__(self):
-        return '%s %s' % (self.get_imaging_mode_display(),self.get_workflow_display())
+        return '%s %s' % (self.get_imaging_mode_display(), self.get_workflow_display())
+
 
 class SessionPlan(models.Model):
     scope = models.ForeignKey(Microscope, on_delete=models.CASCADE)
@@ -93,38 +101,39 @@ class SessionPlan(models.Model):
     software = models.ForeignKey(Software, on_delete=models.CASCADE)
 
     def __str__(self):
-        return '%s collected with %s on %s and %s' % (self.imaging_workflow, self.software, self.scope,self.camera)
+        return '%s collected with %s on %s and %s' % (self.imaging_workflow, self.software, self.scope, self.camera)
 
     class Meta:
         app_label = 'tem'
 
+
 class Session(models.Model):
     name = models.CharField(max_length=20, unique=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
     session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
     grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True)
-    frames = models.ForeignKey(Path, related_name='frames',on_delete=models.SET_NULL, null=True)
-    mdocs = models.ForeignKey(Path, related_name='mdocs',on_delete=models.SET_NULL, null=True)
+    frames = models.ForeignKey(Path, related_name='frames', on_delete=models.SET_NULL, null=True)
+    mdocs = models.ForeignKey(Path, related_name='mdocs', on_delete=models.SET_NULL, null=True)
     sums = models.ForeignKey(Path, related_name='sums', on_delete=models.SET_NULL, null=True)
 
     class Meta:
         app_label = 'tem'
 
-    def _get_session_glob(self,path_type):
+    def _get_session_glob(self, path_type):
         plan = self.session_plan
         scope_name = plan.scope.name
-        my_attr = getattr(plan.software,path_type)
+        my_attr = getattr(plan.software, path_type)
         if not my_attr:
             out_path = '.'
         else:
             out_path = fill_place_holders(my_attr.overlay_path,
-                    {
-                        'scope':scope_name,
-                        'session':self.name
-                    }
-        )
+                                          {
+                                              'scope': scope_name,
+                                              'session': self.name
+                                          }
+                                          )
             return out_path
 
     def get_session_frames_glob(self):
@@ -142,29 +151,29 @@ class Session(models.Model):
     def get_session_atlas_glob(self):
         return self._get_session_glob('atlas')
 
-    def get_session_path(self,type_name='frames'):
+    def get_session_path(self, type_name='frames'):
         """
         Use session_plan and software to update session path by replacing place holders
         """
         plan = self.session_plan
         scope_name = plan.scope.name
-        path_obj = getattr(plan.software,type_name)
+        path_obj = getattr(plan.software, type_name)
         static_path = fill_place_holders(path_obj.static_path,
-                    {
-                        'scope':scope_name,
-                        'session':self.name
-                    }
-        )
-        session_attr = getattr(self,'get_session_%s_glob' % type_name)
+                                         {
+                                             'scope': scope_name,
+                                             'session': self.name
+                                         }
+                                         )
+        session_attr = getattr(self, 'get_session_%s_glob' % type_name)
         overlay_path = fill_place_holders(session_attr(),
-                    {
-                        'scope':scope_name,
-                        'session':self.name
-                    }
-        )
-        path_set = Path.objects.filter(overlay_path=overlay_path,static_path=static_path)
+                                          {
+                                              'scope': scope_name,
+                                              'session': self.name
+                                          }
+                                          )
+        path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
         if not path_set:
-            p=Path(overlay_path=overlay_path,static_path=static_path)
+            p = Path(overlay_path=overlay_path, static_path=static_path)
             p.save()
         else:
             p = path_set[0]
@@ -172,6 +181,29 @@ class Session(models.Model):
 
     def __str__(self):
         return self.get_session_sums_glob()
+
+
+class PathInfo(BaseModel):
+    static_path: str | None
+    overlay_path: str | None
+
+class SoftwareFieldsResponse(BaseModel):
+    name: str
+    frames: PathInfo
+    sums: PathInfo
+    mdocs: PathInfo
+    parents: PathInfo
+    atlas: PathInfo
+
+
+class SoftwareResponseModel(BaseModel):
+    model: str
+    pk: int  # redundant info
+    fields: SoftwareFieldsResponse
+
+class ErrorResponse(BaseModel):
+    error: str
+
 
 def suggest_name(prefix):
     """
@@ -198,7 +230,7 @@ def suggest_name(prefix):
     else:
         try:
             my_index = alphabet.index(last_char)
-            return last_name[:-1]+alphabet[my_index+1]
+            return last_name[:-1] + alphabet[my_index + 1]
         except IndexError:
             return last_name + 'a'
         except Exception:
