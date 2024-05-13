@@ -36,29 +36,35 @@ def create_grid(user):
     cryo_grid = CryoGrid.objects.create(name='grid1',freezing_plan=plan,freezing_session=session,notes='test',grid_box=box)
     return cryo_grid
 
-def create_tomo5_plan(grid):
-    camera = Camera.objects.create(name='Falcon4i',root_dir='/hpc/instruments/czii.krios1/OffloadData/',initial_frame_base_dir='/OffloadData/')
+def create_scope_camera():
     scope = Microscope.objects.create(name='czii-krios1')
+    camera = Camera.objects.create(name='Falcon4i',root_dir='/hpc/instruments/czii.krios1/OffloadData/',initial_frame_base_dir='/OffloadData/')
+    return scope, camera
+
+def create_tomo5_plan(grid, scope, camera):
+    """
+    TFS tomo5 single grid tomography plan
+    """
     workflow = ImagingWorkflow.objects.create(imaging_mode='tem',workflow='tomo')
     frame_path_type = PathType.objects.create(
-                static_path='/tem/{session}/{run}/frames',
-                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/{run}_{sequence}_{tilt}_*.eer',
+                static_path='/{workflow}/{session}/{run}/frames',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/{run}_{sequence}_{tilt}_*.eer',
     )
     sum_path_type = PathType.objects.create(
-                static_path='/tem/{session}/{run}/sums',
-                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/Batch/{run}_Exposure.mrc',
+                static_path='/{workflow}/{session}/{run}/sums',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/Batch/{run}_Exposure.mrc',
     )
     mdoc_path_type = PathType.objects.create(
-                static_path='/tem/{session}/{run}/mdoc',
-                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/{run}.mdoc',
+                static_path='/{workflow}/{session}/{run}/mdoc',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/{run}.mdoc',
     )
     parent_path_type = PathType.objects.create(
-                static_path='/tem/{session}/{run}/parents',
-                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/Batch/{run}_Search.mrc',
+                static_path='/{workflow}/{session}/{run}/parents',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/Batch/{run}_Search.mrc',
     )
     atlas_path_type = PathType.objects.create(
-                static_path='/tem/{session}/{run}/atlas',
-                overlay_path='/hpc/instruments/{scope}/OffloadData/{session}/SearchMaps/{SearchMap_{date}_{timestamp}.mrc',
+                static_path='/{workflow}/{session}/{run}/atlas',
+                overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/SearchMaps/{SearchMap_{date}_{timestamp}.mrc',
     )
     software = Software.objects.create(name='tom5',
                 frames=frame_path_type,
@@ -77,7 +83,8 @@ def run():
         print('Please create superuser first')
         sys.exit(1)
     grid=create_grid(User.objects.get(pk=1))
-    plan=create_tomo5_plan(grid)
+    scope,camera=create_scope_camera()
+    plan=create_tomo5_plan(grid, scope, camera)
     project=create_project()
 
 if __name__ == "__main__":
