@@ -11,13 +11,20 @@ from django.contrib.auth.models import Group, Permission
 
 
 def create_group_with_permission_ids(name, permission_ids=None):
-    # Create a new group or get existing one
+    # Create a new group or get the existing one
     group, created = Group.objects.get_or_create(name=name)
 
     if permission_ids:
-        # `permission_ids` should be a list of IDs for the permissions
-        permissions = Permission.objects.filter(id__in=permission_ids)  # Get permissions by their IDs
-        group.permissions.set(permissions)  # Use set() to replace any existing permissions
+        # Get existing permissions of the group to avoid duplicates
+        existing_permission_ids = set(group.permissions.values_list('id', flat=True))
+        # Filter out the existing permission IDs from the new ones to prevent duplicates
+        new_permissions = Permission.objects.filter(id__in=permission_ids).exclude(id__in=existing_permission_ids)
+
+        if new_permissions.exists():
+            group.permissions.add(*new_permissions)  # Only add new, non-duplicate permissions
+            print(f"Added new permissions to the group '{name}'.")
+        else:
+            print(f"No new permissions added; group '{name}' already has all specified permissions.")
 
     group.save()
     return group
@@ -27,19 +34,22 @@ def add_user_to_group(username, group_name):
     try:
         user = User.objects.get(username=username)
         group = Group.objects.get(name=group_name)
-        user.groups.add(group)
+
+        if group not in user.groups.all():
+            user.groups.add(group)
+            print(f"User {username} added to group {group_name} successfully.")
+        else:
+            print(f"User {username} is already in group {group_name}. No action taken.")
     except ObjectDoesNotExist as e:
         print(f"An error occurred: {e}")
         # Optionally, handle the error, e.g., by creating the user or group if they do not exist
-    else:
-        print(f"User {username} added to group {group_name} successfully.")
 
 
 def run():
-    permission_ids = [1, 2, 3, 4]  # Refer user auth auth permission table
+    permission_ids = [1, 2, 3, 4]  # Assume these are valid permission IDs
     create_group_with_permission_ids("Scientist", permission_ids)
     add_user_to_group('test', 'Scientist')
 
+
 if __name__ == "__main__":
     run()
-
