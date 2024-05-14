@@ -33,8 +33,8 @@ def detail(request, session_id):
                     'frame path pattern':session.get_session_frames_glob(),
                     'sum image path pattern':session.get_session_sums_glob(),
                     'mdoc path pattern':session.get_session_mdocs_glob(),
-                    #'parent path pattern':session.get_session_parent_glob(),
-                    #'atlas image path pattern':session.get_session_atlas_glob(),
+                    'parent path pattern':session.get_session_parents_glob(),
+                    'atlas image path pattern':session.get_session_atlas_glob(),
             "update_notes": form,
             }
     }
@@ -70,6 +70,8 @@ def create_session(request):
         session_instance.frames = session_instance.get_session_path('frames')
         session_instance.sums = session_instance.get_session_path('sums')
         session_instance.mdocs = session_instance.get_session_path('mdocs')
+        session_instance.mdocs = session_instance.get_session_path('parents')
+        session_instance.mdocs = session_instance.get_session_path('atlas')
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
