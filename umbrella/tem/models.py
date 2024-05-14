@@ -21,6 +21,7 @@ TEM_CHOICES = {
         ('tomo', 'Tomography'),
         ('ptyc', 'Ptychography'),
         ('idpc', 'iDPC'),
+        ('clem', 'CLEM Mapping'),
     ]
 }
 
@@ -117,6 +118,8 @@ class Session(models.Model):
     frames = models.ForeignKey(Path, related_name='frames', on_delete=models.SET_NULL, null=True)
     mdocs = models.ForeignKey(Path, related_name='mdocs', on_delete=models.SET_NULL, null=True)
     sums = models.ForeignKey(Path, related_name='sums', on_delete=models.SET_NULL, null=True)
+    parents = models.ForeignKey(Path, related_name='parents', on_delete=models.SET_NULL, null=True)
+    atlas = models.ForeignKey(Path, related_name='atlas', on_delete=models.SET_NULL, null=True)
 
     class Meta:
         app_label = 'tem'
@@ -129,9 +132,10 @@ class Session(models.Model):
             out_path = '.'
         else:
             out_path = fill_place_holders(my_attr.overlay_path,
-                                          {
-                                              'scope': scope_name,
-                                              'session': self.name
+                                            {
+                                                'workflow': plan.imaging_workflow.workflow,
+                                                'scope': scope_name,
+                                                'session': self.name
                                           }
                                           )
             return out_path
@@ -160,6 +164,7 @@ class Session(models.Model):
         path_obj = getattr(plan.software, type_name)
         static_path = fill_place_holders(path_obj.static_path,
                                          {
+                                             'workflow': plan.imaging_workflow.workflow,
                                              'scope': scope_name,
                                              'session': self.name
                                          }
@@ -167,6 +172,7 @@ class Session(models.Model):
         session_attr = getattr(self, 'get_session_%s_glob' % type_name)
         overlay_path = fill_place_holders(session_attr(),
                                           {
+                                              'workflow': plan.imaging_workflow.workflow,
                                               'scope': scope_name,
                                               'session': self.name
                                           }
