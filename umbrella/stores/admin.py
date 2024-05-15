@@ -3,3 +3,4 @@ from .models import *
 # Register your models here.
 admin.site.register(Path)
 admin.site.register(PathType)
+admin.site.register(StaticPath)
