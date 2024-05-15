@@ -52,5 +52,5 @@ class PathType(models.Model):
         return fill_place_holders(input_str, key_values)
 
     def __str__(self):
-        return self.static_path.data_type
+        return '%s=>%s' % (self.static_path.data_type, self.overlay_path)
 
