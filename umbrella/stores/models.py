@@ -1,6 +1,18 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+DATA_TYPES = [('frames','frames'),
+                ('rawst','raw tilt image stack'),
+                ('tangl','tilt angles'),
+                ('mdoc','mdoc'),
+                ('ctf','ctf values'),
+                ('aln','tilt alignments'),
+                ('rec','all frame tomo recon'),
+                ('evn','even frame tomo recon'),
+                ('odd','odd frame tomo recon'),
+                ('deno','denoised recon'),
+            ]
+
 def fill_place_holders(input_str, key_values={}):
     for k in key_values.keys():
         place_holder = '{%s}' % k
@@ -21,8 +33,15 @@ class Path(models.Model):
     def __str__(self):
         return self.static_path
 
-class PathType(models.Model):
+class StaticPath(models.Model):
+    data_type = models.CharField(max_length=8, choices=DATA_TYPES,unique=True)
     static_path = models.CharField(max_length=255, help_text="path reference with placeholder")
+    def __str__(self):
+        return self.data_type
+
+
+class PathType(models.Model):
+    static_path = models.ForeignKey(StaticPath, on_delete=models.CASCADE)
     overlay_path = models.CharField(max_length=255, help_text="filesystem path with placeholder")
     #path_type = models.CharField(max_length=32, choices=PATH_TYPES,default='dir')
 
