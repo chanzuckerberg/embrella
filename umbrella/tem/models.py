@@ -162,7 +162,7 @@ class Session(models.Model):
         plan = self.session_plan
         scope_name = plan.scope.name
         path_obj = getattr(plan.software, type_name)
-        static_path = fill_place_holders(path_obj.static_path,
+        static_path = fill_place_holders(path_obj.static_path.static_path,
                                          {
                                              'workflow': plan.imaging_workflow.workflow,
                                              'scope': scope_name,

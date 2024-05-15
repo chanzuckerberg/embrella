@@ -11,7 +11,7 @@ from tem.models import *
 from google.models import DriveFolder
 from confluence.models import Space
 from projects.models import Project
-from stores.models import PathType, fill_place_holders
+from stores.models import StaticPath,PathType, fill_place_holders
 
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
@@ -41,29 +41,37 @@ def create_scope_camera():
     camera = Camera.objects.create(name='Falcon4i',root_dir='/hpc/instruments/czii.krios1/OffloadData/',initial_frame_base_dir='/OffloadData/')
     return scope, camera
 
+def create_tem_static_path(data_type):
+    if data_type in ['frames','sums','mdoc','parents','atlas']:
+        instance = StaticPath.objects.create(
+                data_type=data_type,
+                static_path='/{workflow}/{session}/{run}/%s' % data_type,
+        )
+    return instance
+
 def create_tomo5_plan(grid, scope, camera):
     """
     TFS tomo5 single grid tomography plan
     """
     workflow = ImagingWorkflow.objects.create(imaging_mode='tem',workflow='tomo')
     frame_path_type = PathType.objects.create(
-                static_path='/{workflow}/{session}/{run}/frames',
+                static_path=create_tem_static_path('frames'),
                 overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/{run}_{sequence}_{tilt}_*.eer',
     )
     sum_path_type = PathType.objects.create(
-                static_path='/{workflow}/{session}/{run}/sums',
+                static_path=create_tem_static_path('sums'),
                 overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/Batch/{run}_Exposure.mrc',
     )
     mdoc_path_type = PathType.objects.create(
-                static_path='/{workflow}/{session}/{run}/mdoc',
+                static_path=create_tem_static_path('mdoc'),
                 overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/{run}.mdoc',
     )
     parent_path_type = PathType.objects.create(
-                static_path='/{workflow}/{session}/{run}/parents',
+                static_path=create_tem_static_path('parents'),
                 overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/Batch/{run}_Search.mrc',
     )
     atlas_path_type = PathType.objects.create(
-                static_path='/{workflow}/{session}/{run}/atlas',
+                static_path=create_tem_static_path('atlas'),
                 overlay_path='/hpc/instruments/{scope}/OffloadData/{workflow}/{session}/SearchMaps/{SearchMap_{date}_{timestamp}.mrc',
     )
     software = Software.objects.create(name='tom5',
