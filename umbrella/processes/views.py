@@ -2,91 +2,82 @@ from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from .forms import SessionForm, ReserveSessionForm, UpdateNotesForm
+from .forms import ProcRunForm, ReserveProcRunForm, UpdateNotesForm
 from . import models
-from .models import Session, SessionPlan, Software
-from projects.models import Project
-from cryo_grids.models import CryoGrid
-from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo
+from processes.models import ProcRun, PipelinePlan, ProcSoftware
+from tem.models import Session
 from django.core.serializers import serialize
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 import json
-def detail(request, session_id):
-    session = get_object_or_404(Session, pk=session_id)
+
+def detail(request, run_id):
+    run = get_object_or_404(ProcRun, pk=run_id)
     if request.method == 'POST':
         new_notes=request.POST['notes']
-        session.notes = new_notes
-        session.save()
-    field_objs = session._meta.get_fields()
+        run.notes = new_notes
+        run.save()
+    field_objs = run._meta.get_fields()
     fields = {}
     for f in field_objs:
         try:
-            fields[f.name] = getattr(session, f.name)
+            fields[f.name] = getattr(run, f.name)
         except AttributeError:
             # reverse ManyToOneRel such as processes.procrun is not in this model
+            continue
+        except TypeError:
+            print(f)
             continue
         #ManyToManyField
         if hasattr(fields[f.name],'all'):
             fields[f.name] = list(map((lambda x: x.__str__()),fields[f.name].all()))
-    form = UpdateNotesForm(instance=session)
+    form = UpdateNotesForm(instance=run)
     context = {
-            "data": session,
+            "data": run,
             "fields": fields,
             "paths": {
-                    'frame path pattern':session.get_session_frames_glob(),
-                    'sum image path pattern':session.get_session_sums_glob(),
-                    'mdoc path pattern':session.get_session_mdocs_glob(),
-                    'parent path pattern':session.get_session_parents_glob(),
-                    'atlas image path pattern':session.get_session_atlas_glob(),
-            "update_notes": form,
+                    "update_notes": form,
             }
     }
-    return render(request, "tem/detail.html", context)
+    return render(request, "processes/detail.html", context)
 
-def reserve_session(request):
+def reserve_run(request):
     if request.method == 'POST':
-        form = ReserveSessionForm(request.POST)
+        form = ReserveProcRunForm(request.POST)
         name = models.suggest_name('t')
-        plan_id=int(request.POST['session_plan'])
-        return render(request, reverse("tem:create"))
+        plan_id=int(request.POST['pipeline_plan'])
+        return render(request, reverse("processes:create"))
     else:
-        form = ReserveSessionForm()
-        return render(request, "tem/reserve.html", {"form": form})
+        form = ReserveProcRunForm()
+        return render(request, "processes/reserve.html", {"form": form})
 
-def create_session(request):
-    plan_id=int(request.POST['session_plan'])
-    project_id=int(request.POST['project'])
-    grid_id=int(request.POST['grid'])
+def create_run(request):
+    plan_id=int(request.POST['proc_plan'])
+    session_id=int(request.POST['tomo_session'])
     # TODO suggest name with prefix
-    name = models.suggest_name('')
+    #name = models.suggest_name('')
+    name = 'test1'
     if request.method == 'POST':
-        session_instance = Session.objects.create(
+        run_instance = ProcRun.objects.create(
                     name=name,
-                    user=request.user,
-                    project=Project.objects.get(pk=project_id),
-                    grid=CryoGrid.objects.get(pk=grid_id),
-                    session_plan=SessionPlan.objects.get(pk=plan_id),
+                    tomo_session=Session.objects.get(pk=session_id),
+                    proc_plan=PipelinePlan.objects.get(pk=plan_id),
         )
-        session_instance.save()
-        my_pk = session_instance.id
+        run_instance.save()
+        my_pk = run_instance.id
         path_dicts = {}
-        session_instance.frames = session_instance.get_session_path('frames')
-        session_instance.sums = session_instance.get_session_path('sums')
-        session_instance.mdocs = session_instance.get_session_path('mdocs')
-        session_instance.mdocs = session_instance.get_session_path('parents')
-        session_instance.mdocs = session_instance.get_session_path('atlas')
-        session_instance.save()
-        return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
+        #run_instance.frames = run_instance.get_session_path('frames')
+        run_instance.save()
+        return HttpResponseRedirect(reverse('processes:detail', args=(run_instance.id,)))
 
 @require_http_methods(["GET"])
-def get_all_sessions(request):
+def get_all_runs(request):
     if not request.GET.get('valid', 'true') == 'true':
         return JsonResponse({'error': 'Invalid request'}, status=400)
-    session_list = Session.objects.all()
-    serialized_sessions = serialize('json', session_list)
-    session_data = json.loads(serialized_sessions)
-    return JsonResponse(session_data, safe=False)
+    run_list = Session.objects.all()
+    serialized_runs = serialize('json', run_list)
+    run_data = json.loads(serialized_runs)
+    return JsonResponse(run_data, safe=False)
 
 @require_http_methods(["GET"])
 def get_all_image_paths(request):
@@ -95,16 +86,16 @@ def get_all_image_paths(request):
 
     name_param = request.GET.get('name')
 
-    software_query = Software.objects.select_related(
+    software_query = ProcSoftware.objects.select_related(
         'frames', 'sums', 'mdocs', 'parents', 'atlas'
     ).all()
 
     result_list: List[dict] = []
     for software in software_query:
-        software_data = SoftwareResponseModel(
+        software_data = ProcSoftwareResponseModel(
             model="tem.software",
             pk=software.pk,
-            fields=SoftwareFieldsResponse(
+            fields=ProcSoftwareFieldsResponse(
                 name=software.name,
                 frames=PathInfo(
                     static_path=software.frames.static_path if software.frames else None,

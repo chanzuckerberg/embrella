@@ -1,5 +1,5 @@
 Django>=5.0
-django-extension==3.2.3
+django-extensions==3.2.3
 atlassian-python-api==3.41
 beautifulsoup4==4.12
 lxml==5.1

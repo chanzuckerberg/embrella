@@ -26,6 +26,7 @@ urlpatterns = [
     path('umbrella/', admin.site.urls),
     path('projects/', include('projects.urls')),
     path('tem/', include('tem.urls')),
+    path('processes/', include('processes.urls')),
     path('ping/', ping),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
