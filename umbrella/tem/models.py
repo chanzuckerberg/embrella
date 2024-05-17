@@ -210,6 +210,23 @@ class SoftwareResponseModel(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
 
+class UserBase(BaseModel):
+    username: str
+
+class ProjectBase(BaseModel):
+    name: str
+
+class SessionBase(BaseModel):
+    id: int
+    name: str
+    notes: str
+    user: UserBase
+    project: ProjectBase
+    frames: PathInfo
+    mdocs: PathInfo
+    sums: PathInfo
+    parents: PathInfo
+    atlas: PathInfo
 
 def suggest_name(prefix):
     """

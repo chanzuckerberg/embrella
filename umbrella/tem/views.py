@@ -7,7 +7,7 @@ from . import models
 from .models import Session, SessionPlan, Software
 from projects.models import Project
 from cryo_grids.models import CryoGrid
-from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo
+from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo, UserBase, ProjectBase, SessionBase
 from django.core.serializers import serialize
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
@@ -79,65 +79,113 @@ def create_session(request):
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
+
 @require_http_methods(["GET"])
 def get_all_sessions(request):
-    if not request.GET.get('valid', 'true') == 'true':
+    if request.GET.get('valid', 'true') != 'true':
         return JsonResponse({'error': 'Invalid request'}, status=400)
-    session_list = Session.objects.all()
-    serialized_sessions = serialize('json', session_list)
-    session_data = json.loads(serialized_sessions)
-    return JsonResponse(session_data, safe=False)
+    # Retrieve the 'name' parameter from the GET request, defaulting to None if not provided
+    session_name = request.GET.get('name', None)
+
+    # Fetch sessions and related stores_path records, filter by name if provided
+    if session_name:
+        sessions = Session.objects.filter(name=session_name).select_related(
+            'grid', 'project', 'user', 'mdocs', 'sums', 'parents', 'atlas', 'frames'
+        )
+    else:
+        sessions = Session.objects.select_related(
+            'grid', 'project', 'user', 'mdocs', 'sums', 'parents', 'atlas', 'frames'
+        ).all()
+
+    session_list = []
+    for session in sessions:
+        # Create Pydantic model instances
+        session_data = SessionBase(
+            id=session.id,
+            name=session.name,
+            notes=session.notes,
+            user=UserBase(username=session.user.username),
+            project=ProjectBase(name=session.project.name),
+            frames=PathInfo(
+                static_path=session.frames.static_path if session.frames.static_path else None,
+                overlay_path=session.frames.overlay_path if session.frames.overlay_path else None
+            ),
+            mdocs=PathInfo(
+                static_path=session.mdocs.static_path if session.mdocs.static_path else None,
+                overlay_path=session.mdocs.overlay_path if session.mdocs.overlay_path else None
+            ),
+            sums=PathInfo(
+                static_path=session.sums.static_path if session.sums.static_path else None,
+                overlay_path=session.sums.overlay_path if session.sums.overlay_path else None
+            ),
+            parents=PathInfo(
+                static_path=session.parents.static_path if session.parents.static_path else None,
+                overlay_path=session.parents.overlay_path if session.parents.overlay_path else None
+            ),
+            atlas=PathInfo(
+                static_path=session.atlas.static_path if session.atlas.static_path else None,
+                overlay_path=session.atlas.overlay_path if session.atlas.overlay_path else None
+            )
+        )
+        # Convert Pydantic model to dictionary and append to the list
+        session_list.append(session_data.dict())
+
+    # Use JsonResponse to send back a list of dictionaries
+    return JsonResponse(session_list, safe=False)
 
 @require_http_methods(["GET"])
 def get_all_image_paths(request):
+    # Check for a valid request
     if request.GET.get('valid', 'true') != 'true':
         return JsonResponse({'error': 'Invalid request'}, status=400)
 
     name_param = request.GET.get('name')
 
-    software_query = Software.objects.select_related(
-        'frames', 'sums', 'mdocs', 'parents', 'atlas'
+    # Query the Software table and prefetch related paths via nested "select_related"
+    software_query = Software.objects.prefetch_related(
+        'frames__static_path', 'sums__static_path', 'mdocs__static_path',
+        'parents__static_path', 'atlas__static_path'
     ).all()
 
-    result_list: List[dict] = []
+    result_list = []
     for software in software_query:
+        # Constructing the response data with nested paths
         software_data = SoftwareResponseModel(
-            model="tem.software",
-            pk=software.pk,
-            fields=SoftwareFieldsResponse(
-                name=software.name,
-                frames=PathInfo(
-                    static_path=software.frames.static_path if software.frames else None,
-                    overlay_path=software.frames.overlay_path if software.frames else None,
+            model= "tem.software",
+            pk= software.pk,
+            fields= SoftwareFieldsResponse(
+                name= software.name,
+                frames= PathInfo(
+                    static_path= software.frames.static_path.static_path if software.frames and software.frames.static_path else None,
+                    overlay_path= software.frames.overlay_path if software.frames else None,
                 ),
-                sums=PathInfo(
-                    static_path=software.sums.static_path if software.sums else None,
-                    overlay_path=software.sums.overlay_path if software.sums else None,
+                sums= PathInfo(
+                    static_path= software.sums.static_path.static_path if software.sums and software.sums.static_path else None,
+                    overlay_path= software.sums.overlay_path if software.sums else None,
                 ),
-                mdocs=PathInfo(
-                    static_path=software.mdocs.static_path if software.mdocs else None,
-                    overlay_path=software.mdocs.overlay_path if software.mdocs else None,
+                mdocs= PathInfo(
+                    static_path= software.mdocs.static_path.static_path if software.mdocs and software.mdocs.static_path else None,
+                    overlay_path= software.mdocs.overlay_path if software.mdocs else None,
                 ),
-                parents=PathInfo(
-                    static_path=software.parents.static_path if software.parents else None,
-                    overlay_path=software.parents.overlay_path if software.parents else None,
+                parents= PathInfo(
+                    static_path= software.parents.static_path.static_path if software.parents and software.parents.static_path else None,
+                    overlay_path= software.parents.overlay_path if software.parents else None,
                 ),
-                atlas=PathInfo(
-                    static_path=software.atlas.static_path if software.atlas else None,
-                    overlay_path=software.atlas.overlay_path if software.atlas else None,
-                )
+                atlas= PathInfo(
+                    static_path= software.atlas.static_path.static_path if software.atlas and software.atlas.static_path else None,
+                    overlay_path= software.atlas.overlay_path if software.atlas else None,
+                ),
             )
         )
         result_list.append(software_data.dict())
 
     if not name_param:
-        return JsonResponse(content=result_list.dict())
-    #case sensitive
+        return JsonResponse(result_list, safe=False)
+
+    # Filter results based on the name parameter
     filtered_results = [item for item in result_list if item['fields']['name'].lower() == name_param.lower()]
     if filtered_results:
-        return JsonResponse(data=filtered_results[0], safe=False)
+        return JsonResponse(filtered_results[0], safe=False)
 
-    # Use ErrorResponse model correctly by converting it to a dictionary
-    error_response = ErrorResponse(error='No matching software found')
-
-    return JsonResponse(data=error_response.dict(), status=404, safe=False)
+    # Return error if no matching software is found
+    return JsonResponse({'error': 'No matching software found'}, status=404, safe=False)
