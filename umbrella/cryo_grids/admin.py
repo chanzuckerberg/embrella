@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from .models import Site, Dewar, Cane, Puck,CryoGridBox
 from .models import PlungeFreezingDevice, PlungeFreezingSession, PlungeFreezingPlan, CryoGrid
-from .models import Sample
+from .models import Sample, MolecularTag
 
 admin.site.register(Site)
 admin.site.register(Dewar)
@@ -14,3 +14,4 @@ admin.site.register(PlungeFreezingSession)
 admin.site.register(PlungeFreezingPlan)
 admin.site.register(CryoGrid)
 admin.site.register(Sample)
+admin.site.register(MolecularTag)
