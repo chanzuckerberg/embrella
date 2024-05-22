@@ -79,7 +79,15 @@ class PlungeFreezingSession(models.Model):
         return '%s' % self.datetime.date().isoformat()
 
 class Sample(models.Model):
-    name = models.CharField(max_length=100, unique=True,help_text='unique sample name that you may use to search your grid for later. For example, lysosome')
+    name = models.CharField(max_length=30, unique=True,help_text='unique sample name that you may use to search your grid for later. For example, lysosome')
+    description = models.TextField(max_length=255, blank=True)
+
+    def __str__(self):
+        return self.name
+
+class MolecularTag(models.Model):
+    name = models.CharField(max_length=30, unique=True,help_text='unique molecule attached to specific biological macromolecules to investigate the properties of the sample. For example, DAPI')
+    description = models.TextField(max_length=255, blank=True)
 
     def __str__(self):
         return self.name
@@ -90,11 +98,15 @@ class PlungeFreezingPlan(models.Model):
     sample_application_protocol = models.TextField(max_length=255, blank=True)
     blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
     wash_step = models.TextField(max_length=255, blank=True)
-    tag = models.CharField(max_length=100, blank=True)
+    tags = models.ManyToManyField(MolecularTag,)
 
     def __str__(self):
         sample_str = ','.join(list(map((lambda x: x['name']),self.sample.values())))
-        return '%s with %s, id=%d' % (sample_str, self.tag, self.pk)
+        tag_str = ','.join(list(map((lambda x: x['name']),self.tags.values())))
+        if tag_str:
+            return '%s with %s, id=%d' % (sample_str, tag_str, self.pk)
+        else:
+            return '%s without tag, id=%d' % (sample_str, self.pk)
 
 class CryoGrid(models.Model):
     create_on = models.DateField(auto_now_add=True)
