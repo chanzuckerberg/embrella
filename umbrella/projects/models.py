@@ -1,7 +1,6 @@
 from django.db import models
 from confluence.models import Space
 from google.models import DriveFolder
-from umbrella.choices import PROJECT_NAMES
 
 # Create your models here.
 class Project(models.Model):
