@@ -1,9 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.core.validators import validate_comma_separated_integer_list
+
 from projects.models import Project
-from cryo_grids.models import CryoGrid
+from cryo_grids.models import CryoGrid, CryoGridCassette
 from stores.models import Path, PathType, fill_place_holders
+import sys
 import os
 import time
 import string
@@ -188,6 +191,102 @@ class Session(models.Model):
     def __str__(self):
         return self.get_session_sums_glob()
 
+def parse_integer_order_list(text):
+    return list((map((lambda x: int(x)), text.split(','))))
+
+class ScreenSessionGroup(models.Model):
+    """
+    A grouping of screening on grids. It is identified by the cassette
+    and the order of the grid positions that are loaded and imaged.
+    """
+    name = models.CharField(max_length=20, unique=True)
+    cassette = models.ForeignKey(CryoGridCassette, on_delete=models.PROTECT, null=True)
+    session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
+    order = models.CharField(max_length=36, validators=[validate_comma_separated_integer_list], help_text='comma separated list ofgrid positions to screen, i.e. 1,2,5', default='1,2,3,4,5,6,7,8,9,10,11,12')
+
+    def get_order_list(self):
+        try:
+            return parse_integer_order_list(self.order)
+        except Exception as e:
+            raise ValueError('Bad order field entry: %s' % e)
+
+    def __str__(self):
+        return '%s - Screening of %s' % (self.name, self.cassette)
+
+class ScreenSession(models.Model):
+    """
+    A tem session which purpose is to assess the quality of the grid.
+    Currently only record atlas path.
+    """
+    # name is determined by software
+    name = models.CharField(max_length=20, unique=False, help_text="software-dependent name for the screen session for the grid")
+    group = models.ForeignKey(ScreenSessionGroup, on_delete=models.CASCADE)
+    order_in_screen = models.PositiveSmallIntegerField(default=1)
+    project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
+    atlas = models.ForeignKey(Path, related_name='screenatlas', on_delete=models.SET_NULL, null=True)
+    quality = models.SmallIntegerField(
+            default=-1,
+            help_text='grid quality score 0-5 5=highest, -1=not started, 0=failed'
+    )
+    notes = models.TextField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        unique_together = [["name","group"]]
+        constraints = [
+            models.CheckConstraint(check=models.Q(quality__lte=5),name='quality_score_exceed_max'),
+            models.CheckConstraint(check=models.Q(quality__gte=-1),name='quality_score_not_valid')
+        ]
+ 
+    def get_replacement_map(self):
+        plan = self.group.session_plan
+        scope_name = plan.scope.name
+        mapping = {
+            'workflow': plan.imaging_workflow.workflow,
+            'scope': scope_name,
+            'session_group': self.group.name,
+            'grid_session': self.name,
+        }
+        return mapping
+
+    def _get_session_glob(self, path_type):
+        plan = self.group.session_plan
+        my_attr = getattr(plan.software, path_type)
+        if not my_attr:
+            out_path = '.'
+        else:
+            out_path = fill_place_holders(my_attr.overlay_path,
+                    self.get_replacement_map()
+            )
+            return out_path
+
+    def get_session_path(self, type_name='atlas'):
+        """
+        Use session_plan and software to update session path by replacing place holders
+        """
+        plan = self.group.session_plan
+        path_obj = getattr(plan.software, type_name)
+        static_path = fill_place_holders(path_obj.static_path.static_path,
+                    self.get_replacement_map()
+        )
+        session_attr = getattr(self, 'get_session_%s_glob' % type_name)
+        overlay_path = fill_place_holders(session_attr(),
+                    self.get_replacement_map()
+        )
+        path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
+        if not path_set:
+            p = Path(overlay_path=overlay_path, static_path=static_path)
+            p.save()
+        else:
+            p = path_set[0]
+        return p
+
+    def get_session_atlas_glob(self):
+        return self._get_session_glob('atlas')
+
+    def __str__(self):
+        return '/scrn/%s/%s/' % (self.group.name,self.name)
 
 class PathInfo(BaseModel):
     static_path: str | None
@@ -228,7 +327,7 @@ class SessionBase(BaseModel):
     parents: PathInfo
     atlas: PathInfo
 
-def suggest_name(prefix):
+def suggest_name(prefix, model_name='Session'):
     """
     Session based on prefix and then date format 24mar01.
     Make unique name by advancing to next in alphabet.
@@ -241,7 +340,8 @@ def suggest_name(prefix):
         prefix_search = prefix + date_str
     else:
         prefix_search = date_str
-    used_names = list(map((lambda x: x.name), Session.objects.filter(Q(name__startswith=prefix_search))))
+    model_instance = getattr(sys.modules[__name__], model_name)
+    used_names = list(map((lambda x: x.name), model_instance.objects.filter(Q(name__startswith=prefix_search))))
     if not used_names:
         # first session of the day
         return prefix_search + 'a'
@@ -258,3 +358,14 @@ def suggest_name(prefix):
             return last_name + 'a'
         except Exception:
             raise
+
+def suggest_scrn_session_name(prefix,group_instance):
+    print(group_instance)
+    model_instance = ScreenSession
+    used_names = list(map((lambda x: x.name), model_instance.objects.filter(Q(group=group_instance,name__startswith=prefix))))
+    software = group_instance.session_plan.software
+    # TODO need to find a way to decide whether names are defined as Sample%d
+    if software.name == 'tfs multi-grid':
+        return 'Sample%d' % (len(used_names)+1,)
+    else:
+        return suggest_name(prefix, model_name='ScreenSession')

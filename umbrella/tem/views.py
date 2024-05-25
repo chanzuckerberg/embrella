@@ -3,15 +3,19 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from .forms import SessionForm, ReserveSessionForm, UpdateNotesForm
+from .forms import ScreenSessionGroupForm, ReserveScreenSessionGroupForm, UpdateOrderForm
 from . import models
 from .models import Session, SessionPlan, Software
 from projects.models import Project
-from cryo_grids.models import CryoGrid
+from cryo_grids.models import CryoGrid, CryoGridCassette
 from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo, UserBase, ProjectBase, SessionBase
+from tem.models import ScreenSessionGroup, ScreenSession
 from django.core.serializers import serialize
+from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 import json
+
 def detail(request, session_id):
     session = get_object_or_404(Session, pk=session_id)
     if request.method == 'POST':
@@ -79,6 +83,96 @@ def create_session(request):
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
+#############
+#Screening
+############
+def scrn_group_detail(request, scrn_group_id):
+    '''
+    Render the details of the screen session group
+    '''
+    session_group = get_object_or_404(ScreenSessionGroup, pk=scrn_group_id)
+    field_objs = session_group._meta.get_fields()
+    fields = {}
+    for f in field_objs:
+        try:
+            fields[f.name] = getattr(session_group, f.name)
+        except AttributeError:
+            # reverse ManyToOneRel such as processes.procrun is not in this model
+            continue
+    order_list = models.parse_integer_order_list(session_group.order)
+    scrn_sessions = []
+    scrn_sessions = ScreenSession.objects.filter(
+            group=session_group,
+    ).order_by("order_in_screen")
+    context = {
+            "data": session_group,
+            "fields": fields,
+            "screens": scrn_sessions,
+    }
+    return render(request, "tem/scrndetail.html", context)
+
+def reserve_scrn_session_group(request,error_msg=''):
+    '''
+    Render the form to create screen session group.
+    '''
+    form = ReserveScreenSessionGroupForm()
+    return render(request, "tem/scrnreserve.html", {"form": form})
+
+def _validate_order_list(cassette, order_list):
+    valid = True
+    for i in order_list:
+        grids=CryoGrid.objects.filter(grid_cassette=cassette,position_in_cassette=i)
+        if len(grids) != 1:
+            return False
+    return valid
+    
+def create_scrn_session_group(request):
+    '''
+    Validate and create the screen session group and screen sessions
+    '''
+    plan_id = int(request.POST['session_plan'])
+    cassette_id = int(request.POST['cassette'])
+    cassette=CryoGridCassette.objects.get(pk=cassette_id)
+    session_plan=SessionPlan.objects.get(pk=plan_id)
+    order_str = request.POST['order']
+    order_list = models.parse_integer_order_list(order_str)
+    error_msg = ''
+    if not _validate_order_list(cassette, order_list):
+        # Don't save anything.
+        # TODO: send error message to the page.
+        return HttpResponseRedirect(reverse('tem:scrnreserve'))
+    name = models.suggest_name('','ScreenSessionGroup')
+    if request.method == 'POST':
+        # save the validated group
+        group_instance = ScreenSessionGroup.objects.create(
+                    name=name,
+                    cassette=cassette,
+                    session_plan=session_plan,
+                    order= order_str,
+        )
+        group_instance.save()
+        for i in order_list:
+            # create screen session for each grid and make association with
+            # the group 
+            grids=CryoGrid.objects.filter(grid_cassette=cassette,position_in_cassette=i)
+            _create_scrn_session(request.user, group_instance, grids[0])
+    return HttpResponseRedirect(reverse('tem:scrndetail', args=(group_instance.id,)))
+
+def _create_scrn_session(user,group_instance,grid):
+    plan = group_instance.session_plan
+    name = models.suggest_scrn_session_name('',group_instance)
+    session_instance = ScreenSession.objects.create(
+                    name=name,
+                    user=user,
+                    grid=grid,
+                    group=group_instance,
+    )
+    session_instance.save()
+    my_pk = session_instance.id
+    path_dicts = {}
+    session_instance.atlas = session_instance.get_session_path('atlas')
+    session_instance.save()
+    return
 
 @require_http_methods(["GET"])
 def get_all_sessions(request):

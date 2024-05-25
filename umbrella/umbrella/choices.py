@@ -39,3 +39,7 @@ GRID_BOX_NUMBERING = [
     ('z','Z-top-left'),
 ]
 
+GRID_CASSETTE_NUMBERING = [
+    ('bot','Number 1 at the bottom'),
+    ('top','Number 1 at the top'),
+]

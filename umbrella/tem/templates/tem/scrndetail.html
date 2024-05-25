@@ -12,9 +12,7 @@
 <body> 
 
 <div class="container"> 
-<h2 class="text-center"><u>Session {{ data.name }}</u></h2><br>			 
-<form action="{% url 'tem:detail' data.id %}" method="post">
-{% csrf_token %} 
+<h2 class="text-center"><u>Screening {{ data.name }}</u></h2><br>			 
 <table class="table table-light table-striped"> 
 	<thead> 
 	<tr>
@@ -24,31 +22,33 @@
 	</thead> 
 	<tbody> 
 	{% for f, v in  fields.items %} 
-	<tr> 
+	<tr>
         <td>{{ f }}</td>
-    <!-- add link for grid -->
-    {% if f == "grid" %}
-		<td><a href="{% url 'admin:cryo_grids_cryogrid_change' v.id %}">{{ v }}</a></td> 
-    {% else %}
         <td>{{ v }}</td>
-    {% endif %}
 	</tr> 
 	{% endfor %} 
-	{% for k, v in  paths.items %} 
-	<tr> 
-        <td>{{ k }}</td>
-        <td>{{ v }}</td>
-	</tr> 
-	{% endfor %}
-    <!-- model form is added automatically, it seems -->
-    <!-- line up submit button with the entry -->
-    <tr><td></td><td>
-        <input type="submit" value="Update the session notes">
-        <td>
-    </tr>
 	</tbody> 
 </table> 
-</form>
+<hr>
+<h2 class="text-center"><u>Grid list by screen order </u></h2><br>			 
+<table class="table table-light table-striped"> 
+	<thead> 
+	<tr>
+		<th>screening</th> 
+		<th>grid</th> 
+		<th>project</th> 
+		<th>quality</th> 
+	</tr> 
+	</thead> 
+	<tbody> 
+	{% for s in  screens %} 
+	<tr> 
+	    <td><a href= "{% url 'admin:tem_screensession_change' s.id %}">{{ s }}</a></td>
+	    <td><a href= "{% url 'admin:cryo_grids_cryogrid_change' s.grid.id %}">{{ s.grid }} </a></td>
+        <td> {{ s.grid.project }}</td>
+        <td> {{ s.quality }}</td>
+	</tr> 
+	{% endfor %} 
 </div> 
 
 </body> 
