@@ -71,16 +71,16 @@ class Software(models.Model):
     Software determines the paths of the output files
     '''
     name = models.CharField(max_length=50, unique=True)
-    frames = models.ForeignKey(PathType, related_name='frames_type', on_delete=models.SET_NULL, null=True,
+    frames = models.ForeignKey(PathType, related_name='frames_type', on_delete=models.SET_NULL, null=True, blank=True,
                                help_text='path pattern to access frames')
-    sums = models.ForeignKey(PathType, related_name='sums_type', on_delete=models.SET_NULL, null=True,
+    sums = models.ForeignKey(PathType, related_name='sums_type', on_delete=models.SET_NULL, null=True, blank=True,
                              help_text='path pattern to access 0 tilt projection thumbnail image')
-    mdocs = models.ForeignKey(PathType, related_name='mdocs_type', on_delete=models.SET_NULL, null=True,
+    mdocs = models.ForeignKey(PathType, related_name='mdocs_type', on_delete=models.SET_NULL, null=True, blank=True,
                               help_text='path pattern to access mdocs')
 
-    parents = models.ForeignKey(PathType, related_name='parents_type', on_delete=models.SET_NULL, null=True,
+    parents = models.ForeignKey(PathType, related_name='parents_type', on_delete=models.SET_NULL, null=True, blank=True,
                                 help_text='path pattern to access parent images for viewing')
-    atlas = models.ForeignKey(PathType, related_name='atlas_type', on_delete=models.SET_NULL, null=True,
+    atlas = models.ForeignKey(PathType, related_name='atlas_type', on_delete=models.SET_NULL, null=True, blank=True,
                               help_text='path pattern to access grid atlas image for viewing')
 
     def __str__(self):
@@ -118,11 +118,11 @@ class Session(models.Model):
     session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
     grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True)
-    frames = models.ForeignKey(Path, related_name='frames', on_delete=models.SET_NULL, null=True)
-    mdocs = models.ForeignKey(Path, related_name='mdocs', on_delete=models.SET_NULL, null=True)
-    sums = models.ForeignKey(Path, related_name='sums', on_delete=models.SET_NULL, null=True)
-    parents = models.ForeignKey(Path, related_name='parents', on_delete=models.SET_NULL, null=True)
-    atlas = models.ForeignKey(Path, related_name='atlas', on_delete=models.SET_NULL, null=True)
+    frames = models.ForeignKey(Path, related_name='frames', on_delete=models.SET_NULL, null=True, blank=True)
+    mdocs = models.ForeignKey(Path, related_name='mdocs', on_delete=models.SET_NULL, null=True, blank=True)
+    sums = models.ForeignKey(Path, related_name='sums', on_delete=models.SET_NULL, null=True, blank=True)
+    parents = models.ForeignKey(Path, related_name='parents', on_delete=models.SET_NULL, null=True, blank=True)
+    atlas = models.ForeignKey(Path, related_name='atlas', on_delete=models.SET_NULL, null=True, blank=True)
 
     class Meta:
         app_label = 'tem'
