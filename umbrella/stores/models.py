@@ -1,7 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-DATA_TYPES = [('frames','frames'),
+DATA_TYPES = [
+                ('atlas','grid atlas'),
+                ('satlas','grid atlas from screening'),
+                ('parents','parent image of the tomography images'),
+                ('sums','sum image of the frames'),
+                ('frames','frames'),
                 ('rawst','raw tilt image stack'),
                 ('tangl','tilt angles'),
                 ('mdoc','mdoc'),

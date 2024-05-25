@@ -78,8 +78,8 @@ def create_session(request):
         session_instance.frames = session_instance.get_session_path('frames')
         session_instance.sums = session_instance.get_session_path('sums')
         session_instance.mdocs = session_instance.get_session_path('mdocs')
-        session_instance.mdocs = session_instance.get_session_path('parents')
-        session_instance.mdocs = session_instance.get_session_path('atlas')
+        session_instance.parents = session_instance.get_session_path('parents')
+        session_instance.atlas = session_instance.get_session_path('atlas')
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
