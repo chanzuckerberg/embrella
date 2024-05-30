@@ -108,7 +108,7 @@ class MolecularTag(models.Model):
 class PlungeFreezingPlan(models.Model):
     # may be multiple samples that each needs history and metadata
     sample = models.ManyToManyField(Sample,)
-    tags = models.ManyToManyField(MolecularTag,)
+    tags = models.ManyToManyField(MolecularTag,blank=True)
     sample_application_protocol = models.TextField(max_length=255, blank=True)
     blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
     wash_step = models.TextField(max_length=255, blank=True)
