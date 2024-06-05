@@ -6,7 +6,7 @@ from . import views
 app_name = "tem"
 
 urlpatterns = [
-    path("", views.reserve_session, name="reserve"),
+    path("reserve", views.reserve_session, name="reserve"),
     path("create", views.create_session, name="create"),
     path("<int:session_id>/", views.detail, name="detail"),
     path("scrn/", views.reserve_scrn_session_group, name="scrnreserve"),
