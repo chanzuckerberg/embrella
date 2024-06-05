@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'cryo_grids',
     'projects',
     'tem',
+    'custom',
     'stores',
     'processes',
     'django.contrib.admin',
@@ -125,6 +126,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+LOGIN_URL = 'login'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
-
+LOGIN_REDIRECT_URL = '/custom_page/'

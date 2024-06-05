@@ -20,17 +20,27 @@ from umbrella.ping import ping
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+from django.contrib.auth.views import LoginView
+from django.contrib.auth import views as auth_views
+
+from django.shortcuts import redirect
+from django.urls import reverse
+
 
 urlpatterns = [
     path('', RedirectView.as_view(url='/umbrella/', permanent=True)),
-    path('umbrella/', admin.site.urls),
+    path('umbrella/', admin.site.urls, name='umbrella'),
+    path('custom_page/', include('custom.urls'),name='custom_page'),
     path('projects/', include('projects.urls')),
     path('tem/', include('tem.urls')),
     path('processes/', include('processes.urls')),
     path('ping/', ping),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    path('umbrella/login/', auth_views.LoginView.as_view(), name='login'),
+    path('umbrella/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+]
 
 
 # change header name
 admin.site.site_header = 'Lab auto workflow'
 admin.site.site_title = 'Lab auto workflow'
+
