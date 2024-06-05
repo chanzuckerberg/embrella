@@ -118,8 +118,6 @@ class Session(models.Model):
     session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
     grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True)
-    message = models.TextField(max_length=255, blank=True, null=True, default='Please see the file directory below '
-                                                                              'and store accordingly')
     frames = models.ForeignKey(Path, related_name='frames', on_delete=models.SET_NULL, null=True, blank=True)
     mdocs = models.ForeignKey(Path, related_name='mdocs', on_delete=models.SET_NULL, null=True, blank=True)
     sums = models.ForeignKey(Path, related_name='sums', on_delete=models.SET_NULL, null=True, blank=True)

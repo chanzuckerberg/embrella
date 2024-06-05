@@ -18,15 +18,16 @@ class SetNextParameterMiddleware(MiddlewareMixin):
     """
     def process_view(self, request, view_func, view_args, view_kwargs):
         custom_page_url = reverse('custom:custom')
-        umbrella_url = reverse('admin:index')
+        admin = reverse('admin:index')
         # Print debug information
-        logger.info(f'Request Path: {request.path}')
-        logger.info(f'Request GET parameters: {request.GET}')
-        logger.info(f'Admin index URL: {umbrella_url}')
-        logger.info(f'Is user authenticated: {request.user.is_authenticated}')
+        logger.debug(f'Request Path: {request.path}')
+        logger.debug(f'custom page url: {custom_page_url}')
+        logger.debug(f'Request GET parameters: {request.GET}')
+        logger.debug(f'Admin index URL: {admin}')
+        logger.debug(f'Is user authenticated: {request.user.is_authenticated}')
 
         # Check if the user is authenticated and trying to access /umbrella/
-        if request.path == umbrella_url or request.path == '/umbrella/login/':
+        if request.path == custom_page_url or request.path == '/admin/login/':
             if not request.user.is_authenticated:
                 # Redirect to login page with next parameter set to custom_page
                 next_param = request.GET.get('next', '')
@@ -38,8 +39,5 @@ class SetNextParameterMiddleware(MiddlewareMixin):
             # If authenticated, proceed to the original umbrella page
             else:
                 return None
-
-        # If the request is not for the umbrella page, proceed as normal
-        return None
 
 
