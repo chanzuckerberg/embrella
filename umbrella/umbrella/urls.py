@@ -30,7 +30,7 @@ from django.urls import reverse
 urlpatterns = [
     path('', RedirectView.as_view(url='/admin/', permanent=True)),
     path('admin/', admin.site.urls, name='umbrella'),
-    path('predefined/', include('custom.urls'),name='custom_page'),
+    path('umbrella/', include('custom.urls'),name='custom_page'),
     path('projects/', include('projects.urls')),
     path('tem/', include('tem.urls')),
     path('processes/', include('processes.urls')),
