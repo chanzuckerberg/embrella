@@ -14,7 +14,7 @@
 <div class="container"> 
 <h2 class="text-center"><u>Session {{ data.name }}</u></h2><br>
 <div class="alert alert-info" role="alert">
-        ** Note: Please check the below file directory and store the data accordingly.
+        ** Note: Please review the file directory below and ensure the data is stored correctly.
 </div>
 <form action="{% url 'tem:detail' data.id %}" method="post">
 {% csrf_token %} 
