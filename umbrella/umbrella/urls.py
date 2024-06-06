@@ -28,15 +28,15 @@ from django.urls import reverse
 
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/umbrella/', permanent=True)),
-    path('umbrella/', admin.site.urls, name='umbrella'),
-    path('custom_page/', include('custom.urls'),name='custom_page'),
+    path('', RedirectView.as_view(url='/admin/', permanent=True)),
+    path('admin/', admin.site.urls, name='umbrella'),
+    path('umbrella/', include('custom.urls'),name='custom_page'),
     path('projects/', include('projects.urls')),
     path('tem/', include('tem.urls')),
     path('processes/', include('processes.urls')),
     path('ping/', ping),
-    path('umbrella/login/', auth_views.LoginView.as_view(), name='login'),
-    path('umbrella/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+    path('admin/login/', auth_views.LoginView.as_view(), name='login'),
+    path('admin/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
 ]
 
 
