@@ -28,9 +28,9 @@ from django.urls import reverse
 
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/admin/', permanent=True)),
-    path('admin/', admin.site.urls, name='umbrella'),
-    path('umbrella/', include('custom.urls'),name='custom_page'),
+    path('', RedirectView.as_view(url='/umbrella/', permanent=True)),
+    path('admin/', admin.site.urls, name='admin'),
+    path('umbrella/', include('custom.urls'),name='umbrella'),
     path('projects/', include('projects.urls')),
     path('tem/', include('tem.urls')),
     path('processes/', include('processes.urls')),
