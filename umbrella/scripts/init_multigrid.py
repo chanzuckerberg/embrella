@@ -19,7 +19,7 @@ def create_tem_static_path(data_type):
     if data_type in ['frames','sums','mdoc','parents','atlas']:
         instance = StaticPath.objects.create(
                 data_type=data_type,
-                static_path='/{workflow}/{session}/{run}/%s' % data_type,
+                static_path='/{workflow}/{msi_session}/{run}/%s' % data_type,
         )
     if data_type in ['satlas']:
         # screen atlas

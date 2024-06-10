@@ -141,7 +141,7 @@ class MsiSession(models.Model):
                                             {
                                                 'workflow': plan.imaging_workflow.workflow,
                                                 'scope': scope_name,
-                                                'session': self.name
+                                                'msi_session': self.name
                                           }
                                           )
             return out_path
@@ -172,7 +172,7 @@ class MsiSession(models.Model):
                                          {
                                              'workflow': plan.imaging_workflow.workflow,
                                              'scope': scope_name,
-                                             'session': self.name
+                                             'msi_session': self.name
                                          }
                                          )
         session_attr = getattr(self, 'get_session_%s_glob' % type_name)
@@ -180,7 +180,7 @@ class MsiSession(models.Model):
                                           {
                                               'workflow': plan.imaging_workflow.workflow,
                                               'scope': scope_name,
-                                              'session': self.name
+                                              'msi_session': self.name
                                           }
                                           )
         path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
