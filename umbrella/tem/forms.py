@@ -1,20 +1,20 @@
 from django.db import models
 from django.forms import ModelForm
-from .models import Session, ScreenSessionGroup
+from .models import MsiSession, ScreenSessionGroup
 
-class ReserveSessionForm(ModelForm):
+class ReserveMsiSessionForm(ModelForm):
     class Meta:
-        model = Session
+        model = MsiSession
         fields = ["session_plan","project","grid"]
 
-class SessionForm(ModelForm):
+class MsiSessionForm(ModelForm):
     class Meta:
-        model = Session
+        model = MsiSession
         fields = "__all__"
 
 class UpdateNotesForm(ModelForm):
     class Meta:
-        model = Session
+        model = MsiSession
         fields = ["notes"]
 
 class ReserveScreenSessionGroupForm(ModelForm):

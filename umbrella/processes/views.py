@@ -5,7 +5,7 @@ from django.urls import reverse
 from .forms import ProcRunForm, ReserveProcRunForm, UpdateNotesForm
 from . import models
 from processes.models import ProcRun, PipelinePlan, ProcSoftware
-from tem.models import Session
+from tem.models import MsiSession
 from django.core.serializers import serialize
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
@@ -53,14 +53,14 @@ def reserve_run(request):
 
 def create_run(request):
     plan_id=int(request.POST['proc_plan'])
-    session_id=int(request.POST['tomo_session'])
+    session_id=int(request.POST['msi_session'])
     # TODO suggest name with prefix
     #name = models.suggest_name('')
     name = 'test1'
     if request.method == 'POST':
         run_instance = ProcRun.objects.create(
                     name=name,
-                    tomo_session=Session.objects.get(pk=session_id),
+                    msi_session=MsiSession.objects.get(pk=session_id),
                     proc_plan=PipelinePlan.objects.get(pk=plan_id),
         )
         run_instance.save()

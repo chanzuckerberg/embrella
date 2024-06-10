@@ -1,5 +1,5 @@
 from django.db import models
-from tem.models import Session
+from tem.models import MsiSession
 from stores.models import StaticPath, PathType, Path
 '''
 from stores.models import DataRecord, 
@@ -35,7 +35,7 @@ class Task(models.Model):
         return '%d-%s' % (self.step,self.name)
 
 class ProcSoftware(models.Model):
-    name = models.CharField(max_length=32, default='AreTomo3')
+    name = models.CharField(max_length=32, default='aretomo3')
     version = models.CharField(max_length=32, default='2024-03-10')
     capable_tasks = models.ManyToManyField(Task,)
     callback_function = models.CharField(max_length=32, default='run_aretomo3')
@@ -52,6 +52,7 @@ class PipelinePlan(models.Model):
         return self.name
 
 class PlanPipe(models.Model):
+    name = models.CharField(max_length=32, default='voxelspacing10.000a')
     plan = models.ForeignKey(PipelinePlan, on_delete=models.CASCADE)
     step = models.PositiveSmallIntegerField(default=1)
     software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
@@ -61,7 +62,7 @@ class PlanPipe(models.Model):
 
 
     def __str__(self):
-        return 'plan %s pipe %d: %s with %d tasks' % (self.plan, self.step, self.software,self.tasks_performed.count())
+        return 'plan %s pipe %s: %s with %d tasks' % (self.plan, self.name, self.software,self.tasks_performed.count())
 
 class GlobalParam(models.Model):
     key = models.ForeignKey(MetaKey, on_delete=models.CASCADE)
@@ -81,7 +82,7 @@ class PipeParam(models.Model):
 class ProcRun(models.Model):
     name = models.CharField(max_length=20, default='1')
     proc_plan = models.ForeignKey(PipelinePlan, on_delete=models.CASCADE)
-    tomo_session = models.ForeignKey(Session, on_delete=models.CASCADE)
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)
     notes = models.TextField(max_length=255, blank=True, null=True)
     def __str__(self):
         return '%s-%s' % (self.proc_plan, self.name)
@@ -110,7 +111,12 @@ class RunPipeValue(models.Model):
         return 'pipe%d %s : %s' % (self.param.pipe.step, self.param.key.name,display_value)
 
 class RunPipeData(models.Model):
+    '''
+    Output data path record of the run
+    '''
     run = models.ForeignKey(ProcRun, on_delete=models.CASCADE)
     pipe = models.ForeignKey(PlanPipe, on_delete=models.CASCADE)
     path = models.ForeignKey(Path, on_delete=models.CASCADE, null=True)
 
+    def __str__(self):
+        return '%s %s: %s' % (self.run, self.pipe.name, self.path)

@@ -5,7 +5,7 @@ from .models import ProcRun
 class ReserveProcRunForm(ModelForm):
     class Meta:
         model = ProcRun
-        fields = ["proc_plan","tomo_session","name"]
+        fields = ["proc_plan","msi_session","name"]
 
 class ProcRunForm(ModelForm):
     class Meta:

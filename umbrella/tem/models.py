@@ -111,7 +111,10 @@ class SessionPlan(models.Model):
         app_label = 'tem'
 
 
-class Session(models.Model):
+class MsiSession(models.Model):
+    '''
+    Multi-scale imaging session
+    '''
     name = models.CharField(max_length=20, unique=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
@@ -189,7 +192,7 @@ class Session(models.Model):
         return p
 
     def __str__(self):
-        return self.get_session_sums_glob()
+        return 'msi %s' % self.name
 
 def parse_integer_order_list(text):
     return list((map((lambda x: int(x)), text.split(','))))
@@ -315,7 +318,7 @@ class UserBase(BaseModel):
 class ProjectBase(BaseModel):
     name: str
 
-class SessionBase(BaseModel):
+class MsiSessionBase(BaseModel):
     id: int
     name: str
     notes: str
@@ -327,7 +330,7 @@ class SessionBase(BaseModel):
     parents: PathInfo
     atlas: PathInfo
 
-def suggest_name(prefix, model_name='Session'):
+def suggest_name(prefix, model_name='MsiSession'):
     """
     Session based on prefix and then date format 24mar01.
     Make unique name by advancing to next in alphabet.
