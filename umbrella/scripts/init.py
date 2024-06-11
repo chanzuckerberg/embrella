@@ -45,7 +45,7 @@ def create_tem_static_path(data_type):
     if data_type in ['frames','sums','mdoc','parents','atlas']:
         instance = StaticPath.objects.create(
                 data_type=data_type,
-                static_path='/{workflow}/{session}/{run}/%s' % data_type,
+                static_path='/{workflow}/{msi_session}/{run}/%s' % data_type,
         )
     if data_type in ['satlas']:
         # screen atlas
@@ -62,23 +62,23 @@ def create_tomo5_plan(scope, camera):
     workflow = ImagingWorkflow.objects.create(imaging_mode='tem',workflow='tomo')
     frame_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('frames'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session}/{run}_{sequence}_{tilt}_*.eer',
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/{run}_{sequence}_{tilt}_*.eer',
     )
     sum_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('sums'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session}/Batch/{run}_Exposure.mrc',
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run}_Exposure.mrc',
     )
     mdoc_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('mdoc'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session}/{run}.mdoc',
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/{run}.mdoc',
     )
     parent_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('parents'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session}/Batch/{run}_Search.mrc',
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run}_Search.mrc',
     )
     atlas_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('atlas'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session}/SearchMaps/{SearchMap_{date}_{timestamp}.mrc',
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/SearchMaps/{SearchMap_{date}_{timestamp}.mrc',
     )
     software = Software.objects.create(name='tomo5',
                 frames=frame_path_type,

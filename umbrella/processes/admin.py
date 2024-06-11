@@ -12,4 +12,5 @@ admin.site.register(PipeParam)
 admin.site.register(ProcRun)
 admin.site.register(RunGlobalValue)
 admin.site.register(RunPipeValue)
+admin.site.register(RunPipeData)
 

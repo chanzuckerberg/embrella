@@ -2,13 +2,13 @@ from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from .forms import SessionForm, ReserveSessionForm, UpdateNotesForm
+from .forms import MsiSessionForm, ReserveMsiSessionForm, UpdateNotesForm
 from .forms import ScreenSessionGroupForm, ReserveScreenSessionGroupForm, UpdateOrderForm
 from . import models
-from .models import Session, SessionPlan, Software
+from .models import MsiSession, SessionPlan, Software
 from projects.models import Project
 from cryo_grids.models import CryoGrid, CryoGridCassette
-from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo, UserBase, ProjectBase, SessionBase
+from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo, UserBase, ProjectBase, MsiSessionBase
 from tem.models import ScreenSessionGroup, ScreenSession
 from django.core.serializers import serialize
 from django.core.exceptions import ValidationError
@@ -17,7 +17,7 @@ from django.http import JsonResponse
 import json
 
 def detail(request, session_id):
-    session = get_object_or_404(Session, pk=session_id)
+    session = get_object_or_404(MsiSession, pk=session_id)
     if request.method == 'POST':
         new_notes=request.POST['notes']
         session.notes = new_notes
@@ -50,12 +50,12 @@ def detail(request, session_id):
 
 def reserve_session(request):
     if request.method == 'POST':
-        form = ReserveSessionForm(request.POST)
+        form = ReserveMsiSessionForm(request.POST)
         name = models.suggest_name('t')
         plan_id=int(request.POST['session_plan'])
         return render(request, reverse("tem:create"))
     else:
-        form = ReserveSessionForm()
+        form = ReserveMsiSessionForm()
         return render(request, "tem/reserve.html", {"form": form})
 
 def create_session(request):
@@ -65,7 +65,7 @@ def create_session(request):
     # TODO suggest name with prefix
     name = models.suggest_name('')
     if request.method == 'POST':
-        session_instance = Session.objects.create(
+        session_instance = MsiSession.objects.create(
                     name=name,
                     user=request.user,
                     project=Project.objects.get(pk=project_id),
@@ -121,7 +121,7 @@ def reserve_scrn_session_group(request,error_msg=''):
 def _validate_order_list(cassette, order_list):
     valid = True
     for i in order_list:
-        grids=CryoGrid.objects.filter(grid_cassette=cassette,position_in_cassette=i)
+        grids=CryoGrid.objects.filter(grid_cassette=cassette,slot_number_in_cassette=i)
         if len(grids) != 1:
             return False
     return valid
@@ -154,7 +154,7 @@ def create_scrn_session_group(request):
         for i in order_list:
             # create screen session for each grid and make association with
             # the group 
-            grids=CryoGrid.objects.filter(grid_cassette=cassette,position_in_cassette=i)
+            grids=CryoGrid.objects.filter(grid_cassette=cassette,slot_number_in_cassette=i)
             _create_scrn_session(request.user, group_instance, grids[0])
     return HttpResponseRedirect(reverse('tem:scrndetail', args=(group_instance.id,)))
 
@@ -183,18 +183,18 @@ def get_all_sessions(request):
 
     # Fetch sessions and related stores_path records, filter by name if provided
     if session_name:
-        sessions = Session.objects.filter(name=session_name).select_related(
+        sessions = MsiSession.objects.filter(name=session_name).select_related(
             'grid', 'project', 'user', 'mdocs', 'sums', 'parents', 'atlas', 'frames'
         )
     else:
-        sessions = Session.objects.select_related(
+        sessions = MsiSession.objects.select_related(
             'grid', 'project', 'user', 'mdocs', 'sums', 'parents', 'atlas', 'frames'
         ).all()
 
     session_list = []
     for session in sessions:
         # Create Pydantic model instances
-        session_data = SessionBase(
+        session_data = MsiSessionBase(
             id=session.id,
             name=session.name,
             notes=session.notes,

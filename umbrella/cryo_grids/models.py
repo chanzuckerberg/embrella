@@ -64,10 +64,10 @@ class CryoGridBox(models.Model):
 class CryoGridCassette(models.Model):
     name = models.CharField(max_length=20, unique=True)
     numbering = models.CharField(max_length=3, choices=GRID_CASSETTE_NUMBERING, default='bot',help_text="numbering system on the cassette")
-    max_positions = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
+    max_slots = models.PositiveSmallIntegerField(default=12, null=True, blank=True,help_text="number of slots available for grids")
 
     def __str__(self):
-        return 'Cryo cassette %s with %s' % (self.name, self.get_numbering_display())
+        return 'Cryo cassette %s' % (self.name)
 
 class PlungeFreezingDevice(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -117,9 +117,9 @@ class PlungeFreezingPlan(models.Model):
         sample_str = ','.join(list(map((lambda x: x['name']),self.sample.values())))
         tag_str = ','.join(list(map((lambda x: x['name']),self.tags.values())))
         if tag_str:
-            return '%s with %s, id=%d' % (sample_str, tag_str, self.pk)
+            return '%s with %s' % (sample_str, tag_str)
         else:
-            return '%s without tag, id=%d' % (sample_str, self.pk)
+            return '%s without tag' % (sample_str)
 
 class CryoGrid(models.Model):
     create_on = models.DateField(auto_now_add=True)
@@ -131,15 +131,15 @@ class CryoGrid(models.Model):
     position_in_box = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
     clipped = models.BooleanField(default=False,help_text="Is this cryo-grid clipped ?")
     grid_cassette = models.ForeignKey(CryoGridCassette, on_delete=models.CASCADE, null=True, blank=True, help_text='choose a microscope grid loader cassette when in use')
-    position_in_cassette = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
+    slot_number_in_cassette = models.PositiveSmallIntegerField(default=1, null=True, blank=True, help_text='The slot the grid is put in the cryo cassette if exists')
     trashed = models.BooleanField(default=False,help_text="Is this cryo-grid discarded ?")
 
     class Meta:
         unique_together = ["name","freezing_session","freezing_plan"]
         constraints = [
             models.UniqueConstraint(fields=["grid_box","position_in_box"], name="unique_box_position", condition=models.Q(trashed=False), nulls_distinct=True),
-            models.UniqueConstraint(fields=["grid_cassette","position_in_cassette"], name="unique_cassette_position", condition=models.Q(trashed=False), nulls_distinct=True),
+            models.UniqueConstraint(fields=["grid_cassette","slot_number_in_cassette"], name="unique_cassette_slot", condition=models.Q(trashed=False), nulls_distinct=True),
         ]
         
     def __str__(self):
-        return '%s from %s of %s' % (self.name, self.freezing_session, self.freezing_plan)
+        return '%s (id=%d) from %s of %s' % (self.name, self.pk, self.freezing_session, self.freezing_plan)
