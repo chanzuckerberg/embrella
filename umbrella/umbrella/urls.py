@@ -17,19 +17,19 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from umbrella.ping import ping
-from django.conf import settings
-from django.conf.urls.static import static
 from django.views.generic import RedirectView
-from django.contrib.auth.views import LoginView
 from django.contrib.auth import views as auth_views
 
-from django.shortcuts import redirect
-from django.urls import reverse
+import google
 
+google.__path__.append('lib/google')
 
 urlpatterns = [
     path('', RedirectView.as_view(url='/umbrella/', permanent=True)),
     path('admin/', admin.site.urls, name='admin'),
+    path(
+        "google_sso/", include("django_google_sso.urls", namespace="django_google_sso")
+    ),
     path('umbrella/', include('custom.urls'),name='umbrella'),
     path('projects/', include('projects.urls')),
     path('tem/', include('tem.urls')),
