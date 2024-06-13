@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('googledoc', '0002_alter_drivefolder_name'),
+        ('clouddocs', '0002_alter_drivefolder_name'),
     ]
 
     operations = [

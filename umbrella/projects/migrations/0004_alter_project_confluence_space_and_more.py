@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('confluence', '0003_alter_space_name_page'),
-        ('googledoc', '0003_alter_drivefolder_name'),
+        ('clouddocs', '0003_alter_drivefolder_name'),
         ('projects', '0003_project_description_alter_project_name'),
     ]
 
@@ -21,6 +21,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='project',
             name='google_drive_folder',
-            field=models.ForeignKey(blank=True, on_delete=django.db.models.deletion.PROTECT, to='googledoc.drivefolder'),
+            field=models.ForeignKey(blank=True, on_delete=django.db.models.deletion.PROTECT, to='clouddocs.drivefolder'),
         ),
     ]

@@ -1,6 +1,6 @@
 from django.db import models
 from confluence.models import Space
-from googledoc.models import DriveFolder
+from clouddocs.models import DriveFolder
 
 # Create your models here.
 class Project(models.Model):
