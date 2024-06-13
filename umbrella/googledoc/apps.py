@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class GoogleConfig(AppConfig):
+class GoogledocConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'google'
+    name = 'googledoc'

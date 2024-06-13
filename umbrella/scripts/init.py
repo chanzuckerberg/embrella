@@ -8,7 +8,7 @@ django.setup()
 #from cryo_grids.models import Site, Dewar, Cane, Puck, CryoGridBox, Sample
 from cryo_grids.models import *
 from tem.models import *
-from google.models import DriveFolder
+from googledoc.models import DriveFolder
 from confluence.models import Space
 from projects.models import Project
 from stores.models import StaticPath,PathType, fill_place_holders

@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('confluence', '0001_initial'),
-        ('google', '0001_initial'),
+        ('googledoc', '0001_initial'),
     ]
 
     operations = [
@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(choices=[('BD01', 'BD01 Human Organelle Library'), ('TRD05', 'TRD05 Data Integration')], default='TRD05', max_length=6, unique=True)),
                 ('confluence_space', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='confluence.space')),
-                ('google_drive_folder', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='google.drivefolder')),
+                ('google_drive_folder', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='googledoc.drivefolder')),
             ],
         ),
     ]
