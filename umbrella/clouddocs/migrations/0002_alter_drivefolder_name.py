@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('google', '0001_initial'),
+        ('clouddocs', '0001_initial'),
     ]
 
     operations = [

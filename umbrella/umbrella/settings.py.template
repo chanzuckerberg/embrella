@@ -38,7 +38,7 @@ STATICFILES_DIRS = [
 
 INSTALLED_APPS = [
     'confluence',
-    'google',
+    'clouddocs',
     'cryo_grids',
     'projects',
     'tem',

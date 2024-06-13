@@ -22,8 +22,6 @@ from django.contrib.auth import views as auth_views
 
 import google
 
-google.__path__.append('lib/google')
-
 urlpatterns = [
     path('', RedirectView.as_view(url='/umbrella/', permanent=True)),
     path('admin/', admin.site.urls, name='admin'),
