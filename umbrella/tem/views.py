@@ -5,6 +5,7 @@ from django.urls import reverse
 from .forms import MsiSessionForm, ReserveMsiSessionForm, UpdateNotesForm
 from .forms import ScreenSessionGroupForm, ReserveScreenSessionGroupForm, UpdateOrderForm
 from . import models
+from stores.models import Path
 from .models import MsiSession, SessionPlan, Software
 from projects.models import Project
 from cryo_grids.models import CryoGrid, CryoGridCassette
@@ -20,11 +21,18 @@ def detail(request, session_id):
     session = get_object_or_404(MsiSession, pk=session_id)
     if request.method == 'POST':
         new_notes=request.POST['notes']
+        new_grid_session=request.POST['grid_session']
         session.notes = new_notes
+        if new_grid_session:
+            session.grid_session = ScreenSession.objects.get(pk=new_grid_session)
+        else:
+            session.grid_session = None
         session.save()
     field_objs = session._meta.get_fields()
     fields = {}
     for f in field_objs:
+        if f.related_model == Path:
+            continue
         try:
             fields[f.name] = getattr(session, f.name)
         except AttributeError:
@@ -65,21 +73,26 @@ def create_session(request):
     # TODO suggest name with prefix
     name = models.suggest_name('')
     if request.method == 'POST':
+        grid_instance = CryoGrid.objects.get(pk=grid_id)
         session_instance = MsiSession.objects.create(
                     name=name,
                     user=request.user,
                     project=Project.objects.get(pk=project_id),
-                    grid=CryoGrid.objects.get(pk=grid_id),
+                    grid=grid_instance,
                     session_plan=SessionPlan.objects.get(pk=plan_id),
         )
         session_instance.save()
         my_pk = session_instance.id
+        # default to the latest screening grid if available
+        grid_session = ScreenSession.objects.filter(grid=grid_instance).last()
+        session_instance.grid_session = grid_session
         path_dicts = {}
         session_instance.frames = session_instance.get_session_path('frames')
         session_instance.sums = session_instance.get_session_path('sums')
         session_instance.mdocs = session_instance.get_session_path('mdocs')
         session_instance.parents = session_instance.get_session_path('parents')
-        session_instance.atlas = session_instance.get_session_path('atlas')
+        if grid_session:
+            session_instance.atlas = grid_session.atlas
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
@@ -163,7 +176,6 @@ def _create_scrn_session(user,group_instance,grid):
     name = models.suggest_scrn_session_name('',group_instance)
     session_instance = ScreenSession.objects.create(
                     name=name,
-                    user=user,
                     grid=grid,
                     group=group_instance,
     )

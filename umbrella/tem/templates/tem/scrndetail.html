@@ -36,7 +36,6 @@
 	<tr>
 		<th>screening</th> 
 		<th>grid</th> 
-		<th>project</th> 
 		<th>quality</th> 
 	</tr> 
 	</thead> 
@@ -45,7 +44,6 @@
 	<tr> 
 	    <td><a href= "{% url 'admin:tem_screensession_change' s.id %}">{{ s }}</a></td>
 	    <td><a href= "{% url 'admin:cryo_grids_cryogrid_change' s.grid.id %}">{{ s.grid }} </a></td>
-        <td> {{ s.grid.project }}</td>
         <td> {{ s.quality }}</td>
 	</tr> 
 	{% endfor %} 

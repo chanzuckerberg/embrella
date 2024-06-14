@@ -32,6 +32,8 @@
     <!-- add link for grid -->
     {% if f == "grid" %}
 		<td><a href="{% url 'admin:cryo_grids_cryogrid_change' v.id %}">{{ v }}</a></td> 
+    {% elif f == "grid_session" and v %}
+	    <td><a href= "{% url 'admin:tem_screensession_change' v.id %}">{{ v }}</a></td>
     {% else %}
         <td>{{ v }}</td>
     {% endif %}

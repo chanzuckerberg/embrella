@@ -110,93 +110,6 @@ class SessionPlan(models.Model):
     class Meta:
         app_label = 'tem'
 
-
-class MsiSession(models.Model):
-    '''
-    Multi-scale imaging session
-    '''
-    name = models.CharField(max_length=20, unique=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
-    session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
-    grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
-    notes = models.TextField(max_length=255, blank=True, null=True)
-    frames = models.ForeignKey(Path, related_name='frames', on_delete=models.SET_NULL, null=True, blank=True)
-    mdocs = models.ForeignKey(Path, related_name='mdocs', on_delete=models.SET_NULL, null=True, blank=True)
-    sums = models.ForeignKey(Path, related_name='sums', on_delete=models.SET_NULL, null=True, blank=True)
-    parents = models.ForeignKey(Path, related_name='parents', on_delete=models.SET_NULL, null=True, blank=True)
-    atlas = models.ForeignKey(Path, related_name='atlas', on_delete=models.SET_NULL, null=True, blank=True)
-
-    class Meta:
-        app_label = 'tem'
-
-    def _get_session_glob(self, path_type):
-        plan = self.session_plan
-        scope_name = plan.scope.name
-        my_attr = getattr(plan.software, path_type)
-        if not my_attr:
-            out_path = '.'
-        else:
-            out_path = fill_place_holders(my_attr.overlay_path,
-                                            {
-                                                'workflow': plan.imaging_workflow.workflow,
-                                                'scope': scope_name,
-                                                'msi_session': self.name
-                                          }
-                                          )
-            return out_path
-
-    def get_session_frames_glob(self):
-        return self._get_session_glob('frames')
-
-    def get_session_mdocs_glob(self):
-        return self._get_session_glob('mdocs')
-
-    def get_session_sums_glob(self):
-        return self._get_session_glob('sums')
-
-    def get_session_parents_glob(self):
-        return self._get_session_glob('parents')
-
-    def get_session_atlas_glob(self):
-        return self._get_session_glob('atlas')
-
-    def get_session_path(self, type_name='frames'):
-        """
-        Use session_plan and software to update session path by replacing place holders
-        """
-        plan = self.session_plan
-        scope_name = plan.scope.name
-        path_obj = getattr(plan.software, type_name)
-        static_path = fill_place_holders(path_obj.static_path.static_path,
-                                         {
-                                             'workflow': plan.imaging_workflow.workflow,
-                                             'scope': scope_name,
-                                             'msi_session': self.name
-                                         }
-                                         )
-        session_attr = getattr(self, 'get_session_%s_glob' % type_name)
-        overlay_path = fill_place_holders(session_attr(),
-                                          {
-                                              'workflow': plan.imaging_workflow.workflow,
-                                              'scope': scope_name,
-                                              'msi_session': self.name
-                                          }
-                                          )
-        path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
-        if not path_set:
-            p = Path(overlay_path=overlay_path, static_path=static_path)
-            p.save()
-        else:
-            p = path_set[0]
-        return p
-
-    def __str__(self):
-        return 'msi %s' % self.name
-
-def parse_integer_order_list(text):
-    return list((map((lambda x: int(x)), text.split(','))))
-
 class ScreenSessionGroup(models.Model):
     """
     A grouping of screening on grids. It is identified by the cassette
@@ -225,8 +138,6 @@ class ScreenSession(models.Model):
     name = models.CharField(max_length=20, unique=False, help_text="software-dependent name for the screen session for the grid")
     group = models.ForeignKey(ScreenSessionGroup, on_delete=models.CASCADE)
     order_in_screen = models.PositiveSmallIntegerField(default=1)
-    project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
     atlas = models.ForeignKey(Path, related_name='screenatlas', on_delete=models.SET_NULL, null=True)
     quality = models.SmallIntegerField(
@@ -290,6 +201,98 @@ class ScreenSession(models.Model):
 
     def __str__(self):
         return '/scrn/%s/%s/' % (self.group.name,self.name)
+
+
+class MsiSession(models.Model):
+    '''
+    Multi-scale imaging session
+    '''
+    name = models.CharField(max_length=20, unique=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
+    session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
+    grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
+    notes = models.TextField(max_length=255, blank=True, null=True)
+    frames = models.ForeignKey(Path, related_name='frames', on_delete=models.SET_NULL, null=True, blank=True)
+    mdocs = models.ForeignKey(Path, related_name='mdocs', on_delete=models.SET_NULL, null=True, blank=True)
+    sums = models.ForeignKey(Path, related_name='sums', on_delete=models.SET_NULL, null=True, blank=True)
+    parents = models.ForeignKey(Path, related_name='parents', on_delete=models.SET_NULL, null=True, blank=True)
+    atlas = models.ForeignKey(Path, related_name='atlas', on_delete=models.SET_NULL, null=True, blank=True)
+    grid_session = models.ForeignKey(ScreenSession, on_delete=models.SET_NULL, null=True,blank=True, help_text='Seperate grid screen atlas if exists')
+
+    class Meta:
+        app_label = 'tem'
+
+    def _get_session_glob(self, path_type):
+        plan = self.session_plan
+        scope_name = plan.scope.name
+        my_attr = getattr(plan.software, path_type)
+        if not my_attr:
+            out_path = '.'
+        else:
+            out_path = fill_place_holders(my_attr.overlay_path,
+                                            {
+                                                'workflow': plan.imaging_workflow.workflow,
+                                                'scope': scope_name,
+                                                'msi_session': self.name
+                                          }
+                                          )
+            return out_path
+
+    def get_session_frames_glob(self):
+        return self._get_session_glob('frames')
+
+    def get_session_mdocs_glob(self):
+        return self._get_session_glob('mdocs')
+
+    def get_session_sums_glob(self):
+        return self._get_session_glob('sums')
+
+    def get_session_parents_glob(self):
+        return self._get_session_glob('parents')
+
+    def get_session_atlas_glob(self):
+        if self.grid_session:
+            # grid screening of this grid exists
+            return self.grid_session._get_session_glob('atlas')
+        else:
+            return self._get_session_glob('atlas')
+
+    def get_session_path(self, type_name='frames'):
+        """
+        Use session_plan and software to update session path by replacing place holders
+        """
+        plan = self.session_plan
+        scope_name = plan.scope.name
+        path_obj = getattr(plan.software, type_name)
+        static_path = fill_place_holders(path_obj.static_path.static_path,
+                                         {
+                                             'workflow': plan.imaging_workflow.workflow,
+                                             'scope': scope_name,
+                                             'msi_session': self.name
+                                         }
+                                         )
+        session_attr = getattr(self, 'get_session_%s_glob' % type_name)
+        overlay_path = fill_place_holders(session_attr(),
+                                          {
+                                              'workflow': plan.imaging_workflow.workflow,
+                                              'scope': scope_name,
+                                              'msi_session': self.name
+                                          }
+                                          )
+        path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
+        if not path_set:
+            p = Path(overlay_path=overlay_path, static_path=static_path)
+            p.save()
+        else:
+            p = path_set[0]
+        return p
+
+    def __str__(self):
+        return 'msi %s' % self.name
+
+def parse_integer_order_list(text):
+    return list((map((lambda x: int(x)), text.split(','))))
 
 class PathInfo(BaseModel):
     static_path: str | None
@@ -363,7 +366,6 @@ def suggest_name(prefix, model_name='MsiSession'):
             raise
 
 def suggest_scrn_session_name(prefix,group_instance):
-    print(group_instance)
     model_instance = ScreenSession
     used_names = list(map((lambda x: x.name), model_instance.objects.filter(Q(group=group_instance,name__startswith=prefix))))
     software = group_instance.session_plan.software
