@@ -219,6 +219,8 @@ class MsiSession(models.Model):
     parents = models.ForeignKey(Path, related_name='parents', on_delete=models.SET_NULL, null=True, blank=True)
     atlas = models.ForeignKey(Path, related_name='atlas', on_delete=models.SET_NULL, null=True, blank=True)
     atlas_session = models.ForeignKey(AtlasSession, on_delete=models.SET_NULL, null=True,blank=True, help_text='link a seperate grid screen atlas if exists')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = 'tem'
