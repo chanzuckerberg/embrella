@@ -129,7 +129,7 @@ class ScreenSessionGroup(models.Model):
     def __str__(self):
         return '%s - Screening of %s' % (self.name, self.cassette)
 
-class ScreenSession(models.Model):
+class AtlasSession(models.Model):
     """
     A tem session which purpose is to assess the quality of the grid.
     Currently only record atlas path.
@@ -160,7 +160,7 @@ class ScreenSession(models.Model):
             'workflow': plan.imaging_workflow.workflow,
             'scope': scope_name,
             'session_group': self.group.name,
-            'grid_session': self.name,
+            'atlas_session': self.name,
         }
         return mapping
 
@@ -218,7 +218,7 @@ class MsiSession(models.Model):
     sums = models.ForeignKey(Path, related_name='sums', on_delete=models.SET_NULL, null=True, blank=True)
     parents = models.ForeignKey(Path, related_name='parents', on_delete=models.SET_NULL, null=True, blank=True)
     atlas = models.ForeignKey(Path, related_name='atlas', on_delete=models.SET_NULL, null=True, blank=True)
-    grid_session = models.ForeignKey(ScreenSession, on_delete=models.SET_NULL, null=True,blank=True, help_text='Seperate grid screen atlas if exists')
+    atlas_session = models.ForeignKey(AtlasSession, on_delete=models.SET_NULL, null=True,blank=True, help_text='link a seperate grid screen atlas if exists')
 
     class Meta:
         app_label = 'tem'
@@ -252,9 +252,9 @@ class MsiSession(models.Model):
         return self._get_session_glob('parents')
 
     def get_session_atlas_glob(self):
-        if self.grid_session:
+        if self.atlas_session:
             # grid screening of this grid exists
-            return self.grid_session._get_session_glob('atlas')
+            return self.atlas_session._get_session_glob('atlas')
         else:
             return self._get_session_glob('atlas')
 
@@ -366,11 +366,11 @@ def suggest_name(prefix, model_name='MsiSession'):
             raise
 
 def suggest_scrn_session_name(prefix,group_instance):
-    model_instance = ScreenSession
+    model_instance = AtlasSession
     used_names = list(map((lambda x: x.name), model_instance.objects.filter(Q(group=group_instance,name__startswith=prefix))))
     software = group_instance.session_plan.software
     # TODO need to find a way to decide whether names are defined as Sample%d
     if software.name == 'tfs multi-grid':
         return 'Sample%d' % (len(used_names)+1,)
     else:
-        return suggest_name(prefix, model_name='ScreenSession')
+        return suggest_name(prefix, model_name='AtlasSession')

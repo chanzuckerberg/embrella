@@ -10,7 +10,7 @@ from .models import MsiSession, SessionPlan, Software
 from projects.models import Project
 from cryo_grids.models import CryoGrid, CryoGridCassette
 from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo, UserBase, ProjectBase, MsiSessionBase
-from tem.models import ScreenSessionGroup, ScreenSession
+from tem.models import ScreenSessionGroup, AtlasSession
 from django.core.serializers import serialize
 from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_http_methods
@@ -21,12 +21,12 @@ def detail(request, session_id):
     session = get_object_or_404(MsiSession, pk=session_id)
     if request.method == 'POST':
         new_notes=request.POST['notes']
-        new_grid_session=request.POST['grid_session']
+        new_atlas_session=request.POST['atlas_session']
         session.notes = new_notes
-        if new_grid_session:
-            session.grid_session = ScreenSession.objects.get(pk=new_grid_session)
+        if new_atlas_session:
+            session.atlas_session = AtlasSession.objects.get(pk=new_atlas_session)
         else:
-            session.grid_session = None
+            session.atlas_session = None
         session.save()
     field_objs = session._meta.get_fields()
     fields = {}
@@ -83,16 +83,16 @@ def create_session(request):
         )
         session_instance.save()
         my_pk = session_instance.id
-        # default to the latest screening grid if available
-        grid_session = ScreenSession.objects.filter(grid=grid_instance).last()
-        session_instance.grid_session = grid_session
+        # default to the latest screening grid atlas if available
+        atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
+        session_instance.atlas_session = atlas_session
         path_dicts = {}
         session_instance.frames = session_instance.get_session_path('frames')
         session_instance.sums = session_instance.get_session_path('sums')
         session_instance.mdocs = session_instance.get_session_path('mdocs')
         session_instance.parents = session_instance.get_session_path('parents')
-        if grid_session:
-            session_instance.atlas = grid_session.atlas
+        if atlas_session:
+            session_instance.atlas = atlas_session.atlas
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
@@ -114,7 +114,7 @@ def scrn_group_detail(request, scrn_group_id):
             continue
     order_list = models.parse_integer_order_list(session_group.order)
     scrn_sessions = []
-    scrn_sessions = ScreenSession.objects.filter(
+    scrn_sessions = AtlasSession.objects.filter(
             group=session_group,
     ).order_by("order_in_screen")
     context = {
@@ -174,7 +174,7 @@ def create_scrn_session_group(request):
 def _create_scrn_session(user,group_instance,grid):
     plan = group_instance.session_plan
     name = models.suggest_scrn_session_name('',group_instance)
-    session_instance = ScreenSession.objects.create(
+    session_instance = AtlasSession.objects.create(
                     name=name,
                     grid=grid,
                     group=group_instance,

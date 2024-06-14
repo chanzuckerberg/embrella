@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import Microscope, Camera, ImagingWorkflow, Software, SessionPlan, MsiSession
-from .models import ScreenSessionGroup, ScreenSession
+from .models import ScreenSessionGroup, AtlasSession
 
 # Register your models here.
 admin.site.register(Microscope)
@@ -10,4 +10,4 @@ admin.site.register(Software)
 admin.site.register(SessionPlan)
 admin.site.register(MsiSession)
 admin.site.register(ScreenSessionGroup)
-admin.site.register(ScreenSession)
+admin.site.register(AtlasSession)
