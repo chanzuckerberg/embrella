@@ -16,10 +16,15 @@ def get_scope_camera():
     return scope, camera
 
 def create_tem_static_path(data_type):
-    if data_type in ['frames','sums','mdoc','parents','atlas']:
+    if data_type in ['frames','sums','mdoc','parents']:
         instance = StaticPath.objects.create(
                 data_type=data_type,
                 static_path='/{workflow}/{msi_session}/{run}/%s' % data_type,
+        )
+    if data_type in ['atlas']:
+        instance = StaticPath.objects.create(
+            data_type=data_type,
+            static_path='/{msi_session}/{run}/%s' % data_type,
         )
     if data_type in ['satlas']:
         # screen atlas

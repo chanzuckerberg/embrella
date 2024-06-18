@@ -255,6 +255,7 @@ class MsiSession(models.Model):
         return self._get_session_glob('parents')
 
     def get_session_atlas_glob(self):
+        print(self._get_session_glob('atlas'))
         if self.atlas_session:
             # grid screening of this grid exists
             return self.atlas_session._get_session_glob('atlas')
