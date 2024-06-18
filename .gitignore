@@ -8,6 +8,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+.idea/
 build/
 develop-eggs/
 dist/
@@ -162,3 +163,5 @@ cython_debug/
 #umbrella-django
 umbrella/umbrella/settings.py
 .DS_Store
+# Ignore specific file
+../.idea/workspace.xml
