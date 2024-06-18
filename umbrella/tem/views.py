@@ -5,7 +5,7 @@ from django.urls import reverse
 from .forms import MsiSessionForm, ReserveMsiSessionForm, UpdateNotesForm
 from .forms import ScreenSessionGroupForm, ReserveScreenSessionGroupForm, UpdateOrderForm
 from . import models
-from .models import User
+from .models import User, CryoGrid
 from stores.models import Path
 from .models import MsiSession, SessionPlan, Software
 from projects.models import Project

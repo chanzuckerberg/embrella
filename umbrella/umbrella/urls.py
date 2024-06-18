@@ -17,10 +17,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from umbrella.ping import ping
+from umbrella.get_grids_by_user import get_grids_by_user
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
-
 import google
+
 
 urlpatterns = [
     path('', RedirectView.as_view(url='/umbrella/', permanent=True)),
@@ -35,10 +36,12 @@ urlpatterns = [
     path('ping/', ping),
     path('admin/login/', auth_views.LoginView.as_view(), name='login'),
     path('admin/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+    path('get_grids_by_user/', get_grids_by_user, name='get_grids_by_user'),
 ]
 
 
 # change header name
 admin.site.site_header = 'Lab auto workflow'
 admin.site.site_title = 'Lab auto workflow'
+
 

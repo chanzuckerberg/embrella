@@ -57,17 +57,22 @@
     input[type="submit"]:hover {
       background-color: #0056b3;
     }
+    .warning {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2 class="text-center"><u>Create TEM Multi-Scaled Imaging Session</u></h2><br>
-    <form action="{% url 'tem:create' %}" method="post">
+    <form id="sessionForm" action="{% url 'tem:create' %}" method="post">
       {% csrf_token %}
       <div class="row form-group">
         <div class="col-md-12">
           <label for="session_plan">Session Plan</label>
-          <select id="session_plan" name="session_plan">
+          <select id="session_plan" name="session_plan" required>
             {% for option in form.session_plan.field.choices %}
               <option value="{{ option.0 }}" {% if option.0 == form.session_plan.value %}selected{% endif %}>
                 {{ option.1 }}
@@ -79,7 +84,7 @@
       <div class="row form-group">
         <div class="col-md-12">
           <label for="project">Project</label>
-          <select id="project" name="project">
+          <select id="project" name="project" required>
             {% for option in form.project.field.choices %}
               <option value="{{ option.0 }}" {% if option.0 == form.project.value %}selected{% endif %}>
                 {{ option.1 }}
@@ -91,7 +96,7 @@
       <div class="row form-group">
         <div class="col-md-6">
           <label for="grid">Grid</label>
-          <select id="grid" name="grid">
+          <select id="grid" name="grid" required>
             {% for option in form.grid.field.choices %}
               <option value="{{ option.0 }}" {% if option.0 == form.grid.value %}selected{% endif %}>
                 {{ option.1 }}
@@ -112,6 +117,45 @@
       </div>
       <input type="submit" value="Create a session name">
     </form>
+    <div class="warning" id="warningMessage" style="display: none;">
+      Please fill out all required fields.
+    </div>
   </div>
+
+  <!-- Include the script here -->
+  <script>
+    $(document).ready(function() {
+      $('#user').change(function() {
+          var userId = $(this).val();
+          $.ajax({
+              url: "{% url 'get_grids_by_user' %}",
+              data: {
+                  'user_id': userId
+              },
+              success: function(data) {
+                  var $grid = $('#grid');
+                  $grid.empty();
+                  $grid.append('<option value="">Select a grid</option>');
+                  $.each(data, function(index, item) {
+                      $grid.append('<option value="' + item.id + '">' + item.name + '</option>');
+                  });
+              }
+          });
+      });
+
+      $('#sessionForm').submit(function(event) {
+        var sessionPlan = $('#session_plan').val();
+        var project = $('#project').val();
+        var grid = $('#grid').val();
+
+        if (!sessionPlan || !project || !grid) {
+          event.preventDefault();
+          $('#warningMessage').show();
+        } else {
+          $('#warningMessage').hide();
+        }
+      });
+    });
+  </script>
 </body>
 </html>
