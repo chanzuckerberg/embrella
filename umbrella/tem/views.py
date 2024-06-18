@@ -89,6 +89,7 @@ def create_session(request):
         atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
         session_instance.atlas_session = atlas_session
         path_dicts = {}
+        print(session_instance)
         session_instance.frames = session_instance.get_session_path('frames')
         session_instance.sums = session_instance.get_session_path('sums')
         session_instance.mdocs = session_instance.get_session_path('mdocs')
