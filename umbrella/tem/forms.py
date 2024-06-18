@@ -1,11 +1,13 @@
 from django.db import models
 from django.forms import ModelForm
-from .models import MsiSession, ScreenSessionGroup
-
+from .models import MsiSession, ScreenSessionGroup, User
+from django import forms
 class ReserveMsiSessionForm(ModelForm):
+    user = forms.ModelChoiceField(queryset=User.objects.all())
+
     class Meta:
         model = MsiSession
-        fields = ["session_plan","project","grid"]
+        fields = ["session_plan", "project", "grid", "user"]
 
 class MsiSessionForm(ModelForm):
     class Meta:

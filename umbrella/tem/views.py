@@ -5,6 +5,7 @@ from django.urls import reverse
 from .forms import MsiSessionForm, ReserveMsiSessionForm, UpdateNotesForm
 from .forms import ScreenSessionGroupForm, ReserveScreenSessionGroupForm, UpdateOrderForm
 from . import models
+from .models import User
 from stores.models import Path
 from .models import MsiSession, SessionPlan, Software
 from projects.models import Project
@@ -57,6 +58,7 @@ def detail(request, session_id):
     return render(request, "tem/detail.html", context)
 
 def reserve_session(request):
+    print(request.method)
     if request.method == 'POST':
         form = ReserveMsiSessionForm(request.POST)
         name = models.suggest_name('t')
@@ -77,7 +79,6 @@ def create_session(request):
         # print(request.user)
         session_instance = MsiSession.objects.create(
                     name=name,
-                    # user=request.user,
                     project=Project.objects.get(pk=project_id),
                     grid=grid_instance,
                     session_plan=SessionPlan.objects.get(pk=plan_id),

@@ -93,17 +93,20 @@
           <label for="grid">Grid</label>
           <select id="grid" name="grid">
             {% for option in form.grid.field.choices %}
-              <option value="{{ option.0 }}" data-user-created="{{ option.2 }}" data-recent="{{ option.3 }}" {% if option.0 == form.grid.value %}selected{% endif %}>
+              <option value="{{ option.0 }}" {% if option.0 == form.grid.value %}selected{% endif %}>
                 {{ option.1 }}
               </option>
             {% endfor %}
           </select>
         </div>
         <div class="col-md-6">
-          <label for="filter">Filter</label>
-          <select id="filter" name="filter">
-            <option value="user">User</option>
-            <option value="time">Time</option>
+          <label for="user">Filter by user</label>
+          <select id="user" name="user">
+            {% for option in form.user.field.choices %}
+              <option value="{{ option.0 }}" {% if option.0 == form.user.value %}selected{% endif %}>
+                {{ option.1 }}
+              </option>
+            {% endfor %}
           </select>
         </div>
       </div>
