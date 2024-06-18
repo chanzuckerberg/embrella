@@ -1,21 +1,114 @@
-<html lang="en"> 
-<head> 
-<title>Create Session</title> 
-<meta charset="utf-8"> 
-<meta name="viewport" content="width=device-width, initial-scale=1"> 
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"> 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script> 
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script> 
-</head> 
-<body> 
-<div class="container"> 
-<h2 class="text-center"><u>Create TEM Multi-Scaled Imaging Session</u></h2><br>
-<form action="{% url 'tem:create' %}" method="post">
-{% csrf_token %} 
-{{ form }}
-<input type="submit" value="Create a session name">
-</form>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create Session</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      margin-top: 50px;
+      max-width: 1000px;
+      padding: 50px;
+      background-color: #ffffff;
+      box-shadow: 0px 0px 25px rgba(0,0,0,0.1);
+      border-radius: 12px;
+    }
+    h2 {
+      color: #007bff;
+      font-size: 32px;
+    }
+    form {
+      margin-top: 30px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+      color: #333;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ced4da;
+      font-size: 16px;
+    }
+    input[type="submit"] {
+      width: 50%;
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      display: block;
+      margin: 0 auto;
+    }
+    input[type="submit"]:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="text-center"><u>Create TEM Multi-Scaled Imaging Session</u></h2><br>
+    <form action="{% url 'tem:create' %}" method="post">
+      {% csrf_token %}
+      <div class="row form-group">
+        <div class="col-md-12">
+          <label for="session_plan">Session Plan</label>
+          <select id="session_plan" name="session_plan">
+            {% for option in form.session_plan.field.choices %}
+              <option value="{{ option.0 }}" {% if option.0 == form.session_plan.value %}selected{% endif %}>
+                {{ option.1 }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="row form-group">
+        <div class="col-md-12">
+          <label for="project">Project</label>
+          <select id="project" name="project">
+            {% for option in form.project.field.choices %}
+              <option value="{{ option.0 }}" {% if option.0 == form.project.value %}selected{% endif %}>
+                {{ option.1 }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="row form-group">
+        <div class="col-md-6">
+          <label for="grid">Grid</label>
+          <select id="grid" name="grid">
+            {% for option in form.grid.field.choices %}
+              <option value="{{ option.0 }}" data-user-created="{{ option.2 }}" data-recent="{{ option.3 }}" {% if option.0 == form.grid.value %}selected{% endif %}>
+                {{ option.1 }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="filter">Filter</label>
+          <select id="filter" name="filter">
+            <option value="user">User</option>
+            <option value="time">Time</option>
+          </select>
+        </div>
+      </div>
+      <input type="submit" value="Create a session name">
+    </form>
+  </div>
 </body>
 </html>

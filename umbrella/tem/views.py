@@ -74,9 +74,10 @@ def create_session(request):
     name = models.suggest_name('')
     if request.method == 'POST':
         grid_instance = CryoGrid.objects.get(pk=grid_id)
+        # print(request.user)
         session_instance = MsiSession.objects.create(
                     name=name,
-                    user=request.user,
+                    # user=request.user,
                     project=Project.objects.get(pk=project_id),
                     grid=grid_instance,
                     session_plan=SessionPlan.objects.get(pk=plan_id),
