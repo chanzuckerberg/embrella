@@ -78,7 +78,7 @@ def create_tomo5_plan(scope, camera):
     )
     atlas_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('atlas'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/SearchMaps/{SearchMap_{date}_{timestamp}.mrc',
+                overlay_path='/hpc/instruments/czii.krios1/OffloadData/{msi_session}/{Sample}/Atlas/'
     )
     software = Software.objects.create(name='tomo5',
                 frames=frame_path_type,

@@ -7,6 +7,7 @@ from projects.models import Project
 from cryo_grids.models import CryoGrid, CryoGridCassette
 from stores.models import Path, PathType, fill_place_holders
 import sys
+from django.utils import timezone
 import os
 import time
 import string
@@ -219,6 +220,8 @@ class MsiSession(models.Model):
     parents = models.ForeignKey(Path, related_name='parents', on_delete=models.SET_NULL, null=True, blank=True)
     atlas = models.ForeignKey(Path, related_name='atlas', on_delete=models.SET_NULL, null=True, blank=True)
     atlas_session = models.ForeignKey(AtlasSession, on_delete=models.SET_NULL, null=True,blank=True, help_text='link a seperate grid screen atlas if exists')
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    updated_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         app_label = 'tem'
