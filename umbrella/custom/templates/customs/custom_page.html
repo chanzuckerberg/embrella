@@ -1,135 +1,160 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Umbrella Home</title>
+    <title>Embrella Home</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
             margin: 0;
             padding: 20px;
+            color: #333;
         }
         h1 {
-            color: #333;
+            color: #444;
+            text-align: center;
+        }
+        h2 {
+            color: #555;
+            margin-top: 40px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
         }
         table {
             border-collapse: collapse;
-            border: 0;
-            width: 934px;
-            background-color: #E7E8E8;
-            box-shadow: 1px 2px 3px #ccc;
+            width: 100%;
+            margin: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
         }
         th {
-            background-color: #999;
-            padding: 10px;
-            border: 1px solid #666;
+            background-color: #f4f4f4;
         }
         td {
-            padding: 10px;
-            border: 1px solid #666;
+            background-color: #fcfcfc;
         }
-
         .button {
             display: inline-block;
-            padding: 10px 20px;
+            padding: 12px 25px;
             font-size: 16px;
             cursor: pointer;
             text-align: center;
             text-decoration: none;
-            outline: none;
             color: #fff;
-            background-color: #08a4a4;
+            background-color: #17a2b8;
             border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px #999;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background-color 0.3s ease;
         }
-        .button:hover {background-color: #077F7F}
+        .button:hover {
+            background-color: #138f99;
+        }
         .button:active {
-            background-color: #075050;
-            box-shadow: 0 3px #666;
-            transform: translateY(4px);
+            background-color: #0f7a83;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transform: translateY(2px);
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        p {
+            margin: 15px 0;
+        }
+        .center {
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <h1>Welcome to Umbrella Startup Page!</h1>
-    <p>You are logged in as {{ user.username }}.</p>
-    <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="button">Logout</button>
-    </form>
-    <br>
-    <a href="{% url 'admin:index' %}" class="button">Admin</a>
-
-    <br>
-    <p></p>
-    <h2>Let's do something</h2>
-    <table><tr>
-        <th>Freeze some grids</th>
-        <th>Start a TEM session</th>
-        <th>Start a processing run</th>
-    </tr>
-    <tr>
-        <td>
-            <a href="{% url 'admin:cryo_grids_plungefreezingplan_add' %}" class="button">Plan plunge freezing parameters</a>
-            <p> such as what samples will be on the grid </p>
-        </td>
-        <td>
-            <a href="{% url 'tem:reserve' %}" class="button">Creat new singel-grid tem session</a>
-            <p>start new tem session</p>
-        </td>
-        <td>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <a href="{% url 'admin:cryo_grids_plungefreezingsession_add' %}" class="button">Creat new plunge freezing session</a>
-            <p>record a new session on freezing day</p>
-        </td>
-        <td>
-            <a href="{% url 'tem:scrnreserve' %}" class="button">Screen multiple grids in a cassette</a>
-            <p>make new directory name for screening</p>
-        </td>
-        <td>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <a href="{% url 'admin:cryo_grids_cryogrid_add' %}" class="button">Add a new grid</a>
-            <p>make a new grid</p>
-        </td>
-        <td>
-        </td>
-        <td>
-        </td>
-    </tr></table>
-    <h2>List of all things</h2>
-    <table><tr>
-        <th>grids</th>
-        <th>TEM sessions</th>
-        <th>processing runs</th>
-    </tr>
-    <tr>
-        <td>
-            <a href="{% url 'admin:cryo_grids_cryogrid_changelist' %}" class="button">Cryo Grids</a>
-            <p> grids stored </p>
-        </td>
-        <td>
-            <a href="{% url 'admin:tem_msisession_changelist' %}" class="button">Single Grid Sessions</a>
-            <p> multiscaled spa or tomography data collection </p>
-        </td>
-        <td>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <a href="{% url 'admin:cryo_grids_cryogridbox_changelist' %}" class="button">Grid Boxes</a>
-        </td>
-        <td>
-            <a href="{% url 'admin:tem_screensessiongroup_changelist' %}" class="button">Multigrid Screens</a>
-        </td>
-        <td>
-        </td>
-    </tr></table>
+    <div class="container">
+        <h1>Welcome to Embrella Startup Page!</h1>
+        <p class="center">You are logged in as {{ user.username }}.</p>
+        <div class="center">
+            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="button">Logout</button>
+            </form>
+            <a href="{% url 'admin:index' %}" class="button">Admin</a>
+        </div>
+        <h2>Let's do something</h2>
+        <table>
+            <tr>
+                <th>Freeze some grids</th>
+                <th>Start a TEM session</th>
+                <th>Start a processing run</th>
+            </tr>
+            <tr>
+                <td>
+                    <a href="{% url 'admin:cryo_grids_plungefreezingplan_add' %}" class="button">Plan plunge freezing parameters</a>
+                    <p> such as what samples will be on the grid </p>
+                </td>
+                <td>
+                    <a href="{% url 'tem:reserve' %}" class="button">Create new single-grid TEM session</a>
+                    <p>start new TEM session</p>
+                </td>
+                <td>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <a href="{% url 'admin:cryo_grids_plungefreezingsession_add' %}" class="button">Create new plunge freezing session</a>
+                    <p>record a new session on freezing day</p>
+                </td>
+                <td>
+                    <a href="{% url 'tem:scrnreserve' %}" class="button">Screen multiple grids in a cassette</a>
+                    <p>make new directory name for screening</p>
+                </td>
+                <td>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <a href="{% url 'admin:cryo_grids_cryogrid_add' %}" class="button">Add a new grid</a>
+                    <p>make a new grid</p>
+                </td>
+                <td>
+                </td>
+                <td>
+                </td>
+            </tr>
+        </table>
+        <h2>List of all things</h2>
+        <table>
+            <tr>
+                <th>Grids</th>
+                <th>TEM sessions</th>
+                <th>Processing runs</th>
+            </tr>
+            <tr>
+                <td>
+                    <a href="{% url 'admin:cryo_grids_cryogrid_changelist' %}" class="button">Cryo Grids</a>
+                    <p> grids stored </p>
+                </td>
+                <td>
+                    <a href="{% url 'admin:tem_msisession_changelist' %}" class="button">Single Grid Sessions</a>
+                    <p> multiscaled SPA or tomography data collection </p>
+                </td>
+                <td>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <a href="{% url 'admin:cryo_grids_cryogridbox_changelist' %}" class="button">Grid Boxes</a>
+                </td>
+                <td>
+                    <a href="{% url 'admin:tem_screensessiongroup_changelist' %}" class="button">Multigrid Screens</a>
+                </td>
+                <td>
+                </td>
+            </tr>
+        </table>
+    </div>
 </body>
 </html>

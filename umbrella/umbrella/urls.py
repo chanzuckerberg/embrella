@@ -41,7 +41,7 @@ urlpatterns = [
 
 
 # change header name
-admin.site.site_header = 'Lab auto workflow'
-admin.site.site_title = 'Lab auto workflow'
+admin.site.site_header = 'Embrella'
+admin.site.site_title = 'Embrella'
 
 
