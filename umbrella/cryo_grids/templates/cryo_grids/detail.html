@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ title }}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container-fluid {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            width: 100%;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+            white-space: nowrap;
+            text-align: center; /* Center align text */
+        }
+        .btn-custom {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-custom:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <h2 class="text-center text-primary"><u>{{ title }}</u></h2><br>
+    <div class="form-group">
+        <label for="gridBoxSelect">Select Grid Box:</label>
+        <select class="form-control" id="gridBoxSelect">
+            <option value="">Select a grid box</option>
+        </select>
+    </div>
+    <form action="{% if data.id %}{% url 'tem:detail' data.id %}{% else %}#{% endif %}" method="post">
+        {% csrf_token %}
+        <div class="table-wrapper">
+            <table class="table table-hover table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Create On</th>
+                        <th>Name</th>
+                        <th>Notes</th>
+                        <th>Position in Box</th>
+                        <th>Grid Box ID</th>
+                        <th>Clipped</th>
+                        <th>Trashed</th>
+                        <th>Slot Number in Cassette</th>
+                        <th>Grid Cassette ID</th>
+                        <th>Username</th>
+                    </tr>
+                </thead>
+                <tbody id="gridBoxData">
+                    <!-- Data will be populated here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </form>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Fetch the unique grid box names
+    $.ajax({
+        url: '/cryo_grids/all_grid_boxes/',  // Update with the correct endpoint
+        method: 'GET',
+        success: function(response) {
+            console.log('Grid boxes fetched:', response);  // Debugging line
+            if (response.unique_names) {
+                var gridBoxSelect = $('#gridBoxSelect');
+                response.unique_names.forEach(function(name) {
+                    gridBoxSelect.append(new Option(name, name));
+                });
+            } else {
+                alert(response.error);
+            }
+        },
+        error: function(error) {
+            console.error('Error fetching grid boxes:', error);
+            alert('Error fetching grid boxes. Please check the console for more details.');
+        }
+    });
+
+    // Handle the selection change
+    $('#gridBoxSelect').change(function() {
+        var selectedGridBox = $(this).val();
+        if (selectedGridBox) {
+            $.ajax({
+                url: '/cryo_grids/specific_grids/',  // Update with the correct endpoint
+                method: 'GET',
+                data: { grid_box_name: selectedGridBox },
+                success: function(response) {
+                    console.log('Specific grids fetched:', response);  // Debugging line
+                    var gridBoxData = $('#gridBoxData');
+                    gridBoxData.empty();
+                    response.forEach(function(grid) {
+                        gridBoxData.append(`
+                            <tr>
+                                <td>${grid.id}</td>
+                                <td>${grid.create_on}</td>
+                                <td>${grid.name}</td>
+                                <td>${grid.notes}</td>
+                                <td>${grid.position_in_box}</td>
+                                <td>${grid.grid_box_id}</td>
+                                <td>${grid.clipped}</td>
+                                <td>${grid.trashed}</td>
+                                <td>${grid.slot_number_in_cassette}</td>
+                                <td>${grid.grid_cassette_id}</td>
+                                <td>${grid.user__username}</td>
+                            </tr>
+                        `);
+                    });
+                },
+                error: function(error) {
+                    console.error('Error fetching specific grids:', error);
+                    alert('Error fetching specific grids. Please check the console for more details.');
+                }
+            });
+        }
+    });
+});
+</script>
+
+</body>
+</html>

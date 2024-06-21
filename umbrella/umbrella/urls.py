@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 from umbrella.ping import ping
 from umbrella.api_internal import get_grids_by_user, get_available_grids
+
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 import google
@@ -37,7 +38,8 @@ urlpatterns = [
     path('admin/login/', auth_views.LoginView.as_view(), name='login'),
     path('admin/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
     path('get_grids_by_user/', get_grids_by_user, name='get_grids_by_user'),
-    path('get_available_grids', get_available_grids, name='get_available_grids')
+    path('available_grids', get_available_grids, name='get_available_grids'),
+    path('cryo_grids/', include('cryo_grids.urls'), name='cryo_grids')
 ]
 
 

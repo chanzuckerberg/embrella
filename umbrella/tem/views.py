@@ -58,7 +58,6 @@ def detail(request, session_id):
     return render(request, "tem/detail.html", context)
 
 def reserve_session(request):
-    print(request.method)
     if request.method == 'POST':
         form = ReserveMsiSessionForm(request.POST)
         name = models.suggest_name('t')
