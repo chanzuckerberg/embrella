@@ -349,9 +349,12 @@ def get_specific_session(request):
                 'screening': atlas_session.name,
                 'cassette': scrn_session.cassette.name if scrn_session.cassette else None,
                 'session_plan': session_plan.software.name if session_plan and session_plan.software else None,
+                'session_plan_id': session_plan.id if session_plan else None,
                 'order_in_screen': atlas_session.order_in_screen,
+                'atlas_id': atlas_session.id,
                 'atlas_name': atlas_session.name,
                 'grid_name': atlas_session.grid.name if atlas_session.grid else None,
+                'grid_id': atlas_session.grid.id if atlas_session.grid else None,
                 'quality': atlas_session.quality
             }
             session_data.append(session_info)

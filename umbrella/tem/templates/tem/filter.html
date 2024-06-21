@@ -57,8 +57,8 @@
                     <th>Cassette</th>
                     <th>Session Plan</th>
                     <th>Order in Screen</th>
-                    <th>Atlas Name</th>
                     <th>Grid Name</th>
+                    <th>Grid ID</th>
                     <th>Quality</th>
                 </tr>
             </thead>
@@ -108,12 +108,12 @@ $(document).ready(function() {
                                 <tr>
                                     <td>${session.id}</td>
                                     <td>${session.name}</td>
-                                    <td>${session.screening}</td>
+                                    <td><a href="/admin/tem/atlassession/${session.session_plan_id}/change/">${session.screening}</a></td>
                                     <td>${session.cassette}</td>
-                                    <td>${session.session_plan}</td>
+                                    <td><a href="/admin/tem/sessionplan/${session.session_plan_id}/change/">${session.session_plan}</a></td>
                                     <td>${session.order_in_screen}</td>
-                                    <td>${session.atlas_name}</td>
-                                    <td>${session.grid_name}</td>
+                                    <td><a href="/admin/cryo_grids/cryogrid/${session.grid_id}/change/">${session.grid_name}</a></td>
+                                    <td>${session.grid_id}</td>
                                     <td>${session.quality}</td>
                                 </tr>
                             `);
