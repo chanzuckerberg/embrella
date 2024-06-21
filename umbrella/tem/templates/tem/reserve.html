@@ -97,11 +97,7 @@
         <div class="col-md-6">
           <label for="grid">Grid</label>
           <select id="grid" name="grid" required>
-            {% for option in form.grid.field.choices %}
-              <option value="{{ option.0 }}" {% if option.0 == form.grid.value %}selected{% endif %}>
-                {{ option.1 }}
-              </option>
-            {% endfor %}
+            <option value="">Select a grid</option>
           </select>
         </div>
         <div class="col-md-6">
@@ -125,6 +121,24 @@
   <!-- Include the script here -->
   <script>
     $(document).ready(function() {
+      $('#project').change(function() {
+          var projectName = $(this).find("option:selected").text().trim();
+          $.ajax({
+              url: "{% url 'tem:grid_by_projects' %}",
+              data: {
+                  'project_name': projectName
+              },
+              success: function(data) {
+                  var $grid = $('#grid');
+                  $grid.empty();
+                  $grid.append('<option value="">Select a grid</option>');
+                  $.each(data.grids, function(index, item) {
+                      $grid.append('<option value="' + item.id + '">' + item.grid_name + '</option>');
+                  });
+              }
+          });
+      });
+
       $('#user').change(function() {
           var userId = $(this).val();
           $.ajax({

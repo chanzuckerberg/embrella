@@ -58,7 +58,6 @@ def detail(request, session_id):
     return render(request, "tem/detail.html", context)
 
 def reserve_session(request):
-    print(request.method)
     if request.method == 'POST':
         form = ReserveMsiSessionForm(request.POST)
         name = models.suggest_name('t')
@@ -89,7 +88,6 @@ def create_session(request):
         atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
         session_instance.atlas_session = atlas_session
         path_dicts = {}
-        print(session_instance)
         session_instance.frames = session_instance.get_session_path('frames')
         session_instance.sums = session_instance.get_session_path('sums')
         session_instance.mdocs = session_instance.get_session_path('mdocs')
@@ -298,3 +296,34 @@ def get_all_image_paths(request):
 
     # Return error if no matching software is found
     return JsonResponse({'error': 'No matching software found'}, status=404, safe=False)
+
+
+@require_http_methods(["GET"])
+def get_project_grid(request):
+    # Check for a valid request
+    if request.GET.get('valid', 'true') != 'true':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+
+    project_name = request.GET.get('project_name')
+    if project_name:
+        try:
+            # Fetch the project by name
+            project = Project.objects.get(name=project_name)
+
+            # Fetch the cryo grid for the intended project
+            cryo_grids = CryoGrid.objects.filter(intended_project_id=project.id)
+
+            # Prepare the response data
+            grids_data = []
+            for grid in cryo_grids:
+                grids_data.append({
+                    'id': grid.id,
+                    'grid_name': grid.name
+                })
+
+            return JsonResponse({'project_name': project_name, 'grids': grids_data}, status=200)
+
+        except Project.DoesNotExist:
+            return JsonResponse({'error': 'Project not found'}, status=404)
+    else:
+        return JsonResponse({'error': 'Project name not provided'}, status=400)

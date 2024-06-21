@@ -13,5 +13,6 @@ urlpatterns = [
     path("scrn/create", views.create_scrn_session_group, name="scrncreate"),
     path("scrn/<int:scrn_group_id>/", views.scrn_group_detail, name="scrndetail"),
     path("session_list/", views.get_all_sessions, name="get"),
-    path("path_list/", views.get_all_image_paths, name="path")
+    path("path_list/", views.get_all_image_paths, name="path"),
+    path('grid_by_projects/', views.get_project_grid, name='grid_by_projects')
 ]
