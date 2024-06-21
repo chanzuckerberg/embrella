@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from cryo_grids.models import CryoGrid, CryoGridBox
+from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette
 from django.contrib.auth.models import User
 
 from django.http import JsonResponse
@@ -46,12 +46,11 @@ def get_specific_grids(request):
             # Find the grid box with the specified name
             grid_box = CryoGridBox.objects.get(name=grid_box_name)
 
-            # Find the grids associated with this grid box and join with the User table
-            specific_grids = CryoGrid.objects.filter(grid_box=grid_box).select_related('grid_box', 'user').values(
+            # Find the grids associated with this grid box and join with the User and CryoGridCassette tables
+            specific_grids = CryoGrid.objects.filter(grid_box=grid_box).select_related('grid_box', 'user', 'grid_cassette').values(
                 'id', 'create_on', 'name', 'notes', 'position_in_box', 'grid_box_id',
-                'clipped', 'trashed',#'freezing_plan_id',  #'freezing_session_id',
-                'slot_number_in_cassette', 'grid_cassette_id',
-                'user__username',
+                'clipped', 'trashed', 'slot_number_in_cassette', 'grid_cassette_id',
+                'user__username', 'grid_cassette__name'
             )
 
             # Format the data

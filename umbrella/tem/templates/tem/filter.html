@@ -58,7 +58,7 @@
                     <th>Session Plan</th>
                     <th>Order in Screen</th>
                     <th>Grid Name</th>
-                    <th>Grid ID</th>
+{#                    <th>Grid ID</th>#}
                     <th>Quality</th>
                 </tr>
             </thead>
@@ -113,7 +113,7 @@ $(document).ready(function() {
                                     <td><a href="/admin/tem/sessionplan/${session.session_plan_id}/change/">${session.session_plan}</a></td>
                                     <td>${session.order_in_screen}</td>
                                     <td><a href="/admin/cryo_grids/cryogrid/${session.grid_id}/change/">${session.grid_name}</a></td>
-                                    <td>${session.grid_id}</td>
+{#                                    <td>${session.grid_id}</td>#}
                                     <td>${session.quality}</td>
                                 </tr>
                             `);

@@ -54,15 +54,15 @@
                 <thead class="thead-dark">
                     <tr>
                         <th>ID</th>
-                        <th>Create On</th>
                         <th>Name</th>
                         <th>Notes</th>
                         <th>Position in Box</th>
-                        <th>Grid Box ID</th>
+{#                        <th>Grid Box ID</th>#}
                         <th>Clipped</th>
                         <th>Trashed</th>
                         <th>Slot Number in Cassette</th>
-                        <th>Grid Cassette ID</th>
+                        <th>Grid Cassette Name</th>
+                        <th>Create On</th>
                         <th>Username</th>
                     </tr>
                 </thead>
@@ -113,16 +113,17 @@ $(document).ready(function() {
                         gridBoxData.append(`
                             <tr>
                                 <td>${grid.id}</td>
-                                <td>${grid.create_on}</td>
-                                <td>${grid.name}</td>
+                                <td><a href="/admin/cryo_grids/cryogrid/${grid.id}/change/">${grid.name}</a></td>
                                 <td>${grid.notes}</td>
                                 <td>${grid.position_in_box}</td>
-                                <td>${grid.grid_box_id}</td>
+{#                                <td>${grid.grid_box_id}</td>#}
                                 <td>${grid.clipped}</td>
                                 <td>${grid.trashed}</td>
                                 <td>${grid.slot_number_in_cassette}</td>
-                                <td>${grid.grid_cassette_id}</td>
+                                <td><a href="/admin/cryo_grids/cryogridcassette/${grid.grid_cassette_id}/change/">${grid.grid_cassette__name}</a></td>
+                                <td>${grid.create_on}</td>
                                 <td>${grid.user__username}</td>
+
                             </tr>
                         `);
                     });
