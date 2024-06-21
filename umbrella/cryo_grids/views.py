@@ -3,6 +3,8 @@ from django.http import JsonResponse
 from cryo_grids.models import CryoGrid, CryoGridBox
 from django.contrib.auth.models import User
 
+from django.http import JsonResponse
+from .models import CryoGridBox, CryoGrid
 from django.views.decorators.http import require_http_methods
 
 
@@ -35,13 +37,6 @@ def grid_boxes_view(request):
     return render(request, 'cryo_grids/detail.html', context)
 
 
-from django.contrib.auth.models import User
-from django.http import JsonResponse
-from .models import CryoGridBox, CryoGrid
-
-from django.contrib.auth.models import User
-from django.http import JsonResponse
-from .models import CryoGridBox, CryoGrid
 
 def get_specific_grids(request):
     grid_box_name = request.GET.get('grid_box_name')

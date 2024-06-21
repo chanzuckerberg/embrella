@@ -88,7 +88,6 @@ def create_session(request):
         atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
         session_instance.atlas_session = atlas_session
         path_dicts = {}
-        print(session_instance)
         session_instance.frames = session_instance.get_session_path('frames')
         session_instance.sums = session_instance.get_session_path('sums')
         session_instance.mdocs = session_instance.get_session_path('mdocs')
@@ -297,3 +296,66 @@ def get_all_image_paths(request):
 
     # Return error if no matching software is found
     return JsonResponse({'error': 'No matching software found'}, status=404, safe=False)
+
+
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from .models import ScreenSessionGroup
+
+
+@require_http_methods(["GET"])
+def get_all_scrns(request):
+    if request.GET.get('valid', 'true') != 'true':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    try:
+        unique_names = ScreenSessionGroup.objects.values_list('name', flat=True).distinct()
+        return JsonResponse({"unique_names": list(unique_names)}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def render_screening_form(request):
+    data_id = request.GET.get('id')  # Example way to get data.id, adjust as needed.
+
+    context = {
+        'title': 'Screening Session',
+        'data': {
+            'id': data_id
+        }
+    }
+    return render(request, 'tem/filter.html', context)
+
+@require_http_methods(["GET"])
+def get_specific_session(request):
+    session_name = request.GET.get('session_name')
+
+    if not session_name:
+        return JsonResponse({'error': 'Session name not provided'}, status=400)
+
+    try:
+        scrn_session = get_object_or_404(ScreenSessionGroup, name=session_name)
+
+        # Gather required information from the related models
+        atlas_sessions = AtlasSession.objects.filter(group=scrn_session)
+        session_data = []
+
+        for atlas_session in atlas_sessions:
+            session_plan = scrn_session.session_plan
+            session_info = {
+                'id': scrn_session.id,
+                'name': scrn_session.name,
+                'screening': atlas_session.name,
+                'cassette': scrn_session.cassette.name if scrn_session.cassette else None,
+                'session_plan': session_plan.software.name if session_plan and session_plan.software else None,
+                'order_in_screen': atlas_session.order_in_screen,
+                'atlas_name': atlas_session.name,
+                'grid_name': atlas_session.grid.name if atlas_session.grid else None,
+                'quality': atlas_session.quality
+            }
+            session_data.append(session_info)
+
+        return JsonResponse({'sessions': session_data}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
