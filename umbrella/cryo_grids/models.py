@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 from confluence.models import Page
+from projects.models import Project
 
 from umbrella.choices import CANE_COLORS, PUCK_COLORS
 from umbrella.choices import GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING
@@ -134,6 +135,8 @@ class CryoGrid(models.Model):
     grid_cassette = models.ForeignKey(CryoGridCassette, on_delete=models.CASCADE, null=True, blank=True, help_text='choose a microscope grid loader cassette when in use')
     slot_number_in_cassette = models.PositiveSmallIntegerField(default=1, null=True, blank=True, help_text='The slot the grid is put in the cryo cassette if exists')
     trashed = models.BooleanField(default=False,help_text="Is this cryo-grid discarded ?")
+
+    intended_project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, help_text='Optionally assign the project this grid is made for. This makes the grid easier to find.')
 
     class Meta:
         unique_together = ["name","freezing_session","freezing_plan"]
