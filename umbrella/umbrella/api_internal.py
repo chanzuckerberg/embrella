@@ -1,5 +1,7 @@
 from django.http import JsonResponse
-from cryo_grids.models import CryoGrid, CryoGridBox
+from django.http import JsonResponse
+from django.db.models import F
+from cryo_grids.models import CryoGrid
 from projects.models import Project
 from tem.models import MsiSession
 
@@ -8,12 +10,17 @@ def get_grids_by_user(request):
     user_id = request.GET.get('user_id')
 
     if user_id:
-        grids = CryoGrid.objects.filter(user_id=user_id).values('id', 'name')
+        grids = CryoGrid.objects.filter(user_id=user_id).select_related('intended_project', 'user').annotate(
+            project_name=F('intended_project__name'),
+            username=F('user__username')
+        ).values('id', 'name', 'project_name', 'username')
     else:
-        grids = CryoGrid.objects.values('id', 'name')
+        grids = CryoGrid.objects.select_related('intended_project', 'user').annotate(
+            project_name=F('intended_project__name'),
+            username=F('user__username')
+        ).values('id', 'name', 'project_name', 'username')
 
     return JsonResponse(list(grids), safe=False)
-
 
 def get_available_grids(request):
     project_id = request.GET.get('project_id')
