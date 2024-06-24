@@ -101,7 +101,7 @@
           </select>
         </div>
         <div class="col-md-6">
-          <label for="user">Filter by user</label>
+          <label for="user">Sort by user</label>
           <select id="user" name="user">
             {% for option in form.user.field.choices %}
               <option value="{{ option.0 }}" {% if option.0 == form.user.value %}selected{% endif %}>
@@ -121,40 +121,51 @@
   <!-- Include the script here -->
   <script>
     $(document).ready(function() {
+      function loadGridsByProject(projectName) {
+        $.ajax({
+          url: "{% url 'tem:grid_by_projects' %}",
+          data: {
+            'project_name': projectName
+          },
+          success: function(data) {
+            var $grid = $('#grid');
+            $grid.empty();
+            $grid.append('<option value="">Select a grid</option>');
+            $.each(data.grids, function(index, item) {
+              $grid.append('<option value="' + item.id + '">' + item.grid_name + '</option>');
+            });
+          }
+        });
+      }
+
       $('#project').change(function() {
-          var projectName = $(this).find("option:selected").text().trim();
-          $.ajax({
-              url: "{% url 'tem:grid_by_projects' %}",
-              data: {
-                  'project_name': projectName
-              },
-              success: function(data) {
-                  var $grid = $('#grid');
-                  $grid.empty();
-                  $grid.append('<option value="">Select a grid</option>');
-                  $.each(data.grids, function(index, item) {
-                      $grid.append('<option value="' + item.id + '">' + item.grid_name + '</option>');
-                  });
-              }
-          });
+        var projectName = $(this).find("option:selected").text().trim();
+        loadGridsByProject(projectName);
       });
 
       $('#user').change(function() {
-          var userId = $(this).val();
+        var userId = $(this).val();
+        var projectId = $('#project').val();
+        if (userId) {
           $.ajax({
-              url: "{% url 'get_grids_by_user' %}",
-              data: {
-                  'user_id': userId
-              },
-              success: function(data) {
-                  var $grid = $('#grid');
-                  $grid.empty();
-                  $grid.append('<option value="">Select a grid</option>');
-                  $.each(data, function(index, item) {
-                      $grid.append('<option value="' + item.id + '">' + item.name + '</option>');
-                  });
-              }
+            url: "{% url 'get_grids_by_user' %}",
+            data: {
+              'user_id': userId,
+              'project_id': projectId
+            },
+            success: function(data) {
+              var $grid = $('#grid');
+              $grid.empty();
+              $grid.append('<option value="">Select a grid</option>');
+              $.each(data, function(index, item) {
+                $grid.append('<option value="' + item.id + '">' + item.grid_name + '</option>');
+              });
+            }
           });
+        } else {
+          var projectName = $('#project').find("option:selected").text().trim();
+          loadGridsByProject(projectName);
+        }
       });
 
       $('#sessionForm').submit(function(event) {

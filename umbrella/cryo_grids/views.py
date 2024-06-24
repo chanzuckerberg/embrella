@@ -1,27 +1,25 @@
-from django.shortcuts import render
-
-# Create your views here.
 from django.http import JsonResponse
-from cryo_grids.models import CryoGrid, CryoGridBox
+from cryo_grids.models import CryoGrid
 from projects.models import Project
-from tem.models import MsiSession
+from django.contrib.auth.models import User  # Assuming the user table is the default User model
 from django.db.models import F
+
 
 def get_grids_by_user(request):
     user_id = request.GET.get('user_id')
+    project_id = request.GET.get('project_id')
 
-    if user_id:
-        grids = CryoGrid.objects.filter(user_id=user_id).annotate(
+    if user_id and project_id:
+        grids = CryoGrid.objects.filter(user_id=user_id, intended_project_id=project_id).select_related(
+            'intended_project').annotate(
             grid_name=F('name'),
-            project_name=F('intended_project__name')  # Using 'intended_project' as the foreign key to Project
-        ).values('id', 'grid_name', 'project_name')
+            project_name=F('intended_project__name'),
+            project_id=F('intended_project__id')
+        ).values('id', 'grid_name', 'project_name', 'project_id')
+
+        return JsonResponse(list(grids), safe=False)
     else:
-        grids = CryoGrid.objects.annotate(
-            grid_name=F('name'),
-            project_name=F('intended_project__name')  # Using 'intended_project' as the foreign key to Project
-        ).values('id', 'grid_name', 'project_name')
-
-    return JsonResponse(list(grids), safe=False)
+        return JsonResponse({'error': 'Missing user_id or project_id'}, status=400)
 
 def get_available_grids(request):
     project_id = request.GET.get('project_id')
