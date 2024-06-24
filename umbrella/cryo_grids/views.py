@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from cryo_grids.models import CryoGrid
 from projects.models import Project
-from django.contrib.auth.models import User  # Assuming the user table is the default User model
+from django.contrib.auth.models import User
 from django.db.models import F
 
 
