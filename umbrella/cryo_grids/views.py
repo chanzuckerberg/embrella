@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette
+from tem.models import MsiSession
 from django.contrib.auth.models import User
 
 from django.http import JsonResponse
@@ -38,6 +39,33 @@ def grid_boxes_view(request):
 
 
 
+# def get_specific_grids(request):
+#     grid_box_name = request.GET.get('grid_box_name')
+#
+#     if grid_box_name:
+#         try:
+#             # Find the grid box with the specified name
+#             grid_box = CryoGridBox.objects.get(name=grid_box_name)
+#
+#             # Find the grids associated with this grid box and join with the User and CryoGridCassette tables
+#             specific_grids = CryoGrid.objects.filter(grid_box=grid_box).select_related('grid_box', 'user', 'grid_cassette').values(
+#                 'id', 'create_on', 'name', 'notes', 'position_in_box', 'grid_box_id',
+#                 'clipped', 'trashed', 'slot_number_in_cassette', 'grid_cassette_id',
+#                 'user__username', 'grid_cassette__name'
+#             )
+#
+#             # Format the data
+#             grids_data = list(specific_grids)
+#
+#             return JsonResponse(grids_data, safe=False)
+#         except CryoGridBox.DoesNotExist:
+#             return JsonResponse({"error": "Grid box not found."}, status=404)
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=500)
+#     else:
+#         return JsonResponse({"error": "Grid box name not provided."}, status=400)
+
+
 def get_specific_grids(request):
     grid_box_name = request.GET.get('grid_box_name')
 
@@ -46,11 +74,13 @@ def get_specific_grids(request):
             # Find the grid box with the specified name
             grid_box = CryoGridBox.objects.get(name=grid_box_name)
 
-            # Find the grids associated with this grid box and join with the User and CryoGridCassette tables
-            specific_grids = CryoGrid.objects.filter(grid_box=grid_box).select_related('grid_box', 'user', 'grid_cassette').values(
+            # Find the grids associated with this grid box and join with the CryoGridCassette and MSISession tables
+            specific_grids = CryoGrid.objects.filter(grid_box=grid_box).select_related(
+                'grid_box', 'grid_cassette', 'msisession__user'
+            ).values(
                 'id', 'create_on', 'name', 'notes', 'position_in_box', 'grid_box_id',
                 'clipped', 'trashed', 'slot_number_in_cassette', 'grid_cassette_id',
-                'user__username', 'grid_cassette__name'
+                'grid_cassette__name', 'msisession__user__user'
             )
 
             # Format the data

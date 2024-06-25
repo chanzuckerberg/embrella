@@ -81,6 +81,7 @@ def create_session(request):
                     project=Project.objects.get(pk=project_id),
                     grid=grid_instance,
                     session_plan=SessionPlan.objects.get(pk=plan_id),
+                    user=request.user
         )
         session_instance.save()
         my_pk = session_instance.id
