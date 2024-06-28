@@ -34,8 +34,14 @@ python manage.py migrate
 ```
 python manage.py createsuperuser
 ```
-7. run django server locally at the default 8000 port
+7. run the following initialization scripts that creates a project, a grid, and a live processing plan.
+```
+python manage.py runscript init
+python manage.py runscript init_multigrid
+python manage.py runscript init_processes
+```
+8. run django server locally at the default 8000 port
 ```
 python manage.py runserver
 ```
-8. view your admin page at http://127.0.0.1/admin/
+9. view the main page at http://127.0.0.1/umbrella/
