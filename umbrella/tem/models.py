@@ -327,7 +327,7 @@ class ProjectBase(BaseModel):
 class MsiSessionBase(BaseModel):
     id: int
     name: str
-    notes: str
+    notes: str | None
     user: UserBase
     project: ProjectBase
     frames: PathInfo
