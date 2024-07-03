@@ -58,6 +58,14 @@ INSTALLED_APPS = [
     "django_google_sso",
 ]
 
+JAZZMIN_SETTINGS = {
+    # Other Jazzmin settings...
+
+    "show_ui_builder": False,  # Disable the UI Builder
+    "copyright": "CZII",
+    "show_version": False,
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
