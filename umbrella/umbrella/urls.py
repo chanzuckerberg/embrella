@@ -36,14 +36,12 @@ urlpatterns = [
     path('ping/', ping),
     path('admin/login/', auth_views.LoginView.as_view(), name='login'),
     path('admin/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
-    path('get_grids_by_user/', get_grids_by_user, name='get_grids_by_user'),
-    path('available_grids', get_available_grids, name='get_available_grids'),
-    path('cryo_grids/', include('cryo_grids.urls'), name='cryo_grids')
+    path('grids_by_user/', get_grids_by_user, name='get_grids_by_user'),
+    path('get_available_grids', get_available_grids, name='get_available_grids'),
 ]
 
 
 # change header name
 admin.site.site_header = 'Embrella'
 admin.site.site_title = 'Embrella'
-
 
