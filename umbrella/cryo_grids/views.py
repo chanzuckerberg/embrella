@@ -1,52 +1,66 @@
+from django.shortcuts import render
 from django.http import JsonResponse
-from cryo_grids.models import CryoGrid
-from projects.models import Project
+from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette
+from tem.models import MsiSession
 from django.contrib.auth.models import User
-from django.db.models import F
+
+from django.http import JsonResponse
+from .models import CryoGridBox, CryoGrid
+from django.views.decorators.http import require_http_methods
 
 
-def get_grids_by_user(request):
-    user_id = request.GET.get('user_id')
-    project_id = request.GET.get('project_id')
+@require_http_methods(["GET"])
+def get_all_grid_boxes(request):
+    if request.GET.get('valid', 'true') != 'true':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    try:
+        # Get all unique names of grid boxes
+        unique_grid_boxes = CryoGridBox.objects.order_by('name').values('name').distinct()
+        # Extract names into a list
+        unique_names = [box['name'] for box in unique_grid_boxes]
 
-    if user_id and project_id:
-        grids = CryoGrid.objects.filter(user_id=user_id, intended_project_id=project_id).select_related(
-            'intended_project').annotate(
-            grid_name=F('name'),
-            project_name=F('intended_project__name'),
-            project_id=F('intended_project__id')
-        ).values('id', 'grid_name', 'project_name', 'project_id')
+        return JsonResponse({"unique_names": unique_names}, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
-        return JsonResponse(list(grids), safe=False)
-    else:
-        return JsonResponse({'error': 'Missing user_id or project_id'}, status=400)
 
-def get_available_grids(request):
-    project_id = request.GET.get('project_id')
+@require_http_methods(["GET"])
+def grid_boxes_view(request):
+    # Assuming you have a way to get `data.id`, perhaps from a query parameter or some logic.
+    data_id = request.GET.get('id')  # Example way to get data.id, adjust as needed.
 
-    if project_id:
-        # Ensure project_id is valid
+    context = {
+        'title': 'Gridboxes',
+        'data': {
+            'id': data_id
+        }
+    }
+    return render(request, 'cryo_grids/detail.html', context)
+
+
+
+def get_specific_grids(request):
+    grid_box_name = request.GET.get('grid_box_name')
+
+    if grid_box_name:
         try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            return JsonResponse({"error": "Project not found."}, status=404)
+            # Find the grid box with the specified name
+            grid_box = CryoGridBox.objects.get(name=grid_box_name)
 
-        # Get the available grids for the given project
-        available_grids = CryoGrid.objects.filter(
-            trashed=False,
-            msisession__project=project
-        ).select_related('grid_box').distinct()
+            # Find the grids associated with this grid box and join with the User and CryoGridCassette tables
+            specific_grids = CryoGrid.objects.filter(grid_box=grid_box).select_related('grid_box', 'user', 'grid_cassette').values(
+                'id', 'create_on', 'name', 'notes', 'position_in_box', 'grid_box_id',
+                'clipped', 'trashed', 'slot_number_in_cassette', 'grid_cassette_id',
+                'user__username', 'grid_cassette__name'
+            )
 
-        # Format the data
-        grids_data = []
-        for grid in available_grids:
-            grids_data.append({
-                "grid_id": grid.id,
-                "grid_name": grid.name,
-                "grid_box_id": grid.grid_box.id,
-                "grid_box_name": grid.grid_box.name,
-            })
+            # Format the data
+            grids_data = list(specific_grids)
 
-        return JsonResponse(grids_data, safe=False)
+            return JsonResponse(grids_data, safe=False)
+        except CryoGridBox.DoesNotExist:
+            return JsonResponse({"error": "Grid box not found."}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
     else:
-        return JsonResponse({"error": "Project ID not provided."}, status=400)
+        return JsonResponse({"error": "Grid box name not provided."}, status=400)
