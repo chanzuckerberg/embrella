@@ -10,7 +10,8 @@ from stores.models import Path
 from .models import MsiSession, SessionPlan, Software
 from projects.models import Project
 from cryo_grids.models import CryoGrid, CryoGridCassette
-from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo, UserBase, ProjectBase, MsiSessionBase
+from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo, UserBase, \
+    ProjectBase, MsiSessionBase
 from tem.models import ScreenSessionGroup, AtlasSession
 from django.core.serializers import serialize
 from django.core.exceptions import ValidationError
@@ -18,11 +19,12 @@ from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 import json
 
+
 def detail(request, session_id):
     session = get_object_or_404(MsiSession, pk=session_id)
     if request.method == 'POST':
-        new_notes=request.POST['notes']
-        new_atlas_session=request.POST['atlas_session']
+        new_notes = request.POST['notes']
+        new_atlas_session = request.POST['atlas_session']
         session.notes = new_notes
         if new_atlas_session:
             session.atlas_session = AtlasSession.objects.get(pk=new_atlas_session)
@@ -39,48 +41,51 @@ def detail(request, session_id):
         except AttributeError:
             # reverse ManyToOneRel such as processes.procrun is not in this model
             continue
-        #ManyToManyField
-        if hasattr(fields[f.name],'all'):
-            fields[f.name] = list(map((lambda x: x.__str__()),fields[f.name].all()))
+        # ManyToManyField
+        if hasattr(fields[f.name], 'all'):
+            fields[f.name] = list(map((lambda x: x.__str__()), fields[f.name].all()))
     form = UpdateNotesForm(instance=session)
     context = {
-            "data": session,
-            "fields": fields,
-            "paths": {
-                    'frame path pattern':session.get_session_frames_glob(),
-                    'sum image path pattern':session.get_session_sums_glob(),
-                    'mdoc path pattern':session.get_session_mdocs_glob(),
-                    'parent path pattern':session.get_session_parents_glob(),
-                    'atlas image path pattern':session.get_session_atlas_glob(),
+        "data": session,
+        "fields": fields,
+        "paths": {
+            'frame path pattern': session.get_session_frames_glob(),
+            'sum image path pattern': session.get_session_sums_glob(),
+            'mdoc path pattern': session.get_session_mdocs_glob(),
+            'parent path pattern': session.get_session_parents_glob(),
+            'atlas image path pattern': session.get_session_atlas_glob(),
             "update_notes": form,
-            }
+        }
     }
     return render(request, "tem/detail.html", context)
+
 
 def reserve_session(request):
     if request.method == 'POST':
         form = ReserveMsiSessionForm(request.POST)
         name = models.suggest_name('t')
-        plan_id=int(request.POST['session_plan'])
+        plan_id = int(request.POST['session_plan'])
         return render(request, reverse("tem:create"))
     else:
         form = ReserveMsiSessionForm()
         return render(request, "tem/reserve.html", {"form": form})
 
+
 def create_session(request):
-    plan_id=int(request.POST['session_plan'])
-    project_id=int(request.POST['project'])
-    grid_id=int(request.POST['grid'])
+    plan_id = int(request.POST['session_plan'])
+    project_id = int(request.POST['project'])
+    grid_id = int(request.POST['grid'])
     # TODO suggest name with prefix
     name = models.suggest_name('')
     if request.method == 'POST':
         grid_instance = CryoGrid.objects.get(pk=grid_id)
         # print(request.user)
         session_instance = MsiSession.objects.create(
-                    name=name,
-                    project=Project.objects.get(pk=project_id),
-                    grid=grid_instance,
-                    session_plan=SessionPlan.objects.get(pk=plan_id),
+            name=name,
+            project=Project.objects.get(pk=project_id),
+            grid=grid_instance,
+            session_plan=SessionPlan.objects.get(pk=plan_id),
+            user=request.user
         )
         session_instance.save()
         my_pk = session_instance.id
@@ -97,8 +102,9 @@ def create_session(request):
         session_instance.save()
         return HttpResponseRedirect(reverse('tem:detail', args=(session_instance.id,)))
 
+
 #############
-#Screening
+# Screening
 ############
 def scrn_group_detail(request, scrn_group_id):
     '''
@@ -116,38 +122,41 @@ def scrn_group_detail(request, scrn_group_id):
     order_list = models.parse_integer_order_list(session_group.order)
     scrn_sessions = []
     scrn_sessions = AtlasSession.objects.filter(
-            group=session_group,
+        group=session_group,
     ).order_by("order_in_screen")
     context = {
-            "data": session_group,
-            "fields": fields,
-            "screens": scrn_sessions,
+        "data": session_group,
+        "fields": fields,
+        "screens": scrn_sessions,
     }
     return render(request, "tem/scrndetail.html", context)
 
-def reserve_scrn_session_group(request,error_msg=''):
+
+def reserve_scrn_session_group(request, error_msg=''):
     '''
     Render the form to create screen session group.
     '''
     form = ReserveScreenSessionGroupForm()
     return render(request, "tem/scrnreserve.html", {"form": form})
 
+
 def _validate_order_list(cassette, order_list):
     valid = True
     for i in order_list:
-        grids=CryoGrid.objects.filter(grid_cassette=cassette,slot_number_in_cassette=i)
+        grids = CryoGrid.objects.filter(grid_cassette=cassette, slot_number_in_cassette=i)
         if len(grids) != 1:
             return False
     return valid
-    
+
+
 def create_scrn_session_group(request):
     '''
     Validate and create the screen session group and screen sessions
     '''
     plan_id = int(request.POST['session_plan'])
     cassette_id = int(request.POST['cassette'])
-    cassette=CryoGridCassette.objects.get(pk=cassette_id)
-    session_plan=SessionPlan.objects.get(pk=plan_id)
+    cassette = CryoGridCassette.objects.get(pk=cassette_id)
+    session_plan = SessionPlan.objects.get(pk=plan_id)
     order_str = request.POST['order']
     order_list = models.parse_integer_order_list(order_str)
     error_msg = ''
@@ -155,30 +164,31 @@ def create_scrn_session_group(request):
         # Don't save anything.
         # TODO: send error message to the page.
         return HttpResponseRedirect(reverse('tem:scrnreserve'))
-    name = models.suggest_name('','ScreenSessionGroup')
+    name = models.suggest_name('', 'ScreenSessionGroup')
     if request.method == 'POST':
         # save the validated group
         group_instance = ScreenSessionGroup.objects.create(
-                    name=name,
-                    cassette=cassette,
-                    session_plan=session_plan,
-                    order= order_str,
+            name=name,
+            cassette=cassette,
+            session_plan=session_plan,
+            order=order_str,
         )
         group_instance.save()
         for i in order_list:
             # create screen session for each grid and make association with
-            # the group 
-            grids=CryoGrid.objects.filter(grid_cassette=cassette,slot_number_in_cassette=i)
+            # the group
+            grids = CryoGrid.objects.filter(grid_cassette=cassette, slot_number_in_cassette=i)
             _create_scrn_session(request.user, group_instance, grids[0])
     return HttpResponseRedirect(reverse('tem:scrndetail', args=(group_instance.id,)))
 
-def _create_scrn_session(user,group_instance,grid):
+
+def _create_scrn_session(user, group_instance, grid):
     plan = group_instance.session_plan
-    name = models.suggest_scrn_session_name('',group_instance)
+    name = models.suggest_scrn_session_name('', group_instance)
     session_instance = AtlasSession.objects.create(
-                    name=name,
-                    grid=grid,
-                    group=group_instance,
+        name=name,
+        grid=grid,
+        group=group_instance,
     )
     session_instance.save()
     my_pk = session_instance.id
@@ -186,6 +196,7 @@ def _create_scrn_session(user,group_instance,grid):
     session_instance.atlas = session_instance.get_session_path('atlas')
     session_instance.save()
     return
+
 
 @require_http_methods(["GET"])
 def get_all_sessions(request):
@@ -240,6 +251,7 @@ def get_all_sessions(request):
     # Use JsonResponse to send back a list of dictionaries
     return JsonResponse(session_list, safe=False)
 
+
 @require_http_methods(["GET"])
 def get_all_image_paths(request):
     # Check for a valid request
@@ -258,29 +270,29 @@ def get_all_image_paths(request):
     for software in software_query:
         # Constructing the response data with nested paths
         software_data = SoftwareResponseModel(
-            model= "tem.software",
-            pk= software.pk,
-            fields= SoftwareFieldsResponse(
-                name= software.name,
-                frames= PathInfo(
-                    static_path= software.frames.static_path.static_path if software.frames and software.frames.static_path else None,
-                    overlay_path= software.frames.overlay_path if software.frames else None,
+            model="tem.software",
+            pk=software.pk,
+            fields=SoftwareFieldsResponse(
+                name=software.name,
+                frames=PathInfo(
+                    static_path=software.frames.static_path.static_path if software.frames and software.frames.static_path else None,
+                    overlay_path=software.frames.overlay_path if software.frames else None,
                 ),
-                sums= PathInfo(
-                    static_path= software.sums.static_path.static_path if software.sums and software.sums.static_path else None,
-                    overlay_path= software.sums.overlay_path if software.sums else None,
+                sums=PathInfo(
+                    static_path=software.sums.static_path.static_path if software.sums and software.sums.static_path else None,
+                    overlay_path=software.sums.overlay_path if software.sums else None,
                 ),
-                mdocs= PathInfo(
-                    static_path= software.mdocs.static_path.static_path if software.mdocs and software.mdocs.static_path else None,
-                    overlay_path= software.mdocs.overlay_path if software.mdocs else None,
+                mdocs=PathInfo(
+                    static_path=software.mdocs.static_path.static_path if software.mdocs and software.mdocs.static_path else None,
+                    overlay_path=software.mdocs.overlay_path if software.mdocs else None,
                 ),
-                parents= PathInfo(
-                    static_path= software.parents.static_path.static_path if software.parents and software.parents.static_path else None,
-                    overlay_path= software.parents.overlay_path if software.parents else None,
+                parents=PathInfo(
+                    static_path=software.parents.static_path.static_path if software.parents and software.parents.static_path else None,
+                    overlay_path=software.parents.overlay_path if software.parents else None,
                 ),
-                atlas= PathInfo(
-                    static_path= software.atlas.static_path.static_path if software.atlas and software.atlas.static_path else None,
-                    overlay_path= software.atlas.overlay_path if software.atlas else None,
+                atlas=PathInfo(
+                    static_path=software.atlas.static_path.static_path if software.atlas and software.atlas.static_path else None,
+                    overlay_path=software.atlas.overlay_path if software.atlas else None,
                 ),
             )
         )
@@ -298,32 +310,68 @@ def get_all_image_paths(request):
     return JsonResponse({'error': 'No matching software found'}, status=404, safe=False)
 
 
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from .models import ScreenSessionGroup
+
+
 @require_http_methods(["GET"])
-def get_project_grid(request):
-    # Check for a valid request
+def get_all_scrns(request):
     if request.GET.get('valid', 'true') != 'true':
         return JsonResponse({'error': 'Invalid request'}, status=400)
+    try:
+        unique_names = ScreenSessionGroup.objects.values_list('name', flat=True).distinct()
+        return JsonResponse({"unique_names": list(unique_names)}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
-    project_name = request.GET.get('project_name')
-    if project_name:
-        try:
-            # Fetch the project by name
-            project = Project.objects.get(name=project_name)
 
-            # Fetch the cryo grid for the intended project
-            cryo_grids = CryoGrid.objects.filter(intended_project_id=project.id)
+@require_http_methods(["GET"])
+def render_screening_form(request):
+    data_id = request.GET.get('id')  # Example way to get data.id, adjust as needed.
 
-            # Prepare the response data
-            grids_data = []
-            for grid in cryo_grids:
-                grids_data.append({
-                    'id': grid.id,
-                    'grid_name': grid.name
-                })
+    context = {
+        'title': 'Screening Session',
+        'data': {
+            'id': data_id
+        }
+    }
+    return render(request, 'tem/filter.html', context)
 
-            return JsonResponse({'project_name': project_name, 'grids': grids_data}, status=200)
 
-        except Project.DoesNotExist:
-            return JsonResponse({'error': 'Project not found'}, status=404)
-    else:
-        return JsonResponse({'error': 'Project name not provided'}, status=400)
+@require_http_methods(["GET"])
+def get_specific_session(request):
+    session_name = request.GET.get('session_name')
+
+    if not session_name:
+        return JsonResponse({'error': 'Session name not provided'}, status=400)
+
+    try:
+        scrn_session = get_object_or_404(ScreenSessionGroup, name=session_name)
+
+        # Gather required information from the related models
+        atlas_sessions = AtlasSession.objects.filter(group=scrn_session)
+        session_data = []
+
+        for atlas_session in atlas_sessions:
+            session_plan = scrn_session.session_plan
+            session_info = {
+                'id': scrn_session.id,
+                'name': scrn_session.name,
+                'screening': atlas_session.name,
+                'cassette': scrn_session.cassette.name if scrn_session.cassette else None,
+                'session_plan': session_plan.software.name if session_plan and session_plan.software else None,
+                'session_plan_id': session_plan.id if session_plan else None,
+                'order_in_screen': atlas_session.order_in_screen,
+                'atlas_id': atlas_session.id,
+                'atlas_name': atlas_session.name,
+                'grid_name': atlas_session.grid.name if atlas_session.grid else None,
+                'grid_id': atlas_session.grid.id if atlas_session.grid else None,
+                'quality': atlas_session.quality
+            }
+            session_data.append(session_info)
+
+        return JsonResponse({'sessions': session_data}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
