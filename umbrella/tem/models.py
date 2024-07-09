@@ -209,7 +209,7 @@ class MsiSession(models.Model):
     Multi-scale imaging session
     '''
     name = models.CharField(max_length=20, unique=True)
-    # user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True)
     session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
     grid = models.ForeignKey(CryoGrid, on_delete=models.PROTECT, null=True)
@@ -327,7 +327,7 @@ class ProjectBase(BaseModel):
 class MsiSessionBase(BaseModel):
     id: int
     name: str
-    notes: str
+    notes: str | None
     user: UserBase
     project: ProjectBase
     frames: PathInfo

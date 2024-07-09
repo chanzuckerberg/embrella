@@ -81,11 +81,19 @@ def create_session(request):
         grid_instance = CryoGrid.objects.get(pk=grid_id)
         # print(request.user)
         session_instance = MsiSession.objects.create(
+<<<<<<< HEAD
             name=name,
             project=Project.objects.get(pk=project_id),
             grid=grid_instance,
             session_plan=SessionPlan.objects.get(pk=plan_id),
             user=request.user
+=======
+                    name=name,
+                    project=Project.objects.get(pk=project_id),
+                    grid=grid_instance,
+                    session_plan=SessionPlan.objects.get(pk=plan_id),
+                    user=request.user
+>>>>>>> main
         )
         session_instance.save()
         my_pk = session_instance.id

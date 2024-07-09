@@ -1,54 +1,93 @@
-<!DOCTYPE html> 
-<html lang="en"> 
-<head> 
-<title>Session {{ data.name }}</title> 
-<meta charset="utf-8"> 
-<meta name="viewport" content="width=device-width, initial-scale=1"> 
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"> 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script> 
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script> 
-</head> 
-<body> 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Session {{ data.name }}</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 50px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-bottom: 20px;
+        }
+        table {
+            margin-bottom: 30px;
+        }
+        .table-light {
+            background-color: #fdfdfe;
+        }
+        th, td {
+            text-align: center;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+        a {
+            color: #007bff;
+        }
+        a:hover {
+            color: #0056b3;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
 
-<div class="container"> 
-<h2 class="text-center"><u>Screening {{ data.name }}</u></h2><br>			 
-<table class="table table-light table-striped"> 
-	<thead> 
-	<tr>
-		<th>key</th> 
-		<th>value</th> 
-	</tr> 
-	</thead> 
-	<tbody> 
-	{% for f, v in  fields.items %} 
-	<tr>
-        <td>{{ f }}</td>
-        <td>{{ v }}</td>
-	</tr> 
-	{% endfor %} 
-	</tbody> 
-</table> 
-<hr>
-<h2 class="text-center"><u>Grid list by screen order </u></h2><br>			 
-<table class="table table-light table-striped"> 
-	<thead> 
-	<tr>
-		<th>screening</th> 
-		<th>grid</th> 
-		<th>quality</th> 
-	</tr> 
-	</thead> 
-	<tbody> 
-	{% for s in  screens %} 
-	<tr> 
-	    <td><a href= "{% url 'admin:tem_atlassession_change' s.id %}">{{ s }}</a></td>
-	    <td><a href= "{% url 'admin:cryo_grids_cryogrid_change' s.grid.id %}">{{ s.grid }} </a></td>
-        <td> {{ s.quality }}</td>
-	</tr> 
-	{% endfor %} 
-</div> 
+<div class="container">
+    <h2 class="text-center"><u>Screening {{ data.name }}</u></h2>
+    <br>
+    <table class="table table-light table-striped">
+        <thead>
+            <tr>
+                <th>Key</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for f, v in fields.items %}
+            <tr>
+                <td>{{ f }}</td>
+                <td>{{ v }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <hr>
+    <h2 class="text-center"><u>Grid List by Screen Order</u></h2>
+    <br>
+    <table class="table table-light table-striped">
+        <thead>
+            <tr>
+                <th>Screening</th>
+                <th>Grid</th>
+                <th>Quality</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in screens %}
+            <tr>
+                <td><a href="{% url 'admin:tem_atlassession_change' s.id %}">{{ s }}</a></td>
+                <td><a href="{% url 'admin:cryo_grids_cryogrid_change' s.grid.id %}">{{ s.grid }}</a></td>
+                <td>{{ s.quality }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
 
-</body> 
-</html> 
-            
+</body>
+</html>
