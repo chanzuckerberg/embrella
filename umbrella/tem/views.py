@@ -85,7 +85,6 @@ def create_session(request):
             project=Project.objects.get(pk=project_id),
             grid=grid_instance,
             session_plan=SessionPlan.objects.get(pk=plan_id),
-            user=request.user
         )
         session_instance.save()
         my_pk = session_instance.id
@@ -310,68 +309,32 @@ def get_all_image_paths(request):
     return JsonResponse({'error': 'No matching software found'}, status=404, safe=False)
 
 
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from .models import ScreenSessionGroup
-
-
 @require_http_methods(["GET"])
-def get_all_scrns(request):
+def get_project_grid(request):
+    # Check for a valid request
     if request.GET.get('valid', 'true') != 'true':
         return JsonResponse({'error': 'Invalid request'}, status=400)
-    try:
-        unique_names = ScreenSessionGroup.objects.values_list('name', flat=True).distinct()
-        return JsonResponse({"unique_names": list(unique_names)}, status=200)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
 
+    project_name = request.GET.get('project_name')
+    if project_name:
+        try:
+            # Fetch the project by name
+            project = Project.objects.get(name=project_name)
 
-@require_http_methods(["GET"])
-def render_screening_form(request):
-    data_id = request.GET.get('id')  # Example way to get data.id, adjust as needed.
+            # Fetch the cryo grid for the intended project
+            cryo_grids = CryoGrid.objects.filter(intended_project_id=project.id)
 
-    context = {
-        'title': 'Screening Session',
-        'data': {
-            'id': data_id
-        }
-    }
-    return render(request, 'tem/filter.html', context)
+            # Prepare the response data
+            grids_data = []
+            for grid in cryo_grids:
+                grids_data.append({
+                    'id': grid.id,
+                    'grid_name': grid.name
+                })
 
+            return JsonResponse({'project_name': project_name, 'grids': grids_data}, status=200)
 
-@require_http_methods(["GET"])
-def get_specific_session(request):
-    session_name = request.GET.get('session_name')
-
-    if not session_name:
-        return JsonResponse({'error': 'Session name not provided'}, status=400)
-
-    try:
-        scrn_session = get_object_or_404(ScreenSessionGroup, name=session_name)
-
-        # Gather required information from the related models
-        atlas_sessions = AtlasSession.objects.filter(group=scrn_session)
-        session_data = []
-
-        for atlas_session in atlas_sessions:
-            session_plan = scrn_session.session_plan
-            session_info = {
-                'id': scrn_session.id,
-                'name': scrn_session.name,
-                'screening': atlas_session.name,
-                'cassette': scrn_session.cassette.name if scrn_session.cassette else None,
-                'session_plan': session_plan.software.name if session_plan and session_plan.software else None,
-                'session_plan_id': session_plan.id if session_plan else None,
-                'order_in_screen': atlas_session.order_in_screen,
-                'atlas_id': atlas_session.id,
-                'atlas_name': atlas_session.name,
-                'grid_name': atlas_session.grid.name if atlas_session.grid else None,
-                'grid_id': atlas_session.grid.id if atlas_session.grid else None,
-                'quality': atlas_session.quality
-            }
-            session_data.append(session_info)
-
-        return JsonResponse({'sessions': session_data}, status=200)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        except Project.DoesNotExist:
+            return JsonResponse({'error': 'Project not found'}, status=404)
+    else:
+        return JsonResponse({'error': 'Project name not provided'}, status=400)
