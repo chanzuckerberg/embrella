@@ -17,12 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from umbrella.ping import ping
-<<<<<<< HEAD
 from cryo_grids.views import get_grids_by_user, get_available_grids
-=======
-from umbrella.api_internal import get_grids_by_user, get_available_grids
-
->>>>>>> main
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 import google
