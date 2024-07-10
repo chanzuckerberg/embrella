@@ -53,6 +53,9 @@
             <option value="">Select a user</option>
         </select>
     </div>
+    <div class="form-group text-right">
+        <button class="btn btn-secondary" id="resetButton">Reset</button>
+    </div>
     <form action="{% if data.id %}{% url 'tem:detail' data.id %}{% else %}#{% endif %}" method="post">
         {% csrf_token %}
         <div class="table-wrapper">
@@ -194,6 +197,13 @@ $(document).ready(function() {
                 alert('Error fetching specific grids. Please check the console for more details.');
             }
         });
+    });
+
+    // Handle the reset button click
+    $('#resetButton').click(function() {
+        $('#gridBoxSelect').val('');
+        $('#userSelect').empty().append(new Option("Select a user", ""));
+        $('#gridBoxData').empty();
     });
 });
 </script>
