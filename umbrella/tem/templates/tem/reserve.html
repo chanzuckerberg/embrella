@@ -62,9 +62,25 @@
       font-weight: bold;
       margin-top: 10px;
     }
+    .go-back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 10px 20px;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .go-back-btn:hover {
+      background-color: #5a6268;
+    }
   </style>
 </head>
 <body>
+  <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go Back</button>
   <div class="container">
     <h2 class="text-center"><u>Create TEM Multi-Scaled Imaging Session</u></h2><br>
     <form id="sessionForm" action="{% url 'tem:create' %}" method="post">
@@ -122,7 +138,6 @@
     </div>
   </div>
 
-  <!-- Include the script here -->
   <script>
     $(document).ready(function() {
       $('#user').change(function() {
