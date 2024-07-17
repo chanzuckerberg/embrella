@@ -39,28 +39,39 @@ def grid_boxes_view(request):
 
 
 
+from django.http import JsonResponse
+from .models import CryoGrid, CryoGridBox
+
 def get_specific_grids(request):
     grid_box_name = request.GET.get('grid_box_name')
+    username = request.GET.get('username')
 
-    if grid_box_name:
-        try:
-            # Find the grid box with the specified name
-            grid_box = CryoGridBox.objects.get(name=grid_box_name)
+    try:
+        # Initialize the query set
+        specific_grids = CryoGrid.objects.all()
 
-            # Find the grids associated with this grid box and join with the User and CryoGridCassette tables
-            specific_grids = CryoGrid.objects.filter(grid_box=grid_box).select_related('grid_box', 'user', 'grid_cassette').values(
-                'id', 'create_on', 'name', 'notes', 'position_in_box', 'grid_box_id',
-                'clipped', 'trashed', 'slot_number_in_cassette', 'grid_cassette_id',
-                'user__username', 'grid_cassette__name'
-            )
+        # Filter by grid box name if provided
+        if grid_box_name:
+            try:
+                grid_box = CryoGridBox.objects.get(name=grid_box_name)
+                specific_grids = specific_grids.filter(grid_box=grid_box)
+            except CryoGridBox.DoesNotExist:
+                return JsonResponse({"error": "Grid box not found."}, status=404)
 
-            # Format the data
-            grids_data = list(specific_grids)
+        # Filter by username if provided
+        if username:
+            specific_grids = specific_grids.filter(user__username=username)
 
-            return JsonResponse(grids_data, safe=False)
-        except CryoGridBox.DoesNotExist:
-            return JsonResponse({"error": "Grid box not found."}, status=404)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    else:
-        return JsonResponse({"error": "Grid box name not provided."}, status=400)
+        # Join with the User and CryoGridCassette tables and select relevant fields
+        specific_grids = specific_grids.select_related('grid_box', 'user', 'grid_cassette').values(
+            'id', 'create_on', 'name', 'notes', 'position_in_box', 'grid_box_id',
+            'clipped', 'trashed', 'slot_number_in_cassette', 'grid_cassette_id',
+            'user__username', 'grid_cassette__name'
+        )
+
+        # Format the data
+        grids_data = list(specific_grids)
+
+        return JsonResponse(grids_data, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

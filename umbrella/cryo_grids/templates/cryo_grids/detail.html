@@ -64,6 +64,15 @@
             <option value="">Select a grid box</option>
         </select>
     </div>
+    <div class="form-group">
+        <label for="userSelect">Select User:</label>
+        <select class="form-control" id="userSelect">
+            <option value="">Select a user</option>
+        </select>
+    </div>
+    <div class="form-group text-right">
+        <button class="btn btn-secondary" id="resetButton">Reset</button>
+    </div>
     <form action="{% if data.id %}{% url 'tem:detail' data.id %}{% else %}#{% endif %}" method="post">
         {% csrf_token %}
         <div class="table-wrapper">
@@ -114,9 +123,10 @@ $(document).ready(function() {
         }
     });
 
-    // Handle the selection change
+    // Handle the grid box selection change
     $('#gridBoxSelect').change(function() {
         var selectedGridBox = $(this).val();
+        var userSelect = $('#userSelect');
         if (selectedGridBox) {
             $.ajax({
                 url: '/cryo_grids/specific_grids/',  // Update with the correct endpoint
@@ -126,6 +136,14 @@ $(document).ready(function() {
                     console.log('Specific grids fetched:', response);  // Debugging line
                     var gridBoxData = $('#gridBoxData');
                     gridBoxData.empty();
+                    userSelect.empty();
+                    userSelect.append(new Option("Select a user", ""));
+
+                    var usernames = [...new Set(response.map(item => item.user__username))];
+                    usernames.forEach(function(username) {
+                        userSelect.append(new Option(username, username));
+                    });
+
                     response.forEach(function(grid) {
                         gridBoxData.append(`
                             <tr>
@@ -140,7 +158,6 @@ $(document).ready(function() {
                                 <td><a href="/admin/cryo_grids/cryogridcassette/${grid.grid_cassette_id}/change/">${grid.grid_cassette__name}</a></td>
                                 <td>${grid.create_on}</td>
                                 <td>${grid.user__username}</td>
-
                             </tr>
                         `);
                     });
@@ -151,6 +168,59 @@ $(document).ready(function() {
                 }
             });
         }
+    });
+
+    // Handle the user selection change
+    $('#userSelect').change(function() {
+        var selectedGridBox = $('#gridBoxSelect').val();
+        var selectedUser = $(this).val();
+
+        var requestData = {};
+        if (selectedGridBox) {
+            requestData.grid_box_name = selectedGridBox;
+        }
+        if (selectedUser) {
+            requestData.username = selectedUser;
+        }
+
+        $.ajax({
+            url: '/cryo_grids/specific_grids/',  // Update with the correct endpoint
+            method: 'GET',
+            data: requestData,
+            success: function(response) {
+                console.log('Specific grids fetched:', response);  // Debugging line
+                var gridBoxData = $('#gridBoxData');
+                gridBoxData.empty();
+                response.forEach(function(grid) {
+                    gridBoxData.append(`
+                        <tr>
+                            <td>${grid.id}</td>
+                            <td><a href="/admin/cryo_grids/cryogrid/${grid.id}/change/">${grid.name}</a></td>
+                            <td>${grid.notes}</td>
+                            <td>${grid.position_in_box}</td>
+{#                            <td>${grid.grid_box_id}</td>#}
+                            <td>${grid.clipped}</td>
+                            <td>${grid.trashed}</td>
+                            <td>${grid.slot_number_in_cassette}</td>
+                            <td><a href="/admin/cryo_grids/cryogridcassette/${grid.grid_cassette_id}/change/">${grid.grid_cassette__name}</a></td>
+                            <td>${grid.create_on}</td>
+                            <td>${grid.user__username}</td>
+                        </tr>
+                    `);
+                });
+            },
+            error: function(error) {
+                console.error('Error fetching specific grids:', error);
+                alert('Error fetching specific grids. Please check the console for more details.');
+            }
+        });
+    });
+
+    // Handle the reset button click
+    $('#resetButton').click(function() {
+        $('#gridBoxSelect').val('');
+        $('#userSelect').empty().append(new Option("Select a user", ""));
+        $('#gridBoxData').empty();
     });
 });
 </script>
