@@ -45,7 +45,7 @@ def reserve_run(request):
     if request.method == 'POST':
         form = ReserveProcRunForm(request.POST)
         name = models.suggest_name('t')
-        plan_id=int(request.POST['pipeline_plan'])
+        plan_id=int(request.POST['proc_plan'])
         return render(request, reverse("processes:create"))
     else:
         form = ReserveProcRunForm()
@@ -68,6 +68,8 @@ def create_run(request):
         path_dicts = {}
         #run_instance.frames = run_instance.get_session_path('frames')
         run_instance.save()
+        run_instance.save_pipe_run_data()
+        run_instance.create_tomogram_collection()
         return HttpResponseRedirect(reverse('processes:detail', args=(run_instance.id,)))
 
 @require_http_methods(["GET"])
