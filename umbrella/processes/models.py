@@ -1,6 +1,8 @@
 from django.db import models
+from django.db.models import Q
 from tem.models import MsiSession, SessionPlan
 from stores.models import StaticPath, Path, PathType, fill_place_holders
+import sys
 
 '''
 from stores.models import DataRecord, 
@@ -84,8 +86,10 @@ class PlanPipe(models.Model):
         }
         if proc_run:
             mapping['proc_run'] = proc_run.name
+            mapping['proc_software'] = self.software.name
         if msi_session:
             mapping['msi_session'] = msi_session.name
+            mapping['scope'] = msi_session.session_plan.scope.name
         return mapping
 
 class GlobalParam(models.Model):
@@ -104,7 +108,7 @@ class PipeParam(models.Model):
 
 # record
 class ProcRun(models.Model):
-    name = models.CharField(max_length=20, default='1')
+    name = models.CharField(max_length=20, default='run001')
     proc_plan = models.ForeignKey(PipelinePlan, on_delete=models.CASCADE)
     msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)
     notes = models.TextField(max_length=255, blank=True, null=True)
@@ -116,7 +120,7 @@ class ProcRun(models.Model):
         for p in pipes:
             for p_out in p.output.all():
                 out_static = fill_place_holders(
-                        p_out.static_path.data_type,p.get_replacement_map(proc_run=self,msi_session=self.msi_session))
+                        p_out.static_path.static_path,p.get_replacement_map(proc_run=self,msi_session=self.msi_session))
                 out_overlay = fill_place_holders(
                         p_out.overlay_path,p.get_replacement_map(proc_run=self,msi_session=self.msi_session))
                 out_path = Path.objects.create(static_path=out_static,overlay_path=out_overlay)
@@ -164,23 +168,15 @@ class ProcRun(models.Model):
             ### TODO Really determine voxel and pixel spacings###
             if my_pipe_step == 1:
                 voxels = TomogramVoxelSpacing.objects.filter(spacing=5.0)
-                if not voxels:
-                    # Create default voxel method
-                    voxel = TomogramVoxelSpacing.objects.create(spacing=5.0)
-                else:
-                    voxel = voxels[0]
-            elif my_pipe_step in (2,3):
+                voxel = voxels[0]
+            elif my_pipe_step in (2,3,4):
                 voxels = TomogramVoxelSpacing.objects.filter(spacing=10.0)
-                if not voxels:
-                    # Create default voxel method
-                    voxel = TomogramVoxelSpacing.objects.create(spacing=10.0)
-                else:
-                    voxel = voxels[0]
+                voxel = voxels[0]
             else:
                 voxel = None
             if voxel:
                 self.created_objects[my_pipe_step].append(('vox',voxel))
-            ### TODO Define recon method
+            ### TODO Define recon method in pipe
             recon_methods = ReconMethod.objects.all()
             if not recon_methods:
                 # Create default recon method
@@ -224,13 +220,21 @@ class ProcRun(models.Model):
                     # need to really determine this from pipe input pathtype.
                         continue
                     setattr(my_instance, attr_name, obj)
+                if ptype == 'deno' and k == 'rec':
+                    setattr(my_instance,'parent_tomo', obj)
         for item in self.created_objects[my_pipe_step]:
             k, obj = item
             if model_map[k][1] in my_field_names:
                  setattr(my_instance, model_map[k][1], obj)
         # specific to denoised tomogram
         if ptype == 'deno':
-            setattr(my_instance,'denoised', True)
+            deno_methods = TomoPostProcessMethod.objects.filter(software=pdata.pipe.software)
+            if not deno_methods:
+                # Create default method. TODO: should specify names
+                deno_method = TomoPostProcessMethod.objects.create(software=pdata.pipe.software)
+            else:
+                deno_method = deno_methods[0]
+            setattr(my_instance,'post_process', deno_method)
         my_instance.save()
         return my_instance
 
@@ -314,6 +318,16 @@ class ReconMethod(models.Model):
     def __str__(self):
         return '%s' % (self.name)
 
+class TomoPostProcessMethod(models.Model):
+    name = models.CharField(max_length=32, default='denoised')
+    software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
+    
+    class Meta:
+        unique_together = [["name","software"]]
+
+    def __str__(self):
+        return '%s by %s' % (self.name, self.software)
+
 class Tomograms(models.Model):
     '''
     Tomogram collection within the msi_session
@@ -321,10 +335,26 @@ class Tomograms(models.Model):
     # This allows denoise or other type of tomograms to be included
     pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
     recon_method = models.ForeignKey(ReconMethod, on_delete=models.CASCADE)
-    denoised = models.BooleanField(default=False,help_text="Is this a denoised tomogram ?")
     voxel_spacing = models.ForeignKey(TomogramVoxelSpacing, on_delete=models.CASCADE)
     alignment = models.ForeignKey(Alignment, on_delete=models.CASCADE)
     ctf = models.ForeignKey(Ctf, on_delete=models.CASCADE, null=True, blank=True)
     msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE) # included here for easy query
+    post_process = models.ForeignKey(TomoPostProcessMethod, on_delete=models.SET_NULL, null=True, blank=True)
+    parent_tomo = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
 
-
+def suggest_name(prefix, msi_session, plan, model_name='ProcRun'):
+    """
+    Make unique name by advancing to next integer.
+    """
+    model_instance = getattr(sys.modules[__name__], model_name)
+    if prefix:
+        prefix_search = prefix
+        old_runs = model_instance.objects.filter(Q(name__startswith=prefix_search), proc_plan=plan, msi_session=msi_session)
+        used_names = list(map((lambda x: x.name), old_runs))
+        if not used_names:
+            # first session of the day
+            return prefix_search + '%03d' % 1
+        used_numbers = list(map((lambda x: int(x.split(prefix_search)[-1])), used_names))
+        return '%s%03d' % (prefix,max(used_numbers)+1)
+    else: 
+        raise ValueError('Prefix must not be empty string for run name')

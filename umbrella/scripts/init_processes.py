@@ -16,7 +16,7 @@ def create_static_path(data_type):
     for data_type in ['tangl','rawst','aln','ctf','rec','evn','odd','deno']:
         instance = StaticPath.objects.create(
                 data_type=data_type,
-                static_path='/{proc_software}/{proc_run}/{msi_session}/{run}/%s/{proc_software/{proc_run}/{pipe}/' % data_type,
+                static_path='/{msi_session}/{run}/%s/{proc_software}/{proc_run}/{pipe}/' % data_type,
         )
     return instance
 
@@ -48,7 +48,7 @@ def create_pipeline_plan():
     tasks = createStandardTasks()
     aretomo3 = ProcSoftware.objects.create(name='aretomo3',
                 version='2024-03-10')
-    denoiser = ProcSoftware.objects.create(name='denoise',
+    denoiser = ProcSoftware.objects.create(name='ariana_denoiser',
                 version='2024-03-10')
     for t in tasks[:-1]:
         aretomo3.capable_tasks.add(t)
@@ -60,7 +60,7 @@ def create_pipeline_plan():
     # AreTomo3-10A recon
     plan_pipe2 = PlanPipe.objects.create(name='vol002',plan=plan,step=2,software=aretomo3)
     plan_pipe3 = PlanPipe.objects.create(name='vol003',plan=plan,step=3,software=aretomo3)
-    plan_pipe4 = PlanPipe.objects.create(name='run001',plan=plan,step=4,software=denoiser)
+    plan_pipe4 = PlanPipe.objects.create(name='den001',plan=plan,step=4,software=denoiser)
     #input
     input_path_types = []
     #PathType may not be good enough to tell different software
@@ -97,7 +97,7 @@ def create_pipeline_plan():
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('deno'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{input_pipe}/{run}_Vol.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{run}_Vol.mrc',
     ))
     for t in tasks[:-1]:
         # everything at 5 Å except denoising
