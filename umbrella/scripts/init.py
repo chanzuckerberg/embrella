@@ -22,7 +22,7 @@ def create_project():
     project = Project.objects.create(name='BD01', google_drive_folder=drive, confluence_space=confluence)
     return project
 
-def create_grid(user):
+def create_grid(user, project):
     site = Site.objects.create(name='3400Bridge',address='3400 Bridge Parkway')
     dewar = Dewar.objects.create(name='CZII 1', site=site)
     cane = Cane.objects.create(name='cane1', color='CF1E01',dewar=dewar,position_in_dewar=1)
@@ -33,7 +33,7 @@ def create_grid(user):
     plan = PlungeFreezingPlan.objects.create(sample_application_protocol = '', blot_time=6.0,wash_step='')
     plan.sample.add(sample)
     session = PlungeFreezingSession.objects.create(user=user,device=device,device_temperature=4.0,humidity=95,number_of_grids=1)
-    cryo_grid = CryoGrid.objects.create(name='grid1',freezing_plan=plan,freezing_session=session,notes='test',grid_box=box)
+    cryo_grid = CryoGrid.objects.create(name='grid1',freezing_plan=plan,freezing_session=session,notes='test',grid_box=box,user=user,intended_project=project)
     return cryo_grid
 
 def create_scope_camera():
@@ -97,10 +97,10 @@ def run():
     except User.DoesNotExist:
         print('Please create superuser first')
         sys.exit(1)
-    grid=create_grid(User.objects.get(pk=1))
+    project=create_project()
+    grid=create_grid(User.objects.get(pk=1), project)
     scope,camera=create_scope_camera()
     plan=create_tomo5_plan(scope, camera)
-    project=create_project()
 
 if __name__ == "__main__":
     run()

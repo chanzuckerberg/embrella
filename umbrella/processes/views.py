@@ -44,8 +44,6 @@ def detail(request, run_id):
 def reserve_run(request):
     if request.method == 'POST':
         form = ReserveProcRunForm(request.POST)
-        name = models.suggest_name('t')
-        plan_id=int(request.POST['pipeline_plan'])
         return render(request, reverse("processes:create"))
     else:
         form = ReserveProcRunForm()
@@ -54,20 +52,21 @@ def reserve_run(request):
 def create_run(request):
     plan_id=int(request.POST['proc_plan'])
     session_id=int(request.POST['msi_session'])
-    # TODO suggest name with prefix
-    #name = models.suggest_name('')
-    name = 'test1'
+    msi_session=MsiSession.objects.get(pk=session_id)
+    proc_plan=PipelinePlan.objects.get(pk=plan_id)
+    name = models.suggest_name('run',msi_session,proc_plan)
     if request.method == 'POST':
         run_instance = ProcRun.objects.create(
                     name=name,
-                    msi_session=MsiSession.objects.get(pk=session_id),
-                    proc_plan=PipelinePlan.objects.get(pk=plan_id),
+                    msi_session=msi_session,
+                    proc_plan=proc_plan,
         )
         run_instance.save()
         my_pk = run_instance.id
         path_dicts = {}
-        #run_instance.frames = run_instance.get_session_path('frames')
         run_instance.save()
+        run_instance.save_pipe_run_data()
+        run_instance.create_tomogram_collection()
         return HttpResponseRedirect(reverse('processes:detail', args=(run_instance.id,)))
 
 @require_http_methods(["GET"])
