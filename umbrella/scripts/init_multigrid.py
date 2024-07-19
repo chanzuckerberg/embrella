@@ -49,6 +49,12 @@ def create_multigrid_plan(scope, camera):
     plan= SessionPlan.objects.create(scope=scope,camera=camera,imaging_workflow=workflow,software=software)
     return plan
 
+def place_grid_in_cassette():
+    cassette = CryoGridCassette.objects.create(name='C1')
+    grid = CryoGrid.objects.first()
+    grid.grid_cassette = cassette
+    grid.save()
+    
 def run():
     try:
         user=User.objects.get(pk=1)
@@ -61,6 +67,7 @@ def run():
         print('Please run init first')
         sys.exit(1)
     plan=create_multigrid_plan(scope, camera)
+    place_grid_in_cassette()
 
 if __name__ == "__main__":
     run()
