@@ -56,7 +56,7 @@ def create_run(request):
     session_id=int(request.POST['msi_session'])
     # TODO suggest name with prefix
     #name = models.suggest_name('')
-    name = 'test1'
+    name = request.POST['name']
     if request.method == 'POST':
         run_instance = ProcRun.objects.create(
                     name=name,
@@ -66,7 +66,6 @@ def create_run(request):
         run_instance.save()
         my_pk = run_instance.id
         path_dicts = {}
-        #run_instance.frames = run_instance.get_session_path('frames')
         run_instance.save()
         run_instance.save_pipe_run_data()
         run_instance.create_tomogram_collection()

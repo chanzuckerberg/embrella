@@ -135,9 +135,9 @@ class ProcRun(models.Model):
         run_pipe_datas = RunPipeData.objects.filter(run=self)
         pipes_input_from = list(map((lambda x: x.pipe.input_pipe_step), run_pipe_datas))
         max_input_step = max(pipes_input_from)
-        path_types = list(map((lambda x: x.pathtype.static_path), run_pipe_datas))
+        path_types = list(map((lambda x: x.pathtype.static_path.data_type), run_pipe_datas))
         # exit if not tomogram-related
-        if not set(path_types).intercept(set(tomogram_path_type_order)):
+        if not set(path_types).intersection(set(tomogram_path_type_order)):
             return False
         s = self.msi_session
         # frames are done in a different mechanism from others
