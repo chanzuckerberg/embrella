@@ -34,6 +34,20 @@
     {% endif %}
 	</tr> 
 	{% endfor %} 
+	{% for d in  pipe_data %} 
+	<tr> 
+        <td>
+    {% if d.pathtype.static_path.data_type == 'rec' %}
+            <b>
+    {% endif %}
+    {{ d.pipe.software.name }} - {{ d.pipe.name }}: {{ d.pathtype.static_path.data_type }}
+    {% if d.pathtype.static_path.data_type == 'rec' %}
+            </b>
+    {% endif %}
+        </td>
+        <td>{{ d.path.overlay_path }}</td>
+	</tr> 
+	{% endfor %}
 	{% for k, v in  paths.items %} 
 	<tr> 
         <td>{{ k }}</td>
