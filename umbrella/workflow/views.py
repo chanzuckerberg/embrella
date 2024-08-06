@@ -1,14 +1,16 @@
-import paramiko
-import os
 import logging
 from .utils import jsonify, ssh_connect, extract_parameters
 from django.http import JsonResponse
+from django.shortcuts import render
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 KEYS = ('PixSize',
-        'AtBin')
+        'AtBin',
+        'CorrCTF',
+        'McIter',
+        'Wbp')
 
 
 def get_aretomo3_json(request):
@@ -40,6 +42,7 @@ def get_aretomo3_json(request):
     #     return JsonResponse({"error": error_msg}, status=500)
 
 
-
+def custom_workflow_page(request):
+    return render(request, 'workflows/workflow_page.html')
 
 
