@@ -1,10 +1,9 @@
-import logging
+from umbrella_logger import logger
 from .utils import jsonify, ssh_connect, extract_parameters
 from django.http import JsonResponse
 from django.shortcuts import render
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
 
 KEYS = ('PixSize',
         'AtBin',

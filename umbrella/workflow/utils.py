@@ -2,16 +2,13 @@ import json
 
 import paramiko
 import os
+from umbrella_logger import logger
 
 # Other connection details
 hostname = '10.50.120.52'
 port = 22
-username = 'yongbaek.cho'
+username = os.getenv('REMOTE_ID')
 password = os.getenv('REMOTE_PASSWORD')
-
-KEYS = ('PixSize',
-       'AtBin')
-
 
 def ssh_connect(remote_path):
     # Check if password is retrieved successfully
@@ -44,7 +41,7 @@ def jsonify(data):
         json_data = json.loads(data)
         return json_data
     except json.JSONDecodeError as e:
-        print(f"JSONDecodeError: {e}")
+        logger.exception(f"JSONDecodeError: {e}")
         raise e
 
 
