@@ -36,6 +36,10 @@ def get_aretomo3_json(request):
         error_msg = f"File not found"
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=404)
+    except Exception as err:
+        error_msg = f"Please check the server status: {str(err)}"
+        logger.error(error_msg)
+        return JsonResponse({"error": error_msg}, status=500)
 
 
 

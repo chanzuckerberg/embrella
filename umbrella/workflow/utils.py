@@ -33,9 +33,6 @@ def ssh_connect(remote_path):
     # Close the SFTP session and SSH client
     sftp.close()
     ssh.close()
-    # print(file_contents.decode('utf-8'))
-    # print(type(file_contents.decode('utf-8')))
-
     return file_contents.decode('utf-8')
 
 
