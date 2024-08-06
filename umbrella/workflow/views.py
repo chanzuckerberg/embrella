@@ -8,7 +8,7 @@ from django.shortcuts import render
 KEYS = ('PixSize',
         'AtBin',
         'CorrCTF',
-        'McIter',
+        'McBin',
         'Wbp')
 
 

@@ -74,17 +74,20 @@
         .copy-button:active {
             background-color: #A0A0A0;
         }
-        pre {
-            background-color: #f0f0f0;
-            padding: 15px;
-            border-radius: 4px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
             margin-top: 20px;
-            white-space: pre-wrap;
-            position: relative;
-            min-height: 100px; /* Ensure the grey box has sufficient height initially */
         }
-        .result-container {
-            position: relative;
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f9;
         }
     </style>
     <script>
@@ -100,14 +103,36 @@
                 if (!response.ok) {
                     throw new Error(data.error || 'Network response was not ok');
                 }
-                document.getElementById('result').textContent = JSON.stringify(data, null, 4);
+                displayResultAsTable(data);
             } catch (error) {
-                document.getElementById('result').textContent = `Error: ${error.message}`;
+                document.getElementById('result').innerHTML = `Error: ${error.message}`;
             }
         }
 
+        function displayResultAsTable(data) {
+            const resultContainer = document.getElementById('result');
+            resultContainer.innerHTML = '';
+
+            const table = document.createElement('table');
+
+            Object.keys(data).forEach(key => {
+                const row = document.createElement('tr');
+                const cellKey = document.createElement('td');
+                const cellValue = document.createElement('td');
+
+                cellKey.textContent = key;
+                cellValue.textContent = Array.isArray(data[key]) ? data[key].join(', ') : data[key];
+
+                row.appendChild(cellKey);
+                row.appendChild(cellValue);
+                table.appendChild(row);
+            });
+
+            resultContainer.appendChild(table);
+        }
+
         function copyToClipboard() {
-            const resultText = document.getElementById('result').textContent;
+            const resultText = document.getElementById('result').innerText;
             navigator.clipboard.writeText(resultText).then(() => {
                 alert('Result copied to clipboard');
             }).catch(err => {
@@ -133,7 +158,7 @@
         </form>
         <h2>Result:</h2>
         <div class="result-container">
-            <pre id="result"></pre>
+            <div id="result"></div>
             <button class="copy-button" onclick="copyToClipboard()">Copy</button>
         </div>
     </div>
