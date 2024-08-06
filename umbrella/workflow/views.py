@@ -36,10 +36,7 @@ def get_aretomo3_json(request):
         error_msg = f"File not found"
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=404)
-    # except Exception as e:
-    #     error_msg = f"An unexpected error occurred: {e}"
-    #     logger.error(error_msg)
-    #     return JsonResponse({"error": error_msg}, status=500)
+
 
 
 def custom_workflow_page(request):
