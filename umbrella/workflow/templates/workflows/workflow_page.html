@@ -55,12 +55,36 @@
         button:hover {
             background-color: #0056b3;
         }
+        .copy-button {
+            background-color: #E0E0E0;
+            border: none;
+            border-radius: 4px;
+            color: #4A4A4A;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 6px 12px;
+            transition: background-color 0.3s;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+        }
+        .copy-button:hover {
+            background-color: #C0C0C0;
+        }
+        .copy-button:active {
+            background-color: #A0A0A0;
+        }
         pre {
             background-color: #f0f0f0;
             padding: 15px;
             border-radius: 4px;
             margin-top: 20px;
             white-space: pre-wrap;
+            position: relative;
+            min-height: 100px; /* Ensure the grey box has sufficient height initially */
+        }
+        .result-container {
+            position: relative;
         }
     </style>
     <script>
@@ -81,6 +105,15 @@
                 document.getElementById('result').textContent = `Error: ${error.message}`;
             }
         }
+
+        function copyToClipboard() {
+            const resultText = document.getElementById('result').textContent;
+            navigator.clipboard.writeText(resultText).then(() => {
+                alert('Result copied to clipboard');
+            }).catch(err => {
+                alert('Failed to copy: ', err);
+            });
+        }
     </script>
 </head>
 <body>
@@ -99,7 +132,10 @@
             <button type="submit">Fetch Metadata</button>
         </form>
         <h2>Result:</h2>
-        <pre id="result"></pre>
+        <div class="result-container">
+            <pre id="result"></pre>
+            <button class="copy-button" onclick="copyToClipboard()">Copy</button>
+        </div>
     </div>
 </body>
 </html>
