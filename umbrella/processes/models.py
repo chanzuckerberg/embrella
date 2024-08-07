@@ -160,35 +160,50 @@ class ProcRun(models.Model):
         else:
             return 0 # from msi_session acquisition
 
-    def create_tomogram_collection(self):
+    def create_tomogram_collection(self, tomo_input=False):
         """
         Save portal schema-like record. Return True if the run adds data to these records.
         """
-        tomogram_path_type_order = ['tangl','rawst','aln','ctf','rec','deno']
+        tomogram_path_type_order = ['tangl','rawst','aln','ctf','rec','deno','pick','galr']
         run_pipe_datas = RunPipeData.objects.filter(run=self)
         pipes_input_from = []
-        for pip in self.pipes_in_plan:
-            if pip.pipe.input_pipe is None:
+        for pipl in self.pipes_in_plan:
+            if pipl.pipe.input_pipe is None:
                 # handle frames
                 # TODO: consider doing this at the time of msi_session creation
                 frames_fd = self.create_frames_runpipedata(self.msi_session)
-            pipes_input_from.append(self._get_input_pipe_pk(pip.pipe))
+            pipes_input_from.append(self._get_input_pipe_pk(pipl.pipe))
         path_types = list(map((lambda x: x.pathtype.static_path.data_type), run_pipe_datas))
         # TODO: this makes it necessary to enter pipes in strict order.
         input_pipe_pks = pipes_input_from
         # exit if not tomogram-related
-        if not set(path_types).intersection(set(tomogram_path_type_order)):
-            return False
+        #if not set(path_types).intersection(set(tomogram_path_type_order)):
+        #    return False
         # only get here if tomogram creation
-        self.created_objects = {0:[('frames',frames_fd),]} #by pipe pk
+        if not tomo_input and frames_fd:
+            # processing run starts from frames
+            self.created_objects = {0:[('frames',frames_fd),]} #by pipe pk
+        else:
+            # processing run starts from tomogram
+            pipe_pk = tomo_input.pipe_data.pipe.pk
+            self.created_objects = {pipe_pk:[('rec',tomo_input),]}
+            input_pipe_pks = [tomo_input.pipe_data.pipe.pk,]
+
+        # accumulate created_objects
         for ptype in tomogram_path_type_order:
             results = list(filter((lambda x: x.pathtype.static_path.data_type ==ptype), run_pipe_datas))
+            if tomo_input and ptype in ('rec','deno'):
+                # only allow the tomo_input result to be considered
+                results = [tomo_input.pipe_data,]
             for r in results:
                     my_pipe_pk = r.pipe.pk
-                    saved = self._save_instance(r,input_pipe_pks)
-                    if my_pipe_pk not in self.created_objects.keys():
-                        self.created_objects[my_pipe_pk]=[]
-                    self.created_objects[my_pipe_pk].append((ptype,saved))
+                    try:
+                        saved = self._save_instance(r,input_pipe_pks, tomo_input)
+                        if my_pipe_pk not in self.created_objects.keys():
+                            self.created_objects[my_pipe_pk]=[]
+                        self.created_objects[my_pipe_pk].append((ptype,saved))
+                    except Exception as e:
+                        print('ERROR: not able to save pipe_id=%d' % my_pipe_pk)
         return True
 
     def _add_other_objects(self, class_name, my_pipe):
@@ -221,6 +236,14 @@ class ProcRun(models.Model):
                 recon_method = recon_methods[0]
             self.created_objects[my_pipe_pk].append(('recmethod',recon_method))
             self.created_objects[my_pipe_pk].append(('msi',self.msi_session))
+        if class_name == 'Annotation':
+            anno_methods = AnnotationMethod.objects.all()
+            if not anno_methods:
+                # Create default recon method
+                anno_method = ReconMethod.objects.create()
+            else:
+                anno_method = anno_methods[0]
+            self.created_objects[my_pipe_pk].append(('pickmethod',anno_method))
 
     def is_recon_ctf_deconvolved(self, pipe):
         '''
@@ -243,9 +266,9 @@ class ProcRun(models.Model):
                 return self.is_recon_ctf_deconvolved(input_pipe)
         return False
 
-    def _save_instance(self, pdata, input_pipe_pks):
+    def _save_instance(self, pdata, input_pipe_pks, tomo_input=False):
         """
-        Save tomogram-related reinstances
+        Save instances of various cryo-ET models
         """
         model_map = {   
                         # PathType.static_name: (class name, attribute name in other classes)
@@ -259,35 +282,57 @@ class ProcRun(models.Model):
                         'rec':('Tomograms','tomograms'),
                         'deno':('Tomograms','tomograms'),
                         'msi':('MsiSession','msi_session'),
+                        'pickmethod':('AnnotationMethod','annotation_method'),
+                        'pick':('Annotation','pick'),
+                        'seg':('Annotation','segmentation'),
+                        'galr':('ParticleGallery','gallery'),
                     }
         all_input_pipe_pks = list(input_pipe_pks)
+        #
+        # get my_instance from class in this python module
         ptype = pdata.pathtype.static_path.data_type
         class_name = model_map[ptype][0]
         my_attr = getattr_from_globals(class_name)
         my_instance = my_attr(pipe_data=pdata)
+        #
         my_field_names = list(map((lambda x:x.name),my_instance._meta.fields))
         my_pipe = pdata.pipe
         my_pipe_pk = my_pipe.pk
         if my_pipe_pk not in self.created_objects.keys():
+            # initiate created_object
             all_input_pipe_pks.append(my_pipe_pk)
             self.created_objects[my_pipe_pk]=[]
+        # add the required objects that is not the main data pipeline
         self._add_other_objects(class_name, pdata.pipe)
         #
-        my_input_pipe = self._get_input_pipe_pk(my_pipe)
-        for i in range(all_input_pipe_pks.index(my_input_pipe)+1):
+        if tomo_input:
+            my_input_pipe = tomo_input.pipe_data.pipe.pk
+            start = all_input_pipe_pks.index(tomo_input.pipe_data.pipe.pk)
+        else:
+            my_input_pipe = self._get_input_pipe_pk(my_pipe)
+            start = 0
+        # Use the index of the input_pipe to find the item to map the model fields to
+        pipe_range = range(start, all_input_pipe_pks.index(my_input_pipe)+1)
+        for i in pipe_range:
             pk = all_input_pipe_pks[i]
             for item in self.created_objects[pk]:
                 k, obj = item
                 attr_name = model_map[k][1]
+                # map the model fields to the previously created objects
                 if attr_name in my_field_names:
                     if attr_name=='ctf':
                         # Without ctf input means the output tomogram is not ctf deconvoluted..
                         if not self.is_recon_ctf_deconvolved(my_pipe):
                             continue
                     setattr(my_instance, attr_name, obj)
+                # denoised tomogram is derived from a parent
                 if ptype == 'deno' and k == 'rec':
                     # tomogram is derived from others
                     setattr(my_instance,'parent_tomo', obj)
+                # when tomograms are the input, it is referred as tomograms in model fields.
+                if tomo_input and attr_name == 'tomograms':
+                    setattr(my_instance,'tomograms', obj)
+        # add everything created in my_pipe
         for item in self.created_objects[my_pipe_pk]:
             k, obj = item
             if model_map[k][1] in my_field_names:
@@ -301,6 +346,9 @@ class ProcRun(models.Model):
             else:
                 deno_method = deno_methods[0]
             setattr(my_instance,'post_process', deno_method)
+        # specific to annotation
+        if ptype == 'pick':
+            my_instance.name = my_pipe.name
         my_instance.save()
         return my_instance
 
@@ -379,12 +427,18 @@ class TomogramVoxelSpacing(models.Model):
         return '%.3f' % (self.spacing)
 
 class ReconMethod(models.Model):
+    """
+    Processing Method that creates tomogram from alignment
+    """
     name = models.CharField(max_length=32, default='weighted back projection')
 
     def __str__(self):
         return '%s' % (self.name)
 
 class TomoPostProcessMethod(models.Model):
+    """
+    Processing Method that converts one tomogram into another through filtering, denoising etc.
+    """
     name = models.CharField(max_length=32, default='denoised')
     software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
     
@@ -408,6 +462,34 @@ class Tomograms(models.Model):
     post_process = models.ForeignKey(TomoPostProcessMethod, on_delete=models.SET_NULL, null=True, blank=True)
     parent_tomo = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
 
+    def __str__(self):
+        return 'tomo @ %s' % (self.pipe_data)
+
+class AnnotationMethod(models.Model):
+    name = models.CharField(max_length=32, default='template matching')
+
+    def __str__(self):
+        return '%s' % (self.name)
+
+class Annotation(models.Model):
+    pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
+    tomograms = models.ForeignKey(Tomograms, on_delete=models.CASCADE)
+    name = models.CharField(max_length=32, default='ribosome')
+    ontology_term = models.CharField(max_length=20, default='GO:0005840')
+    annotation_type = models.CharField(max_length=12, default='point')
+    annotation_method = models.ForeignKey(AnnotationMethod, on_delete=models.CASCADE)
+    parent_anno = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return '%s' % (self.pipe_data)
+
+class ParticleGallery(models.Model):
+    pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
+    pick = models.ForeignKey(Annotation, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return '%s' % (self.pipe_data)
+
 def suggest_name(prefix, msi_session, plan, model_name='ProcRun'):
     """
     Make unique name by advancing to next integer.
@@ -424,3 +506,12 @@ def suggest_name(prefix, msi_session, plan, model_name='ProcRun'):
         return '%s%03d' % (prefix,max(used_numbers)+1)
     else: 
         raise ValueError('Prefix must not be empty string for run name')
+
+
+def select_plan_ids_by_input_data_types(selected_data_types):
+    selected_static_paths = StaticPath.objects.filter(data_type__in=selected_data_types)
+    selected_pipes = Pipe.objects.filter(input__in=selected_static_paths)
+    pipe_in_plans = PipeInPlan.objects.filter(pipe__in=selected_pipes)
+    plan_ids = list(map((lambda x: x.plan.id), pipe_in_plans))
+    return plan_ids
+

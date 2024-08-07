@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Create Processing Run with frames as input</title>
+  <title>Create Processing Session with tomogram as input</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
@@ -82,12 +82,24 @@
 <body>
   <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go Back</button>
   <div class="container">
-    <h2 class="text-center"><u>Create Processing Run with frame input</u></h2><br>
-    <form id="runForm" action="{% url 'processes:create' %}" method="post">
+    <h2 class="text-center"><u>Create Processing Run with tomogram input</u></h2><br>
+    <form id="runForm" action="{% url 'processes:ptcreate' %}" method="post">
       {% csrf_token %}
       <div class="row form-group">
         <div class="col-md-12">
         {{ form }}
+        </div>
+      </div>
+      <div class="row form-group">
+        <div class="col-md-12">
+          <label for="input_tomo">Input Tomogram</label>
+          <select id="input_tomo" name="input_tomo" required>
+            {% for option in input_tomo_field.choices %}
+              <option value="{{ option.0 }}" {% if option.0 == input_tomo_field.input_tomo.value %}selected{% endif %}>
+                {{ option.1 }}
+              </option>
+            {% endfor %}
+          </select>
         </div>
       </div>
       <div class="row form-group">
@@ -103,11 +115,32 @@
 
   <script>
     $(document).ready(function() {
+      $('#id_msi_session').change(function() {
+          var sessionId = $(this).val();
+          var planId = $('#id_proc_plan').val();
+          $.ajax({
+              url: "{% url 'get_tomo_by_msi_session' %}",
+              data: {
+                  'plan_id': planId,
+                  'session_id': sessionId
+              },
+              success: function(data) {
+                  var $tomo = $('#input_tomo');
+                  $tomo.empty();
+                  $tomo.append('<option value="">Select a tomogram as input</option>');
+                  $.each(data, function(index, item) {
+                      $tomo.append('<option value="' + item.id + '">' + item.name + '</option>');
+                  });
+              }
+          });
+      });
+
       $('#runForm').submit(function(event) {
         var procPlan = $('#id_proc_plan').val();
         var session = $('#id_msi_session').val();
+        var input_tomo = $('#input_tomo').val();
 
-        if (!procPlan || !session) {
+        if (!procPlan || !session || !input_tomo) {
           event.preventDefault();
           $('#warningMessage').show();
         } else {

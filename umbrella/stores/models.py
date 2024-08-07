@@ -15,7 +15,9 @@ DATA_TYPES = [
                 ('rec','all frame tomo recon'),
                 ('evn','even frame tomo recon'),
                 ('odd','odd frame tomo recon'),
-                ('deno','denoised recon'),
+                ('pick','particle point annotation'),
+                ('seg','segmentation'),
+                ('galr','particle gallery'),
             ]
 
 def fill_place_holders(input_str, key_values={}):

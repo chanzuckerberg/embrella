@@ -111,16 +111,6 @@
       </div>
       <div class="row form-group">
         <div class="col-md-6">
-          <label for="grid">Grid</label>
-          <select id="grid" name="grid" required>
-            {% for option in form.grid.field.choices %}
-              <option value="{{ option.0 }}" {% if option.0 == form.grid.value %}selected{% endif %}>
-                {{ option.1 }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
           <label for="user">Filter by user</label>
           <select id="user" name="user">
             {% for option in form.user.field.choices %}
@@ -130,8 +120,22 @@
             {% endfor %}
           </select>
         </div>
+        <div class="col-md-6">
+          <label for="grid">Grid</label>
+          <select id="grid" name="grid" required>
+            {% for option in form.grid.field.choices %}
+              <option value="{{ option.0 }}" {% if option.0 == form.grid.value %}selected{% endif %}>
+                {{ option.1 }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
-      <input type="submit" value="Create a session name">
+      <div class="row form-group">
+        <div class="col-md-12">
+            <input type="submit" value="Create a session name">
+        </div>
+      </div>
     </form>
     <div class="warning" id="warningMessage" style="display: none;">
       Please fill out all required fields.
