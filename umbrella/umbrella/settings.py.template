@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'jazzmin',
     'cryo_grids',
     'projects',
+    'workflow',
     'tem',
     'stores',
     'social_django',

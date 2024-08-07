@@ -39,7 +39,8 @@ urlpatterns = [
     path('admin/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
     path('get_grids_by_user/', get_grids_by_user, name='get_grids_by_user'),
     path('available_grids', get_available_grids, name='get_available_grids'),
-    path('cryo_grids/', include('cryo_grids.urls'), name='cryo_grids')
+    path('cryo_grids/', include('cryo_grids.urls'), name='cryo_grids'),
+    path('workflow/', include('workflow.urls'), name='workflow pipeline')
 ]
 
 

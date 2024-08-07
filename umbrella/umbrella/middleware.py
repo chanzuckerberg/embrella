@@ -1,7 +1,7 @@
 from django.utils.deprecation import MiddlewareMixin
 from django.urls import reverse
 from django.shortcuts import redirect
-from logger import logger
+from umbrella_logger import logger
 
 
 class SetNextParameterMiddleware(MiddlewareMixin):
