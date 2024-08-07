@@ -32,7 +32,6 @@ def detail(request, run_id):
         if hasattr(fields[f.name],'all'):
             fields[f.name] = list(map((lambda x: x.__str__()),fields[f.name].all()))
     all_pipe_data = RunPipeData.objects.filter(run=run)
-    print(all_pipe_data)
     form = UpdateNotesForm(instance=run)
     context = {
             "data": run,
