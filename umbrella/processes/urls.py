@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+from . import views_post_tomo
 
 #register app namespace
 app_name = "processes"
@@ -9,6 +10,10 @@ urlpatterns = [
     path("reserve", views.reserve_run, name="reserve"),
     path("create", views.create_run, name="create"),
     path("<int:run_id>/", views.detail, name="detail"),
+    path("post_tomo/reserve", views_post_tomo.reserve_run, name="ptreserve"),
+    path("post_tomo/select", views_post_tomo.select_tomo, name="ptselect"),
+    path("post_tomo/create", views_post_tomo.create_run, name="ptcreate"),
+    path("post_tomo/<int:run_id>/", views_post_tomo.detail, name="ptdetail"),
     #path("run_list/", views.get_all_sessions, name="get"),
     #path("path_list/", views.get_all_image_paths, name="path")
 ]

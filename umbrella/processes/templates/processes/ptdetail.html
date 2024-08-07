@@ -1,0 +1,70 @@
+<!DOCTYPE html> 
+<html lang="en"> 
+<head> 
+<title>Process Run {{ data.name }}</title> 
+<meta charset="utf-8"> 
+<meta name="viewport" content="width=device-width, initial-scale=1"> 
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"> 
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script> 
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script> 
+</head> 
+<body> 
+
+<div class="container"> 
+<h2 class="text-center"><u>Process Run {{ data.name }}</u></h2><br>			 
+<form action="{% url 'processes:detail' data.id %}" method="post">
+{% csrf_token %} 
+<table class="table table-light table-striped"> 
+	<thead> 
+	<tr>
+		<th>key</th> 
+		<th>value</th> 
+	</tr> 
+	</thead> 
+	<tbody> 
+	{% for f, v in  fields.items %} 
+	<tr> 
+        <td>{{ f }}</td>
+    <!-- add link for grid -->
+    {% if f == "grid" %}
+		<td><a href="http://127.0.0.1:8000/umbrella/cryo_grids/cryogrid/1/change/">{{ v }}</a></td>
+    {% else %}
+        <td>{{ v }}</td>
+    {% endif %}
+	</tr> 
+	{% endfor %} 
+	{% for d in  pipe_data %} 
+	<tr> 
+        <td>
+    {% if d.pathtype.static_path.data_type == 'rec' %}
+            <b>
+    {% endif %}
+    {{ d.pipe.software.name }} - {{ d.pipe.name }}: {{ d.pathtype.static_path.data_type }}
+    {% if d.pathtype.static_path.data_type == 'rec' %}
+            </b>
+    {% endif %}
+        </td>
+        <td>{{ d.path.overlay_path }}</td>
+	</tr> 
+	{% endfor %}
+	{% for k, v in  paths.items %} 
+	<tr> 
+        <td>{{ k }}</td>
+        <td>{{ v }}</td>
+	</tr> 
+	{% endfor %}
+    <!-- model form is added automatically, it seems -->
+    <!-- line up submit button with the entry -->
+    <tr><td></td><td>
+        <input type="submit" value="Update the run notes">
+        <td>
+    </tr>
+	</tbody> 
+</table> 
+</form>
+</div> 
+
+</body> 
+</html> 
+            

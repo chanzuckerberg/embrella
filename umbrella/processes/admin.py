@@ -23,4 +23,7 @@ admin.site.register(ReconMethod)
 admin.site.register(TomogramVoxelSpacing)
 admin.site.register(Tomograms)
 admin.site.register(TomoPostProcessMethod)
+admin.site.register(AnnotationMethod)
+admin.site.register(Annotation)
+admin.site.register(ParticleGallery)
 

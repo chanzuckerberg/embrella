@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from .forms import ProcRunForm, ReserveProcRunForm, UpdateNotesForm
+from .forms import ProcRunForm, ReserveFrameProcRunForm, UpdateNotesForm
 from . import models
 from processes.models import ProcRun, PipelinePlan, ProcSoftware, RunPipeData
 from tem.models import MsiSession
@@ -46,10 +46,10 @@ def detail(request, run_id):
 
 def reserve_run(request):
     if request.method == 'POST':
-        form = ReserveProcRunForm(request.POST)
+        form = ReserveFrameProcRunForm(request.POST)
         return render(request, reverse("processes:create"))
     else:
-        form = ReserveProcRunForm()
+        form = ReserveFrameProcRunForm()
         return render(request, "processes/reserve.html", {"form": form})
 
 def create_run(request):
