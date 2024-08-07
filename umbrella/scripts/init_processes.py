@@ -7,7 +7,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 from tem.models import *
 from stores.models import StaticPath,PathType, fill_place_holders
-from processes.models import ProcSoftware,Task, PipelinePlan, PlanPipe, ReconMethod, TomogramVoxelSpacing
+from processes.models import ProcSoftware,Task, PipelinePlan, Pipe, PipeInPlan, ReconMethod, TomogramVoxelSpacing
 
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
@@ -34,7 +34,7 @@ def createStandardTasks():
                     'stack tilt series',
                     'ctf estimation',
                     'align tilt series',
-                    'ctf decovolution',
+                    'ctf deconvolution',
                     'full tomo reconstruction',
                     'even/odd frame tomo reconstruction',
                     'denoised reconstruction',
@@ -48,7 +48,7 @@ def create_pipeline_plan():
     tasks = createStandardTasks()
     aretomo3 = ProcSoftware.objects.create(name='aretomo3',
                 version='2024-03-10')
-    denoiser = ProcSoftware.objects.create(name='ariana_denoiser',
+    denoiser = ProcSoftware.objects.create(name='denoiset',
                 version='2024-03-10')
     for t in tasks[:-1]:
         aretomo3.capable_tasks.add(t)
@@ -56,11 +56,17 @@ def create_pipeline_plan():
         denoiser.capable_tasks.add(t)
     plan = PipelinePlan.objects.create(name='czii-live')
     # AreTomo3-5A recon
-    plan_pipe1 = PlanPipe.objects.create(name='vol001',plan=plan,step=1,software=aretomo3)
+    pipe1 = Pipe.objects.create(name='vol001',software=aretomo3)
     # AreTomo3-10A recon
-    plan_pipe2 = PlanPipe.objects.create(name='vol002',plan=plan,step=2,software=aretomo3)
-    plan_pipe3 = PlanPipe.objects.create(name='vol003',plan=plan,step=3,software=aretomo3)
-    plan_pipe4 = PlanPipe.objects.create(name='den001',plan=plan,step=4,software=denoiser)
+    pipe2 = Pipe.objects.create(name='vol002',software=aretomo3)
+    pipe3 = Pipe.objects.create(name='vol003',software=aretomo3)
+    pipe4 = Pipe.objects.create(name='den001',software=denoiser)
+    # AreTomo3-5A recon
+    plan_pipe1 = PipeInPlan.objects.create(name='vol001',plan=plan,step=1,pipe=pipe1)
+    # AreTomo3-10A recon
+    plan_pipe2 = PipeInPlan.objects.create(name='vol002',plan=plan,step=2,pipe=pipe2)
+    plan_pipe3 = PipeInPlan.objects.create(name='vol003',plan=plan,step=3,pipe=pipe3)
+    plan_pipe4 = PipeInPlan.objects.create(name='den001',plan=plan,step=4,pipe=pipe4)
     #input
     input_path_types = []
     #PathType may not be good enough to tell different software
@@ -101,44 +107,44 @@ def create_pipeline_plan():
     ))
     for t in tasks[:-1]:
         # everything at 5 Å except denoising
-        plan_pipe1.tasks_performed.add(t)
+        pipe1.tasks_performed.add(t)
     for t in tasks[-3:-2]:
         # 10Å no CTF WBP
-        plan_pipe2.tasks_performed.add(t)
+        pipe2.tasks_performed.add(t)
     for t in tasks[-3:-2]:
         # 10Å no CTF SART
-        plan_pipe3.tasks_performed.add(t)
+        pipe3.tasks_performed.add(t)
     for t in tasks[-1:]:
-        plan_pipe4.tasks_performed.add(t)
+        pipe4.tasks_performed.add(t)
     # input/output
-    plan_pipe1.input.add(get_static_path('frames'))
-    plan_pipe1.input.add(get_static_path('mdoc'))
+    pipe1.input.add(get_static_path('frames'))
+    pipe1.input.add(get_static_path('mdoc'))
     for p in output_path_types[:-1]:
         # all except denoise
-        plan_pipe1.output.add(p) 
-    plan_pipe2.input.add(get_static_path('tangl'))
-    plan_pipe2.input.add(get_static_path('aln'))
-    plan_pipe2.input.add(get_static_path('rawst'))
-    plan_pipe3.input.add(get_static_path('tangl'))
-    plan_pipe3.input.add(get_static_path('aln'))
-    plan_pipe3.input.add(get_static_path('rawst'))
+        pipe1.output.add(p) 
+    pipe2.input.add(get_static_path('tangl'))
+    pipe2.input.add(get_static_path('aln'))
+    pipe2.input.add(get_static_path('rawst'))
+    pipe3.input.add(get_static_path('tangl'))
+    pipe3.input.add(get_static_path('aln'))
+    pipe3.input.add(get_static_path('rawst'))
     for p in output_path_types[4:5]: #recon
-       plan_pipe2.output.add(p)
-       plan_pipe3.output.add(p)
-    plan_pipe4.input.add(get_static_path('odd'))
-    plan_pipe4.input.add(get_static_path('evn'))
+       pipe2.output.add(p)
+       pipe3.output.add(p)
+    pipe4.input.add(get_static_path('odd'))
+    pipe4.input.add(get_static_path('evn'))
     for p in output_path_types[-1:]:
-       plan_pipe4.output.add(p)
+       pipe4.output.add(p)
     # where the input are from
-    plan_pipe1.input_pipe_step = 0
-    plan_pipe2.input_pipe_step = 1
-    plan_pipe3.input_pipe_step = 1
-    plan_pipe4.input_pipe_step = 1
+    pipe1.input_pipe = None
+    pipe2.input_pipe = pipe1
+    pipe3.input_pipe = pipe1
+    pipe4.input_pipe = pipe1
     # save
-    plan_pipe1.save()
-    plan_pipe2.save()
-    plan_pipe3.save()
-    plan_pipe4.save()
+    pipe1.save()
+    pipe2.save()
+    pipe3.save()
+    pipe4.save()
 
 def create_default_spacings():
     TomogramVoxelSpacing.objects.create(spacing=5.0) 

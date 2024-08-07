@@ -61,32 +61,44 @@ class ProcSoftware(models.Model):
         return '%s @ (%s)' % (self.name, self.version)
 
 class PipelinePlan(models.Model):
+    """
+    A collection of software-defined pipe to be used together.  Commonly from start
+    from one single pipe.  Other pipes would be triggered by creation of some output
+    of its parent pipe.
+    """
     name = models.CharField(max_length=32, default='czii-live')
 
     def __str__(self):
         return self.name
 
-class PlanPipe(models.Model):
+class Pipe(models.Model):
     name = models.CharField(max_length=32, default='voxelspacing10.000a')
-    plan = models.ForeignKey(PipelinePlan, on_delete=models.CASCADE)
-    step = models.PositiveSmallIntegerField(default=1)
-    input_pipe_step = models.PositiveSmallIntegerField(default=1, help_text='The pipe step it needs to wait for input in order to run')
+    input_pipe = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, help_text='The pipe it needs to wait for input in order to run')
     software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
     tasks_performed = models.ManyToManyField(Task,)
     input = models.ManyToManyField(StaticPath,related_name='staticpath_in_input')
     output = models.ManyToManyField(PathType,related_name='pathtype_in_output')
 
     def __str__(self):
-        return 'plan %s pipe %s: %s with %d tasks' % (self.plan, self.name, self.software,self.tasks_performed.count())
+        return 'pipe %s: %s with %d tasks' % (self.name, self.software,self.tasks_performed.count())
+
+class PipeInPlan(models.Model):
+    name = models.CharField(max_length=32, default='vol001')
+    plan = models.ForeignKey(PipelinePlan, on_delete=models.CASCADE)
+    step = models.PositiveSmallIntegerField(default=1)
+    pipe = models.ForeignKey(Pipe, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return 'plan %s pipe %s' % (self.plan, self.pipe)
 
     def get_replacement_map(self,proc_run=None,msi_session=None):
         mapping = {
             'proc_plan': self.plan.name,
-            'pipe': self.name,
+            'pipe': self.pipe.name,
         }
         if proc_run:
             mapping['proc_run'] = proc_run.name
-            mapping['proc_software'] = self.software.name
+            mapping['proc_software'] = self.pipe.software.name
         if msi_session:
             mapping['msi_session'] = msi_session.name
             mapping['scope'] = msi_session.session_plan.scope.name
@@ -101,7 +113,7 @@ class GlobalParam(models.Model):
 
 class PipeParam(models.Model):
     key = models.ForeignKey(MetaKey, on_delete=models.CASCADE)
-    pipe = models.ForeignKey(PlanPipe, on_delete=models.CASCADE)
+    pipe = models.ForeignKey(Pipe, on_delete=models.CASCADE)
     def __str__(self):
         return '(%s, %s)' % (self.pipe, self.key)
 
@@ -116,13 +128,14 @@ class ProcRun(models.Model):
         return '%s-%s' % (self.proc_plan, self.name)
 
     def save_pipe_run_data(self):
-        pipes = PlanPipe.objects.filter(plan=self.proc_plan)
-        for p in pipes:
+        self.pipes_in_plan = PipeInPlan.objects.filter(plan=self.proc_plan)
+        for pp in self.pipes_in_plan:
+            p = pp.pipe
             for p_out in p.output.all():
                 out_static = fill_place_holders(
-                        p_out.static_path.static_path,p.get_replacement_map(proc_run=self,msi_session=self.msi_session))
+                        p_out.static_path.static_path,pp.get_replacement_map(proc_run=self,msi_session=self.msi_session))
                 out_overlay = fill_place_holders(
-                        p_out.overlay_path,p.get_replacement_map(proc_run=self,msi_session=self.msi_session))
+                        p_out.overlay_path,pp.get_replacement_map(proc_run=self,msi_session=self.msi_session))
                 out_path = Path.objects.create(static_path=out_static,overlay_path=out_overlay)
                 data_instance = RunPipeData.objects.create(
                     run=self,
@@ -130,40 +143,63 @@ class ProcRun(models.Model):
                     pathtype=p_out,
                     path=out_path,
                 )
-                
+
+    def create_frames_runpipedata(self, msi_session):
+        # frames are done in a different mechanism from others
+        s = self.msi_session
+        frames_fd = Frames.objects.create(
+                session_plan = s.session_plan,
+                frame_path = s.frames,
+        )
+        frames_fd.save()
+        return frames_fd
+
+    def _get_input_pipe_pk(self, pipe):
+        if pipe.input_pipe:
+            return pipe.input_pipe.pk
+        else:
+            return 0 # from msi_session acquisition
+
     def create_tomogram_collection(self):
         """
         Save portal schema-like record. Return True if the run adds data to these records.
         """
         tomogram_path_type_order = ['tangl','rawst','aln','ctf','rec','deno']
         run_pipe_datas = RunPipeData.objects.filter(run=self)
-        pipes_input_from = list(map((lambda x: x.pipe.input_pipe_step), run_pipe_datas))
-        max_input_step = max(pipes_input_from)
+        pipes_input_from = []
+        for pip in self.pipes_in_plan:
+            if pip.pipe.input_pipe is None:
+                # handle frames
+                # TODO: consider doing this at the time of msi_session creation
+                frames_fd = self.create_frames_runpipedata(self.msi_session)
+            pipes_input_from.append(self._get_input_pipe_pk(pip.pipe))
         path_types = list(map((lambda x: x.pathtype.static_path.data_type), run_pipe_datas))
+        # TODO: this makes it necessary to enter pipes in strict order.
+        input_pipe_pks = pipes_input_from
         # exit if not tomogram-related
         if not set(path_types).intersection(set(tomogram_path_type_order)):
             return False
-        s = self.msi_session
-        # frames are done in a different mechanism from others
-        frames_fd = Frames.objects.create(
-                session_plan = s.session_plan,
-                frame_path = s.frames,
-        )
-        frames_fd.save()
-        self.created_objects = {0:[('frames',frames_fd),]}
+        # only get here if tomogram creation
+        self.created_objects = {0:[('frames',frames_fd),]} #by pipe pk
         for ptype in tomogram_path_type_order:
             results = list(filter((lambda x: x.pathtype.static_path.data_type ==ptype), run_pipe_datas))
             for r in results:
-                    my_step = r.pipe.step
-                    saved = self._save_instance(r,max_input_step)
-                    if my_step not in self.created_objects.keys():
-                        self.created_objects[my_step]=[]
-                    self.created_objects[my_step].append((ptype,saved))
+                    my_pipe_pk = r.pipe.pk
+                    saved = self._save_instance(r,input_pipe_pks)
+                    if my_pipe_pk not in self.created_objects.keys():
+                        self.created_objects[my_pipe_pk]=[]
+                    self.created_objects[my_pipe_pk].append((ptype,saved))
         return True
 
-    def _add_other_objects(self, class_name, my_pipe_step):
+    def _add_other_objects(self, class_name, my_pipe):
         """ TODO: These need to be reworked into adding real values
         """
+        results = PipeInPlan.objects.filter(plan=self.proc_plan,pipe=my_pipe)
+        if not results:
+            raise ValueError('pipe %s not in plan of this run' % (my_pipe))
+        # TODO what if a pipe is used twice like step 2 and 3 ?
+        my_pipe_step = results[0].step
+        my_pipe_pk = my_pipe.pk
         if class_name == 'Tomograms':
             ### TODO Really determine voxel and pixel spacings###
             if my_pipe_step == 1:
@@ -175,7 +211,7 @@ class ProcRun(models.Model):
             else:
                 voxel = None
             if voxel:
-                self.created_objects[my_pipe_step].append(('vox',voxel))
+                self.created_objects[my_pipe_pk].append(('vox',voxel))
             ### TODO Define recon method in pipe
             recon_methods = ReconMethod.objects.all()
             if not recon_methods:
@@ -183,10 +219,34 @@ class ProcRun(models.Model):
                 recon_method = ReconMethod.objects.create()
             else:
                 recon_method = recon_methods[0]
-            self.created_objects[my_pipe_step].append(('recmethod',recon_method))
-            self.created_objects[my_pipe_step].append(('msi',self.msi_session))
+            self.created_objects[my_pipe_pk].append(('recmethod',recon_method))
+            self.created_objects[my_pipe_pk].append(('msi',self.msi_session))
 
-    def _save_instance(self, pdata, max_input_step):
+    def is_recon_ctf_deconvolved(self, pipe):
+        '''
+        Determine if ctf deconvolution is done in this pipe.
+        '''
+        if pipe is None:
+            return False
+        task_names = list(map((lambda x: x.name),pipe.tasks_performed.all()))
+        output_types = list(map((lambda x: x.static_path.data_type),pipe.output.all()))
+        input_types = list(map((lambda x: x.data_type),pipe.input.all()))
+        input_pipe = pipe.input_pipe
+        if 'ctf deconvolution' in task_names:
+            return True
+        if set(['rec','deno','evn','odd']).intersection(output_types):
+            if 'aln' in input_types and 'ctf' not in input_types:
+                # alignment is an input but not ctf
+                return False
+            if input_pipe is not None:
+                # determined by input_pipe
+                return self.is_recon_ctf_deconvolved(input_pipe)
+        return False
+
+    def _save_instance(self, pdata, input_pipe_pks):
+        """
+        Save tomogram-related reinstances
+        """
         model_map = {   
                         # PathType.static_name: (class name, attribute name in other classes)
                         'frames':('Frames', 'frames'),
@@ -200,29 +260,35 @@ class ProcRun(models.Model):
                         'deno':('Tomograms','tomograms'),
                         'msi':('MsiSession','msi_session'),
                     }
+        all_input_pipe_pks = list(input_pipe_pks)
         ptype = pdata.pathtype.static_path.data_type
         class_name = model_map[ptype][0]
         my_attr = getattr_from_globals(class_name)
         my_instance = my_attr(pipe_data=pdata)
         my_field_names = list(map((lambda x:x.name),my_instance._meta.fields))
-        my_pipe_step = pdata.pipe.step
-        if my_pipe_step not in self.created_objects.keys():
-             self.created_objects[my_pipe_step]=[]
-        self._add_other_objects(class_name, my_pipe_step)
+        my_pipe = pdata.pipe
+        my_pipe_pk = my_pipe.pk
+        if my_pipe_pk not in self.created_objects.keys():
+            all_input_pipe_pks.append(my_pipe_pk)
+            self.created_objects[my_pipe_pk]=[]
+        self._add_other_objects(class_name, pdata.pipe)
         #
-        for i in range(max_input_step+1):
-            for item in self.created_objects[i]:
+        my_input_pipe = self._get_input_pipe_pk(my_pipe)
+        for i in range(all_input_pipe_pks.index(my_input_pipe)+1):
+            pk = all_input_pipe_pks[i]
+            for item in self.created_objects[pk]:
                 k, obj = item
                 attr_name = model_map[k][1]
                 if attr_name in my_field_names:
-                    if my_pipe_step in (2,3) and attr_name == 'ctf':
-                    # TODO: This is a place holder for no ctf deconv.
-                    # need to really determine this from pipe input pathtype.
-                        continue
+                    if attr_name=='ctf':
+                        # Without ctf input means the output tomogram is not ctf deconvoluted..
+                        if not self.is_recon_ctf_deconvolved(my_pipe):
+                            continue
                     setattr(my_instance, attr_name, obj)
                 if ptype == 'deno' and k == 'rec':
+                    # tomogram is derived from others
                     setattr(my_instance,'parent_tomo', obj)
-        for item in self.created_objects[my_pipe_step]:
+        for item in self.created_objects[my_pipe_pk]:
             k, obj = item
             if model_map[k][1] in my_field_names:
                  setattr(my_instance, model_map[k][1], obj)
@@ -266,7 +332,7 @@ class RunPipeData(models.Model):
     Output data path record of the processing run
     '''
     run = models.ForeignKey(ProcRun, on_delete=models.CASCADE)
-    pipe = models.ForeignKey(PlanPipe, on_delete=models.CASCADE)
+    pipe = models.ForeignKey(Pipe, on_delete=models.CASCADE)
     path = models.ForeignKey(Path, on_delete=models.CASCADE, null=True)
     pathtype = models.ForeignKey(PathType, on_delete=models.CASCADE)
 

@@ -4,7 +4,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from .forms import ProcRunForm, ReserveProcRunForm, UpdateNotesForm
 from . import models
-from processes.models import ProcRun, PipelinePlan, ProcSoftware
+from processes.models import ProcRun, PipelinePlan, ProcSoftware, RunPipeData
 from tem.models import MsiSession
 from django.core.serializers import serialize
 from django.views.decorators.http import require_http_methods
@@ -31,10 +31,13 @@ def detail(request, run_id):
         #ManyToManyField
         if hasattr(fields[f.name],'all'):
             fields[f.name] = list(map((lambda x: x.__str__()),fields[f.name].all()))
+    all_pipe_data = RunPipeData.objects.filter(run=run)
+    print(all_pipe_data)
     form = UpdateNotesForm(instance=run)
     context = {
             "data": run,
             "fields": fields,
+            "pipe_data": all_pipe_data,
             "paths": {
                     "update_notes": form,
             }
