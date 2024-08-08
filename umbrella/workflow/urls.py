@@ -7,5 +7,6 @@ urlpatterns = [
     path("get_aretomo3", views.get_aretomo3_json, name='json_aretomo3'),
     path("run", views.custom_run_workflow_page, name='custom_run_workflow_page'),
     path("", views.custom_workflow_page, name='custom_workflow'),
-    path("run_aretomo3", views.run_aretomo3, name='run_aretomo3')
+    path("run_aretomo3", views.run_aretomo3, name='run_aretomo3'),
+    path("user_info", views.user_info, name='user_details')
 ]

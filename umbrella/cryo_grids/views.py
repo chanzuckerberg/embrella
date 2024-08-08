@@ -41,8 +41,10 @@ def grid_boxes_view(request):
 
 from django.http import JsonResponse
 from .models import CryoGrid, CryoGridBox
+from django.contrib.auth.decorators import login_required
 
 def get_specific_grids(request):
+    print(request.user)
     grid_box_name = request.GET.get('grid_box_name')
     username = request.GET.get('username')
 

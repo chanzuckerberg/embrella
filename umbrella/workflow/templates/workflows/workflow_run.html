@@ -80,7 +80,7 @@
             </div>
             <div class="form-group">
                 <label for="userId">User ID: (e.g., firstname.lastname)</label>
-                <input type="text" id="userId" name="userId" required>
+                <input type="text" id="userId" name="userId">
             </div>
             <div class="form-group">
                 <label for="seconds">Seconds:</label>
@@ -107,6 +107,17 @@
                 }
             }
             return cookieValue;
+        }
+
+        async function fetchUserInfo() {
+            const response = await fetch('/workflow/user_info');
+            const result = await response.json();
+
+            if (response.ok) {
+                document.getElementById('userId').value = result.username;
+            } else {
+                alert('Failed to fetch user info');
+            }
         }
 
         async function runFunction() {
@@ -145,6 +156,10 @@
                 alert(`Failed to run the job. Error: ${result.error}`);
             }
         }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetchUserInfo();
+        });
     </script>
 </body>
 </html>

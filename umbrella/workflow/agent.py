@@ -1,8 +1,8 @@
 import paramiko
 import os
 
-# ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/run_aretomo_sta_pipeline.sh'
-ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/test.sh'
+ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/run_aretomo_sta_pipeline.sh'
+# ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/test.sh'
 
 
 class Aretomo3(object):
