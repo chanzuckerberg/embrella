@@ -10,7 +10,7 @@ port = 22
 username = os.getenv('REMOTE_ID')
 password = os.getenv('REMOTE_PASSWORD')
 
-def ssh_connect(remote_path):
+def ssh_connect(remote_path, shell=False):
     # Check if password is retrieved successfully
     if password is None:
         raise ValueError("Password not found in environment variables. Please set REMOTE_PASSWORD.")
@@ -31,6 +31,8 @@ def ssh_connect(remote_path):
     sftp.close()
     ssh.close()
     return file_contents.decode('utf-8')
+
+
 
 
 def jsonify(data):
