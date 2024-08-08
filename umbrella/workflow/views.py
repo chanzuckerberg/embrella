@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from .agent import ARETOMO3_SCRIPT_PATH, Aretomo3
 import os
+import re
 import json
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -106,7 +107,57 @@ def cancel_aretomo3(request):
             aretomo.close()
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+@csrf_exempt
+def track_jobs(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        job_name = data.get('job_name')
 
+        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
+
+        try:
+            # Connect to the remote server
+            aretomo.connect()
+
+            output, error = aretomo.track_jobs(job_name)
+            formatted_output = format_job_output(output)
+            return JsonResponse({'jobs': formatted_output})
+        finally:
+            aretomo.close()
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+def format_job_output(output):
+    # Split the output into lines
+    lines = output.strip().split('\n')
+    # Extract the header and job details
+    header = lines[0].split()
+    job_details = lines[1:]
+
+    jobs = []
+    for job in job_details:
+        # Split job data into parts based on whitespace
+        job_data = job.split()
+
+        # Initialize a dictionary for the job info
+        job_info = {}
+
+        # Assign values to the corresponding headers
+        job_info['JOBID'] = job_data[0]
+        job_info['PARTITION'] = job_data[1]
+        job_info['NAME'] = job_data[2]
+        job_info['USER'] = job_data[3]
+        job_info['ST'] = job_data[4]
+        job_info['TIME'] = job_data[5]
+        job_info['NODES'] = job_data[6]
+
+        # The remaining part is NODELIST(REASON)
+        job_info['NODELIST(REASON)'] = ' '.join(job_data[7:])
+
+        jobs.append(job_info)
+
+    return jobs
 def custom_workflow_page(request):
     return render(request, 'workflows/workflow_page.html')
 

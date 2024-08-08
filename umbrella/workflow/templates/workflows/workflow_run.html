@@ -19,13 +19,13 @@
         }
         input[type="text"], input[type="number"] {
             width: 100%;
-            padding: 8px;
+            padding: 12px;
             box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 4px;
         }
         button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -37,12 +37,13 @@
             background-color: #45a049;
         }
         .form-container {
-            max-width: 600px;
+            max-width: 800px;
             margin: auto;
-            padding: 20px;
+            padding: 30px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
         }
         h1 {
             text-align: center;
@@ -57,12 +58,33 @@
         }
         .cancel-container {
             margin-top: 40px;
+            margin-bottom: 40px;
         }
         .cancel-container button {
             background-color: #f44336;
         }
         .cancel-container button:hover {
             background-color: #e53935;
+        }
+        #trackingContainer {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        #jobTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #jobTable th, #jobTable td {
+            border: 1px solid #ddd;
+            padding: 12px;
+        }
+        #jobTable th {
+            background-color: #f2f2f2;
+            text-align: left;
         }
     </style>
 </head>
@@ -113,6 +135,34 @@
         </form>
     </div>
 
+    <div class="form-container">
+        <h1>Track Aretomo3 Jobs</h1>
+        <form id="trackForm">
+            <div class="form-group">
+                <label for="jobName">Job Name:</label>
+                <input type="text" id="jobName" name="jobName">
+            </div>
+            <button type="button" onclick="trackJobs()">Track Jobs</button>
+        </form>
+        <div id="trackingContainer">
+            <table id="jobTable">
+                <thead>
+                    <tr>
+                        <th>JOBID</th>
+                        <th>PARTITION</th>
+                        <th>NAME</th>
+                        <th>USER</th>
+                        <th>ST</th>
+                        <th>TIME</th>
+                        <th>NODES</th>
+                        <th>NODELIST(REASON)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
     <script>
         function getCookie(name) {
             let cookieValue = null;
@@ -130,13 +180,17 @@
         }
 
         async function fetchUserInfo() {
-            const response = await fetch('/workflow/user_info');
-            const result = await response.json();
+            try {
+                const response = await fetch('/workflow/user_info');
+                const result = await response.json();
 
-            if (response.ok) {
-                document.getElementById('userId').value = result.username;
-            } else {
-                alert('Failed to fetch user info');
+                if (response.ok && result.username) {
+                    document.getElementById('userId').value = result.username;
+                } else {
+                    alert('Failed to fetch user info');
+                }
+            } catch (error) {
+                alert('An error occurred while fetching user info');
             }
         }
 
@@ -222,6 +276,47 @@
                 alert(`Job ${jobNumber} has been canceled.`);
             } else {
                 alert(`Failed to cancel the job. Error: ${result.error}`);
+            }
+        }
+
+        async function trackJobs() {
+            const jobName = document.getElementById('jobName').value;
+
+            const response = await fetch('/workflow/track_jobs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    job_name: jobName
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                const tbody = document.querySelector('#jobTable tbody');
+                tbody.innerHTML = ''; // Clear existing rows
+
+                result.jobs.forEach(job => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${job.JOBID}</td>
+                        <td>${job.PARTITION}</td>
+                        <td>${job.NAME}</td>
+                        <td>${job.USER}</td>
+                        <td>${job.ST}</td>
+                        <td>${job.TIME}</td>
+                        <td>${job.NODES}</td>
+                        <td>${job['NODELIST(REASON)']}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.getElementById('trackingContainer').style.display = 'block';
+            } else {
+                alert(`Failed to track jobs. Error: ${result.error}`);
             }
         }
 

@@ -80,3 +80,18 @@ class Aretomo3(object):
 
         return output, error
 
+    def track_jobs(self, job_name):
+        if self.ssh is None:
+            raise Exception("SSH connection not established. Call connect() first.")
+
+        # Execute the squeue command
+        stdin, stdout, stderr = self.ssh.exec_command(f'squeue -n {job_name}')
+
+        # Read the output and error streams
+        output = stdout.read().decode('utf-8')
+        error = stderr.read().decode('utf-8')
+
+        if error:
+            logger.error(f"Track Jobs Error: {error}")
+
+        return output, error
