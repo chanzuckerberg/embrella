@@ -64,7 +64,6 @@ def run_aretomo3(request):
         seconds = data.get('seconds')
         user_id = data.get('user_id')
 
-        print(user_id)
         # Create an instance of Aretomo3
         aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
 
@@ -87,6 +86,26 @@ def user_info(request):
     username = request.user.username.split('@')[0]
     response_data = {"username": username}
     return JsonResponse(response_data, safe=False, status=200)
+
+@login_required
+def cancel_aretomo3(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        job_number = data.get('job_number')
+
+        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
+
+        try:
+            # Connect to the remote server
+            aretomo.connect()
+
+            output, error = aretomo.cancel(job_number)
+            return JsonResponse(
+                {'message': f'Job - {job_number} for Aretomo3 is canceld successfully'})
+        finally:
+            aretomo.close()
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 def custom_workflow_page(request):
     return render(request, 'workflows/workflow_page.html')

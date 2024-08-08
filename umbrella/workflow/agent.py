@@ -1,6 +1,6 @@
 import paramiko
 import os
-
+from umbrella_logger import logger
 ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/run_aretomo_sta_pipeline.sh'
 # ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/test.sh'
 
@@ -29,10 +29,9 @@ class Aretomo3(object):
         file_check_output = stdout.read().decode('utf-8')
         file_check_error = stderr.read().decode('utf-8')
 
-        print("File Check Output:")
-        print(file_check_output)
-        print("File Check Error:")
-        print(file_check_error)
+        logger.info(f"File Check Output: {file_check_output}")
+        logger.info(f"File Check Error: {file_check_error}")
+
 
         if "No such file or directory" in file_check_error:
             raise Exception(f"The script path {self.script_path} does not exist on the remote server.")
@@ -64,4 +63,20 @@ class Aretomo3(object):
         if self.ssh is not None:
             self.ssh.close()
             self.ssh = None
+
+    def cancel(self, job_number):
+        if self.ssh is None:
+            raise Exception("SSH connection not established. Call connect() first.")
+
+        # Execute the scancel command with the given job number
+        stdin, stdout, stderr = self.ssh.exec_command(f'scancel {job_number}')
+
+        # Read the output and error streams
+        output = stdout.read().decode('utf-8')
+        error = stderr.read().decode('utf-8')
+
+        if error:
+            logger.error(f"Cancel Error: {error}")
+
+        return output, error
 
