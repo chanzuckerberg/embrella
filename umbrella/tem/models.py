@@ -43,13 +43,13 @@ class Microscope(models.Model):
     Microscope determines what camera is available.
     '''
     name = models.CharField(max_length=20, default='Krios1', unique=True)
+    cs = models.FloatField(default=2.7, help_text='Spherical abberation constant in mm')
 
     def __str__(self):
         return self.name
 
     class Meta:
         app_label = 'tem'
-
 
 class Camera(models.Model):
     '''
@@ -66,6 +66,35 @@ class Camera(models.Model):
     class Meta:
         app_label = 'tem'
 
+class Magnification(models.Model):
+    """
+    Uniquely identify a magnification. This is used to propogate selection list sorted by the index.
+    """
+    scope = models.ForeignKey(Microscope, on_delete=models.CASCADE)
+    mode = models.CharField(max_length=8, default='SA', unique=True, help_text='projection mode')
+    nominal_mag = models.PositiveIntegerField(default=50000, help_text='Nominal mag displayed on the scope')
+    index = models.PositiveIntegerField(default=0, help_text='Base 0 index of list order')
+
+    def __str__(self):
+        return '%d' % self.nominal_mag
+
+    class Meta:
+        app_label = 'tem'
+        # There are cases the same magnification appears with different modes
+        unique_together = [["scope","mode","index"]]
+
+class CalibratedPixelSize(models.Model):
+    mag = models.ForeignKey(Magnification, on_delete=models.CASCADE)
+    camera = models.ForeignKey(Camera, on_delete=models.CASCADE)
+    pixel_spacing = models.FloatField(default=4.0, help_text='Pixel spacing in Angstroms')
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    current = models.BooleanField(default=True,help_text="Is this the current calibration ?")
+    
+    def __str__(self):
+        return '%s@%d-%s: %.3f Å/pixel' % (self.mag.scope, self.mag.nominal_mag, self.camera, self.pixel_spacing)
+
+    class Meta:
+        app_label = 'tem'
 
 class Software(models.Model):
     '''
