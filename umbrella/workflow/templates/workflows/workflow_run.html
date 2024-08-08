@@ -223,11 +223,11 @@
             const result = await response.json();
 
             if (response.ok) {
-                alert(`Output: ${result.output}\nError: ${result.error}`);
-                document.getElementById('outputDirectory').textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${sessionName}`;
+                alert(`Message: ${result.message}`);
+                document.getElementById('outputDirectory').textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${sessionName}/run${runNumber}`;
                 document.getElementById('outputContainer').style.display = 'block';
             } else {
-                alert(`Failed to run the job. Error: ${result.error}`);
+                alert(`Failed to run the job.}`);
             }
         }
 

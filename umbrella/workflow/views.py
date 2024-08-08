@@ -54,7 +54,6 @@ def get_aretomo3_json(request):
 from django.http import JsonResponse
 @csrf_exempt
 @login_required
-# @login_required
 def run_aretomo3(request):
     if request.method == 'POST':
         data = json.loads(request.body)
