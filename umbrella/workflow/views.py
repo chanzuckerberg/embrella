@@ -117,8 +117,10 @@ def track_jobs(request):
         try:
             # Connect to the remote server
             aretomo.connect()
-
-            output, error = aretomo.track_jobs(job_name)
+            if job_name is None:
+                output, error = aretomo.track_jobs(job_name=None,all=True)
+            else:
+                output, error = aretomo.track_jobs(job_name)
             formatted_output = format_job_output(output)
             return JsonResponse({'jobs': formatted_output})
         finally:
