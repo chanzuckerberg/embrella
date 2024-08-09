@@ -46,10 +46,16 @@ def add_user_to_group(username, group_name):
 
 
 def run():
-    permission_ids = [1, 2, 3, 4]  # Assume these are valid permission IDs
-    create_group_with_permission_ids("Scientist", permission_ids)
-    add_user_to_group('test', 'Scientist')
-
+    try:
+        users = User.objects.all()
+        user = users[len(users)-1]
+    except:
+        print('Error: create some users first')
+        sys.exit(1)
+    #permission_ids = [1, 2, 3, 4]  # Assume these are valid permission IDs
+    #create_group_with_permission_ids("Scientist", permission_ids)
+    add_user_to_group(user, 'Scientist')
+    print('added last user to Scientist group')
 
 if __name__ == "__main__":
     run()

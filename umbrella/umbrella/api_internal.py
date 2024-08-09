@@ -52,6 +52,27 @@ def get_available_grids(request):
     else:
         return JsonResponse({"error": "Project ID not provided."}, status=400)
 
+def get_grids_by_cassette(request):
+    cassette_id = request.GET.get('cassette_id')
+    if cassette_id:
+        grids = CryoGrid.objects.filter(grid_cassette__id=cassette_id)
+        # Format the data
+        print(grids)
+        grids_data = []
+        for grid in grids:
+            grids_data.append({
+                "grid_id": grid.id,
+                "grid_user": grid.user.username,
+                "grid_name": grid.name,
+                "grid_freezing": grid.freezing_plan.__str__(),
+                "grid_slot_number": grid.slot_number_in_cassette,
+                "grid_project_name": grid.intended_project.name,
+            })
+
+        return JsonResponse(grids_data, safe=False)
+    else:
+        return JsonResponse({"error": "Cassette ID not provided."}, status=400)
+
 def get_tomo_by_msi_session(request):
     """
     Return form selector options as json response of Tomograms

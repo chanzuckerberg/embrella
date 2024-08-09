@@ -15,6 +15,7 @@ DATA_TYPES = [
                 ('rec','all frame tomo recon'),
                 ('evn','even frame tomo recon'),
                 ('odd','odd frame tomo recon'),
+                ('deno','denoised tomo recon'),
                 ('pick','particle point annotation'),
                 ('seg','segmentation'),
                 ('galr','particle gallery'),
