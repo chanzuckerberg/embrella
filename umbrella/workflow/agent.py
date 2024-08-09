@@ -1,8 +1,7 @@
 import paramiko
-import os
+
 from umbrella_logger import logger
-ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/run_aretomo_sta_pipeline.sh'
-# ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/test.sh'
+
 
 
 class Aretomo3(object):

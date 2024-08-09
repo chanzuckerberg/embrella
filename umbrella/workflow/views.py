@@ -2,7 +2,8 @@ from umbrella_logger import logger
 from .utils import jsonify, ssh_connect, extract_parameters
 from django.http import JsonResponse
 from django.shortcuts import render
-from .agent import ARETOMO3_SCRIPT_PATH, Aretomo3
+from .agent import Aretomo3
+from umbrella.settings import ARETOMO3_SCRIPT_PATH
 import os
 import re
 import json
