@@ -73,7 +73,7 @@ class PipelinePlan(models.Model):
 
 class Pipe(models.Model):
     name = models.CharField(max_length=32, default='voxelspacing10.000a')
-    input_pipe = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, help_text='The pipe it needs to wait for input in order to run')
+    input_pipes = models.ManyToManyField('self', help_text='The pipes it needs to wait for input in order to run')
     software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
     tasks_performed = models.ManyToManyField(Task,)
     input = models.ManyToManyField(StaticPath,related_name='staticpath_in_input')
@@ -81,6 +81,19 @@ class Pipe(models.Model):
 
     def __str__(self):
         return 'pipe %s: %s with %d tasks' % (self.name, self.software,self.tasks_performed.count())
+
+class InputPipePathType(models.Model):
+    """
+    Relate a pipe needing input with an output static path of another pipe.
+    This can not be referenced in Pipe model even though mostly redundant because
+    circular reference issue in migration making.
+    """
+    pipe = models.ForeignKey(Pipe, related_name='pipe_needs_input', on_delete=models.CASCADE, help_text='The pipe needing input')
+    input_pipe = models.ForeignKey(Pipe, null=True, blank=True, related_name='pipe_as_input', on_delete=models.SET_NULL, help_text='The pipe used as input')
+    input_pathtype = models.ForeignKey(PathType, null=True, blank=True, on_delete=models.SET_NULL, help_text='The output pathtype from input_pipe used as the input')
+
+    def __str__(self):
+        return 'pipe %s needs %s from pipe %s' % (self.pipe.name, self.input_pathtype.static_path.data_type, self.input_pipe.name)
 
 class PipeInPlan(models.Model):
     name = models.CharField(max_length=32, default='vol001')
