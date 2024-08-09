@@ -97,9 +97,25 @@
         .button-container button.track-all:hover {
             background-color: #1e88e5;
         }
+        .go-back {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .go-back:hover {
+            background-color: #1e88e5;
+        }
     </style>
 </head>
 <body>
+    <button class="go-back" onclick="goBack()">Go Back</button>
     <div class="form-container">
         <h1>Run Aretomo3 Job</h1>
         <form id="sessionForm">
@@ -371,6 +387,10 @@
             } else {
                 alert(`Failed to track jobs. Error: ${result.error}`);
             }
+        }
+
+        function goBack() {
+            window.location.href = '/umbrella';
         }
 
         document.addEventListener('DOMContentLoaded', (event) => {
