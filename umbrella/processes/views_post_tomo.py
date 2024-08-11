@@ -5,7 +5,8 @@ from django.urls import reverse
 from .forms import ProcRunForm, ReserveTomoProcRunForm, UpdateNotesForm
 from django.forms import CharField, HiddenInput, ModelChoiceField
 from . import models
-from processes.models import ProcRun, PipelinePlan, ProcSoftware, RunPipeData, Tomograms
+from processes.models import ProcRun, ProcPlan, ProcSoftware, RunPipeData, Tomograms
+from processes.models import Annotation
 from tem.models import MsiSession
 from django.core.serializers import serialize
 from django.views.decorators.http import require_http_methods
@@ -63,36 +64,29 @@ def reserve_run(request):
         input_tomo = ModelChoiceField(queryset=Tomograms.objects.all())
         return render(request, "processes/ptreserve.html", {"form": form, "input_tomo_field": input_tomo })
 
-def select_tomo(request):
-    print('select',request.method)
-    if request.method == 'POST':
-        if request.POST['input_tomo']:
-            return render(request, reverse("processes:ptcreate"))
-    else:
-        form = ReserveTomoProcRunForm()
-        input_tomo = ModelChoiceField(queryset=Tomograms.objects.filter(msi_session=msi_session))
-        return render(request, "processes/ptreserve.html", {"form": form, "input_tomo_field": input_tomo })
-
 def create_run(request):
-    plan_id=int(request.POST['proc_plan'])
-    session_id=int(request.POST['msi_session'])
-    print('create_run',request.POST)
-    input_tomo_id=int(request.POST['input_tomo'])
-    msi_session=MsiSession.objects.get(pk=session_id)
-    proc_plan=PipelinePlan.objects.get(pk=plan_id)
-    input_tomo=Tomograms.objects.get(pk=input_tomo_id)
-    name = models.suggest_name('run',msi_session,proc_plan)
     if request.method == 'POST':
+        plan_id=int(request.POST['proc_plan'])
+        session_id=int(request.POST['msi_session'])
+        input_tomo_id=int(request.POST['input_tomo'])
+        input_tomo=Tomograms.objects.get(pk=input_tomo_id)
+        input_objects = {'tomo':input_tomo}
+        if 'input_pick' in request.POST.keys():
+            input_pick_id=int(request.POST['input_pick'])
+            input_pick=Annotation.objects.get(pk=input_pick_id)
+            input_objects['pick']=input_pick
+        else:
+            input_pick_id = False
+            input_objects['pick']=False
+        msi_session=MsiSession.objects.get(pk=session_id)
+        proc_plan=ProcPlan.objects.get(pk=plan_id)
+        name = models.suggest_name('run',msi_session,proc_plan)
         run_instance = ProcRun.objects.create(
                     name=name,
                     msi_session=msi_session,
                     proc_plan=proc_plan,
         )
         run_instance.save()
-        my_pk = run_instance.id
-        path_dicts = {}
-        run_instance.save()
         run_instance.save_pipe_run_data()
-        # TODO: What to create ?
-        run_instance.create_tomogram_collection(input_tomo)
+        run_instance.create_tomogram_collection(input_objects)
         return HttpResponseRedirect(reverse('processes:ptdetail', args=(run_instance.id,)))

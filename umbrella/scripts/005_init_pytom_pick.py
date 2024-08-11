@@ -7,8 +7,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 from tem.models import *
 from stores.models import StaticPath,PathType, fill_place_holders
-from processes.models import ProcSoftware,Task, PipelinePlan, Pipe, PipeInPlan, ReconMethod, TomogramVoxelSpacing
-from processes.models import AnnotationMethod
+from processes.models import ProcSoftware,Task, ProcPlan, Pipe, PipeInPlan, ReconMethod, TomogramVoxelSpacing
+from processes.models import PipeJoint, AnnotationMethod
 
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
@@ -30,6 +30,17 @@ def get_static_path(data_type):
         qset = StaticPath.objects.filter(data_type=data_type)
         return qset[0]
 
+def add_pipe_joints(pipe_in_plan, input_pipe_in_plan, data_types):
+    pathtypes_in_input = input_pipe_in_plan.pipe.output.all()
+    dtypes = list(map((lambda x:x.static_path.data_type), pathtypes_in_input))
+    for t in data_types:
+        dindex = dtypes.index(t)
+        input_pathtype = pathtypes_in_input[dindex]
+        PipeJoint.objects.create(
+                pipe_in_plan=pipe_in_plan,
+                input_pipe_in_plan=input_pipe_in_plan,
+                input_pathtype=input_pathtype)
+
 def createStandardTasks():
     task_names = ['pick particles',
                     'make particle 2d gallery',
@@ -48,7 +59,7 @@ def create_pipeline_plan():
                 version='2024-03-10')
     gallery = ProcSoftware.objects.create(name='gallerymaker',
                 version='2024-03-10')
-    membr = ProcSoftware.objects.create(name='membrainseg',
+    membr = ProcSoftware.objects.create(name='membraneseg',
                 version='2024-03-10')
     for t in tasks[0:1]:
         pytom.capable_tasks.add(t)
@@ -56,19 +67,19 @@ def create_pipeline_plan():
         gallery.capable_tasks.add(t)
     for t in tasks[2:3]:
         membr.capable_tasks.add(t)
-    plan = PipelinePlan.objects.create(name='pytom-pick')
+    plan1 = ProcPlan.objects.create(name='pytom-pick')
     # AreTomo3-5A recon
     pipe1 = Pipe.objects.create(name='80s-ribosome',software=pytom)
     pipe2 = Pipe.objects.create(name='gallery',software=gallery)
     pipe3 = Pipe.objects.create(name='membrane',software=membr)
     # AreTomo3-5A recon
-    plan_pipe1 = PipeInPlan.objects.create(name='pick1',plan=plan,step=1,pipe=pipe1)
-    # AreTomo3-10A recon
-    plan_pipe2 = PipeInPlan.objects.create(name='pick2',plan=plan,step=2,pipe=pipe2)
+    plan1_pipe1 = PipeInPlan.objects.create(name='pick1',plan=plan1,step=1,pipe=pipe1)
+    # Gallery
+    plan2 = ProcPlan.objects.create(name='galery-pick')
+    plan2_pipe2 = PipeInPlan.objects.create(name='galr1',plan=plan2,step=1,pipe=pipe2)
+    plan1_pipe3 = PipeInPlan.objects.create(name='mask1',plan=plan1,step=2,pipe=pipe3)
     #input
     input_path_types = []
-    #PathType may not be good enough to tell different software
-    # TODO: make input only specify static_path, not PathType with software definition
     #output
     output_path_types = []
     output_path_types.append(PathType.objects.create(
@@ -84,33 +95,40 @@ def create_pipeline_plan():
                 overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/output.mrc',
     ))
     for t in tasks[0:1]:
-        # everything at 5 Å except denoising
+        # picking ribosome
         pipe1.tasks_performed.add(t)
     for t in tasks[1:2]:
-        # 10Å no CTF WBP
+        # gallery making
         pipe2.tasks_performed.add(t)
     for t in tasks[2:3]:
-        # 10Å no CTF WBP
+        # membrane
         pipe3.tasks_performed.add(t)
     # input/output
-    pipe1.input.add(get_static_path('rec'))
     for p in output_path_types[0:1]:
         pipe1.output.add(p) 
-    pipe2.input.add(get_static_path('pick'))
     for p in output_path_types[1:2]: #recon
        pipe2.output.add(p)
-    pipe3.input.add(get_static_path('rec'))
     for p in output_path_types[2:3]:
        pipe3.output.add(p)
     # where the input are from
     input_rec = Pipe.objects.filter(name='vol002')[0]
-    pipe1.input_pipe = input_rec
-    pipe2.input_pipe = pipe1
-    pipe3.input_pipe = input_rec
+    pipe1.input.add(get_static_path('rec')) # pick
+    pipe2.input.add(get_static_path('pick')) # gallery
+    pipe2.input.add(get_static_path('deno')) # gallery
+    pipe3.input.add(get_static_path('rec')) # seg
     # save
     pipe1.save()
     pipe2.save()
     pipe3.save()
+
+    plan_live = ProcPlan.objects.get(pk=1)
+    plan_deno = ProcPlan.objects.get(pk=2)
+    plan_live_v001 = PipeInPlan.objects.filter(plan=plan_live,pipe__name='vol001')[0]
+    plan_deno_den001 = PipeInPlan.objects.filter(plan=plan_deno,pipe__name='den001')[0]
+    add_pipe_joints(plan1_pipe1, plan_live_v001,['rec'])
+    add_pipe_joints(plan2_pipe2, plan_deno_den001,['deno'])
+    add_pipe_joints(plan2_pipe2, plan1_pipe1,['pick'])
+    add_pipe_joints(plan1_pipe3, plan_live_v001,['rec'])
 
 def create_default_anno_methods():
     AnnotationMethod.objects.create(name='template matching')

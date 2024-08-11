@@ -4,7 +4,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from .forms import ProcRunForm, ReserveFrameProcRunForm, UpdateNotesForm
 from . import models
-from processes.models import ProcRun, PipelinePlan, ProcSoftware, RunPipeData
+from processes.models import ProcRun, ProcPlan, ProcSoftware, RunPipeData
 from tem.models import MsiSession
 from django.core.serializers import serialize
 from django.views.decorators.http import require_http_methods
@@ -55,7 +55,7 @@ def create_run(request):
     plan_id=int(request.POST['proc_plan'])
     session_id=int(request.POST['msi_session'])
     msi_session=MsiSession.objects.get(pk=session_id)
-    proc_plan=PipelinePlan.objects.get(pk=plan_id)
+    proc_plan=ProcPlan.objects.get(pk=plan_id)
     name = models.suggest_name('run',msi_session,proc_plan)
     if request.method == 'POST':
         run_instance = ProcRun.objects.create(
