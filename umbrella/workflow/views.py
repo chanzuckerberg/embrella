@@ -70,16 +70,11 @@ def run_aretomo3(request):
         seconds = data.get('seconds')
         user_id = data.get('user_id')
         encoded_password = data.get('password')
-        print(encoded_password)
-        # Decrypt the password
-        # cipher = AES.new(secret_key, AES.MODE_ECB)
-        # decrypted_password = cipher.decrypt(base64.b64decode(encrypted_password)).decode('utf-8')
         decoded_password = base64.b64decode(encoded_password).decode('utf-8')
-        # Create an instance of Aretomo3
-        print(decoded_password)
-        aretomo = Aretomo3(HOST, PORT, USERNAME, decoded_password, ARETOMO3_SCRIPT_PATH)
 
         try:
+            aretomo = Aretomo3(HOST, PORT, USERNAME, decoded_password, ARETOMO3_SCRIPT_PATH)
+
             # Connect to the remote server
             aretomo.connect()
 
