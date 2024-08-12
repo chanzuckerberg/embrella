@@ -27,6 +27,10 @@ SECRET_KEY = 'django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*
 # Constant value
 ARETOMO3_SCRIPT_PATH = ''
 
+SESSION_COOKIE_AGE = 6 * 60 * 60
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
