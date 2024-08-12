@@ -3,7 +3,6 @@ import paramiko
 from umbrella_logger import logger
 
 
-
 class Aretomo3(object):
     def __init__(self, hostname, port, username, password, script_path):
         self.hostname = hostname
