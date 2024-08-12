@@ -11,7 +11,6 @@ username = os.getenv('REMOTE_ID')
 password = os.getenv('REMOTE_PASSWORD')
 ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
 
-cipher_suite = Fernet(ENCRYPTION_KEY)
 
 def ssh_connect(remote_path, shell=False):
     # Check if password is retrieved successfully
