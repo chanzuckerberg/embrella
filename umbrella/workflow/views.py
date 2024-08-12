@@ -73,7 +73,7 @@ def run_aretomo3(request):
         decoded_password = base64.b64decode(encoded_password).decode('utf-8')
 
         try:
-            aretomo = Aretomo3(HOST, PORT, USERNAME, decoded_password, ARETOMO3_SCRIPT_PATH)
+            aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
 
             # Connect to the remote server
             aretomo.connect()
