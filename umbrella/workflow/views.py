@@ -111,7 +111,7 @@ def cancel_aretomo3(request):
         if not user_id or not decoded_password:
             return JsonResponse({'error': 'User credentials not found in session'}, status=400)
 
-        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
+        aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
 
         try:
             # Connect to the remote server
@@ -130,7 +130,14 @@ def track_jobs(request):
         data = json.loads(request.body)
         job_name = data.get('job_name')
 
-        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
+        user_id = request.session.get('user_id')
+        decoded_password = request.session.get('decoded_password')
+
+        if not user_id or not decoded_password:
+            return JsonResponse({'error': 'User credentials not found in session'}, status=400)
+
+
+        aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
 
         try:
             # Connect to the remote server
