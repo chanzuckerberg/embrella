@@ -1,7 +1,6 @@
 import paramiko
 
 from umbrella_logger import logger
-from .utils import decrypt_password
 
 
 class Aretomo3(object):

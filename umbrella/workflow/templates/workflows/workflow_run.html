@@ -11,6 +11,7 @@
         }
         .form-group {
             margin-bottom: 15px;
+            position: relative;
         }
         label {
             display: block;
@@ -89,7 +90,7 @@
         .button-container {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: center.
         }
         .button-container button.track-all {
             background-color: #2196F3;
@@ -119,7 +120,6 @@
     <div class="form-container">
         <h1>Run Aretomo3 Job</h1>
         <form id="sessionForm">
-            {% csrf_token %}
             <div class="form-group">
                 <label for="sessionName">Session Name: (e.g., 24jul01a)</label>
                 <input type="text" id="sessionName" name="sessionName" required>
@@ -237,6 +237,9 @@
             const password = document.getElementById('password').value;
             const seconds = document.getElementById('seconds').value;
 
+            // Encode the password using Base64
+            const encodedPassword = btoa(password);
+
             const csrftoken = getCookie('csrftoken');
 
             const response = await fetch('/workflow/run_aretomo3', {
@@ -251,7 +254,7 @@
                     pixel_size: pixelSize,
                     num_checks: numChecks,
                     user_id: userId,
-                    password: password,
+                    password: encodedPassword,
                     seconds: seconds
                 })
             });

@@ -4,7 +4,10 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from .agent import Aretomo3
 from umbrella.settings import ARETOMO3_SCRIPT_PATH
+from Cryptodome.Cipher import AES
+from Cryptodome.Util.Padding import unpad
 import os
+import base64
 import re
 import json
 from django.contrib.auth.decorators import login_required
@@ -54,8 +57,9 @@ def get_aretomo3_json(request):
         return JsonResponse({"error": error_msg}, status=500)
 
 
-@csrf_exempt
+
 @login_required
+@csrf_exempt
 def run_aretomo3(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -65,9 +69,15 @@ def run_aretomo3(request):
         num_checks = data.get('num_checks')
         seconds = data.get('seconds')
         user_id = data.get('user_id')
-        password = data.get('password')
+        encoded_password = data.get('password')
+        print(encoded_password)
+        # Decrypt the password
+        # cipher = AES.new(secret_key, AES.MODE_ECB)
+        # decrypted_password = cipher.decrypt(base64.b64decode(encrypted_password)).decode('utf-8')
+        decoded_password = base64.b64decode(encoded_password).decode('utf-8')
         # Create an instance of Aretomo3
-        aretomo = Aretomo3(HOST, PORT, USERNAME, password, ARETOMO3_SCRIPT_PATH)
+        print(decoded_password)
+        aretomo = Aretomo3(HOST, PORT, USERNAME, decoded_password, ARETOMO3_SCRIPT_PATH)
 
         try:
             # Connect to the remote server
