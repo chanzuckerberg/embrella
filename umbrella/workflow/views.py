@@ -72,6 +72,10 @@ def run_aretomo3(request):
         encoded_password = data.get('password')
         decoded_password = base64.b64decode(encoded_password).decode('utf-8')
 
+        # Store user_id and decoded_password in session
+        request.session['user_id'] = user_id
+        request.session['decoded_password'] = decoded_password
+
         try:
             aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
 
@@ -99,6 +103,13 @@ def cancel_aretomo3(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         job_number = data.get('job_number')
+
+        # Retrieve user_id and decoded_password from session
+        user_id = request.session.get('user_id')
+        decoded_password = request.session.get('decoded_password')
+
+        if not user_id or not decoded_password:
+            return JsonResponse({'error': 'User credentials not found in session'}, status=400)
 
         aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
 
