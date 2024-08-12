@@ -206,7 +206,7 @@ class ProcRun(models.Model):
         """
         Save data-portal schema-like record. Return True if the run adds data to these records.
         """
-        tomogram_path_type_order = ['tangl','rawst','aln','ctf','rec','deno','pick','galr']
+        tomogram_path_type_order = ['tangl','rawst','aln','ctf','rec','deno','seg','pick','galr']
         run_pipe_datas = RunPipeData.objects.filter(run=self)
         pipes_input_from = []
         frames_fd = None
@@ -305,10 +305,12 @@ class ProcRun(models.Model):
                 recon_method = recon_methods[0]
             self.created_objects[my_pipe_pk].append(('recmethod',recon_method))
         if class_name == 'Annotation':
-            anno_methods = AnnotationMethod.objects.all()
+            meth_map = {'pick':'template matching','seg':'ml semantic segamentation'}
+            dtype = my_rpdata.pathtype.static_path.data_type
+            anno_methods = AnnotationMethod.objects.filter(name=meth_map[dtype])
             if not anno_methods:
                 # Create default recon method
-                anno_method = ReconMethod.objects.create()
+                anno_method = AnnotationMethod.objects.create(name=meth_map[dtype])
             else:
                 anno_method = anno_methods[0]
             self.created_objects[my_pipe_pk].append(('pickmethod',anno_method))
@@ -437,8 +439,10 @@ class ProcRun(models.Model):
                 deno_method = deno_methods[0]
             setattr(my_instance,'post_process', deno_method)
         # specific to annotation
-        if ptype == 'pick':
+        atype_map = {'pick':'point','seg':'volume mask'}
+        if ptype in ['pick','seg']:
             my_instance.name = my_pipe.name
+            my_instance.annotation_type = atype_map[ptype]
         my_instance.save()
         return my_instance
 

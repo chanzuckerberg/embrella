@@ -68,31 +68,33 @@ def create_pipeline_plan():
     for t in tasks[2:3]:
         membr.capable_tasks.add(t)
     plan1 = ProcPlan.objects.create(name='pytom-pick')
-    # AreTomo3-5A recon
+    plan2 = ProcPlan.objects.create(name='galery-pick')
+    plan3 = ProcPlan.objects.create(name='membraneseg')
+    # pipes
     pipe1 = Pipe.objects.create(name='80s-ribosome',software=pytom)
     pipe2 = Pipe.objects.create(name='gallery',software=gallery)
     pipe3 = Pipe.objects.create(name='membrane',software=membr)
-    # AreTomo3-5A recon
+    # PyTom
     plan1_pipe1 = PipeInPlan.objects.create(name='pick1',plan=plan1,step=1,pipe=pipe1)
     # Gallery
-    plan2 = ProcPlan.objects.create(name='galery-pick')
     plan2_pipe2 = PipeInPlan.objects.create(name='galr1',plan=plan2,step=1,pipe=pipe2)
-    plan1_pipe3 = PipeInPlan.objects.create(name='mask1',plan=plan1,step=2,pipe=pipe3)
+    # Membrane segamentation
+    plan3_pipe3 = PipeInPlan.objects.create(name='mask1',plan=plan3,step=1,pipe=pipe3)
     #input
     input_path_types = []
     #output
     output_path_types = []
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('pick'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/output.txt',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.txt',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('galr'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/output.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('seg'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/output.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc',
     ))
     for t in tasks[0:1]:
         # picking ribosome
@@ -128,10 +130,11 @@ def create_pipeline_plan():
     add_pipe_joints(plan1_pipe1, plan_live_v001,['rec'])
     add_pipe_joints(plan2_pipe2, plan_deno_den001,['deno'])
     add_pipe_joints(plan2_pipe2, plan1_pipe1,['pick'])
-    add_pipe_joints(plan1_pipe3, plan_live_v001,['rec'])
+    add_pipe_joints(plan3_pipe3, plan_live_v001,['rec'])
 
 def create_default_anno_methods():
     AnnotationMethod.objects.create(name='template matching')
+    AnnotationMethod.objects.create(name='ml semantic segmentation')
 
 def run():
     try:
