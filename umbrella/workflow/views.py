@@ -1,5 +1,5 @@
 from umbrella_logger import logger
-from .utils import jsonify, ssh_connect, extract_parameters
+from .utils import jsonify, ssh_connect, extract_parameters, ENCRYPTION_KEY, decrypt_password
 from django.http import JsonResponse
 from django.shortcuts import render
 from .agent import Aretomo3
@@ -10,6 +10,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
+from django.http import JsonResponse
 # Configure logging
 
 
@@ -52,7 +53,7 @@ def get_aretomo3_json(request):
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=500)
 
-from django.http import JsonResponse
+
 @csrf_exempt
 @login_required
 def run_aretomo3(request):
@@ -64,9 +65,9 @@ def run_aretomo3(request):
         num_checks = data.get('num_checks')
         seconds = data.get('seconds')
         user_id = data.get('user_id')
-
+        password = data.get('password')
         # Create an instance of Aretomo3
-        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
+        aretomo = Aretomo3(HOST, PORT, USERNAME, password, ARETOMO3_SCRIPT_PATH)
 
         try:
             # Connect to the remote server

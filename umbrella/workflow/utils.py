@@ -3,12 +3,15 @@ import json
 import paramiko
 import os
 from umbrella_logger import logger
-
+from cryptography.fernet import Fernet
 # Other connection details
 hostname = '10.50.120.52'
 port = 22
 username = os.getenv('REMOTE_ID')
 password = os.getenv('REMOTE_PASSWORD')
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+
+cipher_suite = Fernet(ENCRYPTION_KEY)
 
 def ssh_connect(remote_path, shell=False):
     # Check if password is retrieved successfully
@@ -60,3 +63,22 @@ def extract_parameters(json_data, parameter_names):
         extracted_params[name] = value
 
     return extracted_params
+
+def encrypt_password(password: str):
+    # Convert the password to bytes
+    password_bytes = password.encode('utf-8')
+    # Encrypt the password
+    encrypted_password = cipher_suite.encrypt(password_bytes)
+    # Convert the encrypted password to a string
+    encrypted_password_str = encrypted_password.decode('utf-8')
+    return encrypted_password_str
+
+# Function to decrypt the password
+def decrypt_password(encrypted_password: str):
+    # Convert the encrypted password to bytes
+    encrypted_password_bytes = encrypted_password.encode('utf-8')
+    # Decrypt the password
+    decrypted_password = cipher_suite.decrypt(encrypted_password_bytes)
+    # Convert the decrypted password to a string
+    decrypted_password_str = decrypted_password.decode('utf-8')
+    return decrypted_password_str
