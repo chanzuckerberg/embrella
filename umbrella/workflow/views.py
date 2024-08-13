@@ -72,6 +72,11 @@ def run_aretomo3(request):
         encoded_password = data.get('password')
         decoded_password = base64.b64decode(encoded_password).decode('utf-8')
 
+        # Validate session_name format
+        session_name_pattern = re.compile(r'^\d{2}[a-z]{3}\d{2}[a-z]$')
+        if not session_name_pattern.match(session_name):
+            return JsonResponse({'error': 'Invalid session_name format. Please check the session name: 422'}, status=422)
+
         # Store user_id and decoded_password in session
         request.session['user_id'] = user_id
         request.session['decoded_password'] = decoded_password
@@ -85,11 +90,12 @@ def run_aretomo3(request):
             # Run the script and get the output
             output, error = aretomo.run_script(session_name, run_number, pix_size, num_checks, seconds, user_id)
             return JsonResponse({'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the below output directory', 'output': output, 'error': error})
-
+        except Exception as e:
+            return JsonResponse({'error': str(e) + ': 500'}, status=500)
         finally:
             aretomo.close()
 
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
+    return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
 @csrf_exempt
 @login_required
@@ -120,6 +126,8 @@ def cancel_aretomo3(request):
             output, error = aretomo.cancel(job_number)
             return JsonResponse(
                 {'message': f'Job - {job_number} for Aretomo3 is canceld successfully'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
         finally:
             aretomo.close()
 
@@ -147,6 +155,8 @@ def track_jobs(request):
                 output, error = aretomo.track_jobs(job_name)
             formatted_output = format_job_output(output)
             return JsonResponse({'jobs': formatted_output})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
         finally:
             aretomo.close()
 
