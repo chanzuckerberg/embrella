@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from .forms import ProcRunForm, ReserveFrameProcRunForm, UpdateNotesForm
+from django.contrib.auth.decorators import login_required
 from . import models
 from processes.models import ProcRun, ProcPlan, ProcSoftware, RunPipeData
 from tem.models import MsiSession
@@ -42,7 +43,7 @@ def detail(request, run_id):
             }
     }
     return render(request, "processes/detail.html", context)
-
+@login_required
 def reserve_run(request):
     if request.method == 'POST':
         form = ReserveFrameProcRunForm(request.POST)
@@ -50,7 +51,7 @@ def reserve_run(request):
     else:
         form = ReserveFrameProcRunForm()
         return render(request, "processes/reserve.html", {"form": form})
-
+@login_required
 def create_run(request):
     plan_id=int(request.POST['proc_plan'])
     session_id=int(request.POST['msi_session'])
