@@ -113,6 +113,15 @@
         .go-back:hover {
             background-color: #1e88e5;
         }
+        .error-message {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #e74c3c;
+            border-radius: 4px;
+            background-color: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -153,6 +162,7 @@
         <div id="outputContainer">
             <strong>Output Directory:</strong> <span id="outputDirectory"></span>
         </div>
+        <div id="errorMessage" class="error-message"></div>
     </div>
 
     <div class="form-container cancel-container">
@@ -259,14 +269,20 @@
                 })
             });
 
-            const result = await response.json();
-
             if (response.ok) {
+                const result = await response.json();
                 alert(`Message: ${result.message}`);
                 document.getElementById('outputDirectory').textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${sessionName}/run${runNumber}`;
                 document.getElementById('outputContainer').style.display = 'block';
+                document.getElementById('errorMessage').style.display = 'none';
             } else {
-                alert(`Failed to run the job.`);
+                const result = await response.json();
+                if (response.status === 500 && result.error && result.error.includes('authentication')) {
+                    document.getElementById('errorMessage').textContent = `Authentication Failed: ${result.error}`;
+                } else {
+                    document.getElementById('errorMessage').textContent = `Error: ${result.error || 'Failed to run the job.'}`;
+                }
+                document.getElementById('errorMessage').style.display = 'block';
             }
         }
 

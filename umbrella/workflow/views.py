@@ -136,7 +136,6 @@ def track_jobs(request):
         if not user_id or not decoded_password:
             return JsonResponse({'error': 'User credentials not found in session'}, status=400)
 
-
         aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
 
         try:
