@@ -4,8 +4,6 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from .agent import Aretomo3
 from umbrella.settings import ARETOMO3_SCRIPT_PATH
-from Cryptodome.Cipher import AES
-from Cryptodome.Util.Padding import unpad
 import os
 import base64
 import re
@@ -138,13 +136,7 @@ def track_jobs(request):
         data = json.loads(request.body)
         job_name = data.get('job_name')
 
-        user_id = request.session.get('user_id')
-        decoded_password = request.session.get('decoded_password')
-
-        if not user_id or not decoded_password:
-            return JsonResponse({'error': 'User credentials not found in session'}, status=400)
-
-        aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
+        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
 
         try:
             # Connect to the remote server
