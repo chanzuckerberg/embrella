@@ -4,8 +4,6 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from .agent import Aretomo3
 from umbrella.settings import ARETOMO3_SCRIPT_PATH
-from Cryptodome.Cipher import AES
-from Cryptodome.Util.Padding import unpad
 import os
 import base64
 import re
