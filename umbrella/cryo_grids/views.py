@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, PlungeFreezingSession, Puck, CryoGridCassette, PlungeFreezingSession
+from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, CryoGridCassette, \
+    PlungeFreezingSession, PlungeFreezingPlan
 from projects.models import Project
 from tem.models import MsiSession
 from django.contrib.auth.models import User
@@ -9,6 +10,7 @@ from django.http import JsonResponse
 from .models import CryoGridBox, CryoGrid
 from django.views.decorators.http import require_http_methods
 from datetime import datetime
+
 
 @require_http_methods(["GET"])
 def get_all_grid_boxes(request):
@@ -39,10 +41,10 @@ def grid_boxes_view(request):
     return render(request, 'cryo_grids/detail.html', context)
 
 
-
 from django.http import JsonResponse
 from .models import CryoGrid, CryoGridBox
 from django.contrib.auth.decorators import login_required
+
 
 def get_specific_grids(request):
     grid_box_name = request.GET.get('grid_box_name')
@@ -79,16 +81,27 @@ def get_specific_grids(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db.models import Q
+
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db.models import Q
+
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
-
     input_grid_name = request.GET.get('grid_name')
-    if input_grid_name:
-        pass
-    else:
-        result = CryoGrid.objects.select_related(
-            'intended_project', 'freezing_session', 'grid_box__puck', 'user', 'grid_cassette'
-        ).prefetch_related('msisession').values(
+
+    # Edge Case: Invalid Query Parameters
+    if input_grid_name is not None and not isinstance(input_grid_name, str):
+        return JsonResponse({'error': 'Invalid grid_name parameter type, expected string.'}, status=422)
+
+    try:
+        # Base queryset
+        queryset = CryoGrid.objects.select_related(
+            'intended_project', 'freezing_session', 'grid_box__puck', 'user', 'grid_cassette', 'freezing_plan'
+        ).prefetch_related('msisession', 'freezing_plan__sample', 'freezing_plan__tags').values(
             'id',
             grid_name=F('name'),
             cassette_name=F('grid_cassette__name'),
@@ -102,8 +115,17 @@ def get_cryo_grids_details(request):
             msisession_id=F('msisession__id'),
             msisession_name=F('msisession__name'),
             fz_session_id=F('freezing_session__id'),
-            fz_session_datetime=F('freezing_session__datetime')
+            fz_session_datetime=F('freezing_session__datetime'),
+            fz_plan_id=F('freezing_plan__id')
         )
+
+        # Apply filtering if grid_name is provided
+        if input_grid_name:
+            queryset = queryset.filter(name=input_grid_name)
+            if not queryset.exists():
+                return JsonResponse({'error': f'No grid found with the name: {input_grid_name}'}, status=404)
+
+        result = queryset
 
         # Reformat the data to match the desired structure
         formatted_result = {}
@@ -111,17 +133,26 @@ def get_cryo_grids_details(request):
         for item in result:
             grid_id = item['id']
 
-
             # Directly format datetime fields to "yyyy-mm-dd hh:mm" format
             created_on_formatted = item['created_on'].strftime("%Y-%m-%d %H:%M")
             fz_session_datetime_formatted = None
             if item['fz_session_datetime']:
                 fz_session_datetime_formatted = item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
 
+            try:
+                # Fetching the freezing plan sample and tag details
+                freezing_plan = PlungeFreezingPlan.objects.get(id=item['fz_plan_id'])
+                sample_names = ', '.join(freezing_plan.sample.values_list('name', flat=True))
+                tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+                freezing_plan_str = f"{sample_names} with {tag_names}" if tag_names else f"{sample_names} without tag"
+            except ObjectDoesNotExist:
+                return JsonResponse({'error': 'Related freezing plan not found.'}, status=404)
+            except ValidationError as e:
+                return JsonResponse({'error': f'Validation error: {str(e)}'}, status=422)
 
             if grid_id not in formatted_result:
                 grid_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/cryogrid/{grid_id}"
-                project_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/project/{item['project_id']}"
+                project_url = f"http://umbrella.czbiohub.org/admin/projects/project/{item['project_id']}"
 
                 formatted_result[grid_id] = {
                     'grid': {
@@ -147,8 +178,8 @@ def get_cryo_grids_details(request):
                         'name': item['username']
                     },
                     'freezingPlan': {
-                        'id': None,
-                        'sample': None,
+                        'id': item['fz_plan_id'],
+                        'sample': freezing_plan_str,
                     },
                     'freezingSession': {
                         'id': item['fz_session_id'],
@@ -171,3 +202,6 @@ def get_cryo_grids_details(request):
         formatted_result_list = list(formatted_result.values())
 
         return JsonResponse({'Result': formatted_result_list})
+
+    except Exception as e:
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
