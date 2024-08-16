@@ -1,13 +1,14 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette
+from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, PlungeFreezingSession, Puck, CryoGridCassette, PlungeFreezingSession
+from projects.models import Project
 from tem.models import MsiSession
 from django.contrib.auth.models import User
-
+from django.db.models import F
 from django.http import JsonResponse
 from .models import CryoGridBox, CryoGrid
 from django.views.decorators.http import require_http_methods
-
+from datetime import datetime
 
 @require_http_methods(["GET"])
 def get_all_grid_boxes(request):
@@ -75,3 +76,97 @@ def get_specific_grids(request):
         return JsonResponse(grids_data, safe=False)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_cryo_grids_details(request):
+
+    input_grid_name = request.GET.get('grid_name')
+    if input_grid_name:
+        pass
+    else:
+        result = CryoGrid.objects.select_related(
+            'intended_project', 'freezing_session', 'grid_box__puck', 'user', 'grid_cassette'
+        ).prefetch_related('msisession').values(
+            'id',
+            grid_name=F('name'),
+            cassette_name=F('grid_cassette__name'),
+            project_name=F('intended_project__name'),
+            project_id=F('intended_project__id'),
+            puck=F('grid_box__puck__name'),
+            userID=F('user__id'),
+            username=F('user__username'),
+            status=F('trashed'),
+            created_on=F('create_on'),
+            msisession_id=F('msisession__id'),
+            msisession_name=F('msisession__name'),
+            fz_session_id=F('freezing_session__id'),
+            fz_session_datetime=F('freezing_session__datetime')
+        )
+
+        # Reformat the data to match the desired structure
+        formatted_result = {}
+
+        for item in result:
+            grid_id = item['id']
+
+
+            # Directly format datetime fields to "yyyy-mm-dd hh:mm" format
+            created_on_formatted = item['created_on'].strftime("%Y-%m-%d %H:%M")
+            fz_session_datetime_formatted = None
+            if item['fz_session_datetime']:
+                fz_session_datetime_formatted = item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
+
+
+            if grid_id not in formatted_result:
+                grid_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/cryogrid/{grid_id}"
+                project_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/project/{item['project_id']}"
+
+                formatted_result[grid_id] = {
+                    'grid': {
+                        'id': grid_id,
+                        'name': item['grid_name'],
+                        'trashed': item['status'],
+                        'url': grid_url,
+                        'created': item['created_on'],
+                    },
+                    'cassette': {
+                        'name': item['cassette_name'],
+                    },
+                    'project': {
+                        'id': item['project_id'],
+                        'name': item['project_name'],
+                        'url': project_url
+                    },
+                    'puck': {
+                        'name': item['puck']
+                    },
+                    'user': {
+                        'id': item['userID'],
+                        'name': item['username']
+                    },
+                    'freezingPlan': {
+                        'id': None,
+                        'sample': None,
+                    },
+                    'freezingSession': {
+                        'id': item['fz_session_id'],
+                        'created_at': fz_session_datetime_formatted
+                    },
+                    'screeningSession': None,
+                    'msiSession': []
+                }
+
+            # Append MSI session details to the 'msiSession' list
+            if item['msisession_id']:
+                msi_url = f"http://umbrella.czbiohub.org/admin/tem/msisession/{item['msisession_id']}"
+                formatted_result[grid_id]['msiSession'].append({
+                    'id': item['msisession_id'],
+                    'name': item['msisession_name'],
+                    'url': msi_url
+                })
+
+        # Convert the formatted_result dictionary to a list
+        formatted_result_list = list(formatted_result.values())
+
+        return JsonResponse({'Result': formatted_result_list})
