@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from .models import CryoGridBox, CryoGrid
 from django.views.decorators.http import require_http_methods
 from datetime import datetime
-
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 
 @require_http_methods(["GET"])
 def get_all_grid_boxes(request):
@@ -81,27 +81,37 @@ def get_specific_grids(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.http import JsonResponse
+from django.db.models import F, Q
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.db.models import Q
-
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.db.models import Q
 
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     input_grid_name = request.GET.get('grid_name')
+    input_puck_name = request.GET.get('puck_name')
+    input_user_name = request.GET.get('user_name')
+
+    # Process input_user_name to handle firstname.lastname format
+    if input_user_name:
+        input_user_name = input_user_name.split('@')[0]
 
     # Edge Case: Invalid Query Parameters
     if input_grid_name is not None and not isinstance(input_grid_name, str):
         return JsonResponse({'error': 'Invalid grid_name parameter type, expected string.'}, status=422)
+    if input_puck_name is not None and not isinstance(input_puck_name, str):
+        return JsonResponse({'error': 'Invalid puck_name parameter type, expected string.'}, status=422)
+    if input_user_name is not None and not isinstance(input_user_name, str):
+        return JsonResponse({'error': 'Invalid user_name parameter'}, status=422)
 
     try:
         # Base queryset
         queryset = CryoGrid.objects.select_related(
-            'intended_project', 'freezing_session', 'grid_box__puck', 'user', 'grid_cassette', 'freezing_plan'
-        ).prefetch_related('msisession', 'freezing_plan__sample', 'freezing_plan__tags').values(
+            'intended_project', 'freezing_session', 'grid_box__puck', 'user',
+            'grid_cassette', 'freezing_plan'
+        ).prefetch_related(
+            'msisession', 'freezing_plan__sample', 'freezing_plan__tags',
+            'atlassession__group'
+        ).values(
             'id',
             grid_name=F('name'),
             cassette_name=F('grid_cassette__name'),
@@ -116,7 +126,8 @@ def get_cryo_grids_details(request):
             msisession_name=F('msisession__name'),
             fz_session_id=F('freezing_session__id'),
             fz_session_datetime=F('freezing_session__datetime'),
-            fz_plan_id=F('freezing_plan__id')
+            fz_plan_id=F('freezing_plan__id'),
+            screening_session_name=F('atlassession__group__name')  # Getting the name from ScreenSessionGroup
         )
 
         # Apply filtering if grid_name is provided
@@ -124,6 +135,18 @@ def get_cryo_grids_details(request):
             queryset = queryset.filter(name=input_grid_name)
             if not queryset.exists():
                 return JsonResponse({'error': f'No grid found with the name: {input_grid_name}'}, status=404)
+
+        # Apply filtering if puck_name is provided
+        if input_puck_name:
+            queryset = queryset.filter(grid_box__puck__name=input_puck_name)
+            if not queryset.exists():
+                return JsonResponse({'error': f'No grid found with the puck name: {input_puck_name}'}, status=404)
+
+        # Apply filtering if user_name is provided
+        if input_user_name:
+            queryset = queryset.filter(Q(user__username__icontains=input_user_name))
+            if not queryset.exists():
+                return JsonResponse({'error': f'No grid found with the user name: {input_user_name}'}, status=404)
 
         result = queryset
 
@@ -134,7 +157,6 @@ def get_cryo_grids_details(request):
             grid_id = item['id']
 
             # Directly format datetime fields to "yyyy-mm-dd hh:mm" format
-            created_on_formatted = item['created_on'].strftime("%Y-%m-%d %H:%M")
             fz_session_datetime_formatted = None
             if item['fz_session_datetime']:
                 fz_session_datetime_formatted = item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
@@ -157,10 +179,10 @@ def get_cryo_grids_details(request):
                 formatted_result[grid_id] = {
                     'grid': {
                         'id': grid_id,
-                        'name': item['grid_name'],
+                        'name': f"{item['grid_name']} (id={grid_id})",
                         'trashed': item['status'],
                         'url': grid_url,
-                        'created': item['created_on'],
+                        'created_at': item['created_on'],
                     },
                     'cassette': {
                         'name': item['cassette_name'],
@@ -185,8 +207,8 @@ def get_cryo_grids_details(request):
                         'id': item['fz_session_id'],
                         'created_at': fz_session_datetime_formatted
                     },
-                    'screeningSession': None,
-                    'msiSession': []
+                    'screeningSession': item['screening_session_name'],
+                    'msiSession': [],
                 }
 
             # Append MSI session details to the 'msiSession' list
