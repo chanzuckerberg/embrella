@@ -164,9 +164,15 @@ def get_cryo_grids_details(request):
             try:
                 # Fetching the freezing plan sample and tag details
                 freezing_plan = PlungeFreezingPlan.objects.get(id=item['fz_plan_id'])
-                sample_names = ', '.join(freezing_plan.sample.values_list('name', flat=True))
-                tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-                freezing_plan_str = f"{sample_names} with {tag_names}" if tag_names else f"{sample_names} without tag"
+
+                # Creating a list to hold the formatted sample and tag strings
+                freezing_plan_list = []
+
+                # Iterate through the sample names
+                for sample_name in freezing_plan.sample.values_list('name', flat=True):
+                    tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+                    plan_str = f"{sample_name} with {tag_names}" if tag_names else f"{sample_name} without tag"
+                    freezing_plan_list.append(plan_str)
             except ObjectDoesNotExist:
                 return JsonResponse({'error': 'Related freezing plan not found.'}, status=404)
             except ValidationError as e:
@@ -201,7 +207,7 @@ def get_cryo_grids_details(request):
                     },
                     'freezingPlan': {
                         'id': item['fz_plan_id'],
-                        'sample': freezing_plan_str,
+                        'sample': freezing_plan_list,
                     },
                     'freezingSession': {
                         'id': item['fz_session_id'],
@@ -213,7 +219,7 @@ def get_cryo_grids_details(request):
 
             # Append MSI session details to the 'msiSession' list
             if item['msisession_id']:
-                msi_url = f"http://umbrella.czbiohub.org/admin/tem/msisession/{item['msisession_id']}"
+                msi_url = f"http://umbrella.czbiohub.org/tem/{item['msisession_id']}"
                 formatted_result[grid_id]['msiSession'].append({
                     'id': item['msisession_id'],
                     'name': item['msisession_name'],
