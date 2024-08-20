@@ -9,4 +9,5 @@ urlpatterns = [
     path("detail", views.grid_boxes_view, name="detail"),
     path('all_grid_boxes/', views.get_all_grid_boxes, name='get_all_grid_boxes'),
     path('specific_grids/', views.get_specific_grids, name='get_specific_grids'),
+    path('v1/grids/', views.get_cryo_grids_details, name='get_cryo_grids_details')
 ]
