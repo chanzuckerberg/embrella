@@ -1,7 +1,7 @@
 from django.db import models
 from django.forms import ModelForm
 from .models import select_plan_ids_by_input_data_types
-from .models import ProcRun, PipelinePlan
+from .models import ProcRun, ProcPlan
 
 class ReserveFrameProcRunForm(ModelForm):
     class Meta:
@@ -11,7 +11,7 @@ class ReserveFrameProcRunForm(ModelForm):
     def __init__(self, **kwargs):
         super(ReserveFrameProcRunForm, self).__init__(**kwargs)
         plan_ids = select_plan_ids_by_input_data_types(['frames',])
-        self.fields['proc_plan'].queryset = PipelinePlan.objects.filter(id__in=plan_ids)
+        self.fields['proc_plan'].queryset = ProcPlan.objects.filter(id__in=plan_ids)
 
 class ReserveTomoProcRunForm(ModelForm):
     class Meta:
@@ -20,8 +20,8 @@ class ReserveTomoProcRunForm(ModelForm):
 
     def __init__(self, **kwargs):
         super(ReserveTomoProcRunForm, self).__init__(**kwargs)
-        plan_ids = select_plan_ids_by_input_data_types(['rec','deno'])
-        self.fields['proc_plan'].queryset = PipelinePlan.objects.filter(id__in=plan_ids)
+        plan_ids = select_plan_ids_by_input_data_types(['rec','deno','evn'])
+        self.fields['proc_plan'].queryset = ProcPlan.objects.filter(id__in=plan_ids)
 
 class ProcRunForm(ModelForm):
     class Meta:

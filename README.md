@@ -36,9 +36,11 @@ python manage.py createsuperuser
 ```
 7. run the following initialization scripts that creates a project, a grid, and a live processing plan.
 ```
-python manage.py runscript init
-python manage.py runscript init_multigrid
-python manage.py runscript init_processes
+python manage.py runscript 001_init
+python manage.py runscript 002_permission (optional)
+python manage.py runscript 003_init_multigrid
+python manage.py runscript 004_init_processes
+python manage.py runscript 005_init_pytom_pick
 ```
 8. run django server locally at the default 8000 port
 ```
