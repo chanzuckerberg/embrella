@@ -1,3 +1,7 @@
+export interface ApiListResponse<T> {
+  Results: T[];
+}
+
 export interface Configs {
   API_URL: string;
 }
