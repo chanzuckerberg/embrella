@@ -1,5 +1,10 @@
+import { initFetch } from "../testing/utils";
 import { fetchResource } from "../common/utils";
 import { GRID_A } from "../testing/constants";
+
+beforeAll(() => {
+  initFetch();
+});
 
 describe("fetchResource", () => {
   it("fails with error when invalid url is provided", async () => {

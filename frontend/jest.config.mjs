@@ -5,5 +5,5 @@ const createJestConfig = nextJest({
 });
 
 export default createJestConfig({
-  setupFiles: ["./testing/setup.ts"]
+  testEnvironment: "jsdom",
 });
