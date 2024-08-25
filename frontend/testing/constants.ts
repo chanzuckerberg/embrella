@@ -43,6 +43,9 @@ export const GRID_A: Grid = {
 };
 
 export const FETCH_RESPONSES: Record<string, FetchResponse> = {
+  "http://localhost:8000/nonexistent": {
+    status: 404,
+  },
   "http://localhost:8000/cryo_grids/v1/grids": {
     body: JSON.stringify({
       Results: [GRID_A],
