@@ -1,5 +1,5 @@
 import { Grid } from "../common/entities";
-import { FetchResponse } from "./entities";
+import { FetchResponseInfo } from "./entities";
 
 export const GRID_A: Grid = {
   grid: {
@@ -42,7 +42,7 @@ export const GRID_A: Grid = {
   ],
 };
 
-export const FETCH_RESPONSES: Record<string, FetchResponse> = {
+export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
   "http://localhost:8000/nonexistent": {
     status: 404,
   },
@@ -50,5 +50,8 @@ export const FETCH_RESPONSES: Record<string, FetchResponse> = {
     body: JSON.stringify({
       Results: [GRID_A],
     }),
+  },
+  "http://localhost:8000/foo": {
+    body: JSON.stringify("foo"),
   },
 };

@@ -31,6 +31,8 @@ export const useFetchData = <D>(
         data,
         isSuccess: true,
       });
+    }).catch((err) => {
+      console.error(err);
     });
   }, [requestURL, shouldFetch]);
 
