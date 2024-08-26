@@ -1,7 +1,7 @@
-import { Grid } from "../common/entities";
+import { GridData } from "../common/entities";
 import { FetchResponseInfo } from "./entities";
 
-export const GRID_A: Grid = {
+export const GRID_A: GridData = {
   grid: {
     id: 0,
     name: "foo bar foo baz",

@@ -6,7 +6,7 @@ export interface Configs {
   API_URL: string;
 }
 
-export interface Grid {
+export interface GridData {
   grid: {
     id: number;
     name: string;
