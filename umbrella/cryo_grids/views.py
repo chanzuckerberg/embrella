@@ -1,20 +1,13 @@
 from django.shortcuts import render
-from django.http import JsonResponse
 from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, CryoGridCassette, \
     PlungeFreezingSession, PlungeFreezingPlan
-from projects.models import Project
-from tem.models import MsiSession
-from django.contrib.auth.models import User
-from django.db.models import F
-from django.http import JsonResponse
-from .models import CryoGridBox, CryoGrid
+
 from django.views.decorators.http import require_http_methods
-from datetime import datetime
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.http import JsonResponse
+
 from django.db.models import F, Q, Count
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-
+from django.utils.timezone import now
+from datetime import timedelta
 
 @require_http_methods(["GET"])
 def get_all_grid_boxes(request):
@@ -84,6 +77,8 @@ def get_specific_grids(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+
+
 @require_http_methods(["GET"])
 def available_filters(request):
     try:
@@ -96,64 +91,77 @@ def available_filters(request):
             'atlassession__group'
         )
 
+        # Calculate the date ranges based on UTC time
+        current_time = now()
+        date_ranges = {
+            'last_1_month': current_time - timedelta(days=30),
+            'last_3_months': current_time - timedelta(days=90),
+            'last_6_months': current_time - timedelta(days=180),
+        }
+
         # Aggregating counts for each filter
         filters = {
-            'project': queryset.annotate(project_temp_name=F('intended_project__name'))
+            'project': list(queryset.annotate(project_temp_name=F('intended_project__name'))
                         .values(project_temp_name=F('project_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('project_temp_name')
-                        .values(name=F('project_temp_name'), count=F('count')),
-            'puck': queryset.annotate(puck_temp_name=F('grid_box__puck__name'))
+                        .values(name=F('project_temp_name'), count=F('count'))),
+            'puck': list(queryset.annotate(puck_temp_name=F('grid_box__puck__name'))
                         .values(puck_temp_name=F('puck_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('puck_temp_name')
-                        .values(name=F('puck_temp_name'), count=F('count')),
-            'sample': queryset.annotate(sample_temp_name=F('freezing_plan__sample__name'))
+                        .values(name=F('puck_temp_name'), count=F('count'))),
+            'sample': list(queryset.annotate(sample_temp_name=F('freezing_plan__sample__name'))
                         .values(sample_temp_name=F('sample_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('sample_temp_name')
-                        .values(name=F('sample_temp_name'), count=F('count')),
-            'user': queryset.annotate(user_temp_name=F('user__username'))
+                        .values(name=F('sample_temp_name'), count=F('count'))),
+            'user': list(queryset.annotate(user_temp_name=F('user__username'))
                         .values(user_temp_name=F('user_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('user_temp_name')
-                        .values(name=F('user_temp_name'), count=F('count')),
-            'cassette': queryset.annotate(cassette_temp_name=F('grid_cassette__name'))
+                        .values(name=F('user_temp_name'), count=F('count'))),
+            'cassette': list(queryset.annotate(cassette_temp_name=F('grid_cassette__name'))
                         .values(cassette_temp_name=F('cassette_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('cassette_temp_name')
-                        .values(name=F('cassette_temp_name'), count=F('count')),
-            'screenSession': queryset.annotate(screen_session_temp_name=F('atlassession__group__name'))
+                        .values(name=F('cassette_temp_name'), count=F('count'))),
+            'screenSession': list(queryset.annotate(screen_session_temp_name=F('atlassession__group__name'))
                         .values(screen_session_temp_name=F('screen_session_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('screen_session_temp_name')
-                        .values(name=F('screen_session_temp_name'), count=F('count')),
-            'msiSession': queryset.annotate(msi_session_temp_name=F('msisession__name'))
+                        .values(name=F('screen_session_temp_name'), count=F('count'))),
+            'msiSession': list(queryset.annotate(msi_session_temp_name=F('msisession__name'))
                         .values(msi_session_temp_name=F('msi_session_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('msi_session_temp_name')
-                        .values(name=F('msi_session_temp_name'), count=F('count')),
-            'status': queryset.values(is_trashed=F('trashed'))
+                        .values(name=F('msi_session_temp_name'), count=F('count'))),
+            'status': list(queryset.values(is_trashed=F('trashed'))
                         .annotate(count=Count('id'))
-                        .order_by('trashed'),
+                        .order_by('trashed')),
+            'date': [
+                {"range": "last_1_month", "count": queryset.filter(create_on__gte=date_ranges['last_1_month']).count()},
+                {"range": "last_3_months", "count": queryset.filter(create_on__gte=date_ranges['last_3_months']).count()},
+                {"range": "last_6_months", "count": queryset.filter(create_on__gte=date_ranges['last_6_months']).count()}
+            ]
         }
 
         # Process the 'sample' filter and replace sample_name with the detailed information
         processed_samples = []
         for item in filters['sample']:
-            if 'sample_name' in item:
+            if 'sample_temp_name' in item:
                 # Get the associated freezing plans based on the sample name
-                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['sample_name'])
+                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['sample_temp_name'])
 
                 # Create a string that summarizes the freezing plan details
                 freezing_plan_details = []
                 for freezing_plan in freezing_plans:
                     tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-                    plan_str = f"{item['sample_name']} with {tag_names}" if tag_names else f"{item['sample_name']} without tag"
+                    plan_str = f"{item['sample_temp_name']} with {tag_names}" if tag_names else f"{item['sample_temp_name']} without tag"
                     freezing_plan_details.append(plan_str)
 
-                # Replace sample_name with the concatenated string
-                item['sample_name'] = ' | '.join(freezing_plan_details)
+                # Replace sample_temp_name with the concatenated string
+                item['sample_temp_name'] = ' | '.join(freezing_plan_details)
 
             processed_samples.append(item)
 
@@ -161,7 +169,7 @@ def available_filters(request):
 
         # Convert to the expected output format
         response_data = {
-            "filters": {key: list(value) for key, value in filters.items()}
+            "filters": filters
         }
 
         return JsonResponse(response_data)
@@ -186,7 +194,7 @@ def get_cryo_grids_details(request):
     # Convert comma-separated string values to lists
     for key, value in input_params.items():
         if value:
-            input_params[key] = value.strip('[]').split(',')
+            input_params[key] = [v.strip() for v in value.strip('[]').split(',')]
 
 
     # Retrieve filter type (AND or OR)
@@ -224,7 +232,7 @@ def get_cryo_grids_details(request):
             fz_plan_id=F('freezing_plan__id'),
             screening_session_name=F('atlassession__group__name'),
             fz_plan_sample_id=F('freezing_plan__sample__id')
-        )
+        ).order_by('-created_on')
 
         # Apply filters based on input parameters
         filter_mappings = {
@@ -238,6 +246,7 @@ def get_cryo_grids_details(request):
             'screen_session_name': 'atlassession__group__name__in',
         }
 
+        # print(filter_mappings)
         filters = Q()
 
         # Apply filters based on the filter type
@@ -336,22 +345,28 @@ def get_cryo_grids_details(request):
                 })
 
         # Filter results by sample name if provided
+        # Filter results by sample name if provided
         if input_params['sample_name']:
             matching_results = {}
             sample_name_input = input_params['sample_name']
 
             for grid_id, data in formatted_result.items():
-                sample_list = data['freezingPlan']['name']
-                matching_samples = [sample for sample in sample_list if
-                                    any(s_name in sample['sample'] for s_name in sample_name_input)]
+                sample_list = data['freezingPlan']['sample']
+
+                # Filter samples within each freezing plan that match any sample_name in the list
+                matching_samples = [
+                    sample for sample in sample_list
+                    if any(s_name in sample['name'] for s_name in sample_name_input)
+                ]
 
                 if matching_samples:
-                    data['freezingPlan']['name'] = matching_samples
+                    data['freezingPlan']['sample'] = matching_samples
                     matching_results[grid_id] = data
 
             formatted_result = matching_results
 
         formatted_result_list = list(formatted_result.values())
+
 
         return JsonResponse({'Result': formatted_result_list})
 
