@@ -8,7 +8,7 @@ from django.db.models import F, Q, Count
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.timezone import now
 from datetime import timedelta
-from .utils import CryoGridsQueryParams
+from .utils import *
 from pydantic import ValidationError
 from django.core.exceptions import ObjectDoesNotExist, ValidationError as DjangoValidationError
 @require_http_methods(["GET"])
@@ -179,6 +179,7 @@ def available_filters(request):
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
 
+
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     try:
@@ -232,7 +233,6 @@ def get_cryo_grids_details(request):
         }
 
         if filter_type == 'AND':
-            # Apply all filters as an intersection of conditions
             filters = Q()
             for key, filter_field in filter_mappings.items():
                 values = getattr(query_params, key)
@@ -240,31 +240,27 @@ def get_cryo_grids_details(request):
                     filters &= Q(**{filter_field: values})
             queryset = queryset.filter(filters)
         elif filter_type == 'OR':
-            # Apply each filter separately and get the intersection of the results
             initial_queryset = CryoGrid.objects.none()
             for key, filter_field in filter_mappings.items():
                 values = getattr(query_params, key)
                 if values:
                     filtered_queryset = queryset.filter(Q(**{filter_field: values}))
                     initial_queryset = initial_queryset | filtered_queryset
-
-            # Only keep grids that appear in all filtered querysets
             queryset = initial_queryset.distinct()
 
         if not queryset.exists():
             return JsonResponse({'Result': []}, status=200)
 
-        formatted_result = {}
+        formatted_result = []
         for item in queryset:
             grid_id = item['id']
 
-            # Format datetime field if it exists
+            # Ensure datetime is correctly formatted as a string
             fz_session_datetime_formatted = (
                 item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
                 if item['fz_session_datetime'] else None
             )
 
-            # Fetching freezing plan sample and tag details
             freezing_plan_list = []
             try:
                 freezing_plan = PlungeFreezingPlan.objects.get(id=item['fz_plan_id'])
@@ -273,87 +269,70 @@ def get_cryo_grids_details(request):
                     sample_name = sample.name
                     tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
                     sample_url = f"http://umbrella.czbiohub.org/admin/samples/{sample_id}"
-                    plan_str = {
-                        'id': sample_id,
-                        'name': f"{sample_name} with {tag_names}" if tag_names else f"{sample_name} without tag",
-                        'url': sample_url
-                    }
+                    plan_str = SampleModel(
+                        id=sample_id,
+                        name=f"{sample_name} with {tag_names}" if tag_names else f"{sample_name} without tag",
+                        url=sample_url
+                    )
                     freezing_plan_list.append(plan_str)
             except ObjectDoesNotExist:
                 return JsonResponse({'error': 'Related freezing plan not found.'}, status=404)
             except ValidationError as e:
                 return JsonResponse({'error': f'Validation error: {str(e)}'}, status=422)
 
-            if grid_id not in formatted_result:
-                grid_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/cryogrid/{grid_id}"
-                project_url = f"http://umbrella.czbiohub.org/admin/projects/project/{item['project_id']}"
-                formatted_result[grid_id] = {
-                    'grid': {
-                        'id': grid_id,
-                        'name': f"{item['grid_name']} (id={grid_id})",
-                        'trashed': item['status'],
-                        'url': grid_url,
-                        'createdAt': item['created_on'],
-                    },
-                    'cassette': {
-                        'name': item['cassette_name'],
-                    },
-                    'project': {
-                        'id': item['project_id'],
-                        'name': item['project_name'],
-                        'url': project_url
-                    },
-                    'puck': {
-                        'name': item['puck']
-                    },
-                    'user': {
-                        'id': item['userID'],
-                        'name': item['username']
-                    },
-                    'freezingPlan': {
-                        'id': item['fz_plan_id'],
-                        'sample': freezing_plan_list,
-                    },
-                    'freezingSession': {
-                        'id': item['fz_session_id'],
-                        'createdAt': fz_session_datetime_formatted
-                    },
-                    'screeningSession': item['screening_session_name'],
-                    'msiSession': [],
-                }
+            grid_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/cryogrid/{grid_id}"
+            project_url = f"http://umbrella.czbiohub.org/admin/projects/project/{item['project_id']}"
 
-            # Append MSI session details
-            if item['msisession_id']:
-                msi_url = f"http://umbrella.czbiohub.org/tem/{item['msisession_id']}"
-                formatted_result[grid_id]['msiSession'].append({
-                    'id': item['msisession_id'],
-                    'name': item['msisession_name'],
-                    'url': msi_url
-                })
+            # Handle msisession_id and msisession_name, treating them as lists
+            msisession_ids = item['msisession_id']
+            msisession_names = item['msisession_name']
+            if not isinstance(msisession_ids, list):
+                msisession_ids = [msisession_ids] if msisession_ids is not None else []
+            if not isinstance(msisession_names, list):
+                msisession_names = [msisession_names] if msisession_names is not None else []
 
-        # Filter results by sample name if provided
-        if query_params.sample_name:
-            matching_results = {}
-            sample_name_input = query_params.sample_name
-
-            for grid_id, data in formatted_result.items():
-                sample_list = data['freezingPlan']['sample']
-
-                # Filter samples within each freezing plan that match any sample_name in the list
-                matching_samples = [
-                    sample for sample in sample_list
-                    if any(s_name in sample['name'] for s_name in sample_name_input)
+            result = CryoGridResultModel(
+                grid=GridModel(
+                    id=grid_id,
+                    name=f"{item['grid_name']} (id={grid_id})",
+                    trashed=item['status'],
+                    url=grid_url,
+                    createdAt=item['created_on'].strftime("%Y-%m-%d")  # Ensure the format is a string
+                ),
+                cassette=CassetteModel(name=item['cassette_name']),
+                project=ProjectModel(
+                    id=item['project_id'],
+                    name=item['project_name'],
+                    url=project_url
+                ),
+                puck=PuckModel(name=item['puck']),
+                user=UserModel(
+                    id=item['userID'],
+                    name=item['username']
+                ),
+                freezingPlan=FreezingPlanModel(
+                    id=item['fz_plan_id'],
+                    sample=freezing_plan_list
+                ),
+                freezingSession=FreezingSessionModel(
+                    id=item['fz_session_id'],
+                    createdAt=fz_session_datetime_formatted
+                ),
+                screeningSession=item['screening_session_name'],
+                msiSession=[
+                    MSISessionModel(
+                        id=msi_id,
+                        name=msi_name,
+                        url=f"http://umbrella.czbiohub.org/tem/{msi_id}"
+                    )
+                    for msi_id, msi_name in zip(msisession_ids, msisession_names)
                 ]
+            )
+            formatted_result.append(result)
 
-                if matching_samples:
-                    data['freezingPlan']['sample'] = matching_samples
-                    matching_results[grid_id] = data
+        response_model = CryoGridResponseModel(Result=formatted_result)
 
-            formatted_result = matching_results
-
-        formatted_result_list = list(formatted_result.values())
-
-        return JsonResponse({'Result': formatted_result_list})
+        return JsonResponse(response_model.dict(), status=200)
 
     except ValidationError as e:
         return JsonResponse({'error': e.errors()}, status=400)

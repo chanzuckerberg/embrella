@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Union
-
+from datetime import datetime
 
 class CryoGridsQueryParams(BaseModel):
     project_name: Optional[Union[List[str], str]] = None
@@ -43,3 +43,63 @@ class CryoGridsQueryParams(BaseModel):
             raise ValueError("trashed must be either 'true' or 'false'")
         return value
 
+
+
+### Result
+
+from pydantic import BaseModel
+from typing import Optional, List
+
+class SampleModel(BaseModel):
+    id: int
+    name: str
+    url: str  # Changed from HttpUrl to str
+
+class FreezingPlanModel(BaseModel):
+    id: int
+    sample: List[SampleModel]
+
+class FreezingSessionModel(BaseModel):
+    id: int
+    createdAt: Optional[str] = None
+
+class MSISessionModel(BaseModel):
+    id: int
+    name: str
+    url: str  # Changed from HttpUrl to str
+
+class GridModel(BaseModel):
+    id: int
+    name: str
+    trashed: bool
+    url: str  # Changed from HttpUrl to str
+    createdAt: Optional[str] = None
+
+class CassetteModel(BaseModel):
+    name: Optional[str] = None
+
+class ProjectModel(BaseModel):
+    id: int
+    name: str
+    url: str  # Changed from HttpUrl to str
+
+class PuckModel(BaseModel):
+    name: str
+
+class UserModel(BaseModel):
+    id: int
+    name: str
+
+class CryoGridResultModel(BaseModel):
+    grid: GridModel
+    cassette: CassetteModel
+    project: ProjectModel
+    puck: PuckModel
+    user: UserModel
+    freezingPlan: FreezingPlanModel
+    freezingSession: FreezingSessionModel
+    screeningSession: Optional[str] = None
+    msiSession: List[MSISessionModel]
+
+class CryoGridResponseModel(BaseModel):
+    Result: List[CryoGridResultModel]
