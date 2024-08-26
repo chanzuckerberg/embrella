@@ -48,7 +48,7 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
   },
   "http://localhost:8000/cryo_grids/v1/grids": {
     body: JSON.stringify({
-      Results: [GRID_A],
+      Result: [GRID_A],
     }),
   },
   "http://localhost:8000/foo": {

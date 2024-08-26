@@ -21,6 +21,6 @@ describe("fetchResource", () => {
     const response = await fetchResource(
       "http://localhost:8000/cryo_grids/v1/grids",
     );
-    expect((await response.json()).Results[0]).toEqual(GRID_A);
+    expect((await response.json()).Result[0]).toEqual(GRID_A);
   });
 });

@@ -1,5 +1,5 @@
 export interface ApiListResponse<T> {
-  Results: T[];
+  Result: T[];
 }
 
 export interface Configs {
