@@ -8,7 +8,9 @@ from django.db.models import F, Q, Count
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.timezone import now
 from datetime import timedelta
-
+from .utils import CryoGridsQueryParams
+from pydantic import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError as DjangoValidationError
 @require_http_methods(["GET"])
 def get_all_grid_boxes(request):
     if request.GET.get('valid', 'true') != 'true':
@@ -179,34 +181,19 @@ def available_filters(request):
 
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
-    # Retrieve all input parameters and split by comma if multiple values are provided
-    input_params = {
-        'project_name': request.GET.get('project_name'),
-        'cassette_name': request.GET.get('cassette_name'),
-        'grid_name': request.GET.get('grid_name'),
-        'puck_name': request.GET.get('puck_name'),
-        'user_name': request.GET.get('user_name'),
-        'sample_name': request.GET.get('sample_name'),
-        'msi_session_name': request.GET.get('msi_session_name'),
-        'screen_session_name': request.GET.get('screen_session_name')
-    }
-
-    # Convert comma-separated string values to lists
-    for key, value in input_params.items():
-        if value:
-            input_params[key] = [v.strip() for v in value.strip('[]').split(',')]
-
-
-    # Retrieve filter type (AND or OR)
-    filter_type = request.GET.get('filter_type', 'AND').upper()  # Default to AND if not provided
-
-    # Process user_name to handle firstname.lastname format
-    if input_params['user_name']:
-        input_params['user_name'] = [
-            username.split('@')[0] for username in input_params['user_name']
-        ]
-
     try:
+        # Parse and validate query parameters using Pydantic
+        query_params = CryoGridsQueryParams(**request.GET.dict())
+
+        # Retrieve filter type
+        filter_type = query_params.filter_type
+
+        # Process user_name to handle firstname.lastname format
+        if query_params.user_name:
+            query_params.user_name = [
+                username.split('@')[0] for username in query_params.user_name
+            ]
+
         # Base queryset
         queryset = CryoGrid.objects.select_related(
             'intended_project', 'freezing_session', 'grid_box__puck', 'user',
@@ -234,40 +221,40 @@ def get_cryo_grids_details(request):
             fz_plan_sample_id=F('freezing_plan__sample__id')
         ).order_by('-created_on')
 
-        # Apply filters based on input parameters
         filter_mappings = {
             'project_name': 'intended_project__name__in',
             'cassette_name': 'grid_cassette__name__in',
             'grid_name': 'name__in',
             'puck_name': 'grid_box__puck__name__in',
             'user_name': 'user__username__in',
-            # 'sample_name': 'freezing_plan__sample__name__icontains',  # handled separately
             'msi_session_name': 'msisession__name__in',
             'screen_session_name': 'atlassession__group__name__in',
         }
 
-        # print(filter_mappings)
-        filters = Q()
-
-        # Apply filters based on the filter type
         if filter_type == 'AND':
+            # Apply all filters as an intersection of conditions
+            filters = Q()
             for key, filter_field in filter_mappings.items():
-                values = input_params.get(key)
+                values = getattr(query_params, key)
                 if values:
                     filters &= Q(**{filter_field: values})
+            queryset = queryset.filter(filters)
         elif filter_type == 'OR':
+            # Apply each filter separately and get the intersection of the results
+            initial_queryset = CryoGrid.objects.none()
             for key, filter_field in filter_mappings.items():
-                values = input_params.get(key)
+                values = getattr(query_params, key)
                 if values:
-                    filters |= Q(**{filter_field: values})
+                    filtered_queryset = queryset.filter(Q(**{filter_field: values}))
+                    initial_queryset = initial_queryset | filtered_queryset
 
-        # Apply the constructed filters to the queryset
-        queryset = queryset.filter(filters)
+            # Only keep grids that appear in all filtered querysets
+            queryset = initial_queryset.distinct()
+
         if not queryset.exists():
             return JsonResponse({'Result': []}, status=200)
 
         formatted_result = {}
-
         for item in queryset:
             grid_id = item['id']
 
@@ -345,10 +332,9 @@ def get_cryo_grids_details(request):
                 })
 
         # Filter results by sample name if provided
-        # Filter results by sample name if provided
-        if input_params['sample_name']:
+        if query_params.sample_name:
             matching_results = {}
-            sample_name_input = input_params['sample_name']
+            sample_name_input = query_params.sample_name
 
             for grid_id, data in formatted_result.items():
                 sample_list = data['freezingPlan']['sample']
@@ -367,8 +353,9 @@ def get_cryo_grids_details(request):
 
         formatted_result_list = list(formatted_result.values())
 
-
         return JsonResponse({'Result': formatted_result_list})
 
+    except ValidationError as e:
+        return JsonResponse({'error': e.errors()}, status=400)
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
