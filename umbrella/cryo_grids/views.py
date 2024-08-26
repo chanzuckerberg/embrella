@@ -47,7 +47,6 @@ def grid_boxes_view(request):
 
 from django.http import JsonResponse
 from .models import CryoGrid, CryoGridBox
-from django.contrib.auth.decorators import login_required
 
 
 def get_specific_grids(request):
@@ -99,45 +98,62 @@ def available_filters(request):
 
         # Aggregating counts for each filter
         filters = {
-            'project': queryset.values(project_name=F('intended_project__name'))
-                               .annotate(count=Count('id'))
-                               .order_by('project_name'),
-            'puck': queryset.values(puck_name=F('grid_box__puck__name'))
-                            .annotate(count=Count('id'))
-                            .order_by('puck_name'),
-            'sample': queryset.values(sample_name=F('freezing_plan__sample__name'))
-                              .annotate(count=Count('id'))
-                              .order_by('sample_name'),
-            'username': queryset.values(username=F('user__username'))
-                                .annotate(count=Count('id'))
-                                .order_by('username'),
-            'cassette': queryset.values(cassette_name=F('grid_cassette__name'))
-                                .annotate(count=Count('id'))
-                                .order_by('cassette_name'),
-            'screen_session': queryset.values(screen_session_name=F('atlassession__group__name'))
-                                       .annotate(count=Count('id'))
-                                       .order_by('screen_session_name'),
-            'msi_session': queryset.values(msi_session_name=F('msisession__name'))
-                                    .annotate(count=Count('id'))
-                                    .order_by('msi_session_name'),
+            'project': queryset.annotate(project_temp_name=F('intended_project__name'))
+                        .values(project_temp_name=F('project_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('project_temp_name')
+                        .values(name=F('project_temp_name'), count=F('count')),
+            'puck': queryset.annotate(puck_temp_name=F('grid_box__puck__name'))
+                        .values(puck_temp_name=F('puck_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('puck_temp_name')
+                        .values(name=F('puck_temp_name'), count=F('count')),
+            'sample': queryset.annotate(sample_temp_name=F('freezing_plan__sample__name'))
+                        .values(sample_temp_name=F('sample_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('sample_temp_name')
+                        .values(name=F('sample_temp_name'), count=F('count')),
+            'user': queryset.annotate(user_temp_name=F('user__username'))
+                        .values(user_temp_name=F('user_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('user_temp_name')
+                        .values(name=F('user_temp_name'), count=F('count')),
+            'cassette': queryset.annotate(cassette_temp_name=F('grid_cassette__name'))
+                        .values(cassette_temp_name=F('cassette_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('cassette_temp_name')
+                        .values(name=F('cassette_temp_name'), count=F('count')),
+            'screenSession': queryset.annotate(screen_session_temp_name=F('atlassession__group__name'))
+                        .values(screen_session_temp_name=F('screen_session_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('screen_session_temp_name')
+                        .values(name=F('screen_session_temp_name'), count=F('count')),
+            'msiSession': queryset.annotate(msi_session_temp_name=F('msisession__name'))
+                        .values(msi_session_temp_name=F('msi_session_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('msi_session_temp_name')
+                        .values(name=F('msi_session_temp_name'), count=F('count')),
+            'status': queryset.values(is_trashed=F('trashed'))
+                        .annotate(count=Count('id'))
+                        .order_by('trashed'),
         }
 
         # Process the 'sample' filter and replace sample_name with the detailed information
         processed_samples = []
         for item in filters['sample']:
-            if 'name' in item:
+            if 'sample_name' in item:
                 # Get the associated freezing plans based on the sample name
-                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name'])
+                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['sample_name'])
 
                 # Create a string that summarizes the freezing plan details
                 freezing_plan_details = []
                 for freezing_plan in freezing_plans:
                     tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-                    plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
+                    plan_str = f"{item['sample_name']} with {tag_names}" if tag_names else f"{item['sample_name']} without tag"
                     freezing_plan_details.append(plan_str)
 
-                # Replace name with the concatenated string
-                item['name'] = ' | '.join(freezing_plan_details)
+                # Replace sample_name with the concatenated string
+                item['sample_name'] = ' | '.join(freezing_plan_details)
 
             processed_samples.append(item)
 
@@ -154,159 +170,8 @@ def available_filters(request):
 
 
 @require_http_methods(["GET"])
-def get_cryo_grids_details2(request):
-    # Retrieve all input parameters
-    input_params = {
-        'project_name': request.GET.get('project_name'),
-        'cassette_name': request.GET.get('cassette_name'),
-        'grid_name': request.GET.get('grid_name'),
-        'puck_name': request.GET.get('puck_name'),
-        'user_name': request.GET.get('user_name'),
-        'sample_name': request.GET.get('sample_name'),
-        'msi_session_name': request.GET.get('msi_session_name'),
-        'screen_session_name': request.GET.get('screen_session_name')
-    }
-
-    # Process input_user_name to handle firstname.lastname format
-    if input_params['user_name']:
-        input_params['user_name'] = input_params['user_name'].split('@')[0]
-
-    # Validate input parameters
-    for key, value in input_params.items():
-        if value is not None and not isinstance(value, str):
-            return JsonResponse({'error': f'Invalid {key} parameter type, expected string.'}, status=422)
-
-    try:
-        # Base queryset
-        queryset = CryoGrid.objects.select_related(
-            'intended_project', 'freezing_session', 'grid_box__puck', 'user',
-            'grid_cassette', 'freezing_plan'
-        ).prefetch_related(
-            'msisession', 'freezing_plan__sample', 'freezing_plan__tags',
-            'atlassession__group'
-        ).values(
-            'id',
-            grid_name=F('name'),
-            cassette_name=F('grid_cassette__name'),
-            project_name=F('intended_project__name'),
-            project_id=F('intended_project__id'),
-            puck=F('grid_box__puck__name'),
-            userID=F('user__id'),
-            username=F('user__username'),
-            status=F('trashed'),
-            created_on=F('create_on'),
-            msisession_id=F('msisession__id'),
-            msisession_name=F('msisession__name'),
-            fz_session_id=F('freezing_session__id'),
-            fz_session_datetime=F('freezing_session__datetime'),
-            fz_plan_id=F('freezing_plan__id'),
-            screening_session_name=F('atlassession__group__name')
-        )
-
-        # Apply filters based on input parameters
-        filter_mappings = {
-            'project_name': 'intended_project__name',
-            'cassette_name': 'grid_cassette__name',
-            'grid_name': 'name',
-            'puck_name': 'grid_box__puck__name',
-            'user_name': 'user__username__icontains',
-            'sample_name': 'freezing_plan__sample__name__icontains',
-            'msi_session_name': 'msisession__name__icontains',
-            'screen_session_name': 'atlassession__group__name__icontains',
-        }
-
-        for key, filter_field in filter_mappings.items():
-            value = input_params.get(key)
-            if value:
-                queryset = queryset.filter(**{filter_field: value})
-                if not queryset.exists():
-                    return JsonResponse({'error': f'No grid found with the {key.replace("_", " ")}: {value}'}, status=404)
-
-        formatted_result = {}
-
-        for item in queryset:
-            grid_id = item['id']
-
-            # Format datetime field if it exists
-            fz_session_datetime_formatted = (
-                item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
-                if item['fz_session_datetime'] else None
-            )
-
-            # Fetching freezing plan sample and tag details
-            freezing_plan_list = []
-            try:
-                freezing_plan = PlungeFreezingPlan.objects.get(id=item['fz_plan_id'])
-                for sample_name in freezing_plan.sample.values_list('name', flat=True):
-                    tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-                    plan_str = f"{sample_name} with {tag_names}" if tag_names else f"{sample_name} without tag"
-                    freezing_plan_list.append(plan_str)
-            except ObjectDoesNotExist:
-                return JsonResponse({'error': 'Related freezing plan not found.'}, status=404)
-            except ValidationError as e:
-                return JsonResponse({'error': f'Validation error: {str(e)}'}, status=422)
-
-            if grid_id not in formatted_result:
-                grid_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/cryogrid/{grid_id}"
-                project_url = f"http://umbrella.czbiohub.org/admin/projects/project/{item['project_id']}"
-
-                formatted_result[grid_id] = {
-                    'grid': {
-                        'id': grid_id,
-                        'name': f"{item['grid_name']} (id={grid_id})",
-                        'trashed': item['status'],
-                        'url': grid_url,
-                        'created_at': item['created_on'],
-                    },
-                    'cassette': {
-                        'name': item['cassette_name'],
-                    },
-                    'project': {
-                        'id': item['project_id'],
-                        'name': item['project_name'],
-                        'url': project_url
-                    },
-                    'puck': {
-                        'name': item['puck']
-                    },
-                    'user': {
-                        'id': item['userID'],
-                        'name': item['username']
-                    },
-                    'freezingPlan': {
-                        'id': item['fz_plan_id'],
-                        'sample': freezing_plan_list,
-                    },
-                    'freezingSession': {
-                        'id': item['fz_session_id'],
-                        'created_at': fz_session_datetime_formatted
-                    },
-                    'screeningSession': item['screening_session_name'],
-                    'msiSession': [],
-                }
-
-            # Append MSI session details
-            if item['msisession_id']:
-                msi_url = f"http://umbrella.czbiohub.org/tem/{item['msisession_id']}"
-                formatted_result[grid_id]['msiSession'].append({
-                    'id': item['msisession_id'],
-                    'name': item['msisession_name'],
-                    'url': msi_url
-                })
-
-        formatted_result_list = list(formatted_result.values())
-
-        return JsonResponse({'Result': formatted_result_list})
-
-    except Exception as e:
-        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-
-
-
-
-@require_http_methods(["GET"])
 def get_cryo_grids_details(request):
-    # Retrieve all input parameters
+    # Retrieve all input parameters and split by comma if multiple values are provided
     input_params = {
         'project_name': request.GET.get('project_name'),
         'cassette_name': request.GET.get('cassette_name'),
@@ -317,18 +182,21 @@ def get_cryo_grids_details(request):
         'msi_session_name': request.GET.get('msi_session_name'),
         'screen_session_name': request.GET.get('screen_session_name')
     }
+
+    # Convert comma-separated string values to lists
+    for key, value in input_params.items():
+        if value:
+            input_params[key] = value.strip('[]').split(',')
+
 
     # Retrieve filter type (AND or OR)
     filter_type = request.GET.get('filter_type', 'AND').upper()  # Default to AND if not provided
 
-    # Process input_user_name to handle firstname.lastname format
+    # Process user_name to handle firstname.lastname format
     if input_params['user_name']:
-        input_params['user_name'] = input_params['user_name'].split('@')[0]
-
-    # Validate input parameters
-    for key, value in input_params.items():
-        if value is not None and not isinstance(value, str):
-            return JsonResponse({'error': f'Invalid {key} parameter type, expected string.'}, status=422)
+        input_params['user_name'] = [
+            username.split('@')[0] for username in input_params['user_name']
+        ]
 
     try:
         # Base queryset
@@ -354,34 +222,40 @@ def get_cryo_grids_details(request):
             fz_session_id=F('freezing_session__id'),
             fz_session_datetime=F('freezing_session__datetime'),
             fz_plan_id=F('freezing_plan__id'),
-            screening_session_name=F('atlassession__group__name')
+            screening_session_name=F('atlassession__group__name'),
+            fz_plan_sample_id=F('freezing_plan__sample__id')
         )
 
         # Apply filters based on input parameters
         filter_mappings = {
-            'project_name': 'intended_project__name',
-            'cassette_name': 'grid_cassette__name',
-            'grid_name': 'name',
-            'puck_name': 'grid_box__puck__name',
-            'user_name': 'user__username__icontains',
-            'sample_name': 'freezing_plan__sample__name__icontains',
-            'msi_session_name': 'msisession__name__icontains',
-            'screen_session_name': 'atlassession__group__name__icontains',
+            'project_name': 'intended_project__name__in',
+            'cassette_name': 'grid_cassette__name__in',
+            'grid_name': 'name__in',
+            'puck_name': 'grid_box__puck__name__in',
+            'user_name': 'user__username__in',
+            # 'sample_name': 'freezing_plan__sample__name__icontains',  # handled separately
+            'msi_session_name': 'msisession__name__in',
+            'screen_session_name': 'atlassession__group__name__in',
         }
 
         filters = Q()
-        for key, filter_field in filter_mappings.items():
-            value = input_params.get(key)
-            if value:
-                if filter_type == 'AND':
-                    filters &= Q(**{filter_field: value})
-                elif filter_type == 'OR':
-                    filters |= Q(**{filter_field: value})
+
+        # Apply filters based on the filter type
+        if filter_type == 'AND':
+            for key, filter_field in filter_mappings.items():
+                values = input_params.get(key)
+                if values:
+                    filters &= Q(**{filter_field: values})
+        elif filter_type == 'OR':
+            for key, filter_field in filter_mappings.items():
+                values = input_params.get(key)
+                if values:
+                    filters |= Q(**{filter_field: values})
 
         # Apply the constructed filters to the queryset
         queryset = queryset.filter(filters)
         if not queryset.exists():
-            return JsonResponse({'error': 'No grid found matching the provided criteria.'}, status=404)
+            return JsonResponse({'Result': []}, status=200)
 
         formatted_result = {}
 
@@ -398,9 +272,16 @@ def get_cryo_grids_details(request):
             freezing_plan_list = []
             try:
                 freezing_plan = PlungeFreezingPlan.objects.get(id=item['fz_plan_id'])
-                for sample_name in freezing_plan.sample.values_list('name', flat=True):
+                for sample in freezing_plan.sample.all():
+                    sample_id = sample.id
+                    sample_name = sample.name
                     tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-                    plan_str = f"{sample_name} with {tag_names}" if tag_names else f"{sample_name} without tag"
+                    sample_url = f"http://umbrella.czbiohub.org/admin/samples/{sample_id}"
+                    plan_str = {
+                        'id': sample_id,
+                        'name': f"{sample_name} with {tag_names}" if tag_names else f"{sample_name} without tag",
+                        'url': sample_url
+                    }
                     freezing_plan_list.append(plan_str)
             except ObjectDoesNotExist:
                 return JsonResponse({'error': 'Related freezing plan not found.'}, status=404)
@@ -410,14 +291,13 @@ def get_cryo_grids_details(request):
             if grid_id not in formatted_result:
                 grid_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/cryogrid/{grid_id}"
                 project_url = f"http://umbrella.czbiohub.org/admin/projects/project/{item['project_id']}"
-
                 formatted_result[grid_id] = {
                     'grid': {
                         'id': grid_id,
                         'name': f"{item['grid_name']} (id={grid_id})",
                         'trashed': item['status'],
                         'url': grid_url,
-                        'created_at': item['created_on'],
+                        'createdAt': item['created_on'],
                     },
                     'cassette': {
                         'name': item['cassette_name'],
@@ -440,7 +320,7 @@ def get_cryo_grids_details(request):
                     },
                     'freezingSession': {
                         'id': item['fz_session_id'],
-                        'created_at': fz_session_datetime_formatted
+                        'createdAt': fz_session_datetime_formatted
                     },
                     'screeningSession': item['screening_session_name'],
                     'msiSession': [],
@@ -454,6 +334,22 @@ def get_cryo_grids_details(request):
                     'name': item['msisession_name'],
                     'url': msi_url
                 })
+
+        # Filter results by sample name if provided
+        if input_params['sample_name']:
+            matching_results = {}
+            sample_name_input = input_params['sample_name']
+
+            for grid_id, data in formatted_result.items():
+                sample_list = data['freezingPlan']['name']
+                matching_samples = [sample for sample in sample_list if
+                                    any(s_name in sample['sample'] for s_name in sample_name_input)]
+
+                if matching_samples:
+                    data['freezingPlan']['name'] = matching_samples
+                    matching_results[grid_id] = data
+
+            formatted_result = matching_results
 
         formatted_result_list = list(formatted_result.values())
 
