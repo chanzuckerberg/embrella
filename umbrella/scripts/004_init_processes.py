@@ -60,7 +60,7 @@ def create_pipeline_plan():
     # AreTomo3-10A recon
     pipe2 = Pipe.objects.create(name='vol002',software=aretomo3)
     pipe3 = Pipe.objects.create(name='vol003',software=aretomo3)
-    pipe4 = Pipe.objects.create(name='den001',software=denoiser)
+    pipe4 = Pipe.objects.create(name='den001',software=denoiser) ##deno should be a 5A recon
     # AreTomo3-5A recon
     plan_pipe1 = PipeInPlan.objects.create(name='vol001',plan=plan,step=1,pipe=pipe1)
     # AreTomo3-10A recon
