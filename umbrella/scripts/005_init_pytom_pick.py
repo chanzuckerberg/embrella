@@ -45,7 +45,7 @@ def createStandardTasks():
     task_names = ['pick particles',
                     'make particle 2d gallery',
                     'segmentate volume',
-    ] ## or: 'compute CC score map', 'extract particles', 'make mini slabs', 'segment membranes'
+    ]
     current_tasks = Task.objects.all()
     task_count = len(current_tasks)
     tasks = []
@@ -72,12 +72,6 @@ def create_pipeline_plan():
     plan3 = ProcPlan.objects.create(name='membraneseg')
     # pipes
     pipe1 = Pipe.objects.create(name='80s-ribosome',software=pytom)
-    pipe2 = Pipe.objects.create(name='gallery',software=gallery) #or  name=gallery, software=slabpick,
-    pipe3 = Pipe.objects.create(name='membrane',software=membr) #a pipe and a datatype??
-    # AreTomo3-5A recon
-    plan_pipe1 = PipeInPlan.objects.create(name='pick1',plan=plan,step=1,pipe=pipe1)
-    # AreTomo3-10A recon
-    plan_pipe2 = PipeInPlan.objects.create(name='pick2',plan=plan,step=2,pipe=pipe2)
     pipe2 = Pipe.objects.create(name='gallery',software=gallery)
     pipe3 = Pipe.objects.create(name='membrane',software=membr)
     # PyTom
