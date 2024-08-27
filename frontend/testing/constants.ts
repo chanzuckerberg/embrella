@@ -7,13 +7,13 @@ export const GRID_A: GridData = {
     name: "foo bar foo baz",
     trashed: false,
     url: "bazfoobazbazbarbar",
-    created: "2024-08-23T21:44:30.881Z",
+    created_at: "2024-08-23T21:44:30.881Z",
   },
   cassette: {
     name: "bar baz foo foo",
   },
   project: {
-    id: "barbazbarbaz",
+    id: 0,
     name: "baz foo baz baz baz",
     url: "barfoofoobarbaz",
   },
@@ -21,16 +21,16 @@ export const GRID_A: GridData = {
     name: "baz foo baz",
   },
   user: {
-    id: "foofoo",
+    id: 0,
     name: "foo",
   },
   freezingPlan: {
     id: 0,
-    sample: "foo baz bar foo",
+    sample: ["foo baz bar foo"],
   },
   freezingSession: {
     id: 0,
-    created: "2024-08-23T21:52:44.539Z",
+    created_at: "2024-08-23T21:52:44.539Z",
   },
   screeningSession: "barbarfoobaz",
   msiSession: [

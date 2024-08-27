@@ -12,13 +12,13 @@ export interface GridData {
     name: string;
     trashed: boolean;
     url: string;
-    created: string;
+    created_at: string;
   };
   cassette: {
     name: string;
   };
   project: {
-    id: string;
+    id: number;
     name: string;
     url: string;
   };
@@ -26,16 +26,16 @@ export interface GridData {
     name: string;
   };
   user: {
-    id: string;
+    id: number;
     name: string;
   };
   freezingPlan: {
     id: number;
-    sample: string;
+    sample: string[];
   };
   freezingSession: {
     id: number;
-    created: string;
+    created_at: string;
   };
   screeningSession: string;
   msiSession: {
