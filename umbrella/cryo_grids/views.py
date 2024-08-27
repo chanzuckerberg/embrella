@@ -8,7 +8,7 @@ from django.db.models import F, Q, Count
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.utils.timezone import now
 from datetime import timedelta
-from .utils import *
+from .utils import CryoGridsQueryParams
 from pydantic import ValidationError
 from django.core.exceptions import ObjectDoesNotExist, ValidationError as DjangoValidationError
 @require_http_methods(["GET"])
@@ -81,6 +81,12 @@ def get_specific_grids(request):
 
 
 
+from django.db.models import Case, When, F, Value, CharField, Count
+from django.db.models.functions import Concat, Substr, StrIndex, Trim, LTrim, RTrim
+from django.http import JsonResponse
+from django.utils.timezone import now
+from datetime import timedelta
+
 @require_http_methods(["GET"])
 def available_filters(request):
     try:
@@ -92,6 +98,11 @@ def available_filters(request):
             'msisession', 'freezing_plan__sample', 'freezing_plan__tags',
             'atlassession__group'
         )
+        print(list(queryset.annotate(msi_session_temp_name=F('msisession__name'))
+                        .values(msi_session_temp_name=F('msi_session_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('msi_session_temp_name')
+                        .values(name=F('msi_session_temp_name'))))
 
         # Calculate the date ranges based on UTC time
         current_time = now()
@@ -118,11 +129,19 @@ def available_filters(request):
                         .annotate(count=Count('id'))
                         .order_by('sample_temp_name')
                         .values(name=F('sample_temp_name'), count=F('count'))),
-            'user': list(queryset.annotate(user_temp_name=F('user__username'))
-                        .values(user_temp_name=F('user_temp_name'))
+            'user': list(queryset.annotate(
+                            user_temp_name=Trim(
+                                Case(
+                                    When(user__username__contains='@',
+                                         then=Substr(F('user__username'), 1, StrIndex(F('user__username'), Value('@')) - 1)),
+                                    default=F('user__username'),
+                                    output_field=CharField()
+                                )
+                            )
+                        ).values(user_temp_name=F('user_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('user_temp_name')
-                        .values(name=F('user_temp_name'), count=F('count'))),
+                        .values(name=Trim(F('user_temp_name')), count=F('count'))),
             'cassette': list(queryset.annotate(cassette_temp_name=F('grid_cassette__name'))
                         .values(cassette_temp_name=F('cassette_temp_name'))
                         .annotate(count=Count('id'))
@@ -133,7 +152,8 @@ def available_filters(request):
                         .annotate(count=Count('id'))
                         .order_by('screen_session_temp_name')
                         .values(name=F('screen_session_temp_name'), count=F('count'))),
-            'msiSession': list(queryset.annotate(msi_session_temp_name=F('msisession__name'))
+            'msiSession': list(queryset.filter(msisession__isnull=False)  # Exclude null msisession relations
+                        .annotate(msi_session_temp_name=F('msisession__name'))
                         .values(msi_session_temp_name=F('msi_session_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('msi_session_temp_name')
@@ -177,9 +197,6 @@ def available_filters(request):
         return JsonResponse(response_data)
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-
-
-
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     try:
@@ -190,10 +207,13 @@ def get_cryo_grids_details(request):
         filter_type = query_params.filter_type
 
         # Process user_name to handle firstname.lastname format
-        if query_params.user_name:
-            query_params.user_name = [
-                username.split('@')[0] for username in query_params.user_name
-            ]
+        # print(query)
+        # if query_params.user_name:
+        #     query_params.user_name = [
+        #         username.split('@')[0] if '@' in username else username for username in query_params.user_name
+        #     ]
+
+
 
         # Base queryset
         queryset = CryoGrid.objects.select_related(
@@ -236,31 +256,40 @@ def get_cryo_grids_details(request):
             filters = Q()
             for key, filter_field in filter_mappings.items():
                 values = getattr(query_params, key)
+                print(key)
+                print(query_params)
                 if values:
-                    filters &= Q(**{filter_field: values})
+                    if isinstance(values, list):  # if values is a list
+                        filters &= Q(**{filter_field: values})
+                    else:  # if values is a single string
+                        filters &= Q(**{filter_field: [values]})
             queryset = queryset.filter(filters)
         elif filter_type == 'OR':
             initial_queryset = CryoGrid.objects.none()
             for key, filter_field in filter_mappings.items():
                 values = getattr(query_params, key)
                 if values:
-                    filtered_queryset = queryset.filter(Q(**{filter_field: values}))
+                    if isinstance(values, list):  # if values is a list
+                        filtered_queryset = queryset.filter(Q(**{filter_field: values}))
+                    else:  # if values is a single string
+                        filtered_queryset = queryset.filter(Q(**{filter_field: [values]}))
                     initial_queryset = initial_queryset | filtered_queryset
             queryset = initial_queryset.distinct()
 
         if not queryset.exists():
             return JsonResponse({'Result': []}, status=200)
 
-        formatted_result = []
+        formatted_result = {}
         for item in queryset:
             grid_id = item['id']
 
-            # Ensure datetime is correctly formatted as a string
+            # Format datetime field if it exists
             fz_session_datetime_formatted = (
                 item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
                 if item['fz_session_datetime'] else None
             )
 
+            # Fetching freezing plan sample and tag details
             freezing_plan_list = []
             try:
                 freezing_plan = PlungeFreezingPlan.objects.get(id=item['fz_plan_id'])
@@ -269,70 +298,87 @@ def get_cryo_grids_details(request):
                     sample_name = sample.name
                     tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
                     sample_url = f"http://umbrella.czbiohub.org/admin/samples/{sample_id}"
-                    plan_str = SampleModel(
-                        id=sample_id,
-                        name=f"{sample_name} with {tag_names}" if tag_names else f"{sample_name} without tag",
-                        url=sample_url
-                    )
+                    plan_str = {
+                        'id': sample_id,
+                        'name': f"{sample_name} with {tag_names}" if tag_names else f"{sample_name} without tag",
+                        'url': sample_url
+                    }
                     freezing_plan_list.append(plan_str)
             except ObjectDoesNotExist:
                 return JsonResponse({'error': 'Related freezing plan not found.'}, status=404)
             except ValidationError as e:
                 return JsonResponse({'error': f'Validation error: {str(e)}'}, status=422)
 
-            grid_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/cryogrid/{grid_id}"
-            project_url = f"http://umbrella.czbiohub.org/admin/projects/project/{item['project_id']}"
+            if grid_id not in formatted_result:
+                grid_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/cryogrid/{grid_id}"
+                project_url = f"http://umbrella.czbiohub.org/admin/projects/project/{item['project_id']}"
+                formatted_result[grid_id] = {
+                    'grid': {
+                        'id': grid_id,
+                        'name': f"{item['grid_name']} (id={grid_id})",
+                        'trashed': item['status'],
+                        'url': grid_url,
+                        'createdAt': item['created_on'],
+                    },
+                    'cassette': {
+                        'name': item['cassette_name'],
+                    },
+                    'project': {
+                        'id': item['project_id'],
+                        'name': item['project_name'],
+                        'url': project_url
+                    },
+                    'puck': {
+                        'name': item['puck']
+                    },
+                    'user': {
+                        'id': item['userID'],
+                        'name': item['username']
+                    },
+                    'freezingPlan': {
+                        'id': item['fz_plan_id'],
+                        'sample': freezing_plan_list,
+                    },
+                    'freezingSession': {
+                        'id': item['fz_session_id'],
+                        'createdAt': fz_session_datetime_formatted
+                    },
+                    'screeningSession': item['screening_session_name'],
+                    'msiSession': [],
+                }
 
-            # Handle msisession_id and msisession_name, treating them as lists
-            msisession_ids = item['msisession_id']
-            msisession_names = item['msisession_name']
-            if not isinstance(msisession_ids, list):
-                msisession_ids = [msisession_ids] if msisession_ids is not None else []
-            if not isinstance(msisession_names, list):
-                msisession_names = [msisession_names] if msisession_names is not None else []
+            # Append MSI session details
+            if item['msisession_id']:
+                msi_url = f"http://umbrella.czbiohub.org/tem/{item['msisession_id']}"
+                formatted_result[grid_id]['msiSession'].append({
+                    'id': item['msisession_id'],
+                    'name': item['msisession_name'],
+                    'url': msi_url
+                })
 
-            result = CryoGridResultModel(
-                grid=GridModel(
-                    id=grid_id,
-                    name=f"{item['grid_name']} (id={grid_id})",
-                    trashed=item['status'],
-                    url=grid_url,
-                    createdAt=item['created_on'].strftime("%Y-%m-%d")  # Ensure the format is a string
-                ),
-                cassette=CassetteModel(name=item['cassette_name']),
-                project=ProjectModel(
-                    id=item['project_id'],
-                    name=item['project_name'],
-                    url=project_url
-                ),
-                puck=PuckModel(name=item['puck']),
-                user=UserModel(
-                    id=item['userID'],
-                    name=item['username']
-                ),
-                freezingPlan=FreezingPlanModel(
-                    id=item['fz_plan_id'],
-                    sample=freezing_plan_list
-                ),
-                freezingSession=FreezingSessionModel(
-                    id=item['fz_session_id'],
-                    createdAt=fz_session_datetime_formatted
-                ),
-                screeningSession=item['screening_session_name'],
-                msiSession=[
-                    MSISessionModel(
-                        id=msi_id,
-                        name=msi_name,
-                        url=f"http://umbrella.czbiohub.org/tem/{msi_id}"
-                    )
-                    for msi_id, msi_name in zip(msisession_ids, msisession_names)
+        # Filter results by sample name if provided
+        if query_params.sample_name:
+            matching_results = {}
+            sample_name_input = query_params.sample_name
+
+            for grid_id, data in formatted_result.items():
+                sample_list = data['freezingPlan']['sample']
+
+                # Filter samples within each freezing plan that match any sample_name in the list
+                matching_samples = [
+                    sample for sample in sample_list
+                    if any(s_name in sample['name'] for s_name in sample_name_input)
                 ]
-            )
-            formatted_result.append(result)
 
-        response_model = CryoGridResponseModel(Result=formatted_result)
+                if matching_samples:
+                    data['freezingPlan']['sample'] = matching_samples
+                    matching_results[grid_id] = data
 
-        return JsonResponse(response_model.dict(), status=200)
+            formatted_result = matching_results
+
+        formatted_result_list = list(formatted_result.values())
+
+        return JsonResponse({'Result': formatted_result_list})
 
     except ValidationError as e:
         return JsonResponse({'error': e.errors()}, status=400)

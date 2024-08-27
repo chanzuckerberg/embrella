@@ -147,9 +147,11 @@ def create_scrn_session_group(request):
     Validate and create the screen session group and screen sessions
     '''
     plan_id = int(request.POST['session_plan'])
+    print(plan_id)
     cassette_id = int(request.POST['cassette'])
     cassette=CryoGridCassette.objects.get(pk=cassette_id)
     session_plan=SessionPlan.objects.get(pk=plan_id)
+    # print(session_plan)
     order_str = request.POST['order']
     order_list = models.parse_integer_order_list(order_str)
     error_msg = ''
