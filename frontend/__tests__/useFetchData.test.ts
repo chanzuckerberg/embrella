@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { delay, getLastFetchResult, initFetch, promiseWithResolvers } from "../testing/utils";
-import { useFetchData } from "@/hooks/useFetchData";
+import { useFetchData } from "../hooks/useFetchData";
+import { URL_FOO, URL_NONEXISTENT } from "../testing/constants";
 
 beforeAll(() => {
   initFetch();
@@ -10,7 +11,7 @@ describe("useFetchData", () => {
   it("does not change when data fails to fetch", async () => {
     const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
     const { result } = renderHook(() =>
-      useFetchData("http://localhost:8000/nonexistent"),
+      useFetchData(URL_NONEXISTENT),
     );
     expect(result.current).toEqual({ isSuccess: false });
     await act(async () => await delay());
@@ -21,7 +22,7 @@ describe("useFetchData", () => {
 
   it("updates with successfully-fetched data", async () => {
     const { result } = renderHook(() =>
-      useFetchData("http://localhost:8000/foo"),
+      useFetchData(URL_FOO),
     );
     expect(result.current).toEqual({ isSuccess: false });
     await act(async () => await delay());
@@ -36,7 +37,7 @@ describe("useFetchData", () => {
       {
         initialProps: {
           shouldFetch: false,
-          url: "http://localhost:8000/foo",
+          url: URL_FOO,
         }
       }
     );
@@ -46,7 +47,7 @@ describe("useFetchData", () => {
     expect(result.current).toEqual({ isSuccess: false });
     rerender({
       shouldFetch: true,
-      url: "http://localhost:8000/foo",
+      url: URL_FOO,
     });
     await act(async () => await delay());
     expect(fetch).toHaveBeenCalledTimes(3);

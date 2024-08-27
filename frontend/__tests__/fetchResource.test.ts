@@ -1,6 +1,6 @@
 import { initFetch } from "../testing/utils";
 import { fetchResource } from "../common/utils";
-import { GRID_A } from "../testing/constants";
+import { GRID_A, URL_GRIDS, URL_NONEXISTENT } from "../testing/constants";
 
 beforeAll(() => {
   initFetch();
@@ -13,13 +13,13 @@ describe("fetchResource", () => {
   });
 
   it("returns error response", async () => {
-    const response = await fetchResource("http://localhost:8000/nonexistent");
+    const response = await fetchResource(URL_NONEXISTENT);
     expect(response.status).toEqual(404);
   });
 
   it("returns fetch response", async () => {
     const response = await fetchResource(
-      "http://localhost:8000/cryo_grids/v1/grids",
+      URL_GRIDS,
     );
     expect((await response.json()).Result[0]).toEqual(GRID_A);
   });

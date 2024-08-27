@@ -1,8 +1,7 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
-import { delay, getLastFetchResult, initFetch, promiseWithResolvers } from "../testing/utils";
-import { useFetchData } from "@/hooks/useFetchData";
-import { useFetchGrids } from "@/hooks/useFetchGrids";
-import { GRID_A } from "@/testing/constants";
+import { act, renderHook } from "@testing-library/react";
+import { delay, initFetch } from "../testing/utils";
+import { useFetchGrids } from "../hooks/useFetchGrids";
+import { GRID_A } from "../testing/constants";
 
 beforeAll(() => {
   initFetch();

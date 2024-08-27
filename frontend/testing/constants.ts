@@ -42,16 +42,20 @@ export const GRID_A: GridData = {
   ],
 };
 
+export const URL_NONEXISTENT = "http://localhost:8000/nonexistent";
+export const URL_GRIDS = "http://localhost:8000/cryo_grids/v1/grids";
+export const URL_FOO = "http://localhost:8000/foo";
+
 export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
-  "http://localhost:8000/nonexistent": {
+  [URL_NONEXISTENT]: {
     status: 404,
   },
-  "http://localhost:8000/cryo_grids/v1/grids": {
+  [URL_GRIDS]: {
     body: JSON.stringify({
       Result: [GRID_A],
     }),
   },
-  "http://localhost:8000/foo": {
+  [URL_FOO]: {
     body: JSON.stringify("foo"),
   },
 };
