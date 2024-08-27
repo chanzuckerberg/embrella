@@ -1,11 +1,9 @@
-from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Union
-from datetime import datetime
+from pydantic import BaseModel,validator
+from typing import  Union, Optional, List
 
 class CryoGridsQueryParams(BaseModel):
     project_name: Optional[Union[List[str], str]] = None
     cassette_name: Optional[Union[List[str], str]] = None
-    grid_name: Optional[Union[List[str], str]] = None
     puck_name: Optional[Union[List[str], str]] = None
     user_name: Optional[Union[List[str], str]] = None
     sample_name: Optional[Union[List[str], str]] = None
@@ -14,14 +12,6 @@ class CryoGridsQueryParams(BaseModel):
     filter_type: Optional[str] = None
     trashed: Optional[str] = None
 
-    @validator('filter_type')
-    def validate_filter_type(cls, value):
-        if not isinstance(value, str):
-            raise ValueError("filter_type must be a string")
-        value = value.upper().strip()
-        if value not in {"AND", "OR"}:
-            raise ValueError("filter_type must be either 'AND' or 'OR'")
-        return value
     @validator('filter_type')
     def validate_filter_type(cls, value):
         if not isinstance(value, str):
@@ -39,16 +29,13 @@ class CryoGridsQueryParams(BaseModel):
 
     @validator('trashed')
     def validate_trashed(cls, value):
-        if value not in {"true", "false"}:
+        if value not in {"True", "False", "true", "false"}:
             raise ValueError("trashed must be either 'true' or 'false'")
         return value
 
 
 
-### Result
-
-from pydantic import BaseModel
-from typing import Optional, List
+## API Result
 
 class SampleModel(BaseModel):
     id: int
@@ -102,4 +89,28 @@ class CryoGridResultModel(BaseModel):
     msiSession: List[MSISessionModel]
 
 class CryoGridResponseModel(BaseModel):
-    Result: List[CryoGridResultModel]
+    result: List[CryoGridResultModel]
+
+
+## available set API
+class DateRangeModel(BaseModel):
+    range: str
+    count: int
+
+class FilterModel(BaseModel):
+    name: str
+    count: int
+
+class FiltersModel(BaseModel):
+    project: List[FilterModel]
+    puck: List[FilterModel]
+    sample: List[FilterModel]
+    user: List[FilterModel]
+    cassette: List[FilterModel]
+    screenSession: List[FilterModel]
+    msiSession: List[FilterModel]
+    status: List[FilterModel]
+    date: List[DateRangeModel]
+
+class ApiResponseModel(BaseModel):
+    filters: FiltersModel
