@@ -72,14 +72,12 @@ def create_pipeline_plan():
     plan3 = ProcPlan.objects.create(name='membraneseg')
     # pipes
     pipe1 = Pipe.objects.create(name='80s-ribosome',software=pytom)
-<<<<<<< HEAD
     pipe2 = Pipe.objects.create(name='gallery',software=gallery) #or  name=gallery, software=slabpick,
     pipe3 = Pipe.objects.create(name='membrane',software=membr) #a pipe and a datatype??
     # AreTomo3-5A recon
     plan_pipe1 = PipeInPlan.objects.create(name='pick1',plan=plan,step=1,pipe=pipe1)
     # AreTomo3-10A recon
     plan_pipe2 = PipeInPlan.objects.create(name='pick2',plan=plan,step=2,pipe=pipe2)
-=======
     pipe2 = Pipe.objects.create(name='gallery',software=gallery)
     pipe3 = Pipe.objects.create(name='membrane',software=membr)
     # PyTom
@@ -88,7 +86,6 @@ def create_pipeline_plan():
     plan2_pipe2 = PipeInPlan.objects.create(name='galr1',plan=plan2,step=1,pipe=pipe2)
     # Membrane segamentation
     plan3_pipe3 = PipeInPlan.objects.create(name='mask1',plan=plan3,step=1,pipe=pipe3)
->>>>>>> origin/main
     #input
     input_path_types = []
     #output
