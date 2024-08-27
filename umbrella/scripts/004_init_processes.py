@@ -10,6 +10,7 @@ from stores.models import StaticPath,PathType, fill_place_holders
 from processes.models import ProcSoftware,Task, ProcPlan, Pipe, PipeInPlan, ReconMethod, TomogramVoxelSpacing
 from processes.models import PipeJoint
 
+
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
 
