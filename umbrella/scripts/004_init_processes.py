@@ -92,31 +92,31 @@ def create_pipeline_plan():
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('rawst'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{run}_rawtilts.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{run}_rawtilts.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('ctf'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{run}_CTF.txt',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{run}_CTF.txt',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('aln'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{run}.aln',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{run}.aln',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('rec'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{run}_Vol.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{pipe}/{run}_Vol.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('evn'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{run}_EVN_Vol.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{pipe}/{run}_EVN_Vol.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('odd'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{run}_ODD_Vol.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{pipe}/{run}_ODD_Vol.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('deno'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{run}_Vol.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{pipe}/{run}_Vol.mrc',
     ))
     for t in tasks[:-1]:
         # everything at 5 Å except denoising
