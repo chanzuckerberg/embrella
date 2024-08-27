@@ -92,7 +92,7 @@ def create_pipeline_plan():
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('rawst'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{run}_rawtilts.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{run}.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('ctf'),
@@ -101,6 +101,10 @@ def create_pipeline_plan():
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('aln'),
                 overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{run}.aln',
+    ))
+    output_path_types.append(PathType.objects.create(
+                static_path=get_static_path('imod'),
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{run}_Imod/',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('rec'),
