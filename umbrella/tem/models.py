@@ -71,7 +71,7 @@ class Magnification(models.Model):
     Uniquely identify a magnification. This is used to propogate selection list sorted by the index.
     """
     scope = models.ForeignKey(Microscope, on_delete=models.CASCADE)
-    mode = models.CharField(max_length=8, default='SA', unique=True, help_text='projection mode')
+    mode = models.CharField(max_length=8, default='SA', help_text='projection mode')
     nominal_mag = models.PositiveIntegerField(default=50000, help_text='Nominal mag displayed on the scope')
     index = models.PositiveIntegerField(default=0, help_text='Base 0 index of list order')
 
