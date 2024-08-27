@@ -14,7 +14,7 @@ def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
 
 def create_static_path(data_type):
-    for data_type in ['tangl','rawst','aln','ctf','rec','evn','odd','deno']:
+    for data_type in ['tangl','rawst','aln','ctf','imod','rec','evn','odd','deno']:
         instance = StaticPath.objects.create(
                 data_type=data_type,
                 static_path='/{msi_session}/{run}/%s/{proc_software}/{proc_run}/{pipe}/' % data_type,
@@ -47,6 +47,7 @@ def createStandardTasks():
                     'ctf estimation',
                     'align tilt series',
                     'ctf deconvolution',
+                    'output imod compatible alns'
                     'full tomo reconstruction',
                     'even/odd frame tomo reconstruction',
                     'denoised reconstruction',
@@ -145,7 +146,7 @@ def create_pipeline_plan():
     pipe3.input.add(get_static_path('tangl'))
     pipe3.input.add(get_static_path('aln'))
     pipe3.input.add(get_static_path('rawst'))
-    for p in output_path_types[4:5]: #recon
+    for p in output_path_types[5:6]: #recon
        pipe2.output.add(p)
        pipe3.output.add(p)
     pipe4.input.add(get_static_path('rec')) # denoise
