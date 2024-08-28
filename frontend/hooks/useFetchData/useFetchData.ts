@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import { fetchResource } from "../common/utils";
-
-interface UseFetchData<D> {
-  data?: D;
-  isSuccess: boolean;
-}
+import { fetchResource } from "../../common/utils";
+import { UseFetchData } from "./common/entities";
 
 export const useFetchData = <D>(
   requestURL: string,

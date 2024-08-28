@@ -1,6 +1,6 @@
 import configs from "../configs/configs";
 import { ApiListResponse, GridData } from "../common/entities";
-import { useFetchData } from "./useFetchData";
+import { useFetchData } from "./useFetchData/useFetchData";
 import { API } from "../common/api";
 
 export const useFetchGrids = (): GridData[] | undefined => {

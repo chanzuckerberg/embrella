@@ -1,6 +1,6 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
-import { delay, getLastFetchResult, initFetch, promiseWithResolvers } from "../testing/utils";
-import { useFetchData } from "../hooks/useFetchData";
+import { act, renderHook } from "@testing-library/react";
+import { delay, getLastFetchResult, initFetch } from "../testing/utils";
+import { useFetchData } from "../hooks/useFetchData/useFetchData";
 import { URL_FOO, URL_NONEXISTENT } from "../testing/constants";
 
 beforeAll(() => {
