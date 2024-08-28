@@ -1,4 +1,4 @@
-import { GridData } from "../common/entities";
+import { ApiListResponse, GridData } from "../common/entities";
 import { FetchResponseInfo } from "./entities";
 
 export const GRID_A: GridData = {
@@ -46,14 +46,16 @@ export const URL_NONEXISTENT = "http://localhost:8000/nonexistent";
 export const URL_GRIDS = "http://localhost:8000/cryo_grids/v1/grids";
 export const URL_FOO = "http://localhost:8000/foo";
 
+const FETCH_RESPONSE_GRIDS: ApiListResponse<GridData> ={
+  result: [GRID_A],
+};
+
 export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
   [URL_NONEXISTENT]: {
     status: 404,
   },
   [URL_GRIDS]: {
-    body: JSON.stringify({
-      Result: [GRID_A],
-    }),
+    body: JSON.stringify(FETCH_RESPONSE_GRIDS),
   },
   [URL_FOO]: {
     body: JSON.stringify("foo"),
