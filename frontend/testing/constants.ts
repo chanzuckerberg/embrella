@@ -7,7 +7,7 @@ export const GRID_A: GridData = {
     name: "foo bar foo baz",
     trashed: false,
     url: "bazfoobazbazbarbar",
-    created_at: "2024-08-23T21:44:30.881Z",
+    createdAt: "2024-08-23T21:44:30.881Z",
   },
   cassette: {
     name: "bar baz foo foo",
@@ -30,7 +30,7 @@ export const GRID_A: GridData = {
   },
   freezingSession: {
     id: 0,
-    created_at: "2024-08-23T21:52:44.539Z",
+    createdAt: "2024-08-23T21:52:44.539Z",
   },
   screeningSession: "barbarfoobaz",
   msiSession: [

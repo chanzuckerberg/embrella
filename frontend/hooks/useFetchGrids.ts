@@ -7,5 +7,5 @@ export const useFetchGrids = (): GridData[] | undefined => {
   const { data: gridsData } = useFetchData<ApiListResponse<GridData>>(
     configs.API_URL + API.GRIDS,
   );
-  return gridsData?.Result;
+  return gridsData?.result;
 };

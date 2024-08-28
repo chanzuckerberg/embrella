@@ -1,5 +1,5 @@
 export interface ApiListResponse<T> {
-  Result: T[];
+  result: T[];
 }
 
 export interface Configs {
@@ -12,7 +12,7 @@ export interface GridData {
     name: string;
     trashed: boolean;
     url: string;
-    created_at: string;
+    createdAt: string;
   };
   cassette: {
     name: string;
@@ -35,7 +35,7 @@ export interface GridData {
   };
   freezingSession: {
     id: number;
-    created_at: string;
+    createdAt: string;
   };
   screeningSession: string;
   msiSession: {
