@@ -11,7 +11,7 @@ class CryoGridsQueryParams(BaseModel):
     screen_session_name: Optional[Union[List[str], str]] = None
     filter_type: Optional[str] = None
     trashed: Optional[str] = None
-
+    month: Optional[int] = None
     @validator('filter_type')
     def validate_filter_type(cls, value):
         if not isinstance(value, str):
@@ -33,7 +33,11 @@ class CryoGridsQueryParams(BaseModel):
             raise ValueError("trashed must be either 'true' or 'false'")
         return value
 
-
+    @validator('month')
+    def validate_month(cls, value):
+        if value not in [1, 3, 6, None]:
+            raise ValueError('Month must be 1, 3, 6, or None')
+        return value
 
 ## API Result
 
