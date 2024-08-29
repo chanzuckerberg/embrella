@@ -90,7 +90,7 @@ def create_pipeline_plan():
     output_path_types = []
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('tangl'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{run}.rawtlt',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{proc_run}/{msi_session}/{run}_TLT.txt',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('rawst'),
