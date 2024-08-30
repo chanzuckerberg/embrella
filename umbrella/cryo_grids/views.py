@@ -86,6 +86,7 @@ from django.views.decorators.csrf import csrf_exempt
 @require_http_methods(["GET"])
 def available_filters(request):
     try:
+        request.META['HTTP_ORIGIN'] = '*'
         # Validate that only the 'q' parameter is present in the request
         if 'q' not in request.GET or len(request.GET) > 1:
             return JsonResponse({'error': 'Invalid query parameters. Only "q" is allowed.'}, status=422)
