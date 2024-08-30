@@ -77,7 +77,9 @@ def get_specific_grids(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+from django.views.decorators.csrf import csrf_exempt
 
+# @csrf_exempt
 @require_http_methods(["GET"])
 def available_filters(request):
     """
@@ -204,7 +206,9 @@ def available_filters(request):
             "filters": filters
         }
 
-        return JsonResponse(response_data)
+        resp = JsonResponse(response_data)
+        # resp["Access-Control-Allow-Origin"] = "*"
+        return resp
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
@@ -257,6 +261,7 @@ def get_cryo_grids_details(request):
         # Filter results by sample name if provided
         if query_params.sample_name:
             formatted_result = filter_by_sample_name(formatted_result, query_params.sample_name)
+
         return JsonResponse({'result': list(formatted_result.values())})
 
     except Exception as e:
