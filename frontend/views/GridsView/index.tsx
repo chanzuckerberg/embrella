@@ -1,8 +1,9 @@
 "use client";
 import React from "react";
 import { GridList } from "@/views/GridsView/components/GridList";
-import { GRIDS } from "@/views/GridsView/common/constants";
+import { useFetchGrids } from "./hooks/useFetchGrids";
 
 export const GridsView = (): JSX.Element => {
-  return <GridList grids={GRIDS} />;
+  const grids = useFetchGrids();
+  return <GridList grids={grids} />;
 };
