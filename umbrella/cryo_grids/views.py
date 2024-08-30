@@ -3,7 +3,8 @@ from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, Cry
     PlungeFreezingSession, PlungeFreezingPlan
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
-from .utils import CryoGridsQueryParams
+from pydantic import ValidationError
+from .utils import CryoGridsQueryParams, QueryParams
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Case, When, F, Value, CharField, Count
 from django.db.models.functions import Substr, StrIndex, Trim
@@ -12,6 +13,7 @@ from datetime import timedelta
 from django.http import JsonResponse
 from .models import CryoGrid, CryoGridBox
 from datetime import datetime
+import json
 @require_http_methods(["GET"])
 def get_all_grid_boxes(request):
     if request.GET.get('valid', 'true') != 'true':
@@ -79,21 +81,27 @@ def get_specific_grids(request):
 
 from django.views.decorators.csrf import csrf_exempt
 
-# @csrf_exempt
+
+
 @require_http_methods(["GET"])
 def available_filters(request):
-    """
-    Returns a list of available set for filters
-    :param request: HTTP request
-    :return: JSON
-    """
     try:
-        request.META['HTTP_ORIGIN'] = '*'
-        # Extract input parameters from the request and split by comma to form a list
-        selected_filters = request.GET.get('selected_filters', '')
-        # Strip spaces from each filter
-        selected_filters = [f.strip() for f in selected_filters.split(',')]
+        # Validate that only the 'q' parameter is present in the request
+        if 'q' not in request.GET or len(request.GET) > 1:
+            return JsonResponse({'error': 'Invalid query parameters. Only "q" is allowed.'}, status=422)
+        raw_query_param = request.GET.get('q', '[]')
 
+        # Parse the JSON string into a Python list
+        query_filters = json.loads(raw_query_param)
+
+        # Validate the parsed list with Pydantic
+        query_params = QueryParams(q=query_filters)
+        # Initialize the selected filters based on the validated query parameters
+        selected_filters = {}
+        for qf in query_params.q:
+            selected_filters[qf.category] = set(qf.value)  # Store as a set for efficient lookup
+
+        # Base queryset and your existing logic for processing the filters...
         # Base queryset with annotations for counting occurrences
         queryset = CryoGrid.objects.select_related(
             'intended_project', 'freezing_session', 'grid_box__puck', 'user',
@@ -109,16 +117,17 @@ def available_filters(request):
             'last_3_months': current_time - timedelta(days=90),
             'last_6_months': current_time - timedelta(days=180),
         }
+
         # Function to add 'selected' key based on user selection
-        def add_selected_status(filter_list):
+        def add_selected_status(filter_list, category):
             for item in filter_list:
-                # Ensure 'name' is a string before checking if it is in selected_filters
-                if isinstance(item['name'], str):
-                    item['selected'] = item['name'] in selected_filters
+                item_name = item['name']
+                if isinstance(item_name, str):
+                    item['selected'] = item_name in selected_filters.get(category, set())
                 else:
                     item['selected'] = False
 
-        # Aggregating counts for each filter
+        # Aggregating counts for each filter (this part remains the same as your original logic)
         filters = {
             'project': list(queryset.annotate(project_temp_name=F('intended_project__name'))
                         .values(project_temp_name=F('project_temp_name'))
@@ -153,13 +162,13 @@ def available_filters(request):
                         .annotate(count=Count('id'))
                         .order_by('cassette_temp_name')
                         .values(name=F('cassette_temp_name'), count=F('count'))),
-            'screeningSession': list(queryset.filter(freezing_session__isnull=False)
+            'screeningsession': list(queryset.filter(freezing_session__isnull=False)
                         .annotate(screen_session_temp_name=F('atlassession__group__name'))
                         .values(screen_session_temp_name=F('screen_session_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('screen_session_temp_name')
                         .values(name=F('screen_session_temp_name'), count=F('count'))),
-            'msiSession': list(queryset.filter(msisession__isnull=False)  # Exclude null msisession relations
+            'msisession': list(queryset.filter(msisession__isnull=False)  # Exclude null msisession relations
                         .annotate(msi_session_temp_name=F('msisession__name'))
                         .values(msi_session_temp_name=F('msi_session_temp_name'))
                         .annotate(count=Count('id'))
@@ -200,19 +209,19 @@ def available_filters(request):
 
         # Apply 'selected' status to filters
         for key, filter_list in filters.items():
-            add_selected_status(filter_list)
+            add_selected_status(filter_list, key)
 
         # Convert to the expected output format
         response_data = {
             "filters": filters
         }
 
-        resp = JsonResponse(response_data)
-        # resp["Access-Control-Allow-Origin"] = "*"
-        return resp
+        return JsonResponse(response_data)
+    except ValidationError as e:
+        # Handle Pydantic validation errors
+        return JsonResponse({'error': f'Invalid input: {e.errors()}'}, status=400)
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """

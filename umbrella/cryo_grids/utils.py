@@ -1,6 +1,6 @@
-from pydantic import BaseModel,validator
+from pydantic import BaseModel,validator, constr
 from typing import  Union, Optional, List
-
+import re
 class CryoGridsQueryParams(BaseModel):
     project_name: Optional[Union[List[str], str]] = None
     cassette_name: Optional[Union[List[str], str]] = None
@@ -118,3 +118,19 @@ class FiltersModel(BaseModel):
 
 class ApiResponseModel(BaseModel):
     filters: FiltersModel
+
+
+
+# filterlist endpoint
+class FilterItem(BaseModel):
+    category: constr(strip_whitespace=True, to_lower=True)
+    value: List[constr(strip_whitespace=True)]
+
+    @validator('value', each_item=True)
+    def validate_value(cls, v):
+        if not re.match(r'^[\w\s.-]+$', v):
+            raise ValueError('Invalid characters in value')
+        return v
+
+class QueryParams(BaseModel):
+    q: Optional[List[FilterItem]] = []
