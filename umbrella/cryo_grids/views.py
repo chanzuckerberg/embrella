@@ -88,6 +88,7 @@ def available_filters(request):
     :return: JSON
     """
     try:
+        request.META['HTTP_ORIGIN'] = '*'
         # Extract input parameters from the request and split by comma to form a list
         selected_filters = request.GET.get('selected_filters', '')
         # Strip spaces from each filter
@@ -220,6 +221,7 @@ def get_cryo_grids_details(request):
     :return: JSON Format response
     """
     try:
+        request.META['HTTP_ORIGIN'] = '*'
         # Parse and validate query parameters using Pydantic
         query_params = CryoGridsQueryParams(**request.GET.dict())
 
