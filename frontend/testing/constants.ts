@@ -1,5 +1,5 @@
-import { ApiListResponse, GridData } from "../common/entities";
-import { FetchResponseInfo } from "./entities";
+import { ApiListResponse, GridData } from "@/common/types";
+import { FetchResponseInfo } from "@/testing/types";
 
 export const GRID_A: GridData = {
   grid: {
@@ -26,7 +26,7 @@ export const GRID_A: GridData = {
   },
   freezingPlan: {
     id: 0,
-    sample: ["foo baz bar foo"],
+    sample: [{ id: 1, name: "foo baz bar foo", url: "bazfoobazbazbarbar" }],
   },
   freezingSession: {
     id: 0,
@@ -46,7 +46,7 @@ export const URL_NONEXISTENT = "http://localhost:8000/nonexistent";
 export const URL_GRIDS = "http://localhost:8000/cryo_grids/v1/grids";
 export const URL_FOO = "http://localhost:8000/foo";
 
-const FETCH_RESPONSE_GRIDS: ApiListResponse<GridData> ={
+const FETCH_RESPONSE_GRIDS: ApiListResponse<GridData> = {
   result: [GRID_A],
 };
 

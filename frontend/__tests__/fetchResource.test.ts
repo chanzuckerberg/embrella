@@ -1,7 +1,7 @@
-import { initFetch } from "../testing/utils";
-import { fetchResource } from "../common/utils";
-import { GRID_A, URL_GRIDS, URL_NONEXISTENT } from "../testing/constants";
-import { ApiListResponse, GridData } from "@/common/entities";
+import { initFetch } from "@/testing/utils";
+import { fetchResource } from "@/common/utils";
+import { GRID_A, URL_GRIDS, URL_NONEXISTENT } from "@/testing/constants";
+import { ApiListResponse, GridData } from "@/common/types";
 
 beforeAll(() => {
   initFetch();
@@ -19,9 +19,7 @@ describe("fetchResource", () => {
   });
 
   it("returns fetch response", async () => {
-    const response = await fetchResource(
-      URL_GRIDS,
-    );
+    const response = await fetchResource(URL_GRIDS);
     const responseData: ApiListResponse<GridData> = await response.json();
     expect(responseData.result[0]).toEqual(GRID_A);
   });

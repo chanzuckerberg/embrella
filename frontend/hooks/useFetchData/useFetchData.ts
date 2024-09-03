@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { fetchResource } from "../../common/utils";
-import { UseFetchData } from "./common/entities";
+import { fetchResource } from "@/common/utils";
+import { UseFetchData } from "@/hooks/useFetchData/common/types";
 
 export const useFetchData = <D>(
   requestURL: string,
@@ -22,14 +22,16 @@ export const useFetchData = <D>(
         return await res.json();
       }
       throw new Error(`Received ${res.status} response`);
-    })().then((data) => {
-      setDataState({
-        data,
-        isSuccess: true,
+    })()
+      .then((data) => {
+        setDataState({
+          data,
+          isSuccess: true,
+        });
+      })
+      .catch((err) => {
+        console.error(err);
       });
-    }).catch((err) => {
-      console.error(err);
-    });
   }, [requestURL, shouldFetch]);
 
   return dataState;

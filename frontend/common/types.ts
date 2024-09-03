@@ -31,7 +31,7 @@ export interface GridData {
   };
   freezingPlan: {
     id: number;
-    sample: string[];
+    sample: GridFreezingPlanSample[];
   };
   freezingSession: {
     id: number;
@@ -43,4 +43,10 @@ export interface GridData {
     name: string;
     url: string;
   }[];
+}
+
+export interface GridFreezingPlanSample {
+  id: number;
+  name: string;
+  url: string;
 }

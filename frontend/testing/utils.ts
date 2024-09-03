@@ -1,5 +1,5 @@
-import { FETCH_RESPONSES } from "./constants";
-import { TestResponse } from "./entities";
+import { TestResponse } from "@/testing/types";
+import { FETCH_RESPONSES } from "@/testing/constants";
 
 /**
  * Initialize mock `fetch` function in global scope, since `fetch` is normally unavailable in tests.
