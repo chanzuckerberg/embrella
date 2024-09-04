@@ -43,7 +43,7 @@ PathData
 '''
 
 class Task(models.Model):
-    name = models.CharField(max_length=32, default='motion correction')
+    name = models.CharField(max_length=255, default='motion correction')
     step = models.PositiveSmallIntegerField(default=1)
 
     def __str__(self):
