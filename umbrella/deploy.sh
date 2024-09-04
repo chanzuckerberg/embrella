@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the path to the .env file
-ENV_FILE="/var.env"
+ENV_FILE="var.env"
 
 # Check if the .env file exists
 if [ -f "$ENV_FILE" ]; then
