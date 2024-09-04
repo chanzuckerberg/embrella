@@ -10,11 +10,12 @@ from stores.models import StaticPath,PathType, fill_place_holders
 from processes.models import ProcSoftware,Task, ProcPlan, Pipe, PipeInPlan, ReconMethod, TomogramVoxelSpacing
 from processes.models import PipeJoint
 
+
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
 
 def create_static_path(data_type):
-    for data_type in ['tangl','rawst','aln','ctf','rec','evn','odd','deno']:
+    for data_type in ['tangl','rawst','aln','ctf','imod','rec','evn','odd','deno']:
         instance = StaticPath.objects.create(
                 data_type=data_type,
                 static_path='/{msi_session}/{run}/%s/{proc_software}/{proc_run}/{pipe}/' % data_type,
@@ -47,6 +48,7 @@ def createStandardTasks():
                     'ctf estimation',
                     'align tilt series',
                     'ctf deconvolution',
+                    'produce imod compatible outputs'
                     'full tomo reconstruction',
                     'even/odd frame tomo reconstruction',
                     'denoised reconstruction',
@@ -60,7 +62,7 @@ def create_pipeline_plan():
     tasks = createStandardTasks()
     aretomo3 = ProcSoftware.objects.create(name='aretomo3',
                 version='2024-03-10')
-    denoiser = ProcSoftware.objects.create(name='denoiset',
+    denoiser = ProcSoftware.objects.create(name='denoise',
                 version='2024-03-10')
     for t in tasks[:-1]:
         aretomo3.capable_tasks.add(t)
@@ -73,13 +75,14 @@ def create_pipeline_plan():
     # AreTomo3-10A recon
     pipe2 = Pipe.objects.create(name='vol002',software=aretomo3)
     pipe3 = Pipe.objects.create(name='vol003',software=aretomo3)
-    pipe4 = Pipe.objects.create(name='den001',software=denoiser)
+    # Denoise-5A reconstruction
+    pipe4 = Pipe.objects.create(name='epoch001',software=denoiser)
     # AreTomo3-5A recon
     plan1_pipe1 = PipeInPlan.objects.create(name='vol001',plan=plan1,step=1,pipe=pipe1)
     # AreTomo3-10A recon
     plan1_pipe2 = PipeInPlan.objects.create(name='vol002',plan=plan1,step=2,pipe=pipe2)
     plan1_pipe3 = PipeInPlan.objects.create(name='vol003',plan=plan1,step=3,pipe=pipe3)
-    plan2_pipe4 = PipeInPlan.objects.create(name='den001',plan=plan2,step=1,pipe=pipe4)
+    plan2_pipe4 = PipeInPlan.objects.create(name='epoch001',plan=plan2,step=1,pipe=pipe4)
     #input
     input_path_types = []
     #PathType may not be good enough to tell different software
@@ -88,35 +91,39 @@ def create_pipeline_plan():
     output_path_types = []
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('tangl'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{run}.rawtlt',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}_TLT.txt',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('rawst'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{run}_rawtilts.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('ctf'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{run}_CTF.txt',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}_CTF.txt',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('aln'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{run}.aln',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}.aln',
+    ))
+    output_path_types.append(PathType.objects.create(
+                static_path=get_static_path('imod'),
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}_Imod/',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('rec'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{run}_Vol.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{pipe}/{run}_Vol.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('evn'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{run}_EVN_Vol.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{pipe}/{run}_EVN_Vol.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('odd'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{run}_ODD_Vol.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{pipe}/{run}_ODD_Vol.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('deno'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{run}_Vol.mrc',
+                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{pipe}/{run}_Vol.mrc',
     ))
     for t in tasks[:-1]:
         # everything at 5 Å except denoising
@@ -141,7 +148,7 @@ def create_pipeline_plan():
     pipe3.input.add(get_static_path('tangl'))
     pipe3.input.add(get_static_path('aln'))
     pipe3.input.add(get_static_path('rawst'))
-    for p in output_path_types[4:5]: #recon
+    for p in output_path_types[5:6]: #recon
        pipe2.output.add(p)
        pipe3.output.add(p)
     pipe4.input.add(get_static_path('rec')) # denoise
