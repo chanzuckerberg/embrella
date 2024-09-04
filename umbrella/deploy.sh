@@ -13,9 +13,6 @@ else
     exit 1
 fi
 
-# # Restrict permissions on the .env file (owner read/write only)
-# chmod 600 "$ENV_FILE"
-# echo "Permissions for $ENV_FILE set to 600."
 
 # Check if gunicorn is running and kill the process
 gunicorn_pid=$(ss -tulpn | grep gunicorn | awk '{print $7}' | cut -d'/' -f1)
