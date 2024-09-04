@@ -12,6 +12,7 @@ DATA_TYPES = [
                 ('mdoc','mdoc'),
                 ('ctf','ctf values'),
                 ('aln','tilt alignments'),
+                ('imod', 'aln in imod compatible format for relion'),
                 ('rec','all frame tomo recon'),
                 ('evn','even frame tomo recon'),
                 ('odd','odd frame tomo recon'),

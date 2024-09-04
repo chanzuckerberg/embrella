@@ -62,23 +62,23 @@ def create_tomo5_plan(scope, camera):
     workflow = ImagingWorkflow.objects.create(imaging_mode='tem',workflow='tomo')
     frame_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('frames'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/{run}_{sequence}_{tilt}_*.eer',
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}_{sequence}_{tilt}_*.eer',
     )
     sum_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('sums'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run}_Exposure.mrc',
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run_stage_pos}_Exposure.mrc',
     )
     mdoc_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('mdoc'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/{run}.mdoc',
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}.mdoc',
     )
     parent_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('parents'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run}_Search.mrc',
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run_stage_pos}_Search.mrc',
     )
     atlas_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('atlas'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/'
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/Atlas_{timestamp}.mrc'
     )
     software = Software.objects.create(name='tomo5',
                 frames=frame_path_type,

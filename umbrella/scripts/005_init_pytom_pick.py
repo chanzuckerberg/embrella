@@ -57,7 +57,7 @@ def create_pipeline_plan():
     tasks = createStandardTasks()
     pytom = ProcSoftware.objects.create(name='pytom',
                 version='2024-03-10')
-    gallery = ProcSoftware.objects.create(name='gallerymaker',
+    gallery = ProcSoftware.objects.create(name='slabpick',
                 version='2024-03-10')
     membr = ProcSoftware.objects.create(name='membraneseg',
                 version='2024-03-10')
@@ -68,10 +68,10 @@ def create_pipeline_plan():
     for t in tasks[2:3]:
         membr.capable_tasks.add(t)
     plan1 = ProcPlan.objects.create(name='pytom-pick')
-    plan2 = ProcPlan.objects.create(name='galery-pick')
+    plan2 = ProcPlan.objects.create(name='make-minislab')
     plan3 = ProcPlan.objects.create(name='membraneseg')
     # pipes
-    pipe1 = Pipe.objects.create(name='80s-ribosome',software=pytom)
+    pipe1 = Pipe.objects.create(name='ribosome-80S',software=pytom)
     pipe2 = Pipe.objects.create(name='gallery',software=gallery)
     pipe3 = Pipe.objects.create(name='membrane',software=membr)
     # PyTom
@@ -126,7 +126,7 @@ def create_pipeline_plan():
     plan_live = ProcPlan.objects.get(pk=1)
     plan_deno = ProcPlan.objects.get(pk=2)
     plan_live_v001 = PipeInPlan.objects.filter(plan=plan_live,pipe__name='vol001')[0]
-    plan_deno_den001 = PipeInPlan.objects.filter(plan=plan_deno,pipe__name='den001')[0]
+    plan_deno_den001 = PipeInPlan.objects.filter(plan=plan_deno,pipe__name='epoch001')[0]
     add_pipe_joints(plan1_pipe1, plan_live_v001,['rec'])
     add_pipe_joints(plan2_pipe2, plan_deno_den001,['deno'])
     add_pipe_joints(plan2_pipe2, plan1_pipe1,['pick'])
