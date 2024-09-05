@@ -355,21 +355,21 @@ def format_queryset_results(queryset):
 
 
 def get_freezing_plan_list(fz_plan_id):
-       try:
-           freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
-           freezing_plan_list = []
-           base_url = get_base_url()
-           for sample in freezing_plan.sample.all():
-               sample_url = f"{base_url}/admin/samples/{sample.id}"
-               tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-               freezing_plan_list.append({
-                   'id': sample.id,
-                   'name': f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag",
-                   'url': sample_url
-               })
-           return freezing_plan_list
-       except ObjectDoesNotExist:
-           return []
+    try:
+        freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
+        freezing_plan_list = []
+        base_url = get_base_url()
+        for sample in freezing_plan.sample.all():
+            sample_url = f"{base_url}/admin/samples/{sample.id}"
+            tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+            freezing_plan_list.append({
+                'id': sample.id,
+                'name': f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag",
+                'url': sample_url
+            })
+        return freezing_plan_list
+    except ObjectDoesNotExist:
+        return []
 
 
 def format_grid(item):
