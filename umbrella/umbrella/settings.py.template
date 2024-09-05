@@ -76,7 +76,6 @@ INSTALLED_APPS = [
     'projects',
     'workflow',
     'tem',
-    'viewer',
     'stores',
     'social_django',
     'custom',
@@ -140,7 +139,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 
-CORS_ALLOW_ALL_ORIGINS = True
+
 
 CORS_ALLOW_METHODS = [
     'DELETE',
