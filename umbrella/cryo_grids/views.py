@@ -13,7 +13,21 @@ from datetime import timedelta
 from django.http import JsonResponse
 from .models import CryoGrid, CryoGridBox
 from datetime import datetime
+from umbrella import settings
 import json
+import os
+
+
+def get_base_url():
+       if settings.ENVIRONMENT == 'staging':
+           return 'http://umbrella-dev.czbiohub.org'
+       elif settings.ENVIRONMENT == 'production':
+           return 'http://umbrella.czbiohub.org'
+       else:  # development
+           return 'http://localhost:8000' 
+       
+
+
 @require_http_methods(["GET"])
 def get_all_grid_boxes(request):
     if request.GET.get('valid', 'true') != 'true':
@@ -341,43 +355,46 @@ def format_queryset_results(queryset):
 
 
 def get_freezing_plan_list(fz_plan_id):
-    try:
-        freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
-        freezing_plan_list = []
-        for sample in freezing_plan.sample.all():
-            sample_url = f"http://umbrella.czbiohub.org/admin/samples/{sample.id}"
-            tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-            freezing_plan_list.append({
-                'id': sample.id,
-                'name': f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag",
-                'url': sample_url
-            })
-        return freezing_plan_list
-    except ObjectDoesNotExist:
-        return []
+       try:
+           freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
+           freezing_plan_list = []
+           base_url = get_base_url()
+           for sample in freezing_plan.sample.all():
+               sample_url = f"{base_url}/admin/samples/{sample.id}"
+               tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+               freezing_plan_list.append({
+                   'id': sample.id,
+                   'name': f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag",
+                   'url': sample_url
+               })
+           return freezing_plan_list
+       except ObjectDoesNotExist:
+           return []
 
 
 def format_grid(item):
-    grid_url = f"http://umbrella.czbiohub.org/admin/cryo_grids/cryogrid/{item['id']}"
-    return {
-        'id': item['id'],
-        'name': f"{item['grid_name']} (id={item['id']})",
-        'trashed': item['status'],
-        'url': grid_url,
-        'createdAt': item['created_on'],
-    }
+       base_url = get_base_url()
+       grid_url = f"{base_url}/admin/cryo_grids/cryogrid/{item['id']}"
+       return {
+           'id': item['id'],
+           'name': f"{item['grid_name']} (id={item['id']})",
+           'trashed': item['status'],
+           'url': grid_url,
+           'createdAt': item['created_on'],
+       }
 
 
 def format_project(item):
-    project_url = f"http://umbrella.czbiohub.org/admin/projects/project/{item['project_id']}"
+    base_url = get_base_url()
+    project_url = f"{base_url}/admin/projects/project/{item['project_id']}"
     return {'id': item['project_id'], 'name': item['project_name'], 'url': project_url}
 
-
 def add_msi_session(msi_session_list, item):
+    base_url = get_base_url()
     msi_session_entry = {
         'id': item['msisession_id'],
         'name': item['msisession_name'],
-        'url': f"http://umbrella.czbiohub.org/tem/{item['msisession_id']}"
+        'url': f"{base_url}/tem/{item['msisession_id']}"
     }
     if msi_session_entry not in msi_session_list:
         msi_session_list.append(msi_session_entry)
