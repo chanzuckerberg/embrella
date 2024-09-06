@@ -105,7 +105,7 @@ from django.views.decorators.csrf import csrf_exempt
 @require_http_methods(["GET"])
 def available_filters(request):
     try:
-        request.META['HTTP_ORIGIN'] = '*'
+        # request.META['HTTP_ORIGIN'] = '*' # this is only for * 
         # Validate that only the 'q' parameter is present in the request
         if 'q' not in request.GET or len(request.GET) > 1:
             return JsonResponse({'error': 'Invalid query parameters. Only "q" is allowed.'}, status=422)
@@ -243,7 +243,7 @@ def available_filters(request):
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-# @login_required
+@login_required
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
@@ -252,7 +252,7 @@ def get_cryo_grids_details(request):
     :return: JSON Format response
     """
     try:
-        request.META['HTTP_ORIGIN'] = '*'
+        # request.META['HTTP_ORIGIN'] = '*'
         # Parse and validate query parameters using Pydantic
         query_params = CryoGridsQueryParams(**request.GET.dict())
 
