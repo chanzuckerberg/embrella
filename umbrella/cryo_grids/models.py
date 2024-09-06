@@ -124,7 +124,7 @@ class PlungeFreezingPlan(models.Model):
 
 class CryoGrid(models.Model):
     create_on = models.DateField(auto_now_add=True)
-    updated_on = models.DateTimeField(auto_now=True) 
+    updated_on = models.DateField(auto_now=True) 
     name = models.CharField(max_length=32, default='grid1')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True,help_text='notes about freezing and grid condition on this grid')

@@ -243,7 +243,7 @@ def available_filters(request):
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-@login_required
+# @login_required
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
@@ -277,6 +277,7 @@ def get_cryo_grids_details(request):
             username=F('user__username'),
             status=F('trashed'),
             created_on=F('create_on'),
+            grid_updated_on=F('updated_on'),
             msisession_id=F('msisession__id'),
             msisession_name=F('msisession__name'),
             fz_session_id=F('freezing_session__id'),
@@ -284,7 +285,7 @@ def get_cryo_grids_details(request):
             fz_plan_id=F('freezing_plan__id'),
             screening_session_name=F('atlassession__group__name'),
             fz_plan_sample_id=F('freezing_plan__sample__id')
-        ).order_by('-created_on')   # Added 'id' for secondary unique ordering
+        ).order_by('-updated_on')   # Added 'id' for secondary unique ordering
 
         # Apply filters to the queryset
         queryset = apply_filters(queryset, query_params, filter_type)
@@ -355,7 +356,7 @@ def apply_filters(queryset, query_params, filter_type=None):
     if getattr(query_params, 'month', None):
         now = datetime.now()
         start_date = now - timedelta(days=query_params.month * 30)  # Approximate month duration
-        filters &= Q(created_on__gte=start_date)
+        filters &= Q(grid_updated_on__gte=start_date)
 
     return queryset.filter(filters).distinct()
 
@@ -418,6 +419,7 @@ def format_grid(item):
            'trashed': item['status'],
            'url': grid_url,
            'createdAt': item['created_on'],
+           'updatedAt': item['grid_updated_on'],
        }
 
 
