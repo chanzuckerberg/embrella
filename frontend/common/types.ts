@@ -6,6 +6,27 @@ export interface Configs {
   API_URL: string;
 }
 
+export interface FiltersList {
+  filters: Record<FilterName, FilterOption[]>;
+}
+
+export type FilterName =
+  | "cassette" 
+  | "date"
+  | "msiSession"
+  | "project"
+  | "puck"
+  | "sample"
+  | "screeningSession"
+  | "status"
+  | "user";
+
+export interface FilterOption {
+  name: string | null;
+  count: number;
+  selected: boolean;
+}
+
 export interface GridData {
   grid: {
     id: number;
