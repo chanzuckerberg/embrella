@@ -62,7 +62,7 @@ def test_available_filters_validation_error(request_factory):
 
     with patch('cryo_grids.views.QueryParams', side_effect=ValidationError([])):
         response = available_filters(request)
-        assert response.status_code == 500
+        assert response.status_code == 400
         response_data = json.loads(response.content)
         assert 'error' in response_data
         assert 'Invalid input' in response_data['error']

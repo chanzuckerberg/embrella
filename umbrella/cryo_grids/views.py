@@ -14,8 +14,13 @@ from django.http import JsonResponse
 from .models import CryoGrid, CryoGridBox
 from datetime import datetime
 from umbrella import settings
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_base_url():
@@ -237,10 +242,12 @@ def available_filters(request):
         return JsonResponse({'error': f'Invalid input: {e.errors()}'}, status=400)
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+
+# @login_required
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
-    Retrieves details about the grid
+    Retrieves details about the grid with pagination
     :param request: HTTP request
     :return: JSON Format response
     """
@@ -252,7 +259,7 @@ def get_cryo_grids_details(request):
         # Retrieve filter type
         filter_type = query_params.filter_type
 
-        # Base queryset
+        # Base queryset with consistent ordering
         queryset = CryoGrid.objects.select_related(
             'intended_project', 'freezing_session', 'grid_box__puck', 'user',
             'grid_cassette', 'freezing_plan'
@@ -277,22 +284,52 @@ def get_cryo_grids_details(request):
             fz_plan_id=F('freezing_plan__id'),
             screening_session_name=F('atlassession__group__name'),
             fz_plan_sample_id=F('freezing_plan__sample__id')
-        ).order_by('-created_on')
+        ).order_by('-created_on')   # Added 'id' for secondary unique ordering
 
+        # Apply filters to the queryset
         queryset = apply_filters(queryset, query_params, filter_type)
-        if not queryset.exists():
-            return JsonResponse({'result': []}, status=200)
+
+        # Format the queryset into grid items
         formatted_result = format_queryset_results(queryset)
 
-        # Filter results by sample name if provided
-        if query_params.sample_name:
-            formatted_result = filter_by_sample_name(formatted_result, query_params.sample_name)
+        # Convert the formatted result into a list of grids
+        formatted_grid_list = list(formatted_result.values())
 
-        return JsonResponse({'result': list(formatted_result.values())})
+        # Apply pagination to the formatted grid list
+        page = request.GET.get('page', 1)
+        page_size = request.GET.get('page_size', 2)  # Default to 2 items per page if not specified
+        paginator = Paginator(formatted_grid_list, page_size)
+
+        try:
+            paginated_queryset = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_queryset = paginator.page(1)
+        except EmptyPage:
+            paginated_queryset = paginator.page(paginator.num_pages)
+
+        # Check if the paginated result is empty
+        if not paginated_queryset.object_list:
+            return JsonResponse({'result': []}, status=200)
+
+        # Log the items in the current page
+        logger.debug(f'Page {page} items: {paginated_queryset.object_list}')
+
+        # Prepare the response with paginated grids
+        response_data = {
+            'result': paginated_queryset.object_list,  # Already a list of grids
+            'pagination': {
+                'page': paginated_queryset.number,
+                'page_size': int(page_size),
+                'total_pages': paginator.num_pages,
+                'total_results': paginator.count,
+            }
+        }
+
+        return JsonResponse(response_data)
 
     except Exception as e:
+        logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-
 
 def apply_filters(queryset, query_params, filter_type=None):
     filter_mappings = {
