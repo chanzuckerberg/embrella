@@ -51,7 +51,8 @@ jobs:
         pip install -r requirements.txt
 
         - name: Check if Secrets are Available
-    - run: |
+    - name: Check if Secrets are Available
+      run: |
         if [ -z "${{ secrets.VM_HOST }}" ]; then echo "VM_HOST is not set"; else echo "VM_HOST is set"; fi
         if [ -z "${{ secrets.VM_USER }}" ]; then echo "VM_USER is not set"; else echo "VM_USER is set"; fi
         if [ -z "${{ secrets.VM_SSH_KEY }}" ]; then echo "VM_SSH_KEY is not set"; else echo "VM_SSH_KEY is set"; fi
