@@ -1,4 +1,4 @@
-name: Django CI
+name: Django CI/CD for yb-grid-api
 
 on:
   push:
@@ -21,10 +21,41 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+
+    - name: Check if tests folder exists
+      id: check-tests
+      run: |
+        if [ -d "./tests" ]; then echo "Tests folder exists"; else echo "Tests folder does not exist"; exit 0; fi
+
     - name: Run Tests
+      if: steps.check-tests.outcome == 'success'
       run: |
         python -m pytest tests/test_cryo_grids_views.py
+
+  deploy:
+    if: success()
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Deploy to Production via SSH
+      uses: appleboy/ssh-action@v0.1.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        script: |
+          cd /path/to/your/app  # Change this to your app directory on the VM
+          ./deploy.sh
