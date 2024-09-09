@@ -55,3 +55,4 @@ jobs:
         script: |
           cd /home/yongbaek.cho/czii-umbrella-django/umbrella
           ./deploy.sh
+          
