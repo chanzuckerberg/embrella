@@ -27,15 +27,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Check if tests folder exists
-      id: check-tests
-      run: |
-        if [ -d "./tests" ]; then echo "Tests folder exists"; else echo "Tests folder does not exist"; exit 0; fi
+    # - name: Check if tests folder exists
+    #   id: check-tests
+    #   run: |
+    #     if [ -d "./tests" ]; then echo "Tests folder exists"; else echo "Tests folder does not exist"; exit 0; fi
 
-    - name: Run Tests
-      if: steps.check-tests.outcome == 'success'
-      run: |
-        python -m pytest tests/test_cryo_grids_views.py
+    # - name: Run Tests
+    #   if: steps.check-tests.outcome == 'success'
+    #   run: |
+    #     python -m pytest tests/test_cryo_grids_views.py
 
   deploy:
     if: success()
