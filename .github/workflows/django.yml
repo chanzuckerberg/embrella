@@ -40,19 +40,13 @@ jobs:
     #     python -m pip install --upgrade pip
     #     pip install -r requirements.txt
 
-    - name: Check if Secrets are Available
-      run: |
-        if [ -z "${{ secrets.VM_HOST }}" ]; then echo "VM_HOST is not set"; else echo "VM_HOST is set"; fi
-        if [ -z "${{ secrets.VM_USER }}" ]; then echo "VM_USER is not set"; else echo "VM_USER is set"; fi
-        if [ -z "${{ secrets.VM_SSH_KEY }}" ]; then echo "VM_SSH_KEY is not set"; else echo "VM_SSH_KEY is set"; fi
-
-    - name: Deploy to Production via SSH
+    - name: Deploy to Production via SSH with Password
       uses: appleboy/ssh-action@v0.1.3
       with:
-        host: ${{ secrets.VM_HOST }}
-        username: ${{ secrets.VM_USER }}
-        key: ${{ secrets.VM_SSH_KEY }}
+        host: ${{ secrets.VM_HOST }}  # The IP address or hostname of your VM
+        username: ${{ secrets.VM_USER }}  # Your SSH username
+        password: ${{ secrets.VM_PASSWORD }}  # Password for your SSH user
+        port: 22  # Default SSH port, adjust if different
         script: |
           cd /home/yongbaek.cho/czii-umbrella-django/umbrella
           ./deploy.sh
-          
