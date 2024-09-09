@@ -19,16 +19,20 @@ export async function fetchResource(requestURL: string): Promise<Response> {
     credentials: 'include',  // Include cookies in the request
   });
 
-  // Check if the response status is 302 (redirect)
+  // Check if the response status is 302 (redirect) or if the URL includes the login page
   if (response.status === 302 || response.url.includes('/admin/login')) {
-    // Hard-code the redirect to the login page
-    const loginURL = 'http://localhost:8000/admin/login';
-    console.log('Redirecting to login page:', loginURL);
-    window.location.href = loginURL; // Redirect to the login page
+    // Detect the current host, protocol, and port dynamically
+    const currentHost = window.location.hostname;
+    const currentPort = window.location.port ? `:${window.location.port}` : ''; // Include port if available
+    const currentProtocol = window.location.protocol;
+    
+    // Construct the login URL dynamically based on the detected host, protocol, and port
+    const loginURL = `${currentProtocol}//${currentHost}${':8000'}/admin/login`;
+    
+    // Redirect to the dynamically generated login page
+    window.location.href = loginURL;
     return Promise.reject(new Error('User is not authenticated, redirecting to login.'));
   }
 
   return response;
 }
-
-

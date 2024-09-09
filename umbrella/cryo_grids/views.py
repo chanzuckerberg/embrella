@@ -243,21 +243,59 @@ def available_filters(request):
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-# @login_required
+@login_required
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
-    Retrieves details about the grid with pagination
+    Retrieves details about the grid with pagination and sorting
     :param request: HTTP request
     :return: JSON Format response
     """
     try:
-        # request.META['HTTP_ORIGIN'] = '*'
         # Parse and validate query parameters using Pydantic
         query_params = CryoGridsQueryParams(**request.GET.dict())
 
         # Retrieve filter type
         filter_type = query_params.filter_type
+
+        # Retrieve sorting parameter and direction
+        sort_field = request.GET.get('sort')
+        if not sort_field:
+            return JsonResponse(
+                {'error': 'The "sort" parameter is required.'}, 
+                status=422
+            )
+
+        # Validate 'sort' parameter, should only be 'modified_on'
+        if sort_field != 'modified_on':
+            return JsonResponse(
+                {'error': 'Invalid "sort" parameter value. It should be "modified_on".'}, 
+                status=422
+            )
+
+        # Retrieve asc parameter
+        asc_param = request.GET.get('asc')
+        if asc_param is None:
+            return JsonResponse(
+                {'error': 'The "asc" parameter is required.'},
+                status=422
+            )
+        
+        # Ensure that the asc parameter is either 'true' or 'false'
+        if asc_param.lower() not in ['true', 'false']:
+            return JsonResponse(
+                {'error': 'Invalid "asc" parameter value. It should be either "true" or "false".'},
+                status=422
+            )
+
+        # Convert the 'asc' parameter to a boolean
+        asc = asc_param.lower() == 'true'
+
+        # Map 'modified_on' to 'updated_on' for sorting
+        sort_field = 'updated_on'
+
+        # Determine the sort order based on the asc parameter
+        sort_order = sort_field if asc else f'-{sort_field}'
 
         # Base queryset with consistent ordering
         queryset = CryoGrid.objects.select_related(
@@ -285,7 +323,7 @@ def get_cryo_grids_details(request):
             fz_plan_id=F('freezing_plan__id'),
             screening_session_name=F('atlassession__group__name'),
             fz_plan_sample_id=F('freezing_plan__sample__id')
-        ).order_by('-updated_on')   # Added 'id' for secondary unique ordering
+        ).order_by(sort_order)  # Apply sorting based on the provided sort field and direction
 
         # Apply filters to the queryset
         queryset = apply_filters(queryset, query_params, filter_type)
