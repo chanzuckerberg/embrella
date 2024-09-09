@@ -29,9 +29,6 @@ django-jazzmin==3.0.0
 paramiko
 cryptography
 pycryptodome
-<<<<<<< HEAD
 django-cors-headers
-=======
 pytest
 pytest-django
->>>>>>> main
