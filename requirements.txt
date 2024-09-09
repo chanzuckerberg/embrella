@@ -29,3 +29,5 @@ django-jazzmin==3.0.0
 paramiko
 cryptography
 pycryptodome
+pytest
+pytest-django
