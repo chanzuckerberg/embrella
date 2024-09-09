@@ -30,4 +30,4 @@ paramiko
 cryptography
 pycryptodome
 pytest
-pytest-djangog
+pytest-django
