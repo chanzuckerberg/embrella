@@ -243,7 +243,7 @@ def available_filters(request):
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-@login_required
+# @login_required
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
@@ -258,13 +258,8 @@ def get_cryo_grids_details(request):
         # Retrieve filter type
         filter_type = query_params.filter_type
 
-        # Retrieve sorting parameter and direction
-        sort_field = request.GET.get('sort')
-        if not sort_field:
-            return JsonResponse(
-                {'error': 'The "sort" parameter is required.'}, 
-                status=422
-            )
+        # Retrieve sorting parameter and direction, make 'sort' and 'asc' optional
+        sort_field = request.GET.get('sort', 'modified_on')  # Default to 'modified_on' if not provided
 
         # Validate 'sort' parameter, should only be 'modified_on'
         if sort_field != 'modified_on':
@@ -273,13 +268,8 @@ def get_cryo_grids_details(request):
                 status=422
             )
 
-        # Retrieve asc parameter
-        asc_param = request.GET.get('asc')
-        if asc_param is None:
-            return JsonResponse(
-                {'error': 'The "asc" parameter is required.'},
-                status=422
-            )
+        # Retrieve asc parameter, default to 'true' (ascending) if not provided
+        asc_param = request.GET.get('asc', 'true')  # Default to ascending if not provided
         
         # Ensure that the asc parameter is either 'true' or 'false'
         if asc_param.lower() not in ['true', 'false']:
@@ -336,7 +326,7 @@ def get_cryo_grids_details(request):
 
         # Apply pagination to the formatted grid list
         page = request.GET.get('page', 1)
-        page_size = request.GET.get('page_size', 2)  # Default to 2 items per page if not specified
+        page_size = request.GET.get('page_size', 10)  # Default to 10 items per page if not specified
         paginator = Paginator(formatted_grid_list, page_size)
 
         try:
@@ -436,7 +426,7 @@ def get_freezing_plan_list(fz_plan_id):
         freezing_plan_list = []
         base_url = get_base_url()
         for sample in freezing_plan.sample.all():
-            sample_url = f"{base_url}/admin/samples/{sample.id}"
+            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
             tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
             freezing_plan_list.append({
                 'id': sample.id,
