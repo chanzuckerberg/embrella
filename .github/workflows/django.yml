@@ -2,9 +2,9 @@ name: Django CI
 
 on:
   push:
-    branches: [ "main", "yb-grid-api" ]
+    branches: ["yb-grid-api" ]
   pull_request:
-    branches: [ "main", "yb-grid-api" ]
+    branches: ["yb-grid-api" ]
 
 jobs:
   build:
