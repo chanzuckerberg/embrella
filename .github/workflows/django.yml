@@ -28,11 +28,10 @@ jobs:
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
-          # key: ${{ secrets.VM_PRIVATE_KEY }}
-          password: ${{ secrets.VM_PASSWORD }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
           port: 22
           # script_stop: true
-          script: whoami
+          # script: whoami
 
   deploy:
     if: success()
