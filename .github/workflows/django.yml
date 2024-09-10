@@ -21,7 +21,9 @@ jobs:
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-
+      - name: Debug connectivity
+        run: |
+          ping -c 5 10.50.120.84  # Check if the VM is reachable
 
       - name: executing remote ssh commands using password
         uses: appleboy/ssh-action@v0.1.7
