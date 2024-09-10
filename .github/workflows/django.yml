@@ -33,19 +33,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        
+
       - name: Execute remote SSH command
         uses: appleboy/ssh-action@v0.1.3
         with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
+          host: 10.50.120.84
+          username: yongbaek.cho
           password: ${{ secrets.VM_PASSWORD }}
           port: 22
           script: |
             cd /home/yongbaek.cho/czii-umbrella-django/umbrella
             sh ./deploy.sh
             echo "Hello from remote server!"
-          timeout: 300
   deploy:
     if: success()
     runs-on: ubuntu-latest
