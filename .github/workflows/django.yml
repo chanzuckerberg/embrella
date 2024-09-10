@@ -34,16 +34,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Setup SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VM_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-      - name: Add VM to known_hosts
-        run: |
-          ssh-keyscan 10.50.120.84 >> ~/.ssh/known_hosts
-
       - name: Deploy to VM
-        run: |
-          ssh yongbaek.cho@10.50.120.84 "cd /home/yongbaek.cho/czii-umbrella-django/umbrella && ./deploy.sh"
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 10.50.120.84
+          username: yongbaek.cho
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          script: |
+            cd /home/yongbaek.cho/czii-umbrella-django/umbrella
+            ./deploy.sh
