@@ -46,7 +46,7 @@ jobs:
   #           ls -l
   #           pwd
   #           echo "Hello from remote server!"
-  # deploy:
+  deploy:
     if: success()
     runs-on: ubuntu-latest
     steps:
