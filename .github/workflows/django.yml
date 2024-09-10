@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Deploy to VM
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v0.1.1
         with:
           host: 10.50.120.84
           username: yongbaek.cho
