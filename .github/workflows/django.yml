@@ -39,4 +39,4 @@ jobs:
 
       - name: Deploy to VM
         run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=yongbaek.cho@10.50.120.84 "cd /home/yongbaek.cho/czii-umbrella-django/umbrella && ./deploy.sh"
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no "yongbaek.cho@10.50.120.84" "cd /home/yongbaek.cho/czii-umbrella-django/umbrella && ./deploy.sh"
