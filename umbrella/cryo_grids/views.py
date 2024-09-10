@@ -269,7 +269,7 @@ def get_cryo_grids_details(request):
             )
 
         # Retrieve asc parameter, default to 'true' (ascending) if not provided
-        asc_param = request.GET.get('asc', 'true')  # Default to ascending if not provided
+        asc_param = request.GET.get('asc', 'false')  # Default to ascending if not provided
         
         # Ensure that the asc parameter is either 'true' or 'false'
         if asc_param.lower() not in ['true', 'false']:
@@ -320,7 +320,9 @@ def get_cryo_grids_details(request):
 
         # Format the queryset into grid items
         formatted_result = format_queryset_results(queryset)
-
+        # Apply sample name filter if provided
+        if query_params.sample_name:
+            formatted_result = filter_by_sample_name(formatted_result, query_params.sample_name)
         # Convert the formatted result into a list of grids
         formatted_grid_list = list(formatted_result.values())
 
