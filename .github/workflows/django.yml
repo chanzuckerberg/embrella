@@ -31,6 +31,9 @@ jobs:
     if: success()
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
       - name: Execute remote SSH command
         uses: appleboy/ssh-action@v0.1.3
         with:
@@ -42,6 +45,7 @@ jobs:
             cd /home/yongbaek.cho/czii-umbrella-django/umbrella
             sh ./deploy.sh
             echo "Hello from remote server!"
+          timeout: 300
   deploy:
     if: success()
     runs-on: ubuntu-latest
