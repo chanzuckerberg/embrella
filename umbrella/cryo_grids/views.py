@@ -4,7 +4,7 @@ from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, Cry
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from pydantic import ValidationError
-from .utils import CryoGridsQueryParams, QueryParams
+from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Case, When, F, Value, CharField, Count
 from django.db.models.functions import Substr, StrIndex, Trim
@@ -259,33 +259,15 @@ def get_cryo_grids_details(request):
         filter_type = query_params.filter_type
 
         # Retrieve sorting parameter and direction, make 'sort' and 'asc' optional
-        sort_field = request.GET.get('sort', 'modified_on')  # Default to 'modified_on' if not provided
-
-        # Validate 'sort' parameter, should only be 'modified_on'
-        if sort_field != 'modified_on':
-            return JsonResponse(
-                {'error': 'Invalid "sort" parameter value. It should be "modified_on".'}, 
-                status=422
-            )
-
+        sort_field = query_params.sort  # This will now be 'updated_on' after validation
+        if sort_field is None:
+            sort_field = 'updated_on'
         # Retrieve asc parameter, default to 'true' (ascending) if not provided
-        asc_param = request.GET.get('asc', 'false')  # Default to ascending if not provided
+        # Retrieve the asc parameter, default to False (descending)
+        asc = query_params.asc
         
-        # Ensure that the asc parameter is either 'true' or 'false'
-        if asc_param.lower() not in ['true', 'false']:
-            return JsonResponse(
-                {'error': 'Invalid "asc" parameter value. It should be either "true" or "false".'},
-                status=422
-            )
-
-        # Convert the 'asc' parameter to a boolean
-        asc = asc_param.lower() == 'true'
-
-        # Map 'modified_on' to 'updated_on' for sorting
-        sort_field = 'updated_on'
-
         # Determine the sort order based on the asc parameter
-        sort_order = sort_field if asc else f'-{sort_field}'
+        sort_order = sort_field if asc else f'-{sort_field}'  # Default to ascending if not provided
 
         # Base queryset with consistent ordering
         queryset = CryoGrid.objects.select_related(
@@ -356,7 +338,21 @@ def get_cryo_grids_details(request):
             }
         }
 
-        return JsonResponse(response_data)
+        response_model = CryoGridResponseModel(
+            result=paginated_queryset.object_list,
+            pagination=PaginationMetadataModel(
+                page=paginated_queryset.number,
+                page_size=int(page_size),
+                total_pages=paginator.num_pages,
+                total_results=paginator.count
+            ),
+            sort= SortMetadataModel(
+                column= sort_field if sort_field is not None and query_params.sort else None,
+                ascending= asc
+            ),
+    )
+
+        return JsonResponse(response_model.dict())
 
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
@@ -441,16 +437,17 @@ def get_freezing_plan_list(fz_plan_id):
 
 
 def format_grid(item):
-       base_url = get_base_url()
-       grid_url = f"{base_url}/admin/cryo_grids/cryogrid/{item['id']}"
-       return {
-           'id': item['id'],
-           'name': f"{item['grid_name']} (id={item['id']})",
-           'trashed': item['status'],
-           'url': grid_url,
-           'createdAt': item['created_on'],
-           'updatedAt': item['grid_updated_on'],
-       }
+    base_url = get_base_url()
+    grid_url = f"{base_url}/admin/cryo_grids/cryogrid/{item['id']}"
+    
+    return {
+        'id': item['id'],
+        'name': f"{item['grid_name']} (id={item['id']})",
+        'trashed': item['status'],
+        'url': grid_url,
+        'createdAt': item['created_on'].isoformat() if item['created_on'] else None,  # Convert datetime to ISO string
+        'updatedAt': item['grid_updated_on'].isoformat() if item['grid_updated_on'] else None  # Convert datetime to ISO string
+    }
 
 
 def format_project(item):

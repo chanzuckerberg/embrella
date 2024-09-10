@@ -12,6 +12,9 @@ class CryoGridsQueryParams(BaseModel):
     filter_type: Optional[str] = None
     trashed: Optional[str] = None
     month: Optional[int] = None
+    page_size: Optional[int] = None
+    sort: Optional[str] = None  # Optional sort field
+    asc: Optional[bool] = False  # Default to False (descending)
     @validator('filter_type')
     def validate_filter_type(cls, value):
         if not isinstance(value, str):
@@ -38,8 +41,45 @@ class CryoGridsQueryParams(BaseModel):
         if value not in [1, 3, 6, None]:
             raise ValueError('Month must be 1, 3, 6, or None')
         return value
+    
+    @validator('page_size')
+    def validate_page_size(cls, value):
+        if value is not None and value <= 0:
+            raise ValueError("page_size must be a positive integer")
+        return value
+    
+    @validator('sort')
+    def validate_sort(cls, value):
+        if value is not None and not isinstance(value, str):
+            raise ValueError("sort must be a valid string")
+        
+        # Only allow 'updatedAt' as the valid sort field
+        if value and value != 'updatedAt':
+            raise ValueError(f"Invalid sort field '{value}', must be 'updatedAt'")
+        
+        # Map 'updatedAt' to 'updated_on'
+        return 'updated_on' if value == 'updatedAt' else value
+
+    @validator('asc')
+    def validate_asc(cls, value):
+        # Default to False (descending) if not provided
+        if value is None:
+            return False
+        if not isinstance(value, bool):
+            raise ValueError("asc must be a boolean value (True or False)")
+        return value
 
 ## API Result
+# Pagination metadata model
+class PaginationMetadataModel(BaseModel):
+    page: int
+    page_size: int
+    total_pages: int
+    total_results: int
+
+class SortMetadataModel(BaseModel):
+    column: Optional[str] 
+    ascending: bool
 
 class SampleModel(BaseModel):
     id: int
@@ -65,6 +105,7 @@ class GridModel(BaseModel):
     trashed: bool
     url: str  # Changed from HttpUrl to str
     createdAt: Optional[str] = None
+    updatedAt: Optional[str] = None
 
 class CassetteModel(BaseModel):
     name: Optional[str] = None
@@ -94,8 +135,8 @@ class CryoGridResultModel(BaseModel):
 
 class CryoGridResponseModel(BaseModel):
     result: List[CryoGridResultModel]
-
-
+    pagination: PaginationMetadataModel
+    sort: Optional[SortMetadataModel] = None 
 ## available set API
 class DateRangeModel(BaseModel):
     range: str
