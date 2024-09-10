@@ -1,53 +1,53 @@
-name: Django CI/CD for yb-grid-api
+# name: Django CI/CD for yb-grid-api
 
-on:
-  push:
-    branches: ["yb-grid-api"]
-  pull_request:
-    branches: ["yb-grid-api"]
+# on:
+#   push:
+#     branches: ["yb-grid-api"]
+#   pull_request:
+#     branches: ["yb-grid-api"]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 4
-      matrix:
-        python-version: [3.11]
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     strategy:
+#       max-parallel: 4
+#       matrix:
+#         python-version: [3.11]
 
-    steps:
-      - uses: actions/checkout@v4
+#     steps:
+#       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Debug connectivity
-        run: |
-          ping -c 5 10.50.120.84  # Check if the VM is reachable
+#       - name: Set up Python ${{ matrix.python-version }}
+#         uses: actions/setup-python@v3
+#         with:
+#           python-version: ${{ matrix.python-version }}
+#       - name: Debug connectivity
+#         run: |
+#           ping -c 5 10.50.120.84  # Check if the VM is reachable
 
-      - name: executing remote ssh commands using password
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_PRIVATE_KEY }}
-          port: 22
-          # script_stop: true
-          # script: whoami
+#       - name: executing remote ssh commands using password
+#         uses: appleboy/ssh-action@v0.1.7
+#         with:
+#           host: ${{ secrets.VM_HOST }}
+#           username: ${{ secrets.VM_USER }}
+#           key: ${{ secrets.VM_PRIVATE_KEY }}
+#           port: 22
+#           # script_stop: true
+#           # script: whoami
 
-  deploy:
-    if: success()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+#   deploy:
+#     if: success()
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v2
 
-      - name: Deploy to VM
-        uses: appleboy/ssh-action@v0.1.1
-        with:
-          host: 10.50.120.84
-          username: yongbaek.cho
-          key: ${{ secrets.VM_PRIVATE_KEY }}
-          script: |
-            cd /home/yongbaek.cho/czii-umbrella-django/umbrella
-            ./deploy.sh
+#       - name: Deploy to VM
+#         uses: appleboy/ssh-action@v0.1.1
+#         with:
+#           host: 10.50.120.84
+#           username: yongbaek.cho
+#           key: ${{ secrets.VM_PRIVATE_KEY }}
+#           script: |
+#             cd /home/yongbaek.cho/czii-umbrella-django/umbrella
+#             ./deploy.sh
