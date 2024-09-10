@@ -27,25 +27,24 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-  # ssh-remote-command:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
+  ssh-remote-command:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-  #     - name: Execute remote SSH command
-  #       uses: appleboy/ssh-action@v1
-  #       with:
-  #         host: ${{ secrets.SSH_HOST }}
-  #         username: ${{ secrets.SSH_USERNAME }}
-  #         password: ${{ secrets.SSH_PASSWORD }}
-  #         port: 22
-  #         script: |
-  #           # Your remote command goes here
-  #           # For example:
-  #           ls -l
-  #           pwd
-  #           echo "Hello from remote server!"
+      - name: Execute remote SSH command
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: 22
+          script: |
+            ssh yongbaek.cho@10.50.120.84
+            cd /home/yongbaek.cho/czii-umbrella-django/umbrella
+            sh ./deploy.sh
+            echo "Hello from remote server!"
   deploy:
     if: success()
     runs-on: ubuntu-latest
