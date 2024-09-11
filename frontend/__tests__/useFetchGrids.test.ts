@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { delay, initFetch } from "@/testing/utils";
 import { useFetchGrids } from "@/views/GridsView/hooks/useFetchGrids";
-import { GRID_A } from "@/testing/constants";
+import { GRIDS } from "@/testing/constants";
 
 beforeAll(() => {
   initFetch();
@@ -12,6 +12,6 @@ describe("useFetchData", () => {
     const { result } = renderHook(() => useFetchGrids());
     expect(result.current).toBeUndefined();
     await act(async () => await delay());
-    expect(result.current).toEqual([GRID_A]);
+    expect(result.current).toEqual(GRIDS);
   });
 });

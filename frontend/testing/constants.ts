@@ -42,13 +42,57 @@ export const GRID_A: GridData = {
   ],
 };
 
+export const GRID_B: GridData = {
+  grid: {
+    id: 1,
+    name: "foo barbarbarbaz",
+    trashed: false,
+    url: "foofoobarfoofoo",
+    createdAt: "2024-09-11T00:52:55.141Z",
+  },
+  cassette: {
+    name: "bar foofoo bar bazbar",
+  },
+  project: {
+    id: 1,
+    name: "barbaz bazbar",
+    url: "bazfoobarfoobarbar",
+  },
+  puck: {
+    name: "foo bar baz foo barfoofoo",
+  },
+  user: {
+    id: 1,
+    name: "bazbaz bar bazfoo bar",
+  },
+  freezingPlan: {
+    id: 1,
+    sample: [{ id: 1, name: "bar baz bazfoo bazfoo", url: "foofoobarbar" }],
+  },
+  freezingSession: {
+    id: 1,
+    createdAt: "2024-09-11T00:53:04.340Z",
+  },
+  screeningSession: "barbazbazbaz",
+  msiSession: [
+    {
+      id: 1,
+      name: "foo baz baz bazfoobaz",
+      url: "foofoofoobazfoobarbar",
+    },
+  ],
+};
+
+export const GRIDS = [GRID_A, GRID_B];
+
 export const URL_NONEXISTENT = "http://localhost:8000/nonexistent";
 export const URL_GRIDS = "http://localhost:8000/cryo_grids/v1/grids";
 export const URL_FILTERS_LIST = "http://localhost:8000/cryo_grids/v1/filterslist";
 export const URL_FOO = "http://localhost:8000/foo";
+const URL_FOO_ALT = URL_FOO + "?alt=true";
 
 const FETCH_RESPONSE_GRIDS: ApiListResponse<GridData> = {
-  result: [GRID_A],
+  result: GRIDS,
 };
 
 export const FETCH_RESPONSE_FILTERS_LIST: FiltersList = {
@@ -141,5 +185,8 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
   },
   [URL_FOO]: {
     body: JSON.stringify("foo"),
+  },
+  [URL_FOO_ALT]: {
+    body: JSON.stringify("bar"),
   },
 };

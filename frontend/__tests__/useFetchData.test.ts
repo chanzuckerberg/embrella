@@ -29,7 +29,7 @@ describe("useFetchData", () => {
   it("doesn't update until shouldFetch is true", async () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     const { rerender, result } = renderHook(
-      ({ shouldFetch, url }) => useFetchData(url, shouldFetch),
+      ({ shouldFetch, url }) => useFetchData(url, undefined, shouldFetch),
       {
         initialProps: {
           shouldFetch: false,
@@ -49,5 +49,13 @@ describe("useFetchData", () => {
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(await getLastFetchResult()).toHaveProperty("status", 200);
     expect(result.current).toEqual({ data: "foo", isSuccess: true });
+  });
+
+  it("fetches using query parameter", async () => {
+    const { result } = renderHook(() => useFetchData(URL_FOO, { alt: "true" }));
+    expect(result.current).toEqual({ isSuccess: false });
+    await act(async () => await delay());
+    expect(await getLastFetchResult()).toHaveProperty("status", 200);
+    expect(result.current).toEqual({ data: "bar", isSuccess: true });
   });
 });

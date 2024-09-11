@@ -1,11 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchResource } from "@/common/utils";
 import { UseFetchData } from "@/hooks/useFetchData/common/types";
 
 export const useFetchData = <D>(
-  requestURL: string,
-  shouldFetch = true,
+  requestURLBase: string,
+  queryParams?: Record<string, string>,
+  shouldFetch = true
 ): UseFetchData<D> => {
+  const requestURL = new URL(requestURLBase);
+  if (queryParams) requestURL.search = new URLSearchParams(queryParams).toString();
+
   const [dataState, setDataState] = useState<UseFetchData<D>>({
     isSuccess: false,
   });
