@@ -4,6 +4,6 @@ import { GridList } from "@/views/GridsView/components/GridList";
 import { useFetchGrids } from "./hooks/useFetchGrids";
 
 export const GridsView = (): JSX.Element => {
-  const grids = useFetchGrids();
+  const grids = useFetchGrids()?.grids;
   return <GridList grids={grids} />;
 };

@@ -193,7 +193,15 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
           (a, b) => a[sortKey].name.localeCompare(b[sortKey].name) * direction,
         );
       }
-      const responseData: ApiListResponse<GridData> = { result: responseGrids };
+      const responseData: ApiListResponse<GridData> = {
+        pagination: {
+          page: 1,
+          page_size: 2,
+          total_pages: 2,
+          total_results: 4,
+        },
+        result: responseGrids,
+      };
       return JSON.stringify(responseData);
     },
   },
