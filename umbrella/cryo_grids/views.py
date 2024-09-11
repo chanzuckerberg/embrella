@@ -243,7 +243,8 @@ def available_filters(request):
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-# @login_required
+# If you want to test locally, you can comment out the @login_required decorator
+@login_required
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
