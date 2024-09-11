@@ -12,11 +12,19 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+from corsheaders.middleware import CorsMiddleware
+import corsheaders
 from umbrella.middleware import SetNextParameterMiddleware
 from django.urls import reverse_lazy
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+CORS_ALLOW_ALL_ORIGINS = False 
+
+CORS_ALLOW_CREDENTIALS = True
+
+ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -25,14 +33,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*'
 
 # Constant value
-ARETOMO3_SCRIPT_PATH = ''
-
-SESSION_COOKIE_AGE = 6 * 60 * 60
-SESSION_SAVE_EVERY_REQUEST = True
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/run_aretomo_sta_pipeline.sh'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:8000',
+    'https://umbrella.czbiohub.org'
+]
 
 ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'umbrella.czbiohub.org', '*']
 
@@ -41,7 +51,40 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False 
+
+CORS_ALLOW_CREDENTIALS = True
 # Application definition
+CORS_ORIGIN_ALLOW_ALL=True
+SESSION_COOKIE_AGE=1209600
+# SESSION_COOKIE_SAMESITE = None 
+
+
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_EXPOSE_HEADERS = ['Access-Control-Allow-Origin','Content-Type']
 
 INSTALLED_APPS = [
     'confluence',
@@ -64,7 +107,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_extensions',
     "django_google_sso",
+    "corsheaders",
 ]
+
 
 JAZZMIN_SETTINGS = {
     # Other Jazzmin settings...
@@ -73,13 +118,12 @@ JAZZMIN_SETTINGS = {
     "copyright": "CZII",
     "show_version": False,
 }
-
-
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -87,6 +131,11 @@ MIDDLEWARE = [
     'social_django.middleware.SocialAuthExceptionMiddleware',
 ]
 
+
+CORS_EXPOSE_HEADERS = ['Access-Control-Allow-Origin']
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+]
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.BasicAuthentication',
@@ -97,6 +146,31 @@ REST_FRAMEWORK = {
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     # 'django_google_sso.backends.GoogleSSOAuthBackend',
+]
+
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = default_headers + (
+    'Access-Control-Allow-Origin',
+)
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',  # Add your frontend URL here
+]
+
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'cookie',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
 GOOGLE_SSO_CLIENT_ID = os.environ.get('GOOGLE_SSO_CLIENT_ID')

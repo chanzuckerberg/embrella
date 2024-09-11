@@ -11,7 +11,7 @@ class SetNextParameterMiddleware(MiddlewareMixin):
 
         This middleware checks if the user is trying to access the /umbrella/ endpoint
         and is not authenticated. If so, it redirects the user to the login page
-        with the `next` parameter set to a custom page URL.
+        with the `next` parameter set to a custom page URL
         Note(Yongbaek):
         This middleware class intercept the request from the user, and it redirects to the speicifc
         webpage. This is not an ideal case, but we should create new FE webpage separately in the future.
