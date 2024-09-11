@@ -169,6 +169,14 @@
         <h1>JobCanceler</h1>
         <form id="cancelForm">
             <div class="form-group">
+                <label for="cancelUserId">User ID: (e.g., firstname.lastname)</label>
+                <input type="text" id="cancelUserId" name="userId">
+            </div>
+            <div class="form-group">
+                <label for="cancelPassword">Password:</label>
+                <input type="password" id="cancelPassword" name="password" required>
+            </div>
+            <div class="form-group">
                 <label for="jobNumber">Job Number:</label>
                 <input type="number" id="jobNumber" name="jobNumber" required>
             </div>
@@ -307,8 +315,19 @@
 
         async function cancelFunction() {
             const jobNumber = document.getElementById('jobNumber').value;
+            const userId = document.getElementById('cancelUserId').value;
+            const password = document.getElementById('cancelPassword').value;
 
+            // Encode the password using Base64 if provided
+            const encodedPassword = password ? btoa(password) : null;
             const csrftoken = getCookie('csrftoken');
+
+            // Construct the request body dynamically
+            const requestBody = {
+                job_number: jobNumber,
+                user_id: userId,  // Ensure user_id is always included
+                password: encodedPassword  // Ensure password is always included
+            };
 
             const response = await fetch('/workflow/cancel_aretomo3', {
                 method: 'POST',
@@ -316,9 +335,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({
-                    job_number: jobNumber
-                })
+                body: JSON.stringify(requestBody)  // Send the request body with password
             });
 
             const result = await response.json();
