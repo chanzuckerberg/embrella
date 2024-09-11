@@ -13,7 +13,7 @@ from datetime import timedelta
 from django.http import JsonResponse
 from .models import CryoGrid, CryoGridBox
 from datetime import datetime
-from umbrella.settings import ENVIRONMENT
+# from umbrella.settings import ENVIRONMENT
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
@@ -22,6 +22,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 
 def get_base_url():
        if ENVIRONMENT == 'staging':
