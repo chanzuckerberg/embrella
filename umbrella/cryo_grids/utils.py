@@ -79,7 +79,7 @@ class PaginationMetadataModel(BaseModel):
 
 class SortMetadataModel(BaseModel):
     column: Optional[str] 
-    ascending: bool
+    asc: bool
 
 class SampleModel(BaseModel):
     id: int

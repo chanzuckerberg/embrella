@@ -244,7 +244,7 @@ def available_filters(request):
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
 # If you want to test locally, you can comment out the @login_required decorator
-@login_required
+# @login_required
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
@@ -348,8 +348,8 @@ def get_cryo_grids_details(request):
                 total_results=paginator.count
             ),
             sort= SortMetadataModel(
-                column= sort_field if sort_field is not None and query_params.sort else None,
-                ascending= asc
+                column= 'updatedAt' if sort_field is not None and query_params.sort else None,
+                asc= asc
             ),
     )
 
