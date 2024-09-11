@@ -64,8 +64,8 @@ def run_aretomo3(request):
         session_name = data.get('session_name')
         run_number = data.get('run_number')
         pix_size = data.get('pixel_size')
+        total_dose = data.get('total_dose')
         num_checks = data.get('num_checks')
-        seconds = data.get('seconds')
         user_id = data.get('user_id')
         encoded_password = data.get('password')
         decoded_password = base64.b64decode(encoded_password).decode('utf-8')
@@ -86,7 +86,7 @@ def run_aretomo3(request):
             aretomo.connect()
 
             # Run the script and get the output
-            output, error = aretomo.run_script(session_name, run_number, pix_size, num_checks, seconds, user_id)
+            output, error = aretomo.run_script(session_name, run_number, pix_size, total_dose,num_checks, user_id)
             return JsonResponse({'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the below output directory', 'output': output, 'error': error})
         except Exception as e:
             return JsonResponse({'error': str(e) + ': 500'}, status=500)

@@ -142,7 +142,11 @@
                 <input type="number" step="any" id="pixelSize" name="pixelSize" required>
             </div>
             <div class="form-group">
-                <label for="numChecks">Number of Checks:</label>
+                <label for="runNumber">Calibrated total dose:</label>
+                <input type="number" id="dosenumber" name="dosenumber" required>
+            </div>
+            <div class="form-group">
+                <label for="numChecks">Estimated number of tilt series: (e.g. 300; Please be generous!)</label>
                 <input type="number" id="numChecks" name="numChecks" required>
             </div>
             <div class="form-group">
@@ -152,10 +156,6 @@
             <div class="form-group">
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
-            </div>
-            <div class="form-group">
-                <label for="seconds">Seconds:</label>
-                <input type="number" step="any" id="seconds" name="seconds" value="300" required>
             </div>
             <button type="button" onclick="runFunction()">Run</button>
             <div id="errorMessage" class="error-message"></div>
@@ -242,10 +242,10 @@
             const sessionName = document.getElementById('sessionName').value;
             const runNumber = document.getElementById('runNumber').value;
             const pixelSize = document.getElementById('pixelSize').value;
+            const dosenumber = document.getElementById('dosenumber').value;
             const numChecks = document.getElementById('numChecks').value;
             const userId = document.getElementById('userId').value;
             const password = document.getElementById('password').value;
-            const seconds = document.getElementById('seconds').value;
 
             // Encode the password using Base64
             const encodedPassword = btoa(password);
@@ -262,10 +262,10 @@
                     session_name: sessionName,
                     run_number: runNumber,
                     pixel_size: pixelSize,
+                    dose_number: dosenumber,
                     num_checks: numChecks,
                     user_id: userId,
                     password: encodedPassword,
-                    seconds: seconds
                 })
             });
 
