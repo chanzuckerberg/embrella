@@ -27,7 +27,8 @@ export async function fetchResource(requestURL: string): Promise<Response> {
     const currentProtocol = window.location.protocol;
     
     // Construct the login URL dynamically based on the detected host, protocol, and port
-    const loginURL = `${currentProtocol}//${currentHost}${':8000'}/admin/login`;
+    // if you want to test locally, change the currentPort to :8000
+    const loginURL = `${currentProtocol}//${currentHost}${currentPort}/admin/login`;
     
     // Redirect to the dynamically generated login page
     window.location.href = loginURL;
