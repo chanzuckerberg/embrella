@@ -4,7 +4,9 @@ import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@/common/api";
 import { UseFetchGridsOptions } from "@/views/GridsView/hooks/common/types";
 
-export const useFetchGrids = (options: UseFetchGridsOptions = {}): GridData[] | undefined => {
+export const useFetchGrids = (
+  options: UseFetchGridsOptions = {},
+): GridData[] | undefined => {
   const queryParams: Record<string, string> = {};
   if (options.sort) {
     queryParams.sort = options.sort.column;
@@ -12,7 +14,7 @@ export const useFetchGrids = (options: UseFetchGridsOptions = {}): GridData[] | 
   }
   const { data: gridsData } = useFetchData<ApiListResponse<GridData>>(
     configs.API_URL + API.GRIDS,
-    queryParams
+    queryParams,
   );
   return gridsData?.result;
 };

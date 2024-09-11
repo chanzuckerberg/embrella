@@ -5,10 +5,13 @@ import { UseFetchData } from "@/hooks/useFetchData/common/types";
 export const useFetchData = <D>(
   requestURLBase: string,
   queryParams?: Record<string, string>,
-  shouldFetch = true
+  shouldFetch = true,
 ): UseFetchData<D> => {
-  const requestURL = new URL(requestURLBase);
-  if (queryParams) requestURL.search = new URLSearchParams(queryParams).toString();
+  const requestURL = useMemo(() => {
+    const url = new URL(requestURLBase);
+    if (queryParams) url.search = new URLSearchParams(queryParams).toString();
+    return url;
+  }, [requestURLBase, queryParams]);
 
   const [dataState, setDataState] = useState<UseFetchData<D>>({
     isSuccess: false,

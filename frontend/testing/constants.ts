@@ -87,7 +87,8 @@ export const GRIDS = [GRID_A, GRID_B];
 
 export const URL_NONEXISTENT = "http://localhost:8000/nonexistent";
 export const URL_GRIDS = "http://localhost:8000/cryo_grids/v1/grids";
-export const URL_FILTERS_LIST = "http://localhost:8000/cryo_grids/v1/filterslist";
+export const URL_FILTERS_LIST =
+  "http://localhost:8000/cryo_grids/v1/filterslist";
 export const URL_FOO = "http://localhost:8000/foo";
 const URL_FOO_ALT = URL_FOO + "?alt=true";
 
