@@ -20,6 +20,10 @@ from django.urls import reverse_lazy
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+CORS_ALLOW_ALL_ORIGINS = False 
+
+CORS_ALLOW_CREDENTIALS = True
+
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 
 # Quick-start development settings - unsuitable for production
@@ -34,6 +38,12 @@ ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scri
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:8000',
+    'https://umbrella.czbiohub.org'
+]
+
 ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'umbrella.czbiohub.org', '*']
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -41,10 +51,17 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False 
+
+CORS_ALLOW_CREDENTIALS = True
 # Application definition
 CORS_ORIGIN_ALLOW_ALL=True
+SESSION_COOKIE_AGE=1209600
+# SESSION_COOKIE_SAMESITE = None 
 
-CORS_ALLOW_ALL_ORIGINS = True
+
 
 CORS_ALLOW_METHODS = [
     'DELETE',
@@ -67,7 +84,7 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-CORS_EXPOSE_HEADERS = ['Access-Control-Allow-Origin']
+CORS_EXPOSE_HEADERS = ['Access-Control-Allow-Origin','Content-Type']
 
 INSTALLED_APPS = [
     'confluence',
@@ -102,8 +119,8 @@ JAZZMIN_SETTINGS = {
     "show_version": False,
 }
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -116,7 +133,9 @@ MIDDLEWARE = [
 
 
 CORS_EXPOSE_HEADERS = ['Access-Control-Allow-Origin']
-
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+]
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.BasicAuthentication',
@@ -134,23 +153,12 @@ from corsheaders.defaults import default_headers
 CORS_ALLOW_HEADERS = default_headers + (
     'Access-Control-Allow-Origin',
 )
-## only for local
-CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:8000",
-    "http://127.0.0.1",
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',  # Add your frontend URL here
 ]
 
-
-
-
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
 
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -158,6 +166,7 @@ CORS_ALLOW_HEADERS = [
     'authorization',
     'content-type',
     'dnt',
+    'cookie',
     'origin',
     'user-agent',
     'x-csrftoken',
