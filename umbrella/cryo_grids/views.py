@@ -13,7 +13,7 @@ from datetime import timedelta
 from django.http import JsonResponse
 from .models import CryoGrid, CryoGridBox
 from datetime import datetime
-from umbrella import settings
+from umbrella.settings import ENVIRONMENT
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_base_url():
-       if settings.ENVIRONMENT == 'staging':
+       if ENVIRONMENT == 'staging':
            return 'http://umbrella-dev.czbiohub.org'
-       elif settings.ENVIRONMENT == 'production':
+       elif ENVIRONMENT == 'production':
            return 'http://umbrella.czbiohub.org'
        else:  # development
            return 'http://localhost:8000' 

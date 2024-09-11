@@ -18,7 +18,7 @@ class Aretomo3(object):
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(self.hostname, self.port, self.username, self.password)
 
-    def run_script(self, project_name, run_number, pix_size, num_checks, seconds, user_id):
+    def run_script(self, project_name, run_number, pix_size, total_dose, num_checks, user_id):
         if self.ssh is None:
             raise Exception("SSH connection not established. Call connect() first.")
 
@@ -44,9 +44,9 @@ class Aretomo3(object):
         stdin.flush()
         stdin.write(f'{pix_size}\n')
         stdin.flush()
-        stdin.write(f'{num_checks}\n')
+        stdin.write(f'{total_dose}\n')
         stdin.flush()
-        stdin.write(f'{seconds}\n')
+        stdin.write(f'{num_checks}\n')
         stdin.flush()
         stdin.write(f'{user_id}\n')
         stdin.flush()
