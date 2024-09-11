@@ -1,6 +1,14 @@
 import { ApiListResponse, FiltersList, GridData } from "@/common/types";
 import { FetchResponseInfo } from "@/testing/types";
 
+const TEST_SORTABLE_GRID_FIELDS = [
+  "grid",
+  "cassette",
+  "project",
+  "puck",
+  "user",
+] as const;
+
 export const GRID_A: GridData = {
   grid: {
     id: 0,
@@ -90,11 +98,6 @@ export const URL_GRIDS = "http://localhost:8000/cryo_grids/v1/grids";
 export const URL_FILTERS_LIST =
   "http://localhost:8000/cryo_grids/v1/filterslist";
 export const URL_FOO = "http://localhost:8000/foo";
-const URL_FOO_ALT = URL_FOO + "?alt=true";
-
-const FETCH_RESPONSE_GRIDS: ApiListResponse<GridData> = {
-  result: GRIDS,
-};
 
 export const FETCH_RESPONSE_FILTERS_LIST: FiltersList = {
   filters: {
@@ -179,15 +182,29 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
     status: 404,
   },
   [URL_GRIDS]: {
-    body: JSON.stringify(FETCH_RESPONSE_GRIDS),
+    body(url) {
+      const sortParam = url.searchParams.get("sort");
+      const sortKey =
+        sortParam && TEST_SORTABLE_GRID_FIELDS.find((key) => key === sortParam);
+      const responseGrids = GRIDS.slice();
+      if (sortKey) {
+        const direction = url.searchParams.get("asc") === "true" ? 1 : -1;
+        responseGrids.sort(
+          (a, b) => a[sortKey].name.localeCompare(b[sortKey].name) * direction,
+        );
+      }
+      const responseData: ApiListResponse<GridData> = { result: responseGrids };
+      return JSON.stringify(responseData);
+    },
   },
   [URL_FILTERS_LIST]: {
     body: JSON.stringify(FETCH_RESPONSE_FILTERS_LIST),
   },
   [URL_FOO]: {
-    body: JSON.stringify("foo"),
-  },
-  [URL_FOO_ALT]: {
-    body: JSON.stringify("bar"),
+    body(url) {
+      return JSON.stringify(
+        url.searchParams.get("alt") === "true" ? "bar" : "foo",
+      );
+    },
   },
 };

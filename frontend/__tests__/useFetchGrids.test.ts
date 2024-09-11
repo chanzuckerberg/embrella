@@ -14,4 +14,19 @@ describe("useFetchData", () => {
     await act(async () => await delay());
     expect(result.current).toEqual(GRIDS);
   });
+
+  it("gets sorted grids", async () => {
+    const { result: resultAsc } = renderHook(() => useFetchGrids({ sort: { ascending: true, column: "cassette" } }));
+    await act(async () => await delay());
+    const gridsAsc = resultAsc.current;
+    expect(gridsAsc).toBeDefined();
+
+    const { result: resultDesc } = renderHook(() => useFetchGrids({ sort: { ascending: false, column: "cassette" } }));
+    await act(async () => await delay());
+    const gridsDesc = resultDesc.current;
+    expect(gridsDesc).toBeDefined();
+
+    if (gridsAsc && gridsDesc)
+      expect(gridsAsc[0]).toEqual(gridsDesc[gridsDesc.length - 1]);
+  });
 });

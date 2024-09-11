@@ -1,6 +1,6 @@
 export interface FetchResponseInfo {
   status?: number;
-  body?: string;
+  body?: string | ((u: URL) => string);
 }
 
 export type TestResponse = Pick<Response, "json" | "text" | "status">;
