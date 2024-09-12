@@ -348,8 +348,8 @@ def get_cryo_grids_details(request):
                 total_pages=paginator.num_pages,
                 total_results=paginator.count
             ),
-            sort= SortMetadataModel(
-                column= 'updatedAt' if sort_field is not None and query_params.sort else None,
+            sortBy= SortMetadataModel(
+                sort= 'updatedAt' if sort_field is not None and query_params.sort else None,
                 asc= asc
             ),
     )
