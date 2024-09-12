@@ -2,17 +2,10 @@ import configs from "@/configs/local";
 import { ApiListResponse, GridData } from "@/common/types";
 import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@/common/api";
-import { UseFetchGridsOptions } from "@/views/GridsView/hooks/common/types";
-
-export interface UseFetchGrids {
-  grids: GridData[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    totalPages: number;
-    totalResults: number;
-  };
-}
+import {
+  UseFetchGrids,
+  UseFetchGridsOptions,
+} from "@/views/GridsView/hooks/common/types";
 
 export const useFetchGrids = (
   options: UseFetchGridsOptions = {},
