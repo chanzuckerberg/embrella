@@ -1,74 +1,47 @@
 from pydantic import BaseModel,validator, constr
 from typing import  Union, Optional, List
 import re
+
 class CryoGridsQueryParams(BaseModel):
-    project_name: Optional[Union[List[str], str]] = None
-    cassette_name: Optional[Union[List[str], str]] = None
-    puck_name: Optional[Union[List[str], str]] = None
-    user_name: Optional[Union[List[str], str]] = None
-    sample_name: Optional[Union[List[str], str]] = None
-    msi_session_name: Optional[Union[List[str], str]] = None
-    screen_session_name: Optional[Union[List[str], str]] = None
-    filter_type: Optional[str] = None
-    trashed: Optional[str] = None
-    month: Optional[int] = None
-    page_size: Optional[int] = None
-    sort: Optional[str] = None  # Optional sort field
-    asc: Optional[bool] = False  # Default to False (descending)
-    @validator('filter_type')
-    def validate_filter_type(cls, value):
-        if not isinstance(value, str):
-            raise ValueError("filter_type must be a string")
-        value = value.upper().strip()
-        if value not in {"AND", "OR"}:
-            raise ValueError("filter_type must be either 'AND' or 'OR'")
-        return value
+    q: Optional[List[dict[str, Union[List[str], str, bool]]]] = None  # q parameter now expects a list of dictionaries
+    # page_size: Optional[int] = None
+    # sort: Optional[str] = None
+    # asc: Optional[bool] = False
 
-    @validator('*', pre=True)
-    def split_comma_separated_values(cls, value):
-        if isinstance(value, str) and ',' in value:
-            return [v.strip() for v in value.strip('[]').split(',')]
-        return value
-
-    @validator('trashed')
-    def validate_trashed(cls, value):
-        if value not in {"True", "False", "true", "false"}:
-            raise ValueError("trashed must be either 'true' or 'false'")
-        return value
-
-    @validator('month')
-    def validate_month(cls, value):
-        if value not in [1, 3, 6, None]:
-            raise ValueError('Month must be 1, 3, 6, or None')
-        return value
-    
-    @validator('page_size')
-    def validate_page_size(cls, value):
-        if value is not None and value <= 0:
-            raise ValueError("page_size must be a positive integer")
-        return value
-    
-    @validator('sort')
-    def validate_sort(cls, value):
-        if value is not None and not isinstance(value, str):
-            raise ValueError("sort must be a valid string")
-        
-        # Only allow 'updatedAt' as the valid sort field
-        if value and value != 'updatedAt':
-            raise ValueError(f"Invalid sort field '{value}', must be 'updatedAt'")
-        
-        # Map 'updatedAt' to 'updated_on'
-        return 'updated_on' if value == 'updatedAt' else value
-
-    @validator('asc')
-    def validate_asc(cls, value):
-        # Default to False (descending) if not provided
+    @validator('q')
+    def validate_q(cls, value):
+        # Ensure that 'q' is a list of dictionaries with 'category' and 'value'
         if value is None:
-            return False
-        if not isinstance(value, bool):
-            raise ValueError("asc must be a boolean value (True or False)")
+            return []
+        if not isinstance(value, list):
+            raise ValueError("q must be a list of filter objects")
+        for item in value:
+            if 'category' not in item or 'value' not in item:
+                raise ValueError("Each item in 'q' must have 'category' and 'value'")
         return value
 
+    # @validator('page_size')
+    # def validate_page_size(cls, value):
+    #     if value is not None and value <= 0:
+    #         raise ValueError("page_size must be a positive integer")
+    #     return value
+    
+    # @validator('sort')
+    # def validate_sort(cls, value):
+    #     if value is not None and not isinstance(value, str):
+    #         raise ValueError("sort must be a valid string")
+    #     # Only allow 'updatedAt' as the valid sort field
+    #     if value and value != 'updatedAt':
+    #         raise ValueError(f"Invalid sort field '{value}', must be 'updatedAt'")
+    #     return 'updated_on' if value == 'updatedAt' else value
+
+    # @validator('asc')
+    # def validate_asc(cls, value):
+    #     if value is None:
+    #         return False
+    #     if not isinstance(value, bool):
+    #         raise ValueError("asc must be a boolean value")
+    #     return value
 ## API Result
 # Pagination metadata model
 class PaginationMetadataModel(BaseModel):
@@ -78,7 +51,7 @@ class PaginationMetadataModel(BaseModel):
     total_results: int
 
 class SortMetadataModel(BaseModel):
-    column: Optional[str] 
+    sort: Optional[str] 
     asc: bool
 
 class SampleModel(BaseModel):

@@ -246,6 +246,8 @@ def available_filters(request):
 
 # If you want to test locally, you can comment out the @login_required decorator
 # @login_required
+import json
+
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
@@ -254,23 +256,51 @@ def get_cryo_grids_details(request):
     :return: JSON Format response
     """
     try:
+        # Get the 'q' parameter from the request and parse it as JSON if it's present
+        raw_q_param = request.GET.get('q', None)
+        if raw_q_param:
+            try:
+                q_param = json.loads(raw_q_param)  # Parse q as a list of dictionaries
+            except json.JSONDecodeError as e:
+                return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
+        else:
+            q_param = []
+
+        # Combine the 'q' parameter with the rest of the query params into a dictionary
+        query_data = request.GET.dict()
+        query_data['q'] = q_param  # Replace the 'q' string with the parsed list
+
         # Parse and validate query parameters using Pydantic
-        query_params = CryoGridsQueryParams(**request.GET.dict())
+        query_params = CryoGridsQueryParams(**query_data)
 
-        # Retrieve filter type
-        filter_type = query_params.filter_type
+        # Default sort and asc values
+        sort_field = 'updated_on'
+        asc = False
+        page_size = 10  # Default page size
 
-        # Retrieve sorting parameter and direction, make 'sort' and 'asc' optional
-        sort_field = query_params.sort  # This will now be 'updated_on' after validation
-        if sort_field is None:
-            sort_field = 'updated_on'
-        # Retrieve asc parameter, default to 'true' (ascending) if not provided
-        # Retrieve the asc parameter, default to False (descending)
-        asc = query_params.asc
-        
-        # Determine the sort order based on the asc parameter
-        sort_order = sort_field if asc else f'-{sort_field}'  # Default to ascending if not provided
+        # Generic function to extract value from different formats
+        def extract_value(value):
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            return value
 
+        # Extract sort, asc, and page_size from q_param if they exist
+        for item in q_param:
+            if item['category'] == 'sort':
+                # Map updatedAt to updated_on
+                sort_field = 'updated_on' if extract_value(item['value']) == 'updatedAt' else extract_value(item['value'])
+            elif item['category'] == 'asc':
+                asc_value = extract_value(item['value'])
+                asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
+            elif item['category'] == 'page_size':
+                try:
+                    page_size = int(extract_value(item['value']))  # Ensure page_size is an integer
+                except ValueError:
+                    return JsonResponse({'error': 'Invalid value for page_size, must be an integer'}, status=400)
+
+
+        # Construct the sort order based on the extracted values
+        sort_order = sort_field if asc else f'-{sort_field}'
         # Base queryset with consistent ordering
         queryset = CryoGrid.objects.select_related(
             'intended_project', 'freezing_session', 'grid_box__puck', 'user',
@@ -297,22 +327,20 @@ def get_cryo_grids_details(request):
             fz_plan_id=F('freezing_plan__id'),
             screening_session_name=F('atlassession__group__name'),
             fz_plan_sample_id=F('freezing_plan__sample__id')
-        ).order_by(sort_order)  # Apply sorting based on the provided sort field and direction
+        ).order_by(sort_order)
 
-        # Apply filters to the queryset
-        queryset = apply_filters(queryset, query_params, filter_type)
+        # Apply filters from q parameter
+        queryset = apply_filters(queryset, query_params.q)
 
         # Format the queryset into grid items
         formatted_result = format_queryset_results(queryset)
-        # Apply sample name filter if provided
-        if query_params.sample_name:
-            formatted_result = filter_by_sample_name(formatted_result, query_params.sample_name)
+
         # Convert the formatted result into a list of grids
         formatted_grid_list = list(formatted_result.values())
 
         # Apply pagination to the formatted grid list
         page = request.GET.get('page', 1)
-        page_size = request.GET.get('page_size', 10)  # Default to 10 items per page if not specified
+
         paginator = Paginator(formatted_grid_list, page_size)
 
         try:
@@ -326,41 +354,29 @@ def get_cryo_grids_details(request):
         if not paginated_queryset.object_list:
             return JsonResponse({'result': []}, status=200)
 
-        # Log the items in the current page
-        logger.debug(f'Page {page} items: {paginated_queryset.object_list}')
-
         # Prepare the response with paginated grids
         response_data = {
-            'result': paginated_queryset.object_list,  # Already a list of grids
+            'result': paginated_queryset.object_list,
             'pagination': {
                 'page': paginated_queryset.number,
                 'pageSize': int(page_size),
                 'totalPages': paginator.num_pages,
                 'totalResults': paginator.count,
-            }
+            },
+            'sortBy': SortMetadataModel(
+                sort= 'updatedAt' if sort_field is not None else None,
+                asc= asc
+            ).dict(),
         }
 
-        response_model = CryoGridResponseModel(
-            result=paginated_queryset.object_list,
-            pagination=PaginationMetadataModel(
-                page=paginated_queryset.number,
-                page_size=int(page_size),
-                total_pages=paginator.num_pages,
-                total_results=paginator.count
-            ),
-            sortBy= SortMetadataModel(
-                sort= 'updatedAt' if sort_field is not None and query_params.sort else None,
-                asc= asc
-            ),
-    )
-
-        return JsonResponse(response_model.dict())
-
+        return JsonResponse(response_data)
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-def apply_filters(queryset, query_params, filter_type=None):
+
+def apply_filters(queryset, filters):
+    # Mapping filter categories to model field lookups
     filter_mappings = {
         'project_name': 'intended_project__name__in',
         'cassette_name': 'grid_cassette__name__in',
@@ -371,23 +387,42 @@ def apply_filters(queryset, query_params, filter_type=None):
         'trashed': 'trashed__in',
     }
 
-    filters = Q()
-    for key, filter_field in filter_mappings.items():
-        values = getattr(query_params, key, None)
-        if values:
-            values = values if isinstance(values, list) else [values]
+    q_filters = Q()
+    filter_type = 'OR'  # Default filter_type is OR
+
+    # First, process all filters to determine the filter_type
+    for filter_item in filters:
+        category = filter_item.get('category')
+        values = filter_item.get('value')
+
+        if category == 'filter_type':
+            if values and isinstance(values, str):
+                filter_type = values.upper()  # Set filter_type to 'AND' or 'OR'
+
+    # Now, apply the filters
+    for filter_item in filters:
+        category = filter_item.get('category')
+        values = filter_item.get('value')
+
+        if category in filter_mappings and values:
+            field = filter_mappings[category]
+            if not isinstance(values, list):
+                values = [values]
+
             if filter_type == 'OR':
-                filters |= Q(**{filter_field: values})
-            else:  # Default to AND logic
-                filters &= Q(**{filter_field: values})
-    # Apply the created_on filter based on the month parameter
-    if getattr(query_params, 'month', None):
-        now = datetime.now()
-        start_date = now - timedelta(days=query_params.month * 30)  # Approximate month duration
-        filters &= Q(grid_updated_on__gte=start_date)
+                q_filters |= Q(**{field: values})
+            elif filter_type == 'AND':
+                q_filters &= Q(**{field: values})
 
-    return queryset.filter(filters).distinct()
+        # Handle the "month" filter case where values is a single integer
+        if category == 'month' and (isinstance(values, int) or isinstance(values, str)):
+            months = int(values)  # Assume the single value is the number of months
+            now = datetime.now()
+            start_date = now - timedelta(days=months * 30)  # Approximate month duration
+            q_filters &= Q(created_on__gte=start_date)
 
+    # Return the filtered queryset, ensuring distinct results
+    return queryset.filter(q_filters).distinct()
 
 def format_queryset_results(queryset):
     formatted_result = {}
@@ -406,7 +441,7 @@ def format_queryset_results(queryset):
                 'cassette': {'name': item['cassette_name']},
                 'project': format_project(item),
                 'puck': {'name': item['puck']},
-                'user': {'id': item['userID'], 'name': item['username']},
+                'name': item['username'].split('@')[0] if '@' in item['username'] else item['username'],
                 'freezingPlan': {'id': item['fz_plan_id'], 'sample': freezing_plan_list},
                 'freezingSession': {'id': item['fz_session_id'], 'createdAt': fz_session_datetime_formatted},
                 'screeningSession': item['screening_session_name'],
