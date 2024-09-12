@@ -334,9 +334,9 @@ def get_cryo_grids_details(request):
             'result': paginated_queryset.object_list,  # Already a list of grids
             'pagination': {
                 'page': paginated_queryset.number,
-                'page_size': int(page_size),
-                'total_pages': paginator.num_pages,
-                'total_results': paginator.count,
+                'pageSize': int(page_size),
+                'totalPages': paginator.num_pages,
+                'totalResults': paginator.count,
             }
         }
 
