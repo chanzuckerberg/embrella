@@ -11,7 +11,7 @@ export interface FiltersList {
 }
 
 export type FilterName =
-  | "cassette" 
+  | "cassette"
   | "date"
   | "msiSession"
   | "project"

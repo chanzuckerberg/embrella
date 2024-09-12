@@ -1,6 +1,14 @@
 import { ApiListResponse, FiltersList, GridData } from "@/common/types";
 import { FetchResponseInfo } from "@/testing/types";
 
+const TEST_SORTABLE_GRID_FIELDS = [
+  "grid",
+  "cassette",
+  "project",
+  "puck",
+  "user",
+] as const;
+
 export const GRID_A: GridData = {
   grid: {
     id: 0,
@@ -42,14 +50,54 @@ export const GRID_A: GridData = {
   ],
 };
 
+export const GRID_B: GridData = {
+  grid: {
+    id: 1,
+    name: "foo barbarbarbaz",
+    trashed: false,
+    url: "foofoobarfoofoo",
+    createdAt: "2024-09-11T00:52:55.141Z",
+  },
+  cassette: {
+    name: "bar foofoo bar bazbar",
+  },
+  project: {
+    id: 1,
+    name: "barbaz bazbar",
+    url: "bazfoobarfoobarbar",
+  },
+  puck: {
+    name: "foo bar baz foo barfoofoo",
+  },
+  user: {
+    id: 1,
+    name: "bazbaz bar bazfoo bar",
+  },
+  freezingPlan: {
+    id: 1,
+    sample: [{ id: 1, name: "bar baz bazfoo bazfoo", url: "foofoobarbar" }],
+  },
+  freezingSession: {
+    id: 1,
+    createdAt: "2024-09-11T00:53:04.340Z",
+  },
+  screeningSession: "barbazbazbaz",
+  msiSession: [
+    {
+      id: 1,
+      name: "foo baz baz bazfoobaz",
+      url: "foofoofoobazfoobarbar",
+    },
+  ],
+};
+
+export const GRIDS = [GRID_A, GRID_B];
+
 export const URL_NONEXISTENT = "http://localhost:8000/nonexistent";
 export const URL_GRIDS = "http://localhost:8000/cryo_grids/v1/grids";
-export const URL_FILTERS_LIST = "http://localhost:8000/cryo_grids/v1/filterslist";
+export const URL_FILTERS_LIST =
+  "http://localhost:8000/cryo_grids/v1/filterslist";
 export const URL_FOO = "http://localhost:8000/foo";
-
-const FETCH_RESPONSE_GRIDS: ApiListResponse<GridData> = {
-  result: [GRID_A],
-};
 
 export const FETCH_RESPONSE_FILTERS_LIST: FiltersList = {
   filters: {
@@ -134,12 +182,29 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
     status: 404,
   },
   [URL_GRIDS]: {
-    body: JSON.stringify(FETCH_RESPONSE_GRIDS),
+    body(url) {
+      const sortParam = url.searchParams.get("sort");
+      const sortKey =
+        sortParam && TEST_SORTABLE_GRID_FIELDS.find((key) => key === sortParam);
+      const responseGrids = GRIDS.slice();
+      if (sortKey) {
+        const direction = url.searchParams.get("asc") === "true" ? 1 : -1;
+        responseGrids.sort(
+          (a, b) => a[sortKey].name.localeCompare(b[sortKey].name) * direction,
+        );
+      }
+      const responseData: ApiListResponse<GridData> = { result: responseGrids };
+      return JSON.stringify(responseData);
+    },
   },
   [URL_FILTERS_LIST]: {
     body: JSON.stringify(FETCH_RESPONSE_FILTERS_LIST),
   },
   [URL_FOO]: {
-    body: JSON.stringify("foo"),
+    body(url) {
+      return JSON.stringify(
+        url.searchParams.get("alt") === "true" ? "bar" : "foo",
+      );
+    },
   },
 };
