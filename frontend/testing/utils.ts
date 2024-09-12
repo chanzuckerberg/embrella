@@ -24,6 +24,7 @@ export function initFetch(
       status: responseInfo.status ?? 200,
       text: async () => body ?? "",
       json: async () => JSON.parse(body ?? ""),
+      url: url.toString(),
     };
   }) as unknown as typeof fetch;
 }
