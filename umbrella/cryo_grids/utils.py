@@ -18,7 +18,7 @@ class CryoGridsQueryParams(BaseModel):
     q: Optional[List[dict[str, Union[List[str], str, bool]]]] = None  # q parameter now expects a list of dictionaries
     
     # Define the allowed category names in camelCase
-    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType","puckName", "userName", "screenSessionName", "msiSessionName", "projectName", "sort", "asc", "page", "pageSize", "trashed", "cassetteName", "sampleName", "status", "date", "freezingPlanName", "freezingSessionName"}
+    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType","puck", "user", "screenSession", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "cassetteName", "sampleName", "status", "date", "freezingPlanName", "freezingSessionName"}
 
     @validator('q')
     def validate_q(cls, value):
