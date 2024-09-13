@@ -4,7 +4,7 @@ from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, Cry
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from pydantic import ValidationError
-from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel
+from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingPlanModel, SampleModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Case, When, F, Value, CharField, Count
 from django.db.models.functions import Substr, StrIndex, Trim
@@ -19,6 +19,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
 import os
 import logging
+from functools import reduce
 
 logger = logging.getLogger(__name__)
 
@@ -270,8 +271,10 @@ def get_cryo_grids_details(request):
         query_data = request.GET.dict()
         query_data['q'] = q_param  # Replace the 'q' string with the parsed list
 
-        # Parse and validate query parameters using Pydantic
-        query_params = CryoGridsQueryParams(**query_data)
+        try:
+            query_params = CryoGridsQueryParams(**query_data)
+        except ValidationError as e:
+            raise UnprocessableEntity(detail=f"Validation error: {str(e)}")
 
         # Default sort and asc values
         sort_field = 'updated_on'
@@ -288,11 +291,11 @@ def get_cryo_grids_details(request):
         for item in q_param:
             if item['category'] == 'sort':
                 # Map updatedAt to updated_on
-                sort_field = 'updated_on' if extract_value(item['value']) == 'updatedAt' else extract_value(item['value'])
+                sort_field = 'updated_on' if extract_value(item['value']) == 'modifiedOn' else extract_value(item['value'])
             elif item['category'] == 'asc':
                 asc_value = extract_value(item['value'])
                 asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
-            elif item['category'] == 'page_size':
+            elif item['category'] == 'pageSize':
                 try:
                     page_size = int(extract_value(item['value']))  # Ensure page_size is an integer
                 except ValueError:
@@ -357,71 +360,78 @@ def get_cryo_grids_details(request):
         # Prepare the response with paginated grids
         response_data = {
             'result': paginated_queryset.object_list,
-            'pagination': {
-                'page': paginated_queryset.number,
-                'pageSize': int(page_size),
-                'totalPages': paginator.num_pages,
-                'totalResults': paginator.count,
-            },
+            'pagination': PaginationMetadataModel(
+                page= paginated_queryset.number,
+                pageSize= int(page_size),
+                totalPages= paginator.num_pages,
+                totalResults= paginator.count,
+            ).model_dump(),
             'sortBy': SortMetadataModel(
                 sort= 'updatedAt' if sort_field is not None else None,
                 asc= asc
-            ).dict(),
+            ).model_dump(),
         }
 
         return JsonResponse(response_data)
+    except UnprocessableEntity as e:
+        # Return a 422 response for invalid parameters
+        return JsonResponse({'error': e.detail}, status=e.status_code)
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
 
 def apply_filters(queryset, filters):
-    # Mapping filter categories to model field lookups
+    """
+    Apply filters to a queryset based on a list of filter items.
+
+    Args:
+        queryset (QuerySet): The initial queryset to filter.
+        filters (list): A list of filter items, where each item is a dict with 'category' and 'value' keys.
+
+    Returns:
+        QuerySet: The filtered queryset with distinct results.
+    """
     filter_mappings = {
-        'project_name': 'intended_project__name__in',
-        'cassette_name': 'grid_cassette__name__in',
-        'puck_name': 'grid_box__puck__name__in',
-        'user_name': 'user__username__in',
-        'msi_session_name': 'msisession__name__in',
-        'screen_session_name': 'atlassession__group__name__in',
+        'projectName': 'intended_project__name__in',
+        'cassetteName': 'grid_cassette__name__in',
+        'puckName': 'grid_box__puck__name__in',
+        'userName': 'user__username__in',
+        'msiSessionName': 'msisession__name__in',
+        'screenSessionName': 'atlassession__group__name__in',
         'trashed': 'trashed__in',
     }
 
     q_filters = Q()
-    filter_type = 'OR'  # Default filter_type is OR
+    filter_type = 'OR'
 
-    # First, process all filters to determine the filter_type
+    # Process filters to determine filter_type and create Q objects
+    filter_q_objects = []
     for filter_item in filters:
         category = filter_item.get('category')
         values = filter_item.get('value')
 
-        if category == 'filter_type':
-            if values and isinstance(values, str):
-                filter_type = values.upper()  # Set filter_type to 'AND' or 'OR'
-
-    # Now, apply the filters
-    for filter_item in filters:
-        category = filter_item.get('category')
-        values = filter_item.get('value')
-
-        if category in filter_mappings and values:
+        if category == 'filterType' and values:
+            filter_type = values[0].upper() if isinstance(values, list) else values.upper()
+        elif category in filter_mappings and values:
             field = filter_mappings[category]
             if not isinstance(values, list):
                 values = [values]
-
-            if filter_type == 'OR':
-                q_filters |= Q(**{field: values})
-            elif filter_type == 'AND':
-                q_filters &= Q(**{field: values})
-
-        # Handle the "month" filter case where values is a single integer
-        if category == 'month' and (isinstance(values, int) or isinstance(values, str)):
-            months = int(values)  # Assume the single value is the number of months
+            filter_q_objects.append(Q(**{field: values}))
+        elif category == 'month' and (isinstance(values, int) or isinstance(values, str)):
+            months = int(values)
             now = datetime.now()
-            start_date = now - timedelta(days=months * 30)  # Approximate month duration
-            q_filters &= Q(created_on__gte=start_date)
+            start_date = now - timedelta(days=months * 30)
+            filter_q_objects.append(Q(created_on__gte=start_date))
 
-    # Return the filtered queryset, ensuring distinct results
+    # Combine Q objects based on filter_type
+    if filter_type == 'OR':
+        q_filters = reduce(lambda x, y: x | y, filter_q_objects, Q())
+    elif filter_type == 'AND':
+        print("hitting", filter_type)
+        q_filters = reduce(lambda x, y: x & y, filter_q_objects, Q())
+
+    # Return the filtered queryset with distinct results
     return queryset.filter(q_filters).distinct()
 
 def format_queryset_results(queryset):
@@ -437,13 +447,13 @@ def format_queryset_results(queryset):
 
         if grid_id not in formatted_result:
             formatted_result[grid_id] = {
-                'grid': format_grid(item),
-                'cassette': {'name': item['cassette_name']},
-                'project': format_project(item),
-                'puck': {'name': item['puck']},
-                'name': item['username'].split('@')[0] if '@' in item['username'] else item['username'],
-                'freezingPlan': {'id': item['fz_plan_id'], 'sample': freezing_plan_list},
-                'freezingSession': {'id': item['fz_session_id'], 'createdAt': fz_session_datetime_formatted},
+                'grid': format_grid(item).model_dump(),
+                'cassette': format_cassette(item).model_dump(),
+                'project': format_project(item).model_dump(),
+                'puck': format_puck(item).model_dump(),
+                'user': format_user(item).model_dump(),
+                'freezingPlan': format_freezing_plan(item).model_dump(),
+                'freezingSession': format_freezing_session(item).model_dump(),
                 'screeningSession': item['screening_session_name'],
                 'msiSession': []
             }
@@ -471,37 +481,7 @@ def get_freezing_plan_list(fz_plan_id):
         return freezing_plan_list
     except ObjectDoesNotExist:
         return []
-
-
-def format_grid(item):
-    base_url = get_base_url()
-    grid_url = f"{base_url}/admin/cryo_grids/cryogrid/{item['id']}"
     
-    return {
-        'id': item['id'],
-        'name': f"{item['grid_name']} (id={item['id']})",
-        'trashed': item['status'],
-        'url': grid_url,
-        'createdAt': item['created_on'].isoformat() if item['created_on'] else None,  # Convert datetime to ISO string
-        'updatedAt': item['grid_updated_on'].isoformat() if item['grid_updated_on'] else None  # Convert datetime to ISO string
-    }
-
-
-def format_project(item):
-    base_url = get_base_url()
-    project_url = f"{base_url}/admin/projects/project/{item['project_id']}"
-    return {'id': item['project_id'], 'name': item['project_name'], 'url': project_url}
-
-def add_msi_session(msi_session_list, item):
-    base_url = get_base_url()
-    msi_session_entry = {
-        'id': item['msisession_id'],
-        'name': item['msisession_name'],
-        'url': f"{base_url}/tem/{item['msisession_id']}"
-    }
-    if msi_session_entry not in msi_session_list:
-        msi_session_list.append(msi_session_entry)
-
 
 def filter_by_sample_name(formatted_result, sample_name_input):
     matching_results = {}
@@ -519,3 +499,51 @@ def filter_by_sample_name(formatted_result, sample_name_input):
             matching_results[grid_id] = data
 
     return matching_results
+
+
+def format_grid(item):
+    base_url = get_base_url()
+    grid_url = f"{base_url}/admin/cryo_grids/cryogrid/{item['id']}"
+    
+    # Return a GridModel instance
+    return GridModel(
+        id=item['id'],
+        name=f"{item['grid_name']} (id={item['id']})",
+        trashed=item['status'],
+        url=grid_url,
+        createdAt=item['created_on'].isoformat() if item['created_on'] else None,  # Convert datetime to ISO string
+        updatedAt=item['grid_updated_on'].isoformat() if item['grid_updated_on'] else None  # Convert datetime to ISO string
+    )
+
+def format_cassette(item):
+    return CassetteModel(name=item['cassette_name'])
+
+def format_project(item):
+    base_url = get_base_url()
+    project_url = f"{base_url}/admin/projects/project/{item['project_id']}"
+    return ProjectModel(id=item['project_id'], name=item['project_name'], url=project_url)
+
+def format_puck(item):
+    return PuckModel(name=item['puck'])
+
+def format_user(item):
+    return UserModel(id=item['userID'], name=item['username'].split('@')[0] if '@' in item['username'] else item['username'])
+
+
+def format_freezing_plan(item):
+    return FreezingPlanModel(id=item['fz_plan_id'], sample=get_freezing_plan_list(item['fz_plan_id']))
+
+def format_freezing_session(item):
+    return FreezingSessionModel(id=item['fz_session_id'], createdAt=str(item['fz_session_datetime']))
+
+def add_msi_session(msi_session_list, item):
+    base_url = get_base_url()
+    msi_session_entry = MSISessionModel(
+        id=item['msisession_id'],
+        name=item['msisession_name'],
+        url=f"{base_url}/tem/{item['msisession_id']}"
+    ).model_dump()
+    if msi_session_entry not in msi_session_list:
+        msi_session_list.append(msi_session_entry)
+
+
