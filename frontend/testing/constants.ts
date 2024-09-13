@@ -207,9 +207,9 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
       const responseData: ApiListResponse<GridData> = {
         pagination: {
           page,
-          page_size: pageSize,
-          total_pages: Math.ceil(responseGrids.length / pageSize),
-          total_results: responseGrids.length,
+          pageSize: pageSize,
+          totalPages: Math.ceil(responseGrids.length / pageSize),
+          totalResults: responseGrids.length,
         },
         result: responseGrids.slice(pageStart, pageStart + pageSize),
       };

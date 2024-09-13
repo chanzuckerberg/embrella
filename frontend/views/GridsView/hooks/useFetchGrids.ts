@@ -26,12 +26,7 @@ export const useFetchGrids = (
   return (
     gridsData && {
       grids: gridsData.result,
-      pagination: {
-        page: gridsData.pagination.page,
-        pageSize: gridsData.pagination.page_size,
-        totalPages: gridsData.pagination.total_pages,
-        totalResults: gridsData.pagination.total_results,
-      },
+      pagination: gridsData.pagination,
     }
   );
 };

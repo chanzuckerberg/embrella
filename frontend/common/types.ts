@@ -1,9 +1,9 @@
 export interface ApiListResponse<T> {
   pagination: {
     page: number;
-    page_size: number;
-    total_pages: number;
-    total_results: number;
+    pageSize: number;
+    totalPages: number;
+    totalResults: number;
   };
   result: T[];
 }
