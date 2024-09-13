@@ -73,6 +73,10 @@ export interface GridFreezingPlanSample {
 }
 
 export interface SearchParam {
-  name: string;
+  name: SEARCH_PARAM_NAME;
   value: unknown;
+}
+
+export enum SEARCH_PARAM_NAME {
+  FILTER = "q",
 }

@@ -1,5 +1,9 @@
 import configs from "@/configs/local";
-import { FiltersList, GridFilterCategory } from "@/common/types";
+import {
+  FiltersList,
+  GridFilterCategory,
+  SEARCH_PARAM_NAME,
+} from "@/common/types";
 import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@/common/api";
 import { getRequestURL } from "@/common/utils";
@@ -10,7 +14,7 @@ export const useFetchFilters = ():
   | undefined => {
   const { data: filtersData } = useFetchData<FiltersList<GridFilterCategory>>(
     getRequestURL(configs.API_URL, API.FILTERS_LIST, [
-      { name: "q", value: DEFAULT_FILTER_PARAM },
+      { name: SEARCH_PARAM_NAME.FILTER, value: DEFAULT_FILTER_PARAM },
     ]),
   );
 
