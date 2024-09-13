@@ -8,6 +8,8 @@
 
 # testing
 /coverage
+/playwright-report/*
+!/playwright-report/.gitkeep
 
 # next.js
 /.next/

@@ -1,0 +1,41 @@
+name: Playwright Tests
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20.10.0"
+      - name: Install dependencies
+        run: |
+            cd frontend
+            yarn install
+      - name: Install Playwright Browsers
+        run: |
+            cd frontend
+            npx playwright install --with-deps
+      - name: Run Chrome tests
+        run: |
+            cd frontend
+            yarn e2e:chrome
+      - name: Run Firefox tests
+        run: |
+            cd frontend
+            yarn e2e:ff
+      - name: Run Edge tests
+        run: |
+            cd frontend
+            yarn e2e:ie
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 30

@@ -23,7 +23,7 @@ export const GridList = ({ gridList = [] }: Props): JSX.Element => {
     getSortedRowModel: getSortedRowModel(),
   });
   return (
-    <SDSTable>
+    <SDSTable data-testid={"grids"}>
       <TableHead table={table} />
       <TableBody table={table} />
     </SDSTable>
