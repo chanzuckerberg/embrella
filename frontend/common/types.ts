@@ -6,23 +6,23 @@ export interface Configs {
   API_URL: string;
 }
 
-export interface FiltersList {
-  filters: Record<FilterName, FilterOption[]>;
+export interface FiltersList<FilterCategory extends string> {
+  filters: Record<FilterCategory, FilterOption[]>;
 }
 
-export type FilterName =
+export type GridFilterCategory =
   | "cassette"
   | "date"
-  | "msiSession"
+  | "msisession"
   | "project"
   | "puck"
   | "sample"
-  | "screeningSession"
+  | "screeningsession"
   | "status"
   | "user";
 
 export interface FilterOption {
-  name: string | null;
+  name: boolean | string | null;
   count: number;
   selected: boolean;
 }
@@ -70,4 +70,9 @@ export interface GridFreezingPlanSample {
   id: number;
   name: string;
   url: string;
+}
+
+export interface SearchParam {
+  name: string;
+  value: unknown;
 }

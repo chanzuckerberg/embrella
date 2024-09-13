@@ -1,4 +1,9 @@
-import { ApiListResponse, FiltersList, GridData } from "@/common/types";
+import {
+  ApiListResponse,
+  FiltersList,
+  GridData,
+  GridFilterCategory,
+} from "@/common/types";
 import { FetchResponseInfo } from "@/testing/types";
 
 const TEST_SORTABLE_GRID_FIELDS = [
@@ -99,7 +104,7 @@ export const URL_FILTERS_LIST =
   "http://localhost:8000/cryo_grids/v1/filterslist";
 export const URL_FOO = "http://localhost:8000/foo";
 
-export const FETCH_RESPONSE_FILTERS_LIST: FiltersList = {
+export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<GridFilterCategory> = {
   filters: {
     cassette: [
       {
@@ -120,7 +125,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList = {
         selected: false,
       },
     ],
-    msiSession: [
+    msisession: [
       {
         name: "foo bazfoo barfoobar",
         count: 2,
@@ -153,7 +158,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList = {
         selected: false,
       },
     ],
-    screeningSession: [
+    screeningsession: [
       {
         name: "foofoo baz foo",
         count: 2,

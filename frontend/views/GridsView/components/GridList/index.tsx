@@ -1,4 +1,3 @@
-"use client";
 import React, { useMemo } from "react";
 import { Props } from "@/views/GridsView/components/GridList/types";
 import { GRID_COLUMN_DEFS } from "@/views/GridsView/components/GridList/columns/column";
@@ -13,11 +12,11 @@ import { TableBody } from "@/components/Table/components/TableBody";
 import { getRowId } from "@/views/GridsView/components/GridList/utils";
 import { Table as SDSTable } from "@czi-sds/components";
 
-export const GridList = ({ grids = [] }: Props): JSX.Element => {
+export const GridList = ({ gridList = [] }: Props): JSX.Element => {
   const columns = useMemo(() => GRID_COLUMN_DEFS, []);
   const table = useReactTable<GridData>({
     columns,
-    data: grids,
+    data: gridList,
     enableSorting: false,
     getCoreRowModel: getCoreRowModel(),
     getRowId,
