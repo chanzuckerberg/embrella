@@ -199,8 +199,8 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
       const page = url.searchParams.has("page")
         ? Number(url.searchParams.get("page"))
         : 1;
-      const pageSize = url.searchParams.has("page_size")
-        ? Number(url.searchParams.get("page_size"))
+      const pageSize = url.searchParams.has("pageSize")
+        ? Number(url.searchParams.get("pageSize"))
         : TEST_DEFAULT_GRIDS_PAGE_SIZE;
       const pageStart = (page - 1) * pageSize;
 
