@@ -17,7 +17,7 @@ export const useFetchGrids = (
   }
   if (options.pagination) {
     queryParams.page = options.pagination.page.toString();
-    queryParams.page_size = options.pagination.pageSize.toString();
+    queryParams.pageSize = options.pagination.pageSize.toString();
   }
   const { data: gridsData } = useFetchData<ApiListResponse<GridData>>(
     configs.API_URL + API.GRIDS,
