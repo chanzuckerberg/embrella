@@ -30,10 +30,11 @@ export interface FilterOption {
 export interface GridData {
   grid: {
     id: number;
+    createdAt: string;
     name: string;
     trashed: boolean;
+    updatedAt: string | null;
     url: string;
-    createdAt: string;
   };
   cassette: {
     name: string;

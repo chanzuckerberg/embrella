@@ -16,6 +16,7 @@ export const GRID_A: GridData = {
     trashed: false,
     url: "bazfoobazbazbarbar",
     createdAt: "2024-08-23T21:44:30.881Z",
+    updatedAt: null,
   },
   cassette: {
     name: "bar baz foo foo",
@@ -57,6 +58,7 @@ export const GRID_B: GridData = {
     trashed: false,
     url: "foofoobarfoofoo",
     createdAt: "2024-09-11T00:52:55.141Z",
+    updatedAt: null,
   },
   cassette: {
     name: "bar foofoo bar bazbar",

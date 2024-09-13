@@ -50,6 +50,13 @@ export const GRID_COLUMN_DEF_PROJECT: GridColumnDef = {
   header: "Project",
 };
 
+export const GRID_COLUMN_DEF_UPDATED_AT: GridColumnDef = {
+  accessorFn: GRID_COLUMN_ACCESSOR_FN.UPDATED_AT,
+  enableSorting: false,
+  id: GRID_COLUMN_ID.UPDATED_AT,
+  header: "Updated At",
+};
+
 export const GRID_COLUMN_DEF: Record<keyof typeof GRID_COLUMN, GridColumnDef> =
   {
     CRYOGRID: GRID_COLUMN_DEF_CRYOGRID,
@@ -57,6 +64,7 @@ export const GRID_COLUMN_DEF: Record<keyof typeof GRID_COLUMN, GridColumnDef> =
     FREEZING_SESSION: GRID_COLUMN_DEF_FREEZING_SESSION,
     MSI: GRID_COLUMN_DEF_MSI,
     PROJECT: GRID_COLUMN_DEF_PROJECT,
+    UPDATED_AT: GRID_COLUMN_DEF_UPDATED_AT,
   };
 
 export const GRID_COLUMN_DEFS: GridColumnDef[] = [
@@ -65,4 +73,5 @@ export const GRID_COLUMN_DEFS: GridColumnDef[] = [
   GRID_COLUMN_DEF.FREEZING_PLAN,
   GRID_COLUMN_DEF.MSI,
   GRID_COLUMN_DEF.FREEZING_SESSION,
+  GRID_COLUMN_DEF.UPDATED_AT,
 ];

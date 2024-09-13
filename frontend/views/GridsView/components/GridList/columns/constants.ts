@@ -10,6 +10,7 @@ import {
   getFreezingSessionAccessorFn,
   getMSIAccessorFn,
   getProjectAccessorFn,
+  getUpdatedAtAccessorFn,
 } from "@/views/GridsView/components/GridList/columns/accessor";
 
 export const GRID_COLUMN_ACCESSOR_FN: Record<
@@ -21,6 +22,7 @@ export const GRID_COLUMN_ACCESSOR_FN: Record<
   FREEZING_SESSION: getFreezingSessionAccessorFn,
   MSI: getMSIAccessorFn,
   PROJECT: getProjectAccessorFn,
+  UPDATED_AT: getUpdatedAtAccessorFn,
 };
 
 export const GRID_COLUMN_ID: Record<
@@ -32,4 +34,5 @@ export const GRID_COLUMN_ID: Record<
   FREEZING_SESSION: "freezingSession",
   MSI: "msi",
   PROJECT: "project",
+  UPDATED_AT: "updatedAt",
 };
