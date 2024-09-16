@@ -3,4 +3,4 @@ export interface FetchResponseInfo {
   body?: string | ((u: URL) => string);
 }
 
-export type TestResponse = Pick<Response, "json" | "text" | "status">;
+export type TestResponse = Pick<Response, "json" | "text" | "status" | "url">;

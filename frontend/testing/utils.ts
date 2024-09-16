@@ -13,13 +13,18 @@ export function initFetch(
     const urlObj = new URL(url);
     const truncatedUrl = urlObj.origin + urlObj.pathname;
     const responseInfo =
-      Object.hasOwn(FETCH_RESPONSES, truncatedUrl) && FETCH_RESPONSES[truncatedUrl];
+      Object.hasOwn(FETCH_RESPONSES, truncatedUrl) &&
+      FETCH_RESPONSES[truncatedUrl];
     if (!responseInfo) throw new TypeError("Failed to fetch");
-    const body = typeof responseInfo.body === "function" ? responseInfo.body(urlObj) : responseInfo.body;
+    const body =
+      typeof responseInfo.body === "function"
+        ? responseInfo.body(urlObj)
+        : responseInfo.body;
     return {
       status: responseInfo.status ?? 200,
       text: async () => body ?? "",
       json: async () => JSON.parse(body ?? ""),
+      url: url.toString(),
     };
   }) as unknown as typeof fetch;
 }

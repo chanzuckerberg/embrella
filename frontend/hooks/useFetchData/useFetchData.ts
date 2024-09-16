@@ -40,7 +40,10 @@ export const useFetchData = <D>(
   return dataState;
 };
 
-function getFullUrl(baseUrl: string, queryParams?: Record<string, string>): string {
+function getFullUrl(
+  baseUrl: string,
+  queryParams?: Record<string, string>,
+): string {
   const url = new URL(baseUrl);
   if (queryParams) url.search = new URLSearchParams(queryParams).toString();
   return url.toString();
