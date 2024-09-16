@@ -1,3 +1,5 @@
+import { SearchParam } from "@/common/types";
+
 // /**
 //  * Fetch request.
 //  * @param requestURL - Request URL.
@@ -39,8 +41,6 @@ export async function fetchResource(requestURL: string): Promise<Response> {
 
   return response;
 }
-
-
 
 /**
  * Returns the request URL.
