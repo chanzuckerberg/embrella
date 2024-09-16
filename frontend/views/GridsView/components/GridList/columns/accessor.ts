@@ -68,3 +68,16 @@ export function getProjectAccessorFn(originalRow: GridData): LinkTValue {
     href: url,
   };
 }
+
+/**
+ * Updated at accessor function.
+ * @param originalRow - Original row data.
+ * @returns string value.
+ */
+export function getUpdatedAtAccessorFn(originalRow: GridData): string {
+  const {
+    grid: { updatedAt },
+  } = originalRow;
+  if (!updatedAt) return "-";
+  return formatDate(updatedAt);
+}

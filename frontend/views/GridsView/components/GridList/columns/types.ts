@@ -7,6 +7,7 @@ export enum GRID_COLUMN {
   FREEZING_SESSION = "FREEZING_SESSION",
   MSI = "MSI",
   PROJECT = "PROJECT",
+  UPDATED_AT = "UPDATED_AT",
 }
 
 export type GridColumnDef = ColumnDef<GridData>;
