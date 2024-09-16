@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { delay, initFetch } from "@/testing/utils";
-import { useFetchFilters } from "@/hooks/useFetchFilters";
+import { useFetchFilters } from "@/views/GridsView/hooks/useFetchFilters";
 import { FETCH_RESPONSE_FILTERS_LIST } from "@/testing/constants";
 
 beforeAll(() => {
