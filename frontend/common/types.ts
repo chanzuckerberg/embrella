@@ -1,4 +1,10 @@
 export interface ApiListResponse<T> {
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    totalResults: number;
+  };
   result: T[];
 }
 

@@ -98,6 +98,8 @@ export const GRID_B: GridData = {
 
 export const GRIDS = [GRID_A, GRID_B];
 
+export const TEST_DEFAULT_GRIDS_PAGE_SIZE = 10;
+
 export const URL_NONEXISTENT = "http://localhost:8000/nonexistent";
 export const URL_GRIDS = "http://localhost:8000/cryo_grids/v1/grids";
 export const URL_FILTERS_LIST =
@@ -198,7 +200,25 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
           (a, b) => a[sortKey].name.localeCompare(b[sortKey].name) * direction,
         );
       }
-      const responseData: ApiListResponse<GridData> = { result: responseGrids };
+
+      const page = url.searchParams.has("page")
+        ? Number(url.searchParams.get("page"))
+        : 1;
+      const pageSize = url.searchParams.has("pageSize")
+        ? Number(url.searchParams.get("pageSize"))
+        : TEST_DEFAULT_GRIDS_PAGE_SIZE;
+      const pageStart = (page - 1) * pageSize;
+
+      const responseData: ApiListResponse<GridData> = {
+        pagination: {
+          page,
+          pageSize: pageSize,
+          totalPages: Math.ceil(responseGrids.length / pageSize),
+          totalResults: responseGrids.length,
+        },
+        result: responseGrids.slice(pageStart, pageStart + pageSize),
+      };
+
       return JSON.stringify(responseData);
     },
   },

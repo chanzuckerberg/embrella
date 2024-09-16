@@ -4,7 +4,7 @@ from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, Cry
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from pydantic import ValidationError
-from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel
+from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingPlanModel, SampleModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Case, When, F, Value, CharField, Count
 from django.db.models.functions import Substr, StrIndex, Trim
@@ -19,6 +19,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import json
 import os
 import logging
+from functools import reduce
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +247,8 @@ def available_filters(request):
 
 # If you want to test locally, you can comment out the @login_required decorator
 # @login_required
+import json
+
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
@@ -254,23 +257,53 @@ def get_cryo_grids_details(request):
     :return: JSON Format response
     """
     try:
-        # Parse and validate query parameters using Pydantic
-        query_params = CryoGridsQueryParams(**request.GET.dict())
+        # Get the 'q' parameter from the request and parse it as JSON if it's present
+        raw_q_param = request.GET.get('q', None)
+        if raw_q_param:
+            try:
+                q_param = json.loads(raw_q_param)  # Parse q as a list of dictionaries
+            except json.JSONDecodeError as e:
+                return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
+        else:
+            q_param = []
 
-        # Retrieve filter type
-        filter_type = query_params.filter_type
+        # Combine the 'q' parameter with the rest of the query params into a dictionary
+        query_data = request.GET.dict()
+        query_data['q'] = q_param  # Replace the 'q' string with the parsed list
 
-        # Retrieve sorting parameter and direction, make 'sort' and 'asc' optional
-        sort_field = query_params.sort  # This will now be 'updated_on' after validation
-        if sort_field is None:
-            sort_field = 'updated_on'
-        # Retrieve asc parameter, default to 'true' (ascending) if not provided
-        # Retrieve the asc parameter, default to False (descending)
-        asc = query_params.asc
-        
-        # Determine the sort order based on the asc parameter
-        sort_order = sort_field if asc else f'-{sort_field}'  # Default to ascending if not provided
+        try:
+            query_params = CryoGridsQueryParams(**query_data)
+        except ValidationError as e:
+            raise UnprocessableEntity(detail=f"Validation error: {str(e)}")
 
+        # Default sort and asc values
+        sort_field = 'updated_on'
+        asc = False
+        page_size = 10  # Default page size
+
+        # Generic function to extract value from different formats
+        def extract_value(value):
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            return value
+
+        # Extract sort, asc, and page_size from q_param if they exist
+        for item in q_param:
+            if item['category'] == 'sort':
+                # Map updatedAt to updated_on
+                sort_field = 'updated_on' if extract_value(item['value']) == 'modifiedOn' else extract_value(item['value'])
+            elif item['category'] == 'asc':
+                asc_value = extract_value(item['value'])
+                asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
+            elif item['category'] == 'pageSize':
+                try:
+                    page_size = int(extract_value(item['value']))  # Ensure page_size is an integer
+                except ValueError:
+                    return JsonResponse({'error': 'Invalid value for page_size, must be an integer'}, status=400)
+
+
+        # Construct the sort order based on the extracted values
+        sort_order = sort_field if asc else f'-{sort_field}'
         # Base queryset with consistent ordering
         queryset = CryoGrid.objects.select_related(
             'intended_project', 'freezing_session', 'grid_box__puck', 'user',
@@ -297,22 +330,20 @@ def get_cryo_grids_details(request):
             fz_plan_id=F('freezing_plan__id'),
             screening_session_name=F('atlassession__group__name'),
             fz_plan_sample_id=F('freezing_plan__sample__id')
-        ).order_by(sort_order)  # Apply sorting based on the provided sort field and direction
+        ).order_by(sort_order)
 
-        # Apply filters to the queryset
-        queryset = apply_filters(queryset, query_params, filter_type)
+        # Apply filters from q parameter
+        queryset = apply_filters(queryset, query_params.q)
 
         # Format the queryset into grid items
         formatted_result = format_queryset_results(queryset)
-        # Apply sample name filter if provided
-        if query_params.sample_name:
-            formatted_result = filter_by_sample_name(formatted_result, query_params.sample_name)
+
         # Convert the formatted result into a list of grids
         formatted_grid_list = list(formatted_result.values())
 
         # Apply pagination to the formatted grid list
         page = request.GET.get('page', 1)
-        page_size = request.GET.get('page_size', 10)  # Default to 10 items per page if not specified
+
         paginator = Paginator(formatted_grid_list, page_size)
 
         try:
@@ -326,68 +357,82 @@ def get_cryo_grids_details(request):
         if not paginated_queryset.object_list:
             return JsonResponse({'result': []}, status=200)
 
-        # Log the items in the current page
-        logger.debug(f'Page {page} items: {paginated_queryset.object_list}')
-
         # Prepare the response with paginated grids
         response_data = {
-            'result': paginated_queryset.object_list,  # Already a list of grids
-            'pagination': {
-                'page': paginated_queryset.number,
-                'page_size': int(page_size),
-                'total_pages': paginator.num_pages,
-                'total_results': paginator.count,
-            }
+            'result': paginated_queryset.object_list,
+            'pagination': PaginationMetadataModel(
+                page= paginated_queryset.number,
+                pageSize= int(page_size),
+                totalPages= paginator.num_pages,
+                totalResults= paginator.count,
+            ).model_dump(),
+            'sortBy': SortMetadataModel(
+                sort= 'updatedAt' if sort_field is not None else None,
+                asc= asc
+            ).model_dump(),
         }
 
-        response_model = CryoGridResponseModel(
-            result=paginated_queryset.object_list,
-            pagination=PaginationMetadataModel(
-                page=paginated_queryset.number,
-                page_size=int(page_size),
-                total_pages=paginator.num_pages,
-                total_results=paginator.count
-            ),
-            sort= SortMetadataModel(
-                column= 'updatedAt' if sort_field is not None and query_params.sort else None,
-                asc= asc
-            ),
-    )
-
-        return JsonResponse(response_model.dict())
-
+        return JsonResponse(response_data)
+    except UnprocessableEntity as e:
+        # Return a 422 response for invalid parameters
+        return JsonResponse({'error': e.detail}, status=e.status_code)
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-def apply_filters(queryset, query_params, filter_type=None):
+
+def apply_filters(queryset, filters):
+    """
+    Apply filters to a queryset based on a list of filter items.
+
+    Args:
+        queryset (QuerySet): The initial queryset to filter.
+        filters (list): A list of filter items, where each item is a dict with 'category' and 'value' keys.
+
+    Returns:
+        QuerySet: The filtered queryset with distinct results.
+    """
     filter_mappings = {
-        'project_name': 'intended_project__name__in',
-        'cassette_name': 'grid_cassette__name__in',
-        'puck_name': 'grid_box__puck__name__in',
-        'user_name': 'user__username__in',
-        'msi_session_name': 'msisession__name__in',
-        'screen_session_name': 'atlassession__group__name__in',
+        'projectName': 'intended_project__name__in',
+        'cassetteName': 'grid_cassette__name__in',
+        'puckName': 'grid_box__puck__name__in',
+        'userName': 'user__username__in',
+        'msiSessionName': 'msisession__name__in',
+        'screenSessionName': 'atlassession__group__name__in',
         'trashed': 'trashed__in',
     }
 
-    filters = Q()
-    for key, filter_field in filter_mappings.items():
-        values = getattr(query_params, key, None)
-        if values:
-            values = values if isinstance(values, list) else [values]
-            if filter_type == 'OR':
-                filters |= Q(**{filter_field: values})
-            else:  # Default to AND logic
-                filters &= Q(**{filter_field: values})
-    # Apply the created_on filter based on the month parameter
-    if getattr(query_params, 'month', None):
-        now = datetime.now()
-        start_date = now - timedelta(days=query_params.month * 30)  # Approximate month duration
-        filters &= Q(grid_updated_on__gte=start_date)
+    q_filters = Q()
+    filter_type = 'OR'
 
-    return queryset.filter(filters).distinct()
+    # Process filters to determine filter_type and create Q objects
+    filter_q_objects = []
+    for filter_item in filters:
+        category = filter_item.get('category')
+        values = filter_item.get('value')
 
+        if category == 'filterType' and values:
+            filter_type = values[0].upper() if isinstance(values, list) else values.upper()
+        elif category in filter_mappings and values:
+            field = filter_mappings[category]
+            if not isinstance(values, list):
+                values = [values]
+            filter_q_objects.append(Q(**{field: values}))
+        elif category == 'month' and (isinstance(values, int) or isinstance(values, str)):
+            months = int(values)
+            now = datetime.now()
+            start_date = now - timedelta(days=months * 30)
+            filter_q_objects.append(Q(created_on__gte=start_date))
+
+    # Combine Q objects based on filter_type
+    if filter_type == 'OR':
+        q_filters = reduce(lambda x, y: x | y, filter_q_objects, Q())
+    elif filter_type == 'AND':
+        print("hitting", filter_type)
+        q_filters = reduce(lambda x, y: x & y, filter_q_objects, Q())
+
+    # Return the filtered queryset with distinct results
+    return queryset.filter(q_filters).distinct()
 
 def format_queryset_results(queryset):
     formatted_result = {}
@@ -402,13 +447,13 @@ def format_queryset_results(queryset):
 
         if grid_id not in formatted_result:
             formatted_result[grid_id] = {
-                'grid': format_grid(item),
-                'cassette': {'name': item['cassette_name']},
-                'project': format_project(item),
-                'puck': {'name': item['puck']},
-                'user': {'id': item['userID'], 'name': item['username']},
-                'freezingPlan': {'id': item['fz_plan_id'], 'sample': freezing_plan_list},
-                'freezingSession': {'id': item['fz_session_id'], 'createdAt': fz_session_datetime_formatted},
+                'grid': format_grid(item).model_dump(),
+                'cassette': format_cassette(item).model_dump(),
+                'project': format_project(item).model_dump(),
+                'puck': format_puck(item).model_dump(),
+                'user': format_user(item).model_dump(),
+                'freezingPlan': format_freezing_plan(item).model_dump(),
+                'freezingSession': format_freezing_session(item).model_dump(),
                 'screeningSession': item['screening_session_name'],
                 'msiSession': []
             }
@@ -436,37 +481,7 @@ def get_freezing_plan_list(fz_plan_id):
         return freezing_plan_list
     except ObjectDoesNotExist:
         return []
-
-
-def format_grid(item):
-    base_url = get_base_url()
-    grid_url = f"{base_url}/admin/cryo_grids/cryogrid/{item['id']}"
     
-    return {
-        'id': item['id'],
-        'name': f"{item['grid_name']} (id={item['id']})",
-        'trashed': item['status'],
-        'url': grid_url,
-        'createdAt': item['created_on'].isoformat() if item['created_on'] else None,  # Convert datetime to ISO string
-        'updatedAt': item['grid_updated_on'].isoformat() if item['grid_updated_on'] else None  # Convert datetime to ISO string
-    }
-
-
-def format_project(item):
-    base_url = get_base_url()
-    project_url = f"{base_url}/admin/projects/project/{item['project_id']}"
-    return {'id': item['project_id'], 'name': item['project_name'], 'url': project_url}
-
-def add_msi_session(msi_session_list, item):
-    base_url = get_base_url()
-    msi_session_entry = {
-        'id': item['msisession_id'],
-        'name': item['msisession_name'],
-        'url': f"{base_url}/tem/{item['msisession_id']}"
-    }
-    if msi_session_entry not in msi_session_list:
-        msi_session_list.append(msi_session_entry)
-
 
 def filter_by_sample_name(formatted_result, sample_name_input):
     matching_results = {}
@@ -484,3 +499,51 @@ def filter_by_sample_name(formatted_result, sample_name_input):
             matching_results[grid_id] = data
 
     return matching_results
+
+
+def format_grid(item):
+    base_url = get_base_url()
+    grid_url = f"{base_url}/admin/cryo_grids/cryogrid/{item['id']}"
+    
+    # Return a GridModel instance
+    return GridModel(
+        id=item['id'],
+        name=f"{item['grid_name']} (id={item['id']})",
+        trashed=item['status'],
+        url=grid_url,
+        createdAt=item['created_on'].isoformat() if item['created_on'] else None,  # Convert datetime to ISO string
+        updatedAt=item['grid_updated_on'].isoformat() if item['grid_updated_on'] else None  # Convert datetime to ISO string
+    )
+
+def format_cassette(item):
+    return CassetteModel(name=item['cassette_name'])
+
+def format_project(item):
+    base_url = get_base_url()
+    project_url = f"{base_url}/admin/projects/project/{item['project_id']}"
+    return ProjectModel(id=item['project_id'], name=item['project_name'], url=project_url)
+
+def format_puck(item):
+    return PuckModel(name=item['puck'])
+
+def format_user(item):
+    return UserModel(id=item['userID'], name=item['username'].split('@')[0] if '@' in item['username'] else item['username'])
+
+
+def format_freezing_plan(item):
+    return FreezingPlanModel(id=item['fz_plan_id'], sample=get_freezing_plan_list(item['fz_plan_id']))
+
+def format_freezing_session(item):
+    return FreezingSessionModel(id=item['fz_session_id'], createdAt=str(item['fz_session_datetime']))
+
+def add_msi_session(msi_session_list, item):
+    base_url = get_base_url()
+    msi_session_entry = MSISessionModel(
+        id=item['msisession_id'],
+        name=item['msisession_name'],
+        url=f"{base_url}/tem/{item['msisession_id']}"
+    ).model_dump()
+    if msi_session_entry not in msi_session_list:
+        msi_session_list.append(msi_session_entry)
+
+
