@@ -42,6 +42,7 @@ export async function fetchResource(requestURL: string): Promise<Response> {
   return response;
 }
 
+
 /**
  * Returns the request URL.
  * @param base - Base URL.
