@@ -39,3 +39,25 @@ export async function fetchResource(requestURL: string): Promise<Response> {
 
   return response;
 }
+
+/**
+ * Returns the request URL.
+ * @param base - Base URL.
+ * @param url - URL (relative reference to the base URL).
+ * @param searchParams - Search parameters.
+ * @returns request URL.
+ */
+export function getRequestURL(
+  base: string,
+  url = "/",
+  searchParams?: SearchParam[],
+): string {
+  const requestURL = new URL(url, base);
+  for (const searchParam of searchParams || []) {
+    requestURL.searchParams.set(
+      searchParam.name,
+      JSON.stringify(searchParam.value),
+    );
+  }
+  return requestURL.href;
+}
