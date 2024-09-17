@@ -3,7 +3,7 @@ from typing import Union, Optional, List, ClassVar
 from rest_framework import status
 from rest_framework.exceptions import APIException
 from django.http import JsonResponse
-
+import re
 
 class UnprocessableEntity(APIException):
     status_code = 422  # Define the 422 status code here
