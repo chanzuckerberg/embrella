@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "e2e": "playwright test --project chromium",
+    "e2e:chrome": "playwright test --project chromium",
+    "e2e:ff": "playwright test --project firefox",
+    "e2e:ie": "playwright test --project edge"
   },
   "dependencies": {
     "@czi-sds/components": "^20.2.0",
@@ -28,6 +32,7 @@
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@playwright/test": "^1.47.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.0.0",
     "@types/jest": "^29.5.12",
