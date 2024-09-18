@@ -24,7 +24,7 @@ const config: PlaywrightTestConfig = {
   testMatch: /.*\.test\.ts/,
   timeout: 1.5 * 60 * 1000,
   use: {
-    baseURL: "http://localhost:3000/",
+    baseURL: "http://localhost:3000/next",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
     video: 'retain-on-failure',
