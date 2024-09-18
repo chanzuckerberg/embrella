@@ -54,9 +54,8 @@ def extract_parameters(json_data, parameter_names):
         raise ValueError("Input data is empty, please provide data")
 
     extracted_params = {}
-
     for name in parameter_names:
-        value = json_data.get(name)
+        value = json_data['parameters'].get(name)
         if value is None:
             raise ValueError(f"{name} not found in the JSON data")
         extracted_params[name] = value
