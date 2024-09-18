@@ -20,7 +20,7 @@ import json
 import os
 import logging
 from functools import reduce
-
+import json
 logger = logging.getLogger(__name__)
 
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
@@ -247,8 +247,6 @@ def available_filters(request):
 
 # If you want to test locally, you can comment out the @login_required decorator
 # @login_required
-import json
-
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
