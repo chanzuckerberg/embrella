@@ -85,8 +85,8 @@
         }
         th, td {
             padding: 10px;
-            text-align: center; /* Center the content horizontally */
-            vertical-align: middle; /* Center the content vertically */
+            text-align: center;
+            vertical-align: middle;
         }
         th {
             background-color: #f4f4f9;
@@ -111,8 +111,7 @@
         async function fetchMetadata() {
             const session = document.getElementById('session').value;
             const runId = document.getElementById('run_id').value;
-            const volId = document.getElementById('vol_id').value;
-            const endpoint = `/workflow/get_aretomo3?session=${session}&run_id=${runId}${volId ? `&vol_id=${volId}` : ''}`;
+            const endpoint = `/workflow/get_aretomo3?session=${session}&run_id=${runId}`;
 
             try {
                 const response = await fetch(endpoint);
@@ -172,9 +171,6 @@
 
             <label for="run_id">Run ID:</label>
             <input type="text" id="run_id" name="run_id" required>
-
-            <label for="vol_id">Volume ID (optional):</label>
-            <input type="text" id="vol_id" name="vol_id">
 
             <button type="submit">Fetch Metadata</button>
         </form>
