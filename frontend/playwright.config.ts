@@ -24,7 +24,7 @@ const config: PlaywrightTestConfig = {
   testMatch: /.*\.test\.ts/,
   timeout: 1.5 * 60 * 1000,
   use: {
-    baseURL: "http://localhost:3000/next",
+    baseURL: "http://localhost:3000/next/",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
     video: 'retain-on-failure',
@@ -33,7 +33,7 @@ const config: PlaywrightTestConfig = {
     command: "yarn && yarn dev",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
-    url: "http://localhost:3000/",
+    url: "http://localhost:3000/next/",
   },
   workers: "75%",
 };
