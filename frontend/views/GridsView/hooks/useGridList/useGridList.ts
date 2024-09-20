@@ -4,12 +4,13 @@ import { useFetchFilters } from "@/views/GridsView/hooks/useFetchFilters";
 import { useCallback } from "react";
 
 export const useGridList = (): UseGridList => {
-  const gridList = useFetchGrids();
+  const grids = useFetchGrids();
   const filtersList = useFetchFilters();
 
   const onFilter = useCallback((): void => {
     // TODO(cc): Implement filter logic.
   }, []);
 
+  const gridList = grids?.grids;
   return { gridList, filtersList, onFilter };
 };
