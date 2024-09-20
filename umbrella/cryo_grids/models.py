@@ -60,7 +60,8 @@ class CryoGridBox(models.Model):
         unique_together = [["puck","position_in_puck"]]
 
     def __str__(self):
-        return 'Cryo grid box %s in color %s and %s numbering' % (self.name, self.get_color_display(), self.get_numbering_display())
+        # return 'Cryo grid box %s in color %s and %s numbering' % (self.name, self.get_color_display(), self.get_numbering_display())
+        return f'{self.name} in color {self.get_color_display()}'
 
 class CryoGridCassette(models.Model):
     name = models.CharField(max_length=20, unique=True)
