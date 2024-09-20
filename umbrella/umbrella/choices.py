@@ -3,6 +3,7 @@
 CANE_COLORS = [
     ('CF1E01','Red'), # Hex=#CF1E01 RGB=(207,30,1)
     ('B9BAB2','Silver'), # Hex=#B9BAB2 RGB=(185,186,178)
+    ('FFC0CB', 'Pink')
 ]
 
 PUCK_COLORS = [

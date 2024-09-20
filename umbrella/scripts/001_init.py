@@ -25,11 +25,21 @@ def create_project():
 def create_grid(user, project):
     site = Site.objects.create(name='3400Bridge',address='3400 Bridge Parkway')
     dewar = Dewar.objects.create(name='CZII 1', site=site)
+    dewar2 = Dewar.objects.create(name='CZII 2', site=site)
+
     cane = Cane.objects.create(name='cane1', color='CF1E01',dewar=dewar,position_in_dewar=1)
+    cane2 = Cane.objects.create(name='cane2', color='FFC0CB',dewar=dewar2,position_in_dewar=1)
+
     puck = Puck.objects.create(name='puck1', color='CF1E01',cane=cane,position_in_cane=1)
+    for i in range(2, 11):
+        Puck.objects.create(name=f'puck{i}', color='CF1E01',cane=cane,position_in_cane=1)
+    for i in range(11, 21):
+        Puck.objects.create(name=f'puck{i}', color='CF1E01',cane=cane,position_in_cane=2)
+
     box = CryoGridBox.objects.create(name='box1', color='FFFFFF',puck=puck,position_in_puck=1)
     sample = Sample.objects.create(name='lysosome',ontology='GO:0005764')
     device = PlungeFreezingDevice.objects.create(name='GP2',maker_model='Leica GP2',site=site)
+    device_vitrobot = PlungeFreezingDevice.objects.create(name='Vitrobot', maker_model='Vitrobot', site=site)
     plan = PlungeFreezingPlan.objects.create(sample_application_protocol = '', blot_time=6.0,wash_step='')
     plan.sample.add(sample)
     session = PlungeFreezingSession.objects.create(user=user,device=device,device_temperature=4.0,humidity=95,number_of_grids=1)
