@@ -184,13 +184,13 @@ def available_filters(request):
                         .annotate(count=Count('id'))
                         .order_by('cassette_temp_name')
                         .values(name=F('cassette_temp_name'), count=F('count'))),
-            'screeningsession': list(queryset.filter(freezing_session__isnull=False)
+            'screeningSession': list(queryset.filter(freezing_session__isnull=False)
                         .annotate(screen_session_temp_name=F('atlassession__group__name'))
                         .values(screen_session_temp_name=F('screen_session_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('screen_session_temp_name')
                         .values(name=F('screen_session_temp_name'), count=F('count'))),
-            'msisession': list(queryset.filter(msisession__isnull=False)  # Exclude null msisession relations
+            'msiSession': list(queryset.filter(msisession__isnull=False)  # Exclude null msisession relations
                         .annotate(msi_session_temp_name=F('msisession__name'))
                         .values(msi_session_temp_name=F('msi_session_temp_name'))
                         .annotate(count=Count('id'))
