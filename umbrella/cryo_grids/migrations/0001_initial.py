@@ -68,7 +68,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=20)),
-                ('color', models.CharField(choices=[('CF1E01', 'Red'), ('B9BAB2', 'Silver')], default='CF1E01', max_length=40)),
+                ('color', models.CharField(choices=[('CF1E01', 'Red'), ('B9BAB2', 'Silver'), ('FFC0CB', 'Pink')], default='CF1E01', max_length=40)),
                 ('position_in_dewar', models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
                 ('dewar', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.dewar')),
             ],
