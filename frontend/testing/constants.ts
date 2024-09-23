@@ -105,7 +105,7 @@ export const TEST_DEFAULT_GRIDS_PAGE_SIZE = 10;
 export const URL_BASE = "http://localhost:8000";
 export const URL_NONEXISTENT = "/nonexistent";
 export const URL_GRIDS = "/cryo_grids/v1/grids";
-export const URL_FILTERS_LIST = "/cryo_grids/v1/filterslist";
+export const URL_FILTERS_LIST = "/cryo_grids/v1/filterlist";
 export const URL_FOO = "/foo";
 
 export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<GridFilterCategory> = {
