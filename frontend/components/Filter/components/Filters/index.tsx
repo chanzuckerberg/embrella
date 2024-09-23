@@ -15,6 +15,7 @@ export const Filters = <FilterId, FilterCategory extends string>({
           {i !== 0 && <FilterDivider />}
           {filterViews.map((filterView) => (
             <Filter
+              category={filterView.category}
               filterView={filterView}
               key={filterView.category}
               onFilter={onFilter}

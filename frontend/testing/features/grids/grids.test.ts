@@ -1,5 +1,5 @@
 import { ROUTES } from "@/common/constants";
-import { TEST_ID_GRIDS } from "@/views/GridsView/components/GridList/common/constants";
+import { TEST_ID_GRIDS } from "@/views/GridsView/components/Main/components/GridList/common/constants";
 import { expect, test } from "@playwright/test";
 
 const { describe } = test;

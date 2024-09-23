@@ -9,7 +9,9 @@ import {
  * @param options - Selected options.
  * @returns an array of filter values.
  */
-export function getFilterValue(options: AutocompleteOption[]): FilterValue[] {
+export function getFilterValue(
+  options: (string | AutocompleteOption)[],
+): FilterValue[] {
   return options.map(mapFilterValue);
 }
 
@@ -18,7 +20,10 @@ export function getFilterValue(options: AutocompleteOption[]): FilterValue[] {
  * @param option - Option.
  * @returns filter value.
  */
-export function mapFilterValue(option: AutocompleteOption): FilterValue {
+export function mapFilterValue(
+  option: string | AutocompleteOption,
+): FilterValue {
+  if (typeof option === "string") return option;
   if (option.name === FILTER_VALUE.UNSPECIFIED) return null;
   return option.name;
 }

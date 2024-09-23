@@ -102,11 +102,11 @@ export const GRIDS = [GRID_A, GRID_B];
 
 export const TEST_DEFAULT_GRIDS_PAGE_SIZE = 10;
 
-export const URL_NONEXISTENT = "http://localhost:8000/nonexistent";
-export const URL_GRIDS = "http://localhost:8000/cryo_grids/v1/grids";
-export const URL_FILTERS_LIST =
-  "http://localhost:8000/cryo_grids/v1/filterslist";
-export const URL_FOO = "http://localhost:8000/foo";
+export const URL_BASE = "http://localhost:8000";
+export const URL_NONEXISTENT = "/nonexistent";
+export const URL_GRIDS = "/cryo_grids/v1/grids";
+export const URL_FILTERS_LIST = "/cryo_grids/v1/filterslist";
+export const URL_FOO = "/foo";
 
 export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<GridFilterCategory> = {
   filters: {
@@ -129,7 +129,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<GridFilterCategory> = {
         selected: false,
       },
     ],
-    msisession: [
+    msiSession: [
       {
         name: "foo bazfoo barfoobar",
         count: 2,
@@ -162,7 +162,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<GridFilterCategory> = {
         selected: false,
       },
     ],
-    screeningsession: [
+    screeningSession: [
       {
         name: "foofoo baz foo",
         count: 2,
@@ -230,7 +230,7 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
   [URL_FOO]: {
     body(url) {
       return JSON.stringify(
-        url.searchParams.get("alt") === "true" ? "bar" : "foo",
+        url.searchParams.get("q") === "true" ? "bar" : "foo",
       );
     },
   },

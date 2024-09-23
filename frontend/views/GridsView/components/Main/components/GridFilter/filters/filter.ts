@@ -1,7 +1,7 @@
 import {
   GRID_FILTER_ID,
   GridFilterConfig,
-} from "@/views/GridsView/components/GridFilter/filters/types";
+} from "@/views/GridsView/components/Main/components/GridFilter/filters/types";
 
 export const GRID_FILTER_CONFIG_CASSETTE: GridFilterConfig = {
   filterCategory: "cassette",

@@ -4,33 +4,33 @@ import {
   COMPLEX_FILTER_PROPS,
   INPUT_DROPDOWN_PROPS,
 } from "@/components/Filter/components/Filter/constants";
-import { MouseEvent, useCallback } from "react";
-import { AutocompleteOption } from "@/components/Filter/common/types";
+import React, { useCallback } from "react";
 import { getFilterValue } from "@/components/Filter/components/Filter/utils";
+import { AutocompleteOption } from "@/components/Filter/common/types";
 
 export const Filter = <FilterId, FilterCategory extends string>({
+  category,
   filterView,
   onFilter,
 }: Props<FilterId, FilterCategory>): JSX.Element => {
   const onChange = useCallback(
-    (_: MouseEvent, options: AutocompleteOption[]) => {
+    (options: (string | AutocompleteOption)[]) => {
       onFilter({
-        category: filterView.category,
+        category,
         value: getFilterValue(options),
       });
     },
-    [filterView, onFilter],
+    [category, onFilter],
   );
   return (
     <SDSComplexFilter
       {...COMPLEX_FILTER_PROPS}
-      DropdownMenuProps={{ onChange }}
       InputDropdownProps={{
         ...INPUT_DROPDOWN_PROPS,
         disabled: filterView.disabled,
       }}
       label={filterView.label}
-      onChange={() => {}}
+      onChange={onChange}
       options={filterView.options}
       value={filterView.value}
     />

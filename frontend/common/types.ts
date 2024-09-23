@@ -19,11 +19,11 @@ export interface FiltersList<FilterCategory extends string> {
 export type GridFilterCategory =
   | "cassette"
   | "date"
-  | "msisession"
+  | "msiSession"
   | "project"
   | "puck"
   | "sample"
-  | "screeningsession"
+  | "screeningSession"
   | "status"
   | "user";
 
@@ -79,11 +79,12 @@ export interface GridFreezingPlanSample {
   url: string;
 }
 
-export interface SearchParam {
-  name: SEARCH_PARAM_NAME;
-  value: unknown;
-}
+export type SearchParam = Partial<Record<SEARCH_PARAM_NAME, unknown>>;
 
 export enum SEARCH_PARAM_NAME {
   FILTER = "q",
+  PAGINATION_PAGE = "page",
+  PAGINATION_PAGE_SIZE = "pageSize",
+  SORT_COLUMN_NAME = "sort",
+  SORT_DIRECTION = "asc",
 }

@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchResource } from "@/common/utils";
+import { fetchResource, getRequestURL } from "@/common/utils";
 import { UseFetchData } from "@/hooks/useFetchData/common/types";
+import { SearchParam } from "@/common/types";
 
 export const useFetchData = <D>(
-  requestURLBase: string,
-  queryParams?: Record<string, string>,
+  baseURL: string,
+  relativeURL: string,
+  searchParam: SearchParam = {},
   shouldFetch = true,
 ): UseFetchData<D> => {
-  const requestURL = getFullUrl(requestURLBase, queryParams);
-
   const [dataState, setDataState] = useState<UseFetchData<D>>({
     isSuccess: false,
   });
+  const requestURL = useMemo(
+    () => getRequestURL(baseURL, relativeURL, searchParam),
+    [baseURL, relativeURL, searchParam],
+  );
 
   useEffect(() => {
     if (!shouldFetch) return;
@@ -39,12 +43,3 @@ export const useFetchData = <D>(
 
   return dataState;
 };
-
-function getFullUrl(
-  baseUrl: string,
-  queryParams?: Record<string, string>,
-): string {
-  const url = new URL(baseUrl);
-  if (queryParams) url.search = new URLSearchParams(queryParams).toString();
-  return url.toString();
-}
