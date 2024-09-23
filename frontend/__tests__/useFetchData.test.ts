@@ -31,12 +31,13 @@ describe("useFetchData", () => {
   it("doesn't update until shouldFetch is true", async () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     const { rerender, result } = renderHook(
-      ({ baseURL, relativeURL, shouldFetch }) =>
-        useFetchData(baseURL, relativeURL, undefined, shouldFetch),
+      ({ baseURL, relativeURL, searchParam, shouldFetch }) =>
+        useFetchData(baseURL, relativeURL, searchParam, shouldFetch),
       {
         initialProps: {
           baseURL: URL_BASE,
           relativeURL: URL_FOO,
+          searchParam: undefined,
           shouldFetch: false,
         },
       },
@@ -48,6 +49,7 @@ describe("useFetchData", () => {
     rerender({
       baseURL: URL_BASE,
       relativeURL: URL_FOO,
+      searchParam: undefined,
       shouldFetch: true,
     });
     await act(async () => await delay());
