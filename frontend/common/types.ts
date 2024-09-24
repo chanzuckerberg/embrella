@@ -19,11 +19,11 @@ export interface FiltersList<FilterCategory extends string> {
 export type GridFilterCategory =
   | "cassette"
   | "date"
-  | "msisession"
+  | "msiSession"
   | "project"
   | "puck"
   | "sample"
-  | "screeningsession"
+  | "screeningSession"
   | "status"
   | "user";
 

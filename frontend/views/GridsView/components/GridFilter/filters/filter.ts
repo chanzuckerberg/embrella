@@ -16,7 +16,7 @@ export const GRID_FILTER_CONFIG_DATE: GridFilterConfig = {
 };
 
 export const GRID_FILTER_CONFIG_MSI_SESSION: GridFilterConfig = {
-  filterCategory: "msisession",
+  filterCategory: "msiSession",
   filterId: GRID_FILTER_ID.MSI_SESSION,
   label: "MSI Session",
 };
@@ -40,7 +40,7 @@ export const GRID_FILTER_CONFIG_SAMPLE: GridFilterConfig = {
 };
 
 export const GRID_FILTER_CONFIG_SCREENING_SESSION: GridFilterConfig = {
-  filterCategory: "screeningsession",
+  filterCategory: "screeningSession",
   filterId: GRID_FILTER_ID.SCREENING_SESSION,
   label: "Screening Session",
 };
