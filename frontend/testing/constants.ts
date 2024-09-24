@@ -1,10 +1,5 @@
-import {
-  ApiListResponse,
-  FiltersList,
-  GridData,
-  GridFilterCategory,
-} from "@/common/types";
-import { FetchResponseInfo } from "@/testing/types";
+import { ApiListResponse, FiltersList, GridData } from "@/common/types";
+import { FetchResponseInfo, TestFilterCategory } from "@/testing/types";
 
 const TEST_SORTABLE_GRID_FIELDS = [
   "grid",
@@ -108,7 +103,7 @@ export const URL_GRIDS = "/cryo_grids/v1/grids";
 export const URL_FILTERS_LIST = "/cryo_grids/v1/filterlist";
 export const URL_FOO = "/foo";
 
-export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<GridFilterCategory> = {
+export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<TestFilterCategory> = {
   filters: {
     cassette: [
       {
