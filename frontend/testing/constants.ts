@@ -129,7 +129,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<GridFilterCategory> = {
         selected: false,
       },
     ],
-    msisession: [
+    msiSession: [
       {
         name: "foo bazfoo barfoobar",
         count: 2,
@@ -162,7 +162,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<GridFilterCategory> = {
         selected: false,
       },
     ],
-    screeningsession: [
+    screeningSession: [
       {
         name: "foofoo baz foo",
         count: 2,
