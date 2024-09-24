@@ -5,11 +5,12 @@ import { Filter } from "@/components/Filter/components/Filter";
 
 export const Filters = <FilterId, FilterCategory extends string>({
   className,
+  dataTestId,
   filters,
   onFilter,
 }: Props<FilterId, FilterCategory>): JSX.Element => {
   return (
-    <StyledFilters className={className}>
+    <StyledFilters className={className} data-testid={dataTestId}>
       {filters.map((filterViews, i) => (
         <Fragment key={i}>
           {i !== 0 && <FilterDivider />}
