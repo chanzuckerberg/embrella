@@ -394,7 +394,7 @@ def apply_filters(queryset, filters):
         'projectName': 'intended_project__name__in',
         'cassetteName': 'grid_cassette__name__in',
         'puckName': 'grid_box__puck__name__in',
-        'userName': 'user__username__in',
+        'user': 'user__username__in',
         'msiSessionName': 'msisession__name__in',
         'screenSessionName': 'atlassession__group__name__in',
         'trashed': 'trashed__in',
