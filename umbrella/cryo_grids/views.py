@@ -338,7 +338,15 @@ def get_cryo_grids_details(request):
 
         # Convert the formatted result into a list of grids
         formatted_grid_list = list(formatted_result.values())
+        
+        # Check if sample filtering is requested
+        sample_filter = next((item for item in q_param if item['category'] == 'sample'), None)
+        if sample_filter:
+            sample_name_input = sample_filter['value'] if isinstance(sample_filter['value'], list) else [sample_filter['value']]
+            formatted_result = filter_by_sample_name(formatted_result, sample_name_input)
 
+        # Convert the formatted result into a list of grids
+        formatted_grid_list = list(formatted_result.values())
         # Apply pagination to the formatted grid list
         page = request.GET.get('page', 1)
 
