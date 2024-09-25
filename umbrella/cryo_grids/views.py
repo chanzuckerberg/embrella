@@ -393,7 +393,7 @@ def apply_filters(queryset, filters):
     filter_mappings = {
         'projectName': 'intended_project__name__in',
         'cassetteName': 'grid_cassette__name__in',
-        'puckName': 'grid_box__puck__name__in',
+        'puck': 'grid_box__puck__name__in',
         'user': 'user__username__in',
         'msiSessionName': 'msisession__name__in',
         'screenSessionName': 'atlassession__group__name__in',
