@@ -123,7 +123,7 @@ def available_filters(request):
         selected_filters = {}
         for qf in query_params.q:
             selected_filters[qf.category] = set(qf.value)  # Store as a set for efficient lookup
-        print(selected_filters)
+
         # Base queryset and your existing logic for processing the filters...
         # Base queryset with annotations for counting occurrences
         queryset = CryoGrid.objects.select_related(
@@ -143,18 +143,10 @@ def available_filters(request):
 
         # Function to add 'selected' key based on user selection
         def add_selected_status(filter_list, category):
-            # print(category)
             for item in filter_list:
-                # print(filter_list)
-                
                 item_name = item['name']
                 # print(item_name)
                 if isinstance(item_name, str):
-                    print('-------------------------')
-                    print(item_name)
-                    # print(category)
-                    print(selected_filters.get(category,set()))
-                    print('-------------------------')
                     item['selected'] = item_name in selected_filters.get(category, set())
                 else:
                     item['selected'] = False
