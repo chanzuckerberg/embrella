@@ -2,13 +2,13 @@ import {
   GRID_COLUMN,
   GridColumnDef,
   GridColumnDefCellContext,
-} from "@/views/GridsView/components/GridList/columns/types";
+} from "@/views/GridsView/components/Main/components/GridList/columns/types";
 import { Links } from "@/components/Table/components/CellComponent/components/Links";
 import { Link } from "@/components/Table/components/CellComponent/components/Link";
 import {
   GRID_COLUMN_ACCESSOR_FN,
   GRID_COLUMN_ID,
-} from "@/views/GridsView/components/GridList/columns/constants";
+} from "@/views/GridsView/components/Main/components/GridList/columns/constants";
 import { LinkTValue } from "@/components/Table/components/CellComponent/types";
 
 export const GRID_COLUMN_DEF_CRYOGRID: GridColumnDef = {

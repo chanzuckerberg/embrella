@@ -1,16 +1,17 @@
 export interface ApiListResponse<T> {
-  pagination: {
-    page: number;
-    pageSize: number;
-    totalPages: number;
-    totalResults: number;
-  };
+  pagination: Pagination;
   result: T[];
 }
 
 export interface Configs {
   API_URL: string;
 }
+
+export type EntityList<T, K extends string> = {
+  [entityName in K]: T[];
+} & {
+  pagination: Pagination;
+};
 
 export interface FiltersList<FilterCategory extends string> {
   filters: Record<FilterCategory, FilterOption[]>;
@@ -19,11 +20,11 @@ export interface FiltersList<FilterCategory extends string> {
 export type GridFilterCategory =
   | "cassette"
   | "date"
-  | "msisession"
+  | "msiSession"
   | "project"
   | "puck"
   | "sample"
-  | "screeningsession"
+  | "screeningSession"
   | "status"
   | "user";
 
@@ -79,11 +80,19 @@ export interface GridFreezingPlanSample {
   url: string;
 }
 
-export interface SearchParam {
-  name: SEARCH_PARAM_NAME;
-  value: unknown;
+export interface Pagination {
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalResults: number;
 }
+
+export type SearchParam = Partial<Record<SEARCH_PARAM_NAME, unknown>>;
 
 export enum SEARCH_PARAM_NAME {
   FILTER = "q",
+  PAGINATION_PAGE = "page",
+  PAGINATION_PAGE_SIZE = "pageSize",
+  SORT_COLUMN_NAME = "sort",
+  SORT_DIRECTION = "asc",
 }

@@ -53,10 +53,8 @@ function buildFilterViewOptions<FilterId, FilterCategory extends string>(
 function buildFilterViewValue<FilterId, FilterCategory extends string>(
   filterOptions?: FilterOption[],
 ): SelectFilterView<FilterId, FilterCategory>["value"] {
-  if (!filterOptions) return;
-  const selectedOptions = filterOptions.filter(isSelected).map(mapOption);
-  if (selectedOptions.length === 0) return;
-  return selectedOptions;
+  if (!filterOptions) return [];
+  return filterOptions.filter(isSelected).map(mapOption);
 }
 
 /**

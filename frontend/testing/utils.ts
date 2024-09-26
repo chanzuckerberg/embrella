@@ -11,10 +11,10 @@ export function initFetch(
   global.fetch = jest.fn(async (url): Promise<TestResponse> => {
     await getBlocker();
     const urlObj = new URL(url);
-    const truncatedUrl = urlObj.origin + urlObj.pathname;
+    const relativeURL = urlObj.pathname;
     const responseInfo =
-      Object.hasOwn(FETCH_RESPONSES, truncatedUrl) &&
-      FETCH_RESPONSES[truncatedUrl];
+      Object.hasOwn(FETCH_RESPONSES, relativeURL) &&
+      FETCH_RESPONSES[relativeURL];
     if (!responseInfo) throw new TypeError("Failed to fetch");
     const body =
       typeof responseInfo.body === "function"

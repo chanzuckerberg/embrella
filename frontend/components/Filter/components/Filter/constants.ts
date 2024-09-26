@@ -3,10 +3,11 @@ import { ComplexFilterProps } from "@/components/Filter/common/types";
 
 export const COMPLEX_FILTER_PROPS: Pick<
   ComplexFilterProps,
-  "isTriggerChangeOnOptionClick" | "multiple"
+  "isTriggerChangeOnOptionClick" | "multiple" | "search"
 > = {
   isTriggerChangeOnOptionClick: true,
   multiple: true,
+  search: true,
 };
 
 export const INPUT_DROPDOWN_PROPS: Pick<

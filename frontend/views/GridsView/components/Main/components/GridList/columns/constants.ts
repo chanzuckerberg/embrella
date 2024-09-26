@@ -3,7 +3,7 @@ import { GridData } from "@/common/types";
 import {
   GRID_COLUMN,
   GridColumnDef,
-} from "@/views/GridsView/components/GridList/columns/types";
+} from "@/views/GridsView/components/Main/components/GridList/columns/types";
 import {
   getCryogridAccessorFn,
   getFreezingPlanAccessorFn,
@@ -11,7 +11,7 @@ import {
   getMSIAccessorFn,
   getProjectAccessorFn,
   getUpdatedAtAccessorFn,
-} from "@/views/GridsView/components/GridList/columns/accessor";
+} from "@/views/GridsView/components/Main/components/GridList/columns/accessor";
 
 export const GRID_COLUMN_ACCESSOR_FN: Record<
   keyof typeof GRID_COLUMN,
