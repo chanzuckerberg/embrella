@@ -340,6 +340,7 @@ def get_cryo_grids_details(request):
         ).order_by(sort_order)
 
         # Apply filters from q parameter
+        print(query_params.q)
         queryset = apply_filters(queryset, query_params.q)
 
         # Format the queryset into grid items
@@ -413,13 +414,12 @@ def apply_filters(queryset, filters):
         'puck': 'grid_box__puck__name__in',
         'user': 'user__username__in',
         'msiSession': 'msisession__name__in',
-        'screenSession': 'atlassession__group__name__in',
+        'screeningSession': 'atlassession__group__name__in',
         'status': 'trashed__in',
     }
-
+    
     q_filters = Q()
     filter_type = 'OR'
-    # print(filter_mappings)
     # Process filters to determine filter_type and create Q objects
     filter_q_objects = []
     for filter_item in filters:
