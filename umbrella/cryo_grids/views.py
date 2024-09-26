@@ -422,10 +422,10 @@ def apply_filters(queryset, filters):
     filter_type = 'OR'
     # Process filters to determine filter_type and create Q objects
     filter_q_objects = []
+
     for filter_item in filters:
         category = filter_item.get('category')
         values = filter_item.get('value')
-
         if category == 'filterType' and values:
             filter_type = values[0].upper() if isinstance(values, list) else values.upper()
         elif category in filter_mappings and values:
@@ -433,11 +433,11 @@ def apply_filters(queryset, filters):
             if not isinstance(values, list):
                 values = [values]
             filter_q_objects.append(Q(**{field: values}))
-        elif category == 'month' and (isinstance(values, int) or isinstance(values, str)):
-            months = int(values)
+        elif category == 'month' and (isinstance(values, list) or isinstance(values, int) or isinstance(values, str)):
+            months = int(values[0])
             now = datetime.now()
             start_date = now - timedelta(days=months * 30)
-            filter_q_objects.append(Q(created_on__gte=start_date))
+            filter_q_objects.append(Q(grid_updated_on__gte=start_date))
 
     # Combine Q objects based on filter_type
     if filter_type == 'OR':
