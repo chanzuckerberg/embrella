@@ -1,6 +1,6 @@
 import { State } from "@/views/GridsView/common/store/types";
 import { UpdateFilterPayload } from "@/views/GridsView/common/store/actions/types";
-import { buildNextFilterState } from "@/components/Filter/common/utils";
+import { buildNextFilterState } from "@/views/GridsView/common/store/actions/filter";
 
 /**
  * Update filter action.
