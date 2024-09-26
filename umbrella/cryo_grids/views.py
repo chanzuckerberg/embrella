@@ -414,12 +414,12 @@ def apply_filters(queryset, filters):
         'user': 'user__username__in',
         'msiSession': 'msisession__name__in',
         'screenSession': 'atlassession__group__name__in',
-        'trashed': 'trashed__in',
+        'status': 'trashed__in',
     }
 
     q_filters = Q()
     filter_type = 'OR'
-
+    # print(filter_mappings)
     # Process filters to determine filter_type and create Q objects
     filter_q_objects = []
     for filter_item in filters:

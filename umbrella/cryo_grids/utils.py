@@ -15,14 +15,13 @@ class UnprocessableEntity(APIException):
         self.detail = detail
 
 class CryoGridsQueryParams(BaseModel):
-    q: Optional[List[dict[str, Union[List[str], str, bool]]]] = None  # q parameter now expects a list of dictionaries
+    q: Optional[List[dict[str, Union[List[Union[str, bool]], str, bool]]]] = None  # q parameter now expects a list of dictionaries
     
     # Define the allowed category names in camelCase
-    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType","puck", "user", "screeningSession", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "cassette", "sample", "status", "date", "freezingPlan", "freezingSession"}
+    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "puck", "user", "screeningSession", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "cassette", "sample", "date", "freezingPlan", "freezingSession"}
 
     @validator('q')
     def validate_q(cls, value):
-        # Ensure that 'q' is a list of dictionaries with 'category' and 'value'
         if value is None:
             return []
         if not isinstance(value, list):
@@ -31,12 +30,19 @@ class CryoGridsQueryParams(BaseModel):
             )
         
         for item in value:
-            if 'category' not in item or 'value' not in item:
+            if not isinstance(item, dict):
                 raise UnprocessableEntity(
-                    detail={"error": "Each item in 'q' must have 'category' and 'value'"}
+                    detail={"error": "Each item in 'q' must be a dictionary with 'category' and 'value'"}
                 )
             
-            category = item['category']
+            category = item.get('category')
+            item_value = item.get('value')
+
+            # Ensure 'category' and 'value' keys exist
+            if category is None or item_value is None:
+                raise UnprocessableEntity(
+                    detail={"error": "Each item in 'q' must have 'category' and 'value' keys"}
+                )
             
             # Check if the category is in the allowed camelCase category names
             if category not in cls.ALLOWED_CATEGORIES:
@@ -45,6 +51,18 @@ class CryoGridsQueryParams(BaseModel):
                         "error": f"Invalid category: '{category}'.",
                         "message": f"Allowed categories are: {', '.join(cls.ALLOWED_CATEGORIES)}"
                     }
+                )
+            
+            # Ensure the value is a string, list of strings, or boolean
+            if isinstance(item_value, list):
+                for val in item_value:
+                    if not isinstance(val, (str, bool)):
+                        raise UnprocessableEntity(
+                            detail={"error": f"Invalid value in list for category '{category}': expected string or boolean."}
+                        )
+            elif not isinstance(item_value, (str, bool)):
+                raise UnprocessableEntity(
+                    detail={"error": f"Invalid value for category '{category}': expected string, boolean, or list of these."}
                 )
         
         return value
