@@ -423,6 +423,12 @@ def apply_filters(queryset, filters):
     # Process filters to determine filter_type and create Q objects
     filter_q_objects = []
 
+    date_mapping = {
+        'last_1_month': 1,
+        'last_3_months': 3,
+        'last_6_months': 6
+    }
+
     for filter_item in filters:
         category = filter_item.get('category')
         values = filter_item.get('value')
@@ -433,11 +439,16 @@ def apply_filters(queryset, filters):
             if not isinstance(values, list):
                 values = [values]
             filter_q_objects.append(Q(**{field: values}))
-        elif category == 'month' and (isinstance(values, list) or isinstance(values, int) or isinstance(values, str)):
-            months = int(values[0])
-            now = datetime.now()
-            start_date = now - timedelta(days=months * 30)
-            filter_q_objects.append(Q(grid_updated_on__gte=start_date))
+        elif category == 'date' and values:
+            # Handle the possible values for the 'date' filter
+            date_value = values[0] if isinstance(values, list) else values
+            if date_value in date_mapping:
+                months = date_mapping[date_value]
+                now = datetime.now()
+                start_date = now - timedelta(days=months * 30)
+                filter_q_objects.append(Q(grid_updated_on__gte=start_date))
+            else:
+                return JsonResponse({'error': f'Invalid value for date filter: {date_value}'}, status=400)
 
     # Combine Q objects based on filter_type
     if filter_type == 'OR':
