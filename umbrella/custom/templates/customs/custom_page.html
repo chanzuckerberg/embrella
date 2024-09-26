@@ -136,9 +136,16 @@
                 <th>TEM sessions</th>
                 <th>Processing runs</th>
             </tr>
+            <script>
+                // Function to detect the base URL and append the `/next` endpoint
+                function getNextUrl() {
+                    const baseUrl = window.location.origin; // Get the base URL (protocol + hostname)
+                    return `${baseUrl}/next`;
+                }
+            </script>
             <tr>
                 <td>
-                    <a href="{% url 'admin:cryo_grids_cryogrid_changelist' %}" class="button">Cryo Grids</a>
+                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getNextUrl()">Cryo Grids</a>
                     <p> grids stored </p>
                 </td>
                 <td>
