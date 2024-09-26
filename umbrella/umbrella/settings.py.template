@@ -117,6 +117,12 @@ JAZZMIN_SETTINGS = {
     "show_ui_builder": False,  # Disable the UI Builder
     "copyright": "CZII",
     "show_version": False,
+    "show_view_site": True,
+    "show_sidebar": True,
+    "topmenu_links": [
+        # Url that gets reversed (Permissions can be added)
+        {"name": "Home",  "url": "/umbrella", "permissions": ["auth.view_user"]},
+    ]
 }
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
