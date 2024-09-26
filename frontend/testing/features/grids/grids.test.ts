@@ -46,13 +46,13 @@ describe("Grids", () => {
       page,
     }) => {
       await goToGridList(page);
-      await getFilterLocators(page).nth(0).click();
+      await openFilter(page);
       const filterPopper = getFilterPopperLocator(page);
       await expect(filterPopper).toBeVisible();
     });
     test("should close filter popper with escape key", async ({ page }) => {
       await goToGridList(page);
-      await getFilterLocators(page).nth(0).click();
+      await openFilter(page);
       const filterPopper = getFilterPopperLocator(page);
       await expect(filterPopper).toBeVisible();
       await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
@@ -60,7 +60,7 @@ describe("Grids", () => {
     });
     test("should display filter options", async ({ page }) => {
       await goToGridList(page);
-      await getFilterLocators(page).nth(0).click();
+      await openFilter(page);
       const filterOptions = getFilterOptionLocators(page);
       await expect(filterOptions).toBeVisible();
     });
@@ -68,7 +68,7 @@ describe("Grids", () => {
       page,
     }) => {
       await goToGridList(page);
-      await getFilterLocators(page).nth(0).click();
+      await openFilter(page);
       const filterPopper = getFilterPopperLocator(page);
       await getFilterOptionLocators(page).nth(0).click();
       await expect(filterPopper).toBeVisible();
@@ -76,6 +76,7 @@ describe("Grids", () => {
     test("should apply filter", async ({ page }) => {
       await goToGridList(page);
       const filter = getFilterLocators(page).nth(0);
+      await skipIfFilterDisabled(filter);
       await filter.click();
       const filterOption = getFilterOptionLocator(page);
       const filterOptionValue = await filterOption
@@ -98,6 +99,7 @@ describe("Grids", () => {
     }) => {
       await goToGridList(page);
       const filter = getFilterLocators(page).nth(0);
+      await skipIfFilterDisabled(filter);
       await filter.click();
       await getFilterOptionLocators(page).nth(0).click();
       await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
@@ -136,4 +138,17 @@ function getFilterPopperLocator(page: Page): Locator {
 
 async function goToGridList(page: Page): Promise<void> {
   await page.goto(ROUTES.HOME);
+}
+
+async function openFilter(page: Page) {
+  const filter = getFilterLocators(page).nth(0);
+  await skipIfFilterDisabled(filter);
+  await filter.click();
+}
+
+async function skipIfFilterDisabled(filter: Locator) {
+  // Skip the test if the filter is disabled; BE is unavailable.
+  if (await filter.isDisabled()) {
+    test.skip();
+  }
 }
