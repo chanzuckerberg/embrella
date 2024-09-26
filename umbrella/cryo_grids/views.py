@@ -412,7 +412,7 @@ def apply_filters(queryset, filters):
         'project': 'intended_project__name__in',
         'cassette': 'grid_cassette__name__in',
         'puck': 'grid_box__puck__name__in',
-        'user': 'user__username__in',
+        # 'user': 'user__username__in',
         'msiSession': 'msisession__name__in',
         'screeningSession': 'atlassession__group__name__in',
         'status': 'trashed__in',
@@ -439,6 +439,16 @@ def apply_filters(queryset, filters):
             if not isinstance(values, list):
                 values = [values]
             filter_q_objects.append(Q(**{field: values}))
+        elif category == 'user' and values:
+            # Handle username that could be in email format
+            usernames = values if isinstance(values, list) else [values]
+            q_username_filters = Q()
+            for username in usernames:
+                if '@' in username:
+                    # Extract the part before '@' for the firstname.lastname format
+                    username = username.split('@')[0]
+                q_username_filters |= Q(user__username__icontains=username)  # Case-insensitive match for username
+            filter_q_objects.append(q_username_filters)
         elif category == 'date' and values:
             # Handle the possible values for the 'date' filter
             date_value = values[0] if isinstance(values, list) else values
