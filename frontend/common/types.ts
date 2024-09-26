@@ -1,16 +1,17 @@
 export interface ApiListResponse<T> {
-  pagination: {
-    page: number;
-    pageSize: number;
-    totalPages: number;
-    totalResults: number;
-  };
+  pagination: Pagination;
   result: T[];
 }
 
 export interface Configs {
   API_URL: string;
 }
+
+export type EntityList<T, K extends string> = {
+  [entityName in K]: T[];
+} & {
+  pagination: Pagination;
+};
 
 export interface FiltersList<FilterCategory extends string> {
   filters: Record<FilterCategory, FilterOption[]>;
@@ -77,6 +78,13 @@ export interface GridFreezingPlanSample {
   id: number;
   name: string;
   url: string;
+}
+
+export interface Pagination {
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalResults: number;
 }
 
 export type SearchParam = Partial<Record<SEARCH_PARAM_NAME, unknown>>;

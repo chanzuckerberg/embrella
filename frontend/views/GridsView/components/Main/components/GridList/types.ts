@@ -1,5 +1,5 @@
-import { UseFetchGrids } from "@/views/GridsView/hooks/useFetchGrids/types";
+import { EntityList, GridData } from "@/common/types";
 
 export interface Props {
-  gridList?: UseFetchGrids;
+  gridList?: EntityList<GridData, "grids">;
 }

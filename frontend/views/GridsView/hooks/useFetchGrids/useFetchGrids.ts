@@ -1,21 +1,19 @@
 import configs from "@/configs/local";
 import {
   ApiListResponse,
+  EntityList,
   GridData,
   SEARCH_PARAM_NAME,
   SearchParam,
 } from "@/common/types";
 import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@/common/api";
-import {
-  UseFetchGrids,
-  UseFetchGridsOptions,
-} from "@/views/GridsView/hooks/useFetchGrids/types";
+import { UseFetchGridsOptions } from "@/views/GridsView/hooks/useFetchGrids/types";
 
 export const useFetchGrids = (
   options: UseFetchGridsOptions = {},
   searchParam: SearchParam,
-): UseFetchGrids | undefined => {
+): EntityList<GridData, "grids"> | undefined => {
   if (options.sort) {
     // TODO(cc): build sort search params in useGridList with sort state.
     searchParam[SEARCH_PARAM_NAME.SORT_COLUMN_NAME] = options.sort.column;
