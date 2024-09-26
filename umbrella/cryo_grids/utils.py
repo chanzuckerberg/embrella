@@ -145,7 +145,7 @@ class ApiResponseModel(BaseModel):
 
 # filterlist endpoint
 class FilterItem(BaseModel):
-    category: constr(strip_whitespace=True, to_lower=True)
+    category: constr(strip_whitespace=True)
     value: List[constr(strip_whitespace=True)]
 
     @validator('value', each_item=True)
