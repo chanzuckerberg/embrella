@@ -146,12 +146,15 @@ class ApiResponseModel(BaseModel):
 # filterlist endpoint
 class FilterItem(BaseModel):
     category: constr(strip_whitespace=True)
-    value: List[constr(strip_whitespace=True)]
+    value: List[Union[constr(strip_whitespace=True), bool]]  # Accept both strings and booleans
 
     @validator('value', each_item=True)
     def validate_value(cls, v):
-        if not re.match(r'^[\w\s.-]+$', v):
-            raise ValueError('Invalid characters in value')
+        # Check if the value is a string, if not, skip validation
+        if isinstance(v, str):
+            # Only validate strings
+            if not re.match(r'^[\w\s.-]+$', v):
+                raise ValueError('Invalid characters in value')
         return v
 
 class QueryParams(BaseModel):
