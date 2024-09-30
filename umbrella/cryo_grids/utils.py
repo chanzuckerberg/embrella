@@ -71,38 +71,38 @@ class CryoGridsQueryParams(BaseModel):
 ## API Result
 # Pagination metadata model
 class PaginationMetadataModel(BaseModel):
-    page: int
-    pageSize: int
-    totalPages: int
-    totalResults: int
+    page: Optional[int] = None
+    pageSize: Optional[int] = None
+    totalPages: Optional[int] = None
+    totalResults: Optional[int] = None
 
 class SortMetadataModel(BaseModel):
-    sort: Optional[str] 
-    asc: bool
+    sort: Optional[str] = None
+    asc: Optional[bool] = None
 
 class SampleModel(BaseModel):
-    id: int
-    name: str
-    url: str  # Changed from HttpUrl to str
+    id: Optional[int]
+    name: Optional[str]
+    url: Optional[str]  # Changed from HttpUrl to str
 
 class FreezingPlanModel(BaseModel):
-    id: int
-    sample: List[SampleModel]
+    id: Optional[int]
+    sample: Optional[List[SampleModel]]
 
 class FreezingSessionModel(BaseModel):
-    id: int
+    id: Optional[int]
     createdAt: Optional[str] = None
 
 class MSISessionModel(BaseModel):
-    id: int
-    name: str
-    url: str  # Changed from HttpUrl to str
+    id: Optional[int]  # id is now optional
+    name: Optional[str]  # name is now optional
+    url: Optional[str]  # url is optional
 
 class GridModel(BaseModel):
-    id: int
-    name: str
-    trashed: bool
-    url: str  # Changed from HttpUrl to str
+    id: Optional[int]
+    name: Optional[str]
+    trashed: Optional[bool]
+    url: Optional[str]  # Changed from HttpUrl to str
     createdAt: Optional[str] = None
     updatedAt: Optional[str] = None
 
@@ -110,51 +110,51 @@ class CassetteModel(BaseModel):
     name: Optional[str] = None
 
 class ProjectModel(BaseModel):
-    id: int
-    name: str
-    url: str  # Changed from HttpUrl to str
+    id: Optional[int]
+    name: Optional[str]
+    url:Optional[str]  # Changed from HttpUrl to str
 
 class PuckModel(BaseModel):
-    name: str
+    name: Optional[str]
 
 class UserModel(BaseModel):
-    id: int
-    name: str
+    id: Optional[int]
+    name: Optional[str]
 
 class CryoGridResultModel(BaseModel):
-    grid: GridModel
-    cassette: CassetteModel
-    project: ProjectModel
-    puck: PuckModel
-    user: UserModel
-    freezingPlan: FreezingPlanModel
-    freezingSession: FreezingSessionModel
+    grid: Optional[GridModel] = None
+    cassette: Optional[CassetteModel] = None
+    project: Optional[ProjectModel] = None
+    puck: Optional[PuckModel] = None
+    user: Optional[UserModel] = None
+    freezingPlan: Optional[FreezingPlanModel] = None
+    freezingSession: Optional[FreezingSessionModel] = None
     screeningSession: Optional[str] = None
-    msiSession: List[MSISessionModel]
+    msiSession: Optional[List[MSISessionModel]] = None
 
 class CryoGridResponseModel(BaseModel):
-    result: List[CryoGridResultModel]
-    pagination: PaginationMetadataModel
+    result: Optional[List[CryoGridResultModel]]
+    pagination: Optional[PaginationMetadataModel]
     sort: Optional[SortMetadataModel] = None 
 ## available set API
 class DateRangeModel(BaseModel):
-    range: str
-    count: int
+    range: Optional[str]
+    count: Optional[int]
 
 class FilterModel(BaseModel):
-    name: str
-    count: int
+    name: Optional[str]
+    count: Optional[int]
 
 class FiltersModel(BaseModel):
-    project: List[FilterModel]
-    puck: List[FilterModel]
-    sample: List[FilterModel]
-    user: List[FilterModel]
-    cassette: List[FilterModel]
-    screenSession: List[FilterModel]
-    msiSession: List[FilterModel]
-    status: List[FilterModel]
-    date: List[DateRangeModel]
+    project: Optional[List[FilterModel]] = None
+    puck: Optional[List[FilterModel]] = None
+    sample: Optional[List[FilterModel]] = None
+    user: Optional[List[FilterModel]] = None
+    cassette: Optional[List[FilterModel]] = None
+    screenSession: Optional[List[FilterModel]] = None
+    msiSession: Optional[List[FilterModel]] = None
+    status: Optional[List[FilterModel]] = None
+    date: Optional[List[DateRangeModel]] = None
 
 class ApiResponseModel(BaseModel):
     filters: FiltersModel

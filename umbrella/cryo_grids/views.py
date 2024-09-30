@@ -480,7 +480,7 @@ def format_queryset_results(queryset):
             item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
             if item['fz_session_datetime'] else None
         )
-
+        
         if grid_id not in formatted_result:
             formatted_result[grid_id] = {
                 'grid': format_grid(item).model_dump(),
