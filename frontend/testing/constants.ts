@@ -214,6 +214,7 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
           totalResults: responseGrids.length,
         },
         result: responseGrids.slice(pageStart, pageStart + pageSize),
+        sortBy: { asc: true, sort: "project" },
       };
 
       return JSON.stringify(responseData);

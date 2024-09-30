@@ -1,9 +1,12 @@
 import { State } from "@/views/GridsView/common/store/types";
 import {
+  updateFilterAction,
+  updateSortAction,
+} from "@/views/GridsView/common/store/actions";
+import {
   Action,
   ActionKind,
 } from "@/views/GridsView/common/store/actions/types";
-import { updateFilterAction } from "@/views/GridsView/common/store/actions";
 
 /**
  * Grid list reducer.
@@ -13,10 +16,12 @@ import { updateFilterAction } from "@/views/GridsView/common/store/actions";
  */
 export function reducer(state: State, action: Action): State {
   const { payload, type } = action;
-  // eslint-disable-next-line sonarjs/no-small-switch -- TODO(cc) add pagination, sorting, etc. cases.
   switch (type) {
     case ActionKind.UpdateFilterAction: {
       return updateFilterAction(state, payload);
+    }
+    case ActionKind.UpdateSortAction: {
+      return updateSortAction(state, payload);
     }
     default:
       return state;

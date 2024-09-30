@@ -4,12 +4,13 @@ import { useContext, useMemo } from "react";
 import {
   buildFilterSearchParam,
   buildSearchParam,
+  buildSortingSearchParam,
 } from "@/views/GridsView/components/Main/utils";
 import { StateContext } from "@/views/GridsView/common/store";
 import { State } from "@/views/GridsView/common/store/types";
 
 export const useConnect = () => {
-  const { filterState } = useContext<State>(StateContext);
+  const { filterState, sortState } = useContext<State>(StateContext);
 
   // Build param "q" for filtering grid and filters list.
   const qParam = useMemo(
@@ -17,8 +18,17 @@ export const useConnect = () => {
     [filterState],
   );
 
+  // Build params "sort" and "asc" for sorting grid list.
+  const sortingParam = useMemo(
+    () => buildSortingSearchParam(sortState),
+    [sortState],
+  );
+
   // Fetch grid and filters list.
-  const gridList = useFetchGrids({}, buildSearchParam({ qParam }));
+  const gridList = useFetchGrids(
+    {},
+    buildSearchParam({ qParam, sortingParam }),
+  );
   const filtersList = useFetchFilters(buildSearchParam({ qParam }));
 
   return { gridList, filtersList };

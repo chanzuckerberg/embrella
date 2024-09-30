@@ -1,5 +1,4 @@
 import { ROUTES } from "@/common/constants";
-import { TEST_ID_GRIDS } from "@/views/GridsView/components/Main/components/GridList/common/constants";
 import { expect, Locator, Page, test } from "@playwright/test";
 import { TEST_ID_GRID_FILTERS } from "@/views/GridsView/components/Main/components/GridFilter/constants";
 import { GRID_FILTER_CONFIGS } from "@/views/GridsView/components/Main/components/GridFilter/filters/filter";
@@ -11,6 +10,7 @@ import {
   MUI_POPPER_ROOT,
   TOOLTIP,
 } from "@/testing/features/common/constants";
+import { TEST_ID_GRIDS } from "@/views/GridsView/components/Main/components/GridList/constants";
 
 const { describe } = test;
 

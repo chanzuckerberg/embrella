@@ -52,7 +52,7 @@ export const GRID_COLUMN_DEF_PROJECT: GridColumnDef = {
 
 export const GRID_COLUMN_DEF_UPDATED_AT: GridColumnDef = {
   accessorFn: GRID_COLUMN_ACCESSOR_FN.UPDATED_AT,
-  enableSorting: false,
+  enableSorting: true,
   id: GRID_COLUMN_ID.UPDATED_AT,
   header: "Updated At",
 };

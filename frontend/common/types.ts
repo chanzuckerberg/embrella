@@ -1,6 +1,7 @@
 export interface ApiListResponse<T> {
   pagination: Pagination;
   result: T[];
+  sortBy: SortBy<T>;
 }
 
 export interface Configs {
@@ -11,6 +12,7 @@ export type EntityList<T, K extends string> = {
   [entityName in K]: T[];
 } & {
   pagination: Pagination;
+  sortBy: SortBy<T>;
 };
 
 export interface FiltersList<FilterCategory extends string> {
@@ -95,4 +97,9 @@ export enum SEARCH_PARAM_NAME {
   PAGINATION_PAGE_SIZE = "pageSize",
   SORT_COLUMN_NAME = "sort",
   SORT_DIRECTION = "asc",
+}
+
+export interface SortBy<T> {
+  asc: boolean;
+  sort: keyof T;
 }
