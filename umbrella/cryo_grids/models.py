@@ -18,6 +18,7 @@ class Dewar(models.Model):
     name = models.CharField(max_length=20, unique=True)
     site = models.ForeignKey(Site, on_delete=models.CASCADE)
     shipper = models.BooleanField(default=False,help_text="Is this a dry-shipper ?")
+    max_canes = models.PositiveSmallIntegerField(default=6, help_text="Maximum number of canes fit in the dewar")
 
     def __str__(self):
         return 'Dewar %s' % self.name
@@ -27,6 +28,7 @@ class Cane(models.Model):
     color = models.CharField(max_length=40, choices=CANE_COLORS, default='CF1E01')
     dewar = models.ForeignKey(Dewar, on_delete=models.CASCADE, null=True, blank=True)
     position_in_dewar = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
+    max_pucks = models.PositiveSmallIntegerField(default=10, help_text="Maximum number of pucks fit in the cane")
 
     class Meta:
         unique_together = [["name","color"],["dewar","position_in_dewar"]]
@@ -40,7 +42,8 @@ class Puck(models.Model):
 
     cane = models.ForeignKey(Cane, on_delete=models.CASCADE, null=True, blank=True)
     # position on cane with 1 at the top.
-    position_in_cane = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
+    position_in_cane = models.PositiveSmallIntegerField(default=1, null=True, blank=True, help_text="position 1 is at the top of the cane")
+    max_boxes = models.PositiveSmallIntegerField(default=12, help_text="Maximum number of boxes fit on the puck")
 
     class Meta:
         unique_together = [["name","color"],["cane","position_in_cane"]]
@@ -55,6 +58,7 @@ class CryoGridBox(models.Model):
     numbering = models.CharField(max_length=20, choices=GRID_BOX_NUMBERING, default='ucw',help_text="numbering system with notch at 12-o'clock orientation")
     puck = models.ForeignKey(Puck, on_delete=models.CASCADE, null=True, blank=True)
     position_in_puck = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
+    max_grids = models.PositiveSmallIntegerField(default=4, help_text="Maximum number of grids fit in the box")
 
     class Meta:
         unique_together = [["puck","position_in_puck"]]
