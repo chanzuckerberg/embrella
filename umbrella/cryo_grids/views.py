@@ -142,21 +142,29 @@ def available_filters(request):
         }
 
         # Function to add 'selected' key based on user selection
+        # Function to add 'selected' key based on user selection
         def add_selected_status(filter_list, category):
             selected_values = selected_filters.get(category, set())
 
-            for item in filter_list:
-                item_name = item['name']
+            # Check if None is present in the selected values for this category
+            if None in selected_values:
+                # If None is present, mark all items as selected
+                for item in filter_list:
+                    item['selected'] = True
+            else:
+                # Otherwise, continue the original logic
+                for item in filter_list:
+                    item_name = item['name']
 
-                # Check if the selected filter contains booleans or strings
-                if isinstance(item_name, bool):
-                    # For boolean comparison (status), check if the item is in selected values
-                    item['selected'] = item_name in selected_values
-                elif isinstance(item_name, str):
-                    # For string comparison, normalize case and check for match
-                    item['selected'] = item_name.strip().lower() in {val.lower() for val in selected_values if isinstance(val, str)}
-                else:
-                    item['selected'] = False
+                    # Check if the selected filter contains booleans or strings
+                    if isinstance(item_name, bool):
+                        # For boolean comparison (status), check if the item is in selected values
+                        item['selected'] = item_name in selected_values
+                    elif isinstance(item_name, str):
+                        # For string comparison, normalize case and check for match
+                        item['selected'] = item_name.strip().lower() in {val.lower() for val in selected_values if isinstance(val, str)}
+                    else:
+                        item['selected'] = False
 
         # Aggregating counts for each filter (this part remains the same as your original logic)
         filters = {
