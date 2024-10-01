@@ -33,7 +33,7 @@ export function mapFilterValue(
  * @returns sanitized filter value.
  */
 export function sanitizeFilterValue(name: string): FilterValue {
-  if (name === null) return FILTER_VALUE.UNSPECIFIED;
+  if (name === FILTER_VALUE.UNSPECIFIED) return null;
   if (name === FILTER_VALUE.FALSE) return false;
   if (name === FILTER_VALUE.TRUE) return true;
   return name;

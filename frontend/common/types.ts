@@ -1,6 +1,7 @@
 export interface ApiListResponse<T> {
   pagination: Pagination;
   result: T[];
+  sortBy: SortBy;
 }
 
 export interface Configs {
@@ -11,6 +12,7 @@ export type EntityList<T, K extends string> = {
   [entityName in K]: T[];
 } & {
   pagination: Pagination;
+  sortBy: SortBy;
 };
 
 export interface FiltersList<FilterCategory extends string> {
@@ -87,12 +89,20 @@ export interface Pagination {
   totalResults: number;
 }
 
-export type SearchParam = Partial<Record<SEARCH_PARAM_NAME, unknown>>;
+export type SearchParam = Partial<
+  Record<SEARCH_PARAM_NAME, SearchParamValue[]>
+>;
 
 export enum SEARCH_PARAM_NAME {
-  FILTER = "q",
-  PAGINATION_PAGE = "page",
-  PAGINATION_PAGE_SIZE = "pageSize",
-  SORT_COLUMN_NAME = "sort",
-  SORT_DIRECTION = "asc",
+  QUERY = "q",
+}
+
+export interface SearchParamValue {
+  category: string;
+  value: unknown;
+}
+
+export interface SortBy {
+  asc: boolean;
+  sort: string;
 }

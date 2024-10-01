@@ -1,5 +1,12 @@
-import { ApiListResponse, FiltersList, GridData } from "@/common/types";
+import {
+  ApiListResponse,
+  FiltersList,
+  GridData,
+  SEARCH_PARAM_NAME,
+  SearchParamValue,
+} from "@/common/types";
 import { FetchResponseInfo, TestFilterCategory } from "@/testing/types";
+import { getSearchParamFirstValue } from "@/testing/utils";
 
 const TEST_SORTABLE_GRID_FIELDS = [
   "grid",
@@ -187,23 +194,36 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
   },
   [URL_GRIDS]: {
     body(url) {
-      const sortParam = url.searchParams.get("sort");
-      const sortKey =
-        sortParam && TEST_SORTABLE_GRID_FIELDS.find((key) => key === sortParam);
-      const responseGrids = GRIDS.slice();
+      const responseGrids: GridData[] = GRIDS.slice();
+
+      // Query parameters.
+      const searchParamValue = url.searchParams.get(SEARCH_PARAM_NAME.QUERY);
+      const values: SearchParamValue[] = JSON.parse(searchParamValue || "[]");
+
+      // Sorting category values "sort" and "asc".
+      const asc = getSearchParamFirstValue<boolean>(values, "asc", 0);
+      const sort = getSearchParamFirstValue<string>(values, "sort", 0);
+      const direction = asc ? 1 : -1;
+      const sortKey = TEST_SORTABLE_GRID_FIELDS.find((key) => key === sort);
+      // Sort grids by the first sort value and direction.
       if (sortKey) {
-        const direction = url.searchParams.get("asc") === "true" ? 1 : -1;
         responseGrids.sort(
           (a, b) => a[sortKey].name.localeCompare(b[sortKey].name) * direction,
         );
       }
-
-      const page = url.searchParams.has("page")
-        ? Number(url.searchParams.get("page"))
-        : 1;
-      const pageSize = url.searchParams.has("pageSize")
-        ? Number(url.searchParams.get("pageSize"))
-        : TEST_DEFAULT_GRIDS_PAGE_SIZE;
+      // Pagination category values "page" and "pageSize".
+      const page = getSearchParamFirstValue<number>(
+        values,
+        "page",
+        0,
+        1,
+      ) as number;
+      const pageSize = getSearchParamFirstValue<number>(
+        values,
+        "pageSize",
+        0,
+        TEST_DEFAULT_GRIDS_PAGE_SIZE,
+      ) as number;
       const pageStart = (page - 1) * pageSize;
 
       const responseData: ApiListResponse<GridData> = {
@@ -214,6 +234,7 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
           totalResults: responseGrids.length,
         },
         result: responseGrids.slice(pageStart, pageStart + pageSize),
+        sortBy: { asc: true, sort: "project" },
       };
 
       return JSON.stringify(responseData);
