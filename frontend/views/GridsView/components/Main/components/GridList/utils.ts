@@ -22,7 +22,7 @@ export function getRowId(row: GridData): string {
 export function getTableState({
   sortBy,
 }: {
-  sortBy?: SortBy<GridData>;
+  sortBy?: SortBy;
 }): Partial<TableState> {
   return {
     sorting: getSortingState(sortBy),

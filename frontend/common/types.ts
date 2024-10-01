@@ -1,7 +1,7 @@
 export interface ApiListResponse<T> {
   pagination: Pagination;
   result: T[];
-  sortBy: SortBy<T>;
+  sortBy: SortBy;
 }
 
 export interface Configs {
@@ -12,7 +12,7 @@ export type EntityList<T, K extends string> = {
   [entityName in K]: T[];
 } & {
   pagination: Pagination;
-  sortBy: SortBy<T>;
+  sortBy: SortBy;
 };
 
 export interface FiltersList<FilterCategory extends string> {
@@ -102,7 +102,7 @@ export interface SearchParamValue {
   value: unknown;
 }
 
-export interface SortBy<T> {
+export interface SortBy {
   asc: boolean;
-  sort: keyof T;
+  sort: string;
 }

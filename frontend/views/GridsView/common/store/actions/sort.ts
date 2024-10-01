@@ -1,6 +1,6 @@
 import { ColumnSort, SortingState } from "@tanstack/react-table";
 import { Updater } from "@tanstack/table-core";
-import { GridData, SortBy } from "@/common/types";
+import { SortBy } from "@/common/types";
 
 /**
  * Builds the next sorting state.
@@ -10,7 +10,7 @@ import { GridData, SortBy } from "@/common/types";
  */
 export function buildNextSortState(
   updaterOrValue: Updater<SortingState>,
-  sortBy?: SortBy<GridData>,
+  sortBy?: SortBy,
 ): SortingState {
   if (typeof updaterOrValue === "function") {
     return updaterOrValue(getSortingState(sortBy));
@@ -23,7 +23,7 @@ export function buildNextSortState(
  * @param sortBy - API sorting state.
  * @returns sorting state.
  */
-export function getSortingState(sortBy?: SortBy<GridData>): SortingState {
+export function getSortingState(sortBy?: SortBy): SortingState {
   const sortingState: SortingState = [];
   if (!sortBy) return sortingState;
   sortingState.push(mapSortingState(sortBy));
@@ -35,7 +35,7 @@ export function getSortingState(sortBy?: SortBy<GridData>): SortingState {
  * @param sortBy - API sorting state.
  * @returns sorting state.
  */
-function mapSortingState(sortBy: SortBy<GridData>): ColumnSort {
+function mapSortingState(sortBy: SortBy): ColumnSort {
   return {
     desc: !sortBy.asc,
     id: sortBy.sort,

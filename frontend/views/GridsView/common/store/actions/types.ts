@@ -1,10 +1,5 @@
 import { CategoryFilter } from "@/components/Filter/common/types";
-import {
-  FiltersList,
-  GridData,
-  GridFilterCategory,
-  SortBy,
-} from "@/common/types";
+import { FiltersList, GridFilterCategory, SortBy } from "@/common/types";
 import { SortingState, Updater } from "@tanstack/react-table";
 
 export type Action = UpdateFilterAction | UpdateSortAction;
@@ -30,6 +25,6 @@ export interface UpdateFilterPayload {
 }
 
 export interface UpdateSortPayload {
-  sortBy?: SortBy<GridData>;
+  sortBy?: SortBy;
   updaterOrValue: Updater<SortingState>;
 }
