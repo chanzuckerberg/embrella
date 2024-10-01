@@ -6,15 +6,38 @@ import { useFetchFilters } from "@/views/GridsView/hooks/useFetchFilters/useFetc
 import { StateContext } from "@/views/GridsView/common/store";
 import React, { ReactNode } from "react";
 import {
-  buildFilterSearchParam,
-  buildSearchParam,
+  buildFilterListSearchParam,
+  buildGridListSearchParam,
+  getFilterSearchParamValue,
+  getSortSearchParamValue,
 } from "@/views/GridsView/components/Main/utils";
+import { SearchParam, SearchParamValue } from "@/common/types";
 
-const MOCK_Q_PARAM = {
-  q: [{ category: "project", value: ["project 01", "project 02"] }],
+const FILTER_SEARCH_PARAM_VALUES: SearchParamValue[] = [
+  {
+    category: "project",
+    value: ["project 01", "project 02"],
+  },
+];
+const SORT_SEARCH_PARAM_VALUES: SearchParamValue[] = [
+  {
+    category: "asc",
+    value: [true],
+  },
+  {
+    category: "sort",
+    value: ["modifiedOn"],
+  },
+];
+const GRID_LIST_SEARCH_PARAM: SearchParam = {
+  q: [...FILTER_SEARCH_PARAM_VALUES, ...SORT_SEARCH_PARAM_VALUES],
 };
-const MOCK_STATE: State = {
+const FILTER_LIST_SEARCH_PARAM: SearchParam = {
+  q: FILTER_SEARCH_PARAM_VALUES,
+};
+const STATE: State = {
   filterState: { project: ["project 01", "project 02"] },
+  sortState: [{ id: "updatedAt", desc: false }],
 };
 
 jest.mock("../views/GridsView/hooks/useFetchGrids/useFetchGrids", () => ({
@@ -33,30 +56,28 @@ describe("Grid View Connect", () => {
     jest.clearAllMocks();
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <StateContext.Provider value={MOCK_STATE}>{children}</StateContext.Provider>
+    <StateContext.Provider value={STATE}>{children}</StateContext.Provider>
   );
-  it("should generate qParam correctly and build search params", () => {
-    const q = MOCK_Q_PARAM.q;
+  it("should fetch grid and filter list with search params", () => {
     const { result } = renderHook(() => useConnect(), { wrapper });
     // Verify that useFetchGrids was called with the correct parameters.
-    expect(useFetchGrids).toHaveBeenCalledWith({}, { q });
+    expect(useFetchGrids).toHaveBeenCalledWith(GRID_LIST_SEARCH_PARAM);
     // Verify that useFetchFilters was called with the correct parameters.
-    expect(useFetchFilters).toHaveBeenCalledWith({ q });
+    expect(useFetchFilters).toHaveBeenCalledWith(FILTER_LIST_SEARCH_PARAM);
     // Verify the returned values from useConnect.
     expect(result.current.gridList).toBe("mockGridList");
     expect(result.current.filtersList).toBe("mockFiltersList");
   });
 });
 describe("Grid View Connect Utilities", () => {
-  const filterState = MOCK_STATE.filterState;
-  const qParam = MOCK_Q_PARAM;
-  const q = qParam.q;
-  it("should generate correct filter search params from filter state", () => {
-    const searchParam = buildFilterSearchParam(filterState);
-    expect(searchParam).toEqual(qParam);
+  it("should generate correct filter search params from state", () => {
+    expect(getFilterSearchParamValue(STATE)).toEqual(
+      FILTER_SEARCH_PARAM_VALUES,
+    );
+    expect(buildFilterListSearchParam(STATE)).toEqual(FILTER_LIST_SEARCH_PARAM);
   });
-  it("should build correct search params", () => {
-    const searchParam = buildSearchParam({ qParam });
-    expect(searchParam).toEqual({ q });
+  it("should generate correct grid list search params from state", () => {
+    expect(getSortSearchParamValue(STATE)).toEqual(SORT_SEARCH_PARAM_VALUES);
+    expect(buildGridListSearchParam(STATE)).toEqual(GRID_LIST_SEARCH_PARAM);
   });
 });

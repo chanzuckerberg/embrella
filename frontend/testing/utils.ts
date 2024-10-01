@@ -1,5 +1,6 @@
 import { TestResponse } from "@/testing/types";
 import { FETCH_RESPONSES } from "@/testing/constants";
+import { SearchParamValue } from "@/common/types";
 
 /**
  * Initialize mock `fetch` function in global scope, since `fetch` is normally unavailable in tests.
@@ -64,4 +65,23 @@ export function delay(ms = 5): Promise<void> {
 export function getLastFetchResult(): Promise<TestResponse | undefined> {
   const fetchMock = fetch as unknown as jest.Mock<Promise<TestResponse>>;
   return fetchMock.mock.results[fetchMock.mock.results.length - 1].value;
+}
+
+/**
+ * Returns the first value of a search parameter category, or a default value if the category is not found.
+ * @param values - Search parameter values.
+ * @param category - Category.
+ * @param index - Category values index.
+ * @param defaultValue - Default value.
+ * @returns search param category value.
+ */
+export function getSearchParamFirstValue<T extends boolean | number | string>(
+  values: SearchParamValue[],
+  category: string,
+  index = 0,
+  defaultValue?: T,
+): T | undefined {
+  const value = values.find((v) => v.category === category)?.value;
+  if (!value) return defaultValue;
+  return Array.isArray(value) ? value[index] : value || defaultValue;
 }

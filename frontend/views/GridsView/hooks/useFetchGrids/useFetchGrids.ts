@@ -3,23 +3,14 @@ import {
   ApiListResponse,
   EntityList,
   GridData,
-  SEARCH_PARAM_NAME,
   SearchParam,
 } from "@/common/types";
 import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@/common/api";
-import { UseFetchGridsOptions } from "@/views/GridsView/hooks/useFetchGrids/types";
 
 export const useFetchGrids = (
-  options: UseFetchGridsOptions = {},
   searchParam: SearchParam,
 ): EntityList<GridData, "grids"> | undefined => {
-  if (options.pagination) {
-    // TODO(cc): build pagination search params in useGridList with pagination state.
-    searchParam[SEARCH_PARAM_NAME.PAGINATION_PAGE] = options.pagination.page;
-    searchParam[SEARCH_PARAM_NAME.PAGINATION_PAGE_SIZE] =
-      options.pagination.pageSize;
-  }
   const { data: gridsData } = useFetchData<ApiListResponse<GridData>>(
     configs.API_URL,
     API.GRIDS,

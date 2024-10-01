@@ -8,7 +8,7 @@ beforeAll(() => {
 });
 
 describe("useFetchData", () => {
-  it("updates with successfully-fetched grids", async () => {
+  it("updates with successfully-fetched filter list", async () => {
     const { result } = renderHook(() => useFetchFilters({}));
     expect(result.current).toBeUndefined();
     await act(async () => await delay());

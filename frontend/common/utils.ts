@@ -1,5 +1,3 @@
-import { SearchParam } from "@/common/types";
-
 // /**
 //  * Fetch request.
 //  * @param requestURL - Request URL.
@@ -52,7 +50,7 @@ export async function fetchResource(requestURL: string): Promise<Response> {
 export function getRequestURL(
   base: string,
   url: string,
-  searchParam: SearchParam = {},
+  searchParam: Record<string, unknown> = {},
 ): string {
   const requestURL = new URL(url, base);
   for (const [name, value] of Object.entries(searchParam)) {

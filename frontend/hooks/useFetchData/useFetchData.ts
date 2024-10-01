@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchResource, getRequestURL } from "@/common/utils";
 import { UseFetchData } from "@/hooks/useFetchData/common/types";
-import { SearchParam } from "@/common/types";
 
 export const useFetchData = <D>(
   baseURL: string,
   relativeURL: string,
-  searchParam: SearchParam = {},
+  searchParam: Record<string, unknown> = {},
   shouldFetch = true,
 ): UseFetchData<D> => {
   const [dataState, setDataState] = useState<UseFetchData<D>>({

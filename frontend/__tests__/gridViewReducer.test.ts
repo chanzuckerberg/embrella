@@ -41,6 +41,7 @@ describe("GridView Reducer", () => {
         type: ActionKind.UpdateFilterAction,
       });
       expect(nextState).toEqual({
+        ...INITIAL_STATE,
         filterState: FILTER_STATE_WITH_SINGLE_CATEGORY_VALUE,
       });
     });
@@ -69,6 +70,7 @@ describe("GridView Reducer", () => {
         type: ActionKind.UpdateFilterAction,
       });
       expect(nextState).toEqual({
+        ...INITIAL_STATE,
         filterState: FILTER_STATE_WITH_MULTIPLE_CATEGORY_VALUES,
       });
     });

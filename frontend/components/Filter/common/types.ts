@@ -33,7 +33,7 @@ export type FilterState<FilterCategory extends string> = Partial<{
 export enum FILTER_VALUE {
   FALSE = "false",
   TRUE = "true",
-  UNSPECIFIED = "Unspecified",
+  UNSPECIFIED = "null",
 }
 
 export type FilterValue = boolean | string | null;

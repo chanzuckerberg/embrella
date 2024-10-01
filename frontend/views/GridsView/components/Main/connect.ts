@@ -1,35 +1,16 @@
 import { useFetchGrids } from "@/views/GridsView/hooks/useFetchGrids/useFetchGrids";
 import { useFetchFilters } from "@/views/GridsView/hooks/useFetchFilters/useFetchFilters";
-import { useContext, useMemo } from "react";
+import { useContext } from "react";
 import {
-  buildFilterSearchParam,
-  buildSearchParam,
-  buildSortingSearchParam,
+  buildFilterListSearchParam,
+  buildGridListSearchParam,
 } from "@/views/GridsView/components/Main/utils";
 import { StateContext } from "@/views/GridsView/common/store";
 import { State } from "@/views/GridsView/common/store/types";
 
 export const useConnect = () => {
-  const { filterState, sortState } = useContext<State>(StateContext);
-
-  // Build param "q" for filtering grid and filters list.
-  const qParam = useMemo(
-    () => buildFilterSearchParam(filterState),
-    [filterState],
-  );
-
-  // Build params "sort" and "asc" for sorting grid list.
-  const sortingParam = useMemo(
-    () => buildSortingSearchParam(sortState),
-    [sortState],
-  );
-
-  // Fetch grid and filters list.
-  const gridList = useFetchGrids(
-    {},
-    buildSearchParam({ qParam, sortingParam }),
-  );
-  const filtersList = useFetchFilters(buildSearchParam({ qParam }));
-
+  const state = useContext<State>(StateContext);
+  const gridList = useFetchGrids(buildGridListSearchParam(state));
+  const filtersList = useFetchFilters(buildFilterListSearchParam(state));
   return { gridList, filtersList };
 };
