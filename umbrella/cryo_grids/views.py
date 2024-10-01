@@ -145,12 +145,15 @@ def available_filters(request):
         # Function to add 'selected' key based on user selection
         def add_selected_status(filter_list, category):
             selected_values = selected_filters.get(category, set())
-
+            # print(selected_values)
             # Check if None is present in the selected values for this category
             if None in selected_values:
                 # If None is present, mark all items as selected
                 for item in filter_list:
-                    item['selected'] = True
+                    if item['name'] is None:
+                        item['selected'] = True
+                    else:
+                        item['selected'] = False
             else:
                 # Otherwise, continue the original logic
                 for item in filter_list:
