@@ -423,7 +423,6 @@ def apply_filters(queryset, filters):
         'project': 'intended_project__name__in',
         'cassette': 'grid_cassette__name__in',
         'puck': 'grid_box__puck__name__in',
-        # 'user': 'user__username__in',
         'msiSession': 'msisession__name__in',
         'screeningSession': 'atlassession__group__name__in',
         'status': 'trashed__in',
@@ -443,13 +442,19 @@ def apply_filters(queryset, filters):
     for filter_item in filters:
         category = filter_item.get('category')
         values = filter_item.get('value')
+        
         if category == 'filterType' and values:
             filter_type = values[0].upper() if isinstance(values, list) else values.upper()
-        elif category in filter_mappings and values:
+        elif category in filter_mappings:
             field = filter_mappings[category]
-            if not isinstance(values, list):
-                values = [values]
-            filter_q_objects.append(Q(**{field: values}))
+
+            # Handle cases where 'null' is passed as a filter value
+            if values is None or (isinstance(values, list) and None in values):
+                filter_q_objects.append(Q(**{f"{field.split('__')[0]}__isnull": True}))  # Check for NULL values
+            elif values:
+                if not isinstance(values, list):
+                    values = [values]
+                filter_q_objects.append(Q(**{field: values}))
         elif category == 'user' and values:
             # Handle username that could be in email format
             usernames = values if isinstance(values, list) else [values]

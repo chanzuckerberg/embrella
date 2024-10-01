@@ -15,7 +15,7 @@ class UnprocessableEntity(APIException):
         self.detail = detail
 
 class CryoGridsQueryParams(BaseModel):
-    q: Optional[List[dict[str, Union[List[Union[str, bool]], str, bool]]]] = None  # q parameter now expects a list of dictionaries
+    q: Optional[List[dict[str, Union[List[Union[str, bool, None]], str, bool, None]]]] = None  # q parameter now expects a list of dictionaries
     
     # Define the allowed category names in camelCase
     ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "puck", "user", "screeningSession", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "cassette", "sample", "date", "freezingPlan", "freezingSession", "date"}
@@ -53,16 +53,16 @@ class CryoGridsQueryParams(BaseModel):
                     }
                 )
             
-            # Ensure the value is a string, list of strings, or boolean
+            # Ensure the value is a string, list of strings/booleans/None, or boolean
             if isinstance(item_value, list):
                 for val in item_value:
-                    if not isinstance(val, (str, bool)):
+                    if not isinstance(val, (str, bool, type(None))):
                         raise UnprocessableEntity(
-                            detail={"error": f"Invalid value in list for category '{category}': expected string or boolean."}
+                            detail={"error": f"Invalid value in list for category '{category}': expected string, boolean, or None."}
                         )
-            elif not isinstance(item_value, (str, bool)):
+            elif not isinstance(item_value, (str, bool, type(None))):
                 raise UnprocessableEntity(
-                    detail={"error": f"Invalid value for category '{category}': expected string, boolean, or list of these."}
+                    detail={"error": f"Invalid value for category '{category}': expected string, boolean, or None."}
                 )
         
         return value
