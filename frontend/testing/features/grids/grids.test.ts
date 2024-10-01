@@ -3,25 +3,113 @@ import { expect, Locator, Page, test } from "@playwright/test";
 import { TEST_ID_GRID_FILTERS } from "@/views/GridsView/components/Main/components/GridFilter/constants";
 import { GRID_FILTER_CONFIGS } from "@/views/GridsView/components/Main/components/GridFilter/filters/filter";
 import {
+  ATTRIBUTE,
   BUTTON,
   KEYBOARD_KEY,
   MUI_AUTOCOMPLETE_OPTION,
   MUI_CHIP_ROOT,
   MUI_POPPER_ROOT,
+  MUI_SVG_ICON_ROOT,
+  TABLE_BODY_ROW,
+  TH,
   TOOLTIP,
 } from "@/testing/features/common/constants";
 import { TEST_ID_GRIDS } from "@/views/GridsView/components/Main/components/GridList/constants";
+import { GRID_COLUMN_DEFS } from "@/views/GridsView/components/Main/components/GridList/columns/column";
 
 const { describe } = test;
 
+const COLUMN_CONFIGS = GRID_COLUMN_DEFS;
 const FILTER_CONFIGS = GRID_FILTER_CONFIGS;
 const FILTER_OPTION_PRIMARY_TEXT = ".primary-text";
+const HEADER_WITH_DIRECTION_ATTRIBUTE = "th[direction]";
 
 describe("Grids", () => {
   describe("grid", () => {
     test("displays grid table", async ({ page }) => {
       await goToGridList(page);
-      await expect(page.getByTestId(TEST_ID_GRIDS)).toBeVisible();
+      await expect(getTableLocator(page)).toBeVisible();
+    });
+  });
+  describe("grid columns", () => {
+    test("displays configured headers with header label", async ({ page }) => {
+      await goToGridList(page);
+      const table = getTableLocator(page);
+      await skipIfGridListEmpty(table);
+      const tableHeaders = getTableHeaderLocators(table);
+      await expect(tableHeaders).toHaveCount(COLUMN_CONFIGS.length);
+      for (let i = 0; i < COLUMN_CONFIGS.length; i++) {
+        const headerLabel = COLUMN_CONFIGS[i].header;
+        if (typeof headerLabel === "string") {
+          // Currently, only string header labels are configured.
+          await expect(tableHeaders.nth(i)).toContainText(headerLabel);
+        }
+      }
+    });
+    describe("grid columns with sorting", () => {
+      const sortableColumnDef = COLUMN_CONFIGS.filter(
+        ({ enableSorting }) => enableSorting,
+      );
+      test(`displays sortable headers`, async ({ page }) => {
+        await goToGridList(page);
+        const table = getTableLocator(page);
+        await skipIfGridListEmpty(table);
+        const sortIcons = getTableSortIconLocator(table);
+        await expect(sortIcons).toHaveCount(sortableColumnDef.length);
+      });
+      test("displays a sorted header with sort icon", async ({ page }) => {
+        await goToGridList(page);
+        const table = getTableLocator(page);
+        await skipIfGridListEmpty(table);
+        const header = table.locator(HEADER_WITH_DIRECTION_ATTRIBUTE);
+        await expect(header).toHaveCount(1);
+        await expect(header).toHaveAttribute(ATTRIBUTE.DIRECTION);
+        const sortIcon = header.locator(MUI_SVG_ICON_ROOT);
+        await expect(sortIcon).toBeVisible();
+      });
+      test("sorted header changes sort direction when header is clicked", async ({
+        page,
+      }) => {
+        await goToGridList(page);
+        const table = getTableLocator(page);
+        await skipIfGridListEmpty(table);
+        const header = table.locator(HEADER_WITH_DIRECTION_ATTRIBUTE);
+        await expect(header).toHaveAttribute(ATTRIBUTE.DIRECTION);
+        const direction01 = await header.getAttribute(ATTRIBUTE.DIRECTION);
+        await header.click();
+        await expect(header).toHaveAttribute(ATTRIBUTE.DIRECTION);
+        const direction02 = await header.getAttribute(ATTRIBUTE.DIRECTION);
+        expect(direction01).not.toEqual(direction02);
+      });
+      test('sort order should be toggled, but not turned "off"', async ({
+        page,
+      }) => {
+        await goToGridList(page);
+        const table = getTableLocator(page);
+        await skipIfGridListEmpty(table);
+        const header = table.locator(HEADER_WITH_DIRECTION_ATTRIBUTE);
+        for (let i = 0; i < 3; i++) {
+          await expect(header).toHaveAttribute(ATTRIBUTE.DIRECTION);
+          await header.click();
+        }
+      });
+      test("header should not sort when sorting is not enabled", async ({
+        page,
+      }) => {
+        await goToGridList(page);
+        const table = getTableLocator(page);
+        await skipIfGridListEmpty(table);
+        for (let i = 0; i < COLUMN_CONFIGS.length; i++) {
+          if (COLUMN_CONFIGS[i].enableSorting) {
+            continue;
+          }
+          const header = getTableHeaderLocator(table, i);
+          await expect(header).not.toHaveAttribute(ATTRIBUTE.DIRECTION);
+          await header.click();
+          await expect(header).not.toHaveAttribute(ATTRIBUTE.DIRECTION);
+          break;
+        }
+      });
     });
   });
   describe("filters", () => {
@@ -136,6 +224,22 @@ function getFilterPopperLocator(page: Page): Locator {
   return page.locator(MUI_POPPER_ROOT).and(page.getByRole(TOOLTIP));
 }
 
+function getTableLocator(page: Page): Locator {
+  return page.getByTestId(TEST_ID_GRIDS);
+}
+
+function getTableHeaderLocator(table: Locator, nth: number): Locator {
+  return getTableHeaderLocators(table).nth(nth);
+}
+
+function getTableHeaderLocators(table: Locator): Locator {
+  return table.locator(TH);
+}
+
+function getTableSortIconLocator(table: Locator): Locator {
+  return getTableHeaderLocators(table).locator(MUI_SVG_ICON_ROOT);
+}
+
 async function goToGridList(page: Page): Promise<void> {
   await page.goto(ROUTES.HOME);
 }
@@ -144,6 +248,13 @@ async function openFilter(page: Page) {
   const filter = getFilterLocators(page).nth(0);
   await skipIfFilterDisabled(filter);
   await filter.click();
+}
+
+async function skipIfGridListEmpty(table: Locator) {
+  // Skip the test if the grid list is empty; BE is unavailable.
+  if ((await table.locator(TABLE_BODY_ROW).count()) === 0) {
+    test.skip();
+  }
 }
 
 async function skipIfFilterDisabled(filter: Locator) {

@@ -32,7 +32,7 @@ export const GRID_COLUMN_ID: Record<
   CRYOGRID: "cryogrid",
   FREEZING_PLAN: "freezingPlan",
   FREEZING_SESSION: "freezingSession",
-  MSI: "msi",
+  MSI: "msiSession",
   PROJECT: "project",
   UPDATED_AT: "updatedAt",
 };
