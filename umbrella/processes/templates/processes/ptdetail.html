@@ -18,7 +18,7 @@
 
 <div class="container"> 
 <h2 class="text-center"><u>Process Run {{ data.name }}</u></h2><br>			 
- <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go Back</button>
+ <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go back to the startup page</button>
 <form action="{% url 'processes:detail' data.id %}" method="post">
 {% csrf_token %} 
 <table class="table table-light table-striped"> 
