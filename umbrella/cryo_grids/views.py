@@ -369,12 +369,20 @@ def get_cryo_grids_details(request):
         # Convert the formatted result into a list of grids
         formatted_grid_list = list(formatted_result.values())
         # Apply pagination to the formatted grid list
-        page = request.GET.get('page', 1)
+        # page = q_param.get('page', 1)
+        # Extract pagination parameters from q_param
+        page_param = next((item for item in q_param if item['category'] == 'page'), None)
+        page_size_param = next((item for item in q_param if item['category'] == 'pageSize'), None)
+
+        # Default values if pagination params are not provided
+        page = int(page_param['value'][0]) if page_param else 1
+        page_size = int(page_size_param['value'][0]) if page_size_param else 10
 
         paginator = Paginator(formatted_grid_list, page_size)
 
         try:
             paginated_queryset = paginator.page(page)
+            print(paginated_queryset.number)
         except PageNotAnInteger:
             paginated_queryset = paginator.page(1)
         except EmptyPage:
