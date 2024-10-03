@@ -25,10 +25,10 @@ export function buildGridListSearchParam(state: State): SearchParam {
   const values: SearchParamValue[] = [];
   // Add filter search param values.
   values.push(...getFilterSearchParamValue(state));
-  // Add sort search param values.
-  values.push(...getSortSearchParamValue(state));
   // Add pagination search param values.
   values.push(...getPaginationSearchParamValue(state));
+  // Add sort search param values.
+  values.push(...getSortSearchParamValue(state));
   return { [SEARCH_PARAM_NAME.QUERY]: values };
 }
 
