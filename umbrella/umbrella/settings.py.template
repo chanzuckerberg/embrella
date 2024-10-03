@@ -20,6 +20,7 @@ from django.urls import reverse_lazy
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+STATIC_URL = '/static/'
 CORS_ALLOW_ALL_ORIGINS = False 
 
 CORS_ALLOW_CREDENTIALS = True
@@ -114,14 +115,16 @@ INSTALLED_APPS = [
 JAZZMIN_SETTINGS = {
     # Other Jazzmin settings...
 
-    "show_ui_builder": False,  # Disable the UI Builder
+    "show_ui_builder": True,  # Disable the UI Builder
     "copyright": "CZII",
     "show_version": False,
     "show_view_site": True,
     "show_sidebar": True,
+    "site_logo": "jazzmin/img/logo.png",
+    "login_logo": "jazzmin/img/logo.png",
     "topmenu_links": [
         # Url that gets reversed (Permissions can be added)
-        {"name": "Home",  "url": "/umbrella", "permissions": ["auth.view_user"]},
+        {"name": "Return to the startup page",  "url": "/umbrella", "permissions": ["auth.view_user"]},
     ]
 }
 MIDDLEWARE = [
