@@ -79,8 +79,8 @@ export function getSortSearchParamValue(state: State): SearchParamValue[] {
  * @param pageIndex - Page index.
  * @returns page value.
  */
-function mapPageValue(pageIndex: number): string {
-  return String(pageIndex + 1);
+function mapPageValue(pageIndex: number): number {
+  return pageIndex + 1;
 }
 
 /**

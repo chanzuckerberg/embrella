@@ -21,7 +21,7 @@ const FILTER_SEARCH_PARAM_VALUES: SearchParamValue[] = [
   },
 ];
 const PAGE_SEARCH_PARAM_VALUES: SearchParamValue[] = [
-  { category: "page", value: ["1"] },
+  { category: "page", value: [1] },
 ];
 const SORT_SEARCH_PARAM_VALUES: SearchParamValue[] = [
   {
