@@ -4,7 +4,10 @@ import { TableHead } from "@/components/Table/components/TableHead";
 import { TableBody } from "@/components/Table/components/TableBody";
 import { Table as SDSTable } from "@czi-sds/components";
 import { useConnect } from "@/views/GridsView/components/Main/components/GridList/connect";
-import { TEST_ID_GRIDS } from "@/views/GridsView/components/Main/components/GridList/constants";
+import {
+  TEST_ID_GRIDS,
+  TEST_ID_GRIDS_PAGINATION,
+} from "@/views/GridsView/components/Main/components/GridList/constants";
 import { Pagination } from "@/components/Table/components/Pagination";
 
 export const GridList = ({ gridList }: Props): JSX.Element => {
@@ -15,7 +18,7 @@ export const GridList = ({ gridList }: Props): JSX.Element => {
         <TableHead table={table} />
         <TableBody table={table} />
       </SDSTable>
-      <Pagination table={table} />
+      <Pagination dataTestId={TEST_ID_GRIDS_PAGINATION} table={table} />
     </Fragment>
   );
 };
