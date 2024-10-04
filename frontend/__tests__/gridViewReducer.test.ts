@@ -8,7 +8,7 @@ import {
   INITIAL_FILTERS_LIST,
   SELECTED_FILTERS_LIST,
 } from "@/testing/fixtures/gridViewFiltersList";
-import { SortBy } from "@/common/types";
+import { Pagination, SortBy } from "@/common/types";
 import { State } from "@/views/GridsView/common/store/types";
 
 const CATEGORY_UPDATED_AT = "updatedAt";
@@ -21,6 +21,16 @@ const FILTER_STATE_WITH_SINGLE_CATEGORY_VALUE: State["filterState"] = {
 const FILTER_STATE_WITH_MULTIPLE_CATEGORY_VALUES: State["filterState"] = {
   [CATEGORY_CASSETTE]: CATEGORY_CASSETTE_MULTIPLE_VALUES,
 };
+const PAGINATION: Pagination = {
+  page: 1,
+  pageSize: 10,
+  totalPages: 2,
+  totalResults: 11,
+};
+const PAGINATION_STATE: State["paginationState"] = {
+  pageIndex: 0,
+  pageSize: 10,
+};
 const SORT_BY: SortBy = {
   asc: false,
   sort: CATEGORY_UPDATED_AT,
@@ -29,7 +39,8 @@ const SORT_STATE: State["sortState"] = [
   { desc: true, id: CATEGORY_UPDATED_AT },
 ];
 
-const MOCK_UPDATER_OR_VALUE = jest.fn(() => SORT_STATE);
+const MOCK_PAGINATION_UPDATER_OR_VALUE = jest.fn(() => PAGINATION_STATE);
+const MOCK_SORT_UPDATER_OR_VALUE = jest.fn(() => SORT_STATE);
 
 describe("GridView Reducer", () => {
   it("should return state when action is unknown", () => {
@@ -87,12 +98,27 @@ describe("GridView Reducer", () => {
       });
     });
   });
+  describe("paginate update action", () => {
+    it("should update pagination state with next page", () => {
+      const nextState = reducer(INITIAL_STATE, {
+        payload: {
+          pagination: PAGINATION,
+          updaterOrValue: MOCK_PAGINATION_UPDATER_OR_VALUE,
+        },
+        type: ActionKind.UpdatePaginationAction,
+      });
+      expect(nextState).toEqual({
+        ...INITIAL_STATE,
+        paginationState: PAGINATION_STATE,
+      });
+    });
+  });
   describe("sort update action", () => {
     it("should update sort state with selected sort value", () => {
       const nextState = reducer(INITIAL_STATE, {
         payload: {
           sortBy: SORT_BY,
-          updaterOrValue: MOCK_UPDATER_OR_VALUE,
+          updaterOrValue: MOCK_SORT_UPDATER_OR_VALUE,
         },
         type: ActionKind.UpdateSortAction,
       });

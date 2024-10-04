@@ -11,5 +11,6 @@ export const TABLE_OPTIONS: Omit<TableOptions<GridData>, "data"> = {
   enableMultiSort: false,
   enableSorting: true,
   enableSortingRemoval: false,
+  manualPagination: true,
   manualSorting: true,
 };

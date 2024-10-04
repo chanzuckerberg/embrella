@@ -25,6 +25,8 @@ export function buildGridListSearchParam(state: State): SearchParam {
   const values: SearchParamValue[] = [];
   // Add filter search param values.
   values.push(...getFilterSearchParamValue(state));
+  // Add pagination search param values.
+  values.push(...getPaginationSearchParamValue(state));
   // Add sort search param values.
   values.push(...getSortSearchParamValue(state));
   return { [SEARCH_PARAM_NAME.QUERY]: values };
@@ -45,6 +47,21 @@ export function getFilterSearchParamValue(state: State): SearchParamValue[] {
 }
 
 /**
+ * Returns pagination related search param values for the given pagination state.
+ * "pageSize" is configured in the BE, and therefore not included in the search params.
+ * @param state - State.
+ * @returns search params "page".
+ */
+export function getPaginationSearchParamValue(
+  state: State,
+): SearchParamValue[] {
+  const {
+    paginationState: { pageIndex },
+  } = state;
+  return [{ category: "page", value: [pageIndex].map(mapPageValue) }];
+}
+
+/**
  * Returns sort related search param values for the given sort state.
  * @param state - State.
  * @returns search params "sort" and "asc".
@@ -55,6 +72,15 @@ export function getSortSearchParamValue(state: State): SearchParamValue[] {
     { category: "asc", value: sortState.map(mapSortDirectionValue) },
     { category: "sort", value: sortState.map(mapSortValue) },
   ];
+}
+
+/**
+ * Returns the page related search param values for the given pagination state.
+ * @param pageIndex - Page index.
+ * @returns page value.
+ */
+function mapPageValue(pageIndex: number): number {
+  return pageIndex + 1;
 }
 
 /**

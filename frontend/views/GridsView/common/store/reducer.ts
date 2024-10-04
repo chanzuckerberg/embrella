@@ -1,6 +1,7 @@
 import { State } from "@/views/GridsView/common/store/types";
 import {
   updateFilterAction,
+  updatePaginationAction,
   updateSortAction,
 } from "@/views/GridsView/common/store/actions";
 import {
@@ -19,6 +20,9 @@ export function reducer(state: State, action: Action): State {
   switch (type) {
     case ActionKind.UpdateFilterAction: {
       return updateFilterAction(state, payload);
+    }
+    case ActionKind.UpdatePaginationAction: {
+      return updatePaginationAction(state, payload);
     }
     case ActionKind.UpdateSortAction: {
       return updateSortAction(state, payload);
