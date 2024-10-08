@@ -1,10 +1,17 @@
+
 #!/bin/bash
 
-# Load environment variables from .env file
+# Load environment variables from env file
 if [ -f "env" ]; then
   echo "Loading environment variables from env file..."
-  while IFS='=' read -r key value; do
-    export "$key"="$value"
+  while IFS= read -r line; do
+    line=${line##export }
+    if [ -n "$line" ]; then
+      key=${line%%=*}
+      value=${line#*=}
+      value=${value//\'/} # Remove single quotes
+      export "$key"="$value"
+    fi
   done < env
   echo "Environment variables loaded successfully."
 else
