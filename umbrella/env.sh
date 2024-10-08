@@ -1,8 +1,11 @@
 #!/bin/bash
 
-# Load environment variables from env file
-export $(grep -v '^#' env | xargs)
+save_env_variables() {
+    grep -v '^#' .env | xargs -I {} echo "export {}" >> ~/.bashrc
+    echo "Environment variables have been successfully loaded from .env"
+}
 
-# Print confirmation message
-echo "Environment variables have been successfully loaded from .env"
+
+save_env_variables
+
 
