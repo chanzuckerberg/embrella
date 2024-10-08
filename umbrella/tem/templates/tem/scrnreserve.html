@@ -11,27 +11,48 @@
     <style>
         body {
             background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
         }
         .container {
             margin-top: 50px;
-            padding: 20px;
+            max-width: 1000px;
+            padding: 50px;
             background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
-        }
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        .btn-custom {
-            background-color: #007bff;
-            color: white;
-        }
-        .btn-custom:hover {
-            background-color: #0056b3;
-            color: white;
+            box-shadow: 0px 0px 25px rgba(0,0,0,0.1);
+            border-radius: 12px;
         }
         h2 {
+            color: #007bff;
+            font-size: 32px;
+        }
+        .form-group {
             margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+            color: #333;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ced4da;
+            font-size: 16px;
+        }
+        input[type="submit"] {
+            width: 50%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            display: block;
+            margin: 0 auto;
+        }
+        input[type="submit"]:hover {
+            background-color: #0056b3;
         }
         table {
             margin-bottom: 30px;
@@ -54,8 +75,25 @@
             color: #0056b3;
             text-decoration: none;
         }
+        .go-back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
         .go-back-btn:hover {
-          background-color: #5a6268;
+            background-color: #5a6268;
+        }
+        .warning {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -89,6 +127,9 @@
         </tbody>
       </table>
     </form>
+    <div class="warning" id="warningMessage" style="display: none;">
+      Please fill out all required fields.
+    </div>
   </div>
 
   <script>
@@ -130,4 +171,5 @@
       });
     });
   </script>
+</body>
 </html>
