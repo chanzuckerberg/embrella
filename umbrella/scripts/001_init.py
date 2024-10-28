@@ -12,6 +12,7 @@ from clouddocs.models import DriveFolder
 from confluence.models import Space
 from projects.models import Project
 from stores.models import StaticPath,PathType, fill_place_holders
+from umbrella.choices import PUCK_COLORS
 
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
@@ -30,11 +31,11 @@ def create_grid(user, project):
     cane = Cane.objects.create(name='cane1', color='CF1E01',dewar=dewar,position_in_dewar=1)
     cane2 = Cane.objects.create(name='cane2', color='FFC0CB',dewar=dewar2,position_in_dewar=1)
 
-    puck = Puck.objects.create(name='puck1', color='CF1E01',cane=cane,position_in_cane=1)
+    puck = Puck.objects.create(name='puck1', color=PUCK_COLORS[0][0],cane=cane,position_in_cane=1)
     for i in range(2, 11):
-        Puck.objects.create(name=f'puck{i}', color='CF1E01',cane=cane,position_in_cane=1)
+        Puck.objects.create(name=f'puck{i}', color=PUCK_COLORS[i-1][0],cane=cane,position_in_cane=i)
     for i in range(11, 21):
-        Puck.objects.create(name=f'puck{i}', color='CF1E01',cane=cane,position_in_cane=2)
+        Puck.objects.create(name=f'puck{i}', color=PUCK_COLORS[i-11][0],cane=cane2,position_in_cane=i-10)
 
     box = CryoGridBox.objects.create(name='box1', color='FFFFFF',puck=puck,position_in_puck=1)
     sample = Sample.objects.create(name='lysosome',ontology='GO:0005764')
