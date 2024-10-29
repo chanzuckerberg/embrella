@@ -139,8 +139,15 @@
             <script>
                 // Function to detect the base URL and append the `/next` endpoint
                 function getNextUrl() {
-                    const baseUrl = window.location.origin; // Get the base URL (protocol + hostname)
-                    return `${baseUrl}/next`;
+                    const LOCALHOST_PORT = 8000;
+                    const LOCALHOST_NEXT_PORT = 3000;
+
+                    let baseUrl = window.location.origin; // Get the base URL (protocol + hostname)
+                    let nextBaseUrl = baseUrl.includes(LOCALHOST_PORT) ?
+                        baseUrl.replace(LOCALHOST_PORT, LOCALHOST_NEXT_PORT)
+                        : baseUrl;
+
+                    return `${nextBaseUrl}/next`;
                 }
             </script>
             <tr>
