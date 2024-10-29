@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create Session</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      margin-top: 50px;
+      max-width: 1000px;
+      padding: 50px;
+      background-color: #ffffff;
+      box-shadow: 0px 0px 25px rgba(0,0,0,0.1);
+      border-radius: 12px;
+    }
+    h2 {
+      color: #007bff;
+      font-size: 32px;
+    }
+    form {
+      margin-top: 30px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+      color: #333;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ced4da;
+      font-size: 16px;
+    }
+    input[type="submit"] {
+      width: 50%;
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      display: block;
+      margin: 0 auto;
+    }
+    input[type="submit"]:hover {
+      background-color: #0056b3;
+    }
+    .warning {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .go-back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 10px 20px;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .go-back-btn:hover {
+      background-color: #5a6268;
+    }
+  </style>
+</head>
+<body>
+  <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go back to the startup page</button>
+  <div class="container">
+    <h2 class="text-center"><u>Choices for where to put the grids removed from<p> {{ cassette }}</u></h2><br>
+    <form id="ClearCassetteMethodForm" action="{% url 'cryo_grids:clear_cassette_move' %}" method="post">
+      {% csrf_token %}
+      <table class="table table-hover table-bordered">
+          <thead class="thead-dark">
+              <tr>
+                  <th>Slot</th>
+                  <th>Grid</th>
+                  <th>Last Location</th>
+                  <th>Choices</th>
+                  <th></th>
+              </tr>
+          </thead>
+          <tbody >
+              {% for g in grids %}
+              <tr>
+                  <!-- Add link for grid -->
+                  <td>{{ g.slot_number_in_cassette }}</td>
+                  <td><a href="{% url 'admin:cryo_grids_cryogrid_change' g.id %}">{{ g }}</a></td>
+                  <td><table class="table table-hover table-bordered">
+                    <tbody>
+                      {% if g.grid_box %}
+                        <tr><td>position {{g.position_in_box}} of<p>{{ g.grid_box }}</td></tr>
+                        {% if g.grid_box.puck %}
+                            <tr><td>position {{g.grid_box.position_in_puck}} of<p>{{ g.grid_box.puck }}</td></tr>
+                            <tr><td>position {{g.grid_box.puck.position_in_cane}} of<p>{{ g.grid_box.puck.cane }}</td></tr>
+                            <tr><td>position {{g.grid_box.puck.cane.position_in_dewar}} of<p>{{ g.grid_box.puck.cane.dewar }}</td></tr>
+                        {% else %}
+                          TEMP BOX
+                        {% endif %}
+                      {% else %}
+                        <tr><td> NOT ASSIGNED TO A BOX
+                      {% endif %}
+                    </tbody>
+                  </table>
+                  </td>
+                  <td>
+                    {% if g.grid_box %}
+                      <input type="radio" id="{{ g.id }}_moveback" name={{ g.id }}_move value="back_to_last" checked="checked"><label for="{{ g.id }}_moveback">Put it back</label><p>
+                    
+                      <input type="radio" id="{{ g.id }}_trash" name={{ g.id }}_move value="to_trash"><label for="{{ g.id }}_trash">Trash it</label>
+                    {% else %}
+                      <input type="radio" id="{{ g.id }}_trash" name={{ g.id }}_move value="to_trash" checked="checked"><label for="{{ g.id }}_trash">Trash it</label>
+                  </td>
+                    {% endif %}
+              </tr>
+              {% endfor %}
+           </tbody>
+        </table>
+    <input type="hidden" id="cassette_id" name="cassette_id" value=casseette.id>
+    <div class="row form-group">
+      <div class="col-md-12">
+          <input type="submit" value="Clear Cassette">
+      </div>
+    </div>
+    </form>
+    <div class="warning" id="warningMessage" style="display: none;">
+      Please fill out all required fields.
+    </div>
+  </div>

@@ -1,26 +1,33 @@
 from django.shortcuts import render
-from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, CryoGridCassette, \
-    PlungeFreezingSession, PlungeFreezingPlan
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 from pydantic import ValidationError
-from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingPlanModel, SampleModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Case, When, F, Value, CharField, Count
 from django.db.models.functions import Substr, StrIndex, Trim
 from django.utils.timezone import now
-from datetime import timedelta
-from django.http import JsonResponse
-from .models import CryoGrid, CryoGridBox
-from datetime import datetime
-# from umbrella.settings import ENVIRONMENT
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import JsonResponse
+
+# python library import
+from datetime import timedelta
+from datetime import datetime
 import json
 import os
 import logging
 from functools import reduce
-import json
+
+# project app imports
+from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, CryoGridCassette, \
+    PlungeFreezingSession, PlungeFreezingPlan
+from .models import CryoGrid, CryoGridBox
+from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingPlanModel, SampleModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
+from .forms import ClearCassetteForm
+
+# from umbrella.settings import ENVIRONMENT
 logger = logging.getLogger(__name__)
 
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
@@ -63,6 +70,11 @@ def grid_boxes_view(request):
     }
     return render(request, 'cryo_grids/detail.html', context)
 
+
+@require_http_methods(["GET"])
+def grid_cassetes_view(request):
+    # Assuming you have a way to get `data.id`, perhaps from a query parameter or some logic.
+    data_id = request.GET.get('id')  # Example way to get data.id, adjust as needed.
 
 
 
@@ -607,3 +619,44 @@ def add_msi_session(msi_session_list, item):
         msi_session_list.append(msi_session_entry)
 
 
+def clear_cassette_view(request,error_msg=''):
+    '''
+    Starting view that renders the form to select the cassette to clear its grids.
+    '''
+    if request.method == 'POST':
+        cassette_id = request.POST['cassette']
+        return HttpResponseRedirect(reverse('cryo_grids:clear_cassette_filter', args=(cassette_id,)))
+    else:
+        form = ClearCassetteForm()
+        return render(request, "cryo_grids/clear_cassette.html", {"form": form})
+
+def clear_cassette_filter(request, cassette_id, error_msg=''):
+    """
+    process and render the page for selecting where the grids will be moved to
+    after taken out of the cassette.
+    """
+    cassette = CryoGridCassette.objects.get(id=cassette_id)
+    grids = CryoGrid.objects.filter(grid_cassette=cassette)
+    context = {'cassette': cassette, 'grids': grids}
+    return render(request, "cryo_grids/clear_cassette_move.html", context)
+
+@require_http_methods(["POST"])
+def clear_cassette_move(request, error_msg=''):
+    """
+    process the action of clearing cassette and move the grids.
+    When finished, render the cassette filter page again which should be empty.
+    """
+    if request.method == 'POST':
+        
+        for k in request.POST.keys():
+            if '_move' in k:
+                grid_id = int(k.split('_')[0])
+                value = request.POST[k]
+                grid = CryoGrid.objects.get(id=grid_id)
+                cassette_id = grid.grid_cassette.pk
+                grid.grid_cassette = None
+                if value.endswith('trash'):
+                    setattr(grid, 'grid_box',None)
+                    setattr(grid, 'trashed',True)
+                grid.save()
+        return HttpResponseRedirect(reverse('cryo_grids:clear_cassette_filter', args=(cassette_id,)))
