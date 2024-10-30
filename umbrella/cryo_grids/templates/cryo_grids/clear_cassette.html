@@ -82,7 +82,7 @@
 <body>
   <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go back to the startup page</button>
   <div class="container">
-    <h2 class="text-center"><u>Create TEM Multi-Scaled Imaging Session</u></h2><br>
+    <h2 class="text-center"><u>Choose which cassette to clear</u></h2><br>
     <form id="ClearCassetteForm" action="{% url 'cryo_grids:clear_cassette' %}" method="post">
       {% csrf_token %}
       <div class="row form-group">
@@ -99,7 +99,7 @@
       </div>
       <div class="row form-group">
         <div class="col-md-12">
-            <input type="submit" value="Trash all grids in the cassette">
+            <input type="submit" value="clear this cassette">
         </div>
       </div>
     </form>
