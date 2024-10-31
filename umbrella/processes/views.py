@@ -11,7 +11,16 @@ from django.core.serializers import serialize
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 import json
-
+from django.db.models.functions import Substr, StrIndex, Trim
+from pydantic import ValidationError
+from django.utils.timezone import now
+from datetime import timedelta
+from datetime import datetime
+from tem.models import MsiSession
+from django.db.models import Case, When, F, Value, CharField, Count
+from processes.models import *
+from processes.utils import QueryParams
+from tem.models import MsiSession
 def detail(request, run_id):
     run = get_object_or_404(ProcRun, pk=run_id)
     if request.method == 'POST':
@@ -134,3 +143,107 @@ def get_all_image_paths(request):
     error_response = ErrorResponse(error='No matching software found')
 
     return JsonResponse(data=error_response.dict(), status=404, safe=False)
+
+
+
+#for tomo filter page
+
+@require_http_methods(["GET"])
+def available_filters(request):
+    try:
+        # Validate that only the 'q' parameter is present in the request
+        if 'q' not in request.GET or len(request.GET) > 1:
+            return JsonResponse({'error': 'Invalid query parameters. Only "q" is allowed.'}, status=422)
+        
+        raw_query_param = request.GET.get('q', '[]')
+        
+        # Parse the JSON string into a Python list
+        query_filters = json.loads(raw_query_param)
+
+        # Validate the parsed list with Pydantic
+        query_params = QueryParams(q=query_filters)
+
+        # Initialize the selected filters based on the validated query parameters
+        selected_filters = {}
+        for qf in query_params.q:
+            selected_filters[qf.category] = set(qf.value)  # Store as a set for efficient lookup
+
+        # Base queryset with annotations for counting occurrences
+        queryset = MsiSession.objects.select_related('project', 'user', 'msisession_name')
+
+        current_time = now()
+        date_ranges = {
+            'last_1_month': current_time - timedelta(days=30),
+            'last_3_months': current_time - timedelta(days=90),
+            'last_6_months': current_time - timedelta(days=180),
+        }
+
+        # Helper function to add 'selected' key based on user selection
+        def add_selected_status(filter_list, category):
+            selected_values = selected_filters.get(category, set())
+            if None in selected_values:
+                for item in filter_list:
+                    item['selected'] = item['name'] is None
+            else:
+                for item in filter_list:
+                    item_name = item['name']
+                    if isinstance(item_name, bool):
+                        item['selected'] = item_name in selected_values
+                    elif isinstance(item_name, str):
+                        item['selected'] = item_name.strip().lower() in {val.lower() for val in selected_values if isinstance(val, str)}
+                    else:
+                        item['selected'] = False
+
+        # Aggregating counts for each filter
+        filters = {
+            'project': list(queryset.annotate(project_temp_name=F('project__name'))
+                            .values('project_temp_name')
+                            .annotate(count=Count('id'))
+                            .order_by('project_temp_name')
+                            .values(name=F('project_temp_name'), count=F('count'))),
+            'user': list(queryset.annotate(
+                            user_display_name=Trim(
+                                Case(
+                                    # If username contains '@', take the substring before '@'
+                                    When(user__username__contains='@',
+                                         then=Substr(F('user__username'), 1, StrIndex(F('user__username'), Value('@')) - 1)),
+                                    # Otherwise, use username or full name if available
+                                    default=Case(
+                                        When(user__first_name='', then=F('user__username')),
+                                        default=F('user__first_name'),
+                                        output_field=CharField()
+                                    ),
+                                    output_field=CharField()
+                                )
+                            )
+                        ).values(user_display_name=F('user_display_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('user_display_name')
+                        .values(name=Trim(F('user_display_name')), count=F('count'))),
+            'msiSession': list(queryset
+                    .exclude(name__isnull=True) 
+                    .annotate(count=Count('id'))
+                    .values('name', 'count')
+                    .order_by('name')),
+            'date': [
+                {"name": "last_1_month", "count": queryset.filter(created_at__gte=date_ranges['last_1_month']).count()},
+                {"name": "last_3_months", "count": queryset.filter(created_at__gte=date_ranges['last_3_months']).count()},
+                {"name": "last_6_months", "count": queryset.filter(created_at__gte=date_ranges['last_6_months']).count()}
+            ]
+        }
+
+        # Apply 'selected' status to filters
+        for key, filter_list in filters.items():
+            add_selected_status(filter_list, key)
+
+        # Convert to the expected output format
+        response_data = {
+            "filters": filters
+        }
+
+        return JsonResponse(response_data)
+    except ValidationError as e:
+        # Handle Pydantic validation errors
+        return JsonResponse({'error': f'Invalid input: {e.errors()}'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
