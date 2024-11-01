@@ -149,6 +149,7 @@ class ProcRun(models.Model):
     msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)
     notes = models.TextField(max_length=255, blank=True, null=True)
     json_path = models.ForeignKey(Path, on_delete=models.CASCADE, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return '%s-%s' % (self.proc_plan, self.name)

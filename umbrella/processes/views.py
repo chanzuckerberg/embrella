@@ -18,6 +18,7 @@ from datetime import timedelta
 from datetime import datetime
 from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
+from cryo_grids.models import CryoGrid, PlungeFreezingSession, PlungeFreezingPlan
 from processes.models import *
 from processes.utils import QueryParams
 from tem.models import MsiSession
@@ -170,7 +171,12 @@ def available_filters(request):
 
         # Base queryset with annotations for counting occurrences
         queryset = MsiSession.objects.select_related('project', 'user', 'msisession_name')
-
+        sample_queryset = CryoGrid.objects.select_related('freezing_session','freezing_plan'
+        ).prefetch_related(
+            'freezing_plan__sample', 'freezing_plan__tags',
+            'atlassession__group'
+        )
+        procplan_queryset = ProcPlan.objects.select_related('name')
         current_time = now()
         date_ranges = {
             'last_1_month': current_time - timedelta(days=30),
@@ -201,6 +207,11 @@ def available_filters(request):
                             .annotate(count=Count('id'))
                             .order_by('project_temp_name')
                             .values(name=F('project_temp_name'), count=F('count'))),
+            'sample': list(sample_queryset.annotate(sample_temp_name=F('freezing_plan__sample__name'))
+                        .values(sample_temp_name=F('sample_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('sample_temp_name')
+                        .values(name=F('sample_temp_name'), count=F('count'))),
             'user': list(queryset.annotate(
                             user_display_name=Trim(
                                 Case(
@@ -225,6 +236,18 @@ def available_filters(request):
                     .annotate(count=Count('id'))
                     .values('name', 'count')
                     .order_by('name')),
+            'screeningSession': list(sample_queryset
+                         .filter(freezing_session__isnull=False, atlassession__group__name__isnull=False)
+                         .annotate(screen_session_temp_name=F('atlassession__group__name'))
+                         .values(screen_session_temp_name=F('screen_session_temp_name'))
+                         .annotate(count=Count('id'))
+                         .order_by('screen_session_temp_name')
+                         .values(name=F('screen_session_temp_name'), count=F('count'))),
+            'procPlan': list(procplan_queryset
+                     .exclude(name__isnull=True)
+                     .annotate(count=Count('id'))
+                     .values('name', 'count')
+                     .order_by('name')),
             'date': [
                 {"name": "last_1_month", "count": queryset.filter(created_at__gte=date_ranges['last_1_month']).count()},
                 {"name": "last_3_months", "count": queryset.filter(created_at__gte=date_ranges['last_3_months']).count()},
