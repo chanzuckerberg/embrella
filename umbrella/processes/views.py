@@ -67,7 +67,8 @@ def create_run(request):
     session_id=int(request.POST['msi_session'])
     msi_session=MsiSession.objects.get(pk=session_id)
     proc_plan=ProcPlan.objects.get(pk=plan_id)
-    name = models.suggest_name('run',msi_session,proc_plan)
+    name = suggest_name('run',msi_session,proc_plan)
+
     if request.method == 'POST':
         run_instance = ProcRun.objects.create(
                     name=name,
