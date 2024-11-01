@@ -151,10 +151,14 @@
 
                     return `${nextBaseUrl}/next`;
                 }
+
+                function getCryoGridsUrl() {
+                    return `${getNextUrl()}/cryo_grids`;
+                }
             </script>
             <tr>
                 <td>
-                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getNextUrl()">Cryo Grids</a>
+                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getCryoGridsUrl()">Cryo Grids</a>
                     <p> Stored Grid Filter Page </p>
                 </td>
                 <td>
