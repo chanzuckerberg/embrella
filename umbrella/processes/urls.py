@@ -13,6 +13,7 @@ urlpatterns = [
     path("post_tomo/reserve", views_post_tomo.reserve_run, name="ptreserve"),
     path("post_tomo/create", views_post_tomo.create_run, name="ptcreate"),
     path("post_tomo/<int:run_id>/", views_post_tomo.detail, name="ptdetail"),
+    path('v1/filterlist/', views.available_filters, name='get_processes_details'),
     #path("run_list/", views.get_all_sessions, name="get"),
     #path("path_list/", views.get_all_image_paths, name="path")
 ]
