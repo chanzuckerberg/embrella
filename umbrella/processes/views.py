@@ -178,6 +178,7 @@ def available_filters(request):
             'atlassession__group'
         )
         procplan_queryset = ProcPlan.objects.select_related('name')
+        procrun_queryset = ProcRun.objects.select_related('created_at')
         current_time = now()
         date_ranges = {
             'last_1_month': current_time - timedelta(days=30),
@@ -250,9 +251,9 @@ def available_filters(request):
                      .values('name', 'count')
                      .order_by('name')),
             'date': [
-                {"name": "last_1_month", "count": queryset.filter(created_at__gte=date_ranges['last_1_month']).count()},
-                {"name": "last_3_months", "count": queryset.filter(created_at__gte=date_ranges['last_3_months']).count()},
-                {"name": "last_6_months", "count": queryset.filter(created_at__gte=date_ranges['last_6_months']).count()}
+                {"name": "last_1_month", "count": procrun_queryset.filter(created_at__gte=date_ranges['last_1_month']).count()},
+                {"name": "last_3_months", "count": procrun_queryset.filter(created_at__gte=date_ranges['last_3_months']).count()},
+                {"name": "last_6_months", "count": procrun_queryset.filter(created_at__gte=date_ranges['last_6_months']).count()}
             ]
         }
 
