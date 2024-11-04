@@ -83,19 +83,6 @@ export interface Pagination {
   totalResults: number;
 }
 
-export type SearchParam = Partial<
-  Record<SEARCH_PARAM_NAME, SearchParamValue[]>
->;
-
-export enum SEARCH_PARAM_NAME {
-  QUERY = "q",
-}
-
-export interface SearchParamValue {
-  category: string;
-  value: unknown;
-}
-
 export interface SortBy {
   asc: boolean;
   sort: string;
