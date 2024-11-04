@@ -1,3 +1,5 @@
+import { MSISession } from "./msiSession";
+
 export interface ApiListResponse<T> {
   pagination: Pagination;
   result: T[];
@@ -65,11 +67,7 @@ export interface GridData {
     createdAt: string;
   };
   screeningSession: string;
-  msiSession: {
-    id: number;
-    name: string;
-    url: string;
-  }[];
+  msiSession: MSISession[];
 }
 
 export interface GridFreezingPlanSample {
