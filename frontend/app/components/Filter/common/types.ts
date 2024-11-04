@@ -1,5 +1,5 @@
 import { ComplexFilterProps as SDSComplexFilterProps } from "@czi-sds/components";
-import { FilterOption } from "@/common/types";
+import { FilterOption } from "@/app/common/types/types";
 
 export type AutocompleteOption = Omit<FilterOption, "name"> & { name: string };
 
@@ -44,7 +44,7 @@ export type FilterView<
 > = SelectFilterView<FilterId, FilterCategory>;
 
 export type OnFilterFn<FilterCategory extends string> = (
-  categoryFilter: CategoryFilter<FilterCategory>,
+  categoryFilter: CategoryFilter<FilterCategory>
 ) => void;
 
 export interface SelectFilterView<FilterId, FilterCategory extends string> {

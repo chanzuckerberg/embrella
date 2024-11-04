@@ -1,5 +1,5 @@
 import { CellContext, ColumnDef } from "@tanstack/react-table";
-import { GridData } from "@/common/types";
+import { GridData } from "@/app/common/types/types";
 
 export enum GRID_COLUMN {
   CRYOGRID = "CRYOGRID",

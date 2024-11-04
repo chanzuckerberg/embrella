@@ -4,7 +4,7 @@ import {
   GridFilterCategory,
   Pagination,
   SortBy,
-} from "@/common/types";
+} from "@/app/common/types/types";
 import { PaginationState, SortingState, Updater } from "@tanstack/react-table";
 
 export type Action =

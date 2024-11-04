@@ -5,7 +5,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { TABLE_OPTIONS } from "@/views/GridsView/components/Main/components/GridList/table/options";
-import { EntityList, GridData } from "@/common/types";
+import { EntityList, GridData } from "@/app/common/types/types";
 import { Updater } from "@tanstack/table-core";
 import { getTableState } from "@/views/GridsView/components/Main/components/GridList/utils";
 import { DispatchContext } from "@/views/GridsView/common/store";

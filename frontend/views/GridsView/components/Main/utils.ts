@@ -2,7 +2,7 @@ import {
   SEARCH_PARAM_NAME,
   SearchParam,
   SearchParamValue,
-} from "@/common/types";
+} from "@/app/common/types/types";
 import { ColumnSort } from "@tanstack/react-table";
 import { SORT_CATEGORY_VALUE } from "@/views/GridsView/hooks/useFetchGrids/constants";
 import { State } from "@/views/GridsView/common/store/types";
@@ -53,7 +53,7 @@ export function getFilterSearchParamValue(state: State): SearchParamValue[] {
  * @returns search params "page".
  */
 export function getPaginationSearchParamValue(
-  state: State,
+  state: State
 ): SearchParamValue[] {
   const {
     paginationState: { pageIndex },
