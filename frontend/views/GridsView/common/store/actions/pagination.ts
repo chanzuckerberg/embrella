@@ -3,6 +3,8 @@ import { Updater } from "@tanstack/table-core";
 import { Pagination } from "@/common/types";
 import { DEFAULT_PAGE_SIZE } from "@/views/GridsView/common/store/constants";
 
+//TODO: these functions can probably be moved to where they are called
+
 /**
  * Builds the next pagination state.
  * @param updaterOrValue - Updater or value to update the pagination state.
@@ -11,7 +13,7 @@ import { DEFAULT_PAGE_SIZE } from "@/views/GridsView/common/store/constants";
  */
 export function buildNextPaginationState(
   updaterOrValue: Updater<PaginationState>,
-  pagination?: Pagination,
+  pagination?: Pagination
 ): PaginationState {
   if (typeof updaterOrValue === "function") {
     return updaterOrValue(getPaginationState(pagination));

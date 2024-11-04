@@ -1,4 +1,4 @@
-import { FilterState } from "@/components/Filter/common/types";
+import { FilterState } from "@/app/components/Filter/common/types";
 import { GridFilterCategory } from "@/common/types";
 import { PaginationState, SortingState } from "@tanstack/react-table";
 

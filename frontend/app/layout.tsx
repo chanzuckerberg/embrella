@@ -8,7 +8,7 @@ import { theme } from "@/app/common/theme";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Embrella Grids",
+  title: "Embrella",
 };
 
 const CACHE_PROVIDER_OPTIONS = {
