@@ -2,5 +2,5 @@
  * App routes
  */
 export enum ROUTES {
-    HOME = "/next/",
+  CRYO_GRIDS = "/next/cryo_grids",
 }
