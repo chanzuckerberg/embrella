@@ -2,7 +2,7 @@ import { useCallback, useContext } from "react";
 import { Props } from "./types";
 import { DispatchContext } from "@/views/GridsView/common/store";
 import { CategoryFilter } from "@/app/components/Filter/common/types";
-import { GridFilterCategory } from "@/common/types";
+import { GridFilterCategory } from "@/app/common/types/types";
 import { useFilterList } from "@/app/components/Filter/hooks/useFilterList/useFilterList";
 import { GRID_FILTER_ID } from "@/views/GridsView/components/Main/components/GridFilter/filters/types";
 import { GRID_FILTER_CONFIGS } from "@/views/GridsView/components/Main/components/GridFilter/filters/filter";

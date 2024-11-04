@@ -1,4 +1,4 @@
-import { ROUTES } from "@/common/constants";
+import { ROUTES } from "@/app/common/constants/constants";
 import { expect, Locator, Page, Response, test } from "@playwright/test";
 import { TEST_ID_GRID_FILTERS } from "@/views/GridsView/components/Main/components/GridFilter/constants";
 import { GRID_FILTER_CONFIGS } from "@/views/GridsView/components/Main/components/GridFilter/filters/filter";
@@ -19,8 +19,8 @@ import {
   TEST_ID_GRIDS_PAGINATION,
 } from "@/views/GridsView/components/Main/components/GridList/constants";
 import { GRID_COLUMN_DEFS } from "@/views/GridsView/components/Main/components/GridList/columns/column";
-import { API } from "@/common/api";
-import { EntityList, GridData } from "@/common/types";
+import { API } from "@/app/common/constants/api";
+import { EntityList, GridData } from "@/app/common/types/types";
 
 const { describe } = test;
 

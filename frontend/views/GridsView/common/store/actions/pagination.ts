@@ -1,6 +1,6 @@
 import { PaginationState } from "@tanstack/react-table";
 import { Updater } from "@tanstack/table-core";
-import { Pagination } from "@/common/types";
+import { Pagination } from "@/app/common/types/types";
 import { DEFAULT_PAGE_SIZE } from "@/views/GridsView/common/store/constants";
 
 //TODO: these functions can probably be moved to where they are called

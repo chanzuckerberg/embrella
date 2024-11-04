@@ -1,4 +1,4 @@
-import { GridData } from "@/common/types";
+import { GridData } from "@/app/common/types/types";
 import { formatDate } from "@/views/common/date/utils";
 import { LinkTValue } from "@/app/components/Table/components/CellComponent/types";
 

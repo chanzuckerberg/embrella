@@ -1,4 +1,4 @@
-import { GridFilterCategory } from "@/common/types";
+import { GridFilterCategory } from "@/app/common/types/types";
 
 export interface FetchResponseInfo {
   status?: number;

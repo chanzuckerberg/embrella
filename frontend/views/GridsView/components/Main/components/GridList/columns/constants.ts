@@ -1,5 +1,5 @@
 import { AccessorFnColumnDef } from "@tanstack/react-table";
-import { GridData } from "@/common/types";
+import { GridData } from "@/app/common/types/types";
 import {
   GRID_COLUMN,
   GridColumnDef,
