@@ -4,10 +4,6 @@ export interface ApiListResponse<T> {
   sortBy: SortBy;
 }
 
-export interface Configs {
-  API_URL: string;
-}
-
 export type EntityList<T, K extends string> = {
   [entityName in K]: T[];
 } & {
