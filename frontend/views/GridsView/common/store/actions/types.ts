@@ -1,4 +1,4 @@
-import { CategoryFilter } from "@/components/Filter/common/types";
+import { CategoryFilter } from "@/app/components/Filter/common/types";
 import {
   FiltersList,
   GridFilterCategory,

@@ -1,8 +1,8 @@
 import React from "react";
 import { ViewLayout } from "@/views/GridsView/style";
-import { Sidebar } from "@/components/Sidebar";
+import { Sidebar } from "@app/components/Sidebar";
 import { useConnect } from "@/views/GridsView/components/Main/connect";
-import { Content } from "@/components/Content/style";
+import { Content } from "@app/components/Content/style";
 import { GridFilter } from "@/views/GridsView/components/Main/components/GridFilter";
 import { GridList } from "@/views/GridsView/components/Main/components/GridList";
 
