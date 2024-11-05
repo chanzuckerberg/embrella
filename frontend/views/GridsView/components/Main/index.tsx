@@ -1,5 +1,5 @@
 import React from "react";
-import { Content } from "@/app/common/components/TableWrapper/style";
+import { TableWrapper } from "@/app/common/components/TableWrapper/TableWrapper";
 import { FilterableTableMain } from "@/app/common/components/FilterableTableMain/FilterableTableMain";
 import { Sidebar } from "@app/components/Sidebar";
 import { useConnect } from "@/views/GridsView/components/Main/connect";
@@ -13,9 +13,9 @@ export const Main = (): JSX.Element => {
       <Sidebar>
         <GridFilter filtersList={filtersList} />
       </Sidebar>
-      <Content>
+      <TableWrapper>
         <GridList gridList={gridList} />
-      </Content>
+      </TableWrapper>
     </FilterableTableMain>
   );
 };
