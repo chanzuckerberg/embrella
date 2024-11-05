@@ -1,21 +1,21 @@
 import React from "react";
-import { ViewLayout } from "@/views/GridsView/style";
+import { Content } from "@app/components/Content/style";
+import { FilterableTableWrapper } from "@app/common/components/FilterableTableViewWrapper/FilterableTableWrapper";
 import { Sidebar } from "@app/components/Sidebar";
 import { useConnect } from "@/views/GridsView/components/Main/connect";
-import { Content } from "@app/components/Content/style";
 import { GridFilter } from "@/views/GridsView/components/Main/components/GridFilter";
 import { GridList } from "@/views/GridsView/components/Main/components/GridList";
 
 export const Main = (): JSX.Element => {
   const { gridList, filtersList } = useConnect();
   return (
-    <ViewLayout>
+    <FilterableTableWrapper>
       <Sidebar>
         <GridFilter filtersList={filtersList} />
       </Sidebar>
       <Content>
         <GridList gridList={gridList} />
       </Content>
-    </ViewLayout>
+    </FilterableTableWrapper>
   );
 };
