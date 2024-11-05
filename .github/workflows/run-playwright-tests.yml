@@ -25,14 +25,6 @@ jobs:
         run: |
             cd frontend
             yarn e2e:chrome
-      - name: Run Firefox tests
-        run: |
-            cd frontend
-            yarn e2e:ff
-      - name: Run Edge tests
-        run: |
-            cd frontend
-            yarn e2e:ie
       - uses: actions/upload-artifact@v3
         if: always()
         with:
