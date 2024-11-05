@@ -1,5 +1,5 @@
 import React from "react";
-import { Content } from "@/app/common/components/Content/style";
+import { Content } from "@/app/common/components/TableWrapper/style";
 import { FilterableTableMain } from "@/app/common/components/FilterableTableMain/FilterableTableMain";
 import { Sidebar } from "@app/components/Sidebar";
 import { useConnect } from "@/views/GridsView/components/Main/connect";
