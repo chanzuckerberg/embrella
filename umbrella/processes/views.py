@@ -381,8 +381,8 @@ def get_tomo_details(request):
             if procrun_id not in unique_results:
                 response_model = ResponseModel(
                     tomograms=TomogramModel(id=entry.get('run_pipe_run_id'), name=entry.get('name'), url=f"{base_url}/admin/processes/tomograms/{entry.get('run_pipe_run_id')}"),
-                    procplan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
-                    procrun=ProcRunModel(id=procrun_id, note=entry.get('notes')),
+                    procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
+                    procRun=ProcRunModel(id=procrun_id, note=entry.get('notes')),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
                         name=entry.get('cryogrid_name'),
@@ -392,7 +392,7 @@ def get_tomo_details(request):
                     ),
                     projects=ProjectModel(id=entry.get('project_id'), name=entry.get('project_name'), url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"),
                     user=UserModel(id=entry.get('user_id'), name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')),
-                    msisession=MSISessionModel(
+                    msiSession=MSISessionModel(
                         id=entry.get('msi_session_id'),
                         name=entry.get('msi_session_name'),
                         url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_id')}"

@@ -124,11 +124,11 @@ class ProcRunModel(BaseModel):
 
 class ResponseModel(BaseModel):
     tomograms: Optional[TomogramModel] = None
-    procplan: Optional[ProcPlanModel] = None
-    procrun: Optional[ProcRunModel] = None
+    procPlan: Optional[ProcPlanModel] = None
+    procRun: Optional[ProcRunModel] = None
     json: Optional[JsonModel] = None
     grid: Optional[GridModel] = None
     projects: Optional[ProjectModel] = None
     user: Optional[UserModel] = None
-    msisession: Optional[MSISessionModel] = None
+    msiSession: Optional[MSISessionModel] = None
 
