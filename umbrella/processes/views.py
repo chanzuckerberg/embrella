@@ -20,8 +20,29 @@ from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
 from cryo_grids.models import CryoGrid, PlungeFreezingSession, PlungeFreezingPlan
 from processes.models import *
-from processes.utils import QueryParams
+from processes.utils import QueryParams, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
+
+from django.db.models import F
+
+import logging
+import os
+# from umbrella.settings import ENVIRONMENT
+logger = logging.getLogger(__name__)
+
+ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
+
+
+def get_base_url():
+       if ENVIRONMENT == 'staging':
+           return 'http://umbrella-dev.czbiohub.org'
+       elif ENVIRONMENT == 'production':
+           return 'http://umbrella.czbiohub.org'
+       else:  # development
+           return 'http://localhost:8000' 
+       
+base_url = get_base_url()
+
 def detail(request, run_id):
     run = get_object_or_404(ProcRun, pk=run_id)
     if request.method == 'POST':
@@ -271,4 +292,120 @@ def available_filters(request):
         # Handle Pydantic validation errors
         return JsonResponse({'error': f'Invalid input: {e.errors()}'}, status=400)
     except Exception as e:
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+    
+
+from django.http import JsonResponse
+from pydantic import ValidationError
+from typing import List
+
+@require_http_methods(["GET"])
+def get_tomo_details(request):
+    try:
+        raw_q_param = request.GET.get('q', None)
+        if raw_q_param:
+            try:
+                q_param = json.loads(raw_q_param)
+            except json.JSONDecodeError as e:
+                return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
+        else:
+            q_param = []
+        
+        query_data = request.GET.dict()
+        query_data['q'] = q_param
+        try:
+            query_params = tomoQueryParams(**query_data)
+        except ValidationError as e:
+            raise UnprocessableEntity(detail=f"Validation error: {str(e)}")
+        
+        sort_field = 'created_at'  # Use a valid date field here
+        asc = False
+        page_size = 10
+
+        def extract_value(value):
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            return value
+
+        for item in q_param:
+            if item['category'] == 'sort':
+                sort_field = 'created_at' if extract_value(item['value']) == 'modifiedOn' else extract_value(item['value'])
+            elif item['category'] == 'asc':
+                asc_value = extract_value(item['value'])
+                asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
+            elif item['category'] == 'pageSize':
+                try:
+                    page_size = int(extract_value(item['value']))
+                except ValueError:
+                    return JsonResponse({'error': 'Invalid value for page_size, must be an integer'}, status=400)
+        
+        sort_order = sort_field if asc else f'-{sort_field}'
+
+        queryset = ProcRun.objects.select_related(
+            'proc_plan', 
+            'runpipedata',
+            'msi_session', 
+            'msi_session__grid',  
+            'msi_session__project',
+            'msi_session__user'
+        ).prefetch_related(
+            'runpipedata_set__tomograms_set'
+        ).values(
+            'id',
+            'name',
+            'notes',
+            'proc_plan_id',  
+            'msi_session_id',  
+            proc_plan_plan_id=F('proc_plan__id'),
+            proc_plan_name=F('proc_plan__name'),
+            run_pipe_run_id=F('runpipedata__run_id'),
+            msi_session_name=F('msi_session__name'),
+            msi_session_notes=F('msi_session__notes'),
+            msi_session_project_id=F('msi_session__project_id'),
+            msi_session_grid_id=F('msi_session__grid_id'),
+            cryogrid_id=F('msi_session__grid__id'),
+            cryogrid_name=F('msi_session__grid__name'),
+            cryogrid_trashed=F('msi_session__grid__trashed'),
+            cryogrid_created_at=F('msi_session__grid__updated_on'),
+            project_id=F('msi_session__project__id'),
+            project_name=F('msi_session__project__name'),
+            user_id=F('msi_session__user__id'),
+            user_name=F('msi_session__user__username')
+        )
+
+        # Use a dictionary to keep unique entries by 'procrun.id'
+        unique_results = {}
+
+        for entry in queryset:
+            procrun_id = entry.get('id')
+            if procrun_id not in unique_results:
+                response_model = ResponseModel(
+                    tomograms=TomogramModel(id=entry.get('run_pipe_run_id'), name=entry.get('name'), url=f"{base_url}/admin/processes/tomograms/{entry.get('run_pipe_run_id')}"),
+                    procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
+                    procRun=ProcRunModel(id=procrun_id, note=entry.get('notes')),
+                    grid=GridModel(
+                        id=entry.get('cryogrid_id'),
+                        name=entry.get('cryogrid_name'),
+                        trashed=entry.get('cryogrid_trashed'),
+                        url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
+                        createdAt=str(entry.get('cryogrid_created_at'))
+                    ),
+                    projects=ProjectModel(id=entry.get('project_id'), name=entry.get('project_name'), url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"),
+                    user=UserModel(id=entry.get('user_id'), name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')),
+                    msiSession=MSISessionModel(
+                        id=entry.get('msi_session_id'),
+                        name=entry.get('msi_session_name'),
+                        url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_id')}"
+                    )
+                )
+                unique_results[procrun_id] = response_model.dict()
+        
+        # Collect unique results as a list
+        response_data = list(unique_results.values())
+        
+        return JsonResponse(response_data, safe=False)
+    except UnprocessableEntity as e:
+        return JsonResponse({'error': e.detail}, status=e.status_code)
+    except Exception as e:
+        logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
