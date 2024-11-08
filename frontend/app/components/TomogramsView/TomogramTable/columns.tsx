@@ -2,7 +2,6 @@ import { Link } from "@czi-sds/components";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 
 import { TomogramData } from "@/app/common/types/tomogram";
-import { Fragment } from "react";
 
 /**
  * Default props to pass to SDS Link component
