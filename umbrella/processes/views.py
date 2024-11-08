@@ -380,12 +380,12 @@ def get_tomo_details(request):
             procrun_id = entry.get('id')
             if procrun_id not in unique_results:
                 response_model = ResponseModel(
-                    tomograms=TomogramModel(id=entry.get('run_pipe_run_id'), name=entry.get('name'), url=f"{base_url}/admin/processes/tomograms/{entry.get('run_pipe_run_id')}"),
+                    tomograms=TomogramModel(id=entry.get('run_pipe_run_id'), name="{} (id={})".format(entry.get('name'), entry.get('run_pipe_run_id')), url=f"{base_url}/admin/processes/tomograms/{entry.get('run_pipe_run_id')}"),
                     procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
                     procRun=ProcRunModel(id=procrun_id, note=entry.get('notes')),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
-                        name=entry.get('cryogrid_name'),
+                        name="{} (id={})".format(entry.get('cryogrid_name'), entry.get('cryogrid_id')),
                         trashed=entry.get('cryogrid_trashed'),
                         url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
                         createdAt=str(entry.get('cryogrid_created_at'))
