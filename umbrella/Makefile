@@ -10,3 +10,7 @@ help: ## display help for this makefile
 .PHONY: start
 start: ## Start the embrella development environment
 	python manage.py runserver
+
+.PHONE: db-migrate
+db-migrate: ## Migrate the database
+	python manage.py migrate
