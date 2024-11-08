@@ -1,6 +1,6 @@
 import { ColumnSort, SortingState } from "@tanstack/react-table";
 import { Updater } from "@tanstack/table-core";
-import { SortBy } from "@/common/types";
+import { SortBy } from "@/app/common/types/types";
 
 /**
  * Builds the next sorting state.
@@ -10,7 +10,7 @@ import { SortBy } from "@/common/types";
  */
 export function buildNextSortState(
   updaterOrValue: Updater<SortingState>,
-  sortBy?: SortBy,
+  sortBy?: SortBy
 ): SortingState {
   if (typeof updaterOrValue === "function") {
     return updaterOrValue(getSortingState(sortBy));

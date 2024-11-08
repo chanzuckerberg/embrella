@@ -1,4 +1,4 @@
-import { ROUTES } from "@/common/constants";
+import { ROUTES } from "@/app/common/constants/constants";
 import { expect, Locator, Page, Response, test } from "@playwright/test";
 import { TEST_ID_GRID_FILTERS } from "@/views/GridsView/components/Main/components/GridFilter/constants";
 import { GRID_FILTER_CONFIGS } from "@/views/GridsView/components/Main/components/GridFilter/filters/filter";
@@ -19,8 +19,8 @@ import {
   TEST_ID_GRIDS_PAGINATION,
 } from "@/views/GridsView/components/Main/components/GridList/constants";
 import { GRID_COLUMN_DEFS } from "@/views/GridsView/components/Main/components/GridList/columns/column";
-import { API } from "@/common/api";
-import { EntityList, GridData } from "@/common/types";
+import { API } from "@/app/common/constants/api";
+import { EntityList, GridData } from "@/app/common/types/types";
 
 const { describe } = test;
 
@@ -82,7 +82,7 @@ describe("Grids", () => {
       } = await waitForResponse<EntityList<GridData, "grids">>(
         page,
         API.GRIDS,
-        () => page.reload(),
+        () => page.reload()
       );
       const pagination = getPaginationLocator(page);
       if (pageSize < totalResults) {
@@ -101,7 +101,7 @@ describe("Grids", () => {
     test("displays sortable headers", async () => {
       test.skip(condition, DESCRIPTION);
       const sortableColumnDef = COLUMN_CONFIGS.filter(
-        ({ enableSorting }) => enableSorting,
+        ({ enableSorting }) => enableSorting
       );
       const sortIcons = getTableSortIconLocator(table);
       await expect(sortIcons).toHaveCount(sortableColumnDef.length);
@@ -231,7 +231,7 @@ describe("Grids", () => {
       await waitForRequest(
         page,
         getFilterOptionLocators(page).nth(0),
-        API.FILTERS_LIST,
+        API.FILTERS_LIST
       );
       await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
       const filterChip = getFilterChipLocators(filter).nth(0);
@@ -288,7 +288,7 @@ function getTableSortIconLocator(table: Locator): Locator {
 }
 
 async function goToGridList(page: Page): Promise<void> {
-  await page.goto(ROUTES.HOME);
+  await page.goto(ROUTES.CRYO_GRIDS);
 }
 
 async function openFilter(filters: Locator) {
@@ -309,12 +309,12 @@ async function shouldSkipFilterTest(filter?: Locator): Promise<boolean> {
 async function waitForRequest(
   page: Page,
   locator: Locator,
-  requestURL: string,
+  requestURL: string
 ): Promise<void> {
   await Promise.all([
     page.waitForResponse(
       (response) =>
-        response.url().includes(requestURL) && response.status() === 200,
+        response.url().includes(requestURL) && response.status() === 200
     ),
     locator.click(),
   ]);
@@ -323,12 +323,12 @@ async function waitForRequest(
 async function waitForResponse<R>(
   page: Page,
   requestURL: string,
-  onRequest: () => Promise<Response | null>,
+  onRequest: () => Promise<Response | null>
 ): Promise<R> {
   const [response] = await Promise.all([
     page.waitForResponse(
       (response) =>
-        response.url().includes(requestURL) && response.status() === 200,
+        response.url().includes(requestURL) && response.status() === 200
     ),
     onRequest(),
   ]);

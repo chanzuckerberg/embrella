@@ -1,5 +1,12 @@
-import { CategoryFilter, FilterState } from "@/components/Filter/common/types";
-import { FilterOption, FiltersList, GridFilterCategory } from "@/common/types";
+import {
+  CategoryFilter,
+  FilterState,
+} from "@/app/components/Filter/common/types";
+import {
+  FilterOption,
+  FiltersList,
+  GridFilterCategory,
+} from "@/app/common/types/types";
 
 /**
  * Build the current set of selected filters.
@@ -7,12 +14,12 @@ import { FilterOption, FiltersList, GridFilterCategory } from "@/common/types";
  * @returns current filter state.
  */
 export function buildCurrentFilterState(
-  filtersList?: FiltersList<GridFilterCategory>,
+  filtersList?: FiltersList<GridFilterCategory>
 ): FilterState<GridFilterCategory> {
   const filterState = {} as FilterState<GridFilterCategory>;
   if (filtersList) {
     for (const [category, filterOptions] of Object.entries(
-      filtersList.filters,
+      filtersList.filters
     ) as [GridFilterCategory, FilterOption[]][]) {
       const selectedValues = filterOptions.filter(isSelected).map(mapValue);
       if (selectedValues.length > 0) {
@@ -31,7 +38,7 @@ export function buildCurrentFilterState(
  */
 export function buildNextFilterState(
   categoryFilter: CategoryFilter<GridFilterCategory>,
-  filtersList?: FiltersList<GridFilterCategory>,
+  filtersList?: FiltersList<GridFilterCategory>
 ): FilterState<GridFilterCategory> {
   const { category, value } = categoryFilter;
   // Grab the current filter state.

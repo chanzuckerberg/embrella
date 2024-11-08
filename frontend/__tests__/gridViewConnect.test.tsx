@@ -12,7 +12,7 @@ import {
   getPaginationSearchParamValue,
   getSortSearchParamValue,
 } from "@/views/GridsView/components/Main/utils";
-import { SearchParam, SearchParamValue } from "@/common/types";
+import { SearchParam, SearchParamValue } from "@/app/common/types/types";
 
 const FILTER_SEARCH_PARAM_VALUES: SearchParamValue[] = [
   {

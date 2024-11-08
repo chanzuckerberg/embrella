@@ -8,7 +8,7 @@ import {
   INITIAL_FILTERS_LIST,
   SELECTED_FILTERS_LIST,
 } from "@/testing/fixtures/gridViewFiltersList";
-import { Pagination, SortBy } from "@/common/types";
+import { Pagination, SortBy } from "@/app/common/types/types";
 import { State } from "@/views/GridsView/common/store/types";
 
 const CATEGORY_UPDATED_AT = "updatedAt";

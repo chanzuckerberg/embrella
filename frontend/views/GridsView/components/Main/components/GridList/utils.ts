@@ -1,5 +1,5 @@
 import { TableState } from "@tanstack/react-table";
-import { GridData, Pagination, SortBy } from "@/common/types";
+import { GridData, Pagination, SortBy } from "@/app/common/types/types";
 import { getSortingState } from "@/views/GridsView/common/store/actions/sort";
 import { getPaginationState } from "@/views/GridsView/common/store/actions/pagination";
 

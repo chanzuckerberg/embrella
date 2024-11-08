@@ -1,6 +1,6 @@
 import React from "react";
 import { Props } from "@/views/GridsView/components/Main/components/GridFilter/types";
-import { Filters } from "@/components/Filter/components/Filters";
+import { Filters } from "@/app/components/Filter/components/Filters";
 import { useConnect } from "@/views/GridsView/components/Main/components/GridFilter/connect";
 import { TEST_ID_GRID_FILTERS } from "@/views/GridsView/components/Main/components/GridFilter/constants";
 
