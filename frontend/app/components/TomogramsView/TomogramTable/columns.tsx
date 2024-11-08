@@ -16,6 +16,7 @@ const DEFAULT_LINK_PROPS = {
  * Required attributes for a model field with a link
  */
 interface LinkField {
+  id: number;
   name: string;
   url: string;
 }
@@ -32,13 +33,16 @@ const getSDSLink = (props: CellContext<TomogramData, LinkCellProps>): React.JSX.
   return <Link {...DEFAULT_LINK_PROPS} {...props.getValue()} />;
 };
 
-const getLinkPropsFromLinkField = (linkField: LinkField) => {
-  const { name, url } = linkField;
-  return { children: name, href: url };
+const getLinkPropsFromLinkField = (linkField: LinkField, showId = false) => {
+  const { id, name, url } = linkField;
+  // Optionally append id to link text
+  const children = showId ? `${name} (id=${id})` : name;
+
+  return { children, href: url };
 };
 
 const TOMOGRAM_COLUMN_IDS = {
-  TOMOGRAM: "tomogram",
+  TOMOGRAMS: "tomograms",
   PROC_PLAN: "procPlan",
   MSI_SESSION: "msiSession",
   PROJECT: "project",
@@ -47,13 +51,12 @@ const TOMOGRAM_COLUMN_IDS = {
 }
 
 export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
-  // TODO: need to show id?
   {
-    id: TOMOGRAM_COLUMN_IDS.TOMOGRAM,
-    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.tomograms),
+    id: TOMOGRAM_COLUMN_IDS.TOMOGRAMS,
+    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.tomograms, true),
     cell: getSDSLink,
     enableSorting: false,
-    header: "Tomogram",
+    header: "Tomograms",
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROC_PLAN,
@@ -76,13 +79,17 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
     enableSorting: false,
     header: "Project",
   },
-  // TODO: need to show grid id?
   {
     id: TOMOGRAM_COLUMN_IDS.GRID,
-    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.grid),
+    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.grid, true),
     cell: getSDSLink,
     enableSorting: false,
     header: "Grid",
-  }
-  // TODO: Notes - not a link, is it from procRun?
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.NOTES,
+    accessorFn: (rowData: TomogramData): string => rowData.procRun.note,
+    enableSorting: false,
+    header: "Notes",
+  },
 ];
