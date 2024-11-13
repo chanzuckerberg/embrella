@@ -37,7 +37,7 @@ class tomoQueryParams(BaseModel):
     
     
     # Define the allowed category names in camelCase
-    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "tomogram", "user", "procPlan", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "date", "procPlan", "json", 'grid'}
+    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "tomogram", "userName", "procPlan", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "date", "procPlan", "json", 'grid', 'tomograms'}
 
     @validator('q')
     def validate_q(cls, value):
@@ -128,7 +128,7 @@ class ResponseModel(BaseModel):
     procRun: Optional[ProcRunModel] = None
     json: Optional[JsonModel] = None
     grid: Optional[GridModel] = None
-    projects: Optional[ProjectModel] = None
+    project: Optional[ProjectModel] = None
     user: Optional[UserModel] = None
     msiSession: Optional[MSISessionModel] = None
 
