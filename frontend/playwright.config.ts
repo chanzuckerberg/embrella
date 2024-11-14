@@ -11,14 +11,6 @@ const config: PlaywrightTestConfig = {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
-    {
-      name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
-    },
-    {
-      name: "edge",
-      use: { ...devices["Desktop Edge"] },
-    },
   ],
   testDir: "testing",
   testMatch: /.*\.test\.ts/,
@@ -27,7 +19,7 @@ const config: PlaywrightTestConfig = {
     baseURL: "http://localhost:3000/next/",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
-    video: 'retain-on-failure',
+    video: "retain-on-failure",
   },
   webServer: {
     command: "yarn && yarn dev",

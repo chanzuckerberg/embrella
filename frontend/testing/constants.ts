@@ -2,9 +2,8 @@ import {
   ApiListResponse,
   FiltersList,
   GridData,
-  SEARCH_PARAM_NAME,
-  SearchParamValue,
 } from "@/app/common/types/types";
+import { SEARCH_PARAM_NAME, SearchParamValue } from "@/app/common/types/search";
 import { FetchResponseInfo, TestFilterCategory } from "@/testing/types";
 import { getSearchParamFirstValue } from "@/testing/utils";
 

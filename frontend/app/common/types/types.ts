@@ -1,3 +1,5 @@
+import { MSISession } from "./msiSession";
+
 export interface ApiListResponse<T> {
   pagination: Pagination;
   result: T[];
@@ -65,11 +67,7 @@ export interface GridData {
     createdAt: string;
   };
   screeningSession: string;
-  msiSession: {
-    id: number;
-    name: string;
-    url: string;
-  }[];
+  msiSession: MSISession[];
 }
 
 export interface GridFreezingPlanSample {
@@ -83,19 +81,6 @@ export interface Pagination {
   pageSize: number;
   totalPages: number;
   totalResults: number;
-}
-
-export type SearchParam = Partial<
-  Record<SEARCH_PARAM_NAME, SearchParamValue[]>
->;
-
-export enum SEARCH_PARAM_NAME {
-  QUERY = "q",
-}
-
-export interface SearchParamValue {
-  category: string;
-  value: unknown;
 }
 
 export interface SortBy {

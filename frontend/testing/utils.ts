@@ -1,6 +1,6 @@
 import { TestResponse } from "@/testing/types";
 import { FETCH_RESPONSES } from "@/testing/constants";
-import { SearchParamValue } from "@/app/common/types/types";
+import { SearchParamValue } from "@/app/common/types/search";
 
 /**
  * Initialize mock `fetch` function in global scope, since `fetch` is normally unavailable in tests.
