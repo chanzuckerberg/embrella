@@ -13,10 +13,6 @@ export type EntityList<T, K extends string> = {
   sortBy: SortBy;
 };
 
-export interface FiltersList<FilterCategory extends string> {
-  filters: Record<FilterCategory, FilterOption[]>;
-}
-
 export type GridFilterCategory =
   | "cassette"
   | "date"
@@ -27,12 +23,6 @@ export type GridFilterCategory =
   | "screeningSession"
   | "status"
   | "user";
-
-export interface FilterOption {
-  name: boolean | string | null;
-  count: number;
-  selected: boolean;
-}
 
 export interface GridData {
   grid: {
@@ -76,6 +66,7 @@ export interface GridFreezingPlanSample {
   url: string;
 }
 
+// TODO: Move to state types file
 export interface Pagination {
   page: number;
   pageSize: number;
@@ -83,6 +74,7 @@ export interface Pagination {
   totalResults: number;
 }
 
+// TODO: Move to state types file
 export interface SortBy {
   asc: boolean;
   sort: string;

@@ -1,5 +1,5 @@
 import { FilterConfig } from "@/app/components/Filter/common/types";
-import { FiltersList } from "@/app/common/types/types";
+import { FiltersList } from "@/app/common/types/filter";
 import { UseFilterList } from "@/app/components/Filter/hooks/useFilterList/types";
 import { buildFilterGroups } from "@/app/components/Filter/hooks/useFilterList/utils";
 import { useMemo } from "react";

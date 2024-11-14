@@ -2,11 +2,9 @@ import {
   CategoryFilter,
   FilterState,
 } from "@/app/components/Filter/common/types";
-import {
-  FilterOption,
-  FiltersList,
-  GridFilterCategory,
-} from "@/app/common/types/types";
+import { GridFilterCategory } from "@/app/common/types/types";
+import { FiltersList } from "@/app/common/types/filter";
+import { FilterOption } from "@/app/common/types/filter";
 
 /**
  * Build the current set of selected filters.
