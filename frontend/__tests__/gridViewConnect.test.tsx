@@ -2,7 +2,7 @@ import { useConnect } from "@/views/GridsView/components/Main/connect";
 import { renderHook } from "@testing-library/react";
 import { State } from "@/views/GridsView/common/store/types";
 import { useFetchGrids } from "@/views/GridsView/hooks/useFetchGrids/useFetchGrids";
-import { useFetchFilters } from "@/views/GridsView/hooks/useFetchFilters/useFetchFilters";
+import { useFetchGridsFilters } from "@/views/GridsView/hooks/useFetchGridsFilters/useFetchGridsFilters";
 import { StateContext } from "@/views/GridsView/common/store";
 import React, { ReactNode } from "react";
 import {
@@ -59,7 +59,7 @@ jest.mock("../views/GridsView/hooks/useFetchFilters/useFetchFilters", () => ({
 describe("Grid View Connect", () => {
   beforeEach(() => {
     (useFetchGrids as jest.Mock).mockReturnValue("mockGridList");
-    (useFetchFilters as jest.Mock).mockReturnValue("mockFiltersList");
+    (useFetchGridsFilters as jest.Mock).mockReturnValue("mockFiltersList");
   });
   afterEach(() => {
     jest.clearAllMocks();
@@ -72,7 +72,7 @@ describe("Grid View Connect", () => {
     // Verify that useFetchGrids was called with the correct parameters.
     expect(useFetchGrids).toHaveBeenCalledWith(GRID_LIST_SEARCH_PARAM);
     // Verify that useFetchFilters was called with the correct parameters.
-    expect(useFetchFilters).toHaveBeenCalledWith(FILTER_LIST_SEARCH_PARAM);
+    expect(useFetchGridsFilters).toHaveBeenCalledWith(FILTER_LIST_SEARCH_PARAM);
     // Verify the returned values from useConnect.
     expect(result.current.gridList).toBe("mockGridList");
     expect(result.current.filtersList).toBe("mockFiltersList");

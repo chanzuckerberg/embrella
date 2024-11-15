@@ -5,7 +5,7 @@ import { SearchParam } from "@/app/common/types/search";
 import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@/app/common/constants/api";
 
-export const useFetchFilters = (
+export const useFetchGridsFilters = (
   searchParam: SearchParam
 ): FiltersList<GridFilterCategory> | undefined => {
   const { data: filtersData } = useFetchData<FiltersList<GridFilterCategory>>(
