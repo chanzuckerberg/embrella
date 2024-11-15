@@ -121,6 +121,7 @@ class MSISessionModel(BaseModel):
 class ProcRunModel(BaseModel):
     id: Optional[int]
     note:Optional[str]
+    createdAt: Optional[str] = None
 
 class ResponseModel(BaseModel):
     tomograms: Optional[TomogramModel] = None

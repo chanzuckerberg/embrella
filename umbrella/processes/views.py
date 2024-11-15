@@ -298,157 +298,56 @@ def available_filters(request):
 from django.http import JsonResponse
 from pydantic import ValidationError
 from typing import List
-
-# @require_http_methods(["GET"])
-# def get_tomo_details(request):
-#     try:
-#         raw_q_param = request.GET.get('q', None)
-#         if raw_q_param:
-#             try:
-#                 q_param = json.loads(raw_q_param)
-#             except json.JSONDecodeError as e:
-#                 return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
-#         else:
-#             q_param = []
-        
-#         query_data = request.GET.dict()
-#         query_data['q'] = q_param
-#         try:
-#             query_params = tomoQueryParams(**query_data)
-#         except ValidationError as e:
-#             raise UnprocessableEntity(detail=f"Validation error: {str(e)}")
-        
-#         sort_field = 'created_at'  # Use a valid date field here
-#         asc = False
-#         page_size = 10
-
-#         def extract_value(value):
-#             if isinstance(value, list) and len(value) > 0:
-#                 value = value[0]
-#             return value
-
-#         for item in q_param:
-#             if item['category'] == 'sort':
-#                 sort_field = 'created_at' if extract_value(item['value']) == 'modifiedOn' else extract_value(item['value'])
-#             elif item['category'] == 'asc':
-#                 asc_value = extract_value(item['value'])
-#                 asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
-#             elif item['category'] == 'pageSize':
-#                 try:
-#                     page_size = int(extract_value(item['value']))
-#                 except ValueError:
-#                     return JsonResponse({'error': 'Invalid value for page_size, must be an integer'}, status=400)
-        
-#         sort_order = sort_field if asc else f'-{sort_field}'
-
-#         queryset = ProcRun.objects.select_related(
-#             'proc_plan', 
-#             'runpipedata',
-#             'msi_session', 
-#             'msi_session__grid',  
-#             'msi_session__project',
-#             'msi_session__user'
-#         ).prefetch_related(
-#             'runpipedata_set__tomograms_set'
-#         ).values(
-#             'id',
-#             'name',
-#             'notes',
-#             'proc_plan_id',  
-#             'msi_session_id',  
-#             proc_plan_plan_id=F('proc_plan__id'),
-#             proc_plan_name=F('proc_plan__name'),
-#             run_pipe_run_id=F('runpipedata__run_id'),
-#             msi_session_name=F('msi_session__name'),
-#             msi_session_notes=F('msi_session__notes'),
-#             msi_session_project_id=F('msi_session__project_id'),
-#             msi_session_grid_id=F('msi_session__grid_id'),
-#             cryogrid_id=F('msi_session__grid__id'),
-#             cryogrid_name=F('msi_session__grid__name'),
-#             cryogrid_trashed=F('msi_session__grid__trashed'),
-#             cryogrid_created_at=F('msi_session__grid__updated_on'),
-#             project_id=F('msi_session__project__id'),
-#             project_name=F('msi_session__project__name'),
-#             user_id=F('msi_session__user__id'),
-#             user_name=F('msi_session__user__username')
-#         )
-
-#         # Use a dictionary to keep unique entries by 'procrun.id'
-#         unique_results = {}
-
-#         for entry in queryset:
-#             procrun_id = entry.get('id')
-#             if procrun_id not in unique_results:
-#                 response_model = ResponseModel(
-#                     tomograms=TomogramModel(id=entry.get('run_pipe_run_id'), name="{} (id={})".format(entry.get('name'), entry.get('run_pipe_run_id')), url=f"{base_url}/admin/processes/tomograms/{entry.get('run_pipe_run_id')}"),
-#                     procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
-#                     procRun=ProcRunModel(id=procrun_id, note=entry.get('notes')),
-#                     grid=GridModel(
-#                         id=entry.get('cryogrid_id'),
-#                         name="{} (id={})".format(entry.get('cryogrid_name'), entry.get('cryogrid_id')),
-#                         trashed=entry.get('cryogrid_trashed'),
-#                         url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
-#                         createdAt=str(entry.get('cryogrid_created_at'))
-#                     ),
-#                     projects=ProjectModel(id=entry.get('project_id'), name=entry.get('project_name'), url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"),
-#                     user=UserModel(id=entry.get('user_id'), name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')),
-#                     msiSession=MSISessionModel(
-#                         id=entry.get('msi_session_id'),
-#                         name=entry.get('msi_session_name'),
-#                         url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_id')}"
-#                     )
-#                 )
-#                 unique_results[procrun_id] = response_model.dict()
-        
-#         # Collect unique results as a list
-#         response_data = list(unique_results.values())
-        
-#         return JsonResponse(response_data, safe=False)
-#     except UnprocessableEntity as e:
-#         return JsonResponse({'error': e.detail}, status=e.status_code)
-#     except Exception as e:
-#         logger.error(f'An unexpected error occurred: {str(e)}')
-#         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-    
-
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 @require_http_methods(["GET"])
 def get_tomo_details(request):
     try:
+        # Parse 'q' parameter if provided
         raw_q_param = request.GET.get('q', None)
         if raw_q_param:
             try:
-                # Load the JSON structure from the raw query parameter
                 q_param = json.loads(raw_q_param)
             except json.JSONDecodeError as e:
                 return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
         else:
-            # If no q parameter, initialize it as an empty list
             q_param = [{"category": "project", "value": ["BD01"]}]  # Default example parameter
 
         query_data = request.GET.dict()
         query_data['q'] = q_param
 
+        # Validate query parameters
         try:
-            # Instantiate query params for validation
             query_params = tomoQueryParams(**query_data)
         except ValidationError as e:
             raise UnprocessableEntity(detail=f"Validation error: {str(e)}")
 
-        sort_field = 'created_at'  # Default sort field
-        asc = False  # Default sort order (descending)
+        # Pagination and sorting defaults
+        page = int(request.GET.get('page', 1))  # Default to first page
+        page_size = int(request.GET.get('pageSize', 20))  # Default page size is 10
+        sort_field = 'created_at'
+        asc = False
 
-        # Helper function to extract the first value if it's a list
+        # Helper function to extract values
         def extract_value(value):
             return value[0] if isinstance(value, list) and value else value
 
+        # Override pagination and sorting if provided in q_param
         for item in q_param:
             if item['category'] == 'sort':
                 sort_field = 'created_at' if extract_value(item['value']) == 'modifiedOn' else extract_value(item['value'])
             elif item['category'] == 'asc':
                 asc_value = extract_value(item['value'])
                 asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
+            elif item['category'] == 'page':
+                page = int(extract_value(item['value']))
+            elif item['category'] == 'pageSize':
+                page_size = int(extract_value(item['value']))
 
+        # Determine sort order
+        sort_order = sort_field if asc else f'-{sort_field}'
+
+        # Base queryset with selected related fields
         queryset = ProcRun.objects.select_related(
             'proc_plan', 
             'runpipedata',
@@ -462,6 +361,7 @@ def get_tomo_details(request):
             'id',
             'name',
             'notes',
+            'created_at',
             'proc_plan_id',  
             'msi_session_id',  
             proc_plan_plan_id=F('proc_plan__id'),
@@ -479,42 +379,41 @@ def get_tomo_details(request):
             project_name=F('msi_session__project__name'),
             user_id=F('msi_session__user__id'),
             user_name=F('msi_session__user__username')
-        )
+        )#.order_by(sort_order)
 
-        # Apply filters only if q_param is not empty
-        if q_param:
-            filter_criteria = {}
-            for item in q_param:
-                category = item['category']
-                values = item['value']
-                if category == 'procPlan':
-                    filter_criteria['proc_plan__name__in'] = values
-                elif category == 'userName':
-                    filter_criteria['msi_session__user__username__in'] = values
-                elif category == 'screeningSession':
-                    filter_criteria['msi_session__name__in'] = values
-                elif category == 'grid':
-                    filter_criteria['msi_session__grid__name__in'] = values
-                elif category == 'project':
-                    filter_criteria['msi_session__project__name__in'] = values
-                elif category == 'msiSession':
-                    filter_criteria['msi_session__name'] = values[0]
-                elif category == 'tomograms':
-                    # Assuming you want to filter by ProcRun name
-                    filter_criteria['name__in'] = values
+        # Apply filters if q_param is not empty
+        filter_criteria = {}
+        for item in q_param:
+            category = item['category']
+            values = item['value']
+            if category == 'procPlan':
+                filter_criteria['proc_plan__name__in'] = values
+            elif category == 'userName':
+                filter_criteria['msi_session__user__username__in'] = values
+            elif category == 'screeningSession':
+                filter_criteria['msi_session__name__in'] = values
+            elif category == 'grid':
+                filter_criteria['msi_session__grid__name__in'] = values
+            elif category == 'project':
+                filter_criteria['msi_session__project__name__in'] = values
+            elif category == 'msiSession':
+                filter_criteria['msi_session__name'] = values[0]
+            elif category == 'tomograms':
+                filter_criteria['name__in'] = values
 
-            queryset = queryset.filter(**filter_criteria)
+        queryset = queryset.filter(**filter_criteria)
 
+
+        # Prepare unique results for the response
         unique_results = {}
-
         for entry in queryset:
             procrun_id = entry.get('id')
-            if procrun_id not in unique_results:
+            tomogram_id = entry.get('run_pipe_run_id')
+            if procrun_id not in unique_results and tomogram_id is not None:  # Ensure we only count entries with tomograms
                 response_model = ResponseModel(
-                    # tomograms=TomogramModel(id=entry.get('run_pipe_run_id'), name="{} (id={})".format(entry.get('name'), entry.get('run_pipe_run_id')), url=f"{base_url}/admin/processes/tomograms/{entry.get('run_pipe_run_id')}"),
-                    tomograms=TomogramModel(id=entry.get('run_pipe_run_id'), name="{}".format(entry.get('name'), entry.get('run_pipe_run_id')), url=f"{base_url}/admin/processes/tomograms/{entry.get('run_pipe_run_id')}"),
+                    tomograms=TomogramModel(id=tomogram_id, name="{}".format(entry.get('name'), tomogram_id), url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"),
                     procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
-                    procRun=ProcRunModel(id=procrun_id, note=entry.get('notes')),
+                    procRun=ProcRunModel(id=procrun_id, note=entry.get('notes'), createdAt=str(entry.get('created_at'))),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
                         name="{} (id={})".format(entry.get('cryogrid_name'), entry.get('cryogrid_id')),
@@ -531,10 +430,34 @@ def get_tomo_details(request):
                     )
                 )
                 unique_results[procrun_id] = response_model.dict()
-        
+
         response_data = list(unique_results.values())
-        
-        return JsonResponse(response_data, safe=False)
+        print(len(response_data))
+        # Paginate the formatted response data using Django's Paginator
+        paginator = Paginator(response_data, page_size)
+        try:
+            paginated_data = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_data = paginator.page(1)
+        except EmptyPage:
+            paginated_data = paginator.page(paginator.num_pages)
+
+        # Final response structure with pagination applied to formatted response data
+        result = {
+            'result': list(paginated_data),  # Contains only the paginated items for the current page
+            'pagination': {
+                'page': paginated_data.number,  # Current page number
+                'pageSize': page_size,  # Items per page
+                'totalPages': paginator.num_pages,  # Total number of pages
+                'totalResults': paginator.count,  # Total number of items across all pages
+            },
+            'sortBy': {
+                'sort': sort_field,
+                'asc': asc
+            }
+        }
+
+        return JsonResponse(result, safe=False)
     except UnprocessableEntity as e:
         return JsonResponse({'error': e.detail}, status=e.status_code)
     except Exception as e:
