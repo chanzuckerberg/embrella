@@ -5,11 +5,6 @@ import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@/app/common/constants/api";
 import { TomogramData } from "@/app/common/types/tomogram";
 
-// TODO: replace TomogramList with EntityList<TomogramData, "tomograms"> when filtering is implemented
-export type TomogramList = {
-  [entityName in "tomograms"]: TomogramData[];
-};
-
 export const useFetchTableData = <DataType, DataResponseField extends string>(
   dataEndpoint: API,
   searchParam: SearchParam,
