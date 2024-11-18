@@ -168,7 +168,23 @@ def get_all_image_paths(request):
     return JsonResponse(data=error_response.dict(), status=404, safe=False)
 
 
-
+def get_freezing_plan_list(fz_plan_id):
+    try:
+        freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
+        freezing_plan_list = []
+        base_url = get_base_url()
+        for sample in freezing_plan.sample.all():
+            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
+            tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+            freezing_plan_list.append({
+                'id': sample.id,
+                'name': f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag",
+                'url': sample_url
+            })
+        return freezing_plan_list
+    except Exception:
+        return []
+    
 #for tomo filter page
 
 @require_http_methods(["GET"])
@@ -311,8 +327,8 @@ def get_tomo_details(request):
             except json.JSONDecodeError as e:
                 return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
         else:
-            q_param = [{"category": "project", "value": ["BD01"]}]  # Default example parameter
-
+            q_param = []
+        print(q_param)
         query_data = request.GET.dict()
         query_data['q'] = q_param
 
@@ -349,21 +365,25 @@ def get_tomo_details(request):
 
         # Base queryset with selected related fields
         queryset = ProcRun.objects.select_related(
-            'proc_plan', 
-            'runpipedata',
-            'msi_session', 
-            'msi_session__grid',  
-            'msi_session__project',
-            'msi_session__user'
+            'proc_plan',  # Direct relationship
+            'msi_session',  # Join with tem_msisession
+            'freezing_session',
+            'msi_session__project',  # Join with the related project
+            'msi_session__grid',  # Join with the related grid
+            'msi_session__user',  # Join with the related user
+            'msi_session__atlas_session',  # Join with tem_atlassession
+            'msi_session__atlas_session__group',  # Join with tem_screensessiongroup
+            'msi_session__grid__freezing_plan'  # Join with plungefreezingplan
         ).prefetch_related(
+            'msi_session__grid__freezing_plan__sample',  # Prefetch the many-to-many relationship
             'runpipedata_set__tomograms_set'
         ).values(
             'id',
             'name',
             'notes',
             'created_at',
-            'proc_plan_id',  
-            'msi_session_id',  
+            'proc_plan_id',
+            'msi_session_id',
             proc_plan_plan_id=F('proc_plan__id'),
             proc_plan_name=F('proc_plan__name'),
             run_pipe_run_id=F('runpipedata__run_id'),
@@ -378,31 +398,36 @@ def get_tomo_details(request):
             project_id=F('msi_session__project__id'),
             project_name=F('msi_session__project__name'),
             user_id=F('msi_session__user__id'),
-            user_name=F('msi_session__user__username')
-        )#.order_by(sort_order)
-
+            user_name=F('msi_session__user__username'),
+            screening_session_name=F('msi_session__atlas_session__group__name'),
+            fz_plan_sample_id=F('msi_session__grid__freezing_plan__sample__id'),
+            fz_plan_sample_name=F('msi_session__grid__freezing_plan__sample__name')
+        )
+        print(queryset)
         # Apply filters if q_param is not empty
         filter_criteria = {}
         for item in q_param:
             category = item['category']
             values = item['value']
+            print(values)
+            print(category)
             if category == 'procPlan':
                 filter_criteria['proc_plan__name__in'] = values
             elif category == 'userName':
                 filter_criteria['msi_session__user__username__in'] = values
             elif category == 'screeningSession':
-                filter_criteria['msi_session__name__in'] = values
+                filter_criteria['msi_session__atlas_session__group__name__icontains'] = values[0]
             elif category == 'grid':
                 filter_criteria['msi_session__grid__name__in'] = values
             elif category == 'project':
                 filter_criteria['msi_session__project__name__in'] = values
             elif category == 'msiSession':
-                filter_criteria['msi_session__name'] = values[0]
+                filter_criteria['msi_session__name__icontains'] = values[0] 
             elif category == 'tomograms':
                 filter_criteria['name__in'] = values
-
-        queryset = queryset.filter(**filter_criteria)
-
+ 
+        queryset = queryset.filter(**filter_criteria)   
+        # print(queryset)
 
         # Prepare unique results for the response
         unique_results = {}
@@ -411,7 +436,6 @@ def get_tomo_details(request):
             tomogram_id = entry.get('run_pipe_run_id')
             if procrun_id not in unique_results and tomogram_id is not None:  # Ensure we only count entries with tomograms
                 proc_run_created_at = datetime.fromisoformat(str(entry.get('created_at'))).strftime('%Y-%m-%d') if entry.get('created_at') else None
-                print(type(proc_run_created_at))
                 cryogrid_created_at = datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d') if entry.get('cryogrid_created_at') else None
                 response_model = ResponseModel(
                     tomograms=TomogramModel(id=tomogram_id, name="{}".format(entry.get('name'), tomogram_id), url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"),
@@ -435,7 +459,7 @@ def get_tomo_details(request):
                 unique_results[procrun_id] = response_model.dict()
 
         response_data = list(unique_results.values())
-        print(len(response_data))
+  
         # Paginate the formatted response data using Django's Paginator
         paginator = Paginator(response_data, page_size)
         try:
@@ -444,8 +468,7 @@ def get_tomo_details(request):
             paginated_data = paginator.page(1)
         except EmptyPage:
             paginated_data = paginator.page(paginator.num_pages)
-        print(len(response_data))
-        print(response_data)
+
         # Final response structure with pagination applied to formatted response data
         result = {
             'result': list(paginated_data),  # Contains only the paginated items for the current page
