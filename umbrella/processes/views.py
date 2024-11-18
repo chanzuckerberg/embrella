@@ -22,8 +22,7 @@ from cryo_grids.models import CryoGrid, PlungeFreezingSession, PlungeFreezingPla
 from processes.models import *
 from processes.utils import QueryParams, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
-
-from django.db.models import F
+from django.db.models import F,Q
 
 import logging
 import os
@@ -168,22 +167,15 @@ def get_all_image_paths(request):
     return JsonResponse(data=error_response.dict(), status=404, safe=False)
 
 
-def get_freezing_plan_list(fz_plan_id):
+def get_freezing_plan_tags(fz_plan_id):
     try:
         freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
         freezing_plan_list = []
-        base_url = get_base_url()
         for sample in freezing_plan.sample.all():
-            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
             tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-            freezing_plan_list.append({
-                'id': sample.id,
-                'name': f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag",
-                'url': sample_url
-            })
-        return freezing_plan_list
+        return f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag"
     except Exception:
-        return []
+        return None
     
 #for tomo filter page
 
@@ -399,34 +391,45 @@ def get_tomo_details(request):
             project_name=F('msi_session__project__name'),
             user_id=F('msi_session__user__id'),
             user_name=F('msi_session__user__username'),
+            fz_plan_id=F('msi_session__grid__freezing_plan__id'),
             screening_session_name=F('msi_session__atlas_session__group__name'),
             fz_plan_sample_id=F('msi_session__grid__freezing_plan__sample__id'),
             fz_plan_sample_name=F('msi_session__grid__freezing_plan__sample__name')
         )
-        print(queryset)
-        # Apply filters if q_param is not empty
-        filter_criteria = {}
+
+
+        filter_criteria = Q()
+
         for item in q_param:
             category = item['category']
             values = item['value']
             print(values)
             print(category)
+
             if category == 'procPlan':
-                filter_criteria['proc_plan__name__in'] = values
+                filter_criteria &= Q(proc_plan__name__in=values)
             elif category == 'userName':
-                filter_criteria['msi_session__user__username__in'] = values
+                filter_criteria &= Q(msi_session__user__username__in=values)
             elif category == 'screeningSession':
-                filter_criteria['msi_session__atlas_session__group__name__icontains'] = values[0]
+                # Support multiple `icontains` values with OR logic
+                session_filter = Q()
+                for value in values:
+                    session_filter |= Q(msi_session__atlas_session__group__name__icontains=value)
+                filter_criteria &= session_filter
             elif category == 'grid':
-                filter_criteria['msi_session__grid__name__in'] = values
+                filter_criteria &= Q(msi_session__grid__name__in=values)
             elif category == 'project':
-                filter_criteria['msi_session__project__name__in'] = values
+                filter_criteria &= Q(msi_session__project__name__in=values)
             elif category == 'msiSession':
-                filter_criteria['msi_session__name__icontains'] = values[0] 
+                # Support multiple `icontains` values with OR logic
+                session_name_filter = Q()
+                for value in values:
+                    session_name_filter |= Q(msi_session__name__icontains=value)
+                filter_criteria &= session_name_filter
             elif category == 'tomograms':
-                filter_criteria['name__in'] = values
- 
-        queryset = queryset.filter(**filter_criteria)   
+                filter_criteria &= Q(name__in=values)
+        
+        queryset = queryset.filter(filter_criteria)   
         # print(queryset)
 
         # Prepare unique results for the response
