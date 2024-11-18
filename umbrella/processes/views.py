@@ -410,16 +410,19 @@ def get_tomo_details(request):
             procrun_id = entry.get('id')
             tomogram_id = entry.get('run_pipe_run_id')
             if procrun_id not in unique_results and tomogram_id is not None:  # Ensure we only count entries with tomograms
+                proc_run_created_at = datetime.fromisoformat(str(entry.get('created_at'))).strftime('%Y-%m-%d') if entry.get('created_at') else None
+                print(type(proc_run_created_at))
+                cryogrid_created_at = datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d') if entry.get('cryogrid_created_at') else None
                 response_model = ResponseModel(
                     tomograms=TomogramModel(id=tomogram_id, name="{}".format(entry.get('name'), tomogram_id), url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"),
                     procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
-                    procRun=ProcRunModel(id=procrun_id, note=entry.get('notes'), createdAt=str(entry.get('created_at'))),
+                    procRun=ProcRunModel(id=procrun_id, note=entry.get('notes'), createdAt=str(proc_run_created_at)),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
                         name="{} (id={})".format(entry.get('cryogrid_name'), entry.get('cryogrid_id')),
                         trashed=entry.get('cryogrid_trashed'),
                         url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
-                        createdAt=str(entry.get('cryogrid_created_at'))
+                        createdAt=str(cryogrid_created_at)
                     ),
                     project=ProjectModel(id=entry.get('project_id'), name=entry.get('project_name'), url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"),
                     user=UserModel(id=entry.get('user_id'), name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')),
@@ -441,13 +444,14 @@ def get_tomo_details(request):
             paginated_data = paginator.page(1)
         except EmptyPage:
             paginated_data = paginator.page(paginator.num_pages)
-
+        print(len(response_data))
+        print(response_data)
         # Final response structure with pagination applied to formatted response data
         result = {
             'result': list(paginated_data),  # Contains only the paginated items for the current page
             'pagination': {
                 'page': paginated_data.number,  # Current page number
-                'pageSize': page_size,  # Items per page
+                'pageSize': int(page_size),  # Items per page
                 'totalPages': paginator.num_pages,  # Total number of pages
                 'totalResults': paginator.count,  # Total number of items across all pages
             },
