@@ -1,6 +1,6 @@
 import { createContext, Dispatch, ReactNode, useReducer } from "react";
 import { noop, PaginationState, SortingState, Updater } from "@tanstack/react-table";
-import { FilterOption, ViewFilterCategory } from "@app/common/types/filter";
+import { FiltersList, ViewFilterCategory } from "@app/common/types/filter";
 import { Pagination, SortBy } from "../../types/types";
 
 export const DEFAULT_PAGE_SIZE = 10;
@@ -40,10 +40,6 @@ export enum TableStateActionTypes {
 interface CategoryFilter {
   category: ViewFilterCategory;
   value: FilterValue[];
-}
-
-interface FiltersList {
-  filters: Record<ViewFilterCategory, FilterOption[]>;
 }
 
 export type UpdateFilterAction = {

@@ -2,14 +2,14 @@ import { ComplexFilterProps as SDSComplexFilterProps } from "@czi-sds/components
 import { GridFilterCategory } from "./types";
 import { FilterConfig } from "@/app/components/Filter/common/types";
 
+export interface FiltersList {
+  filters: Record<ViewFilterCategory, FilterOption[]>;
+}
+
 export interface FilterOption {
   name: boolean | string | null;
   count: number;
   selected: boolean;
-}
-
-export interface FiltersList<FilterCategory extends string> {
-  filters: Record<FilterCategory, FilterOption[]>;
 }
 
 export type TomogramFilterCategory =

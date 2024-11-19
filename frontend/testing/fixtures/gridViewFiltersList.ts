@@ -1,4 +1,4 @@
-import { FiltersList } from "@app/common/types/filter";
+import { FiltersList } from "@/app/common/types/types";
 import { TestFilterCategory } from "@/testing/types";
 
 /**

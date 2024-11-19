@@ -1,20 +1,30 @@
+import { FilterOption } from "./filter";
 import { MSISession } from "./msiSession";
 
-// Type for a raw API response
+/*
+ * For a raw API response
+ */
 export interface ApiListResponse<T> {
   pagination: Pagination;
   result: T[];
   sortBy: SortBy;
 }
 
-// Type for a formatted API response
-// Usage: EntityList<TomogramData, "tomograms">
+/*
+ * Type for a formatted API response
+ * Usage: EntityList<TomogramData, "tomograms">
+ */
 export type EntityList<T, K extends string> = {
   [entityName in K]: T[];
 } & {
   pagination: Pagination;
   sortBy: SortBy;
 };
+
+// This type is used in GridsView
+export interface FiltersList<FilterCategory extends string> {
+  filters: Record<FilterCategory, FilterOption[]>;
+}
 
 export type GridFilterCategory =
   | "cassette"

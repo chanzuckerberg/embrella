@@ -1,12 +1,7 @@
 import React from "react";
 import { TEST_IDS } from "@app/common/constants/testIds";
-import { FiltersList, ViewFilterCategory } from "@app/common/types/filter";
 import { Filters } from "@app/components/Filter/components/Filters";
 import { useConnect } from "./connect";
-
-export interface FiltersProps {
-  filtersList?: FiltersList<ViewFilterCategory>;
-}
 
 export const TomogramFilters = (): React.JSX.Element => {
   const { filters, onFilter } = useConnect();

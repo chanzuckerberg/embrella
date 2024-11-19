@@ -7,14 +7,14 @@ import { TableBody } from "@app/components/Table/components/TableBody";
 
 import { useConnect } from "@app/components/TomogramsView/components/TomogramTable/connect";
 
-const TEST_ID_GRIDS = "tomograms";
+const TEST_ID_DATA_TABLE = "data-table";
 // const TEST_ID_GRIDS_PAGINATION = "tomogram-pagination";
 
 export const TomogramTable = (): React.JSX.Element => {
   const { table } = useConnect();
   return (
     <Fragment>
-      <SDSTable data-testid={TEST_ID_GRIDS}>
+      <SDSTable data-testid={TEST_ID_DATA_TABLE}>
         <TableHead table={table} />
         <TableBody table={table} />
       </SDSTable>

@@ -4,7 +4,7 @@ import {
   Pagination,
   SortBy,
 } from "@/app/common/types/types";
-import { FiltersList } from "@app/common/types/filter";
+import { FiltersList } from "@/app/common/types/types";
 import { PaginationState, SortingState, Updater } from "@tanstack/react-table";
 
 export type Action =

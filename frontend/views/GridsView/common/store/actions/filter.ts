@@ -3,7 +3,7 @@ import {
   FilterState,
 } from "@/app/components/Filter/common/types";
 import { GridFilterCategory } from "@/app/common/types/types";
-import { FiltersList } from "@/app/common/types/filter";
+import { FiltersList } from "@/app/common/types/types";
 import { FilterOption } from "@/app/common/types/filter";
 
 /**

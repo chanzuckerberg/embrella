@@ -5,7 +5,8 @@ import {
   FilterView,
   SelectFilterView,
 } from "@/app/components/Filter/common/types";
-import { FilterOption, FiltersList } from "@app/common/types/filter";
+import { FilterOption } from "@app/common/types/filter";
+import { FiltersList } from "@app/common/types/types";
 
 /**
  * Build view model of filter groups.
