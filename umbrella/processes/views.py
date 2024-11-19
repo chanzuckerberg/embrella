@@ -464,7 +464,7 @@ def get_tomo_details(request):
                 proc_run_created_at = datetime.fromisoformat(str(entry.get('created_at'))).strftime('%Y-%m-%d') if entry.get('created_at') else None
                 cryogrid_created_at = datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d') if entry.get('cryogrid_created_at') else None
                 response_model = ResponseModel(
-                    tomograms=TomogramModel(id=tomogram_id, name="{}".format(entry.get('name'), tomogram_id), url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"),
+                    tomograms=TomogramModel(id=tomogram_id, name="{} (id={})".format(entry.get('name'), tomogram_id), url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"),
                     procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
                     procRun=ProcRunModel(id=procrun_id, note=entry.get('notes'), createdAt=str(proc_run_created_at)),
                     grid=GridModel(
