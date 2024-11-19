@@ -14,6 +14,7 @@ export interface TomogramData {
   procRun: {
     id: number;
     note: string;
+    createdAt: string;
   };
   json: null;
   grid: {

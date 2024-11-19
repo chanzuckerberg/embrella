@@ -47,6 +47,7 @@ const TOMOGRAM_COLUMN_IDS = {
   PROJECT: "project",
   GRID: "grid",
   NOTES: "notes",
+  CREATED_AT: "createdAt",
 }
 
 export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
@@ -80,7 +81,7 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
   },
   {
     id: TOMOGRAM_COLUMN_IDS.GRID,
-    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.grid, true),
+    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.grid),
     cell: getSDSLink,
     enableSorting: false,
     header: "Grid",
@@ -90,5 +91,11 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
     accessorFn: (rowData: TomogramData): string => rowData.procRun.note,
     enableSorting: false,
     header: "Notes",
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.CREATED_AT,
+    accessorFn: (rowData: TomogramData): string => rowData.procRun.createdAt,
+    enableSorting: true,
+    header: "Created At",
   },
 ];
