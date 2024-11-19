@@ -22,8 +22,7 @@ from cryo_grids.models import CryoGrid, PlungeFreezingSession, PlungeFreezingPla
 from processes.models import *
 from processes.utils import QueryParams, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
-
-from django.db.models import F
+from django.db.models import F,Q
 
 import logging
 import os
@@ -168,7 +167,16 @@ def get_all_image_paths(request):
     return JsonResponse(data=error_response.dict(), status=404, safe=False)
 
 
-
+def get_freezing_plan_tags(fz_plan_id):
+    try:
+        freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
+        freezing_plan_list = []
+        for sample in freezing_plan.sample.all():
+            tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+        return f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag"
+    except Exception:
+        return None
+    
 #for tomo filter page
 
 @require_http_methods(["GET"])
@@ -298,10 +306,12 @@ def available_filters(request):
 from django.http import JsonResponse
 from pydantic import ValidationError
 from typing import List
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 @require_http_methods(["GET"])
 def get_tomo_details(request):
     try:
+        # Parse 'q' parameter if provided
         raw_q_param = request.GET.get('q', None)
         if raw_q_param:
             try:
@@ -310,52 +320,62 @@ def get_tomo_details(request):
                 return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
         else:
             q_param = []
-        
+        print(q_param)
         query_data = request.GET.dict()
         query_data['q'] = q_param
+
+        # Validate query parameters
         try:
             query_params = tomoQueryParams(**query_data)
         except ValidationError as e:
             raise UnprocessableEntity(detail=f"Validation error: {str(e)}")
-        
-        sort_field = 'created_at'  # Use a valid date field here
+
+        # Pagination and sorting defaults
+        page = int(request.GET.get('page', 1))  # Default to first page
+        page_size = int(request.GET.get('pageSize', 20))  # Default page size is 10
+        sort_field = 'created_at'
         asc = False
-        page_size = 10
 
+        # Helper function to extract values
         def extract_value(value):
-            if isinstance(value, list) and len(value) > 0:
-                value = value[0]
-            return value
+            return value[0] if isinstance(value, list) and value else value
 
+        # Override pagination and sorting if provided in q_param
         for item in q_param:
             if item['category'] == 'sort':
                 sort_field = 'created_at' if extract_value(item['value']) == 'modifiedOn' else extract_value(item['value'])
             elif item['category'] == 'asc':
                 asc_value = extract_value(item['value'])
                 asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
+            elif item['category'] == 'page':
+                page = int(extract_value(item['value']))
             elif item['category'] == 'pageSize':
-                try:
-                    page_size = int(extract_value(item['value']))
-                except ValueError:
-                    return JsonResponse({'error': 'Invalid value for page_size, must be an integer'}, status=400)
-        
+                page_size = int(extract_value(item['value']))
+
+        # Determine sort order
         sort_order = sort_field if asc else f'-{sort_field}'
 
+        # Base queryset with selected related fields
         queryset = ProcRun.objects.select_related(
-            'proc_plan', 
-            'runpipedata',
-            'msi_session', 
-            'msi_session__grid',  
-            'msi_session__project',
-            'msi_session__user'
+            'proc_plan',  # Direct relationship
+            'msi_session',  # Join with tem_msisession
+            'freezing_session',
+            'msi_session__project',  # Join with the related project
+            'msi_session__grid',  # Join with the related grid
+            'msi_session__user',  # Join with the related user
+            'msi_session__atlas_session',  # Join with tem_atlassession
+            'msi_session__atlas_session__group',  # Join with tem_screensessiongroup
+            'msi_session__grid__freezing_plan'  # Join with plungefreezingplan
         ).prefetch_related(
+            'msi_session__grid__freezing_plan__sample',  # Prefetch the many-to-many relationship
             'runpipedata_set__tomograms_set'
         ).values(
             'id',
             'name',
             'notes',
-            'proc_plan_id',  
-            'msi_session_id',  
+            'created_at',
+            'proc_plan_id',
+            'msi_session_id',
             proc_plan_plan_id=F('proc_plan__id'),
             proc_plan_name=F('proc_plan__name'),
             run_pipe_run_id=F('runpipedata__run_id'),
@@ -370,27 +390,91 @@ def get_tomo_details(request):
             project_id=F('msi_session__project__id'),
             project_name=F('msi_session__project__name'),
             user_id=F('msi_session__user__id'),
-            user_name=F('msi_session__user__username')
+            user_name=F('msi_session__user__username'),
+            fz_plan_id=F('msi_session__grid__freezing_plan__id'),
+            screening_session_name=F('msi_session__atlas_session__group__name'),
+            fz_plan_sample_id=F('msi_session__grid__freezing_plan__sample__id'),
+            fz_plan_sample_name=F('msi_session__grid__freezing_plan__sample__name')
         )
 
-        # Use a dictionary to keep unique entries by 'procrun.id'
-        unique_results = {}
+        date_mapping = {
+            'last_1_month': 1,
+            'last_3_months': 3,
+            'last_6_months': 6
+        }
 
+        filter_criteria = Q()
+
+        for item in q_param:
+            category = item['category']
+            values = item['value']
+
+
+            if category == 'procPlan':
+                filter_criteria &= Q(proc_plan__name__in=values)
+            elif category == 'userName':
+                # Automatically detect email-like usernames (contains '@') or general usernames
+
+                # Handle email-like usernames in the database
+                user_filter = Q()
+                for value in values:
+                    # Use `startswith` to match both exact usernames and email-like formats
+                    user_filter |= Q(msi_session__user__username__startswith=value)
+                filter_criteria &= user_filter
+                    
+            elif category == 'screeningSession':
+                # Support multiple `icontains` values with OR logic
+                session_filter = Q()
+                for value in values:
+                    session_filter |= Q(msi_session__atlas_session__group__name__icontains=value)
+                filter_criteria &= session_filter
+            elif category == 'grid':
+                filter_criteria &= Q(msi_session__grid__name__in=values)
+            elif category == 'project':
+                filter_criteria &= Q(msi_session__project__name__in=values)
+            elif category == 'msiSession':
+                # Support multiple `icontains` values with OR logic
+                session_name_filter = Q()
+                for value in values:
+                    session_name_filter |= Q(msi_session__name__icontains=value)
+                filter_criteria &= session_name_filter
+            elif category == 'tomograms':
+                filter_criteria &= Q(name__in=values)
+
+            elif category == 'date' and values:
+                # Handle the possible values for the 'date' filter
+                date_value = values[0] if isinstance(values, list) else values
+                if date_value in date_mapping:
+                    months = date_mapping[date_value]
+                    now = datetime.now()
+                    start_date = now - timedelta(days=months * 30)
+                    filter_criteria &= Q(created_at__gte=start_date)  # Use 'created_at' column for filtering
+                else:
+                    return JsonResponse({'error': f'Invalid value for date filter: {date_value}'}, status=400)
+
+        queryset = queryset.filter(filter_criteria)   
+        print(queryset)
+
+        # Prepare unique results for the response
+        unique_results = {}
         for entry in queryset:
             procrun_id = entry.get('id')
-            if procrun_id not in unique_results:
+            tomogram_id = entry.get('run_pipe_run_id')
+            if procrun_id not in unique_results and tomogram_id is not None:  # Ensure we only count entries with tomograms
+                proc_run_created_at = datetime.fromisoformat(str(entry.get('created_at'))).strftime('%Y-%m-%d') if entry.get('created_at') else None
+                cryogrid_created_at = datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d') if entry.get('cryogrid_created_at') else None
                 response_model = ResponseModel(
-                    tomograms=TomogramModel(id=entry.get('run_pipe_run_id'), name=entry.get('name'), url=f"{base_url}/admin/processes/tomograms/{entry.get('run_pipe_run_id')}"),
+                    tomograms=TomogramModel(id=tomogram_id, name="{}".format(entry.get('name'), tomogram_id), url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"),
                     procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
-                    procRun=ProcRunModel(id=procrun_id, note=entry.get('notes')),
+                    procRun=ProcRunModel(id=procrun_id, note=entry.get('notes'), createdAt=str(proc_run_created_at)),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
-                        name=entry.get('cryogrid_name'),
+                        name="{} (id={})".format(entry.get('cryogrid_name'), entry.get('cryogrid_id')),
                         trashed=entry.get('cryogrid_trashed'),
                         url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
-                        createdAt=str(entry.get('cryogrid_created_at'))
+                        createdAt=str(cryogrid_created_at)
                     ),
-                    projects=ProjectModel(id=entry.get('project_id'), name=entry.get('project_name'), url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"),
+                    project=ProjectModel(id=entry.get('project_id'), name=entry.get('project_name'), url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"),
                     user=UserModel(id=entry.get('user_id'), name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')),
                     msiSession=MSISessionModel(
                         id=entry.get('msi_session_id'),
@@ -399,11 +483,34 @@ def get_tomo_details(request):
                     )
                 )
                 unique_results[procrun_id] = response_model.dict()
-        
-        # Collect unique results as a list
+
         response_data = list(unique_results.values())
-        
-        return JsonResponse(response_data, safe=False)
+  
+        # Paginate the formatted response data using Django's Paginator
+        paginator = Paginator(response_data, page_size)
+        try:
+            paginated_data = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_data = paginator.page(1)
+        except EmptyPage:
+            paginated_data = paginator.page(paginator.num_pages)
+
+        # Final response structure with pagination applied to formatted response data
+        result = {
+            'result': list(paginated_data),  # Contains only the paginated items for the current page
+            'pagination': {
+                'page': paginated_data.number,  # Current page number
+                'pageSize': int(page_size),  # Items per page
+                'totalPages': paginator.num_pages,  # Total number of pages
+                'totalResults': paginator.count,  # Total number of items across all pages
+            },
+            'sortBy': {
+                'sort': sort_field,
+                'asc': asc
+            }
+        }
+
+        return JsonResponse(result, safe=False)
     except UnprocessableEntity as e:
         return JsonResponse({'error': e.detail}, status=e.status_code)
     except Exception as e:
