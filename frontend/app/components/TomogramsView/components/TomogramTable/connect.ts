@@ -10,7 +10,7 @@ import {
 import { API } from "@app/common/constants/api";
 import { useFetchTableData } from "@app/common/hooks/useFetchTableData/useFetchTableData";
 import { SEARCH_PARAM_NAME } from "@app/common/types/search";
-import { getFilterSearchParamValues } from "@app/common/utils/filter";
+import { getFilterSearchParamValues } from "@app/common/utils/searchParam";
 
 const TABLE_OPTIONS: Omit<TableOptions<TomogramData>, "data" | "columns"> = {
   getCoreRowModel: getCoreRowModel(),
@@ -22,26 +22,39 @@ const TABLE_OPTIONS: Omit<TableOptions<TomogramData>, "data" | "columns"> = {
   manualSorting: true,
 };
 
-const TOMOGRAM_RESPONSE_FIELD = "tomograms" as const;
+const TOMOGRAM_RESPONSE_FIELD = "tomograms";
 
 export const useConnect = () => {
   const state = useContext<TableState>(TableStateContext);
 
-  const tomogramList = useFetchTableData<
-    TomogramData,
-    typeof TOMOGRAM_RESPONSE_FIELD
-  >(
+  const tomogramList = useFetchTableData<typeof TOMOGRAM_RESPONSE_FIELD>(
     API.TOMOGRAMS_V1,
     {
       [SEARCH_PARAM_NAME.QUERY]: [
         ...getFilterSearchParamValues(state),
         // TODO: re-enable when pagination and sort are implemented.
+        // these functions should be implemented in frontend/app/common/utils/filter.ts (plan to rename to searchParam.ts)
         // ...getPaginationSearchParamValue(state),
         // ...getSortSearchParamValue(state)
       ],
     },
     TOMOGRAM_RESPONSE_FIELD
   );
+
+  // TODO: add onPaginationChange, onSortingChange callback functions and pass to useReactTable
+  // const onPaginationChange = useCallback(
+  //   (updaterOrValue: Updater<PaginationState>) => {
+  //     dispatch?.(updatePagination({ updaterOrValue, pagination }));
+  //   },
+  //   [dispatch, pagination]
+  // );
+
+  // const onSortingChange = useCallback(
+  //   (updaterOrValue: Updater<SortingState>) => {
+  //     dispatch?.(updateSort({ updaterOrValue, sortBy }));
+  //   },
+  //   [dispatch, sortBy]
+  // );
 
   const table = useReactTable<TomogramData>({
     ...TABLE_OPTIONS,

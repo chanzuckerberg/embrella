@@ -17,7 +17,7 @@ import { TOMOGRAM_FILTER_CONFIGS } from "@app/components/TomogramsView/component
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
 import { API } from "@app/common/constants/api";
 import { SEARCH_PARAM_NAME } from "@app/common/types/search";
-import { getFilterSearchParamValues } from "@app/common/utils/filter";
+import { getFilterSearchParamValues } from "@app/common/utils/searchParam";
 
 export const useConnect = () => {
   const dispatch = useContext(TableDispatchContext);
