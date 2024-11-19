@@ -73,7 +73,7 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROJECT,
-    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.projects),
+    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.project),
     cell: getSDSLink,
     enableSorting: false,
     header: "Project",

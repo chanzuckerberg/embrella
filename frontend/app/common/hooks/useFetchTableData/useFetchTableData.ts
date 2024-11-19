@@ -9,7 +9,7 @@ export const useFetchTableData = <DataType, DataResponseField extends string>(
   dataEndpoint: API,
   searchParam: SearchParam,
   dataResponseField: DataResponseField
-): EntityList<TomogramData, DataResponseField> | undefined => {
+): EntityList<DataType, DataResponseField> | undefined => {
   const { data } = useFetchData<ApiListResponse<DataType>>(
     configs.API_URL,
     dataEndpoint,
@@ -18,7 +18,7 @@ export const useFetchTableData = <DataType, DataResponseField extends string>(
   // TODO: Type is broken because in draft API, the tomograms list is not nested under `result`
   return (
     data && {
-      [dataResponseField]: data,
+      [dataResponseField]: data.result,
       pagination: {},
       sortBy: {},
     }

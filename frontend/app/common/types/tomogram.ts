@@ -25,7 +25,7 @@ export interface TomogramData {
     createdAt: string;
   };
   // TODO: should this be singular?
-  projects: {
+  project: {
     id: number;
     name: string;
     url: string;
