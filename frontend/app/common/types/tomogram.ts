@@ -1,7 +1,6 @@
 import { MSISession } from "./msiSession";
 
 export interface TomogramData {
-  // TODO: should this be singular?
   tomograms: {
     id: number;
     name: string;
@@ -15,6 +14,7 @@ export interface TomogramData {
   procRun: {
     id: number;
     note: string;
+    createdAt: string;
   };
   json: null;
   grid: {
@@ -24,8 +24,7 @@ export interface TomogramData {
     url: string;
     createdAt: string;
   };
-  // TODO: should this be singular?
-  projects: {
+  project: {
     id: number;
     name: string;
     url: string;

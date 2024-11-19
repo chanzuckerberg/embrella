@@ -1,7 +1,7 @@
 import { Link } from "@czi-sds/components";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 
-import { TomogramData } from "@/app/common/types/tomogram";
+import { TomogramData } from "@app/common/types/tomogram";
 
 /**
  * Default props to pass to SDS Link component
@@ -47,6 +47,7 @@ const TOMOGRAM_COLUMN_IDS = {
   PROJECT: "project",
   GRID: "grid",
   NOTES: "notes",
+  CREATED_AT: "createdAt",
 }
 
 export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
@@ -73,14 +74,14 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROJECT,
-    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.projects),
+    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.project),
     cell: getSDSLink,
     enableSorting: false,
     header: "Project",
   },
   {
     id: TOMOGRAM_COLUMN_IDS.GRID,
-    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.grid, true),
+    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.grid),
     cell: getSDSLink,
     enableSorting: false,
     header: "Grid",
@@ -90,5 +91,11 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
     accessorFn: (rowData: TomogramData): string => rowData.procRun.note,
     enableSorting: false,
     header: "Notes",
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.CREATED_AT,
+    accessorFn: (rowData: TomogramData): string => rowData.procRun.createdAt,
+    enableSorting: true,
+    header: "Created At",
   },
 ];
