@@ -1,26 +1,31 @@
 import configs from "@/configs/local";
-import { ApiListResponse, EntityList } from "@/app/common/types/types";
-import { SearchParam } from "@/app/common/types/search";
+import { ApiListResponse, EntityList, GridData } from "@app/common/types/types";
+import { SearchParam } from "@app/common/types/search";
 import { useFetchData } from "@/hooks/useFetchData/useFetchData";
-import { API } from "@/app/common/constants/api";
-import { TomogramData } from "@/app/common/types/tomogram";
+import { API } from "@app/common/constants/api";
+import { TomogramData } from "@app/common/types/tomogram";
 
-export const useFetchTableData = <DataType, DataResponseField extends string>(
+type APIResponseFieldMap = {
+  tomograms: TomogramData;
+  grids: GridData;
+};
+
+export const useFetchTableData = <K extends keyof APIResponseFieldMap>(
   dataEndpoint: API,
   searchParam: SearchParam,
-  dataResponseField: DataResponseField
-): EntityList<DataType, DataResponseField> | undefined => {
-  const { data } = useFetchData<ApiListResponse<DataType>>(
+  dataResponseField: K
+): EntityList<APIResponseFieldMap[K], K> | undefined => {
+  const { data } = useFetchData<ApiListResponse<APIResponseFieldMap[K]>>(
     configs.API_URL,
     dataEndpoint,
     searchParam
   );
-  // TODO: Type is broken because in draft API, the tomograms list is not nested under `result`
   return (
-    data && {
+    data &&
+    ({
       [dataResponseField]: data.result,
-      pagination: {},
-      sortBy: {},
-    }
+      pagination: data.pagination,
+      sortBy: data.sortBy,
+    } as EntityList<APIResponseFieldMap[K], K>)
   );
 };
