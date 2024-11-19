@@ -34,8 +34,8 @@ class UnprocessableEntity(APIException):
 
 class tomoQueryParams(BaseModel):
     q: Optional[List[dict[str, Union[List[Union[str, bool, None, int]], str, bool, None, int]]]] = None  # Allow int as well in value
-    
-    
+
+
     # Define the allowed category names in camelCase
     ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "tomogram", "userName", "procPlan", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "sample","date", "procPlan", "json", 'grid', 'tomograms','screeningSession'}
 
@@ -45,22 +45,22 @@ class tomoQueryParams(BaseModel):
             return []
         if not isinstance(value, list):
             raise ValueError("q must be a list of filter objects")
-        
+
         for item in value:
             if not isinstance(item, dict):
                 raise ValueError("Each item in 'q' must be a dictionary with 'category' and 'value'")
-            
+
             category = item.get('category')
             item_value = item.get('value')
 
             # Ensure 'category' and 'value' keys exist
             if category is None or item_value is None:
                 raise ValueError("Each item in 'q' must have 'category' and 'value' keys")
-            
+
             # Check if the category is in the allowed camelCase category names
             if category not in cls.ALLOWED_CATEGORIES:
                 raise ValueError(f"Invalid category: '{category}'. Allowed categories are: {', '.join(cls.ALLOWED_CATEGORIES)}")
-            
+
             # Ensure the value is a string, list of strings/booleans/None/ints, boolean, or int
             if isinstance(item_value, list):
                 for val in item_value:
@@ -68,7 +68,7 @@ class tomoQueryParams(BaseModel):
                         raise ValueError(f"Invalid value in list for category '{category}': expected string, boolean, int, or None.")
             elif not isinstance(item_value, (str, bool, type(None), int)):
                 raise ValueError(f"Invalid value for category '{category}': expected string, boolean, int, or None.")
-        
+
         return value
 
 ## API Result
@@ -120,7 +120,7 @@ class MSISessionModel(BaseModel):
 
 class ProcRunModel(BaseModel):
     id: Optional[int]
-    note:Optional[str]
+    notes: Optional[str]
     createdAt: Optional[str] = None
 
 class ResponseModel(BaseModel):
@@ -132,4 +132,3 @@ class ResponseModel(BaseModel):
     project: Optional[ProjectModel] = None
     user: Optional[UserModel] = None
     msiSession: Optional[MSISessionModel] = None
-

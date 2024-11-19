@@ -28,17 +28,16 @@ interface LinkCellProps {
   href: string;
 }
 
-const getSDSLink = (props: CellContext<TomogramData, LinkCellProps>): React.JSX.Element => {
-  return <Link {...DEFAULT_LINK_PROPS} {...props.getValue()} />;
-};
+type AccessorReturnType = LinkCellProps | string;
 
-const getLinkPropsFromLinkField = (linkField: LinkField, showId = false) => {
-  const { id, name, url } = linkField;
-  // Optionally append id to link text
-  const children = showId ? `${name} (id=${id})` : name;
+const getLinkPropsFromLinkField = (linkField: LinkField) => ({
+  children: linkField.name,
+  href: linkField.url,
+});
 
-  return { children, href: url };
-};
+const getSDSLink = (props: CellContext<TomogramData, LinkCellProps>): React.JSX.Element => (
+  <Link {...DEFAULT_LINK_PROPS} {...props.getValue()} />
+);
 
 const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: "tomograms",
@@ -50,10 +49,10 @@ const TOMOGRAM_COLUMN_IDS = {
   CREATED_AT: "createdAt",
 }
 
-export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
+export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData, AccessorReturnType>[] = [
   {
     id: TOMOGRAM_COLUMN_IDS.TOMOGRAMS,
-    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.tomograms, true),
+    accessorFn: (rowData: TomogramData): LinkCellProps => getLinkPropsFromLinkField(rowData.tomograms),
     cell: getSDSLink,
     enableSorting: false,
     header: "Tomograms",
@@ -88,7 +87,7 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<TomogramData>[] = [
   },
   {
     id: TOMOGRAM_COLUMN_IDS.NOTES,
-    accessorFn: (rowData: TomogramData): string => rowData.procRun.note,
+    accessorFn: (rowData: TomogramData): string => rowData.procRun.notes,
     enableSorting: false,
     header: "Notes",
   },

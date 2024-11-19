@@ -38,8 +38,8 @@ def get_base_url():
        elif ENVIRONMENT == 'production':
            return 'http://umbrella.czbiohub.org'
        else:  # development
-           return 'http://localhost:8000' 
-       
+           return 'http://localhost:8000'
+
 base_url = get_base_url()
 
 def detail(request, run_id):
@@ -176,7 +176,7 @@ def get_freezing_plan_tags(fz_plan_id):
         return f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag"
     except Exception:
         return None
-    
+
 #for tomo filter page
 
 @require_http_methods(["GET"])
@@ -185,9 +185,9 @@ def available_filters(request):
         # Validate that only the 'q' parameter is present in the request
         if 'q' not in request.GET or len(request.GET) > 1:
             return JsonResponse({'error': 'Invalid query parameters. Only "q" is allowed.'}, status=422)
-        
+
         raw_query_param = request.GET.get('q', '[]')
-        
+
         # Parse the JSON string into a Python list
         query_filters = json.loads(raw_query_param)
 
@@ -263,7 +263,7 @@ def available_filters(request):
                         .order_by('user_display_name')
                         .values(name=Trim(F('user_display_name')), count=F('count'))),
             'msiSession': list(queryset
-                    .exclude(name__isnull=True) 
+                    .exclude(name__isnull=True)
                     .annotate(count=Count('id'))
                     .values('name', 'count')
                     .order_by('name')),
@@ -301,7 +301,7 @@ def available_filters(request):
         return JsonResponse({'error': f'Invalid input: {e.errors()}'}, status=400)
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-    
+
 
 from django.http import JsonResponse
 from pydantic import ValidationError
@@ -357,7 +357,7 @@ def get_tomo_details(request):
             elif item['category'] == 'pageSize':
                 page_size = int(extract_value(item['value']))
 
-        
+
 
         # Determine sort order
         sort_order = sort_field if asc else f'-{sort_field}'
@@ -429,7 +429,7 @@ def get_tomo_details(request):
                     # Use `startswith` to match both exact usernames and email-like formats
                     user_filter |= Q(msi_session__user__username__startswith=value)
                 filter_criteria &= user_filter
-                    
+
             elif category == 'screeningSession':
                 # Support multiple `icontains` values with OR logic
                 session_filter = Q()
@@ -474,7 +474,7 @@ def get_tomo_details(request):
                 response_model = ResponseModel(
                     tomograms=TomogramModel(id=tomogram_id, name="{} (id={})".format(entry.get('name'), tomogram_id), url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"),
                     procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
-                    procRun=ProcRunModel(id=procrun_id, note=entry.get('notes'), createdAt=str(proc_run_created_at)),
+                    procRun=ProcRunModel(id=procrun_id, notes=entry.get('notes'), createdAt=str(proc_run_created_at)),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
                         name="{} (id={})".format(entry.get('cryogrid_name'), entry.get('cryogrid_id')),
@@ -493,7 +493,7 @@ def get_tomo_details(request):
                 unique_results[procrun_id] = response_model.dict()
 
         response_data = list(unique_results.values())
-  
+
         # Paginate the formatted response data using Django's Paginator
         paginator = Paginator(response_data, page_size)
         try:
