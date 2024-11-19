@@ -76,10 +76,10 @@ type TableStateAction =
   | UpdateSortAction;
 // #endregion Table state actions for reducer
 
-export function tableStateReducer(state: TableState, action: TableStateAction): TableState {
+const tableStateReducer = (state: TableState, action: TableStateAction): TableState => {
   const { payload, type } = action;
   switch (type) {
-    case TableStateActionTypes.UpdateFilter: {
+    case TableStateActionTypes.UpdateFilter:
       const { category, value } = payload.categoryFilter;
       const valueSelected = value.length > 0;
       const filterState = {
@@ -92,11 +92,11 @@ export function tableStateReducer(state: TableState, action: TableStateAction): 
         delete filterState[category];
       }
 
-      return {
+      const nextState = {
         ...state,
         filterState,
       };
-    }
+      return nextState;
     // TODO: move functions in frontend/views/GridsView/common/store/actions/index.ts here
     // case TableStateActionTypes.UpdatePagination: {
     //   return updatePaginationAction(state, payload);
@@ -109,7 +109,7 @@ export function tableStateReducer(state: TableState, action: TableStateAction): 
   }
 };
 
-export const DispatchContext = createContext<Dispatch<TableStateAction>>(noop);
+export const TableDispatchContext = createContext<Dispatch<TableStateAction>>(noop);
 export const TableStateContext = createContext<TableState>(INITIAL_STATE);
 
 export const TableStateProvider = ({ children }: TableStateProviderProps): JSX.Element => {
@@ -117,9 +117,9 @@ export const TableStateProvider = ({ children }: TableStateProviderProps): JSX.E
 
   return (
     <TableStateContext.Provider value={state}>
-      <DispatchContext.Provider value={dispatch}>
+      <TableDispatchContext.Provider value={dispatch}>
         {children}
-      </DispatchContext.Provider>
+      </TableDispatchContext.Provider>
     </TableStateContext.Provider>
   );
 };
