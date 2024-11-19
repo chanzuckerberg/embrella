@@ -343,7 +343,12 @@ def get_tomo_details(request):
         # Override pagination and sorting if provided in q_param
         for item in q_param:
             if item['category'] == 'sort':
-                sort_field = 'created_at' if extract_value(item['value']) == 'modifiedOn' else extract_value(item['value'])
+                # Map 'createdAt' to the actual database field for sorting
+                sort_value = extract_value(item['value'])
+                if sort_value == 'createdAt':
+                    sort_field = 'created_at'  # Corresponding database field
+                else:
+                    sort_field = sort_value
             elif item['category'] == 'asc':
                 asc_value = extract_value(item['value'])
                 asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
@@ -352,8 +357,11 @@ def get_tomo_details(request):
             elif item['category'] == 'pageSize':
                 page_size = int(extract_value(item['value']))
 
+        
+
         # Determine sort order
         sort_order = sort_field if asc else f'-{sort_field}'
+
 
         # Base queryset with selected related fields
         queryset = ProcRun.objects.select_related(
@@ -395,7 +403,7 @@ def get_tomo_details(request):
             screening_session_name=F('msi_session__atlas_session__group__name'),
             fz_plan_sample_id=F('msi_session__grid__freezing_plan__sample__id'),
             fz_plan_sample_name=F('msi_session__grid__freezing_plan__sample__name')
-        )
+        ).order_by(sort_order)
 
         date_mapping = {
             'last_1_month': 1,
@@ -452,7 +460,7 @@ def get_tomo_details(request):
                 else:
                     return JsonResponse({'error': f'Invalid value for date filter: {date_value}'}, status=400)
 
-        queryset = queryset.filter(filter_criteria)   
+        queryset = queryset.filter(filter_criteria)
         print(queryset)
 
         # Prepare unique results for the response
