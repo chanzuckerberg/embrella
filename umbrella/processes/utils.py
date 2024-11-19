@@ -120,7 +120,7 @@ class MSISessionModel(BaseModel):
 
 class ProcRunModel(BaseModel):
     id: Optional[int]
-    note:Optional[str]
+    notes:Optional[str]
     createdAt: Optional[str] = None
 
 class ResponseModel(BaseModel):
