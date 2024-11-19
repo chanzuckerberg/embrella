@@ -5,22 +5,16 @@ import { Table as SDSTable } from "@czi-sds/components";
 import { TableHead } from "@app/components/Table/components/TableHead";
 import { TableBody } from "@app/components/Table/components/TableBody";
 
-import { TomogramData } from "@app/common/types/tomogram";
-import { EntityList } from "@app/common/types/types";
-import { useConnect } from "@app/components/TomogramsView/TomogramTable/connect";
+import { useConnect } from "@app/components/TomogramsView/components/TomogramTable/connect";
 
-interface Props {
-  tomogramList?: EntityList<TomogramData, "tomograms">;
-}
-
-const TEST_ID_GRIDS = "tomograms";
+const TEST_ID_DATA_TABLE = "data-table";
 // const TEST_ID_GRIDS_PAGINATION = "tomogram-pagination";
 
-export const TomogramTable = ({ tomogramList }: Props): React.JSX.Element => {
-  const { table } = useConnect(tomogramList);
+export const TomogramTable = (): React.JSX.Element => {
+  const { table } = useConnect();
   return (
     <Fragment>
-      <SDSTable data-testid={TEST_ID_GRIDS}>
+      <SDSTable data-testid={TEST_ID_DATA_TABLE}>
         <TableHead table={table} />
         <TableBody table={table} />
       </SDSTable>
