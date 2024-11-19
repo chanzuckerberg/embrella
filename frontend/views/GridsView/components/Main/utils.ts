@@ -2,7 +2,7 @@ import {
   SEARCH_PARAM_NAME,
   SearchParam,
   SearchParamValue,
-} from "@/app/common/types/types";
+} from "@/app/common/types/search";
 import { ColumnSort } from "@tanstack/react-table";
 import { SORT_CATEGORY_VALUE } from "@/views/GridsView/hooks/useFetchGrids/constants";
 import { State } from "@/views/GridsView/common/store/types";
