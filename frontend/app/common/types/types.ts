@@ -1,11 +1,19 @@
+import { FilterOption } from "./filter";
 import { MSISession } from "./msiSession";
 
+/*
+ * For a raw API response
+ */
 export interface ApiListResponse<T> {
   pagination: Pagination;
   result: T[];
   sortBy: SortBy;
 }
 
+/*
+ * Type for a formatted API response
+ * Usage: EntityList<TomogramData, "tomograms">
+ */
 export type EntityList<T, K extends string> = {
   [entityName in K]: T[];
 } & {
@@ -13,6 +21,7 @@ export type EntityList<T, K extends string> = {
   sortBy: SortBy;
 };
 
+// This type is used in GridsView
 export interface FiltersList<FilterCategory extends string> {
   filters: Record<FilterCategory, FilterOption[]>;
 }
@@ -27,12 +36,6 @@ export type GridFilterCategory =
   | "screeningSession"
   | "status"
   | "user";
-
-export interface FilterOption {
-  name: boolean | string | null;
-  count: number;
-  selected: boolean;
-}
 
 export interface GridData {
   grid: {
@@ -76,6 +79,7 @@ export interface GridFreezingPlanSample {
   url: string;
 }
 
+// TODO: Move to state types file
 export interface Pagination {
   page: number;
   pageSize: number;
@@ -83,6 +87,7 @@ export interface Pagination {
   totalResults: number;
 }
 
+// TODO: Move to state types file
 export interface SortBy {
   asc: boolean;
   sort: string;

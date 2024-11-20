@@ -16,13 +16,13 @@ import { buildNextPaginationState } from "@/views/GridsView/common/store/actions
  */
 export function updateFilterAction(
   state: State,
-  payload: UpdateFilterPayload,
+  payload: UpdateFilterPayload
 ): State {
   return {
     ...state,
     filterState: buildNextFilterState(
       payload.categoryFilter,
-      payload.filtersList,
+      payload.filtersList
     ),
   };
 }
@@ -35,13 +35,13 @@ export function updateFilterAction(
  */
 export function updatePaginationAction(
   state: State,
-  payload: UpdatePaginationPayload,
+  payload: UpdatePaginationPayload
 ): State {
   return {
     ...state,
     paginationState: buildNextPaginationState(
       payload.updaterOrValue,
-      payload.pagination,
+      payload.pagination
     ),
   };
 }
@@ -54,7 +54,7 @@ export function updatePaginationAction(
  */
 export function updateSortAction(
   state: State,
-  payload: UpdateSortPayload,
+  payload: UpdateSortPayload
 ): State {
   return {
     ...state,
