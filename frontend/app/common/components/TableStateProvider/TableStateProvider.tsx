@@ -72,6 +72,15 @@ type TableStateAction =
   | UpdateSortAction;
 // #endregion Table state actions for reducer
 
+export const getReactTablePaginationState = (pagination: Pagination): PaginationState => (
+  !pagination
+  ? { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE }
+  : {
+      pageIndex: pagination.page - 1,
+      pageSize: pagination.pageSize,
+    }
+)
+
 const tableStateReducer = (state: TableState, action: TableStateAction): TableState => {
   const { payload, type } = action;
   switch (type) {
@@ -93,10 +102,18 @@ const tableStateReducer = (state: TableState, action: TableStateAction): TableSt
         filterState,
       };
       return nextState;
+    case TableStateActionTypes.UpdatePagination: {
+      const { pagination, updaterOrValue} = payload;
+      const paginationState = typeof updaterOrValue === "function" ?
+        updaterOrValue(getReactTablePaginationState(pagination as Pagination)) :
+        updaterOrValue;
+      return {
+        ...state,
+        paginationState,
+      }
+    }
     // TODO: move functions in frontend/views/GridsView/common/store/actions/index.ts here
-    // case TableStateActionTypes.UpdatePagination: {
-    //   return updatePaginationAction(state, payload);
-    // }
+
     // case TableStateActionTypes.UpdateSort: {
     //   return updateSortAction(state, payload);
     // }

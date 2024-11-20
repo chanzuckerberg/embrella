@@ -17,4 +17,29 @@ export function getFilterSearchParamValues(
   });
 }
 
-// TODO: add getPaginationSearchParamValue and getSortSearchParamValue
+/**
+ * Returns pagination related search param values for the given pagination state.
+ * "pageSize" is configured in the BE, and therefore not included in the search params.
+ * @param state - State.
+ * @returns search params "page".
+ */
+export const getPaginationSearchParamValues = (
+  state: TableState
+): SearchParamValue[] => {
+  const {
+    paginationState: { pageIndex },
+  } = state;
+
+  const pageNumbersForIndexes = [pageIndex].map(
+    (pageIndex: number) => pageIndex + 1
+  );
+
+  return [
+    {
+      category: "page",
+      value: pageNumbersForIndexes,
+    },
+  ];
+};
+
+// TODO: add getSortSearchParamValue
