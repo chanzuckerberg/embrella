@@ -366,7 +366,6 @@ def get_cryo_grids_details(request):
         ).order_by(sort_order)
 
         # Apply filters from q parameter
-        print(query_params.q)
         queryset = apply_filters(queryset, query_params.q)
 
         # Format the queryset into grid items

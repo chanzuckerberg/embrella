@@ -23,7 +23,10 @@ from processes.models import *
 from processes.utils import QueryParams, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
 from django.db.models import F,Q
-
+from django.http import JsonResponse
+from pydantic import ValidationError
+from typing import List
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 import logging
 import os
 # from umbrella.settings import ENVIRONMENT
@@ -303,16 +306,14 @@ def available_filters(request):
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
 
-from django.http import JsonResponse
-from pydantic import ValidationError
-from typing import List
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+
 
 @require_http_methods(["GET"])
 def get_tomo_details(request):
     try:
         # Parse 'q' parameter if provided
         raw_q_param = request.GET.get('q', None)
+        # print(get_freezing_plan_tags(1))
         if raw_q_param:
             try:
                 q_param = json.loads(raw_q_param)
@@ -417,7 +418,6 @@ def get_tomo_details(request):
             category = item['category']
             values = item['value']
 
-
             if category == 'procPlan':
                 filter_criteria &= Q(proc_plan__name__in=values)
             elif category == 'userName':
@@ -459,9 +459,33 @@ def get_tomo_details(request):
                     filter_criteria &= Q(created_at__gte=start_date)  # Use 'created_at' column for filtering
                 else:
                     return JsonResponse({'error': f'Invalid value for date filter: {date_value}'}, status=400)
-
+            elif category == 'sample':
+                sample_filter = Q()
+                for value in values:
+                    # Check if the sample value contains "with " or "without tag"
+                    if "with " in value:
+                        # Extract the sample name and specific tag
+                        parts = value.split(" with ")
+                        sample_name = parts[0].strip()
+                        tag_name = parts[1].strip() if len(parts) > 1 else None
+                        # Match the sample name and the specific tag
+                        sample_filter |= Q(
+                            msi_session__grid__freezing_plan__sample__name=sample_name,
+                            msi_session__grid__freezing_plan__tags__name__icontains=tag_name
+                        )
+                    elif "without tag" in value:
+                        sample_name = value.replace(" without tag", "").strip()
+                        # Match the sample name and ensure no tags are associated
+                        sample_filter |= Q(
+                            msi_session__grid__freezing_plan__sample__name=sample_name,
+                            msi_session__grid__freezing_plan__tags__isnull=True
+                        )
+                    else:
+                        # General match for just sample names without tag qualifiers
+                        sample_filter |= Q(msi_session__grid__freezing_plan__sample__name=value)
+                filter_criteria &= sample_filter
         queryset = queryset.filter(filter_criteria)
-        print(queryset)
+        # print(queryset)
 
         # Prepare unique results for the response
         unique_results = {}
@@ -513,7 +537,7 @@ def get_tomo_details(request):
                 'totalResults': paginator.count,  # Total number of items across all pages
             },
             'sortBy': {
-                'sort': sort_field,
+                'sort': 'createdAt' if sort_field is not None else None,
                 'asc': asc
             }
         }
