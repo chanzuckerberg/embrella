@@ -485,7 +485,7 @@ def get_tomo_details(request):
                         sample_filter |= Q(msi_session__grid__freezing_plan__sample__name=value)
                 filter_criteria &= sample_filter
         queryset = queryset.filter(filter_criteria)
-        print(queryset)
+        # print(queryset)
 
         # Prepare unique results for the response
         unique_results = {}
