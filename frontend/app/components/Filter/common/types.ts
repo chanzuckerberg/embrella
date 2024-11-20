@@ -1,5 +1,5 @@
 import { ComplexFilterProps as SDSComplexFilterProps } from "@czi-sds/components";
-import { FilterOption } from "@/app/common/types/types";
+import { FilterOption } from "@app/common/types/filter";
 
 export type AutocompleteOption = Omit<FilterOption, "name"> & { name: string };
 

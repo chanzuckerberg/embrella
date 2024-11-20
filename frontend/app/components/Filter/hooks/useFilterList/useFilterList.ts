@@ -1,7 +1,7 @@
-import { FilterConfig } from "@/app/components/Filter/common/types";
-import { FiltersList } from "@/app/common/types/types";
-import { UseFilterList } from "@/app/components/Filter/hooks/useFilterList/types";
-import { buildFilterGroups } from "@/app/components/Filter/hooks/useFilterList/utils";
+import { FilterConfig } from "@app/components/Filter/common/types";
+import { FiltersList } from "@app/common/types/types";
+import { UseFilterList } from "@app/components/Filter/hooks/useFilterList/types";
+import { buildFilterGroups } from "@app/components/Filter/hooks/useFilterList/utils";
 import { useMemo } from "react";
 
 export const useFilterList = <FilterId, FilterCategory extends string>(
