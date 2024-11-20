@@ -251,6 +251,7 @@ def available_filters(request):
                 for freezing_plan in freezing_plans:
                     tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
                     plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
+<<<<<<< HEAD
 
                     processed_samples.append({
                         'name': plan_str,
@@ -263,6 +264,17 @@ def available_filters(request):
                 # If no 'name' exists, simply append the original item
                 processed_samples.append(item)
 
+=======
+                    processed_samples.append({
+                        'name': plan_str,
+                        'count': item['count'],  # Retain the original count
+                        'selected': False  # Default selected status
+                    })
+
+            else:
+                # If no 'name' exists, simply append the original item
+                processed_samples.append(item)
+>>>>>>> main
 
         filters['sample'] = processed_samples
     
