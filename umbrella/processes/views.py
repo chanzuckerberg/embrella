@@ -333,7 +333,7 @@ def get_tomo_details(request):
 
         # Pagination and sorting defaults
         page = int(request.GET.get('page', 1))  # Default to first page
-        page_size = int(request.GET.get('pageSize', 20))  # Default page size is 10
+        page_size = int(request.GET.get('pageSize', 10))  # Default page size is 10
         sort_field = 'created_at'
         asc = False
 
