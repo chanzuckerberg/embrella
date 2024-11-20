@@ -13,7 +13,7 @@ export interface TomogramData {
   };
   procRun: {
     id: number;
-    note: string;
+    notes: string;
     createdAt: string;
   };
   json: null;
