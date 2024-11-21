@@ -20,7 +20,8 @@ import {
 } from "@/views/GridsView/components/Main/components/GridList/constants";
 import { GRID_COLUMN_DEFS } from "@/views/GridsView/components/Main/components/GridList/columns/column";
 import { API } from "@/app/common/constants/api";
-import { EntityList, GridData } from "@/app/common/types/types";
+import { GridData } from "@/app/common/types/types";
+import { EntityList } from "@app/common/types/tableState";
 
 const { describe } = test;
 

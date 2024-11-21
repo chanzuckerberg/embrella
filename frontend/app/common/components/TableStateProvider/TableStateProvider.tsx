@@ -1,7 +1,8 @@
 import { createContext, Dispatch, ReactNode, useReducer } from "react";
 import { noop, PaginationState, SortingState, Updater } from "@tanstack/react-table";
 import { FiltersList, ViewFilterCategory } from "@app/common/types/filter";
-import { Pagination, SortBy } from "../../types/types";
+import { Pagination, SortBy } from "@app/common/types/tableState";
+import { TOMOGRAM_COLUMN_IDS } from "@app/components/TomogramsView/components/TomogramTable/columns";
 
 export const DEFAULT_PAGE_SIZE = 10;
 
@@ -11,7 +12,7 @@ export const INITIAL_STATE: TableState = {
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
   },
-  sortState: [],
+  sortState: [{ desc: true, id: TOMOGRAM_COLUMN_IDS.CREATED_AT as string }],
 };
 
 interface TableStateProviderProps {
@@ -72,6 +73,21 @@ type TableStateAction =
   | UpdateSortAction;
 // #endregion Table state actions for reducer
 
+export const getReactTablePaginationState = (pagination: Pagination): PaginationState => (
+  !pagination
+  ? { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE }
+  : {
+      pageIndex: pagination.page - 1,
+      pageSize: pagination.pageSize,
+    }
+)
+
+export const getReactTableSortingState = (sortBy: SortBy): SortingState => (
+  !sortBy
+  ? []
+  : [ { id: sortBy.sort, desc: !sortBy.asc } ]
+);
+
 const tableStateReducer = (state: TableState, action: TableStateAction): TableState => {
   const { payload, type } = action;
   switch (type) {
@@ -93,13 +109,25 @@ const tableStateReducer = (state: TableState, action: TableStateAction): TableSt
         filterState,
       };
       return nextState;
-    // TODO: move functions in frontend/views/GridsView/common/store/actions/index.ts here
-    // case TableStateActionTypes.UpdatePagination: {
-    //   return updatePaginationAction(state, payload);
-    // }
-    // case TableStateActionTypes.UpdateSort: {
-    //   return updateSortAction(state, payload);
-    // }
+    case TableStateActionTypes.UpdatePagination:
+      const { pagination, updaterOrValue: paginationUpdaterOrValue} = payload;
+      const paginationState = typeof paginationUpdaterOrValue === "function" ?
+        paginationUpdaterOrValue(getReactTablePaginationState(pagination as Pagination)) :
+        paginationUpdaterOrValue;
+      return {
+        ...state,
+        paginationState,
+      }
+    case TableStateActionTypes.UpdateSort:
+      const { sortBy, updaterOrValue: sortUpdaterOrValue} = payload;
+      const sortState = typeof sortUpdaterOrValue === "function" ?
+        sortUpdaterOrValue(getReactTableSortingState(sortBy as SortBy)) :
+        sortUpdaterOrValue;
+
+      return {
+        ...state,
+        sortState,
+      }
     default:
       return state;
   }

@@ -39,7 +39,7 @@ const getSDSLink = (props: CellContext<TomogramData, LinkCellProps>): React.JSX.
   <Link {...DEFAULT_LINK_PROPS} {...props.getValue()} />
 );
 
-const TOMOGRAM_COLUMN_IDS = {
+export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: "tomograms",
   PROC_PLAN: "procPlan",
   MSI_SESSION: "msiSession",

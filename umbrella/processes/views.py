@@ -20,7 +20,7 @@ from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
 from cryo_grids.models import CryoGrid, PlungeFreezingSession, PlungeFreezingPlan
 from processes.models import *
-from processes.utils import QueryParams, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
+from processes.utils import QueryParams, SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
 from django.db.models import F,Q
 from django.http import JsonResponse
@@ -333,7 +333,7 @@ def get_tomo_details(request):
 
         # Pagination and sorting defaults
         page = int(request.GET.get('page', 1))  # Default to first page
-        page_size = int(request.GET.get('pageSize', 20))  # Default page size is 10
+        page_size = int(request.GET.get('pageSize', 10))  # Default page size is 10
         sort_field = 'created_at'
         asc = False
 
@@ -536,10 +536,10 @@ def get_tomo_details(request):
                 'totalPages': paginator.num_pages,  # Total number of pages
                 'totalResults': paginator.count,  # Total number of items across all pages
             },
-            'sortBy': {
-                'sort': 'createdAt' if sort_field is not None else None,
-                'asc': asc
-            }
+            'sortBy': SortMetadataModel(
+                sort= 'createdAt' if sort_field is not None else None,
+                asc= asc
+            ).model_dump()
         }
 
         return JsonResponse(result, safe=False)
