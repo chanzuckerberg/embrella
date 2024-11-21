@@ -1,4 +1,4 @@
-import { FilterConfig } from "@/app/components/Filter/common/types";
+import { FilterConfig } from "@app/components/Filter/common/types";
 
 export enum TOMOGRAM_FILTER_ID {
   PROJECT = "PROJECT",

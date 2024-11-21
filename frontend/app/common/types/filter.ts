@@ -1,6 +1,5 @@
-import { ComplexFilterProps as SDSComplexFilterProps } from "@czi-sds/components";
 import { GridFilterCategory } from "./types";
-import { TomogramFilterCategory } from "@app/components/TomogramsView/components/TomogramTable/filters";
+import { TomogramFilterCategory } from "@app/components/TomogramsView/types";
 
 export interface FiltersList {
   filters: Record<ViewFilterCategory, FilterOption[]>;
