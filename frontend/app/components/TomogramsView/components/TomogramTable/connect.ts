@@ -3,18 +3,21 @@ import {
   TableOptions,
   Updater,
   TableState as ReactTableTableState,
+  SortingState,
 } from "@tanstack/table-core";
 import { TomogramData } from "@app/common/types/tomogram";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { TOMOGRAM_COLUMN_DEFS } from "./columns";
-import { useCallback, useContext, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo } from "react";
 import {
   getReactTablePaginationState,
+  getReactTableSortingState,
   TableDispatchContext,
   TableState,
   TableStateActionTypes,
   TableStateContext,
   UpdatePaginationAction,
+  UpdateSortAction,
 } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { API } from "@app/common/constants/api";
 import { useFetchTableData } from "@app/common/hooks/useFetchTableData/useFetchTableData";
@@ -22,8 +25,9 @@ import { SEARCH_PARAM_NAME } from "@app/common/types/search";
 import {
   getFilterSearchParamValues,
   getPaginationSearchParamValues,
+  getSortSearchParamValue,
 } from "@app/common/utils/searchParam";
-import { Pagination } from "@app/common/types/types";
+import { Pagination, SortBy } from "@app/common/types/types";
 
 const TABLE_OPTIONS: Omit<TableOptions<TomogramData>, "data" | "columns"> = {
   getCoreRowModel: getCoreRowModel(),
@@ -47,8 +51,7 @@ export const useConnect = () => {
       [SEARCH_PARAM_NAME.QUERY]: [
         ...getFilterSearchParamValues(state),
         ...getPaginationSearchParamValues(state),
-        // TODO: re-enable when pagination and sort are implemented.
-        // ...getSortSearchParamValue(state)
+        ...getSortSearchParamValue(state),
       ],
     },
     TOMOGRAM_RESPONSE_FIELD
@@ -57,46 +60,50 @@ export const useConnect = () => {
   const { pagination: entityPagination, sortBy: entitySortBy } =
     tomogramList || {};
 
-  const pagination: PaginationState = getReactTablePaginationState(
-    entityPagination as Pagination
-  );
-
   const reactTableState: Partial<ReactTableTableState> = useMemo(
     () => ({
-      pagination,
-      // sorting: getSortingState(sortBy),
+      pagination: getReactTablePaginationState(entityPagination as Pagination),
+      sorting: getReactTableSortingState(entitySortBy as SortBy),
     }),
-    [entityPagination /*sortBy*/]
+    [entityPagination, entitySortBy]
   );
 
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>): void => {
-      state.paginationState;
       const updatePaginationAction: UpdatePaginationAction = {
         payload: {
-          pagination: tomogramList?.pagination,
+          pagination: entityPagination,
           updaterOrValue,
         },
         type: TableStateActionTypes.UpdatePagination,
       };
+
       dispatch(updatePaginationAction);
     },
-    [dispatch, tomogramList?.pagination]
+    [dispatch, entityPagination]
   );
 
-  // const onSortingChange = useCallback(
-  //   (updaterOrValue: Updater<SortingState>) => {
-  //     dispatch?.(updateSort({ updaterOrValue, sortBy }));
-  //   },
-  //   [dispatch, sortBy]
-  // );
+  const onSortingChange = useCallback(
+    (updaterOrValue: Updater<SortingState>) => {
+      const updateSortAction: UpdateSortAction = {
+        payload: {
+          sortBy: entitySortBy,
+          updaterOrValue,
+        },
+        type: TableStateActionTypes.UpdateSort,
+      };
+
+      dispatch(updateSortAction);
+    },
+    [dispatch, tomogramList?.sortBy]
+  );
 
   const table = useReactTable<TomogramData>({
     ...TABLE_OPTIONS,
     columns: TOMOGRAM_COLUMN_DEFS,
     data: tomogramList?.tomograms || [],
     onPaginationChange,
-    // onSortingChange,
+    onSortingChange,
     rowCount: tomogramList?.pagination?.totalResults || 0,
     state: reactTableState,
   });

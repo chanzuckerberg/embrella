@@ -1,5 +1,6 @@
 import { TableState } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { SearchParamValue } from "@app/common/types/search";
+import { ColumnSort } from "@tanstack/react-table";
 
 /**
  * Returns the filter related search param values for the given filter state.
@@ -42,4 +43,21 @@ export const getPaginationSearchParamValues = (
   ];
 };
 
-// TODO: add getSortSearchParamValue
+/**
+ * Returns sort related search param values for the given sort state.
+ * @param state - State.
+ * @returns search params "sort" and "asc".
+ */
+export function getSortSearchParamValue(state: TableState): SearchParamValue[] {
+  const { sortState } = state;
+  return [
+    {
+      category: "asc",
+      value: sortState.map((columnSort: ColumnSort) => !columnSort.desc),
+    },
+    {
+      category: "sort",
+      value: sortState.map((columnSort: ColumnSort) => columnSort.id),
+    },
+  ];
+}
