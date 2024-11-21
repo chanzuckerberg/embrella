@@ -458,7 +458,7 @@ def get_tomo_details(request):
 
             if category == 'procPlan':
                 filter_criteria &= Q(proc_plan__name__in=values)
-            elif category == 'userName':
+            elif category == 'user':
                 # Automatically detect email-like usernames (contains '@') or general usernames
 
                 # Handle email-like usernames in the database
@@ -469,20 +469,28 @@ def get_tomo_details(request):
                 filter_criteria &= user_filter
 
             elif category == 'screeningSession':
-                # Support multiple `icontains` values with OR logic
+                # Support multiple `icontains` values with OR logic, including None
                 session_filter = Q()
                 for value in values:
-                    session_filter |= Q(msi_session__atlas_session__group__name__icontains=value)
+                    if value is None:
+                        # Add a filter for NULL values in the database
+                        session_filter |= Q(msi_session__atlas_session__group__name__isnull=True)
+                    else:
+                        session_filter |= Q(msi_session__atlas_session__group__name__icontains=value)
                 filter_criteria &= session_filter
             elif category == 'grid':
                 filter_criteria &= Q(msi_session__grid__name__in=values)
             elif category == 'project':
                 filter_criteria &= Q(msi_session__project__name__in=values)
             elif category == 'msiSession':
-                # Support multiple `icontains` values with OR logic
+                # Support multiple `icontains` values with OR logic, including None
                 session_name_filter = Q()
                 for value in values:
-                    session_name_filter |= Q(msi_session__name__icontains=value)
+                    if value is None:
+                        # Add a filter for NULL values in the database
+                        session_name_filter |= Q(msi_session__name__isnull=True)
+                    else:
+                        session_name_filter |= Q(msi_session__name__icontains=value)
                 filter_criteria &= session_name_filter
             elif category == 'tomograms':
                 filter_criteria &= Q(name__in=values)
