@@ -10,7 +10,7 @@ import { UpdateFilterAction } from "@app/common/components/TableStateProvider/Ta
 import {
   TOMOGRAM_FILTER_ID,
   TomogramFilterCategory,
-} from "@app/common/types/filter";
+} from "@app/components/TomogramsView/components/TomogramTable/filters";
 import { CategoryFilter } from "@app/components/Filter/common/types";
 import { useFilterList } from "@app/components/Filter/hooks/useFilterList/useFilterList";
 import { TOMOGRAM_FILTER_CONFIGS } from "@app/components/TomogramsView/components/TomogramTable/filters";
