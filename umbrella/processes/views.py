@@ -181,7 +181,6 @@ def get_freezing_plan_tags(fz_plan_id):
         return None
 
 #for tomo filter page
-
 @require_http_methods(["GET"])
 def available_filters(request):
     try:
@@ -203,14 +202,21 @@ def available_filters(request):
             selected_filters[qf.category] = set(qf.value)  # Store as a set for efficient lookup
 
         # Base queryset with annotations for counting occurrences
-        queryset = MsiSession.objects.select_related('project', 'user', 'msisession_name')
-        sample_queryset = CryoGrid.objects.select_related('freezing_session','freezing_plan'
+        filter_criteria = Q()
+        queryset = ProcRun.objects.select_related(
+            'proc_plan',
+            'msi_session',
+            'freezing_session',
+            'msi_session__project',
+            'msi_session__grid',
+            'msi_session__user',
+            'msi_session__atlas_session',
+            'msi_session__atlas_session__group',
+            'msi_session__grid__freezing_plan'
         ).prefetch_related(
-            'freezing_plan__sample', 'freezing_plan__tags',
-            'atlassession__group'
-        )
-        procplan_queryset = ProcPlan.objects.select_related('name')
-        procrun_queryset = ProcRun.objects.select_related('created_at')
+            'msi_session__grid__freezing_plan__sample',
+            'runpipedata_set__tomograms_set'
+        ).filter(filter_criteria)
         current_time = now()
         date_ranges = {
             'last_1_month': current_time - timedelta(days=30),
@@ -236,58 +242,91 @@ def available_filters(request):
 
         # Aggregating counts for each filter
         filters = {
-            'project': list(queryset.annotate(project_temp_name=F('project__name'))
-                            .values('project_temp_name')
-                            .annotate(count=Count('id'))
-                            .order_by('project_temp_name')
-                            .values(name=F('project_temp_name'), count=F('count'))),
-            'sample': list(sample_queryset.annotate(sample_temp_name=F('freezing_plan__sample__name'))
-                        .values(sample_temp_name=F('sample_temp_name'))
-                        .annotate(count=Count('id'))
-                        .order_by('sample_temp_name')
-                        .values(name=F('sample_temp_name'), count=F('count'))),
-            'user': list(queryset.annotate(
-                            user_display_name=Trim(
-                                Case(
-                                    # If username contains '@', take the substring before '@'
-                                    When(user__username__contains='@',
-                                         then=Substr(F('user__username'), 1, StrIndex(F('user__username'), Value('@')) - 1)),
-                                    # Otherwise, use username or full name if available
-                                    default=Case(
-                                        When(user__first_name='', then=F('user__username')),
-                                        default=F('user__first_name'),
-                                        output_field=CharField()
-                                    ),
-                                    output_field=CharField()
+            'project': list(
+                queryset.values(project_name=F('msi_session__project__name'))
+                .annotate(count=Count('id'))
+                .order_by('project_name')
+                .values(name=F('project_name'), count=F('count'))
+            ),
+            'sample': list(
+                queryset.values(sample_name=F('msi_session__grid__freezing_plan__sample__name'))
+                .annotate(count=Count('id'))
+                .order_by('sample_name')
+                .values(name=F('sample_name'), count=F('count'))
+            ),
+            'user': list(
+                queryset.annotate(
+                    user_temp_name=Trim(
+                        Case(
+                            When(
+                                msi_session__user__username__contains='@',  # Ensure this path is correct
+                                then=Substr(
+                                    F('msi_session__user__username'),
+                                    1,
+                                    StrIndex(F('msi_session__user__username'), Value('@')) - 1
                                 )
-                            )
-                        ).values(user_display_name=F('user_display_name'))
-                        .annotate(count=Count('id'))
-                        .order_by('user_display_name')
-                        .values(name=Trim(F('user_display_name')), count=F('count'))),
-            'msiSession': list(queryset
-                    .exclude(name__isnull=True)
-                    .annotate(count=Count('id'))
-                    .values('name', 'count')
-                    .order_by('name')),
-            'screeningSession': list(sample_queryset
-                         .filter(freezing_session__isnull=False, atlassession__group__name__isnull=False)
-                         .annotate(screen_session_temp_name=F('atlassession__group__name'))
-                         .values(screen_session_temp_name=F('screen_session_temp_name'))
-                         .annotate(count=Count('id'))
-                         .order_by('screen_session_temp_name')
-                         .values(name=F('screen_session_temp_name'), count=F('count'))),
-            'procPlan': list(procplan_queryset
-                     .exclude(name__isnull=True)
-                     .annotate(count=Count('id'))
-                     .values('name', 'count')
-                     .order_by('name')),
+                            ),
+                            default=F('msi_session__user__username'),
+                            output_field=CharField()
+                        )
+                    )
+                )
+                .values(user_temp_name=F('user_temp_name'))
+                .annotate(count=Count('id'))
+                .order_by('user_temp_name')
+                .values(name=F('user_temp_name'), count=F('count'))
+            ),
+            'msiSession': list(
+                queryset.values(session_name=F('msi_session__name'))
+                .annotate(count=Count('id'))
+                .order_by('session_name')
+                .values(name=F('session_name'), count=F('count'))
+            ),
+            'screeningSession': list(
+                queryset.values(screening_session_name=F('msi_session__atlas_session__group__name'))
+                .annotate(count=Count('id'))
+                .order_by('screening_session_name')
+                .values(name=F('screening_session_name'), count=F('count'))
+            ),
+            'procPlan': list(
+                queryset.values(plan_name=F('proc_plan__name'))
+                .annotate(count=Count('id'))
+                .order_by('plan_name')
+                .values(name=F('plan_name'), count=F('count'))
+            ),
             'date': [
-                {"name": "last_1_month", "count": procrun_queryset.filter(created_at__gte=date_ranges['last_1_month']).count()},
-                {"name": "last_3_months", "count": procrun_queryset.filter(created_at__gte=date_ranges['last_3_months']).count()},
-                {"name": "last_6_months", "count": procrun_queryset.filter(created_at__gte=date_ranges['last_6_months']).count()}
-            ]
+                {
+                    "name": key,
+                    "count": queryset.filter(created_at__gte=value).count()
+                }
+                for key, value in date_ranges.items()
+            ],
         }
+
+
+        # Process the 'sample' filter and replace sample_name with the detailed information
+        processed_samples = []
+        for item in filters['sample']:
+            if 'name' in item:
+                # Get the associated freezing plans based on the sample name
+                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name'])
+
+                # Create a string that summarizes the freezing plan details
+                freezing_plan_details = []
+                for freezing_plan in freezing_plans:
+                    tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+                    plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
+                    processed_samples.append({
+                        'name': plan_str,
+                        'count': item['count'],  # Retain the original count
+                        'selected': False  # Default selected status
+                    })
+
+            else:
+                # If no 'name' exists, simply append the original item
+                processed_samples.append(item)
+
+        filters['sample'] = processed_samples
 
         # Apply 'selected' status to filters
         for key, filter_list in filters.items():
@@ -303,9 +342,8 @@ def available_filters(request):
         # Handle Pydantic validation errors
         return JsonResponse({'error': f'Invalid input: {e.errors()}'}, status=400)
     except Exception as e:
+        logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-
-
 
 
 @require_http_methods(["GET"])
@@ -420,7 +458,7 @@ def get_tomo_details(request):
 
             if category == 'procPlan':
                 filter_criteria &= Q(proc_plan__name__in=values)
-            elif category == 'userName':
+            elif category == 'user':
                 # Automatically detect email-like usernames (contains '@') or general usernames
 
                 # Handle email-like usernames in the database
@@ -431,20 +469,28 @@ def get_tomo_details(request):
                 filter_criteria &= user_filter
 
             elif category == 'screeningSession':
-                # Support multiple `icontains` values with OR logic
+                # Support multiple `icontains` values with OR logic, including None
                 session_filter = Q()
                 for value in values:
-                    session_filter |= Q(msi_session__atlas_session__group__name__icontains=value)
+                    if value is None:
+                        # Add a filter for NULL values in the database
+                        session_filter |= Q(msi_session__atlas_session__group__name__isnull=True)
+                    else:
+                        session_filter |= Q(msi_session__atlas_session__group__name__icontains=value)
                 filter_criteria &= session_filter
             elif category == 'grid':
                 filter_criteria &= Q(msi_session__grid__name__in=values)
             elif category == 'project':
                 filter_criteria &= Q(msi_session__project__name__in=values)
             elif category == 'msiSession':
-                # Support multiple `icontains` values with OR logic
+                # Support multiple `icontains` values with OR logic, including None
                 session_name_filter = Q()
                 for value in values:
-                    session_name_filter |= Q(msi_session__name__icontains=value)
+                    if value is None:
+                        # Add a filter for NULL values in the database
+                        session_name_filter |= Q(msi_session__name__isnull=True)
+                    else:
+                        session_name_filter |= Q(msi_session__name__icontains=value)
                 filter_criteria &= session_name_filter
             elif category == 'tomograms':
                 filter_criteria &= Q(name__in=values)
