@@ -303,6 +303,31 @@ def available_filters(request):
             ],
         }
 
+
+        # Process the 'sample' filter and replace sample_name with the detailed information
+        processed_samples = []
+        for item in filters['sample']:
+            if 'name' in item:
+                # Get the associated freezing plans based on the sample name
+                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name'])
+
+                # Create a string that summarizes the freezing plan details
+                freezing_plan_details = []
+                for freezing_plan in freezing_plans:
+                    tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+                    plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
+                    processed_samples.append({
+                        'name': plan_str,
+                        'count': item['count'],  # Retain the original count
+                        'selected': False  # Default selected status
+                    })
+
+            else:
+                # If no 'name' exists, simply append the original item
+                processed_samples.append(item)
+
+        filters['sample'] = processed_samples
+
         # Apply 'selected' status to filters
         for key, filter_list in filters.items():
             add_selected_status(filter_list, key)
