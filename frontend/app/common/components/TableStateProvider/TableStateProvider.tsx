@@ -2,7 +2,7 @@ import { createContext, Dispatch, ReactNode, useReducer } from "react";
 import { noop, PaginationState, SortingState, Updater } from "@tanstack/react-table";
 import { FiltersList, ViewFilterCategory } from "@app/common/types/filter";
 import { Pagination, SortBy } from "../../types/types";
-import { TOMOGRAM_COLUMN_DEFS, TOMOGRAM_COLUMN_IDS } from "@/app/components/TomogramsView/components/TomogramTable/columns";
+import { TOMOGRAM_COLUMN_IDS } from "@/app/components/TomogramsView/components/TomogramTable/columns";
 
 export const DEFAULT_PAGE_SIZE = 10;
 
