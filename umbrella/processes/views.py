@@ -255,10 +255,26 @@ def available_filters(request):
                 .values(name=F('sample_name'), count=F('count'))
             ),
             'user': list(
-                queryset.values(user_name=F('msi_session__user__username'))
+                queryset.annotate(
+                    user_temp_name=Trim(
+                        Case(
+                            When(
+                                msi_session__user__username__contains='@',  # Ensure this path is correct
+                                then=Substr(
+                                    F('msi_session__user__username'),
+                                    1,
+                                    StrIndex(F('msi_session__user__username'), Value('@')) - 1
+                                )
+                            ),
+                            default=F('msi_session__user__username'),
+                            output_field=CharField()
+                        )
+                    )
+                )
+                .values(user_temp_name=F('user_temp_name'))
                 .annotate(count=Count('id'))
-                .order_by('user_name')
-                .values(name=F('user_name'), count=F('count'))
+                .order_by('user_temp_name')
+                .values(name=F('user_temp_name'), count=F('count'))
             ),
             'msiSession': list(
                 queryset.values(session_name=F('msi_session__name'))
