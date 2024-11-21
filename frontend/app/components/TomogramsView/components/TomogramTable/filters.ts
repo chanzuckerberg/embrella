@@ -11,14 +11,14 @@ export const TOMOGRAM_FILTER_CONFIGS: TomogramFilterConfig[][] = [
       label: "Project",
     },
     {
+      filterCategory: "sample",
+      filterId: TOMOGRAM_FILTER_ID.SAMPLE,
+      label: "Sample",
+    },
+    {
       filterCategory: "user",
       filterId: TOMOGRAM_FILTER_ID.USER,
       label: "User",
-    },
-    {
-      filterCategory: "screeningSession",
-      filterId: TOMOGRAM_FILTER_ID.SCREENING_SESSION,
-      label: "Screening Session",
     },
     {
       filterCategory: "msiSession",
@@ -26,13 +26,23 @@ export const TOMOGRAM_FILTER_CONFIGS: TomogramFilterConfig[][] = [
       label: "MSI Session",
     },
     {
+      filterCategory: "screeningSession",
+      filterId: TOMOGRAM_FILTER_ID.SCREENING_SESSION,
+      label: "Screening Session",
+    },
+    {
+      filterCategory: "procPlan",
+      filterId: TOMOGRAM_FILTER_ID.PROC_PLAN,
+      label: "Proc Plan",
+    },
+    {
       filterCategory: "date",
       filterId: TOMOGRAM_FILTER_ID.DATE,
       label: "Date",
     },
     {
-      filterCategory: "procRun",
-      filterId: TOMOGRAM_FILTER_ID.PROC_RUN,
+      filterCategory: "procPlan",
+      filterId: TOMOGRAM_FILTER_ID.PROC_PLAN,
       label: "Proc Run",
     },
   ],

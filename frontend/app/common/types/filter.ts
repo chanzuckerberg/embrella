@@ -14,11 +14,12 @@ export interface FilterOption {
 
 export type TomogramFilterCategory =
   | "project"
+  | "sample"
   | "user"
-  | "screeningSession"
   | "msiSession"
-  | "date"
-  | "procRun";
+  | "screeningSession"
+  | "procPlan"
+  | "date";
 
 export type TomogramFilterConfig = FilterConfig<
   TOMOGRAM_FILTER_ID,
@@ -27,11 +28,12 @@ export type TomogramFilterConfig = FilterConfig<
 
 export enum TOMOGRAM_FILTER_ID {
   PROJECT = "PROJECT",
+  SAMPLE = "SAMPLE",
   USER = "USER",
-  SCREENING_SESSION = "SCREENING_SESSION",
   MSI_SESSION = "MSI_SESSION",
+  SCREENING_SESSION = "SCREENING_SESSION",
+  PROC_PLAN = "PROC_PLAN",
   DATE = "DATE",
-  PROC_RUN = "PROC_RUN",
 }
 
 export type ViewFilterCategory = GridFilterCategory | TomogramFilterCategory;
