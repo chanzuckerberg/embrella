@@ -27,7 +27,7 @@ import {
   getPaginationSearchParamValues,
   getSortSearchParamValue,
 } from "@app/common/utils/searchParam";
-import { Pagination, SortBy } from "@app/common/types/types";
+import { Pagination, SortBy } from "@app/common/types/tableState";
 
 const TABLE_OPTIONS: Omit<TableOptions<TomogramData>, "data" | "columns"> = {
   getCoreRowModel: getCoreRowModel(),

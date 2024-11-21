@@ -1,5 +1,6 @@
 import configs from "@/configs/local";
-import { ApiListResponse, EntityList, GridData } from "@app/common/types/types";
+import { GridData } from "@app/common/types/types";
+import { ApiListResponse, EntityList } from "@app/common/types/tableState";
 import { SearchParam } from "@app/common/types/search";
 import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@app/common/constants/api";

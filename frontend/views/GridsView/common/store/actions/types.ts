@@ -1,9 +1,6 @@
 import { CategoryFilter } from "@/app/components/Filter/common/types";
-import {
-  GridFilterCategory,
-  Pagination,
-  SortBy,
-} from "@/app/common/types/types";
+import { GridFilterCategory } from "@/app/common/types/types";
+import { Pagination, SortBy } from "@/app/common/types/tableState";
 import { FiltersList } from "@/app/common/types/types";
 import { PaginationState, SortingState, Updater } from "@tanstack/react-table";
 
