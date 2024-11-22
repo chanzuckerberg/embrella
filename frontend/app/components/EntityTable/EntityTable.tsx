@@ -5,7 +5,7 @@ import { TableHead } from "@app/components/Table/components/TableHead";
 import { TableBody } from "@app/components/Table/components/TableBody";
 
 import { Pagination } from "@app/components/Table/components/Pagination";
-import { EntityDataTypes, EntityList } from "@app/common/types/tableState";
+import { EntityDataTypes } from "@app/common/types/tableState";
 import { ColumnDef } from "@tanstack/react-table";
 import { AccessorReturnType } from "../TomogramsView/components/TomogramTable/columns";
 import { useConnect } from "./connect";
@@ -16,12 +16,16 @@ const TEST_ID_ENTITY_TABLE = "entity-table";
 const TEST_ID_ENTITY_TABLE_PAGINATION = "entity-table-pagination";
 
 interface EntityTableProps {
-  entityApi: API,
-  entityApiResponseField: ApiPrimaryEntityAttribute,
-  columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[],
-};
+  entityApi: API;
+  entityApiResponseField: ApiPrimaryEntityAttribute;
+  columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[];
+}
 
-export const EntityTable = ({ entityApi, entityApiResponseField, columnDefs }: EntityTableProps): React.JSX.Element => {
+export const EntityTable = ({
+  entityApi,
+  entityApiResponseField,
+  columnDefs,
+}: EntityTableProps): React.JSX.Element => {
   const { table } = useConnect(entityApi, entityApiResponseField, columnDefs);
   return (
     <Fragment>

@@ -8,7 +8,7 @@ import { ColumnSort } from "@tanstack/react-table";
  * @returns filter search param value.
  */
 export function getFilterSearchParamValues(
-  state: TableState
+  state: TableState,
 ): SearchParamValue[] {
   return Object.entries(state.filterState).map(([category, value]) => {
     return {
@@ -25,14 +25,14 @@ export function getFilterSearchParamValues(
  * @returns search params "page".
  */
 export const getPaginationSearchParamValues = (
-  state: TableState
+  state: TableState,
 ): SearchParamValue[] => {
   const {
     paginationState: { pageIndex },
   } = state;
 
   const pageNumbersForIndexes = [pageIndex].map(
-    (pageIndex: number) => pageIndex + 1
+    (pageIndex: number) => pageIndex + 1,
   );
 
   return [

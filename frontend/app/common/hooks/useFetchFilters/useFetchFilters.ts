@@ -7,12 +7,12 @@ import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 
 export const useFetchFilters = (
   filterlistEndpoint: API,
-  searchParam: SearchParam
+  searchParam: SearchParam,
 ): FiltersList | undefined => {
   const { data: filtersData } = useFetchData<FiltersList>(
     configs.API_URL,
     filterlistEndpoint,
-    searchParam
+    searchParam,
   );
 
   return filtersData;

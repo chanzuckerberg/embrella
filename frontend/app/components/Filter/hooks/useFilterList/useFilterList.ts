@@ -6,10 +6,10 @@ import { useMemo } from "react";
 
 export const useFilterList = <FilterId, FilterCategory extends string>(
   config: FilterConfig<FilterId, FilterCategory>[][],
-  filtersList?: FiltersList<FilterCategory>
+  filtersList?: FiltersList<FilterCategory>,
 ): UseFilterList<FilterId, FilterCategory> => {
   return useMemo(
     () => buildFilterGroups(config, filtersList?.filters),
-    [config, filtersList]
+    [config, filtersList],
   );
 };

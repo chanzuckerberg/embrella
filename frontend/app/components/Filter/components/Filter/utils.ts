@@ -10,7 +10,7 @@ import {
  * @returns an array of filter values.
  */
 export function getFilterValue(
-  options: (string | AutocompleteOption)[]
+  options: (string | AutocompleteOption)[],
 ): FilterValue[] {
   return options.map(mapFilterValue);
 }
@@ -21,7 +21,7 @@ export function getFilterValue(
  * @returns filter value.
  */
 export function mapFilterValue(
-  option: string | AutocompleteOption
+  option: string | AutocompleteOption,
 ): FilterValue {
   if (typeof option === "string") return option;
   return sanitizeFilterValue(option.name);

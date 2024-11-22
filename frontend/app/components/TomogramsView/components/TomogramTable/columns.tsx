@@ -2,7 +2,8 @@ import { Link } from "@czi-sds/components";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 
 import { TomogramData } from "@app/common/types/tomogram";
-import { EntityDataTypes } from "@/app/common/types/tableState";
+import { EntityDataTypes } from "@app/common/types/tableState";
+import { EntityLinkField } from "@app/common/types/entity";
 
 /**
  * Default props to pass to SDS Link component
@@ -11,15 +12,6 @@ const DEFAULT_LINK_PROPS = {
   sdsStyle: "default",
   target: "_blank",
 };
-
-/**
- * Required attributes for a model field with a link
- */
-interface LinkField {
-  id: number;
-  name: string;
-  url: string;
-}
 
 /**
  * Attributes to pass to SDS Link component
@@ -32,28 +24,20 @@ interface LinkCellProps {
 // TODO: move to common table types
 export type AccessorReturnType = LinkCellProps | string;
 
-const getLinkCellAccessorFn = (field: LinkField): Function => {
-  return (rowData: EntityDataTypes): LinkCellProps => {
-    return {
-      children: field.name,
-      href: field.url,
-    };
-  };
-}
-
-const getLinkPropsFromLinkField = (linkField: LinkField) => ({
+const getLinkPropsFromLinkField = (linkField: EntityLinkField) => ({
   children: linkField.name,
   href: linkField.url,
 });
 
-const getSDSLink = (props: CellContext<EntityDataTypes, AccessorReturnType>): React.JSX.Element => {
+const getSDSLink = (
+  props: CellContext<EntityDataTypes, AccessorReturnType>,
+): React.JSX.Element => {
   // Cast CellContext to LinkCellProps since this function is only used for cells that display links
-  const linkCellProps = (props as CellContext<EntityDataTypes, LinkCellProps>).getValue();
+  const linkCellProps = (
+    props as CellContext<EntityDataTypes, LinkCellProps>
+  ).getValue();
 
-  return <Link
-    {...DEFAULT_LINK_PROPS}
-    {...linkCellProps}
-  />
+  return <Link {...DEFAULT_LINK_PROPS} {...linkCellProps} />;
 };
 
 export const TOMOGRAM_COLUMN_IDS = {
@@ -64,54 +48,63 @@ export const TOMOGRAM_COLUMN_IDS = {
   GRID: "grid",
   NOTES: "notes",
   CREATED_AT: "createdAt",
-}
+};
 
-
-export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] = [
+export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
+  EntityDataTypes,
+  AccessorReturnType
+>[] = [
   {
     id: TOMOGRAM_COLUMN_IDS.TOMOGRAMS,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps => getLinkPropsFromLinkField((rowData as TomogramData).tomograms),
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).tomograms),
     cell: getSDSLink,
     enableSorting: false,
     header: "Tomograms",
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROC_PLAN,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps => getLinkPropsFromLinkField((rowData as TomogramData).procPlan),
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).procPlan),
     cell: getSDSLink,
     enableSorting: false,
     header: "Proc Plan",
   },
   {
     id: TOMOGRAM_COLUMN_IDS.MSI_SESSION,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps => getLinkPropsFromLinkField((rowData as TomogramData).msiSession),
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).msiSession),
     cell: getSDSLink,
     enableSorting: false,
     header: "MSI Session",
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROJECT,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps => getLinkPropsFromLinkField((rowData as TomogramData).project),
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).project),
     cell: getSDSLink,
     enableSorting: false,
     header: "Project",
   },
   {
     id: TOMOGRAM_COLUMN_IDS.GRID,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps => getLinkPropsFromLinkField((rowData as TomogramData).grid),
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).grid),
     cell: getSDSLink,
     enableSorting: false,
     header: "Grid",
   },
   {
     id: TOMOGRAM_COLUMN_IDS.NOTES,
-    accessorFn: (rowData: EntityDataTypes): string => (rowData as TomogramData).procRun.notes,
+    accessorFn: (rowData: EntityDataTypes): string =>
+      (rowData as TomogramData).procRun.notes,
     enableSorting: false,
     header: "Notes",
   },
   {
     id: TOMOGRAM_COLUMN_IDS.CREATED_AT,
-    accessorFn: (rowData: EntityDataTypes): string => (rowData as TomogramData).procRun.createdAt,
+    accessorFn: (rowData: EntityDataTypes): string =>
+      (rowData as TomogramData).procRun.createdAt,
     enableSorting: true,
     header: "Created At",
   },

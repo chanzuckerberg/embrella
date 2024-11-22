@@ -1,11 +1,8 @@
+import { EntityLinkField } from "./entity";
 import { MSISession } from "./msiSession";
 
 export interface TomogramData {
-  tomograms: {
-    id: number;
-    name: string;
-    url: string;
-  };
+  tomograms: EntityLinkField;
   procPlan: {
     id: number;
     name: string;

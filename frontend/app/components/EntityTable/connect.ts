@@ -19,7 +19,7 @@ import {
   UpdatePaginationAction,
   UpdateSortAction,
 } from "@/app/common/components/TableStateProvider/TableStateProvider";
-import { EntityList, Pagination, SortBy } from "@/app/common/types/tableState";
+import { Pagination, SortBy } from "@/app/common/types/tableState";
 import { AccessorReturnType } from "../TomogramsView/components/TomogramTable/columns";
 import { EntityDataTypes } from "@/app/common/types/tableState";
 import { ApiPrimaryEntityAttribute } from "./types";
@@ -31,16 +31,25 @@ import {
   getPaginationSearchParamValues,
   getSortSearchParamValue,
 } from "@/app/common/utils/searchParam";
+import {
+  EntityAPIPrimaryAttributeToDataType,
+  EntityLinkField,
+} from "@/app/common/types/entity";
 
-/*
- * This accesses the object of the attribute that is the main entity of the table,
- * and returns its id as a string.  e.g. row.tomograms.id
- */
-const getRowId = (
+const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   row: EntityDataTypes,
-  entityApiResponseField: ApiPrimaryEntityAttribute
-): string =>
-  (row as Record<string, any>)[entityApiResponseField]?.id.toString();
+  entityApiResponseField: K
+): string => {
+  // This function needs to access the attribute of an entity object in the API response to use as the row ID.
+  // Due to the primary attribute differing depending on the endpoint, typecasting is needed to satisfy TypeScript.
+  // Example of data access: row.tomograms.id
+  const typedRow = row as EntityAPIPrimaryAttributeToDataType[K];
+  const typedEntityAttribute =
+    entityApiResponseField as keyof EntityAPIPrimaryAttributeToDataType[K];
+  const entity = typedRow[typedEntityAttribute] as EntityLinkField;
+
+  return entity.id.toString();
+};
 
 const getDefaultTableOptions = (
   entityApiResponseField: ApiPrimaryEntityAttribute

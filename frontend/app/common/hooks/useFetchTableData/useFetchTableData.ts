@@ -12,12 +12,12 @@ import { API } from "@app/common/constants/api";
 
 export const useFetchTableData = (
   dataEndpoint: API,
-  searchParam: SearchParam
+  searchParam: SearchParam,
 ): EntityList => {
   const { data } = useFetchData<ApiListResponse<EntityDataTypes>>(
     configs.API_URL,
     dataEndpoint,
-    searchParam
+    searchParam,
   );
 
   return {

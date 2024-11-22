@@ -10,22 +10,21 @@ import { TomogramFilters } from "@app/components/TomogramsView/components/Tomogr
 import { TOMOGRAM_COLUMN_IDS } from "./components/TomogramTable/columns";
 import { SortingState } from "@tanstack/react-table";
 
-
 export const TomogramsView = (): React.JSX.Element => {
-  const initialSortState: SortingState = [{ desc: true, id: TOMOGRAM_COLUMN_IDS.CREATED_AT }];
+  const initialSortState: SortingState = [
+    { desc: true, id: TOMOGRAM_COLUMN_IDS.CREATED_AT },
+  ];
 
   return (
-    <TableStateProvider
-      initialSortState={initialSortState}
-    >
+    <TableStateProvider initialSortState={initialSortState}>
       <FilterableTableMain>
-      <Sidebar>
+        <Sidebar>
           <TomogramFilters />
-      </Sidebar>
+        </Sidebar>
         <TableWrapper>
           <TomogramTable />
         </TableWrapper>
-      </FilterableTableMain >
+      </FilterableTableMain>
     </TableStateProvider>
   );
 };

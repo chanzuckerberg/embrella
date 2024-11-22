@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "check": "next lint && yarn prettier --check . && yarn tsc",
+    "fix": "next lint --fix && yarn prettier --write .",
     "test": "jest --runInBand",
     "e2e": "playwright test --project chromium",
     "e2e:chrome": "playwright test --project chromium",
