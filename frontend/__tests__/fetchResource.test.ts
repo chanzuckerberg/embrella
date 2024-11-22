@@ -21,7 +21,7 @@ describe("fetchResource", () => {
 
   it("returns error response", async () => {
     const response = await fetchResource(
-      getRequestURL(URL_BASE, URL_NONEXISTENT)
+      getRequestURL(URL_BASE, URL_NONEXISTENT),
     );
     expect(response.status).toEqual(404);
   });

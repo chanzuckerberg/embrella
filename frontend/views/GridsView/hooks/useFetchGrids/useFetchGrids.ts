@@ -7,12 +7,12 @@ import { API } from "@/app/common/constants/api";
 import { EntityList } from "@/views/GridsView/components/Main/components/GridList/types";
 
 export const useFetchGrids = (
-  searchParam: SearchParam
+  searchParam: SearchParam,
 ): EntityList<GridData, "grids"> | undefined => {
   const { data: gridsData } = useFetchData<ApiListResponse<GridData>>(
     configs.API_URL,
     API.GRIDS,
-    searchParam
+    searchParam,
   );
   return (
     gridsData && {

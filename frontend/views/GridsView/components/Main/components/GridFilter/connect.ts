@@ -18,7 +18,7 @@ export const useConnect = ({
   // Build filter groups with the filter list and the filter config.
   const filters = useFilterList<GRID_FILTER_ID, GridFilterCategory>(
     GRID_FILTER_CONFIGS,
-    filtersList
+    filtersList,
   );
 
   // Update filter.
@@ -26,7 +26,7 @@ export const useConnect = ({
     (categoryFilter: CategoryFilter<GridFilterCategory>): void => {
       dispatch?.(updateFilter({ categoryFilter, filtersList }));
     },
-    [dispatch, filtersList]
+    [dispatch, filtersList],
   );
 
   return {

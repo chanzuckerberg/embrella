@@ -6,12 +6,12 @@ import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@/app/common/constants/api";
 
 export const useFetchGridsFilters = (
-  searchParam: SearchParam
+  searchParam: SearchParam,
 ): FiltersList<GridFilterCategory> | undefined => {
   const { data: filtersData } = useFetchData<FiltersList<GridFilterCategory>>(
     configs.API_URL,
     API.FILTERS_LIST,
-    searchParam
+    searchParam,
   );
 
   return filtersData;

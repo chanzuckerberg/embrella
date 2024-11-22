@@ -53,7 +53,7 @@ export function getFilterSearchParamValue(state: State): SearchParamValue[] {
  * @returns search params "page".
  */
 export function getPaginationSearchParamValue(
-  state: State
+  state: State,
 ): SearchParamValue[] {
   const {
     paginationState: { pageIndex },
