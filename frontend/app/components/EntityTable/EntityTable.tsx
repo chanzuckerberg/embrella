@@ -10,18 +10,19 @@ import { ColumnDef } from "@tanstack/react-table";
 import { AccessorReturnType } from "../TomogramsView/components/TomogramTable/columns";
 import { useConnect } from "./connect";
 import { ApiPrimaryEntityAttribute } from "./types";
+import { API } from "@/app/common/constants/api";
 
 const TEST_ID_ENTITY_TABLE = "entity-table";
 const TEST_ID_ENTITY_TABLE_PAGINATION = "entity-table-pagination";
 
 interface EntityTableProps {
-  entityList: EntityList,
+  entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
   columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[],
 };
 
-export const EntityTable = ({ entityList, entityApiResponseField, columnDefs }: EntityTableProps): React.JSX.Element => {
-  const { table } = useConnect(entityList, entityApiResponseField, columnDefs);
+export const EntityTable = ({ entityApi, entityApiResponseField, columnDefs }: EntityTableProps): React.JSX.Element => {
+  const { table } = useConnect(entityApi, entityApiResponseField, columnDefs);
   return (
     <Fragment>
       <SDSTable data-testid={TEST_ID_ENTITY_TABLE}>

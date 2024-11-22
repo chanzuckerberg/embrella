@@ -13,7 +13,9 @@ import {
   getReactTablePaginationState,
   getReactTableSortingState,
   TableDispatchContext,
+  TableState,
   TableStateActionTypes,
+  TableStateContext,
   UpdatePaginationAction,
   UpdateSortAction,
 } from "@/app/common/components/TableStateProvider/TableStateProvider";
@@ -21,6 +23,14 @@ import { EntityList, Pagination, SortBy } from "@/app/common/types/tableState";
 import { AccessorReturnType } from "../TomogramsView/components/TomogramTable/columns";
 import { EntityDataTypes } from "@/app/common/types/tableState";
 import { ApiPrimaryEntityAttribute } from "./types";
+import { API } from "@/app/common/constants/api";
+import { useFetchTableData } from "@/app/common/hooks/useFetchTableData/useFetchTableData";
+import { SEARCH_PARAM_NAME } from "@/app/common/types/search";
+import {
+  getFilterSearchParamValues,
+  getPaginationSearchParamValues,
+  getSortSearchParamValue,
+} from "@/app/common/utils/searchParam";
 
 /*
  * This accesses the object of the attribute that is the main entity of the table,
@@ -45,11 +55,20 @@ const getDefaultTableOptions = (
 });
 
 export const useConnect = (
-  entityList: EntityList,
+  entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
   columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[]
 ) => {
+  const state = useContext<TableState>(TableStateContext);
   const dispatch = useContext(TableDispatchContext);
+
+  const entityList = useFetchTableData(entityApi, {
+    [SEARCH_PARAM_NAME.QUERY]: [
+      ...getFilterSearchParamValues(state),
+      ...getPaginationSearchParamValues(state),
+      ...getSortSearchParamValue(state),
+    ],
+  });
 
   const { pagination: entityPagination, sortBy: entitySortBy } =
     entityList || {};
