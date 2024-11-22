@@ -6,14 +6,14 @@ export const useFetchData = <D>(
   baseURL: string,
   relativeURL: string,
   searchParam: Record<string, unknown> = {},
-  shouldFetch = true
+  shouldFetch = true,
 ): UseFetchData<D> => {
   const [dataState, setDataState] = useState<UseFetchData<D>>({
     isSuccess: false,
   });
   const requestURL = useMemo(
     () => getRequestURL(baseURL, relativeURL, searchParam),
-    [baseURL, relativeURL, searchParam]
+    [baseURL, relativeURL, searchParam],
   );
 
   useEffect(() => {
