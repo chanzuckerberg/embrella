@@ -38,7 +38,7 @@ import {
 
 const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   row: EntityDataTypes,
-  entityApiResponseField: K
+  entityApiResponseField: K,
 ): string => {
   // This function needs to access the attribute of an entity object in the API response to use as the row ID.
   // Due to the primary attribute differing depending on the endpoint, typecasting is needed to satisfy TypeScript.
@@ -52,7 +52,7 @@ const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
 };
 
 const getDefaultTableOptions = (
-  entityApiResponseField: ApiPrimaryEntityAttribute
+  entityApiResponseField: ApiPrimaryEntityAttribute,
 ): Omit<TableOptions<EntityDataTypes>, "data" | "columns"> => ({
   getCoreRowModel: getCoreRowModel(),
   getRowId: (row: EntityDataTypes) => getRowId(row, entityApiResponseField),
@@ -66,7 +66,7 @@ const getDefaultTableOptions = (
 export const useConnect = (
   entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
-  columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[]
+  columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[],
 ) => {
   const state = useContext<TableState>(TableStateContext);
   const dispatch = useContext(TableDispatchContext);
@@ -87,7 +87,7 @@ export const useConnect = (
       pagination: getReactTablePaginationState(entityPagination as Pagination),
       sorting: getReactTableSortingState(entitySortBy as SortBy),
     }),
-    [entityPagination, entitySortBy]
+    [entityPagination, entitySortBy],
   );
 
   const onPaginationChange = useCallback(
@@ -102,7 +102,7 @@ export const useConnect = (
 
       dispatch(updatePaginationAction);
     },
-    [dispatch, entityPagination]
+    [dispatch, entityPagination],
   );
 
   const onSortingChange = useCallback(
@@ -117,7 +117,7 @@ export const useConnect = (
 
       dispatch(updateSortAction);
     },
-    [dispatch, entitySortBy]
+    [dispatch, entitySortBy],
   );
 
   const table = useReactTable<EntityDataTypes>({

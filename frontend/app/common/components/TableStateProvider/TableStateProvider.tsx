@@ -122,8 +122,8 @@ const tableStateReducer = (
       const paginationState =
         typeof updaterOrValue === "function"
           ? updaterOrValue(
-            getReactTablePaginationState(pagination as Pagination),
-          )
+              getReactTablePaginationState(pagination as Pagination),
+            )
           : updaterOrValue;
       return {
         ...state,
