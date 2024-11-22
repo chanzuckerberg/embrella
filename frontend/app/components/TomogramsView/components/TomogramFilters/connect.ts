@@ -30,7 +30,7 @@ export const useConnect = () => {
 
   const filters = useFilterList<TOMOGRAM_FILTER_ID, TomogramFilterCategory>(
     TOMOGRAM_FILTER_CONFIGS,
-    filtersList
+    filtersList,
   );
 
   const onFilter = useCallback(
@@ -44,7 +44,7 @@ export const useConnect = () => {
       };
       dispatch(updateFilterAction);
     },
-    [dispatch, filtersList]
+    [dispatch, filtersList],
   );
 
   return { filters, onFilter };

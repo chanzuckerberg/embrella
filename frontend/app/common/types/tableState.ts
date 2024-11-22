@@ -1,3 +1,18 @@
+import { TomogramData } from "./tomogram";
+import { GridData } from "./types";
+
+export type EntityDataTypes = GridData | TomogramData;
+
+/*
+ * Type for a formatted API response
+ * Usage: EntityList<TomogramData, "tomograms">
+ */
+export type EntityList = {
+  entities: EntityDataTypes[];
+  pagination: Pagination;
+  sortBy: SortBy;
+};
+
 export interface Pagination {
   page: number;
   pageSize: number;
@@ -17,14 +32,3 @@ export interface ApiListResponse<T> {
   result: T[];
   sortBy: SortBy;
 }
-/*
- * Type for a formatted API response
- * Usage: EntityList<TomogramData, "tomograms">
- */
-
-export type EntityList<T, K extends string> = {
-  [entityName in K]: T[];
-} & {
-  pagination: Pagination;
-  sortBy: SortBy;
-};

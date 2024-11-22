@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Install the node version specified in `.nvmrc`.  It is highly recommended to use a node version manager to manage multiple versions of node on your machine.  Using a consistent version of node for the project ensures that any developer or deployed environment will have the same dependency versions installed.
+Install the node version specified in `.nvmrc`. It is highly recommended to use a node version manager to manage multiple versions of node on your machine. Using a consistent version of node for the project ensures that any developer or deployed environment will have the same dependency versions installed.
 
 A list of recommended node version managers is below:
 

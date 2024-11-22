@@ -6,8 +6,8 @@ import {
 } from "@tanstack/react-table";
 import { TABLE_OPTIONS } from "@/views/GridsView/components/Main/components/GridList/table/options";
 import { GridData } from "@/app/common/types/types";
-import { EntityList } from "@/app/common/types/tableState";
 import { Updater } from "@tanstack/table-core";
+import { EntityList } from "@/views/GridsView/components/Main/components/GridList/types";
 import { getTableState } from "@/views/GridsView/components/Main/components/GridList/utils";
 import { DispatchContext } from "@/views/GridsView/common/store";
 import {
@@ -20,7 +20,7 @@ export const useConnect = (gridList?: EntityList<GridData, "grids">) => {
   const { pagination, sortBy } = gridList || {};
   const state = useMemo(
     () => getTableState({ pagination, sortBy }),
-    [pagination, sortBy]
+    [pagination, sortBy],
   );
 
   // Update pagination.
@@ -28,7 +28,7 @@ export const useConnect = (gridList?: EntityList<GridData, "grids">) => {
     (updaterOrValue: Updater<PaginationState>) => {
       dispatch?.(updatePagination({ updaterOrValue, pagination }));
     },
-    [dispatch, pagination]
+    [dispatch, pagination],
   );
 
   // Update sorting.
@@ -36,7 +36,7 @@ export const useConnect = (gridList?: EntityList<GridData, "grids">) => {
     (updaterOrValue: Updater<SortingState>) => {
       dispatch?.(updateSort({ updaterOrValue, sortBy }));
     },
-    [dispatch, sortBy]
+    [dispatch, sortBy],
   );
 
   const table = useReactTable<GridData>({

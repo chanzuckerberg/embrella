@@ -10,7 +10,7 @@ import { SortBy } from "@app/common/types/tableState";
  */
 export function buildNextSortState(
   updaterOrValue: Updater<SortingState>,
-  sortBy?: SortBy
+  sortBy?: SortBy,
 ): SortingState {
   if (typeof updaterOrValue === "function") {
     return updaterOrValue(getSortingState(sortBy));

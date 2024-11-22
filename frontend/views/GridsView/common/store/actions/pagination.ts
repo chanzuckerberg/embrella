@@ -13,7 +13,7 @@ import { DEFAULT_PAGE_SIZE } from "@/views/GridsView/common/store/constants";
  */
 export function buildNextPaginationState(
   updaterOrValue: Updater<PaginationState>,
-  pagination?: Pagination
+  pagination?: Pagination,
 ): PaginationState {
   if (typeof updaterOrValue === "function") {
     return updaterOrValue(getPaginationState(pagination));

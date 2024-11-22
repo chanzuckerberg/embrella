@@ -1,5 +1,6 @@
 import {
   GRID_COLUMN,
+  GridAccessorReturnType,
   GridColumnDef,
   GridColumnDefCellContext,
 } from "@/views/GridsView/components/Main/components/GridList/columns/types";
@@ -13,7 +14,10 @@ import { LinkTValue } from "@/app/components/Table/components/CellComponent/type
 
 export const GRID_COLUMN_DEF_CRYOGRID: GridColumnDef = {
   accessorFn: GRID_COLUMN_ACCESSOR_FN.CRYOGRID,
-  cell: (props: GridColumnDefCellContext<LinkTValue>) => Link({ ...props }),
+  cell: (
+    props: GridColumnDefCellContext<GridAccessorReturnType>,
+  ): React.JSX.Element =>
+    Link({ ...(props as GridColumnDefCellContext<LinkTValue>) }),
   enableSorting: false,
   id: GRID_COLUMN_ID.CRYOGRID,
   header: "Cryogrid",
@@ -21,7 +25,8 @@ export const GRID_COLUMN_DEF_CRYOGRID: GridColumnDef = {
 
 export const GRID_COLUMN_DEF_FREEZING_PLAN: GridColumnDef = {
   accessorFn: GRID_COLUMN_ACCESSOR_FN.FREEZING_PLAN,
-  cell: (props: GridColumnDefCellContext<LinkTValue[]>) => Links({ ...props }),
+  cell: (props: GridColumnDefCellContext<GridAccessorReturnType>) =>
+    Links({ ...(props as GridColumnDefCellContext<LinkTValue[]>) }),
   enableSorting: false,
   id: GRID_COLUMN_ID.FREEZING_PLAN,
   header: "Freezing Plan",
@@ -36,7 +41,8 @@ export const GRID_COLUMN_DEF_FREEZING_SESSION: GridColumnDef = {
 
 export const GRID_COLUMN_DEF_MSI: GridColumnDef = {
   accessorFn: GRID_COLUMN_ACCESSOR_FN.MSI,
-  cell: (props: GridColumnDefCellContext<LinkTValue[]>) => Links({ ...props }),
+  cell: (props: GridColumnDefCellContext<GridAccessorReturnType>) =>
+    Links({ ...(props as GridColumnDefCellContext<LinkTValue[]>) }),
   enableSorting: false,
   id: GRID_COLUMN_ID.MSI,
   header: "MSI",
@@ -44,7 +50,8 @@ export const GRID_COLUMN_DEF_MSI: GridColumnDef = {
 
 export const GRID_COLUMN_DEF_PROJECT: GridColumnDef = {
   accessorFn: GRID_COLUMN_ACCESSOR_FN.PROJECT,
-  cell: (props: GridColumnDefCellContext<LinkTValue>) => Link({ ...props }),
+  cell: (props: GridColumnDefCellContext<GridAccessorReturnType>) =>
+    Link({ ...(props as GridColumnDefCellContext<LinkTValue>) }),
   enableSorting: false,
   id: GRID_COLUMN_ID.PROJECT,
   header: "Project",

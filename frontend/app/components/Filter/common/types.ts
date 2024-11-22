@@ -44,7 +44,7 @@ export type FilterView<
 > = SelectFilterView<FilterId, FilterCategory>;
 
 export type OnFilterFn<FilterCategory extends string> = (
-  categoryFilter: CategoryFilter<FilterCategory>
+  categoryFilter: CategoryFilter<FilterCategory>,
 ) => void;
 
 export interface SelectFilterView<FilterId, FilterCategory extends string> {

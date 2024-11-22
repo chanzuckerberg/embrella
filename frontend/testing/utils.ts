@@ -7,7 +7,7 @@ import { SearchParamValue } from "@/app/common/types/search";
  * @param getBlocker - Function returning a promise that the mock-fetch will await before returning.
  */
 export function initFetch(
-  getBlocker: () => Promise<void> | undefined = () => undefined
+  getBlocker: () => Promise<void> | undefined = () => undefined,
 ): void {
   global.fetch = jest.fn(async (url): Promise<TestResponse> => {
     await getBlocker();
@@ -79,7 +79,7 @@ export function getSearchParamFirstValue<T extends boolean | number | string>(
   values: SearchParamValue[],
   category: string,
   index = 0,
-  defaultValue?: T
+  defaultValue?: T,
 ): T | undefined {
   const value = values.find((v) => v.category === category)?.value;
   if (!value) return defaultValue;
