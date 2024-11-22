@@ -40,14 +40,21 @@ const getLinkCellAccessorFn = (field: LinkField): Function => {
     };
   };
 }
+
 const getLinkPropsFromLinkField = (linkField: LinkField) => ({
   children: linkField.name,
   href: linkField.url,
 });
 
-const getSDSLink = (props: CellContext<TomogramData, LinkCellProps>): React.JSX.Element => (
-  <Link {...DEFAULT_LINK_PROPS} {...props.getValue()} />
-);
+const getSDSLink = (props: CellContext<EntityDataTypes, AccessorReturnType>): React.JSX.Element => {
+  // Cast CellContext to LinkCellProps since this function is only used for cells that display links
+  const linkCellProps = (props as CellContext<EntityDataTypes, LinkCellProps>).getValue();
+
+  return <Link
+    {...DEFAULT_LINK_PROPS}
+    {...linkCellProps}
+  />
+};
 
 export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: "tomograms",
