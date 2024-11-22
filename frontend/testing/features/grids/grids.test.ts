@@ -18,10 +18,10 @@ import {
   TEST_ID_GRIDS,
   TEST_ID_GRIDS_PAGINATION,
 } from "@/views/GridsView/components/Main/components/GridList/constants";
+import { EntityList } from "@/views/GridsView/components/Main/components/GridList/types";
 import { GRID_COLUMN_DEFS } from "@/views/GridsView/components/Main/components/GridList/columns/column";
 import { API } from "@/app/common/constants/api";
 import { GridData } from "@/app/common/types/types";
-import { EntityList } from "@app/common/types/tableState";
 
 const { describe } = test;
 

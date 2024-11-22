@@ -2,21 +2,21 @@ import { createContext, Dispatch, ReactNode, useReducer } from "react";
 import { noop, PaginationState, SortingState, Updater } from "@tanstack/react-table";
 import { FiltersList, ViewFilterCategory } from "@app/common/types/filter";
 import { Pagination, SortBy } from "@app/common/types/tableState";
-import { TOMOGRAM_COLUMN_IDS } from "@app/components/TomogramsView/components/TomogramTable/columns";
 
 export const DEFAULT_PAGE_SIZE = 10;
 
-export const INITIAL_STATE: TableState = {
+export const getInitialTableState = (sortState: SortingState = []): TableState => ({
   filterState: {},
   paginationState: {
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
   },
-  sortState: [{ desc: true, id: TOMOGRAM_COLUMN_IDS.CREATED_AT as string }],
-};
+  sortState,
+});
 
 interface TableStateProviderProps {
   children: ReactNode;
+  initialSortState?: SortingState;
 }
 
 type FilterValue = boolean | string | null;
@@ -134,10 +134,11 @@ const tableStateReducer = (state: TableState, action: TableStateAction): TableSt
 };
 
 export const TableDispatchContext = createContext<Dispatch<TableStateAction>>(noop);
-export const TableStateContext = createContext<TableState>(INITIAL_STATE);
+export const TableStateContext = createContext<TableState>(getInitialTableState());
 
-export const TableStateProvider = ({ children }: TableStateProviderProps): JSX.Element => {
-  const [state, dispatch] = useReducer(tableStateReducer, INITIAL_STATE);
+export const TableStateProvider = ({ children, initialSortState }: TableStateProviderProps): JSX.Element => {
+  const sortState = initialSortState || [];
+  const [state, dispatch] = useReducer(tableStateReducer, getInitialTableState(sortState));
 
   return (
     <TableStateContext.Provider value={state}>
