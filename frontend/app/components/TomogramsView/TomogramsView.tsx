@@ -8,7 +8,7 @@ import { Sidebar } from "@app/common/components/Sidebar/Sidebar";
 import { TomogramFilters } from "@app/components/TomogramsView/components/TomogramFilters/TomogramFilters";
 import { TOMOGRAM_COLUMN_DEFS, TOMOGRAM_COLUMN_IDS } from "./columns";
 import { SortingState } from "@tanstack/react-table";
-import { EntityTable } from "../EntityTable/EntityTable";
+import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
 import { API } from "@/app/common/constants/api";
 
 export const TomogramsView = (): React.JSX.Element => {
