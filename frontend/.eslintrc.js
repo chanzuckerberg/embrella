@@ -50,5 +50,4 @@ module.exports = {
     // Allows for the parsing of modern ECMAScript features
     sourceType: "module",
   },
-  workingDirectories: ["frontend"],
 };
