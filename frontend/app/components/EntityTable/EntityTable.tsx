@@ -7,7 +7,7 @@ import { TableBody } from "@app/components/Table/components/TableBody";
 import { Pagination } from "@app/components/Table/components/Pagination";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import { ColumnDef } from "@tanstack/react-table";
-import { AccessorReturnType } from "../TomogramsView/components/TomogramTable/columns";
+import { AccessorReturnType } from "../TomogramsView/columns";
 import { useConnect } from "./connect";
 import { ApiPrimaryEntityAttribute } from "./types";
 import { API } from "@/app/common/constants/api";

@@ -3,12 +3,13 @@
 import React from "react";
 import { TableWrapper } from "@app/common/components/TableWrapper/TableWrapper";
 import { FilterableTableMain } from "@app/common/components/FilterableTableMain/FilterableTableMain";
-import { TomogramTable } from "@app/components/TomogramsView/components/TomogramTable/TomogramTable";
 import { TableStateProvider } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { Sidebar } from "@app/common/components/Sidebar/Sidebar";
 import { TomogramFilters } from "@app/components/TomogramsView/components/TomogramFilters/TomogramFilters";
-import { TOMOGRAM_COLUMN_IDS } from "./components/TomogramTable/columns";
+import { TOMOGRAM_COLUMN_DEFS, TOMOGRAM_COLUMN_IDS } from "./columns";
 import { SortingState } from "@tanstack/react-table";
+import { EntityTable } from "../EntityTable/EntityTable";
+import { API } from "@/app/common/constants/api";
 
 export const TomogramsView = (): React.JSX.Element => {
   const initialSortState: SortingState = [
@@ -22,7 +23,11 @@ export const TomogramsView = (): React.JSX.Element => {
           <TomogramFilters />
         </Sidebar>
         <TableWrapper>
-          <TomogramTable />
+          <EntityTable
+            entityApi={API.TOMOGRAMS_V1}
+            entityApiResponseField="tomograms"
+            columnDefs={TOMOGRAM_COLUMN_DEFS}
+          />
         </TableWrapper>
       </FilterableTableMain>
     </TableStateProvider>
