@@ -15,6 +15,7 @@ from django.http import JsonResponse
 # python library import
 from datetime import timedelta
 from datetime import datetime
+import datetime
 import json
 import os
 import logging
@@ -25,7 +26,8 @@ from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, Cry
     PlungeFreezingSession, PlungeFreezingPlan
 from .models import CryoGrid, CryoGridBox
 from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingPlanModel, SampleModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
-from .forms import ClearCassetteForm
+from .forms import CopyGridForm, ClearCassetteForm, NumberToCopyGridForm
+from stores.models import Path
 
 # from umbrella.settings import ENVIRONMENT
 logger = logging.getLogger(__name__)
@@ -620,6 +622,76 @@ def add_msi_session(msi_session_list, item):
     if msi_session_entry not in msi_session_list:
         msi_session_list.append(msi_session_entry)
 
+def grid_detail_view(request, grid_id=1, error_msg=''):
+    """
+    View to show grid detail and provide forms to link to admin grid editing
+    and grid copying
+    """
+    form = CopyGridForm()
+    number_form = NumberToCopyGridForm
+    old_grid = CryoGrid.objects.get(id=grid_id)
+    field_objs = old_grid._meta.get_fields()
+    fields = {}
+    for f in field_objs:
+        if f.related_model == Path:
+            continue
+        try:
+            fields[f.name] = getattr(old_grid, f.name)
+        except AttributeError:
+            # reverse ManyToOneRel such as processes.procrun is not in this model
+            continue
+        #ManyToManyField
+        if hasattr(fields[f.name],'all'):
+            fields[f.name] = list(map((lambda x: x.__str__()),fields[f.name].all()))
+    context = {'old_grid':old_grid, 'fields':fields, 'form':form,'number_form': number_form, 'error_msg':error_msg}
+    return render(request, "cryo_grids/grid_detail.html", context)
+
+def _save_copied_grid(old_grid, box, position):
+    # grids sharing the same unique requirement except copy_number
+    existing_grids = CryoGrid.objects.filter(name=old_grid.name,freezing_session=old_grid.freezing_session, freezing_plan=old_grid.freezing_plan)
+    existing_numbers = list(map((lambda x:x.copy_number), existing_grids))
+    copy_number = max(existing_numbers) + 1
+    new_grid = CryoGrid.objects.get(id=old_grid.id)
+    new_grid.id = None
+    new_grid.grid_cassette = None
+    new_grid.trashed = False
+    new_grid.grid_box = box
+    new_grid.position = position
+    new_grid.copy_number = copy_number
+    new_grid.create_on = datetime.date.today()
+    new_grid.updated_on = datetime.date.today()
+    new_grid.save()
+    return new_grid
+
+def _handle_grid_to_copy_post(request):
+    """
+    Validate parameters and save copied grids
+    """
+    old_grid_id = int(request.POST['old_grid'])
+    old_grid = CryoGrid.objects.get(id=old_grid_id)
+    new_grid_box_id = int(request.POST['new_box'])
+    number_to_copy = int(request.POST['number_to_copy'])
+    box = CryoGridBox.objects.get(id=new_grid_box_id)
+    # validate
+    grids_at_used_positions = CryoGrid.objects.filter(grid_box=box, trashed=False)
+    used_positions = list(map((lambda x: x.position_in_box), grids_at_used_positions))
+    new_positions = list(set(range(1,box.max_grids+1)).difference(used_positions))
+    new_positions.sort()
+    if number_to_copy > len(new_positions):
+        error_msg = 'Box "%s" has only %d position(s) left.  Not enough to put in %d grids. Please try again.' % (box, len(new_positions), number_to_copy)
+        return HttpResponseRedirect(reverse('cryo_grids:grid_detail', kwargs={'grid_id':old_grid_id, 'error_msg':error_msg}))
+    # saving
+    for p in new_positions[:number_to_copy]:
+        _save_copied_grid(old_grid, box, p)
+    # TODO apply grid box filter or redirect to grid filter page
+    return HttpResponseRedirect(reverse('cryo_grids:detail'))
+
+def copy_grid_to_box(request, error_msg=''):
+    """
+    TODO this work around error message passing.  There may be a better way.
+    """
+    if request.method == 'POST':
+        return _handle_grid_to_copy_post(request)
 
 def clear_cassette_view(request,error_msg=''):
     '''
