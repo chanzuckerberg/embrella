@@ -1,5 +1,5 @@
 import { FilterOption } from "./filter";
-import { MSISession } from "./msiSession";
+import { MSISession } from "./entity";
 
 // This type is used in GridsView
 export interface FiltersList<FilterCategory extends string> {

@@ -1,4 +1,37 @@
+import { EntityLinkField, MSISession } from "@app/common/types/entity";
 import { FilterConfig } from "@app/components/Filter/common/types";
+
+export interface TomogramData {
+  tomograms: EntityLinkField;
+  procPlan: {
+    id: number;
+    name: string;
+    url: string;
+  };
+  procRun: {
+    id: number;
+    notes: string;
+    createdAt: string;
+  };
+  json: null;
+  grid: {
+    id: number;
+    name: string;
+    trashed: boolean;
+    url: string;
+    createdAt: string;
+  };
+  project: {
+    id: number;
+    name: string;
+    url: string;
+  };
+  user: {
+    id: number;
+    name: string;
+  };
+  msiSession: MSISession;
+}
 
 export enum TOMOGRAM_FILTER_ID {
   PROJECT = "PROJECT",

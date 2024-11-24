@@ -3,7 +3,8 @@ import { GridData } from "@/app/common/types/types";
 
 /*
  * Type for a formatted API response
- * Usage: EntityList<TomogramData, "tomograms">
+ * Usage: EntityList<GridData, "grid">
+ * TODO: this is only used for GridsView, should be removed in favor of version in tableState.ts
  */
 
 export type EntityList<T, K extends string> = {
