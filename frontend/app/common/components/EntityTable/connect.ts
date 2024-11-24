@@ -19,8 +19,11 @@ import {
   UpdatePaginationAction,
   UpdateSortAction,
 } from "@/app/common/components/TableStateProvider/TableStateProvider";
-import { Pagination, SortBy } from "@/app/common/types/tableState";
-import { AccessorReturnType } from "../../../components/TomogramsView/columns";
+import {
+  AccessorReturnType,
+  Pagination,
+  SortBy,
+} from "@/app/common/types/tableState";
 import { EntityDataTypes } from "@/app/common/types/tableState";
 import { ApiPrimaryEntityAttribute } from "./types";
 import { API } from "@/app/common/constants/api";
