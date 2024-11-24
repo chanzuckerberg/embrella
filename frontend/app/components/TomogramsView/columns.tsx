@@ -2,10 +2,8 @@ import { Link } from "@czi-sds/components";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 
 import { TomogramData } from "@app/common/types/tomogram";
-import {
-  AccessorReturnType,
-  EntityDataTypes,
-} from "@app/common/types/tableState";
+import { EntityDataTypes } from "@app/common/types/tableState";
+import { AccessorReturnType } from "@app/common/components/EntityTable/types";
 import { EntityLinkField } from "@app/common/types/entity";
 
 /**

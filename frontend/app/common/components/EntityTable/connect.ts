@@ -19,11 +19,8 @@ import {
   UpdatePaginationAction,
   UpdateSortAction,
 } from "@/app/common/components/TableStateProvider/TableStateProvider";
-import {
-  AccessorReturnType,
-  Pagination,
-  SortBy,
-} from "@/app/common/types/tableState";
+import { Pagination, SortBy } from "@/app/common/types/tableState";
+import { AccessorReturnType } from "./types";
 import { EntityDataTypes } from "@/app/common/types/tableState";
 import { ApiPrimaryEntityAttribute } from "./types";
 import { API } from "@/app/common/constants/api";

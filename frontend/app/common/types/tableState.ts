@@ -1,4 +1,3 @@
-import { LinkCellProps } from "@/app/components/TomogramsView/columns";
 import { TomogramData } from "./tomogram";
 import { GridData } from "./types";
 
@@ -33,5 +32,3 @@ export interface ApiListResponse<T> {
   result: T[];
   sortBy: SortBy;
 }
-
-export type AccessorReturnType = LinkCellProps | string;
