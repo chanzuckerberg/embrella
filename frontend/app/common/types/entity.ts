@@ -11,7 +11,7 @@ export type EntityAPIPrimaryAttributeToDataType = {
   tomograms: TomogramData;
   grid: GridData;
 };
-export interface MSISession {
+export interface MSISessionField {
   id: number;
   name: string;
   url: string;
