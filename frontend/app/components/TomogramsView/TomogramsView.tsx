@@ -9,11 +9,8 @@ import { TOMOGRAM_COLUMN_DEFS, TOMOGRAM_COLUMN_IDS } from "./columns";
 import { SortingState } from "@tanstack/react-table";
 import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
 import { API } from "@app/common/constants/api";
-import {
-  TOMOGRAM_FILTER_CONFIGS,
-  TomogramFilterId,
-  TomogramFilterCategory,
-} from "./types";
+import { TomogramFilterId, TomogramFilterCategory } from "./types";
+import { TOMOGRAM_FILTER_CONFIGS } from "./constants/filters";
 import { EntityTableFilters } from "@/app/common/components/EntityTableFilters/EntityTableFilters";
 
 export const TomogramsView = (): React.JSX.Element => {
