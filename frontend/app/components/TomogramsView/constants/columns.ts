@@ -1,0 +1,79 @@
+import { ColumnDef } from "@tanstack/react-table";
+
+import { AccessorReturnType } from "@app/common/components/EntityTable/types";
+import { EntityDataTypes } from "@app/common/types/tableState";
+import {
+  LinkCellProps,
+  getLinkPropsFromLinkField,
+  getLinkCellFromCellContext,
+} from "@app/components/Table/components/LinkCell/LinkCell";
+import { TomogramData } from "@app/components/TomogramsView/types";
+
+export const TOMOGRAM_COLUMN_IDS = {
+  TOMOGRAMS: "tomograms",
+  PROC_PLAN: "procPlan",
+  MSI_SESSION: "msiSession",
+  PROJECT: "project",
+  GRID: "grid",
+  NOTES: "notes",
+  CREATED_AT: "createdAt",
+};
+export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
+  EntityDataTypes,
+  AccessorReturnType
+>[] = [
+  {
+    id: TOMOGRAM_COLUMN_IDS.TOMOGRAMS,
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).tomograms),
+    cell: getLinkCellFromCellContext,
+    enableSorting: false,
+    header: "Tomograms",
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.PROC_PLAN,
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).procPlan),
+    cell: getLinkCellFromCellContext,
+    enableSorting: false,
+    header: "Proc Plan",
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.MSI_SESSION,
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).msiSession),
+    cell: getLinkCellFromCellContext,
+    enableSorting: false,
+    header: "MSI Session",
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.PROJECT,
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).project),
+    cell: getLinkCellFromCellContext,
+    enableSorting: false,
+    header: "Project",
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.GRID,
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).grid),
+    cell: getLinkCellFromCellContext,
+    enableSorting: false,
+    header: "Grid",
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.NOTES,
+    accessorFn: (rowData: EntityDataTypes): string =>
+      (rowData as TomogramData).procRun.notes,
+    enableSorting: false,
+    header: "Notes",
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.CREATED_AT,
+    accessorFn: (rowData: EntityDataTypes): string =>
+      (rowData as TomogramData).procRun.createdAt,
+    enableSorting: true,
+    header: "Created At",
+  },
+];
