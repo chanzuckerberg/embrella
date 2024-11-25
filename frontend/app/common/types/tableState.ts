@@ -1,4 +1,4 @@
-import { TomogramData } from "./tomogram";
+import { TomogramData } from "@app/components/TomogramsView/types";
 import { GridData } from "./types";
 
 export type EntityDataTypes = GridData | TomogramData;

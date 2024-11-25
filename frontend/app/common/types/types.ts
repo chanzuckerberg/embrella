@@ -1,5 +1,5 @@
 import { FilterOption } from "./filter";
-import { MSISession } from "./msiSession";
+import { MSISessionField } from "./entity";
 
 // This type is used in GridsView
 export interface FiltersList<FilterCategory extends string> {
@@ -50,7 +50,7 @@ export interface GridData {
     createdAt: string;
   };
   screeningSession: string;
-  msiSession: MSISession[];
+  msiSession: MSISessionField[];
 }
 
 export interface GridFreezingPlanSample {
