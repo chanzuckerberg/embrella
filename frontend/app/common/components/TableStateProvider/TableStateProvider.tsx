@@ -5,7 +5,7 @@ import {
   SortingState,
   Updater,
 } from "@tanstack/react-table";
-import { FiltersList, ViewFilterCategory } from "@app/common/types/filter";
+import { FiltersList, EntityFilterCategories } from "@app/common/types/filter";
 import { Pagination, SortBy } from "@app/common/types/tableState";
 
 export const DEFAULT_PAGE_SIZE = 10;
@@ -29,7 +29,7 @@ interface TableStateProviderProps {
 type FilterValue = boolean | string | null;
 
 type FilterState = Partial<{
-  [K in ViewFilterCategory]: FilterValue[];
+  [K in EntityFilterCategories]: FilterValue[];
 }>;
 
 export interface TableState {
@@ -46,7 +46,7 @@ export enum TableStateActionTypes {
 }
 
 interface CategoryFilter {
-  category: ViewFilterCategory;
+  category: EntityFilterCategories;
   value: FilterValue[];
 }
 

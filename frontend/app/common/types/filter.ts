@@ -1,8 +1,16 @@
+import {
+  GRID_FILTER_ID,
+  GridFilterConfig,
+} from "@/views/GridsView/components/Main/components/GridFilter/filters/types";
 import { GridFilterCategory } from "./types";
-import { TomogramFilterCategory } from "@app/components/TomogramsView/types";
+import {
+  TomogramFilterId,
+  TomogramFilterCategory,
+  TomogramFilterConfig,
+} from "@app/components/TomogramsView/types";
 
 export interface FiltersList {
-  filters: Record<ViewFilterCategory, FilterOption[]>;
+  filters: Record<EntityFilterCategories, FilterOption[]>;
 }
 
 export interface FilterOption {
@@ -11,4 +19,11 @@ export interface FilterOption {
   selected: boolean;
 }
 
-export type ViewFilterCategory = GridFilterCategory | TomogramFilterCategory;
+// TODO: Consider moving these types under EntityTableFilters
+export type EntityFilterIdTypes = TomogramFilterId | GRID_FILTER_ID;
+
+export type EntityFilterCategories =
+  | GridFilterCategory
+  | TomogramFilterCategory;
+
+export type EntityFilterConfigs = TomogramFilterConfig | GridFilterConfig;
