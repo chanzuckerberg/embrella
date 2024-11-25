@@ -5,11 +5,16 @@ import { TableWrapper } from "@app/common/components/TableWrapper/TableWrapper";
 import { FilterableTableMain } from "@app/common/components/FilterableTableMain/FilterableTableMain";
 import { TableStateProvider } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { Sidebar } from "@app/common/components/Sidebar/Sidebar";
-import { TomogramFilters } from "@app/components/TomogramsView/components/TomogramFilters/TomogramFilters";
 import { TOMOGRAM_COLUMN_DEFS, TOMOGRAM_COLUMN_IDS } from "./columns";
 import { SortingState } from "@tanstack/react-table";
 import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
-import { API } from "@/app/common/constants/api";
+import { API } from "@app/common/constants/api";
+import {
+  TOMOGRAM_FILTER_CONFIGS,
+  TOMOGRAM_FILTER_IDS,
+  TomogramFilterCategory,
+} from "./types";
+import { EntityTableFilters } from "@/app/common/components/EntityTableFilters/EntityTableFilters";
 
 export const TomogramsView = (): React.JSX.Element => {
   const initialSortState: SortingState = [
@@ -20,7 +25,10 @@ export const TomogramsView = (): React.JSX.Element => {
     <TableStateProvider initialSortState={initialSortState}>
       <FilterableTableMain>
         <Sidebar>
-          <TomogramFilters />
+          <EntityTableFilters<TOMOGRAM_FILTER_IDS, TomogramFilterCategory>
+            entityFilterConfigs={TOMOGRAM_FILTER_CONFIGS}
+            entityFilterListApi={API.TOMOGRAMS_FILTERLIST_V1}
+          />
         </Sidebar>
         <TableWrapper>
           <EntityTable
