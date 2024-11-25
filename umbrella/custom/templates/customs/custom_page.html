@@ -155,6 +155,10 @@
                 function getCryoGridsUrl() {
                     return `${getNextUrl()}/cryo_grids`;
                 }
+
+                function getTomogramsUrl() {
+                    return `${getNextUrl()}/tomograms`;
+                }
             </script>
             <tr>
                 <td>
@@ -164,6 +168,10 @@
                 <td>
                     <a href="{% url 'admin:tem_msisession_changelist' %}" class="button">Single Grid Sessions</a>
                     <p> multiscaled SPA or tomography data collection </p>
+                </td>
+                <td>
+                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
+                    <p> View and manage tomograms </p>
                 </td>
                 <td>
                 </td>
@@ -199,3 +207,4 @@
     </div>
 </body>
 </html>
+
