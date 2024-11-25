@@ -25,7 +25,7 @@ export interface TomogramData {
   msiSession: MSISessionField;
 }
 
-export enum TOMOGRAM_FILTER_IDS {
+export enum TomogramFilterIds {
   PROJECT = "PROJECT",
   SAMPLE = "SAMPLE",
   USER = "USER",
@@ -45,7 +45,7 @@ export type TomogramFilterCategory =
   | "date";
 
 export type TomogramFilterConfig = FilterConfig<
-  TOMOGRAM_FILTER_IDS,
+  TomogramFilterIds,
   TomogramFilterCategory
 >;
 
@@ -53,37 +53,37 @@ export const TOMOGRAM_FILTER_CONFIGS: TomogramFilterConfig[][] = [
   [
     {
       filterCategory: "project",
-      filterId: TOMOGRAM_FILTER_IDS.PROJECT,
+      filterId: TomogramFilterIds.PROJECT,
       label: "Project",
     },
     {
       filterCategory: "sample",
-      filterId: TOMOGRAM_FILTER_IDS.SAMPLE,
+      filterId: TomogramFilterIds.SAMPLE,
       label: "Sample",
     },
     {
       filterCategory: "user",
-      filterId: TOMOGRAM_FILTER_IDS.USER,
+      filterId: TomogramFilterIds.USER,
       label: "User",
     },
     {
       filterCategory: "msiSession",
-      filterId: TOMOGRAM_FILTER_IDS.MSI_SESSION,
+      filterId: TomogramFilterIds.MSI_SESSION,
       label: "MSI Session",
     },
     {
       filterCategory: "screeningSession",
-      filterId: TOMOGRAM_FILTER_IDS.SCREENING_SESSION,
+      filterId: TomogramFilterIds.SCREENING_SESSION,
       label: "Screening Session",
     },
     {
       filterCategory: "procPlan",
-      filterId: TOMOGRAM_FILTER_IDS.PROC_PLAN,
+      filterId: TomogramFilterIds.PROC_PLAN,
       label: "Proc Plan",
     },
     {
       filterCategory: "date",
-      filterId: TOMOGRAM_FILTER_IDS.DATE,
+      filterId: TomogramFilterIds.DATE,
       label: "Date",
     },
   ],

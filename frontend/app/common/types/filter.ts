@@ -4,7 +4,7 @@ import {
 } from "@/views/GridsView/components/Main/components/GridFilter/filters/types";
 import { GridFilterCategory } from "./types";
 import {
-  TOMOGRAM_FILTER_IDS,
+  TomogramFilterIds,
   TomogramFilterCategory,
   TomogramFilterConfig,
 } from "@app/components/TomogramsView/types";
@@ -20,7 +20,7 @@ export interface FilterOption {
 }
 
 // TODO: Consider moving these types under EntityTableFilters
-export type EntityFilterId = TOMOGRAM_FILTER_IDS | GRID_FILTER_ID;
+export type EntityFilterId = TomogramFilterIds | GRID_FILTER_ID;
 
 export type EntityFilterCategories =
   | GridFilterCategory
