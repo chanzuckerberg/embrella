@@ -1,8 +1,9 @@
 import { Link } from "@czi-sds/components";
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 
-import { TomogramData } from "@app/common/types/tomogram";
+import { TomogramData } from "./types";
 import { EntityDataTypes } from "@app/common/types/tableState";
+import { AccessorReturnType } from "@app/common/components/EntityTable/types";
 import { EntityLinkField } from "@app/common/types/entity";
 
 /**
@@ -16,13 +17,12 @@ const DEFAULT_LINK_PROPS = {
 /**
  * Attributes to pass to SDS Link component
  */
-interface LinkCellProps {
+
+//TODO: move this to shared type file
+export interface LinkCellProps {
   children: string;
   href: string;
 }
-
-// TODO: move to common table types
-export type AccessorReturnType = LinkCellProps | string;
 
 const getLinkPropsFromLinkField = (linkField: EntityLinkField) => ({
   children: linkField.name,
