@@ -4,7 +4,7 @@ import { useConnect } from "./connect";
 import {
   EntityFilterCategories,
   EntityFilterConfigs,
-  EntityFilterId,
+  EntityFilterIdTypes,
 } from "@app/common/types/filter";
 import { API } from "../../constants/api";
 
@@ -14,7 +14,7 @@ interface EntityTableFiltersProps {
 }
 
 export const EntityTableFilters = <
-  ENTITY_FILTER_ID extends EntityFilterId,
+  ENTITY_FILTER_ID extends EntityFilterIdTypes,
   EntityFilterCategory extends EntityFilterCategories,
 >({
   entityFilterConfigs,

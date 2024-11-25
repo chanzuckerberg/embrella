@@ -19,11 +19,11 @@ import { getFilterSearchParamValues } from "@app/common/utils/searchParam";
 import {
   EntityFilterCategories,
   EntityFilterConfigs,
-  EntityFilterId,
+  EntityFilterIdTypes,
 } from "../../types/filter";
 
 export const useConnect = <
-  FilterId extends EntityFilterId,
+  FilterId extends EntityFilterIdTypes,
   FilterCategory extends EntityFilterCategories,
 >(
   entityFilterConfigs: EntityFilterConfigs[][],

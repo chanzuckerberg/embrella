@@ -11,7 +11,7 @@ import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
 import { API } from "@app/common/constants/api";
 import {
   TOMOGRAM_FILTER_CONFIGS,
-  TomogramFilterIds,
+  TomogramFilterId,
   TomogramFilterCategory,
 } from "./types";
 import { EntityTableFilters } from "@/app/common/components/EntityTableFilters/EntityTableFilters";
@@ -25,7 +25,7 @@ export const TomogramsView = (): React.JSX.Element => {
     <TableStateProvider initialSortState={initialSortState}>
       <FilterableTableMain>
         <Sidebar>
-          <EntityTableFilters<TomogramFilterIds, TomogramFilterCategory>
+          <EntityTableFilters<TomogramFilterId, TomogramFilterCategory>
             entityFilterConfigs={TOMOGRAM_FILTER_CONFIGS}
             entityFilterListApi={API.TOMOGRAMS_FILTERLIST_V1}
           />
