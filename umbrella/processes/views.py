@@ -311,20 +311,45 @@ def available_filters(request):
             .order_by('sample_name', 'tag_name')
         )
 
+        # Process samples to ensure exclusive categorization as "with tag" or "without tag"
+        sample_data = (
+            queryset.values(
+                sample_name=F('msi_session__grid__freezing_plan__sample__name'),
+                tag_name=F('msi_session__grid__freezing_plan__tags__name')
+            )
+            .annotate(count=Count('id'))
+            .order_by('sample_name', 'tag_name')
+        )
+
         processed_samples = {}
         for item in sample_data:
             sample_name = item['sample_name']
-            tag_name = item['tag_name'] or "without tag"
-            unique_name = f"{sample_name} with {tag_name}"
+            tag_name = item['tag_name']
 
-            if unique_name not in processed_samples:
-                processed_samples[unique_name] = {
-                    'name': unique_name,
+            if sample_name not in processed_samples:
+                # Default to "without tag" if no tags are encountered
+                processed_samples[sample_name] = {
+                    'name': f"{sample_name} without tag",
                     'count': 0,
                     'selected': False
                 }
-            processed_samples[unique_name]['count'] += item['count']
 
+            if tag_name:  # If there's a tag, overwrite the entry with "with tag"
+                tag_names = ', '.join(
+                    sample_data.filter(sample_name=sample_name)
+                    .values_list('tag_name', flat=True)
+                    .distinct()
+                )
+                processed_samples[sample_name] = {
+                    'name': f"{sample_name} with {tag_names}",
+                    'count': processed_samples[sample_name]['count'] + item['count'],
+                    'selected': False
+                }
+            else:
+                # Count samples without tags
+                processed_samples[sample_name]['count'] += item['count']
+
+        # Convert processed_samples to a list for the final 'sample' filter
         filters['sample'] = list(processed_samples.values())
 
         # Apply 'selected' status to filters
