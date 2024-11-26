@@ -203,6 +203,14 @@ def available_filters(request):
 
         # Base queryset with annotations for counting occurrences
         filter_criteria = Q()
+
+        queryset1 = CryoGrid.objects.select_related(
+            'intended_project', 'freezing_session', 'grid_box__puck', 'user',
+            'grid_cassette', 'freezing_plan'
+        ).prefetch_related(
+            'msisession', 'freezing_plan__sample', 'freezing_plan__tags',
+            'atlassession__group'
+        )
         queryset = ProcRun.objects.select_related(
             'proc_plan',
             'msi_session',
@@ -249,7 +257,7 @@ def available_filters(request):
                 .values(name=F('project_name'), count=F('count'))
             ),
             'sample': list(
-                queryset.values(sample_name=F('msi_session__grid__freezing_plan__sample__name'))
+                queryset1.values(sample_name=F('freezing_plan__sample__name'))
                 .annotate(count=Count('id'))
                 .order_by('sample_name')
                 .values(name=F('sample_name'), count=F('count'))
@@ -302,11 +310,10 @@ def available_filters(request):
                 for key, value in date_ranges.items()
             ],
         }
-        print(filters['sample'])
-        # Process the 'sample' filter and replace sample_name with the detailed information
+
         processed_samples = {}
         for item in filters['sample']:
-            if 'name' in item and item['name']:
+            if 'name' in item:
                 # Get the associated freezing plans based on the sample name
                 freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name'])
 
@@ -314,29 +321,22 @@ def available_filters(request):
                 for freezing_plan in freezing_plans:
                     tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
                     plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
-                    # Calculate the count directly based on the specific freezing plan and its associated ProcRun objects
-                    run_count = ProcRun.objects.filter(
-                        msi_session__grid__freezing_plan=freezing_plan
-                    ).count()
 
-                    # Use a unique key to ensure distinct entries
-                    unique_key = (item['name'], tag_names if tag_names else "without tag")
-
-                    # Add the count to processed_samples without aggregating across different tags
-                    processed_samples[unique_key] = {
-                        'name': plan_str,
-                        'count': run_count,  # Count specific to this unique tag or no-tag combination
-                        'selected': False  # Default selected status
-                    }
+                    # Aggregate counts for duplicates
+                    if plan_str in processed_samples:
+                        processed_samples[plan_str]['count'] += item['count']
+                    else:
+                        processed_samples[plan_str] = {
+                            'name': plan_str,
+                            'count': item['count'],  # Start with the original count
+                            'selected': False  # Default selected status
+                        }
             else:
-                        # If no 'name' exists, simply append the original item
-                if item['name'] not in processed_samples:
-                    processed_samples[item['name']] = item
+                # If all items have a 'name', this block won't execute
+                continue
 
-        # Convert the dictionary back to a list for the final output
+        # Convert processed_samples back to a list
         filters['sample'] = list(processed_samples.values())
-
-        # Apply 'selected' status to filters
         for key, filter_list in filters.items():
             add_selected_status(filter_list, key)
 
