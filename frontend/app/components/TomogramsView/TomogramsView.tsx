@@ -8,7 +8,7 @@ import { Sidebar } from "@app/common/components/Sidebar/Sidebar";
 import {
   TOMOGRAM_COLUMN_DEFS,
   TOMOGRAM_COLUMN_IDS,
-} from "@app/components/TomogramsView/constants/columns";
+} from "./constants/columns";
 import { SortingState } from "@tanstack/react-table";
 import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
 import { API } from "@app/common/constants/api";
