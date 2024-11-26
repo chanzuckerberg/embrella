@@ -302,31 +302,39 @@ def available_filters(request):
                 for key, value in date_ranges.items()
             ],
         }
-
-
+        print(filters['sample'])
         # Process the 'sample' filter and replace sample_name with the detailed information
-        processed_samples = []
+        processed_samples = {}
         for item in filters['sample']:
-            if 'name' in item:
+            if 'name' in item and item['name']:
                 # Get the associated freezing plans based on the sample name
                 freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name'])
 
                 # Create a string that summarizes the freezing plan details
-                freezing_plan_details = []
                 for freezing_plan in freezing_plans:
                     tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
                     plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
-                    processed_samples.append({
+                    # Calculate the count directly based on the specific freezing plan and its associated ProcRun objects
+                    run_count = ProcRun.objects.filter(
+                        msi_session__grid__freezing_plan=freezing_plan
+                    ).count()
+
+                    # Use a unique key to ensure distinct entries
+                    unique_key = (item['name'], tag_names if tag_names else "without tag")
+
+                    # Add the count to processed_samples without aggregating across different tags
+                    processed_samples[unique_key] = {
                         'name': plan_str,
-                        'count': item['count'],  # Retain the original count
+                        'count': run_count,  # Count specific to this unique tag or no-tag combination
                         'selected': False  # Default selected status
-                    })
-
+                    }
             else:
-                # If no 'name' exists, simply append the original item
-                processed_samples.append(item)
+                        # If no 'name' exists, simply append the original item
+                if item['name'] not in processed_samples:
+                    processed_samples[item['name']] = item
 
-        filters['sample'] = processed_samples
+        # Convert the dictionary back to a list for the final output
+        filters['sample'] = list(processed_samples.values())
 
         # Apply 'selected' status to filters
         for key, filter_list in filters.items():
@@ -344,8 +352,7 @@ def available_filters(request):
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-
-
+    
 @require_http_methods(["GET"])
 def get_tomo_details(request):
     try:
