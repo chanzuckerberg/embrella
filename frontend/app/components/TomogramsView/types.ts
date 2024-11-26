@@ -1,4 +1,9 @@
-import { EntityLinkField, MSISessionField } from "@app/common/types/entity";
+import {
+  EntityLinkField,
+  GridField,
+  MSISessionField,
+  UserField,
+} from "@app/common/types/entity";
 import { FilterConfig } from "@app/components/Filter/common/types";
 
 export interface TomogramData {
@@ -10,18 +15,9 @@ export interface TomogramData {
     updatedAt: string;
   };
   json: null;
-  grid: {
-    id: number;
-    name: string;
-    trashed: boolean;
-    url: string;
-    createdAt: string;
-  };
+  grid: GridField;
   project: EntityLinkField;
-  user: {
-    id: number;
-    name: string;
-  };
+  user: UserField;
   msiSession: MSISessionField;
 }
 

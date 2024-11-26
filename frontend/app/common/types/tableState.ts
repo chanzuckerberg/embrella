@@ -1,7 +1,8 @@
+import { AnnotationData } from "@app/components/AnnotationsView/types";
 import { TomogramData } from "@app/components/TomogramsView/types";
 import { GridData } from "./types";
 
-export type EntityDataTypes = GridData | TomogramData;
+export type EntityDataTypes = AnnotationData | GridData | TomogramData;
 
 /*
  * Type for a formatted API response
@@ -23,10 +24,11 @@ export interface Pagination {
 export interface SortBy {
   asc: boolean;
   sort: string;
-} /*
+}
+
+/*
  * For a raw API response
  */
-
 export interface ApiListResponse<T> {
   pagination: Pagination;
   result: T[];
