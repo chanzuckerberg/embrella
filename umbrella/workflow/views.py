@@ -20,7 +20,8 @@ KEYS = ('PixSize',
         'CorrCTF',
         'McBin',
         'Wbp')
-HOST = '10.50.120.52'
+# HOST = '10.50.120.52'
+HOST = 'login-1.czii.org'
 PORT = 22
 USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
