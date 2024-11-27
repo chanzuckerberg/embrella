@@ -21,7 +21,8 @@ KEYS = ('PixSize',
         'McBin',
         'Wbp')
 # HOST = '10.50.120.52'
-HOST = 'login-1.czii.org'
+# HOST = 'login-1.czii.org'
+HOST = "10.50.120.90"
 PORT = 22
 USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
@@ -139,6 +140,7 @@ def cancel_aretomo3(request):
 def track_jobs(request):
     if request.method == 'POST':
         data = json.loads(request.body)
+        print(data)
         job_name = data.get('job_name')
 
         aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
