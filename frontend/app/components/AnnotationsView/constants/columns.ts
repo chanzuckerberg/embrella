@@ -18,7 +18,7 @@ export const ANNOTATION_COLUMN_IDS = {
   PROJECT: "project",
   GRID: "grid",
   NOTES: "notes",
-  CREATED_AT: "createdAt",
+  UPDATED_AT: "updatedAt",
 };
 export const ANNOTATION_COLUMN_DEFS: ColumnDef<
   EntityDataTypes,
@@ -73,10 +73,10 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
     header: humanize(ANNOTATION_COLUMN_IDS.NOTES),
   },
   {
-    id: ANNOTATION_COLUMN_IDS.CREATED_AT,
+    id: ANNOTATION_COLUMN_IDS.UPDATED_AT,
     accessorFn: (rowData: EntityDataTypes): string =>
-      (rowData as AnnotationData).procRun.createdAt,
+      (rowData as AnnotationData).procRun.updatedAt,
     enableSorting: true,
-    header: humanize(ANNOTATION_COLUMN_IDS.CREATED_AT),
+    header: humanize(ANNOTATION_COLUMN_IDS.UPDATED_AT),
   },
 ];

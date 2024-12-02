@@ -12,7 +12,7 @@ export interface AnnotationData {
   procRun: {
     id: number;
     notes: string;
-    createdAt: string;
+    updatedAt: string;
   };
   json: null;
   grid: GridField;

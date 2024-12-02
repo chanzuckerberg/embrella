@@ -18,7 +18,7 @@ import { EntityTableFilters } from "@/app/common/components/EntityTableFilters/E
 
 export const AnnotationsView = (): React.JSX.Element => {
   const initialSortState: SortingState = [
-    { desc: true, id: ANNOTATION_COLUMN_IDS.CREATED_AT },
+    { desc: true, id: ANNOTATION_COLUMN_IDS.UPDATED_AT },
   ];
 
   return (
