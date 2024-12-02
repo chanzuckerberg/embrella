@@ -9,7 +9,6 @@ import {
   getLinkCellFromCellContext,
 } from "@app/components/Table/components/LinkCell/LinkCell";
 import { TomogramData } from "@app/components/TomogramsView/types";
-import { hu } from "date-fns/locale";
 
 export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: "tomograms",
