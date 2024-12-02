@@ -391,10 +391,8 @@ def get_tomo_details(request):
             if item['category'] == 'sort':
                 # Map 'createdAt' to the actual database field for sorting
                 sort_value = extract_value(item['value'])
-                if sort_value == 'createdAt':
-                    sort_field = 'created_at'  # Corresponding database field
-                else:
-                    sort_field = sort_value
+                if sort_value == 'updatedAt':
+                    sort_field = 'updated_at'  # Corresponding database field
             elif item['category'] == 'asc':
                 asc_value = extract_value(item['value'])
                 asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
@@ -591,7 +589,7 @@ def get_tomo_details(request):
                 'totalResults': paginator.count,  # Total number of items across all pages
             },
             'sortBy': SortMetadataModel(
-                sort= 'createdAt' if sort_field is not None else None,
+                sort= 'updatedAt' if sort_field is not None else None,
                 asc= asc
             ).model_dump()
         }
