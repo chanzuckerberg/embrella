@@ -150,7 +150,7 @@ class ProcRun(models.Model):
     notes = models.TextField(max_length=255, blank=True, null=True)
     json_path = models.ForeignKey(Path, on_delete=models.CASCADE, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
         return '%s-%s' % (self.proc_plan, self.name)
 

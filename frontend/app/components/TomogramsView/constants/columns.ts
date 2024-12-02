@@ -16,8 +16,9 @@ export const TOMOGRAM_COLUMN_IDS = {
   PROJECT: "project",
   GRID: "grid",
   NOTES: "notes",
-  CREATED_AT: "createdAt",
+  UPDATED_AT: "updatedAt",
 };
+
 export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
   EntityDataTypes,
   AccessorReturnType
@@ -70,10 +71,10 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
     header: "Notes",
   },
   {
-    id: TOMOGRAM_COLUMN_IDS.CREATED_AT,
+    id: TOMOGRAM_COLUMN_IDS.UPDATED_AT,
     accessorFn: (rowData: EntityDataTypes): string =>
-      (rowData as TomogramData).procRun.createdAt,
+      (rowData as TomogramData).procRun.updatedAt,
     enableSorting: true,
-    header: "Created At",
+    header: "Updated At",
   },
 ];

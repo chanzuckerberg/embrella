@@ -295,7 +295,7 @@ def available_filters(request):
             'date': [
                 {
                     "name": key,
-                    "count": queryset.filter(created_at__gte=value).count()
+                    "count": queryset.filter(updated_at__gte=value).count()
                 }
                 for key, value in date_ranges.items()
             ],
@@ -561,7 +561,7 @@ def get_tomo_details(request):
         # Pagination and sorting defaults
         page = int(request.GET.get('page', 1))  # Default to first page
         page_size = int(request.GET.get('pageSize', 10))  # Default page size is 10
-        sort_field = 'created_at'
+        sort_field = 'updated_at'
         asc = False
 
         # Helper function to extract values
@@ -573,10 +573,8 @@ def get_tomo_details(request):
             if item['category'] == 'sort':
                 # Map 'createdAt' to the actual database field for sorting
                 sort_value = extract_value(item['value'])
-                if sort_value == 'createdAt':
-                    sort_field = 'created_at'  # Corresponding database field
-                else:
-                    sort_field = sort_value
+                if sort_value == 'updatedAt':
+                    sort_field = 'updated_at'  # Corresponding database field
             elif item['category'] == 'asc':
                 asc_value = extract_value(item['value'])
                 asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
@@ -610,6 +608,7 @@ def get_tomo_details(request):
             'name',
             'notes',
             'created_at',
+            'updated_at',
             'proc_plan_id',
             'msi_session_id',
             proc_plan_plan_id=F('proc_plan__id'),
@@ -691,7 +690,7 @@ def get_tomo_details(request):
                     months = date_mapping[date_value]
                     now = datetime.now()
                     start_date = now - timedelta(days=months * 30)
-                    filter_criteria &= Q(created_at__gte=start_date)  # Use 'created_at' column for filtering
+                    filter_criteria &= Q(updated_at__gte=start_date)  # Use 'created_at' column for filtering
                 else:
                     return JsonResponse({'error': f'Invalid value for date filter: {date_value}'}, status=400)
             elif category == 'sample':
@@ -728,12 +727,12 @@ def get_tomo_details(request):
             procrun_id = entry.get('id')
             tomogram_id = entry.get('run_pipe_run_id')
             if procrun_id not in unique_results and tomogram_id is not None:  # Ensure we only count entries with tomograms
-                proc_run_created_at = datetime.fromisoformat(str(entry.get('created_at'))).strftime('%Y-%m-%d') if entry.get('created_at') else None
+                proc_run_updated_at = datetime.fromisoformat(str(entry.get('updated_at'))).strftime('%Y-%m-%d') if entry.get('updated_at') else None
                 cryogrid_created_at = datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d') if entry.get('cryogrid_created_at') else None
                 response_model = ResponseModel(
                     tomograms=TomogramModel(id=tomogram_id, name="{} (id={})".format(entry.get('name'), tomogram_id), url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"),
                     procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
-                    procRun=ProcRunModel(id=procrun_id, notes=entry.get('notes'), createdAt=str(proc_run_created_at)),
+                    procRun=ProcRunModel(id=procrun_id, notes=entry.get('notes'), updatedAt=str(proc_run_updated_at)),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
                         name="{} (id={})".format(entry.get('cryogrid_name'), entry.get('cryogrid_id')),
@@ -772,7 +771,7 @@ def get_tomo_details(request):
                 'totalResults': paginator.count,  # Total number of items across all pages
             },
             'sortBy': SortMetadataModel(
-                sort= 'createdAt' if sort_field is not None else None,
+                sort= 'updatedAt' if sort_field is not None else None,
                 asc= asc
             ).model_dump()
         }
