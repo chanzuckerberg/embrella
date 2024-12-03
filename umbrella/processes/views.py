@@ -20,7 +20,7 @@ from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
 from cryo_grids.models import CryoGrid, PlungeFreezingSession, PlungeFreezingPlan
 from processes.models import *
-from processes.utils import QueryParams, AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
+from processes.utils import QueryParams, InputTomogramModel,AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
 from django.db.models import F,Q
 from django.http import JsonResponse
@@ -957,10 +957,9 @@ def get_annotation_details(request):
                         name=entry.get('proc_plan_name'),
                         url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_id')}"
                     ),
-                    procRun=ProcRunModel(
-                        id=procrun_id,
-                        notes=entry.get('proc_run_note'),
-                        createdAt=proc_run_updated_at
+                    inputTomogram=InputTomogramModel(
+                        id=None,
+                        name=None
                     ),
                     json=JsonModel(
                         id=json_id,
