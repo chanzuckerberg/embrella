@@ -23,6 +23,7 @@ from umbrella.api_internal import get_grids_by_user, get_available_grids, get_gr
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 import google
+from processes.views import available_annotation_filter
 
 
 urlpatterns = [
@@ -43,7 +44,9 @@ urlpatterns = [
     path('get_tomo_by_msi_session/', get_tomo_by_msi_session, name='get_tomo_by_msi_session'),
     path('available_grids', get_available_grids, name='get_available_grids'),
     path('cryo_grids/', include('cryo_grids.urls'), name='cryo_grids'),
-    path('workflow/', include('workflow.urls'), name='workflow pipeline')
+    path('workflow/', include('workflow.urls'), name='workflow pipeline'),
+    path('annotations/v1/filterlist/', available_annotation_filter, name='get filter list for annotations'),
+
 ]
 
 

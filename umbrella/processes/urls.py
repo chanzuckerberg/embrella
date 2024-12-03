@@ -15,7 +15,7 @@ urlpatterns = [
     path("post_tomo/<int:run_id>/", views_post_tomo.detail, name="ptdetail"),
     path('v1/filterlist/', views.available_filters, name='get_processes_details'),
     path('v1/tomograms/', views.get_tomo_details, name='get proc run details'),
-    path('annotations/v1/filterlist/', views.available_annotation_filter, name='get filter list for annotations'),
+    
     #path("run_list/", views.get_all_sessions, name="get"),
     #path("path_list/", views.get_all_image_paths, name="path")
 ]
