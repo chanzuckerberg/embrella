@@ -594,3 +594,189 @@ def get_tomo_details(request):
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+    
+
+@require_http_methods(["GET"])
+def available_annotation_filter(request):
+    try:
+        # Validate that only the 'q' parameter is present in the request
+        if 'q' not in request.GET or len(request.GET) > 1:
+            return JsonResponse({'error': 'Invalid query parameters. Only "q" is allowed.'}, status=422)
+
+        raw_query_param = request.GET.get('q', '[]')
+
+        # Parse the JSON string into a Python list
+        query_filters = json.loads(raw_query_param)
+
+        # Validate the parsed list with Pydantic
+        query_params = QueryParams(q=query_filters)
+
+        # Initialize the selected filters based on the validated query parameters
+        selected_filters = {}
+        for qf in query_params.q:
+            selected_filters[qf.category] = set(qf.value)  # Store as a set for efficient lookup
+
+        # Base queryset with annotations for counting occurrences
+        filter_criteria = Q()
+
+        queryset = Annotation.objects.select_related(
+            'msi_session',
+            'msi_session__project',
+            'msi_session__user',
+            'msi_session__grid',
+            'msi_session__grid__freezing_plan',
+            'msi_session__grid__freezing_plan__sample',
+            'msi_session__atlas_session__group',
+            'pipe_data__run__proc_plan'  # Traverse the relationship to proc_plan
+        ).prefetch_related(
+            'msi_session__grid__freezing_plan__tags'
+        ).values(
+            'id',
+            annotation_name=F('name'),
+            project_display_name=F('msi_session__project__name'),
+            user_display_name=F('msi_session__user__username'),
+            grid_display_name=F('msi_session__grid__name'),
+            freezing_plan_protocol=F('msi_session__grid__freezing_plan__sample_application_protocol'),
+            freezing_plan_blot_time=F('msi_session__grid__freezing_plan__blot_time'),
+            freezing_plan_sample=F('msi_session__grid__freezing_plan__sample__name'),
+            freezing_plan_tags=F('msi_session__grid__freezing_plan__tags__id'),
+            screen_session_display_name=F('msi_session__atlas_session__group__name'),
+            proc_plan_display_name=F('pipe_data__run__proc_plan__name')  # Access proc_plan name
+        ).filter(filter_criteria)
+
+        current_time = now()
+        date_ranges = {
+            'last_1_month': current_time - timedelta(days=30),
+            'last_3_months': current_time - timedelta(days=90),
+            'last_6_months': current_time - timedelta(days=180),
+        }
+
+        # Helper function to add 'selected' key based on user selection
+        def add_selected_status(filter_list, category):
+            selected_values = selected_filters.get(category, set())
+            if None in selected_values:
+                for item in filter_list:
+                    item['selected'] = item['name'] is None
+            else:
+                for item in filter_list:
+                    item_name = item['name']
+                    if isinstance(item_name, bool):
+                        item['selected'] = item_name in selected_values
+                    elif isinstance(item_name, str):
+                        item['selected'] = item_name.strip().lower() in {val.lower() for val in selected_values if isinstance(val, str)}
+                    else:
+                        item['selected'] = False
+
+        # Aggregating counts for each filter
+        filters = {
+            'project': list(
+                queryset.values(project_name=F('project_display_name'))
+                .annotate(count=Count('id'))
+                .order_by('project_name')
+                .values(name=F('project_name'), count=F('count'))
+            ),
+            'user': list(
+                queryset.annotate(
+                    user_temp_name=Trim(
+                        Case(
+                            When(
+                                user_display_name__contains='@',
+                                then=Substr(
+                                    F('user_display_name'),
+                                    1,
+                                    StrIndex(F('user_display_name'), Value('@')) - 1
+                                )
+                            ),
+                            default=F('user_display_name'),
+                            output_field=CharField()
+                        )
+                    )
+                )
+                .values(user_temp_name=F('user_temp_name'))
+                .annotate(count=Count('id'))
+                .order_by('user_temp_name')
+                .values(name=F('user_temp_name'), count=F('count'))
+            ),
+            'msiSession': list(
+                queryset.values(msi_session_name=F('msi_session__name'))  # Correct reference to session name
+                .annotate(count=Count('id'))
+                .order_by('msi_session_name')
+                .values(name=F('msi_session_name'), count=F('count'))
+            ),
+            'screenSession': list(
+                queryset.values(screen_session_name=F('screen_session_display_name'))  # Updated alias
+                .annotate(count=Count('id'))
+                .order_by('screen_session_name')
+                .values(name=F('screen_session_name'), count=F('count'))
+            ),
+            'sample': list(
+                queryset.values(sample_name=F('freezing_plan_sample'))  # Group by sample name
+                .annotate(count=Count('id', distinct=True))  # Ensure unique counts
+                .order_by('sample_name')
+                .values(name=F('sample_name'), count=F('count'))
+            ),
+            'grid': list(
+                queryset.values(grid_name=F('grid_display_name'))
+                .annotate(count=Count('id'))
+                .order_by('grid_name')
+                .values(name=F('grid_name'), count=F('count'))
+            ),
+            'procPlan': list(
+                queryset.values(proc_plan_name=F('proc_plan_display_name'))  # Use updated alias
+                .annotate(count=Count('id'))
+                .order_by('proc_plan_name')
+                .values(name=F('proc_plan_name'), count=F('count'))
+            ),
+            'date': [
+                {
+                    "name": key,
+                    "count": queryset.filter(msi_session__created_at__gte=value).count()
+                }
+                for key, value in date_ranges.items()
+            ],
+        }
+
+        # Process the 'sample' filter and replace sample_name with the detailed information
+        processed_samples = []
+        sample_set = set()  # Track unique entries
+
+        for item in filters['sample']:
+            if 'name' in item:
+                # Get the associated freezing plans based on the sample name
+                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name']).distinct()
+
+                # Create a string that summarizes the freezing plan details
+                for freezing_plan in freezing_plans:
+                    tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+                    plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
+
+                    # Add unique entries only
+                    if plan_str not in sample_set:
+                        sample_set.add(plan_str)
+                        processed_samples.append({
+                            'name': plan_str,
+                            'count': item['count'],  # Retain the original count
+                            'selected': False  # Default selected status
+                        })
+            else:
+                # If no 'name' exists, simply append the original item
+                if str(item) not in sample_set:
+                    sample_set.add(str(item))
+                    processed_samples.append(item)
+
+        # Replace the filter with processed samples
+        filters['sample'] = processed_samples
+        # filters['sample'] = processed_samples
+
+        # Apply 'selected' status to filters
+        for key, filter_list in filters.items():
+            add_selected_status(filter_list, key)
+
+        # Convert to the expected output format
+        response_data = {
+            "filters": filters
+        }
+
+        return JsonResponse(response_data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
