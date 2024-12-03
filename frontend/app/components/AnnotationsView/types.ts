@@ -2,6 +2,7 @@ import {
   EntityLinkField,
   GridField,
   MSISessionField,
+  ProcRunField,
   UserField,
 } from "@app/common/types/entity";
 import { FilterConfig } from "@app/components/Filter/common/types";
@@ -9,11 +10,7 @@ import { FilterConfig } from "@app/components/Filter/common/types";
 export interface AnnotationData {
   annotations: EntityLinkField;
   procPlan: EntityLinkField;
-  procRun: {
-    id: number;
-    notes: string;
-    updatedAt: string;
-  };
+  procRun: ProcRunField;
   json: null;
   grid: GridField;
   project: EntityLinkField;

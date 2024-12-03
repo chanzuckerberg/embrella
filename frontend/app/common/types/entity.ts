@@ -28,6 +28,12 @@ export interface GridField {
   createdAt: string;
 }
 
+export interface ProcRunField {
+  id: number;
+  notes: string;
+  updatedAt: string;
+}
+
 export interface UserField {
   id: number;
   name: string;
