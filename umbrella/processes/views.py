@@ -20,7 +20,7 @@ from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
 from cryo_grids.models import CryoGrid, PlungeFreezingSession, PlungeFreezingPlan
 from processes.models import *
-from processes.utils import QueryParams, SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
+from processes.utils import QueryParams, InputTomogramModel,AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
 from django.db.models import F,Q
 from django.http import JsonResponse
@@ -782,3 +782,437 @@ def get_tomo_details(request):
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+    
+
+@require_http_methods(["GET"])
+def available_annotation_filter(request):
+    try:
+        # Validate that only the 'q' parameter is present in the request
+        if 'q' not in request.GET or len(request.GET) > 1:
+            return JsonResponse({'error': 'Invalid query parameters. Only "q" is allowed.'}, status=422)
+
+        raw_query_param = request.GET.get('q', '[]')
+
+        # Parse the JSON string into a Python list
+        query_filters = json.loads(raw_query_param)
+
+        # Validate the parsed list with Pydantic
+        query_params = QueryParams(q=query_filters)
+
+        # Initialize the selected filters based on the validated query parameters
+        selected_filters = {}
+        for qf in query_params.q:
+            selected_filters[qf.category] = set(qf.value)  # Store as a set for efficient lookup
+
+        # Base queryset with annotations for counting occurrences
+        filter_criteria = Q()
+
+        queryset = Annotation.objects.select_related(
+            'msi_session',
+            'msi_session__project',
+            'msi_session__user',
+            'msi_session__grid',
+            'msi_session__grid__freezing_plan',
+            'msi_session__grid__freezing_plan__sample',
+            'msi_session__atlas_session__group',
+            'pipe_data__run__proc_plan'  # Traverse the relationship to proc_plan
+        ).prefetch_related(
+            'msi_session__grid__freezing_plan__tags'
+        ).values(
+            'id',
+            annotation_name=F('name'),
+            project_display_name=F('msi_session__project__name'),
+            user_display_name=F('msi_session__user__username'),
+            grid_display_name=F('msi_session__grid__name'),
+            freezing_plan_protocol=F('msi_session__grid__freezing_plan__sample_application_protocol'),
+            freezing_plan_blot_time=F('msi_session__grid__freezing_plan__blot_time'),
+            freezing_plan_sample=F('msi_session__grid__freezing_plan__sample__name'),
+            freezing_plan_tags=F('msi_session__grid__freezing_plan__tags__id'),
+            screen_session_display_name=F('msi_session__atlas_session__group__name'),
+            proc_plan_display_name=F('pipe_data__run__proc_plan__name')  # Access proc_plan name
+        ).filter(filter_criteria)
+
+        current_time = now()
+        date_ranges = {
+            'last_1_month': current_time - timedelta(days=30),
+            'last_3_months': current_time - timedelta(days=90),
+            'last_6_months': current_time - timedelta(days=180),
+        }
+
+        # Helper function to add 'selected' key based on user selection
+        def add_selected_status(filter_list, category):
+            selected_values = selected_filters.get(category, set())
+            if None in selected_values:
+                for item in filter_list:
+                    item['selected'] = item['name'] is None
+            else:
+                for item in filter_list:
+                    item_name = item['name']
+                    if isinstance(item_name, bool):
+                        item['selected'] = item_name in selected_values
+                    elif isinstance(item_name, str):
+                        item['selected'] = item_name.strip().lower() in {val.lower() for val in selected_values if isinstance(val, str)}
+                    else:
+                        item['selected'] = False
+
+        # Aggregating counts for each filter
+        filters = {
+            'project': list(
+                queryset.values(project_name=F('project_display_name'))
+                .annotate(count=Count('id'))
+                .order_by('project_name')
+                .values(name=F('project_name'), count=F('count'))
+            ),
+            'user': list(
+                queryset.annotate(
+                    user_temp_name=Trim(
+                        Case(
+                            When(
+                                user_display_name__contains='@',
+                                then=Substr(
+                                    F('user_display_name'),
+                                    1,
+                                    StrIndex(F('user_display_name'), Value('@')) - 1
+                                )
+                            ),
+                            default=F('user_display_name'),
+                            output_field=CharField()
+                        )
+                    )
+                )
+                .values(user_temp_name=F('user_temp_name'))
+                .annotate(count=Count('id'))
+                .order_by('user_temp_name')
+                .values(name=F('user_temp_name'), count=F('count'))
+            ),
+            'msiSession': list(
+                queryset.values(msi_session_name=F('msi_session__name'))  # Correct reference to session name
+                .annotate(count=Count('id'))
+                .order_by('msi_session_name')
+                .values(name=F('msi_session_name'), count=F('count'))
+            ),
+            'screenSession': list(
+                queryset.values(screen_session_name=F('screen_session_display_name'))  # Updated alias
+                .annotate(count=Count('id'))
+                .order_by('screen_session_name')
+                .values(name=F('screen_session_name'), count=F('count'))
+            ),
+            'sample': list(
+                queryset.values(sample_name=F('freezing_plan_sample'))  # Group by sample name
+                .annotate(count=Count('id', distinct=True))  # Ensure unique counts
+                .order_by('sample_name')
+                .values(name=F('sample_name'), count=F('count'))
+            ),
+            'grid': list(
+                queryset.values(grid_name=F('grid_display_name'))
+                .annotate(count=Count('id'))
+                .order_by('grid_name')
+                .values(name=F('grid_name'), count=F('count'))
+            ),
+            'procPlan': list(
+                queryset.values(proc_plan_name=F('proc_plan_display_name'))  # Use updated alias
+                .annotate(count=Count('id'))
+                .order_by('proc_plan_name')
+                .values(name=F('proc_plan_name'), count=F('count'))
+            ),
+            'date': [
+                {
+                    "name": key,
+                    "count": queryset.filter(msi_session__created_at__gte=value).count()
+                }
+                for key, value in date_ranges.items()
+            ],
+        }
+
+        # Process the 'sample' filter and replace sample_name with the detailed information
+        processed_samples = []
+        sample_set = set()  # Track unique entries
+
+        for item in filters['sample']:
+            if 'name' in item:
+                # Get the associated freezing plans based on the sample name
+                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name']).distinct()
+
+                # Create a string that summarizes the freezing plan details
+                for freezing_plan in freezing_plans:
+                    tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+                    plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
+
+                    # Add unique entries only
+                    if plan_str not in sample_set:
+                        sample_set.add(plan_str)
+                        processed_samples.append({
+                            'name': plan_str,
+                            'count': item['count'],  # Retain the original count
+                            'selected': False  # Default selected status
+                        })
+            else:
+                # If no 'name' exists, simply append the original item
+                if str(item) not in sample_set:
+                    sample_set.add(str(item))
+                    processed_samples.append(item)
+
+        # Replace the filter with processed samples
+        filters['sample'] = processed_samples
+        # filters['sample'] = processed_samples
+
+        # Apply 'selected' status to filters
+        for key, filter_list in filters.items():
+            add_selected_status(filter_list, key)
+
+        # Convert to the expected output format
+        response_data = {
+            "filters": filters
+        }
+
+        return JsonResponse(response_data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+
+
+
+@require_http_methods(["GET"])
+def get_annotation_details(request):
+    try:
+        # Parse 'q' parameter if provided
+        raw_q_param = request.GET.get('q', None)
+        if raw_q_param:
+            try:
+                q_param = json.loads(raw_q_param)
+            except json.JSONDecodeError as e:
+                return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
+        else:
+            q_param = []
+
+        query_data = request.GET.dict()
+        query_data['q'] = q_param
+
+        # Validate query parameters
+        try:
+            query_params = annotationQueryParams(**query_data)
+        except ValidationError as e:
+            raise UnprocessableEntity(detail=f"Validation error: {str(e)}")
+
+        # Pagination and sorting defaults
+        page = int(request.GET.get('page', 1))  # Default to first page
+        page_size = int(request.GET.get('pageSize', 10))  # Default page size is 10
+        sort_field = 'updated_at'
+        asc = True
+
+        # Override pagination and sorting if provided in q_param
+        def extract_value(value):
+            return value[0] if isinstance(value, list) and value else value
+
+        for item in q_param:
+            if item['category'] == 'sort':
+                sort_value = extract_value(item['value'])
+                if sort_value == 'updatedAt':
+                    sort_field = 'updated_at'
+                else:
+                    sort_field = sort_value
+            elif item['category'] == 'asc':
+                asc_value = extract_value(item['value'])
+                asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
+            elif item['category'] == 'page':
+                page = int(extract_value(item['value']))
+            elif item['category'] == 'pageSize':
+                page_size = int(extract_value(item['value']))
+
+        # Determine sort order
+        sort_order = sort_field if asc else f'-{sort_field}'
+
+        # Base queryset
+        queryset = Annotation.objects.select_related(
+            'pipe_data__run__proc_plan',
+            'pipe_data__run__msi_session',
+            'pipe_data__run__msi_session__project',
+            'pipe_data__run__msi_session__grid',
+            'pipe_data__run__msi_session__user',
+            'pipe_data__run__msi_session__atlas_session__group',
+            'tomograms',
+            'tomograms__pipe_data',  # Join on processes_runpipedata
+            'tomograms__pipe_data__run'
+        ).values(
+            'id',
+            annotation_name=F('name'),
+            annotation_id=F('id'),
+            proc_plan_id=F('pipe_data__run__proc_plan__id'),
+            proc_plan_name=F('pipe_data__run__proc_plan__name'),
+            proc_run_id=F('pipe_data__run__id'),
+            proc_run_display_name=F('pipe_data__run__name'),
+            proc_run_note=F('pipe_data__run__notes'),
+            proc_run_updated_at=F('pipe_data__run__updated_at'),
+            json_id=F('pipe_data__run__json_path_id'),
+            cryogrid_id=F('pipe_data__run__msi_session__grid__id'),
+            cryogrid_name=F('pipe_data__run__msi_session__grid__name'),
+            cryogrid_trashed=F('pipe_data__run__msi_session__grid__trashed'),
+            cryogrid_created_at=F('pipe_data__run__msi_session__grid__updated_on'),
+            project_id=F('pipe_data__run__msi_session__project__id'),
+            project_name=F('pipe_data__run__msi_session__project__name'),
+            user_id=F('pipe_data__run__msi_session__user__id'),
+            user_name=F('pipe_data__run__msi_session__user__username'),
+            msi_session_identifier=F('pipe_data__run__msi_session__id'),  # Updated alias
+            msi_session_name=F('pipe_data__run__msi_session__name'),
+            tomogram_id=F('tomograms__id'),
+            tomogram_name=F('tomograms__pipe_data__run__name')
+        ).order_by(sort_order)
+        print(queryset)
+        # Apply filters from q_param
+        filter_criteria = Q()
+        for item in q_param:
+            category = item['category']
+            values = item['value']
+
+            if category == 'procPlan':
+                filter_criteria &= Q(pipe_data__run__proc_plan__name__in=values)
+            elif category == 'user':
+                user_filter = Q()
+                for value in values:
+                    user_filter |= Q(pipe_data__run__msi_session__user__username__icontains=value)
+                filter_criteria &= user_filter
+            elif category == 'grid':
+                filter_criteria &= Q(pipe_data__run__msi_session__grid__name__in=values)
+            elif category == 'project':
+                filter_criteria &= Q(pipe_data__run__msi_session__project__name__in=values)
+            elif category == 'msiSession':
+                # Support multiple `icontains` values with OR logic, including None
+                session_name_filter = Q()
+                for value in values:
+                    if value is None:
+                        # Add a filter for NULL values in the database
+                        session_name_filter |= Q(msi_session__name__isnull=True)
+                    else:
+                        session_name_filter |= Q(msi_session__name__icontains=value)
+                filter_criteria &= session_name_filter
+            elif category == 'screeningSession':
+                # Support multiple `icontains` values with OR logic, including None
+                session_filter = Q()
+                for value in values:
+                    if value is None:
+                        # Add a filter for NULL values in the database
+                        session_filter |= Q(msi_session__atlas_session__group__name__isnull=True)
+                    else:
+                        session_filter |= Q(msi_session__atlas_session__group__name__icontains=value)
+                filter_criteria &= session_filter
+            elif category == 'sample':
+                sample_filter = Q()
+                for value in values:
+                    # Check if the sample value contains "with " or "without tag"
+                    if "with " in value:
+                        # Extract the sample name and specific tag
+                        parts = value.split(" with ")
+                        sample_name = parts[0].strip()
+                        tag_name = parts[1].strip() if len(parts) > 1 else None
+                        # Match the sample name and the specific tag
+                        sample_filter |= Q(
+                            msi_session__grid__freezing_plan__sample__name=sample_name,
+                            msi_session__grid__freezing_plan__tags__name__icontains=tag_name
+                        )
+                    elif "without tag" in value:
+                        sample_name = value.replace(" without tag", "").strip()
+                        # Match the sample name and ensure no tags are associated
+                        sample_filter |= Q(
+                            msi_session__grid__freezing_plan__sample__name=sample_name,
+                            msi_session__grid__freezing_plan__tags__isnull=True
+                        )
+                    else:
+                        # General match for just sample names without tag qualifiers
+                        sample_filter |= Q(msi_session__grid__freezing_plan__sample__name=value)
+                filter_criteria &= sample_filter
+
+        queryset = queryset.filter(filter_criteria)
+
+        # Prepare unique results for the response
+        unique_results = {}
+        for entry in queryset:
+            procrun_id = entry.get('proc_run_id')  # Using `proc_run_id` from the query
+            json_id = entry.get('json_id')  # Using `json_id` if available
+            cryogrid_created_at = (
+                datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d')
+                if entry.get('cryogrid_created_at') else None
+            )
+            proc_run_updated_at = (
+                datetime.fromisoformat(str(entry.get('proc_run_updated_at'))).strftime('%Y-%m-%d')
+                if entry.get('proc_run_updated_at') else None
+            )
+
+            if procrun_id not in unique_results:
+                # Create a response model instance
+                response_model = AnnotationResponseModel(
+                    annotations=AnnotationModel(
+                        id=entry.get('annotation_id'),
+                        name=f"{entry.get('proc_run_display_name')} (id={entry.get('annotation_id')})",
+                        url=f"{base_url}/processes/annotations/{entry.get('annotation_id')}/"
+                    ),
+                    procPlan=ProcPlanModel(
+                        id=entry.get('proc_plan_id'),
+                        name=entry.get('proc_plan_name'),
+                        url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_id')}"
+                    ),
+                    inputTomogram=InputTomogramModel(
+                        id=entry.get('tomogram_id'),
+                        name="{} (id={})".format(entry.get('tomogram_name'), entry.get('tomogram_id')),
+                        url=f"{base_url}/admin/processes/tomograms/{entry.get('tomogram_id')}"
+                    ),
+                    json=JsonModel(
+                        id=json_id,
+                        name=f"hpc/processes/{json_id}" if json_id else None
+                    ),
+                    grid=GridModel(
+                        id=entry.get('cryogrid_id'),
+                        name=f"{entry.get('cryogrid_name')} (id={entry.get('cryogrid_id')})",
+                        trashed=entry.get('cryogrid_trashed'),
+                        url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
+                        createdAt=cryogrid_created_at
+                    ),
+                    project=ProjectModel(
+                        id=entry.get('project_id'),
+                        name=entry.get('project_name'),
+                        url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"
+                    ),
+                    user=UserModel(
+                        id=entry.get('user_id'),
+                        name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')
+                    ),
+                    msiSession=MSISessionModel(
+                        id=entry.get('msi_session_identifier'),
+                        name=entry.get('msi_session_name'),
+                        url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_identifier')}"
+                    )
+                )
+                unique_results[procrun_id] = response_model.dict()
+
+        response_data = list(unique_results.values())
+
+        # Paginate the formatted response data using Django's Paginator
+        paginator = Paginator(response_data, page_size)
+        try:
+            paginated_data = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_data = paginator.page(1)
+        except EmptyPage:
+            paginated_data = paginator.page(paginator.num_pages)
+
+        # Final response structure with pagination applied to formatted response data
+        result = {
+            'result': list(paginated_data),  # Contains only the paginated items for the current page
+            'pagination': {
+                'page': paginated_data.number,  # Current page number
+                'pageSize': int(page_size),  # Items per page
+                'totalPages': paginator.num_pages,  # Total number of pages
+                'totalResults': paginator.count,  # Total number of items across all pages
+            },
+            'sortBy': SortMetadataModel(
+                sort= 'updatedAt' if sort_field is not None else None,
+                asc= asc
+            ).model_dump()
+        }
+
+        return JsonResponse(result, safe=False)
+
+    except UnprocessableEntity as e:
+        return JsonResponse({'error': e.detail}, status=e.status_code)
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {str(e)}")
+        return JsonResponse({'error': f"An unexpected error occurred: {str(e)}"}, status=500)
