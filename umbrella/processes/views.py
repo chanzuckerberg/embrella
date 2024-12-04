@@ -1159,8 +1159,8 @@ def get_annotation_details(request):
                         url=f"{base_url}/admin/processes/tomograms/{entry.get('tomogram_id')}"
                     ),
                     json=JsonModel(
-                        id=json_id,
-                        name=f"hpc/processes/{json_id}" if json_id else None
+                        id=None,
+                        name=None
                     ),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
