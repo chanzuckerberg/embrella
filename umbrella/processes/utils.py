@@ -171,6 +171,7 @@ class ProcRunModel(BaseModel):
 class InputTomogramModel(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
+    url: Optional[str] = None
 
 class ResponseModel(BaseModel):
     tomograms: Optional[TomogramModel] = None
@@ -185,6 +186,7 @@ class ResponseModel(BaseModel):
 class AnnotationResponseModel(BaseModel):
     annotations: Optional[AnnotationModel] = None
     procPlan: Optional[ProcPlanModel] = None
+    inputTomogram: Optional[InputTomogramModel] = None
     json: Optional[JsonModel] = None
     grid: Optional[GridModel] = None
     project: Optional[ProjectModel] = None

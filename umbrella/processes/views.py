@@ -841,7 +841,10 @@ def get_annotation_details(request):
             'pipe_data__run__msi_session__project',
             'pipe_data__run__msi_session__grid',
             'pipe_data__run__msi_session__user',
-            'pipe_data__run__msi_session__atlas_session__group'
+            'pipe_data__run__msi_session__atlas_session__group',
+            'tomograms',
+            'tomograms__pipe_data',  # Join on processes_runpipedata
+            'tomograms__pipe_data__run'
         ).values(
             'id',
             annotation_name=F('name'),
@@ -862,9 +865,11 @@ def get_annotation_details(request):
             user_id=F('pipe_data__run__msi_session__user__id'),
             user_name=F('pipe_data__run__msi_session__user__username'),
             msi_session_identifier=F('pipe_data__run__msi_session__id'),  # Updated alias
-            msi_session_name=F('pipe_data__run__msi_session__name')
+            msi_session_name=F('pipe_data__run__msi_session__name'),
+            tomogram_id=F('tomograms__id'),
+            tomogram_name=F('tomograms__pipe_data__run__name')
         ).order_by(sort_order)
-
+        print(queryset)
         # Apply filters from q_param
         filter_criteria = Q()
         for item in q_param:
@@ -958,8 +963,9 @@ def get_annotation_details(request):
                         url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_id')}"
                     ),
                     inputTomogram=InputTomogramModel(
-                        id=None,
-                        name=None
+                        id=entry.get('tomogram_id'),
+                        name="{} (id={})".format(entry.get('tomogram_name'), entry.get('tomogram_id')),
+                        url=f"{base_url}/admin/processes/tomograms/{entry.get('tomogram_id')}"
                     ),
                     json=JsonModel(
                         id=json_id,
