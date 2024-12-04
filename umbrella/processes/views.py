@@ -1059,7 +1059,7 @@ def get_annotation_details(request):
             tomogram_id=F('tomograms__id'),
             tomogram_name=F('tomograms__pipe_data__run__name')
         ).order_by(sort_order)
-        print(queryset)
+        print(len(queryset))
         # Apply filters from q_param
         filter_criteria = Q()
         for item in q_param:
@@ -1126,9 +1126,11 @@ def get_annotation_details(request):
         queryset = queryset.filter(filter_criteria)
 
         # Prepare unique results for the response
-        unique_results = {}
+        # unique_results = {}
+        response_data = [] 
         for entry in queryset:
             procrun_id = entry.get('proc_run_id')  # Using `proc_run_id` from the query
+            print(procrun_id)
             json_id = entry.get('json_id')  # Using `json_id` if available
             cryogrid_created_at = (
                 datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d')
@@ -1139,54 +1141,56 @@ def get_annotation_details(request):
                 if entry.get('proc_run_updated_at') else None
             )
 
-            if procrun_id not in unique_results:
-                # Create a response model instance
-                response_model = AnnotationResponseModel(
-                    annotations=AnnotationModel(
-                        id=entry.get('annotation_id'),
-                        name=f"{entry.get('proc_run_display_name')} (id={entry.get('annotation_id')})",
-                        url=f"{base_url}/processes/annotations/{entry.get('annotation_id')}/",
-                        updatedAt=datetime.fromisoformat(str(entry.get('annotation_updated_at'))).strftime('%Y-%m-%d')
-                    ),
-                    procPlan=ProcPlanModel(
-                        id=entry.get('proc_plan_id'),
-                        name=entry.get('proc_plan_name'),
-                        url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_id')}"
-                    ),
-                    inputTomogram=InputTomogramModel(
-                        id=entry.get('tomogram_id'),
-                        name="{} (id={})".format(entry.get('tomogram_name'), entry.get('tomogram_id')),
-                        url=f"{base_url}/admin/processes/tomograms/{entry.get('tomogram_id')}"
-                    ),
-                    json=JsonModel(
-                        id=None,
-                        name=None
-                    ),
-                    grid=GridModel(
-                        id=entry.get('cryogrid_id'),
-                        name=f"{entry.get('cryogrid_name')} (id={entry.get('cryogrid_id')})",
-                        trashed=entry.get('cryogrid_trashed'),
-                        url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
-                        createdAt=cryogrid_created_at
-                    ),
-                    project=ProjectModel(
-                        id=entry.get('project_id'),
-                        name=entry.get('project_name'),
-                        url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"
-                    ),
-                    user=UserModel(
-                        id=entry.get('user_id'),
-                        name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')
-                    ),
-                    msiSession=MSISessionModel(
-                        id=entry.get('msi_session_identifier'),
-                        name=entry.get('msi_session_name'),
-                        url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_identifier')}"
-                    )
+            # if procrun_id not in unique_results:
+            # Create a response model instance
+            response_model = AnnotationResponseModel(
+                annotations=AnnotationModel(
+                    id=entry.get('annotation_id'),
+                    name=f"{entry.get('proc_run_display_name')} (id={entry.get('annotation_id')})",
+                    url=f"{base_url}/processes/annotations/{entry.get('annotation_id')}/",
+                    updatedAt=datetime.fromisoformat(str(entry.get('annotation_updated_at'))).strftime('%Y-%m-%d')
+                ),
+                procPlan=ProcPlanModel(
+                    id=entry.get('proc_plan_id'),
+                    name=entry.get('proc_plan_name'),
+                    url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_id')}"
+                ),
+                inputTomogram=InputTomogramModel(
+                    id=entry.get('tomogram_id'),
+                    name="{} (id={})".format(entry.get('tomogram_name'), entry.get('tomogram_id')),
+                    url=f"{base_url}/admin/processes/tomograms/{entry.get('tomogram_id')}"
+                ),
+                json=JsonModel(
+                    id=None,
+                    name=None
+                ),
+                grid=GridModel(
+                    id=entry.get('cryogrid_id'),
+                    name=f"{entry.get('cryogrid_name')} (id={entry.get('cryogrid_id')})",
+                    trashed=entry.get('cryogrid_trashed'),
+                    url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
+                    createdAt=cryogrid_created_at
+                ),
+                project=ProjectModel(
+                    id=entry.get('project_id'),
+                    name=entry.get('project_name'),
+                    url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"
+                ),
+                user=UserModel(
+                    id=entry.get('user_id'),
+                    name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')
+                ),
+                msiSession=MSISessionModel(
+                    id=entry.get('msi_session_identifier'),
+                    name=entry.get('msi_session_name'),
+                    url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_identifier')}"
                 )
-                unique_results[procrun_id] = response_model.dict()
+            )
+            # unique_results[procrun_id] = response_model.dict()
 
-        response_data = list(unique_results.values())
+        # response_data = list(unique_results.values())
+            response_data.append(response_model.dict())  # Append the result directly
+
 
         # Paginate the formatted response data using Django's Paginator
         paginator = Paginator(response_data, page_size)
