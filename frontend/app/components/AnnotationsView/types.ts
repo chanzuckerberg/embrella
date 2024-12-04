@@ -8,9 +8,10 @@ import {
 import { FilterConfig } from "@app/components/Filter/common/types";
 
 export interface AnnotationData {
-  annotations: EntityLinkField;
+  annotations: EntityLinkField & { updatedAt: string };
   procPlan: EntityLinkField;
-  procRun: ProcRunField;
+  // procRun: ProcRunField;
+  inputTomogram: EntityLinkField;
   json: null;
   grid: GridField;
   project: EntityLinkField;

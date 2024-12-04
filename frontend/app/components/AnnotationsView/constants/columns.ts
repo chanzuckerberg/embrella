@@ -13,7 +13,7 @@ import { AnnotationData } from "../types";
 export const ANNOTATION_COLUMN_IDS = {
   ANNOTATIONS: "annotations",
   PROC_PLAN: "procPlan",
-  //TODO: need Input Tomograms column?
+  INPUT_TOMORGRAM: "inputTomogram",
   MSI_SESSION: "msiSession",
   PROJECT: "project",
   GRID: "grid",
@@ -42,6 +42,14 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
   },
   //TODO: need Input Tomograms column?
   {
+    id: ANNOTATION_COLUMN_IDS.INPUT_TOMORGRAM,
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as AnnotationData).inputTomogram),
+    cell: getLinkCellFromCellContext,
+    enableSorting: false,
+    header: humanize(ANNOTATION_COLUMN_IDS.INPUT_TOMORGRAM),
+  },
+  {
     id: ANNOTATION_COLUMN_IDS.MSI_SESSION,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
       getLinkPropsFromLinkField((rowData as AnnotationData).msiSession),
@@ -65,17 +73,17 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.GRID),
   },
-  {
-    id: ANNOTATION_COLUMN_IDS.NOTES,
-    accessorFn: (rowData: EntityDataTypes): string =>
-      (rowData as AnnotationData).procRun.notes,
-    enableSorting: false,
-    header: humanize(ANNOTATION_COLUMN_IDS.NOTES),
-  },
+  // {
+  //   id: ANNOTATION_COLUMN_IDS.NOTES,
+  //   accessorFn: (rowData: EntityDataTypes): string =>
+  //     (rowData as AnnotationData).procRun.notes,
+  //   enableSorting: false,
+  //   header: humanize(ANNOTATION_COLUMN_IDS.NOTES),
+  // },
   {
     id: ANNOTATION_COLUMN_IDS.UPDATED_AT,
     accessorFn: (rowData: EntityDataTypes): string =>
-      (rowData as AnnotationData).procRun.updatedAt,
+      (rowData as AnnotationData).annotations.updatedAt,
     enableSorting: true,
     header: humanize(ANNOTATION_COLUMN_IDS.UPDATED_AT),
   },
