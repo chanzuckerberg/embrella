@@ -891,7 +891,7 @@ def available_annotation_filter(request):
                 .order_by('msi_session_name')
                 .values(name=F('msi_session_name'), count=F('count'))
             ),
-            'screeningSession': list(
+            'screenSession': list(
                 queryset.values(screen_session_name=F('screen_session_display_name'))  # Updated alias
                 .annotate(count=Count('id'))
                 .order_by('screen_session_name')
@@ -1130,7 +1130,7 @@ def get_annotation_details(request):
         response_data = [] 
         for entry in queryset:
             procrun_id = entry.get('proc_run_id')  # Using `proc_run_id` from the query
-            # print(procrun_id)
+            print(procrun_id)
             json_id = entry.get('json_id')  # Using `json_id` if available
             cryogrid_created_at = (
                 datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d')
