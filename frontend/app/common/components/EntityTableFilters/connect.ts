@@ -47,7 +47,6 @@ export const useConnect = <
       const updateFilterAction: UpdateFilterAction = {
         payload: {
           categoryFilter,
-          filtersList,
         },
         type: TableStateActionTypes.UpdateFilter,
       };

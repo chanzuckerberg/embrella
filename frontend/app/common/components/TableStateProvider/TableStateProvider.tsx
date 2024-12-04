@@ -5,8 +5,7 @@ import {
   SortingState,
   Updater,
 } from "@tanstack/react-table";
-import { FiltersList, EntityFilterCategories } from "@app/common/types/filter";
-import { Pagination, SortBy } from "@app/common/types/tableState";
+import { EntityFilterCategories } from "@app/common/types/filter";
 
 export const DEFAULT_PAGE_SIZE = 10;
 
@@ -38,7 +37,7 @@ export interface TableState {
   sortState: SortingState;
 }
 
-// #region Table state actions for reducer
+// #region Table state action types for reducer
 export enum TableStateActionTypes {
   UpdateFilter = "UPDATE_FILTER_ACTION",
   UpdatePagination = "UPDATE_PAGINATION_ACTION",
@@ -53,14 +52,13 @@ interface CategoryFilter {
 export type UpdateFilterAction = {
   payload: {
     categoryFilter: CategoryFilter;
-    filtersList?: FiltersList;
   };
   type: TableStateActionTypes.UpdateFilter;
 };
 
 export type UpdatePaginationAction = {
   payload: {
-    pagination?: Pagination;
+    pagination: PaginationState;
     updaterOrValue: Updater<PaginationState>;
   };
   type: TableStateActionTypes.UpdatePagination;
@@ -68,32 +66,19 @@ export type UpdatePaginationAction = {
 
 export type UpdateSortAction = {
   payload: {
-    sortBy?: SortBy;
+    sortBy: SortingState;
     updaterOrValue: Updater<SortingState>;
   };
   type: TableStateActionTypes.UpdateSort;
 };
 
-type TableStateAction =
+export type TableStateAction =
   | UpdateFilterAction
   | UpdatePaginationAction
   | UpdateSortAction;
-// #endregion Table state actions for reducer
+// #endregion Table state action types for reducer
 
-export const getReactTablePaginationState = (
-  pagination: Pagination,
-): PaginationState =>
-  !pagination
-    ? { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE }
-    : {
-        pageIndex: pagination.page - 1,
-        pageSize: pagination.pageSize,
-      };
-
-export const getReactTableSortingState = (sortBy: SortBy): SortingState =>
-  !sortBy ? [] : [{ id: sortBy.sort, desc: !sortBy.asc }];
-
-const tableStateReducer = (
+export const tableStateReducer = (
   state: TableState,
   action: TableStateAction,
 ): TableState => {
@@ -121,10 +106,9 @@ const tableStateReducer = (
       const { pagination, updaterOrValue } = payload;
       const paginationState =
         typeof updaterOrValue === "function"
-          ? updaterOrValue(
-              getReactTablePaginationState(pagination as Pagination),
-            )
+          ? updaterOrValue(pagination)
           : updaterOrValue;
+
       return {
         ...state,
         paginationState,
@@ -134,9 +118,8 @@ const tableStateReducer = (
       const { sortBy, updaterOrValue } = payload;
       const sortState =
         typeof updaterOrValue === "function"
-          ? updaterOrValue(getReactTableSortingState(sortBy as SortBy))
+          ? updaterOrValue(sortBy)
           : updaterOrValue;
-
       return {
         ...state,
         sortState,

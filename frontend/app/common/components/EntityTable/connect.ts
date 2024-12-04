@@ -10,8 +10,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
-  getReactTablePaginationState,
-  getReactTableSortingState,
+  DEFAULT_PAGE_SIZE,
   TableDispatchContext,
   TableState,
   TableStateActionTypes,
@@ -63,6 +62,19 @@ const getDefaultTableOptions = (
   manualSorting: true,
 });
 
+const getPaginationStateForPayload = (
+  pagination: Pagination,
+): PaginationState =>
+  !pagination
+    ? { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE }
+    : {
+        pageIndex: pagination.page - 1,
+        pageSize: pagination.pageSize,
+      };
+
+const getSortingStateForPayload = (sortBy: SortBy): SortingState =>
+  !sortBy ? [] : [{ id: sortBy.sort, desc: !sortBy.asc }];
+
 export const useConnect = (
   entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
@@ -84,17 +96,18 @@ export const useConnect = (
 
   const reactTableState: Partial<ReactTableTableState> = useMemo(
     () => ({
-      pagination: getReactTablePaginationState(entityPagination as Pagination),
-      sorting: getReactTableSortingState(entitySortBy as SortBy),
+      pagination: getPaginationStateForPayload(entityPagination),
+      sorting: getSortingStateForPayload(entitySortBy),
     }),
     [entityPagination, entitySortBy],
   );
 
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>): void => {
+      const pagination = getPaginationStateForPayload(entityList.pagination);
       const updatePaginationAction: UpdatePaginationAction = {
         payload: {
-          pagination: entityPagination,
+          pagination,
           updaterOrValue,
         },
         type: TableStateActionTypes.UpdatePagination,
@@ -107,9 +120,10 @@ export const useConnect = (
 
   const onSortingChange = useCallback(
     (updaterOrValue: Updater<SortingState>) => {
+      const sortBy = getSortingStateForPayload(entityList.sortBy);
       const updateSortAction: UpdateSortAction = {
         payload: {
-          sortBy: entitySortBy,
+          sortBy,
           updaterOrValue,
         },
         type: TableStateActionTypes.UpdateSort,
