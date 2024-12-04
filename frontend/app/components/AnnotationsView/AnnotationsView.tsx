@@ -27,7 +27,7 @@ export const AnnotationsView = (): React.JSX.Element => {
         <Sidebar>
           <EntityTableFilters<AnnotationFilterId, AnnotationFilterCategory>
             entityFilterConfigs={ANNOTATION_FILTER_CONFIGS}
-            entityFilterListApi={API.TOMOGRAMS_FILTERLIST_V1}
+            entityFilterListApi={API.ANNOTATIONS_FILTERLIST_V1}
           />
         </Sidebar>
         <TableWrapper>
