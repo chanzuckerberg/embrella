@@ -891,7 +891,7 @@ def available_annotation_filter(request):
                 .order_by('msi_session_name')
                 .values(name=F('msi_session_name'), count=F('count'))
             ),
-            'screenSession': list(
+            'screeningSession': list(
                 queryset.values(screen_session_name=F('screen_session_display_name'))  # Updated alias
                 .annotate(count=Count('id'))
                 .order_by('screen_session_name')
