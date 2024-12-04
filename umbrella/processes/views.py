@@ -1130,7 +1130,7 @@ def get_annotation_details(request):
         response_data = [] 
         for entry in queryset:
             procrun_id = entry.get('proc_run_id')  # Using `proc_run_id` from the query
-            print(procrun_id)
+            # print(procrun_id)
             json_id = entry.get('json_id')  # Using `json_id` if available
             cryogrid_created_at = (
                 datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d')
