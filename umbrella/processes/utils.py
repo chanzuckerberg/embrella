@@ -132,6 +132,7 @@ class AnnotationModel(BaseModel):
     id: Optional[int]
     name: Optional[str]
     url: Optional[str]
+    updatedAt: Optional[str] = None
 
 class ProcPlanModel(BaseModel):
     id: Optional[int]

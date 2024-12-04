@@ -1035,8 +1035,10 @@ def get_annotation_details(request):
             'tomograms__pipe_data__run'
         ).values(
             'id',
+            'updated_at',
             annotation_name=F('name'),
             annotation_id=F('id'),
+            annotation_updated_at=F('updated_at'),
             proc_plan_id=F('pipe_data__run__proc_plan__id'),
             proc_plan_name=F('pipe_data__run__proc_plan__name'),
             proc_run_id=F('pipe_data__run__id'),
@@ -1143,7 +1145,8 @@ def get_annotation_details(request):
                     annotations=AnnotationModel(
                         id=entry.get('annotation_id'),
                         name=f"{entry.get('proc_run_display_name')} (id={entry.get('annotation_id')})",
-                        url=f"{base_url}/processes/annotations/{entry.get('annotation_id')}/"
+                        url=f"{base_url}/processes/annotations/{entry.get('annotation_id')}/",
+                        updatedAt=datetime.fromisoformat(str(entry.get('annotation_updated_at'))).strftime('%Y-%m-%d')
                     ),
                     procPlan=ProcPlanModel(
                         id=entry.get('proc_plan_id'),
