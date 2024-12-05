@@ -18,11 +18,11 @@ class Migration(migrations.Migration):
             ),
             preserve_default=False,
         ),
-        # migrations.AddField(
-        #     model_name="annotation",
-        #     name="updated_at",
-        #     field=models.DateTimeField(auto_now=True),
-        # ),
+        migrations.AddField(
+            model_name="annotation",
+            name="updated_at",
+            field=models.DateTimeField(auto_now=True),
+        ),
         migrations.AddField(
             model_name="procrun",
             name="updated_at",
