@@ -368,172 +368,7 @@ def available_filters(request):
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-# def available_filters(request):
-#     try:
-#         # Validate that only the 'q' parameter is present in the request
-#         if 'q' not in request.GET or len(request.GET) > 1:
-#             return JsonResponse({'error': 'Invalid query parameters. Only "q" is allowed.'}, status=422)
 
-#         raw_query_param = request.GET.get('q', '[]')
-
-#         # Parse the JSON string into a Python list
-#         query_filters = json.loads(raw_query_param)
-
-#         # Validate the parsed list with Pydantic
-#         query_params = QueryParams(q=query_filters)
-
-#         # Initialize the selected filters based on the validated query parameters
-#         selected_filters = {}
-#         for qf in query_params.q:
-#             selected_filters[qf.category] = set(qf.value)  # Store as a set for efficient lookup
-
-#         # Base queryset with annotations for counting occurrences
-#         filter_criteria = Q()
-#         queryset = ProcRun.objects.select_related(
-#             'proc_plan',
-#             'msi_session',
-#             'freezing_session',
-#             'msi_session__project',
-#             'msi_session__grid',
-#             'msi_session__user',
-#             'msi_session__atlas_session',
-#             'msi_session__atlas_session__group',
-#             'msi_session__grid__freezing_plan'
-#         ).prefetch_related(
-#             'msi_session__grid__freezing_plan__sample',
-#             'runpipedata_set__tomograms_set'
-#         ).filter(filter_criteria)
-#         current_time = now()
-#         date_ranges = {
-#             'last_1_month': current_time - timedelta(days=30),
-#             'last_3_months': current_time - timedelta(days=90),
-#             'last_6_months': current_time - timedelta(days=180),
-#         }
-
-#         # Helper function to add 'selected' key based on user selection
-#         def add_selected_status(filter_list, category):
-#             selected_values = selected_filters.get(category, set())
-#             if None in selected_values:
-#                 for item in filter_list:
-#                     item['selected'] = item['name'] is None
-#             else:
-#                 for item in filter_list:
-#                     item_name = item['name']
-#                     if isinstance(item_name, bool):
-#                         item['selected'] = item_name in selected_values
-#                     elif isinstance(item_name, str):
-#                         item['selected'] = item_name.strip().lower() in {val.lower() for val in selected_values if isinstance(val, str)}
-#                     else:
-#                         item['selected'] = False
-
-#         # Aggregating counts for each filter
-#         filters = {
-#             'project': list(
-#                 queryset.values(project_name=F('msi_session__project__name'))
-#                 .annotate(count=Count('id'))
-#                 .order_by('project_name')
-#                 .values(name=F('project_name'), count=F('count'))
-#             ),
-#             'sample': list(
-#                 queryset.values(sample_name=F('msi_session__grid__freezing_plan__sample__name'))
-#                 .annotate(count=Count('id'))
-#                 .order_by('sample_name')
-#                 .values(name=F('sample_name'), count=F('count'))
-#             ),
-#             'user': list(
-#                 queryset.annotate(
-#                     user_temp_name=Trim(
-#                         Case(
-#                             When(
-#                                 msi_session__user__username__contains='@',  # Ensure this path is correct
-#                                 then=Substr(
-#                                     F('msi_session__user__username'),
-#                                     1,
-#                                     StrIndex(F('msi_session__user__username'), Value('@')) - 1
-#                                 )
-#                             ),
-#                             default=F('msi_session__user__username'),
-#                             output_field=CharField()
-#                         )
-#                     )
-#                 )
-#                 .values(user_temp_name=F('user_temp_name'))
-#                 .annotate(count=Count('id'))
-#                 .order_by('user_temp_name')
-#                 .values(name=F('user_temp_name'), count=F('count'))
-#             ),
-#             'msiSession': list(
-#                 queryset.values(session_name=F('msi_session__name'))
-#                 .annotate(count=Count('id'))
-#                 .order_by('session_name')
-#                 .values(name=F('session_name'), count=F('count'))
-#             ),
-#             'screeningSession': list(
-#                 queryset.values(screening_session_name=F('msi_session__atlas_session__group__name'))
-#                 .annotate(count=Count('id'))
-#                 .order_by('screening_session_name')
-#                 .values(name=F('screening_session_name'), count=F('count'))
-#             ),
-#             'procPlan': list(
-#                 queryset.values(plan_name=F('proc_plan__name'))
-#                 .annotate(count=Count('id'))
-#                 .order_by('plan_name')
-#                 .values(name=F('plan_name'), count=F('count'))
-#             ),
-#             'date': [
-#                 {
-#                     "name": key,
-#                     "count": queryset.filter(created_at__gte=value).count()
-#                 }
-#                 for key, value in date_ranges.items()
-#             ],
-#         }
-#         processed_samples = {}
-#         for item in filters['sample']:
-#             if 'name' in item:
-#                 sample_name = item['name']
-#                 # Retrieve associated freezing plans for the specific sample
-#                 freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=sample_name)
-
-#                 # Process each freezing plan separately
-#                 for freezing_plan in freezing_plans:
-#                     tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))  # Join tags with ', '
-#                     unique_name = f"{sample_name} with {tag_names}" if tag_names else f"{sample_name} without tag"
-
-#                     # Initialize the count as 0 for mismatched or new entries
-#                     if unique_name not in processed_samples:
-#                         processed_samples[unique_name] = {
-#                             'name': unique_name,
-#                             'count': item['count'],  # Start with 0 since it should only count exact matches
-#                             'selected': False  # Default selected status
-#                         }
-
-#                     # Only add counts if the name matches exactly
-#                     if item['name'] == unique_name:
-#                         processed_samples[unique_name]['count'] += item['count']
-#             else:
-#                 # Skip items without a name
-#                 continue
-
-#         # Convert processed_samples back to a list for the final 'sample' filter
-#         filters['sample'] = list(processed_samples.values())
-
-#         # Apply 'selected' status to filters
-#         for key, filter_list in filters.items():
-#             add_selected_status(filter_list, key)
-
-#         # Convert to the expected output format
-#         response_data = {
-#             "filters": filters
-#         }
-
-#         return JsonResponse(response_data)
-#     except ValidationError as e:
-#         # Handle Pydantic validation errors
-#         return JsonResponse({'error': f'Invalid input: {e.errors()}'}, status=400)
-#     except Exception as e:
-#         logger.error(f'An unexpected error occurred: {str(e)}')
-#         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
     
 @require_http_methods(["GET"])
 def get_tomo_details(request):
@@ -924,38 +759,46 @@ def available_annotation_filter(request):
                 for key, value in date_ranges.items()
             ],
         }
+        # Process samples to ensure exclusive categorization as "with tag" or "without tag"
+        sample_data = (
+            queryset.values(
+                sample_name=F('msi_session__grid__freezing_plan__sample__name'),
+                tag_name=F('msi_session__grid__freezing_plan__tags__name')
+            )
+            .annotate(count=Count('id'))
+            .order_by('sample_name', 'tag_name')
+        )
 
-        # Process the 'sample' filter and replace sample_name with the detailed information
-        processed_samples = []
-        sample_set = set()  # Track unique entries
+        processed_samples = {}
+        for item in sample_data:
+            sample_name = item['sample_name']
+            tag_name = item['tag_name']
 
-        for item in filters['sample']:
-            if 'name' in item:
-                # Get the associated freezing plans based on the sample name
-                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name']).distinct()
+            if sample_name not in processed_samples:
+                # Default to "without tag" if no tags are encountered
+                processed_samples[sample_name] = {
+                    'name': f"{sample_name} without tag",
+                    'count': 0,
+                    'selected': False
+                }
 
-                # Create a string that summarizes the freezing plan details
-                for freezing_plan in freezing_plans:
-                    tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-                    plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
-
-                    # Add unique entries only
-                    if plan_str not in sample_set:
-                        sample_set.add(plan_str)
-                        processed_samples.append({
-                            'name': plan_str,
-                            'count': item['count'],  # Retain the original count
-                            'selected': False  # Default selected status
-                        })
+            if tag_name:  # If there's a tag, overwrite the entry with "with tag"
+                tag_names = ', '.join(
+                    sample_data.filter(sample_name=sample_name)
+                    .values_list('tag_name', flat=True)
+                    .distinct()
+                )
+                processed_samples[sample_name] = {
+                    'name': f"{sample_name} with {tag_names}",
+                    'count': processed_samples[sample_name]['count'] + item['count'],
+                    'selected': False
+                }
             else:
-                # If no 'name' exists, simply append the original item
-                if str(item) not in sample_set:
-                    sample_set.add(str(item))
-                    processed_samples.append(item)
+                # Count samples without tags
+                processed_samples[sample_name]['count'] += item['count']
 
-        # Replace the filter with processed samples
-        filters['sample'] = processed_samples
-        # filters['sample'] = processed_samples
+        # Convert processed_samples to a list for the final 'sample' filter
+        filters['sample'] = list(processed_samples.values())
 
         # Apply 'selected' status to filters
         for key, filter_list in filters.items():
