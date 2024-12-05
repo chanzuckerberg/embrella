@@ -820,6 +820,7 @@ def available_annotation_filter(request):
             'msi_session__grid__freezing_plan__tags'
         ).values(
             'id',
+            'updated_at',
             annotation_name=F('name'),
             project_display_name=F('msi_session__project__name'),
             user_display_name=F('msi_session__user__username'),
@@ -918,7 +919,7 @@ def available_annotation_filter(request):
             'date': [
                 {
                     "name": key,
-                    "count": queryset.filter(msi_session__created_at__gte=value).count()
+                    "count": queryset.filter(updated_at__gte=value).count()
                 }
                 for key, value in date_ranges.items()
             ],
@@ -1019,6 +1020,12 @@ def get_annotation_details(request):
             elif item['category'] == 'pageSize':
                 page_size = int(extract_value(item['value']))
 
+        date_mapping = {
+            'last_1_month': 1,
+            'last_3_months': 3,
+            'last_6_months': 6
+        }
+
         # Determine sort order
         sort_order = sort_field if asc else f'-{sort_field}'
 
@@ -1077,6 +1084,16 @@ def get_annotation_details(request):
                 filter_criteria &= Q(pipe_data__run__msi_session__grid__name__in=values)
             elif category == 'project':
                 filter_criteria &= Q(pipe_data__run__msi_session__project__name__in=values)
+            elif category == 'date' and values:
+                # Handle the possible values for the 'date' filter
+                date_value = values[0] if isinstance(values, list) else values
+                if date_value in date_mapping:
+                    months = date_mapping[date_value]
+                    now = datetime.now()
+                    start_date = now - timedelta(days=months * 30)
+                    filter_criteria &= Q(updated_at__gte=start_date)  # Use 'created_at' column for filtering
+                else:
+                    return JsonResponse({'error': f'Invalid value for date filter: {date_value}'}, status=400)
             elif category == 'msiSession':
                 # Support multiple `icontains` values with OR logic, including None
                 session_name_filter = Q()
