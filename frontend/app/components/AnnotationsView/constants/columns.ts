@@ -72,15 +72,6 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.GRID),
   },
-<<<<<<< HEAD
-  // {
-  //   id: ANNOTATION_COLUMN_IDS.NOTES,
-  //   accessorFn: (rowData: EntityDataTypes): string =>
-  //     (rowData as AnnotationData).procRun.notes,
-  //   enableSorting: false,
-  //   header: humanize(ANNOTATION_COLUMN_IDS.NOTES),
-  // },
-=======
   {
     id: ANNOTATION_COLUMN_IDS.NOTES,
     accessorFn: (rowData: EntityDataTypes): string =>
@@ -88,7 +79,6 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.NOTES),
   },
->>>>>>> origin/main
   {
     id: ANNOTATION_COLUMN_IDS.UPDATED_AT,
     accessorFn: (rowData: EntityDataTypes): string =>
