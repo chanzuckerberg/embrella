@@ -1,4 +1,4 @@
-import { AnnotationData } from "./../../components/AnnotationsView/types";
+import { AnnotationData } from "@app/components/AnnotationsView/types";
 import { TomogramData } from "@app/components/TomogramsView/types";
 import { GridData } from "./types";
 
