@@ -287,7 +287,10 @@ def available_filters(request):
                 .values(name=F('screening_session_name'), count=F('count'))
             ),
             'procPlan': list(
-                queryset.values(plan_name=F('proc_plan__name'))
+                queryset.filter(
+                    proc_plan__name__in=['czii-denoise', 'czii-live']
+                )
+                .values(plan_name=F('proc_plan__name'))
                 .annotate(count=Count('id'))
                 .order_by('plan_name')
                 .values(name=F('plan_name'), count=F('count'))
@@ -438,6 +441,8 @@ def get_tomo_details(request):
         ).prefetch_related(
             'msi_session__grid__freezing_plan__sample',  # Prefetch the many-to-many relationship
             'runpipedata_set__tomograms_set'
+        ).filter(
+            proc_plan__name__in=['czii-live', 'czii-denoise']
         ).values(
             'id',
             'name',
@@ -653,6 +658,8 @@ def available_annotation_filter(request):
             'pipe_data__run__proc_plan'  # Traverse the relationship to proc_plan
         ).prefetch_related(
             'msi_session__grid__freezing_plan__tags'
+        ).exclude(
+            pipe_data__run__proc_plan__name__in=['czii-live', 'czii-denoise']  # Exclude specific proc p
         ).values(
             'id',
             'updated_at',
@@ -800,6 +807,7 @@ def available_annotation_filter(request):
         # Convert processed_samples to a list for the final 'sample' filter
         filters['sample'] = list(processed_samples.values())
 
+
         # Apply 'selected' status to filters
         for key, filter_list in filters.items():
             add_selected_status(filter_list, key)
@@ -883,6 +891,8 @@ def get_annotation_details(request):
             'tomograms',
             'tomograms__pipe_data',  # Join on processes_runpipedata
             'tomograms__pipe_data__run'
+        ).exclude(
+            pipe_data__run__proc_plan__name__in=['czii-live', 'czii-denoise']
         ).values(
             'id',
             'updated_at',
