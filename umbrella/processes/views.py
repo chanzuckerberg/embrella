@@ -1018,7 +1018,7 @@ def get_annotation_details(request):
                 annotations=AnnotationModel(
                     id=entry.get('annotation_id'),
                     name=f"{entry.get('proc_run_display_name')} (id={entry.get('annotation_id')})",
-                    url=f"{base_url}/admin/processes/annotations/{entry.get('annotation_id')}/",
+                    url=f"{base_url}/admin/processes/annotation/{entry.get('annotation_id')}/",
                     updatedAt=datetime.fromisoformat(str(entry.get('annotation_updated_at'))).strftime('%Y-%m-%d'),
                     notes=f"{entry.get('notes')}"
                 ),
