@@ -920,7 +920,7 @@ def get_annotation_details(request):
             tomogram_id=F('tomograms__id'),
             tomogram_name=F('tomograms__pipe_data__run__name')
         ).order_by(sort_order)
-        print(len(queryset))
+        print(queryset)
         # Apply filters from q_param
         filter_criteria = Q()
         for item in q_param:
@@ -1020,7 +1020,7 @@ def get_annotation_details(request):
                     name=f"{entry.get('proc_run_display_name')} (id={entry.get('annotation_id')})",
                     url=f"{base_url}/admin/processes/annotations/{entry.get('annotation_id')}/",
                     updatedAt=datetime.fromisoformat(str(entry.get('annotation_updated_at'))).strftime('%Y-%m-%d'),
-                    notes=f"{entry.get('note')}"
+                    notes=f"{entry.get('notes')}"
                 ),
                 procPlan=ProcPlanModel(
                     id=entry.get('proc_plan_id'),
