@@ -40,7 +40,6 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.PROC_PLAN),
   },
-  //TODO: need Input Tomograms column?
   {
     id: ANNOTATION_COLUMN_IDS.INPUT_TOMORGRAM,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
@@ -73,13 +72,13 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.GRID),
   },
-  // {
-  //   id: ANNOTATION_COLUMN_IDS.NOTES,
-  //   accessorFn: (rowData: EntityDataTypes): string =>
-  //     (rowData as AnnotationData).procRun.notes,
-  //   enableSorting: false,
-  //   header: humanize(ANNOTATION_COLUMN_IDS.NOTES),
-  // },
+  {
+    id: ANNOTATION_COLUMN_IDS.NOTES,
+    accessorFn: (rowData: EntityDataTypes): string =>
+      (rowData as AnnotationData).annotations.notes,
+    enableSorting: false,
+    header: humanize(ANNOTATION_COLUMN_IDS.NOTES),
+  },
   {
     id: ANNOTATION_COLUMN_IDS.UPDATED_AT,
     accessorFn: (rowData: EntityDataTypes): string =>

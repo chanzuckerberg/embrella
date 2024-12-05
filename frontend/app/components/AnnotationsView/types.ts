@@ -7,10 +7,13 @@ import {
 } from "@app/common/types/entity";
 import { FilterConfig } from "@app/components/Filter/common/types";
 
+interface AnnotationsField extends EntityLinkField {
+  updatedAt: string;
+  notes: string;
+}
 export interface AnnotationData {
-  annotations: EntityLinkField & { updatedAt: string };
+  annotations: AnnotationsField;
   procPlan: EntityLinkField;
-  // procRun: ProcRunField;
   inputTomogram: EntityLinkField;
   json: null;
   grid: GridField;
