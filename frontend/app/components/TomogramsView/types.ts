@@ -10,8 +10,8 @@ import { FilterConfig } from "@app/common/types/filter";
 export interface TomogramData {
   tomograms: EntityLinkField;
   procPlan: EntityLinkField;
+  json: EntityLinkField;
   procRun: ProcRunField;
-  json: null;
   grid: GridField;
   project: EntityLinkField;
   user: UserField;

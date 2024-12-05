@@ -14,8 +14,8 @@ interface AnnotationsField extends EntityLinkField {
 export interface AnnotationData {
   annotations: AnnotationsField;
   procPlan: EntityLinkField;
+  json: EntityLinkField;
   inputTomogram: EntityLinkField;
-  json: null;
   grid: GridField;
   project: EntityLinkField;
   user: UserField;

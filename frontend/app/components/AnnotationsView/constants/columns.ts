@@ -13,6 +13,7 @@ import { AnnotationData } from "../types";
 export const ANNOTATION_COLUMN_IDS = {
   ANNOTATIONS: "annotations",
   PROC_PLAN: "procPlan",
+  JSON: "json",
   INPUT_TOMORGRAM: "inputTomogram",
   MSI_SESSION: "msiSession",
   PROJECT: "project",
@@ -39,6 +40,14 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
     cell: getLinkCellFromCellContext,
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.PROC_PLAN),
+  },
+  {
+    id: ANNOTATION_COLUMN_IDS.JSON,
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as AnnotationData).json),
+    cell: getLinkCellFromCellContext,
+    enableSorting: false,
+    header: humanize(ANNOTATION_COLUMN_IDS.JSON),
   },
   {
     id: ANNOTATION_COLUMN_IDS.INPUT_TOMORGRAM,

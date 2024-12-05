@@ -13,6 +13,7 @@ import { TomogramData } from "../types";
 export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: "tomograms",
   PROC_PLAN: "procPlan",
+  JSON: "json",
   MSI_SESSION: "msiSession",
   PROJECT: "project",
   GRID: "grid",
@@ -39,6 +40,14 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
     cell: getLinkCellFromCellContext,
     enableSorting: false,
     header: humanize(TOMOGRAM_COLUMN_IDS.PROC_PLAN),
+  },
+  {
+    id: TOMOGRAM_COLUMN_IDS.JSON,
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
+      getLinkPropsFromLinkField((rowData as TomogramData).json),
+    cell: getLinkCellFromCellContext,
+    enableSorting: false,
+    header: humanize(TOMOGRAM_COLUMN_IDS.JSON),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.MSI_SESSION,
