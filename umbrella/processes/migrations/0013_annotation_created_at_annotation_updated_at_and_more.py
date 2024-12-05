@@ -23,9 +23,9 @@ class Migration(migrations.Migration):
         #     name="updated_at",
         #     field=models.DateTimeField(auto_now=True),
         # ),
-        migrations.AddField(
-            model_name="procrun",
-            name="updated_at",
-            field=models.DateTimeField(auto_now=True),
-        ),
+        # migrations.AddField(
+        #     model_name="procrun",
+        #     name="updated_at",
+        #     field=models.DateTimeField(auto_now=True),
+        # ),
     ]
