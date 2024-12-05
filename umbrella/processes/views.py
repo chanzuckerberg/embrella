@@ -1034,7 +1034,7 @@ def get_annotation_details(request):
                 ),
                 json=JsonModel(
                     id=1,
-                    name=None
+                    name="/24sep11c/{run}/deno/denoiset/run001/den001/"
                 ),
                 grid=GridModel(
                     id=entry.get('cryogrid_id'),
