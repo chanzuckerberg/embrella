@@ -159,6 +159,10 @@
                 function getTomogramsUrl() {
                     return `${getNextUrl()}/tomograms`;
                 }
+
+                function getAnnotationsUrl() {
+                    return `${getNextUrl()}/annotations`;
+                }
             </script>
             <tr>
                 <td>
@@ -173,6 +177,7 @@
                     <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
                     <p> View and manage tomograms </p>
                 </td>
+
                 <td>
                 </td>
             </tr>
@@ -182,6 +187,10 @@
                 </td>
                 <td>
                     <a href="{% url 'tem:render_screening_form' %}" class="button">Multigrid Screens</a>
+                </td>
+                <td>
+                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
+                    <p> View and manage Annotations </p>
                 </td>
                 <td>
                 </td>
