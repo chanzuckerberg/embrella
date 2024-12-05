@@ -2,25 +2,25 @@ import {
   EntityLinkField,
   GridField,
   MSISessionField,
-  ProcRunField,
+  // ProcRunField,
   UserField,
 } from "@app/common/types/entity";
 import { FilterConfig } from "@app/components/Filter/common/types";
 
+interface AnnotationsField extends EntityLinkField {
+  updatedAt: string;
+  notes: string;
+}
 export interface AnnotationData {
-  annotations: EntityLinkField & { updatedAt: string };
+  annotations: AnnotationsField;
   procPlan: EntityLinkField;
-  // procRun: ProcRunField;
   inputTomogram: EntityLinkField;
   json: null;
   grid: GridField;
   project: EntityLinkField;
   user: UserField;
   msiSession: MSISessionField;
-  //TODO: need tomograms field?
 }
-
-//TODO: need tomograms field for all filter types below?
 export enum AnnotationFilterId {
   PROJECT = "PROJECT",
   SAMPLE = "SAMPLE",
