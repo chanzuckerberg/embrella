@@ -896,6 +896,7 @@ def get_annotation_details(request):
         ).values(
             'id',
             'updated_at',
+            'notes',
             annotation_name=F('name'),
             annotation_id=F('id'),
             annotation_updated_at=F('updated_at'),
@@ -1018,7 +1019,8 @@ def get_annotation_details(request):
                     id=entry.get('annotation_id'),
                     name=f"{entry.get('proc_run_display_name')} (id={entry.get('annotation_id')})",
                     url=f"{base_url}/processes/annotations/{entry.get('annotation_id')}/",
-                    updatedAt=datetime.fromisoformat(str(entry.get('annotation_updated_at'))).strftime('%Y-%m-%d')
+                    updatedAt=datetime.fromisoformat(str(entry.get('annotation_updated_at'))).strftime('%Y-%m-%d'),
+                    notes=f"{entry.get('note')}"
                 ),
                 procPlan=ProcPlanModel(
                     id=entry.get('proc_plan_id'),
@@ -1031,7 +1033,7 @@ def get_annotation_details(request):
                     url=f"{base_url}/admin/processes/tomograms/{entry.get('tomogram_id')}"
                 ),
                 json=JsonModel(
-                    id=None,
+                    id=1,
                     name=None
                 ),
                 grid=GridModel(
