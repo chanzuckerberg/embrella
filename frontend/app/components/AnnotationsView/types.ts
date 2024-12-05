@@ -2,15 +2,19 @@ import {
   EntityLinkField,
   GridField,
   MSISessionField,
-  ProcRunField,
+  // ProcRunField,
   UserField,
 } from "@app/common/types/entity";
 import { FilterConfig } from "@app/components/Filter/common/types";
 
-export interface TomogramData {
-  tomograms: EntityLinkField;
+interface AnnotationsField extends EntityLinkField {
+  updatedAt: string;
+  notes: string;
+}
+export interface AnnotationData {
+  annotations: AnnotationsField;
   procPlan: EntityLinkField;
-  procRun: ProcRunField;
+  inputTomogram: EntityLinkField;
   json: null;
   grid: GridField;
   project: EntityLinkField;
@@ -18,26 +22,26 @@ export interface TomogramData {
   msiSession: MSISessionField;
 }
 
-export enum TomogramFilterId {
+export enum AnnotationFilterId {
   PROJECT = "PROJECT",
   SAMPLE = "SAMPLE",
   USER = "USER",
-  MSI_SESSION = "MSI_SESSION",
   SCREENING_SESSION = "SCREENING_SESSION",
-  PROC_PLAN = "PROC_PLAN",
+  MSI_SESSION = "MSI_SESSION",
   DATE = "DATE",
+  PROC_PLAN = "PROC_PLAN",
 }
 
-export type TomogramFilterCategory =
+export type AnnotationFilterCategory =
   | "project"
   | "sample"
   | "user"
-  | "msiSession"
   | "screeningSession"
-  | "procPlan"
-  | "date";
+  | "msiSession"
+  | "date"
+  | "procPlan";
 
-export type TomogramFilterConfig = FilterConfig<
-  TomogramFilterId,
-  TomogramFilterCategory
+export type AnnotationFilterConfig = FilterConfig<
+  AnnotationFilterId,
+  AnnotationFilterCategory
 >;

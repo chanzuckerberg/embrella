@@ -83,7 +83,7 @@
             </form>
             <a href="{% url 'admin:index' %}" class="button">Admin</a>
         </div>
-        <h2>Let's do something</h2>
+        <h2>Workflow Management</h2>
         <table>
             <tr>
                 <th>Freeze some grids</th>
@@ -131,7 +131,7 @@
                 </td>
             </tr>
         </table>
-        <h2>List of all things</h2>
+        <h2>Search Filters</h2>
         <table>
             <tr>
                 <th>Grids</th>
@@ -159,6 +159,10 @@
                 function getTomogramsUrl() {
                     return `${getNextUrl()}/tomograms`;
                 }
+
+                function getAnnotationsUrl() {
+                    return `${getNextUrl()}/annotations`;
+                }
             </script>
             <tr>
                 <td>
@@ -173,6 +177,7 @@
                     <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
                     <p> View and manage tomograms </p>
                 </td>
+
                 <td>
                 </td>
             </tr>
@@ -182,6 +187,10 @@
                 </td>
                 <td>
                     <a href="{% url 'tem:render_screening_form' %}" class="button">Multigrid Screens</a>
+                </td>
+                <td>
+                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
+                    <p> View and manage Annotations </p>
                 </td>
                 <td>
                 </td>

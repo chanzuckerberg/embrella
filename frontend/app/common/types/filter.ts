@@ -1,4 +1,9 @@
 import {
+  AnnotationFilterCategory,
+  AnnotationFilterConfig,
+  AnnotationFilterId,
+} from "@app/components/AnnotationsView/types";
+import {
   GRID_FILTER_ID,
   GridFilterConfig,
 } from "@/views/GridsView/components/Main/components/GridFilter/filters/types";
@@ -20,10 +25,17 @@ export interface FilterOption {
 }
 
 // TODO: Consider moving these types under EntityTableFilters
-export type EntityFilterIdTypes = TomogramFilterId | GRID_FILTER_ID;
+export type EntityFilterIdTypes =
+  | AnnotationFilterId
+  | TomogramFilterId
+  | GRID_FILTER_ID;
 
 export type EntityFilterCategories =
+  | AnnotationFilterCategory
   | GridFilterCategory
   | TomogramFilterCategory;
 
-export type EntityFilterConfigs = TomogramFilterConfig | GridFilterConfig;
+export type EntityFilterConfigs =
+  | AnnotationFilterConfig
+  | TomogramFilterConfig
+  | GridFilterConfig;

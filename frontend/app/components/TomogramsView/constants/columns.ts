@@ -1,6 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 
 import { AccessorReturnType } from "@app/common/components/EntityTable/types";
+import { humanize } from "@app/common/utils/string";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import {
   LinkCellProps,
@@ -29,7 +30,7 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
       getLinkPropsFromLinkField((rowData as TomogramData).tomograms),
     cell: getLinkCellFromCellContext,
     enableSorting: false,
-    header: "Tomograms",
+    header: humanize(TOMOGRAM_COLUMN_IDS.TOMOGRAMS),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROC_PLAN,
@@ -37,7 +38,7 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
       getLinkPropsFromLinkField((rowData as TomogramData).procPlan),
     cell: getLinkCellFromCellContext,
     enableSorting: false,
-    header: "Proc Plan",
+    header: humanize(TOMOGRAM_COLUMN_IDS.PROC_PLAN),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.MSI_SESSION,
@@ -53,7 +54,7 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
       getLinkPropsFromLinkField((rowData as TomogramData).project),
     cell: getLinkCellFromCellContext,
     enableSorting: false,
-    header: "Project",
+    header: humanize(TOMOGRAM_COLUMN_IDS.PROJECT),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.GRID,
@@ -61,20 +62,20 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
       getLinkPropsFromLinkField((rowData as TomogramData).grid),
     cell: getLinkCellFromCellContext,
     enableSorting: false,
-    header: "Grid",
+    header: humanize(TOMOGRAM_COLUMN_IDS.GRID),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.NOTES,
     accessorFn: (rowData: EntityDataTypes): string =>
       (rowData as TomogramData).procRun.notes,
     enableSorting: false,
-    header: "Notes",
+    header: humanize(TOMOGRAM_COLUMN_IDS.NOTES),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.UPDATED_AT,
     accessorFn: (rowData: EntityDataTypes): string =>
       (rowData as TomogramData).procRun.updatedAt,
     enableSorting: true,
-    header: "Updated At",
+    header: humanize(TOMOGRAM_COLUMN_IDS.UPDATED_AT),
   },
 ];
