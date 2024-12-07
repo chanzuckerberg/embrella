@@ -105,14 +105,12 @@ describe("tableStateReducer", () => {
 
     it("updates sort state using updater function in payload", () => {
       // mock updater function - inverts the sorting order of first entry in sortingState
-      const updaterOrValue = jest.fn((sortingState: SortingState) => (
-        [
-          {
-            id: sortingState[0].id,
-            desc: !sortingState[0].desc,
-          }
-        ]
-      ));
+      const updaterOrValue = jest.fn((sortingState: SortingState) => [
+        {
+          id: sortingState[0].id,
+          desc: !sortingState[0].desc,
+        },
+      ]);
       const action: UpdateSortAction = {
         type: TableStateActionTypes.UpdateSort,
         payload: {

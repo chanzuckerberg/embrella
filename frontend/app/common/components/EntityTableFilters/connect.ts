@@ -52,7 +52,7 @@ export const useConnect = <
       };
       dispatch(updateFilterAction);
     },
-    [dispatch, filtersList],
+    [dispatch],
   );
 
   return { filters, onFilter };

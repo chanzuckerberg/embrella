@@ -104,7 +104,7 @@ export const useConnect = (
 
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>): void => {
-      const pagination = getPaginationStateForPayload(entityList.pagination);
+      const pagination = getPaginationStateForPayload(entityPagination);
       const updatePaginationAction: UpdatePaginationAction = {
         payload: {
           pagination,
@@ -120,7 +120,7 @@ export const useConnect = (
 
   const onSortingChange = useCallback(
     (updaterOrValue: Updater<SortingState>) => {
-      const sortBy = getSortingStateForPayload(entityList.sortBy);
+      const sortBy = getSortingStateForPayload(entitySortBy);
       const updateSortAction: UpdateSortAction = {
         payload: {
           sortBy,
