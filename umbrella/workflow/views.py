@@ -12,8 +12,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.http import JsonResponse
-# Configure logging
-
+from django.views.decorators.http import require_http_methods
+from tem.models import MsiSession
 
 KEYS = ('PixSize',
         'AtBin',
@@ -197,3 +197,16 @@ def custom_workflow_page(request):
 
 def custom_run_workflow_page(request):
     return render(request, 'workflows/workflow_run.html')
+
+
+@require_http_methods(["GET"])
+def get_msi_session_list(request):
+    try:
+        # Fetch only the name field from MsiSession
+        session_names = list(MsiSession.objects.values_list('name', flat=True))
+        
+        return JsonResponse({'session_names': session_names}, status=200)
+
+    except Exception as e:
+        logger.error(f'An unexpected error occurred: {str(e)}')
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
