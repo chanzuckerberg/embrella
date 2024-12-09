@@ -254,40 +254,40 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await fetchUserInfo();
-        await populateSessionDropdown(); // Populate session dropdown after fetching user info
-    } catch (error) {
-        console.error('Error during initialization:', error);
-    }
-});
+            try {
+                await fetchUserInfo();
+                await populateSessionDropdown(); // Populate session dropdown after fetching user info
+            } catch (error) {
+                console.error('Error during initialization:', error);
+            }
+        });
 
-async function populateSessionDropdown() {
-    try {
-        const response = await fetch('/workflow/get_msisession_list');
-        const result = await response.json();
+        async function populateSessionDropdown() {
+            try {
+                const response = await fetch('/workflow/get_msisession_list');
+                const result = await response.json();
 
-        if (response.ok && result.session_names) {
-            const sessionNamesList = document.getElementById('sessionNames'); // Ensure this ID matches the datalist element
+                if (response.ok && result.session_names) {
+                    const sessionNamesList = document.getElementById('sessionNames'); // Ensure this ID matches the datalist element
 
-            // Clear existing options (if any)
-            sessionNamesList.innerHTML = '';
+                    // Clear existing options (if any)
+                    sessionNamesList.innerHTML = '';
 
-            // Populate the dropdown with session names
-            result.session_names.forEach(sessionName => {
-                const option = document.createElement('option');
-                option.value = sessionName;
-                sessionNamesList.appendChild(option);
-            });
-        } else {
-            console.error('Failed to fetch session names:', result.error || 'Unknown error');
-            alert('Failed to fetch session names. Please try again later.');
+                    // Populate the dropdown with session names
+                    result.session_names.forEach(sessionName => {
+                        const option = document.createElement('option');
+                        option.value = sessionName;
+                        sessionNamesList.appendChild(option);
+                    });
+                } else {
+                    console.error('Failed to fetch session names:', result.error || 'Unknown error');
+                    alert('Failed to fetch session names. Please try again later.');
+                }
+            } catch (error) {
+                console.error('An error occurred while fetching session names:', error);
+                alert('An error occurred while fetching session names.');
+            }
         }
-    } catch (error) {
-        console.error('An error occurred while fetching session names:', error);
-        alert('An error occurred while fetching session names.');
-    }
-}
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
