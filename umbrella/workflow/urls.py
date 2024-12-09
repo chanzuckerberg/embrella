@@ -10,5 +10,6 @@ urlpatterns = [
     path("run_aretomo3", views.run_aretomo3, name='run_aretomo3'),
     path("cancel_aretomo3", views.cancel_aretomo3, name='cancel_aretomo3'),
     path("track_jobs", views.track_jobs, name='track_jobs'),
-    path("user_info", views.user_info, name='user_details')
+    path("user_info", views.user_info, name='user_details'),
+    path("get_msisession_list", views.get_msi_session_list, name='get all msi session name')
 ]
