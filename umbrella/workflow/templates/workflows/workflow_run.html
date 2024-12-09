@@ -161,12 +161,12 @@
     <div class="form-container">
         <h1>Run Aretomo3 Job</h1>
         <p><strong style="color:red;">Note:</strong> User credentials are SSH credentials for the HPC node.</p>
-        <form id="sessionForm">
+        <form id="sessionForm" autocomplete="off">
             <div class="form-group">
                 <label for="sessionName">Session Name:</label>
-                <input list="sessionNames" id="sessionName" name="sessionName" placeholder="Select or type..." required>
+                <input list="sessionNames" id="sessionName" name="sessionName" placeholder="Select or type..." required autocomplete="off">
                 <datalist id="sessionNames">
-                    <!-- Options will be dynamically populated here -->
+                    <!-- Options populated dynamically -->
                 </datalist>
             </div>
             <div class="form-group">
