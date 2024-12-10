@@ -1,6 +1,9 @@
 import { getRowId, useConnect } from "./connect";
-import { TableDispatchContext, TableStateContext } from '@/app/common/components/TableStateProvider/TableStateProvider';
-import { API } from '@/app/common/constants/api';
+import {
+  TableDispatchContext,
+  TableStateContext,
+} from "@/app/common/components/TableStateProvider/TableStateProvider";
+import { API } from "@/app/common/constants/api";
 import { EntityAPIPrimaryAttributeToDataType } from "@app/common/types/entity";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import { GridData } from "@app/common/types/types";
@@ -48,8 +51,7 @@ describe("getRowId", () => {
   });
 });
 
-
-describe('useConnect', () => {
+describe("useConnect", () => {
   const mockDispatch = jest.fn();
   const mockState = {
     filterState: {},
@@ -65,27 +67,19 @@ describe('useConnect', () => {
     </TableDispatchContext.Provider>
   );
 
-  it('should set up table options correctly', () => {
-    const { result } = renderHook(() =>
-      useConnect(
-        API.TOMOGRAMS_V1,
-        'tomograms',
-        [],
-      ),
-      { wrapper }
+  it("should set up table options correctly", () => {
+    const { result } = renderHook(
+      () => useConnect(API.TOMOGRAMS_V1, "tomograms", []),
+      { wrapper },
     );
 
     expect(result.current.table).toBeDefined();
   });
 
-  it('should dispatch UpdatePagination action on pagination change', () => {
-    const { result } = renderHook(() =>
-      useConnect(
-        API.TOMOGRAMS_V1,
-        'tomograms',
-        [],
-      ),
-      { wrapper }
+  it("should dispatch UpdatePagination action on pagination change", () => {
+    const { result } = renderHook(
+      () => useConnect(API.TOMOGRAMS_V1, "tomograms", []),
+      { wrapper },
     );
 
     act(() => {
@@ -93,7 +87,7 @@ describe('useConnect', () => {
     });
 
     expect(mockDispatch).toHaveBeenCalledWith({
-      type: 'UPDATE_PAGINATION_ACTION',
+      type: "UPDATE_PAGINATION_ACTION",
       payload: {
         pagination: { pageIndex: 0, pageSize: 10 },
         updaterOrValue: expect.any(Function),
@@ -101,25 +95,21 @@ describe('useConnect', () => {
     });
   });
 
-  it('should dispatch UpdateSort action on sorting change', () => {
-    const { result } = renderHook(() =>
-      useConnect(
-        API.TOMOGRAMS_V1,
-        'tomograms',
-        [],
-      ),
-      { wrapper }
+  it("should dispatch UpdateSort action on sorting change", () => {
+    const { result } = renderHook(
+      () => useConnect(API.TOMOGRAMS_V1, "tomograms", []),
+      { wrapper },
     );
 
     act(() => {
-      result.current.table.setSorting([{ id: 'name', desc: false }]);
+      result.current.table.setSorting([{ id: "name", desc: false }]);
     });
 
     expect(mockDispatch).toHaveBeenCalledWith({
-      type: 'UPDATE_SORT_ACTION',
+      type: "UPDATE_SORT_ACTION",
       payload: {
         sortBy: [],
-        updaterOrValue: [{ id: 'name', desc: false }],
+        updaterOrValue: [{ id: "name", desc: false }],
       },
     });
   });
