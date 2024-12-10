@@ -731,13 +731,15 @@ def available_annotation_filter(request):
                 .values(name=F('user_temp_name'), count=F('count'))
             ),
             'msiSession': list(
-                queryset.values(msi_session_name=F('msi_session__name'))  # Correct reference to session name
+                queryset.exclude(msi_session__name__isnull=True)
+                .values(msi_session_name=F('msi_session__name'))  # Correct reference to session name
                 .annotate(count=Count('id'))
                 .order_by('msi_session_name')
                 .values(name=F('msi_session_name'), count=F('count'))
             ),
             'screeningSession': list(
-                queryset.values(screen_session_name=F('screen_session_display_name'))  # Updated alias
+                queryset.exclude(screen_session_display_name__isnull=True) 
+                .values(screen_session_name=F('screen_session_display_name'))  # Updated alias
                 .annotate(count=Count('id'))
                 .order_by('screen_session_name')
                 .values(name=F('screen_session_name'), count=F('count'))
