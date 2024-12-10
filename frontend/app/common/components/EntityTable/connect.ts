@@ -35,7 +35,7 @@ import {
   EntityLinkField,
 } from "@/app/common/types/entity";
 
-const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
+export const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   row: EntityDataTypes,
   entityApiResponseField: K,
 ): string => {
