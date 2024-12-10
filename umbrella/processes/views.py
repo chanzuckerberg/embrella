@@ -276,13 +276,14 @@ def available_filters(request):
             ),
             'msiSession': list(
                 queryset.exclude(msi_session__name__isnull=True) 
-                values(session_name=F('msi_session__name'))
+                .values(session_name=F('msi_session__name'))
                 .annotate(count=Count('id'))
                 .order_by('session_name')
                 .values(name=F('session_name'), count=F('count'))
             ),
             'screeningSession': list(
-                queryset.values(screening_session_name=F('msi_session__atlas_session__group__name'))
+                queryset.exclude(msi_session__atlas_session__group__name__isnull=True)
+                .values(screening_session_name=F('msi_session__atlas_session__group__name'))
                 .annotate(count=Count('id'))
                 .order_by('screening_session_name')
                 .values(name=F('screening_session_name'), count=F('count'))
