@@ -217,7 +217,7 @@ def available_filters(request):
             'msi_session__grid__freezing_plan__sample',
             'msi_session__grid__freezing_plan__tags',
             'runpipedata_set__tomograms_set'
-        ).filter(filter_criteria)
+        ).filter(filter_criteria,proc_plan__name__in=['czii-live', 'czii-denoise'])
 
         # Add date ranges
         current_time = now()
