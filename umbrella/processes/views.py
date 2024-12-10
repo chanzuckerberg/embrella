@@ -275,7 +275,8 @@ def available_filters(request):
                 .values(name=F('user_temp_name'), count=F('count'))
             ),
             'msiSession': list(
-                queryset.values(session_name=F('msi_session__name'))
+                queryset.exclude(msi_session__name__isnull=True) 
+                values(session_name=F('msi_session__name'))
                 .annotate(count=Count('id'))
                 .order_by('session_name')
                 .values(name=F('session_name'), count=F('count'))
