@@ -654,9 +654,10 @@ def _save_copied_grid(old_grid, box, position):
     new_grid = CryoGrid.objects.get(id=old_grid.id)
     new_grid.id = None
     new_grid.grid_cassette = None
+    new_grid.slot_number_in_cassette = None
     new_grid.trashed = False
     new_grid.grid_box = box
-    new_grid.position = position
+    new_grid.position_in_box = position
     new_grid.copy_number = copy_number
     new_grid.create_on = datetime.date.today()
     new_grid.updated_on = datetime.date.today()
