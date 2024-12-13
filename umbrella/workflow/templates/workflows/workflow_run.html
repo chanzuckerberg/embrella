@@ -18,12 +18,48 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="text"], input[type="number"], input[type="password"] {
+        input[type="text"], input[type="number"], input[type="password"], .styled-input {
             width: 100%;
             padding: 12px;
             box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 4px;
+            font-size: 16px;
+        }
+        input[type="text"]:hover, input[type="number"]:hover, input[type="password"]:hover, .styled-input:hover {
+            border-color: #4CAF50;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus, .styled-input:focus {
+            border-color: #4CAF50;
+            outline: none;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+        }
+
+        input[list] {
+            background-color: #f9f9f9;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+
+        input[list]:hover {
+            border-color: #4CAF50;
+        }
+
+        input[list]:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+            outline: none;
+        }
+
+        datalist option {
+            font-size: 16px;
+            padding: 5px;
+            cursor: pointer;
         }
         button {
             padding: 12px 24px;
@@ -57,10 +93,6 @@
             border-radius: 4px;
             background-color: #f9f9f9;
         }
-        .cancel-container {
-            margin-top: 40px;
-            margin-bottom: 40px;
-        }
         .cancel-container button {
             background-color: #f44336;
         }
@@ -90,7 +122,7 @@
         .button-container {
             display: flex;
             justify-content: space-between;
-            align-items: center
+            align-items: center;
         }
         .button-container button.track-all {
             background-color: #2196F3;
@@ -129,10 +161,13 @@
     <div class="form-container">
         <h1>Run Aretomo3 Job</h1>
         <p><strong style="color:red;">Note:</strong> User credentials are SSH credentials for the HPC node.</p>
-        <form id="sessionForm">
+        <form id="sessionForm" autocomplete="off">
             <div class="form-group">
-                <label for="sessionName">Session Name: (e.g., 24jul01a)</label>
-                <input type="text" id="sessionName" name="sessionName" required>
+                <label for="sessionName">Session Name:</label>
+                <input list="sessionNames" id="sessionName" name="sessionName" placeholder="Select or type..." required autocomplete="off">
+                <datalist id="sessionNames">
+                    <!-- Options populated dynamically -->
+                </datalist>
             </div>
             <div class="form-group">
                 <label for="runNumber">Run Number: (e.g., 001)</label>
@@ -218,6 +253,41 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await fetchUserInfo();
+                await populateSessionDropdown(); // Populate session dropdown after fetching user info
+            } catch (error) {
+                console.error('Error during initialization:', error);
+            }
+        });
+
+        async function populateSessionDropdown() {
+            try {
+                const response = await fetch('/workflow/get_msisession_list');
+                const result = await response.json();
+
+                if (response.ok && result.session_names) {
+                    const sessionNamesList = document.getElementById('sessionNames'); // Ensure this ID matches the datalist element
+
+                    // Clear existing options (if any)
+                    sessionNamesList.innerHTML = '';
+
+                    // Populate the dropdown with session names
+                    result.session_names.forEach(sessionName => {
+                        const option = document.createElement('option');
+                        option.value = sessionName;
+                        sessionNamesList.appendChild(option);
+                    });
+                } else {
+                    console.error('Failed to fetch session names:', result.error || 'Unknown error');
+                    alert('Failed to fetch session names. Please try again later.');
+                }
+            } catch (error) {
+                console.error('An error occurred while fetching session names:', error);
+                alert('An error occurred while fetching session names.');
+            }
+        }
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {

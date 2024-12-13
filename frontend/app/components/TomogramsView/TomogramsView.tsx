@@ -3,23 +3,38 @@
 import React from "react";
 import { TableWrapper } from "@app/common/components/TableWrapper/TableWrapper";
 import { FilterableTableMain } from "@app/common/components/FilterableTableMain/FilterableTableMain";
-import { TomogramTable } from "@app/components/TomogramsView/components/TomogramTable/TomogramTable";
 import { TableStateProvider } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { Sidebar } from "@app/common/components/Sidebar/Sidebar";
-import { TomogramFilters } from "@app/components/TomogramsView/components/TomogramFilters/TomogramFilters";
-
+import { TOMOGRAM_COLUMN_DEFS, TOMOGRAM_COLUMN_IDS } from "./constants/columns";
+import { SortingState } from "@tanstack/react-table";
+import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
+import { API } from "@app/common/constants/api";
+import { TomogramFilterId, TomogramFilterCategory } from "./types";
+import { TOMOGRAM_FILTER_CONFIGS } from "./constants/filters";
+import { EntityTableFilters } from "@/app/common/components/EntityTableFilters/EntityTableFilters";
 
 export const TomogramsView = (): React.JSX.Element => {
+  const initialSortState: SortingState = [
+    { desc: true, id: TOMOGRAM_COLUMN_IDS.UPDATED_AT },
+  ];
+
   return (
-    <TableStateProvider>
+    <TableStateProvider initialSortState={initialSortState}>
       <FilterableTableMain>
-      <Sidebar>
-          <TomogramFilters />
-      </Sidebar>
+        <Sidebar>
+          <EntityTableFilters<TomogramFilterId, TomogramFilterCategory>
+            entityFilterConfigs={TOMOGRAM_FILTER_CONFIGS}
+            entityFilterListApi={API.TOMOGRAMS_FILTERLIST_V1}
+          />
+        </Sidebar>
         <TableWrapper>
-          <TomogramTable />
+          <EntityTable
+            entityApi={API.TOMOGRAMS_V1}
+            entityApiResponseField="tomograms"
+            columnDefs={TOMOGRAM_COLUMN_DEFS}
+          />
         </TableWrapper>
-      </FilterableTableMain >
+      </FilterableTableMain>
     </TableStateProvider>
   );
 };

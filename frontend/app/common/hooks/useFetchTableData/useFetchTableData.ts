@@ -1,31 +1,28 @@
 import configs from "@/configs/local";
-import { ApiListResponse, EntityList, GridData } from "@app/common/types/types";
+import {
+  ApiListResponse,
+  EntityDataTypes,
+  EntityList,
+} from "@app/common/types/tableState";
 import { SearchParam } from "@app/common/types/search";
 import { useFetchData } from "@/hooks/useFetchData/useFetchData";
 import { API } from "@app/common/constants/api";
-import { TomogramData } from "@app/common/types/tomogram";
 
-type APIResponseFieldMap = {
-  tomograms: TomogramData;
-  grids: GridData;
-};
+// TODO: May be able to move hook into EntityTable component if it's the only component using this
 
-export const useFetchTableData = <K extends keyof APIResponseFieldMap>(
+export const useFetchTableData = (
   dataEndpoint: API,
   searchParam: SearchParam,
-  dataResponseField: K
-): EntityList<APIResponseFieldMap[K], K> | undefined => {
-  const { data } = useFetchData<ApiListResponse<APIResponseFieldMap[K]>>(
+): EntityList => {
+  const { data } = useFetchData<ApiListResponse<EntityDataTypes>>(
     configs.API_URL,
     dataEndpoint,
-    searchParam
+    searchParam,
   );
-  return (
-    data &&
-    ({
-      [dataResponseField]: data.result,
-      pagination: data.pagination,
-      sortBy: data.sortBy,
-    } as EntityList<APIResponseFieldMap[K], K>)
-  );
+
+  return {
+    entities: data?.result,
+    pagination: data?.pagination,
+    sortBy: data?.sortBy,
+  } as EntityList;
 };

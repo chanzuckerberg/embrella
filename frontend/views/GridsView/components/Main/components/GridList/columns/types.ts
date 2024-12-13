@@ -1,5 +1,6 @@
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { GridData } from "@/app/common/types/types";
+import { LinkTValue } from "@/app/components/Table/components/CellComponent/types";
 
 export enum GRID_COLUMN {
   CRYOGRID = "CRYOGRID",
@@ -10,6 +11,8 @@ export enum GRID_COLUMN {
   UPDATED_AT = "UPDATED_AT",
 }
 
-export type GridColumnDef = ColumnDef<GridData>;
+export type GridAccessorReturnType = string | LinkTValue | LinkTValue[];
+
+export type GridColumnDef = ColumnDef<GridData, GridAccessorReturnType>;
 
 export type GridColumnDefCellContext<TData> = CellContext<GridData, TData>;

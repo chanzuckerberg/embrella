@@ -1,9 +1,21 @@
-import { ComplexFilterProps as SDSComplexFilterProps } from "@czi-sds/components";
+import {
+  AnnotationFilterCategory,
+  AnnotationFilterConfig,
+  AnnotationFilterId,
+} from "@app/components/AnnotationsView/types";
+import {
+  GRID_FILTER_ID,
+  GridFilterConfig,
+} from "@/views/GridsView/components/Main/components/GridFilter/filters/types";
 import { GridFilterCategory } from "./types";
-import { FilterConfig } from "@/app/components/Filter/common/types";
+import {
+  TomogramFilterId,
+  TomogramFilterCategory,
+  TomogramFilterConfig,
+} from "@app/components/TomogramsView/types";
 
 export interface FiltersList {
-  filters: Record<ViewFilterCategory, FilterOption[]>;
+  filters: Record<EntityFilterCategories, FilterOption[]>;
 }
 
 export interface FilterOption {
@@ -12,26 +24,18 @@ export interface FilterOption {
   selected: boolean;
 }
 
-export type TomogramFilterCategory =
-  | "project"
-  | "user"
-  | "screeningSession"
-  | "msiSession"
-  | "date"
-  | "procRun";
+// TODO: Consider moving these types under EntityTableFilters
+export type EntityFilterIdTypes =
+  | AnnotationFilterId
+  | TomogramFilterId
+  | GRID_FILTER_ID;
 
-export type TomogramFilterConfig = FilterConfig<
-  TOMOGRAM_FILTER_ID,
-  TomogramFilterCategory
->;
+export type EntityFilterCategories =
+  | AnnotationFilterCategory
+  | GridFilterCategory
+  | TomogramFilterCategory;
 
-export enum TOMOGRAM_FILTER_ID {
-  PROJECT = "PROJECT",
-  USER = "USER",
-  SCREENING_SESSION = "SCREENING_SESSION",
-  MSI_SESSION = "MSI_SESSION",
-  DATE = "DATE",
-  PROC_RUN = "PROC_RUN",
-}
-
-export type ViewFilterCategory = GridFilterCategory | TomogramFilterCategory;
+export type EntityFilterConfigs =
+  | AnnotationFilterConfig
+  | TomogramFilterConfig
+  | GridFilterConfig;

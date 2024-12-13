@@ -1,4 +1,5 @@
-import { ApiListResponse, GridData } from "@app/common/types/types";
+import { GridData } from "@app/common/types/types";
+import { ApiListResponse } from "@app/common/types/tableState";
 import { FiltersList } from "@/app/common/types/types";
 import { SEARCH_PARAM_NAME, SearchParamValue } from "@/app/common/types/search";
 import { FetchResponseInfo, TestFilterCategory } from "@/testing/types";
@@ -204,7 +205,7 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
       // Sort grids by the first sort value and direction.
       if (sortKey) {
         responseGrids.sort(
-          (a, b) => a[sortKey].name.localeCompare(b[sortKey].name) * direction
+          (a, b) => a[sortKey].name.localeCompare(b[sortKey].name) * direction,
         );
       }
       // Pagination category values "page" and "pageSize".
@@ -212,13 +213,13 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
         values,
         "page",
         0,
-        1
+        1,
       ) as number;
       const pageSize = getSearchParamFirstValue<number>(
         values,
         "pageSize",
         0,
-        TEST_DEFAULT_GRIDS_PAGE_SIZE
+        TEST_DEFAULT_GRIDS_PAGE_SIZE,
       ) as number;
       const pageStart = (page - 1) * pageSize;
 
@@ -242,7 +243,7 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
   [URL_FOO]: {
     body(url) {
       return JSON.stringify(
-        url.searchParams.get("q") === "true" ? "bar" : "foo"
+        url.searchParams.get("q") === "true" ? "bar" : "foo",
       );
     },
   },

@@ -1,25 +1,5 @@
 import { FilterOption } from "./filter";
-import { MSISession } from "./msiSession";
-
-/*
- * For a raw API response
- */
-export interface ApiListResponse<T> {
-  pagination: Pagination;
-  result: T[];
-  sortBy: SortBy;
-}
-
-/*
- * Type for a formatted API response
- * Usage: EntityList<TomogramData, "tomograms">
- */
-export type EntityList<T, K extends string> = {
-  [entityName in K]: T[];
-} & {
-  pagination: Pagination;
-  sortBy: SortBy;
-};
+import { MSISessionField } from "./entity";
 
 // This type is used in GridsView
 export interface FiltersList<FilterCategory extends string> {
@@ -70,25 +50,11 @@ export interface GridData {
     createdAt: string;
   };
   screeningSession: string;
-  msiSession: MSISession[];
+  msiSession: MSISessionField[];
 }
 
 export interface GridFreezingPlanSample {
   id: number;
   name: string;
   url: string;
-}
-
-// TODO: Move to state types file
-export interface Pagination {
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  totalResults: number;
-}
-
-// TODO: Move to state types file
-export interface SortBy {
-  asc: boolean;
-  sort: string;
 }

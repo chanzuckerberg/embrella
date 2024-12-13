@@ -21,10 +21,11 @@ export type ComplexFilterProps = SDSComplexFilterProps<
   false
 >;
 
-export type FilterConfig<
-  FilterId,
-  FilterCategory extends string,
-> = BaseFilterConfig<FilterId, FilterCategory>;
+export interface FilterConfig<FilterId, FilterCategory extends string> {
+  filterCategory: FilterCategory; // Key in result set row values to filter on.
+  filterId: FilterId;
+  label: string;
+}
 
 export type FilterState<FilterCategory extends string> = Partial<{
   [K in FilterCategory]: FilterValue[];
@@ -44,7 +45,7 @@ export type FilterView<
 > = SelectFilterView<FilterId, FilterCategory>;
 
 export type OnFilterFn<FilterCategory extends string> = (
-  categoryFilter: CategoryFilter<FilterCategory>
+  categoryFilter: CategoryFilter<FilterCategory>,
 ) => void;
 
 export interface SelectFilterView<FilterId, FilterCategory extends string> {

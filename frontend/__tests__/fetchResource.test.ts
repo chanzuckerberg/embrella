@@ -6,7 +6,8 @@ import {
   URL_GRIDS,
   URL_NONEXISTENT,
 } from "@/testing/constants";
-import { ApiListResponse, GridData } from "@/app/common/types/types";
+import { GridData } from "@/app/common/types/types";
+import { ApiListResponse } from "@app/common/types/tableState";
 
 beforeAll(() => {
   initFetch();
@@ -20,7 +21,7 @@ describe("fetchResource", () => {
 
   it("returns error response", async () => {
     const response = await fetchResource(
-      getRequestURL(URL_BASE, URL_NONEXISTENT)
+      getRequestURL(URL_BASE, URL_NONEXISTENT),
     );
     expect(response.status).toEqual(404);
   });

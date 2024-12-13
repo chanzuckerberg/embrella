@@ -12,15 +12,17 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.http import JsonResponse
-# Configure logging
-
+from django.views.decorators.http import require_http_methods
+from tem.models import MsiSession
 
 KEYS = ('PixSize',
         'AtBin',
         'CorrCTF',
         'McBin',
         'Wbp')
-HOST = '10.50.120.52'
+# HOST = '10.50.120.52'
+# HOST = 'login-1.czii.org'
+HOST = "10.50.120.90"
 PORT = 22
 USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
@@ -138,6 +140,7 @@ def cancel_aretomo3(request):
 def track_jobs(request):
     if request.method == 'POST':
         data = json.loads(request.body)
+        print(data)
         job_name = data.get('job_name')
 
         aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
@@ -194,3 +197,16 @@ def custom_workflow_page(request):
 
 def custom_run_workflow_page(request):
     return render(request, 'workflows/workflow_run.html')
+
+
+@require_http_methods(["GET"])
+def get_msi_session_list(request):
+    try:
+        # Fetch only the name field from MsiSession
+        session_names = list(MsiSession.objects.values_list('name', flat=True))
+        
+        return JsonResponse({'session_names': session_names}, status=200)
+
+    except Exception as e:
+        logger.error(f'An unexpected error occurred: {str(e)}')
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)

@@ -8,33 +8,42 @@ import {
 } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { UpdateFilterAction } from "@app/common/components/TableStateProvider/TableStateProvider";
 import {
-  TOMOGRAM_FILTER_ID,
-  TomogramFilterCategory,
-} from "@app/common/types/filter";
-import { CategoryFilter } from "@app/components/Filter/common/types";
+  CategoryFilter,
+  FilterConfig,
+} from "@app/components/Filter/common/types";
 import { useFilterList } from "@app/components/Filter/hooks/useFilterList/useFilterList";
-import { TOMOGRAM_FILTER_CONFIGS } from "@app/components/TomogramsView/components/TomogramTable/filters";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
 import { API } from "@app/common/constants/api";
 import { SEARCH_PARAM_NAME } from "@app/common/types/search";
 import { getFilterSearchParamValues } from "@app/common/utils/searchParam";
+import {
+  EntityFilterCategories,
+  EntityFilterConfigs,
+  EntityFilterIdTypes,
+} from "../../types/filter";
 
-export const useConnect = () => {
+export const useConnect = <
+  FilterId extends EntityFilterIdTypes,
+  FilterCategory extends EntityFilterCategories,
+>(
+  entityFilterConfigs: EntityFilterConfigs[][],
+  entityFilterListApi: API,
+) => {
   const dispatch = useContext(TableDispatchContext);
 
   const state = useContext<TableState>(TableStateContext);
 
-  const filtersList = useFetchFilters(API.TOMOGRAMS_FILTERLIST_V1, {
+  const filtersList = useFetchFilters(entityFilterListApi, {
     [SEARCH_PARAM_NAME.QUERY]: getFilterSearchParamValues(state),
   });
 
-  const filters = useFilterList<TOMOGRAM_FILTER_ID, TomogramFilterCategory>(
-    TOMOGRAM_FILTER_CONFIGS,
-    filtersList
+  const filters = useFilterList<FilterId, FilterCategory>(
+    entityFilterConfigs as FilterConfig<FilterId, FilterCategory>[][],
+    filtersList,
   );
 
   const onFilter = useCallback(
-    (categoryFilter: CategoryFilter<TomogramFilterCategory>): void => {
+    (categoryFilter: CategoryFilter<FilterCategory>): void => {
       const updateFilterAction: UpdateFilterAction = {
         payload: {
           categoryFilter,
@@ -44,7 +53,7 @@ export const useConnect = () => {
       };
       dispatch(updateFilterAction);
     },
-    [dispatch, filtersList]
+    [dispatch, filtersList],
   );
 
   return { filters, onFilter };

@@ -2,6 +2,7 @@ import { AccessorFnColumnDef } from "@tanstack/react-table";
 import { GridData } from "@/app/common/types/types";
 import {
   GRID_COLUMN,
+  GridAccessorReturnType,
   GridColumnDef,
 } from "@/views/GridsView/components/Main/components/GridList/columns/types";
 import {
@@ -15,7 +16,7 @@ import {
 
 export const GRID_COLUMN_ACCESSOR_FN: Record<
   keyof typeof GRID_COLUMN,
-  AccessorFnColumnDef<GridData>["accessorFn"]
+  AccessorFnColumnDef<GridData, GridAccessorReturnType>["accessorFn"]
 > = {
   CRYOGRID: getCryogridAccessorFn,
   FREEZING_PLAN: getFreezingPlanAccessorFn,

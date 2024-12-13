@@ -16,7 +16,7 @@ import { FiltersList } from "@app/common/types/types";
  */
 export function buildFilterGroups<FilterId, FilterCategory extends string>(
   filterConfigs: FilterConfig<FilterId, FilterCategory>[][],
-  filters?: FiltersList<FilterCategory>["filters"]
+  filters?: FiltersList<FilterCategory>["filters"],
 ): FilterView<FilterId, FilterCategory>[][] {
   return filterConfigs.map((configs) => {
     return configs.map((config) => {
@@ -40,7 +40,7 @@ export function buildFilterGroups<FilterId, FilterCategory extends string>(
  * @returns an array of filter view options.
  */
 function buildFilterViewOptions<FilterId, FilterCategory extends string>(
-  filterOptions?: FilterOption[]
+  filterOptions?: FilterOption[],
 ): SelectFilterView<FilterId, FilterCategory>["options"] {
   if (!filterOptions) return [];
   return filterOptions.map(mapOption);
@@ -52,7 +52,7 @@ function buildFilterViewOptions<FilterId, FilterCategory extends string>(
  * @returns an array of selected values.
  */
 function buildFilterViewValue<FilterId, FilterCategory extends string>(
-  filterOptions?: FilterOption[]
+  filterOptions?: FilterOption[],
 ): SelectFilterView<FilterId, FilterCategory>["value"] {
   if (!filterOptions) return [];
   return filterOptions.filter(isSelected).map(mapOption);

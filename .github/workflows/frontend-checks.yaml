@@ -1,0 +1,40 @@
+name: Frontend Checks
+
+on:
+  push:
+    paths:
+      - "frontend/**"
+  pull_request:
+    paths:
+      - "frontend/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "./frontend/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "./frontend/yarn.lock"
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: yarn install
+
+      - name: Run TypeScript Compiler for frontend
+        working-directory: ./frontend
+        run: yarn tsc --project tsconfig.json
+
+      - name: Run Linter
+        working-directory: ./frontend
+        run: yarn lint
+
+      - name: Run Prettier
+        working-directory: ./frontend
+        run: yarn prettier --check .
