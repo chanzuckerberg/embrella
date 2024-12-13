@@ -579,7 +579,7 @@ def filter_by_sample_name(formatted_result, sample_name_input):
 
 def format_grid(item):
     base_url = get_base_url()
-    grid_url = f"{base_url}/admin/cryo_grids/cryogrid/{item['id']}"
+    grid_url = f"{base_url}/cryo_grids/grid_detail/{item['id']}" #redirect to new grid detail page
     
     # Return a GridModel instance
     return GridModel(
