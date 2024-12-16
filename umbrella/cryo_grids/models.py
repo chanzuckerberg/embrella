@@ -143,13 +143,14 @@ class CryoGrid(models.Model):
     trashed = models.BooleanField(default=False,help_text="Is this cryo-grid discarded ?")
 
     intended_project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, help_text='Optionally assign the project this grid is made for. This makes the grid easier to find.')
+    copy_number = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
-        unique_together = ["name","freezing_session","freezing_plan"]
+        unique_together = ["name","freezing_session","freezing_plan","copy_number"]
         constraints = [
             models.UniqueConstraint(fields=["grid_box","position_in_box"], name="unique_box_position", condition=models.Q(trashed=False), nulls_distinct=True),
             models.UniqueConstraint(fields=["grid_cassette","slot_number_in_cassette"], name="unique_cassette_slot", condition=models.Q(trashed=False), nulls_distinct=True),
         ]
         
     def __str__(self):
-        return '%s (id=%d) from %s of %s' % (self.name, self.pk, self.freezing_session, self.freezing_plan)
+        return '%s.c%d (id=%d) from %s of %s' % (self.name, self.copy_number, self.pk, self.freezing_session, self.freezing_plan)

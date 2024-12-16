@@ -217,7 +217,7 @@ def available_filters(request):
             'msi_session__grid__freezing_plan__sample',
             'msi_session__grid__freezing_plan__tags',
             'runpipedata_set__tomograms_set'
-        ).filter(filter_criteria)
+        ).filter(filter_criteria,proc_plan__name__in=['czii-live', 'czii-denoise'])
 
         # Add date ranges
         current_time = now()
@@ -275,13 +275,15 @@ def available_filters(request):
                 .values(name=F('user_temp_name'), count=F('count'))
             ),
             'msiSession': list(
-                queryset.values(session_name=F('msi_session__name'))
+                queryset.exclude(msi_session__name__isnull=True) 
+                .values(session_name=F('msi_session__name'))
                 .annotate(count=Count('id'))
                 .order_by('session_name')
                 .values(name=F('session_name'), count=F('count'))
             ),
             'screeningSession': list(
-                queryset.values(screening_session_name=F('msi_session__atlas_session__group__name'))
+                queryset.exclude(msi_session__atlas_session__group__name__isnull=True)
+                .values(screening_session_name=F('msi_session__atlas_session__group__name'))
                 .annotate(count=Count('id'))
                 .order_by('screening_session_name')
                 .values(name=F('screening_session_name'), count=F('count'))
@@ -729,13 +731,15 @@ def available_annotation_filter(request):
                 .values(name=F('user_temp_name'), count=F('count'))
             ),
             'msiSession': list(
-                queryset.values(msi_session_name=F('msi_session__name'))  # Correct reference to session name
+                queryset.exclude(msi_session__name__isnull=True)
+                .values(msi_session_name=F('msi_session__name'))  # Correct reference to session name
                 .annotate(count=Count('id'))
                 .order_by('msi_session_name')
                 .values(name=F('msi_session_name'), count=F('count'))
             ),
             'screeningSession': list(
-                queryset.values(screen_session_name=F('screen_session_display_name'))  # Updated alias
+                queryset.exclude(screen_session_display_name__isnull=True) 
+                .values(screen_session_name=F('screen_session_display_name'))  # Updated alias
                 .annotate(count=Count('id'))
                 .order_by('screen_session_name')
                 .values(name=F('screen_session_name'), count=F('count'))
