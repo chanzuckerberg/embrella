@@ -28,10 +28,12 @@ const StyledNavLink = styled(Link)`
 `;
 
 export const TopNavigation = () => {
+  const [baseNextUrl, setBaseNextUrl] = useState("");
   const [adminUrl, setAdminUrl] = useState("");
 
   useEffect(() => {
     setAdminUrl(getAdminUrl());
+    setBaseNextUrl(getBaseNextUrl());
   }, []);
 
   return (
@@ -39,10 +41,14 @@ export const TopNavigation = () => {
       <StyledNavbar>
         <span className={"sds-font-body-xl"}>
           <StyledNavLink href={adminUrl} fontWeight="bold">
-            Admin Page
+            Startup Page
           </StyledNavLink>
           {Object.entries(TAB_PATHS_TO_LABELS).map(([path, label]) => (
-            <StyledNavLink key={path} href={path} fontWeight="bold">
+            <StyledNavLink
+              key={path}
+              href={`${baseNextUrl}/${path}`}
+              fontWeight="bold"
+            >
               {label}
             </StyledNavLink>
           ))}
@@ -52,24 +58,28 @@ export const TopNavigation = () => {
   );
 };
 
-const getAdminUrl = (): string => {
+const getBaseUrl = (localhostPort: string): string => {
   if (typeof window === "undefined") {
     return "";
   }
 
   const { protocol, hostname } = window.location;
-  const LOCALHOST_ADMIN_PORT = 8000;
+  let baseUrl = `${protocol}//${hostname}`;
 
-  // Check if running on localhost
   const isLocalhost = hostname === "localhost";
-
-  let adminUrl = `${protocol}//${hostname}`;
   if (isLocalhost) {
-    adminUrl += `:${LOCALHOST_ADMIN_PORT}`;
+    baseUrl += `:${localhostPort}`;
   }
 
-  // Remove the `/next` portion if it exists
-  adminUrl = adminUrl.replace(/\/next$/, "");
+  return baseUrl;
+};
 
-  return adminUrl;
+const getAdminUrl = (): string => {
+  const LOCALHOST_ADMIN_PORT = "8000";
+  return getBaseUrl(LOCALHOST_ADMIN_PORT);
+};
+
+const getBaseNextUrl = (): string => {
+  const LOCALHOST_NEXT_PORT = "3000";
+  return `${getBaseUrl(LOCALHOST_NEXT_PORT)}/next`;
 };
