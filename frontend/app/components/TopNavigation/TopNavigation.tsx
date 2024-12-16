@@ -76,14 +76,10 @@ const getBaseUrl = (localhostPort: string): string => {
 
 const getAdminUrl = (): string => {
   const LOCALHOST_ADMIN_PORT = "8000";
-
-  let adminUrl = getBaseUrl(LOCALHOST_ADMIN_PORT);
-
-  return adminUrl;
+  return getBaseUrl(LOCALHOST_ADMIN_PORT);
 };
 
 const getBaseNextUrl = (): string => {
   const LOCALHOST_NEXT_PORT = "3000";
-
   return `${getBaseUrl(LOCALHOST_NEXT_PORT)}/next`;
 };
