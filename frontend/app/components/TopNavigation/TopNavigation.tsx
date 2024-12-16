@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import styled from "@emotion/styled";
-import { Theme } from "@mui/material/styles";
 import { Link } from "@czi-sds/components";
 
 import { spacesL, spacesS, spacesXxxs } from "@app/common/theme";
@@ -22,16 +21,6 @@ const StyledNavbar = styled.span`
   border-bottom: ${spacesXxxs}px solid;
   width: 100%;
 `;
-
-export const getNavLinkTypography = (theme: Theme) => {
-  const { fontFamily, fontWeight, fontSize, lineHeight } = theme.typography.h3;
-  return {
-    fontFamily,
-    fontWeight,
-    fontSize,
-    lineHeight,
-  };
-};
 
 const StyledNavLink = styled(Link)`
   padding: 0 ${spacesL}px;
