@@ -1,12 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import styled from "@emotion/styled";
-import { Link } from "@czi-sds/components";
 import { Theme } from "@mui/material/styles";
+import { Link } from "@czi-sds/components";
 
 import { spacesL, spacesS, spacesXxxs } from "@app/common/theme";
-import { noop } from "@app/common/utils/noop";
-import { useEffect, useState } from "react";
 
 const TAB_PATHS_TO_LABELS: Record<string, string> = {
   cryo_grids: "Grids",
