@@ -41,7 +41,7 @@ export const TopNavigation = () => {
       <StyledNavbar>
         <span className={"sds-font-body-xl"}>
           <StyledNavLink href={adminUrl} fontWeight="bold">
-            Admin Page
+            Startup Page
           </StyledNavLink>
           {Object.entries(TAB_PATHS_TO_LABELS).map(([path, label]) => (
             <StyledNavLink
