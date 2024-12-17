@@ -1,7 +1,7 @@
 import React from "react";
 import { RowData } from "@tanstack/react-table";
-import { Props } from "@/app/components/Table/components/Pagination/types";
-import { StyledPagination } from "@/app/components/Table/components/Pagination/style";
+import { Props } from "@/app/common/components/Table/components/Pagination/types";
+import { StyledPagination } from "@/app/common/components/Table/components/Pagination/style";
 
 export const Pagination = <TData extends RowData>({
   dataTestId,

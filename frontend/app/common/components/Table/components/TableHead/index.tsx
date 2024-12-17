@@ -1,6 +1,6 @@
 import React, { Fragment } from "react";
 import { flexRender, RowData } from "@tanstack/react-table";
-import { Props } from "@/app/components/Table/components/TableHead/types";
+import { Props } from "@/app/common/components/Table/components/TableHead/types";
 import {
   CellHeader as SDSCellHeader,
   TableHeader as SDSTableHeader,
@@ -9,7 +9,7 @@ import {
   getCellHeaderActive,
   getCellHeaderDirection,
   getCellHeaderHideSortIcon,
-} from "@/app/components/Table/components/TableHead/utils";
+} from "@/app/common/components/Table/components/TableHead/utils";
 
 export const TableHead = <TData extends RowData>({
   table,

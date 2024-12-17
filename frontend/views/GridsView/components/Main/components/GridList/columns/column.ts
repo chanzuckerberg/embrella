@@ -4,13 +4,13 @@ import {
   GridColumnDef,
   GridColumnDefCellContext,
 } from "@/views/GridsView/components/Main/components/GridList/columns/types";
-import { Links } from "@/app/components/Table/components/CellComponent/components/Links";
-import { Link } from "@/app/components/Table/components/CellComponent/components/Link";
+import { Links } from "@/app/common/components/Table/components/CellComponent/components/Links";
+import { Link } from "@/app/common/components/Table/components/CellComponent/components/Link";
 import {
   GRID_COLUMN_ACCESSOR_FN,
   GRID_COLUMN_ID,
 } from "@/views/GridsView/components/Main/components/GridList/columns/constants";
-import { LinkTValue } from "@/app/components/Table/components/CellComponent/types";
+import { LinkTValue } from "@/app/common/components/Table/components/CellComponent/types";
 
 export const GRID_COLUMN_DEF_CRYOGRID: GridColumnDef = {
   accessorFn: GRID_COLUMN_ACCESSOR_FN.CRYOGRID,

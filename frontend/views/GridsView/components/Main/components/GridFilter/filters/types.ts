@@ -1,4 +1,4 @@
-import { FilterConfig } from "@/app/components/Filter/common/types";
+import { FilterConfig } from "@/app/common/components/Filter/common/types";
 import { GridFilterCategory } from "@/app/common/types/types";
 
 export type GridFilterConfig = FilterConfig<GRID_FILTER_ID, GridFilterCategory>;

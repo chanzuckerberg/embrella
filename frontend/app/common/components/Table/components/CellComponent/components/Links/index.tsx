@@ -1,7 +1,7 @@
 import React, { Fragment } from "react";
-import { Props } from "@/app/components/Table/components/CellComponent/components/Links/types";
+import { Props } from "@/app/common/components/Table/components/CellComponent/components/Links/types";
 import { Link as SDSLink } from "@czi-sds/components";
-import { LINK_PROPS } from "@/app/components/Table/components/CellComponent/components/Link/constants";
+import { LINK_PROPS } from "@/app/common/components/Table/components/CellComponent/components/Link/constants";
 import { RowData } from "@tanstack/react-table";
 
 export const Links = <TData extends RowData>({

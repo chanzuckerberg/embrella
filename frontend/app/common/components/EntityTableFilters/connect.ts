@@ -10,8 +10,8 @@ import { UpdateFilterAction } from "@app/common/components/TableStateProvider/Ta
 import {
   CategoryFilter,
   FilterConfig,
-} from "@app/components/Filter/common/types";
-import { useFilterList } from "@app/components/Filter/hooks/useFilterList/useFilterList";
+} from "@/app/common/components/Filter/common/types";
+import { useFilterList } from "@/app/common/components/Filter/hooks/useFilterList/useFilterList";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
 import { API } from "@app/common/constants/api";
 import { SEARCH_PARAM_NAME } from "@app/common/types/search";

@@ -1,6 +1,6 @@
 import React from "react";
 import { flexRender, RowData } from "@tanstack/react-table";
-import { Props } from "@/app/components/Table/components/TableBody/types";
+import { Props } from "@/app/common/components/Table/components/TableBody/types";
 import { TableBody as MTableBody } from "@mui/material";
 import {
   CellComponent as SDSCellComponent,

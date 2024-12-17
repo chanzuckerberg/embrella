@@ -1,4 +1,7 @@
-import { FilterView, OnFilterFn } from "@/app/components/Filter/common/types";
+import {
+  FilterView,
+  OnFilterFn,
+} from "@/app/common/components/Filter/common/types";
 
 export interface Props<FilterId, FilterCategory extends string> {
   category: FilterCategory;

@@ -2,7 +2,7 @@ import {
   AutocompleteOption,
   FILTER_VALUE,
   FilterValue,
-} from "@/app/components/Filter/common/types";
+} from "@/app/common/components/Filter/common/types";
 
 /**
  * Returns an array of filter values from the given selected options.

@@ -4,7 +4,7 @@ import {
   FilterConfig,
   FilterView,
   SelectFilterView,
-} from "@/app/components/Filter/common/types";
+} from "@/app/common/components/Filter/common/types";
 import { FilterOption } from "@app/common/types/filter";
 import { FiltersList } from "@app/common/types/types";
 
