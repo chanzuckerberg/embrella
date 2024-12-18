@@ -38,7 +38,6 @@ export const useConnect = <
   entityFilterConfigs: EntityFilterConfigs[][],
   entityFilterListApi: API,
 ): EntityTableFilterConnect<FilterId, FilterCategory> => {
-  console.log("entityFilterConfigs", entityFilterConfigs);
   const dispatch = useContext(TableDispatchContext);
 
   const state = useContext<TableState>(TableStateContext);
