@@ -1,5 +1,6 @@
 import { initFetch } from "@/testing/utils";
-import { fetchResource, getRequestURL } from "@/app/common/queries/utils";
+import { getRequestURL } from "@/app/common/queries/utils";
+import { fetchResource } from "@/app/common/queries/fetchResource";
 import {
   GRID_A,
   URL_BASE,
