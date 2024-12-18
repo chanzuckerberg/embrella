@@ -6,7 +6,7 @@ import {
   LinkCellProps,
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
-} from "@/app/common/components/Table/components/LinkCell/LinkCell";
+} from "@/app/common/components/Table/utils/linkUtils";
 import { humanize } from "@/app/common/utils/string";
 import { AnnotationData } from "../types";
 
