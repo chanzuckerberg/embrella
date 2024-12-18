@@ -9,10 +9,12 @@ import { TableStateActionTypes } from "@app/common/components/TableStateProvider
 import {
   EntityFilterCategories,
   EntityFilterConfigs,
+  FiltersList,
 } from "@app/common/types/filter";
 import { useFilterList } from "@app/common/components/Filter/hooks/useFilterList/useFilterList";
 import { API } from "@app/common/constants/api";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
+import { UseFilterList } from "../Filter/hooks/useFilterList/types";
 
 jest.mock("../../hooks/useFetchFilters/useFetchFilters", () => ({
   useFetchFilters: jest.fn(),
@@ -38,8 +40,8 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe("useConnect", () => {
-  let filtersList: any;
-  let filters: any;
+  let filtersList: FiltersList;
+  let filters: UseFilterList<"PROJECT", "project">;
   let entityFilterConfigs: EntityFilterConfigs[][];
 
   beforeEach(() => {
@@ -58,7 +60,7 @@ describe("useConnect", () => {
           },
         ],
       },
-    };
+    } as FiltersList;
 
     filters = [
       [
