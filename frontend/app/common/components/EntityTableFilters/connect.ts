@@ -10,8 +10,9 @@ import { UpdateFilterAction } from "@app/common/components/TableStateProvider/Ta
 import {
   CategoryFilter,
   FilterConfig,
-} from "@app/components/Filter/common/types";
-import { useFilterList } from "@app/components/Filter/hooks/useFilterList/useFilterList";
+} from "@app/common/components/Filter/common/types";
+import { UseFilterList } from "@app/common/components/Filter/hooks/useFilterList/types";
+import { useFilterList } from "@app/common/components/Filter/hooks/useFilterList/useFilterList";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
 import { API } from "@app/common/constants/api";
 import { SEARCH_PARAM_NAME } from "@app/common/types/search";
@@ -20,7 +21,15 @@ import {
   EntityFilterCategories,
   EntityFilterConfigs,
   EntityFilterIdTypes,
-} from "../../types/filter";
+} from "@app/common/types/filter";
+
+export interface EntityTableFilterConnect<
+  FilterId extends EntityFilterIdTypes,
+  FilterCategory extends EntityFilterCategories,
+> {
+  filters: UseFilterList<FilterId, FilterCategory>;
+  onFilter: (categoryFilter: CategoryFilter<FilterCategory>) => void;
+}
 
 export const useConnect = <
   FilterId extends EntityFilterIdTypes,
@@ -28,7 +37,8 @@ export const useConnect = <
 >(
   entityFilterConfigs: EntityFilterConfigs[][],
   entityFilterListApi: API,
-) => {
+): EntityTableFilterConnect<FilterId, FilterCategory> => {
+  console.log("entityFilterConfigs", entityFilterConfigs);
   const dispatch = useContext(TableDispatchContext);
 
   const state = useContext<TableState>(TableStateContext);
@@ -47,13 +57,12 @@ export const useConnect = <
       const updateFilterAction: UpdateFilterAction = {
         payload: {
           categoryFilter,
-          filtersList,
         },
         type: TableStateActionTypes.UpdateFilter,
       };
       dispatch(updateFilterAction);
     },
-    [dispatch, filtersList],
+    [dispatch],
   );
 
   return { filters, onFilter };

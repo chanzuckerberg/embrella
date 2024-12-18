@@ -1,4 +1,4 @@
-name: Playwright Tests
+name: Jest Unit Tests
 on:
   push:
     branches: [ main ]
@@ -15,19 +15,16 @@ jobs:
           node-version-file: "./frontend/.nvmrc"
       - name: Install dependencies
         run: |
-            cd frontend
-            yarn install
-      - name: Install Playwright Browsers
+          cd frontend
+          yarn install
+      - name: Run Jest tests
         run: |
-            cd frontend
-            npx playwright install --with-deps
-      - name: Run Chrome tests
-        run: |
-            cd frontend
-            yarn e2e:chrome
-      - uses: actions/upload-artifact@v3
+          cd frontend
+          yarn test
+      - name: Upload Jest test results
         if: always()
+        uses: actions/upload-artifact@v3
         with:
-          name: playwright-report
-          path: frontend/playwright-report/
+          name: jest-test-results
+          path: frontend/jest-test-results/
           retention-days: 30

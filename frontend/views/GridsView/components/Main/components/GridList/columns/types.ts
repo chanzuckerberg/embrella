@@ -1,6 +1,6 @@
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { GridData } from "@/app/common/types/types";
-import { LinkTValue } from "@/app/components/Table/components/CellComponent/types";
+import { LinkTValue } from "@/app/common/components/Table/components/CellComponent/types";
 
 export enum GRID_COLUMN {
   CRYOGRID = "CRYOGRID",

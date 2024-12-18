@@ -1,4 +1,4 @@
-import { CategoryFilter } from "@/app/components/Filter/common/types";
+import { CategoryFilter } from "@/app/common/components/Filter/common/types";
 import { GridFilterCategory } from "@/app/common/types/types";
 import { Pagination, SortBy } from "@/app/common/types/tableState";
 import { FiltersList } from "@/app/common/types/types";

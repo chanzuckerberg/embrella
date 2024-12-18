@@ -1,7 +1,7 @@
 import {
   CategoryFilter,
   FilterState,
-} from "@/app/components/Filter/common/types";
+} from "@/app/common/components/Filter/common/types";
 import { GridFilterCategory } from "@/app/common/types/types";
 import { FiltersList } from "@/app/common/types/types";
 import { FilterOption } from "@/app/common/types/filter";

@@ -7,7 +7,7 @@ import {
   LinkCellProps,
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
-} from "@app/components/Table/components/LinkCell/LinkCell";
+} from "@/app/common/components/Table/components/LinkCell/LinkCell";
 import { TomogramData } from "@app/components/TomogramsView/types";
 
 export const TOMOGRAM_COLUMN_IDS = {

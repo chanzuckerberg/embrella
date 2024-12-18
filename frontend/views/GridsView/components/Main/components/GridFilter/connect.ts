@@ -1,9 +1,9 @@
 import { useCallback, useContext } from "react";
 import { Props } from "./types";
 import { DispatchContext } from "@/views/GridsView/common/store";
-import { CategoryFilter } from "@/app/components/Filter/common/types";
+import { CategoryFilter } from "@/app/common/components/Filter/common/types";
 import { GridFilterCategory } from "@/app/common/types/types";
-import { useFilterList } from "@/app/components/Filter/hooks/useFilterList/useFilterList";
+import { useFilterList } from "@/app/common/components/Filter/hooks/useFilterList/useFilterList";
 import { GRID_FILTER_ID } from "@/views/GridsView/components/Main/components/GridFilter/filters/types";
 import { GRID_FILTER_CONFIGS } from "@/views/GridsView/components/Main/components/GridFilter/filters/filter";
 import { updateFilter } from "@/views/GridsView/common/store/actions/dispatch";

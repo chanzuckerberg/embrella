@@ -1,6 +1,6 @@
 import { GridData } from "@/app/common/types/types";
 import { formatDate } from "@/views/common/date/utils";
-import { LinkTValue } from "@/app/components/Table/components/CellComponent/types";
+import { LinkTValue } from "@/app/common/components/Table/components/CellComponent/types";
 
 /**
  * Cryogrid accessor function.

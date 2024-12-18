@@ -52,9 +52,12 @@ const STATE: State = {
 jest.mock("../views/GridsView/hooks/useFetchGrids/useFetchGrids", () => ({
   useFetchGrids: jest.fn(),
 }));
-jest.mock("../views/GridsView/hooks/useFetchFilters/useFetchFilters", () => ({
-  useFetchFilters: jest.fn(),
-}));
+jest.mock(
+  "../views/GridsView/hooks/useFetchGridsFilters/useFetchGridsFilters",
+  () => ({
+    useFetchGridsFilters: jest.fn(),
+  }),
+);
 
 describe("Grid View Connect", () => {
   beforeEach(() => {
