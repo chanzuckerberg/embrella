@@ -102,7 +102,7 @@ describe("useConnect", () => {
     (useFilterList as jest.Mock).mockReturnValue(filters);
 
     const { result } = renderHook(
-      () => useConnect(entityFilterConfigs, API.TOMOGRAMS_FILTERLIST_V1),
+      () => useConnect(entityFilterConfigs, API.TOMOGRAMS_FILTERLIST),
       { wrapper },
     );
 
@@ -121,7 +121,7 @@ describe("useConnect", () => {
     (useFilterList as jest.Mock).mockReturnValue(filtersList);
 
     const { result } = renderHook(
-      () => useConnect(entityFilterConfigs, API.TOMOGRAMS_FILTERLIST_V1),
+      () => useConnect(entityFilterConfigs, API.TOMOGRAMS_FILTERLIST),
       { wrapper },
     );
 

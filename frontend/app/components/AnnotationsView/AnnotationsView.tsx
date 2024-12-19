@@ -27,12 +27,12 @@ export const AnnotationsView = (): React.JSX.Element => {
         <Sidebar>
           <EntityTableFilters<AnnotationFilterId, AnnotationFilterCategory>
             entityFilterConfigs={ANNOTATION_FILTER_CONFIGS}
-            entityFilterListApi={API.ANNOTATIONS_FILTERLIST_V1}
+            entityFilterListApi={API.ANNOTATIONS_FILTERLIST}
           />
         </Sidebar>
         <TableWrapper>
           <EntityTable
-            entityApi={API.ANNOTATIONS_V1}
+            entityApi={API.ANNOTATIONS}
             entityApiResponseField="annotations"
             columnDefs={ANNOTATION_COLUMN_DEFS}
           />

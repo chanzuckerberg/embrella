@@ -69,7 +69,7 @@ describe("useConnect", () => {
 
   it("should set up table options correctly", () => {
     const { result } = renderHook(
-      () => useConnect(API.TOMOGRAMS_V1, "tomograms", []),
+      () => useConnect(API.TOMOGRAMS, "tomograms", []),
       { wrapper },
     );
 
@@ -78,7 +78,7 @@ describe("useConnect", () => {
 
   it("should dispatch UpdatePagination action on pagination change", () => {
     const { result } = renderHook(
-      () => useConnect(API.TOMOGRAMS_V1, "tomograms", []),
+      () => useConnect(API.TOMOGRAMS, "tomograms", []),
       { wrapper },
     );
 
@@ -97,7 +97,7 @@ describe("useConnect", () => {
 
   it("should dispatch UpdateSort action on sorting change", () => {
     const { result } = renderHook(
-      () => useConnect(API.TOMOGRAMS_V1, "tomograms", []),
+      () => useConnect(API.TOMOGRAMS, "tomograms", []),
       { wrapper },
     );
 

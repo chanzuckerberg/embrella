@@ -24,12 +24,12 @@ export const TomogramsView = (): React.JSX.Element => {
         <Sidebar>
           <EntityTableFilters<TomogramFilterId, TomogramFilterCategory>
             entityFilterConfigs={TOMOGRAM_FILTER_CONFIGS}
-            entityFilterListApi={API.TOMOGRAMS_FILTERLIST_V1}
+            entityFilterListApi={API.TOMOGRAMS_FILTERLIST}
           />
         </Sidebar>
         <TableWrapper>
           <EntityTable
-            entityApi={API.TOMOGRAMS_V1}
+            entityApi={API.TOMOGRAMS}
             entityApiResponseField="tomograms"
             columnDefs={TOMOGRAM_COLUMN_DEFS}
           />
