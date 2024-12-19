@@ -8,7 +8,7 @@ import {
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
 } from "@/app/common/components/Table/utils/linkUtils";
-import { TomogramData } from "@app/components/TomogramsView/types";
+import { TomogramData } from "../types";
 
 export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: "tomograms",
