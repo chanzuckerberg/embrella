@@ -6,12 +6,6 @@ import {
 } from "@app/common/types/entity";
 import { FilterConfig } from "@/app/common/components/Filter/common/types";
 
-interface GridFreezingPlanSample {
-  id: number;
-  name: string;
-  url: string;
-}
-
 export interface GridData {
   grid: GridField & { updatedAt: string | null };
   cassette: {
@@ -24,7 +18,7 @@ export interface GridData {
   user: UserField;
   freezingPlan: {
     id: number;
-    sample: GridFreezingPlanSample[];
+    sample: EntityLinkField[];
   };
   freezingSession: {
     id: number;
