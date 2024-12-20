@@ -42,7 +42,7 @@ export const useConnect = <
 
   const state = useContext<TableState>(TableStateContext);
 
-  const filtersList = useFetchFilters(entityFilterListApi, {
+  const filtersList = useFetchFilters<FilterCategory>(entityFilterListApi, {
     [SEARCH_PARAM_NAME.QUERY]: getFilterSearchParamValues(state),
   });
 

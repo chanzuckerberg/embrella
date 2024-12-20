@@ -15,6 +15,7 @@ import { useFilterList } from "@app/common/components/Filter/hooks/useFilterList
 import { API } from "@app/common/constants/api";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
 import { UseFilterList } from "../Filter/hooks/useFilterList/types";
+import { TestFilterCategory } from "@/testing/types";
 
 jest.mock("../../hooks/useFetchFilters/useFetchFilters", () => ({
   useFetchFilters: jest.fn(),
@@ -40,7 +41,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe("useConnect", () => {
-  let filtersList: FiltersList;
+  let filtersList: FiltersList<TestFilterCategory>;
   let filters: UseFilterList<"PROJECT", "project">;
   let entityFilterConfigs: EntityFilterConfigs[][];
 
@@ -60,7 +61,7 @@ describe("useConnect", () => {
           },
         ],
       },
-    } as FiltersList;
+    } as FiltersList<TestFilterCategory>;
 
     filters = [
       [

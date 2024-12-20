@@ -1,7 +1,7 @@
-import { GridData } from "@app/common/types/types";
 import { ApiListResponse } from "@app/common/types/tableState";
-import { FiltersList } from "@/app/common/types/types";
+import { FiltersList } from "@app/common/types/filter";
 import { SEARCH_PARAM_NAME, SearchParamValue } from "@/app/common/types/search";
+import { GridData } from "@app/components/GridsView/types";
 import { FetchResponseInfo, TestFilterCategory } from "@/testing/types";
 import { getSearchParamFirstValue } from "@/testing/utils";
 

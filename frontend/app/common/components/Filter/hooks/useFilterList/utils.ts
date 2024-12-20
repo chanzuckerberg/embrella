@@ -5,8 +5,11 @@ import {
   FilterView,
   SelectFilterView,
 } from "@/app/common/components/Filter/common/types";
-import { FilterOption } from "@app/common/types/filter";
-import { FiltersList } from "@app/common/types/types";
+import {
+  EntityFilterCategories,
+  FilterOption,
+  FiltersList,
+} from "@app/common/types/filter";
 
 /**
  * Build view model of filter groups.
@@ -14,7 +17,10 @@ import { FiltersList } from "@app/common/types/types";
  * @param filters - Filters list filters.
  * @returns filter groups view model.
  */
-export function buildFilterGroups<FilterId, FilterCategory extends string>(
+export function buildFilterGroups<
+  FilterId,
+  FilterCategory extends EntityFilterCategories,
+>(
   filterConfigs: FilterConfig<FilterId, FilterCategory>[][],
   filters?: FiltersList<FilterCategory>["filters"],
 ): FilterView<FilterId, FilterCategory>[][] {

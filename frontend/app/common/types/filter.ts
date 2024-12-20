@@ -13,10 +13,13 @@ import {
   GridFilterConfig,
   GridFilterId,
 } from "@app/components/GridsView/types";
-
-export interface FiltersList {
-  filters: Record<EntityFilterCategories, FilterOption[]>;
+// EntityFilterCategory extends EntityFilterCategories
+export interface FiltersList<FilterCategory extends EntityFilterCategories> {
+  filters: Record<FilterCategory, FilterOption[]>;
 }
+// export interface FiltersList<FilterCategory extends string> {
+//   filters: Record<FilterCategory, FilterOption[]>;
+// }
 
 export interface FilterOption {
   name: boolean | string | null;
