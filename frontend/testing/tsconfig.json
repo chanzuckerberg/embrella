@@ -9,6 +9,7 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "paths": {
+      "@testing/*": ["./*"],
       "@app/*": ["../app/*"]
     },
     "skipLibCheck": true,
