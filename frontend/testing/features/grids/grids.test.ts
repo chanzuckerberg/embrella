@@ -1,7 +1,13 @@
-import { ROUTES } from "@/app/common/constants/constants";
 import { expect, Locator, Page, Response, test } from "@playwright/test";
-import { TEST_ID_GRID_FILTERS } from "@/views/GridsView/components/Main/components/GridFilter/constants";
-import { GRID_FILTER_CONFIGS } from "@/views/GridsView/components/Main/components/GridFilter/filters/filter";
+
+import { API } from "@app/common/constants/api";
+import { ROUTES } from "@app/common/constants/constants";
+import { TEST_IDS } from "@app/common/constants/testIds";
+import { EntityList } from "@app/common/types/tableState";
+
+import { GRID_COLUMN_DEFS } from "@app/components/GridsView/constants/columns";
+import { GRID_FILTER_CONFIGS } from "@app/components/GridsView/constants/filters";
+
 import {
   ATTRIBUTE,
   BUTTON,
@@ -14,14 +20,6 @@ import {
   TH,
   TOOLTIP,
 } from "@/testing/features/common/constants";
-import {
-  TEST_ID_GRIDS,
-  TEST_ID_GRIDS_PAGINATION,
-} from "@/views/GridsView/components/Main/components/GridList/constants";
-import { EntityList } from "@/views/GridsView/components/Main/components/GridList/types";
-import { GRID_COLUMN_DEFS } from "@/views/GridsView/components/Main/components/GridList/columns/column";
-import { API } from "@/app/common/constants/api";
-import { GridData } from "@/app/common/types/types";
 
 const { describe } = test;
 
@@ -80,10 +78,8 @@ describe("Grids", () => {
       test.skip(condition, DESCRIPTION);
       const {
         pagination: { pageSize, totalResults },
-      } = await waitForResponse<EntityList<GridData, "grids">>(
-        page,
-        API.GRIDS,
-        () => page.reload(),
+      } = await waitForResponse<EntityList>(page, API.GRIDS, () =>
+        page.reload(),
       );
       const pagination = getPaginationLocator(page);
       if (pageSize < totalResults) {
@@ -159,7 +155,7 @@ describe("Grids", () => {
       condition = await shouldSkipFilterTest(filters.nth(0));
     });
     test("displays filters", async ({ page }) => {
-      await expect(page.getByTestId(TEST_ID_GRID_FILTERS)).toBeVisible();
+      await expect(page.getByTestId(TEST_IDS.SIDEBAR_FILTERS)).toBeVisible();
     });
     test("should display configured filters with correct filter label", async () => {
       const FILTERS = FILTER_CONFIGS.flat();
@@ -210,7 +206,7 @@ describe("Grids", () => {
         .locator(FILTER_OPTION_PRIMARY_TEXT)
         .innerText();
       // Apply filter.
-      await waitForRequest(page, filterOption, API.FILTERS_LIST);
+      await waitForRequest(page, filterOption, API.GRIDS_FILTERS_LIST);
       // Verify filter option is selected.
       await expect(filterOption).toHaveClass(/Mui-selected/);
       await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
@@ -232,12 +228,12 @@ describe("Grids", () => {
       await waitForRequest(
         page,
         getFilterOptionLocators(page).nth(0),
-        API.FILTERS_LIST,
+        API.GRIDS_FILTERS_LIST,
       );
       await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
       const filterChip = getFilterChipLocators(filter).nth(0);
       // Clear filter.
-      await waitForRequest(page, filterChip, API.FILTERS_LIST);
+      await waitForRequest(page, filterChip, API.GRIDS_FILTERS_LIST);
       // Verify the filter chip is no longer visible.
       await expect(filterChip).not.toBeVisible();
       // Verify filter option is no longer selected.
@@ -253,7 +249,7 @@ function getFilterChipLocators(filter: Locator): Locator {
 }
 
 function getFilterLocators(page: Page): Locator {
-  return page.getByTestId(TEST_ID_GRID_FILTERS).locator(BUTTON);
+  return page.getByTestId(TEST_IDS.SIDEBAR_FILTERS).locator(BUTTON);
 }
 
 function getFilterOptionLocator(page: Page, nth = 0): Locator {
@@ -269,11 +265,11 @@ function getFilterPopperLocator(page: Page): Locator {
 }
 
 function getPaginationLocator(page: Page) {
-  return page.getByTestId(TEST_ID_GRIDS_PAGINATION);
+  return page.getByTestId(TEST_IDS.ENTITY_TABLE_PAGINATION);
 }
 
 function getTableLocator(page: Page): Locator {
-  return page.getByTestId(TEST_ID_GRIDS);
+  return page.getByTestId(TEST_IDS.ENTITY_TABLE);
 }
 
 function getTableHeaderLocator(table: Locator, nth: number): Locator {
