@@ -6,8 +6,8 @@ import {
 import { API } from "@/app/common/constants/api";
 import { EntityAPIPrimaryAttributeToDataType } from "@app/common/types/entity";
 import { EntityDataTypes } from "@app/common/types/tableState";
-import { GridData } from "@app/common/types/types";
 import { AnnotationData } from "@app/components/AnnotationsView/types";
+import { GridData } from "@app/components/GridsView/types";
 import { TomogramData } from "@app/components/TomogramsView/types";
 import { act, renderHook } from "@testing-library/react";
 

@@ -7,8 +7,8 @@ import {
   URL_GRIDS,
   URL_NONEXISTENT,
 } from "@/testing/constants";
-import { GridData } from "@/app/common/types/types";
 import { ApiListResponse } from "@app/common/types/tableState";
+import { GridData } from "@app/components/GridsView/types";
 
 beforeAll(() => {
   initFetch();
