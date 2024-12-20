@@ -19,7 +19,7 @@ import {
   TABLE_BODY_ROW,
   TH,
   TOOLTIP,
-} from "@/testing/features/common/constants";
+} from "@testing/features/common/constants";
 
 const { describe } = test;
 

@@ -1,17 +1,16 @@
 {
   "compilerOptions": {
+    "target": "es6",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
-    "baseUrl": ".",
     "esModuleInterop": true,
     "isolatedModules": true,
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
     "paths": {
-      "@e2e/*": ["./*"],
       "@app/*": ["../app/*"]
     },
-    "target": "ES2018",
     "skipLibCheck": true,
     "strict": true
   },
