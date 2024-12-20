@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { delay, initFetch } from "@/testing/utils";
-import { FETCH_RESPONSE_FILTERS_LIST } from "@/testing/constants";
+import { delay, initFetch } from "@testing/utils";
+import { FETCH_RESPONSE_FILTERS_LIST } from "@testing/constants";
 import { useFetchFilters } from "./useFetchFilters";
 import { API } from "../../constants/api";
 

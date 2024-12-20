@@ -14,7 +14,7 @@ import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
 import { API } from "@app/common/constants/api";
 import { AnnotationFilterId, AnnotationFilterCategory } from "./types";
 import { ANNOTATION_FILTER_CONFIGS } from "./constants/filters";
-import { EntityTableFilters } from "@/app/common/components/EntityTableFilters/EntityTableFilters";
+import { EntityTableFilters } from "@app/common/components/EntityTableFilters/EntityTableFilters";
 
 export const AnnotationsView = (): React.JSX.Element => {
   const initialSortState: SortingState = [

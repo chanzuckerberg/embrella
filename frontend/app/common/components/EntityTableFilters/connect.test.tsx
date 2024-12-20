@@ -15,7 +15,7 @@ import { useFilterList } from "@app/common/components/Filter/hooks/useFilterList
 import { API } from "@app/common/constants/api";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
 import { UseFilterList } from "../Filter/hooks/useFilterList/types";
-import { TestFilterCategory } from "@/testing/types";
+import { TestFilterCategory } from "@testing/types";
 
 jest.mock("../../hooks/useFetchFilters/useFetchFilters", () => ({
   useFetchFilters: jest.fn(),

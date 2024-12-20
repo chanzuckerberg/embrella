@@ -1,4 +1,4 @@
-import { LinkCellProps } from "@/app/common/components/Table/utils/linkUtils";
+import { LinkCellProps } from "@app/common/components/Table/utils/linkUtils";
 
 /*
  * Name of attribute in API response to use for the row ID

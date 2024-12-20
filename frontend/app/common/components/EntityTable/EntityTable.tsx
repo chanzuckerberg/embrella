@@ -1,16 +1,16 @@
 import { Fragment } from "react";
 import { Table as SDSTable } from "@czi-sds/components";
 
-import { TableHead } from "@/app/common/components/Table/components/TableHead";
-import { TableBody } from "@/app/common/components/Table/components/TableBody";
+import { TableHead } from "@app/common/components/Table/components/TableHead";
+import { TableBody } from "@app/common/components/Table/components/TableBody";
 
-import { Pagination } from "@/app/common/components/Table/components/Pagination";
+import { Pagination } from "@app/common/components/Table/components/Pagination";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import { ColumnDef } from "@tanstack/react-table";
 import { AccessorReturnType } from "./types";
 import { useConnect } from "./connect";
 import { ApiPrimaryEntityAttribute } from "./types";
-import { API } from "@/app/common/constants/api";
+import { API } from "@app/common/constants/api";
 import { TEST_IDS } from "@app/common/constants/testIds";
 
 interface EntityTableProps {

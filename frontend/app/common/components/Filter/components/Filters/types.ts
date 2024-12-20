@@ -1,7 +1,7 @@
 import {
   FilterView,
   OnFilterFn,
-} from "@/app/common/components/Filter/common/types";
+} from "@app/common/components/Filter/common/types";
 
 export interface Props<FilterId, FilterCategory extends string> {
   className?: string;

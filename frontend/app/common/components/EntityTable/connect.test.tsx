@@ -2,8 +2,8 @@ import { getRowId, useConnect } from "./connect";
 import {
   TableDispatchContext,
   TableStateContext,
-} from "@/app/common/components/TableStateProvider/TableStateProvider";
-import { API } from "@/app/common/constants/api";
+} from "@app/common/components/TableStateProvider/TableStateProvider";
+import { API } from "@app/common/constants/api";
 import { EntityAPIPrimaryAttributeToDataType } from "@app/common/types/entity";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import { AnnotationData } from "@app/components/AnnotationsView/types";

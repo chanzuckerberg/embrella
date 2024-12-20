@@ -1,5 +1,5 @@
 import { FiltersList } from "@app/common/types/filter";
-import { TestFilterCategory } from "@/testing/types";
+import { TestFilterCategory } from "@testing/types";
 
 /**
  * Partial test data representing a list of filters typed as `TestFilterCategory`.

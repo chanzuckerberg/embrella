@@ -10,7 +10,9 @@
     "noEmit": true,
     "paths": {
       "@testing/*": ["./*"],
-      "@app/*": ["../app/*"]
+      "@app/*": ["../app/*"],
+      "@configs/*": ["../configs/*"],
+      "@hooks/*": ["../hooks/*"]
     },
     "skipLibCheck": true,
     "strict": true

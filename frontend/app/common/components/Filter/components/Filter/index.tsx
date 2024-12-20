@@ -1,12 +1,12 @@
-import { Props } from "@/app/common/components/Filter/components/Filter/types";
+import { Props } from "@app/common/components/Filter/components/Filter/types";
 import { ComplexFilter as SDSComplexFilter } from "@czi-sds/components";
 import {
   COMPLEX_FILTER_PROPS,
   INPUT_DROPDOWN_PROPS,
-} from "@/app/common/components/Filter/components/Filter/constants";
+} from "@app/common/components/Filter/components/Filter/constants";
 import React, { useCallback } from "react";
-import { getFilterValue } from "@/app/common/components/Filter/components/Filter/utils";
-import { AutocompleteOption } from "@/app/common/components/Filter/common/types";
+import { getFilterValue } from "@app/common/components/Filter/components/Filter/utils";
+import { AutocompleteOption } from "@app/common/components/Filter/common/types";
 
 export const Filter = <FilterId, FilterCategory extends string>({
   category,

@@ -6,8 +6,8 @@ import {
   LinkCellProps,
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
-} from "@/app/common/components/Table/utils/linkUtils";
-import { humanize } from "@/app/common/utils/string";
+} from "@app/common/components/Table/utils/linkUtils";
+import { humanize } from "@app/common/utils/string";
 import { AnnotationData } from "../types";
 
 export const ANNOTATION_COLUMN_IDS = {

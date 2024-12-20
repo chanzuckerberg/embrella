@@ -2,8 +2,8 @@ import { Link } from "@czi-sds/components";
 
 import { EntityLinkField } from "@app/common/types/entity";
 import { CellContext } from "@tanstack/react-table";
-import { EntityDataTypes } from "@/app/common/types/tableState";
-import { AccessorReturnType } from "@/app/common/components/EntityTable/types";
+import { EntityDataTypes } from "@app/common/types/tableState";
+import { AccessorReturnType } from "@app/common/components/EntityTable/types";
 
 const DEFAULT_LINK_PROPS = {
   sdsStyle: "default",

@@ -4,7 +4,7 @@ import {
   MSISessionField,
   UserField,
 } from "@app/common/types/entity";
-import { FilterConfig } from "@/app/common/components/Filter/common/types";
+import { FilterConfig } from "@app/common/components/Filter/common/types";
 
 export interface GridData {
   grid: GridField & { updatedAt: string | null };
