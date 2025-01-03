@@ -1,13 +1,14 @@
 import React from "react";
-import { RowData, Table } from "@tanstack/react-table";
+import { Table } from "@tanstack/react-table";
 import { StyledPagination } from "@app/common/components/EntityTable/components/Pagination/style";
+import { EntityDataTypes } from "@app/common/types/tableState";
 
-interface PaginationProps<TData extends RowData> {
+interface PaginationProps<TData extends EntityDataTypes> {
   dataTestId?: string;
   table: Table<TData>;
 }
 
-export const Pagination = <TData extends RowData>({
+export const Pagination = <TData extends EntityDataTypes>({
   dataTestId,
   table,
 }: PaginationProps<TData>): JSX.Element => {

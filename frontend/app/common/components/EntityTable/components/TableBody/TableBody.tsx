@@ -1,30 +1,28 @@
 import React from "react";
-import { flexRender, RowData, Table } from "@tanstack/react-table";
+import { flexRender, Table } from "@tanstack/react-table";
 import { TableBody as MTableBody } from "@mui/material";
-import {
-  CellComponent as SDSCellComponent,
-  TableRow as SDSTableRow,
-} from "@czi-sds/components";
+import { CellComponent, TableRow } from "@czi-sds/components";
+import { EntityDataTypes } from "@app/common/types/tableState";
 
-interface TableBodyProps<TData extends RowData> {
+interface TableBodyProps<TData extends EntityDataTypes> {
   table: Table<TData>;
 }
 
-export const TableBody = <TData extends RowData>({
+export const TableBody = <TData extends EntityDataTypes>({
   table,
 }: TableBodyProps<TData>): JSX.Element => {
   return (
     <MTableBody>
       {table.getRowModel().rows.map((row) => (
-        <SDSTableRow key={row.id}>
+        <TableRow key={row.id}>
           {row.getVisibleCells().map((cell) => {
             return (
-              <SDSCellComponent key={cell.id}>
+              <CellComponent key={cell.id}>
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </SDSCellComponent>
+              </CellComponent>
             );
           })}
-        </SDSTableRow>
+        </TableRow>
       ))}
     </MTableBody>
   );

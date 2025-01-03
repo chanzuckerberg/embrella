@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Table as SDSTable } from "@czi-sds/components";
+import { Table } from "@czi-sds/components";
 
 import { TableHead } from "@app/common/components/EntityTable/components/TableHead/TableHead";
 import { TableBody } from "@app/common/components/EntityTable/components/TableBody/TableBody";
@@ -27,10 +27,10 @@ export const EntityTable = ({
   const { table } = useConnect(entityApi, entityApiResponseField, columnDefs);
   return (
     <Fragment>
-      <SDSTable data-testid={TEST_IDS.ENTITY_TABLE}>
+      <Table data-testid={TEST_IDS.ENTITY_TABLE}>
         <TableHead table={table} />
         <TableBody table={table} />
-      </SDSTable>
+      </Table>
       <Pagination dataTestId={TEST_IDS.ENTITY_TABLE_PAGINATION} table={table} />
     </Fragment>
   );

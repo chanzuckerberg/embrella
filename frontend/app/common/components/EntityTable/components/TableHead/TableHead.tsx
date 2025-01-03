@@ -1,27 +1,25 @@
 import React, { Fragment } from "react";
-import { flexRender, RowData, Table } from "@tanstack/react-table";
-import {
-  CellHeader as SDSCellHeader,
-  TableHeader as SDSTableHeader,
-} from "@czi-sds/components";
+import { flexRender, Table } from "@tanstack/react-table";
+import { CellHeader, TableHeader } from "@czi-sds/components";
 import {
   getCellHeaderActive,
   getCellHeaderDirection,
   getCellHeaderHideSortIcon,
 } from "@app/common/components/EntityTable/components/TableHead/utils/cellHeader";
+import { EntityDataTypes } from "@app/common/types/tableState";
 
-interface TableHeadProps<TData extends RowData> {
+interface TableHeadProps<TData extends EntityDataTypes> {
   table: Table<TData>;
 }
 
-export const TableHead = <TData extends RowData>({
+export const TableHead = <TData extends EntityDataTypes>({
   table,
 }: TableHeadProps<TData>): JSX.Element => {
   return (
-    <SDSTableHeader>
+    <TableHeader>
       {table.getFlatHeaders().map((header) => (
         <Fragment key={header.id}>
-          <SDSCellHeader
+          <CellHeader
             active={getCellHeaderActive(header)}
             direction={getCellHeaderDirection(header)}
             hideSortIcon={getCellHeaderHideSortIcon(header)}
@@ -29,9 +27,9 @@ export const TableHead = <TData extends RowData>({
             onClick={header.column.getToggleSortingHandler()}
           >
             {flexRender(header.column.columnDef.header, header.getContext())}
-          </SDSCellHeader>
+          </CellHeader>
         </Fragment>
       ))}
-    </SDSTableHeader>
+    </TableHeader>
   );
 };
