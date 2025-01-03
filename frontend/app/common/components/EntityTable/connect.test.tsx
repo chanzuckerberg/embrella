@@ -11,6 +11,10 @@ import { GridData } from "@app/components/GridsView/types";
 import { TomogramData } from "@app/components/TomogramsView/types";
 import { act, renderHook } from "@testing-library/react";
 
+jest.mock("../../hooks/useFetchTableData/useFetchTableData", () => ({
+  useFetchTableData: jest.fn(),
+}));
+
 describe("getRowId", () => {
   it("should return the correct row ID for a tomogram entity", () => {
     const row: EntityDataTypes = {
