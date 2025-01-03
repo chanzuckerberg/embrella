@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Table as SDSTable } from "@czi-sds/components";
 
-import { TableHead } from "@app/common/components/EntityTable/components/TableHead";
+import { TableHead } from "@app/common/components/EntityTable/components/TableHead/TableHead";
 import { TableBody } from "@app/common/components/EntityTable/components/TableBody/TableBody";
 
 import { Pagination } from "@app/common/components/EntityTable/components/Pagination/Pagination";
