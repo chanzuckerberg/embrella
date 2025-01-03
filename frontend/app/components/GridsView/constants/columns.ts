@@ -5,12 +5,12 @@ import { humanize } from "@app/common/utils/string";
 import { formatDate } from "@app/common/utils/date";
 import { AccessorReturnType } from "@app/common/components/EntityTable/types";
 import {
-  LinkCellProps,
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
   getLinkPropsFromLinkFieldList,
   getLinkCellListFromCellContext,
-} from "@app/common/components/Table/utils/linkUtils";
+} from "@app/common/components/EntityTable/utils/linkUtils";
+import { LinkCellProps } from "@app/common/components/EntityTable/types";
 import { GridData } from "../types";
 
 export const GRID_COLUMN_IDS = {

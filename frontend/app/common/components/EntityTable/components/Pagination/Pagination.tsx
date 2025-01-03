@@ -1,6 +1,6 @@
 import React from "react";
 import { RowData, Table } from "@tanstack/react-table";
-import { StyledPagination } from "@app/common/components/Table/components/Pagination/style";
+import { StyledPagination } from "@app/common/components/EntityTable/components/Pagination/style";
 
 interface PaginationProps<TData extends RowData> {
   dataTestId?: string;

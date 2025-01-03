@@ -3,10 +3,10 @@ import { ColumnDef } from "@tanstack/react-table";
 import { AccessorReturnType } from "@app/common/components/EntityTable/types";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import {
-  LinkCellProps,
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
-} from "@app/common/components/Table/utils/linkUtils";
+} from "@app/common/components/EntityTable/utils/linkUtils";
+import { LinkCellProps } from "@app/common/components/EntityTable/types";
 import { humanize } from "@app/common/utils/string";
 import { AnnotationData } from "../types";
 

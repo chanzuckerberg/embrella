@@ -3,17 +3,15 @@ import { Link } from "@czi-sds/components";
 import { EntityLinkField } from "@app/common/types/entity";
 import { CellContext } from "@tanstack/react-table";
 import { EntityDataTypes } from "@app/common/types/tableState";
-import { AccessorReturnType } from "@app/common/components/EntityTable/types";
+import {
+  AccessorReturnType,
+  LinkCellProps,
+} from "@app/common/components/EntityTable/types";
 
 const DEFAULT_LINK_PROPS = {
   sdsStyle: "default",
   target: "_blank",
 };
-
-export interface LinkCellProps {
-  children: string;
-  href: string;
-}
 
 export const getLinkPropsFromLinkField = (
   linkField: EntityLinkField,
