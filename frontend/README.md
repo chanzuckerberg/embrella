@@ -49,19 +49,19 @@ This information is current as of Dec 2024.
 
 #### TableStateProvider
 
-The `TableStateProvider` encapsulates a context and reducer to manage the filter, pagination, and sorting state of a table view.  This component is based on [the "Scaling Up with Reducer and Context" page in the React docs](https://react.dev/learn/scaling-up-with-reducer-and-context).
+The `TableStateProvider` encapsulates a context and reducer to manage the filter, pagination, and sorting state of a table view. This component is based on [the "Scaling Up with Reducer and Context" page in the React docs](https://react.dev/learn/scaling-up-with-reducer-and-context).
 
 #### EntityTable
 
-The `EntityTable` component is a reusable component that fetches data from a given API endpoint and displays it in a table.  The table component uses the SDS Table component.
+The `EntityTable` component is a reusable component that fetches data from a given API endpoint and displays it in a table. The table component uses the SDS Table component.
 
 #### EntityTableFilters and Filters
 
-The `EntityTableFilters` component implements the filter side panel use in Embrella UI views.  It uses the `Filters` component, which is based on the SDS `ComplexFilter` component.
+The `EntityTableFilters` component implements the filter side panel use in Embrella UI views. It uses the `Filters` component, which is based on the SDS `ComplexFilter` component.
 
 ### Checklist for adding a new view
 
-This is a general checklist for adding a filterable table view with a similar API to existing views.  These steps may need some modification depending on the details of the new view.
+This is a general checklist for adding a filterable table view with a similar API to existing views. These steps may need some modification depending on the details of the new view.
 
 - [ ] Create new folder in `app/` to setup new route
 - [ ] Duplicate folder for existing view (e.g. `app/components/AnnotationsView/`) and rename the duplicate to desired name.
