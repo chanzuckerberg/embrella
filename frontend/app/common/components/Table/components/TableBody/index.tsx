@@ -1,15 +1,18 @@
 import React from "react";
-import { flexRender, RowData } from "@tanstack/react-table";
-import { Props } from "@app/common/components/Table/components/TableBody/types";
+import { flexRender, RowData, Table } from "@tanstack/react-table";
 import { TableBody as MTableBody } from "@mui/material";
 import {
   CellComponent as SDSCellComponent,
   TableRow as SDSTableRow,
 } from "@czi-sds/components";
 
+interface TableBodyProps<TData extends RowData> {
+  table: Table<TData>;
+}
+
 export const TableBody = <TData extends RowData>({
   table,
-}: Props<TData>): JSX.Element => {
+}: TableBodyProps<TData>): JSX.Element => {
   return (
     <MTableBody>
       {table.getRowModel().rows.map((row) => (
