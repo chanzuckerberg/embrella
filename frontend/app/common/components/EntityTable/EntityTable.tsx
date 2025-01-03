@@ -4,7 +4,7 @@ import { Table as SDSTable } from "@czi-sds/components";
 import { TableHead } from "@app/common/components/Table/components/TableHead";
 import { TableBody } from "@app/common/components/Table/components/TableBody";
 
-import { Pagination } from "@app/common/components/Table/components/Pagination";
+import { Pagination } from "@app/common/components/Table/components/Pagination/Pagination";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import { ColumnDef } from "@tanstack/react-table";
 import { AccessorReturnType } from "./types";
