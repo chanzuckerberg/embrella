@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { Table as SDSTable } from "@czi-sds/components";
 
 import { TableHead } from "@app/common/components/Table/components/TableHead";
-import { TableBody } from "@app/common/components/Table/components/TableBody";
+import { TableBody } from "@app/common/components/Table/components/TableBody/TableBody";
 
 import { Pagination } from "@app/common/components/Table/components/Pagination/Pagination";
 import { EntityDataTypes } from "@app/common/types/tableState";
