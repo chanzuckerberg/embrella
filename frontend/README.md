@@ -41,8 +41,8 @@ This information is current as of Dec 2024.
 
 ### Code structure for views
 
-- Each top level app route typically invokes a component for that view.
-- For example, `app/annotations/page.tsx` component (which is rendered for the `/annotations` URL) invokes the `AnnotationsView` component at `app/components/AnnotationsView/AnnotationsView.tsx`.
+- Each top level app route renders the component in the `page.tsx` file in the route's folder.
+  - For example, `app/annotations/page.tsx` component (which is rendered for the `/annotations` URL) invokes the `AnnotationsView` component at `app/components/AnnotationsView/AnnotationsView.tsx`.
 - The current view components (`AnnotationsView`, `GridsView`, `TomogramsView`) all have the same UX pattern and APIs, and leverage the `TableStateProvider`, `EntityTable`, and `EntityTableFilters` common components that implement core functionality for the application.
 
 ### Details on common components
