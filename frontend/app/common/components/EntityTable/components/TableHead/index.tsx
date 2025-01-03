@@ -1,6 +1,5 @@
 import React, { Fragment } from "react";
-import { flexRender, RowData } from "@tanstack/react-table";
-import { Props } from "@app/common/components/EntityTable/components/TableHead/types";
+import { flexRender, RowData, Table } from "@tanstack/react-table";
 import {
   CellHeader as SDSCellHeader,
   TableHeader as SDSTableHeader,
@@ -9,11 +8,15 @@ import {
   getCellHeaderActive,
   getCellHeaderDirection,
   getCellHeaderHideSortIcon,
-} from "@app/common/components/EntityTable/components/TableHead/utils";
+} from "@app/common/components/EntityTable/components/TableHead/utils/cellHeader";
+
+interface TableHeadProps<TData extends RowData> {
+  table: Table<TData>;
+}
 
 export const TableHead = <TData extends RowData>({
   table,
-}: Props<TData>): JSX.Element => {
+}: TableHeadProps<TData>): JSX.Element => {
   return (
     <SDSTableHeader>
       {table.getFlatHeaders().map((header) => (
