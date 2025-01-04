@@ -185,7 +185,7 @@ describe("Grids", () => {
     test("should display filter options", async ({ page }) => {
       test.skip(condition, DESCRIPTION);
       await openFilter(filters);
-      const filterOptions = getFilterOptionLocators(page);
+      const filterOptions = getFilterOptionLocators(page).nth(0);
       await expect(filterOptions).toBeVisible();
     });
     test("should keep the filter popper open after selecting a filter item", async ({
