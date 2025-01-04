@@ -3,10 +3,12 @@ import { Fragment } from "react";
 import {
   CellComponent,
   CellHeader,
+  Pagination,
   Table,
   TableHeader,
   TableRow,
 } from "@czi-sds/components";
+import styled from "@emotion/styled";
 import { TableBody } from "@mui/material";
 import { ColumnDef, flexRender } from "@tanstack/react-table";
 
@@ -14,7 +16,6 @@ import { API } from "@app/common/constants/api";
 import { TEST_IDS } from "@app/common/constants/testIds";
 import { EntityDataTypes } from "@app/common/types/tableState";
 
-import { Pagination } from "./components/Pagination/Pagination";
 import { useConnect } from "./connect";
 import { AccessorReturnType, ApiPrimaryEntityAttribute } from "./types";
 import {
@@ -29,12 +30,21 @@ interface EntityTableProps {
   columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[];
 }
 
+export const StyledPagination = styled(Pagination)`
+  margin-top: 16px;
+`;
+
 export const EntityTable = ({
   entityApi,
   entityApiResponseField,
   columnDefs,
 }: EntityTableProps): React.JSX.Element => {
   const { table } = useConnect(entityApi, entityApiResponseField, columnDefs);
+
+  const { getRowCount, getState, nextPage, previousPage, setPageIndex } = table;
+  const {
+    pagination: { pageIndex, pageSize },
+  } = getState();
 
   return (
     <Fragment>
@@ -67,7 +77,17 @@ export const EntityTable = ({
           ))}
         </TableBody>
       </Table>
-      <Pagination dataTestId={TEST_IDS.ENTITY_TABLE_PAGINATION} table={table} />
+
+      <StyledPagination
+        currentPage={pageIndex + 1}
+        data-testid={TEST_IDS.ENTITY_TABLE_PAGINATION}
+        onNextPage={nextPage}
+        onPageChange={(page) => setPageIndex(page - 1)}
+        onPreviousPage={previousPage}
+        pageSize={pageSize}
+        totalCount={getRowCount()}
+        truncateDropdown
+      />
     </Fragment>
   );
 };
