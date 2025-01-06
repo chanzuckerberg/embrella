@@ -1,4 +1,4 @@
-import { Filters } from "@/app/common/components/Filter/components/Filters";
+import { Filters } from "@app/common/components/Filter/components/Filters/Filters";
 import { TEST_IDS } from "@app/common/constants/testIds";
 import { useConnect } from "./connect";
 import {
