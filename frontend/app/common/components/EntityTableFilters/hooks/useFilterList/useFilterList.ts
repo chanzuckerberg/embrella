@@ -1,6 +1,6 @@
 import { FilterConfig } from "@app/common/types/filter";
-import { UseFilterList } from "@app/common/components/Filter/hooks/useFilterList/types";
-import { buildFilterGroups } from "@app/common/components/Filter/hooks/useFilterList/utils";
+import { UseFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/types";
+import { buildFilterGroups } from "@app/common/components/EntityTableFilters/hooks/useFilterList/utils";
 import { EntityFilterCategories, FiltersList } from "@app/common/types/filter";
 import { useMemo } from "react";
 
