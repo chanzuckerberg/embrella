@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { getRequestURL } from "@app/common/queries/utils";
 import { fetchResource } from "@app/common/queries/fetchResource";
-import { UseFetchData } from "@/hooks/useFetchData/common/types";
+
+interface UseFetchData<D> {
+  data?: D;
+  isSuccess: boolean;
+}
 
 export const useFetchData = <D>(
   baseURL: string,

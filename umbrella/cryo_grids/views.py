@@ -40,8 +40,8 @@ def get_base_url():
        elif ENVIRONMENT == 'production':
            return 'http://umbrella.czbiohub.org'
        else:  # development
-           return 'http://localhost:8000' 
-       
+           return 'http://localhost:8000'
+
 
 
 @require_http_methods(["GET"])
@@ -121,7 +121,7 @@ from django.views.decorators.csrf import csrf_exempt
 @require_http_methods(["GET"])
 def available_filters(request):
     try:
-        # request.META['HTTP_ORIGIN'] = '*' # this is only for * 
+        # request.META['HTTP_ORIGIN'] = '*' # this is only for *
         # Validate that only the 'q' parameter is present in the request
         if 'q' not in request.GET or len(request.GET) > 1:
             return JsonResponse({'error': 'Invalid query parameters. Only "q" is allowed.'}, status=422)
@@ -264,7 +264,7 @@ def available_filters(request):
                 processed_samples.append(item)
 
         filters['sample'] = processed_samples
-    
+
         # Apply 'selected' status to filters
         for key, filter_list in filters.items():
             # print(filter_list)
@@ -375,7 +375,7 @@ def get_cryo_grids_details(request):
 
         # Convert the formatted result into a list of grids
         formatted_grid_list = list(formatted_result.values())
-        
+
         # Check if sample filtering is requested
         sample_filter = next((item for item in q_param if item['category'] == 'sample'), None)
         if sample_filter:
@@ -418,7 +418,7 @@ def get_cryo_grids_details(request):
                 totalResults= paginator.count,
             ).model_dump(),
             'sortBy': SortMetadataModel(
-                sort= 'updatedAt' if sort_field is not None else None,
+                sort= 'modifiedOn' if sort_field is not None else None,
                 asc= asc
             ).model_dump(),
         }
@@ -451,7 +451,7 @@ def apply_filters(queryset, filters):
         'screeningSession': 'atlassession__group__name__in',
         'status': 'trashed__in',
     }
-    
+
     q_filters = Q()
     filter_type = 'OR'
     # Process filters to determine filter_type and create Q objects
@@ -466,7 +466,7 @@ def apply_filters(queryset, filters):
     for filter_item in filters:
         category = filter_item.get('category')
         values = filter_item.get('value')
-        
+
         if category == 'filterType' and values:
             filter_type = values[0].upper() if isinstance(values, list) else values.upper()
         elif category in filter_mappings:
@@ -520,7 +520,7 @@ def format_queryset_results(queryset):
             item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
             if item['fz_session_datetime'] else None
         )
-        
+
         if grid_id not in formatted_result:
             formatted_result[grid_id] = {
                 'grid': format_grid(item).model_dump(),
@@ -557,7 +557,7 @@ def get_freezing_plan_list(fz_plan_id):
         return freezing_plan_list
     except ObjectDoesNotExist:
         return []
-    
+
 
 def filter_by_sample_name(formatted_result, sample_name_input):
     matching_results = {}
@@ -580,7 +580,7 @@ def filter_by_sample_name(formatted_result, sample_name_input):
 def format_grid(item):
     base_url = get_base_url()
     grid_url = f"{base_url}/cryo_grids/grid_detail/{item['id']}" #redirect to new grid detail page
-    
+
     # Return a GridModel instance
     return GridModel(
         id=item['id'],
@@ -722,7 +722,7 @@ def clear_cassette_move(request, error_msg=''):
     When finished, render the cassette filter page again which should be empty.
     """
     if request.method == 'POST':
-        
+
         for k in request.POST.keys():
             if '_move' in k:
                 grid_id = int(k.split('_')[0])

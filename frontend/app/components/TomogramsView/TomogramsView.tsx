@@ -11,7 +11,7 @@ import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
 import { API } from "@app/common/constants/api";
 import { TomogramFilterId, TomogramFilterCategory } from "./types";
 import { TOMOGRAM_FILTER_CONFIGS } from "./constants/filters";
-import { EntityTableFilters } from "@/app/common/components/EntityTableFilters/EntityTableFilters";
+import { EntityTableFilters } from "@app/common/components/EntityTableFilters/EntityTableFilters";
 
 export const TomogramsView = (): React.JSX.Element => {
   const initialSortState: SortingState = [
@@ -24,12 +24,12 @@ export const TomogramsView = (): React.JSX.Element => {
         <Sidebar>
           <EntityTableFilters<TomogramFilterId, TomogramFilterCategory>
             entityFilterConfigs={TOMOGRAM_FILTER_CONFIGS}
-            entityFilterListApi={API.TOMOGRAMS_FILTERLIST_V1}
+            entityFilterListApi={API.TOMOGRAMS_FILTERLIST}
           />
         </Sidebar>
         <TableWrapper>
           <EntityTable
-            entityApi={API.TOMOGRAMS_V1}
+            entityApi={API.TOMOGRAMS}
             entityApiResponseField="tomograms"
             columnDefs={TOMOGRAM_COLUMN_DEFS}
           />

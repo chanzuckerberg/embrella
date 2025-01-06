@@ -165,3 +165,5 @@ umbrella/umbrella/settings.py
 .DS_Store
 # Ignore specific file
 ../.idea/workspace.xml
+
+.autoenv*

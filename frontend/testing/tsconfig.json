@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "paths": {
+      "@testing/*": ["./*"],
+      "@app/*": ["../app/*"],
+      "@configs/*": ["../configs/*"],
+      "@hooks/*": ["../hooks/*"]
+    },
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "include": ["./**/*.ts", "./**/*.tsx"],
+  "exclude": ["node_modules", "playwright-report"]
+}

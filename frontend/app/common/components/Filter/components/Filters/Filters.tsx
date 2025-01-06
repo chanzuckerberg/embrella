@@ -3,9 +3,9 @@ import React, { Fragment } from "react";
 import {
   FilterView,
   OnFilterFn,
-} from "@/app/common/components/Filter/common/types";
+} from "@app/common/components/Filter/common/types";
 
-import { Filter } from "@/app/common/components/Filter/components/Filter/Filter";
+import { Filter } from "@app/common/components/Filter/components/Filter/Filter";
 import { FilterDivider, StyledFilters } from "./style";
 
 interface FiltersProps<FilterId, FilterCategory extends string> {
