@@ -1,7 +1,7 @@
 import {
   AutocompleteOption,
   FILTER_VALUE,
-} from "@app/common/components/Filter/common/types";
+} from "@app/common/components/EntityTableFilters/types";
 import { FilterValue } from "@app/common/types/filter";
 
 /**

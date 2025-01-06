@@ -7,7 +7,7 @@ import {
   TableStateContext,
 } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { UpdateFilterAction } from "@app/common/components/TableStateProvider/TableStateProvider";
-import { CategoryFilter } from "@app/common/components/Filter/common/types";
+import { CategoryFilter } from "@app/common/components/EntityTableFilters/types";
 import { FilterConfig } from "@app/common/types/filter";
 import { UseFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/types";
 import { useFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/useFilterList";

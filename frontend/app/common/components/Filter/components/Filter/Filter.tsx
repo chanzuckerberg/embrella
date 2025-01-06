@@ -7,7 +7,7 @@ import {
   EntityTableComplexFilterProps,
   FilterView,
   OnFilterFn,
-} from "@app/common/components/Filter/common/types";
+} from "@app/common/components/EntityTableFilters/types";
 
 import { getFilterValue } from "./utils";
 
