@@ -5,36 +5,33 @@ import { TableWrapper } from "@app/common/components/TableWrapper/TableWrapper";
 import { FilterableTableMain } from "@app/common/components/FilterableTableMain/FilterableTableMain";
 import { TableStateProvider } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { Sidebar } from "@app/common/components/Sidebar/Sidebar";
-import {
-  ANNOTATION_COLUMN_DEFS,
-  ANNOTATION_COLUMN_IDS,
-} from "./constants/columns";
+import { GRID_COLUMN_DEFS, GRID_COLUMN_IDS } from "./constants/columns";
 import { SortingState } from "@tanstack/react-table";
 import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
 import { API } from "@app/common/constants/api";
-import { AnnotationFilterId, AnnotationFilterCategory } from "./types";
-import { ANNOTATION_FILTER_CONFIGS } from "./constants/filters";
+import { GridFilterId, GridFilterCategory } from "./types";
+import { GRID_FILTER_CONFIGS } from "./constants/filters";
 import { EntityTableFilters } from "@app/common/components/EntityTableFilters/EntityTableFilters";
 
-export const AnnotationsView = (): React.JSX.Element => {
+export const GridsView = (): React.JSX.Element => {
   const initialSortState: SortingState = [
-    { desc: true, id: ANNOTATION_COLUMN_IDS.UPDATED_AT },
+    { desc: true, id: GRID_COLUMN_IDS.MODIFIED_ON },
   ];
 
   return (
     <TableStateProvider initialSortState={initialSortState}>
       <FilterableTableMain>
         <Sidebar>
-          <EntityTableFilters<AnnotationFilterId, AnnotationFilterCategory>
-            entityFilterConfigs={ANNOTATION_FILTER_CONFIGS}
-            entityFilterListApi={API.ANNOTATIONS_FILTERLIST}
+          <EntityTableFilters<GridFilterId, GridFilterCategory>
+            entityFilterConfigs={GRID_FILTER_CONFIGS}
+            entityFilterListApi={API.GRIDS_FILTERS_LIST}
           />
         </Sidebar>
         <TableWrapper>
           <EntityTable
-            entityApi={API.ANNOTATIONS}
-            entityApiResponseField="annotations"
-            columnDefs={ANNOTATION_COLUMN_DEFS}
+            entityApi={API.GRIDS}
+            entityApiResponseField="grid"
+            columnDefs={GRID_COLUMN_DEFS}
           />
         </TableWrapper>
       </FilterableTableMain>

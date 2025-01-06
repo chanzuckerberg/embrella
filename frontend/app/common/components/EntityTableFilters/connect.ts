@@ -38,12 +38,11 @@ export const useConnect = <
   entityFilterConfigs: EntityFilterConfigs[][],
   entityFilterListApi: API,
 ): EntityTableFilterConnect<FilterId, FilterCategory> => {
-  console.log("entityFilterConfigs", entityFilterConfigs);
   const dispatch = useContext(TableDispatchContext);
 
   const state = useContext<TableState>(TableStateContext);
 
-  const filtersList = useFetchFilters(entityFilterListApi, {
+  const filtersList = useFetchFilters<FilterCategory>(entityFilterListApi, {
     [SEARCH_PARAM_NAME.QUERY]: getFilterSearchParamValues(state),
   });
 

@@ -1,5 +1,8 @@
 import { format } from "date-fns";
-import { FORMAT_PATTERN } from "@/views/common/date/constants";
+
+export const FORMAT_PATTERN = {
+  YYYY_MM_DD: "yyyy-MM-dd",
+};
 
 /**
  * Returns date, formatted as a string.

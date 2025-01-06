@@ -1,5 +1,5 @@
 import { InputDropdownProps as SDSInputDropdownProps } from "@czi-sds/components";
-import { ComplexFilterProps } from "@/app/common/components/Filter/common/types";
+import { ComplexFilterProps } from "@app/common/components/Filter/common/types";
 
 export const COMPLEX_FILTER_PROPS: Pick<
   ComplexFilterProps,

@@ -2,14 +2,18 @@ import { getRowId, useConnect } from "./connect";
 import {
   TableDispatchContext,
   TableStateContext,
-} from "@/app/common/components/TableStateProvider/TableStateProvider";
-import { API } from "@/app/common/constants/api";
+} from "@app/common/components/TableStateProvider/TableStateProvider";
+import { API } from "@app/common/constants/api";
 import { EntityAPIPrimaryAttributeToDataType } from "@app/common/types/entity";
 import { EntityDataTypes } from "@app/common/types/tableState";
-import { GridData } from "@app/common/types/types";
 import { AnnotationData } from "@app/components/AnnotationsView/types";
+import { GridData } from "@app/components/GridsView/types";
 import { TomogramData } from "@app/components/TomogramsView/types";
 import { act, renderHook } from "@testing-library/react";
+
+jest.mock("../../hooks/useFetchTableData/useFetchTableData", () => ({
+  useFetchTableData: jest.fn(),
+}));
 
 describe("getRowId", () => {
   it("should return the correct row ID for a tomogram entity", () => {
@@ -69,7 +73,7 @@ describe("useConnect", () => {
 
   it("should set up table options correctly", () => {
     const { result } = renderHook(
-      () => useConnect(API.TOMOGRAMS_V1, "tomograms", []),
+      () => useConnect(API.TOMOGRAMS, "tomograms", []),
       { wrapper },
     );
 
@@ -78,7 +82,7 @@ describe("useConnect", () => {
 
   it("should dispatch UpdatePagination action on pagination change", () => {
     const { result } = renderHook(
-      () => useConnect(API.TOMOGRAMS_V1, "tomograms", []),
+      () => useConnect(API.TOMOGRAMS, "tomograms", []),
       { wrapper },
     );
 
@@ -97,7 +101,7 @@ describe("useConnect", () => {
 
   it("should dispatch UpdateSort action on sorting change", () => {
     const { result } = renderHook(
-      () => useConnect(API.TOMOGRAMS_V1, "tomograms", []),
+      () => useConnect(API.TOMOGRAMS, "tomograms", []),
       { wrapper },
     );
 
