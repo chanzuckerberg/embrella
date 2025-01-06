@@ -8,6 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            background-color: #f5f5f5;
         }
         .form-group {
             margin-bottom: 15px;
@@ -25,6 +26,7 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             font-size: 16px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
         input[type="text"]:hover, input[type="number"]:hover, input[type="password"]:hover, select:hover {
             border-color: #4CAF50;
@@ -70,6 +72,7 @@
             cursor: pointer;
             font-size: 16px;
             margin: 5px 0;
+            transition: background-color 0.3s ease;
         }
         button:hover {
             background-color: #45a049;
@@ -82,10 +85,12 @@
             border-radius: 8px;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
             margin-bottom: 40px;
+            background-color: white;
             position: relative;
         }
         h1 {
             text-align: center;
+            margin-bottom: 20px;
         }
         #outputContainer {
             display: none;
@@ -143,6 +148,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            transition: background-color 0.3s ease;
         }
         .go-back:hover {
             background-color: #1e88e5;
@@ -156,43 +162,97 @@
             background-color: #f8d7da;
             color: #721c24;
         }
-        /* New Styles for Small Buttons */
-        .button-group {
+        /* Toggle Switch Styles */
+        .toggle-switch {
             display: flex;
             justify-content: center;
             align-items: center;
             margin-bottom: 20px;
         }
-        .small-button {
-            padding: 8px 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 20px;
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
             cursor: pointer;
-            font-size: 14px;
-            margin: 0 5px;
-            transition: background-color 0.3s ease, transform 0.2s ease;
+            top: 0; left: 0;
+            right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 34px;
         }
-        .small-button:hover {
-            background-color: #45a049;
-            transform: scale(1.05);
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px; width: 26px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
         }
-        .small-button:active {
-            transform: scale(0.95);
+        input:checked + .slider {
+            background-color: #4CAF50;
         }
-        .separator {
+        input:focus + .slider {
+            box-shadow: 0 0 1px #4CAF50;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        /* Labels for Toggle */
+        .toggle-label {
+            margin-left: 15px;
             font-size: 16px;
+            font-weight: bold;
             color: #555;
-            margin: 0 5px;
         }
-        /* Optional: Highlight active button */
-        .active {
+        /* Small Button Styles (Removed as replaced by toggle) */
+        /* ... existing small-button styles can remain if used elsewhere ... */
+
+        /* Optional: Highlight active button (no longer needed with toggle) */
+        /* .active {
             background-color: #388E3C;
-        }
+        } */
+
         /* Optional: Additional Advanced Fields */
         .additional-advanced-field, .gain-reference-section {
             display: none; /* Hidden by default */
+        }
+
+        /* Responsive Design Enhancements */
+        @media (max-width: 600px) {
+            .switch {
+                width: 50px;
+                height: 28px;
+            }
+            .slider:before {
+                height: 22px;
+                width: 22px;
+                left: 3px;
+                bottom: 3px;
+            }
+            input:checked + .slider:before {
+                transform: translateX(22px);
+            }
+            .toggle-label {
+                font-size: 14px;
+            }
+            .go-back {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -202,11 +262,13 @@
         <h1>Run Aretomo3 Job</h1>
         <p><strong style="color:red;">Note:</strong> User credentials are SSH credentials for the HPC node.</p>
         
-        <!-- Button Group for Basic and Advanced -->
-        <div class="button-group">
-            <button type="button" class="small-button active" id="basicBtn">Basic</button>
-            <span class="separator">|</span>
-            <button type="button" class="small-button" id="advancedBtn">Advanced</button>
+        <!-- Toggle Switch for Basic and Advanced -->
+        <div class="toggle-switch">
+            <label class="switch">
+                <input type="checkbox" id="modeToggle">
+                <span class="slider"></span>
+            </label>
+            <span class="toggle-label" id="toggleLabel">Basic</span>
         </div>
         
         <!-- Basic Mode Form -->
@@ -287,7 +349,7 @@
             </div>
 
             <!-- Show if "no" is selected -->
-            <div id="additionalFields" class="additional-advanced-field" style="display: none;">
+            <div id="additionalFields" class="additional-advanced-field">
                 <!-- Enter the run number -->
                 <div class="form-group">
                     <label for="advancedRunNumber">Enter the run number (e.g., 001):</label>
@@ -331,7 +393,7 @@
                 </div>
                 
                 <!-- Advanced Parameters Section -->
-                <div id="advancedParamsSection" class="additional-advanced-field" style="display: none;">
+                <div id="advancedParamsSection" class="additional-advanced-field">
                     <div class="form-group">
                         <label for="tiltAxis">Enter the tilt axis (default is -1):</label>
                         <input type="number" id="tiltAxis" name="tiltAxis" value="-1">
@@ -360,7 +422,7 @@
             </div>
             
             <!-- Show if "yes" is selected -->
-            <div id="oldGainFields" class="gain-reference-section" style="display: none;">
+            <div id="oldGainFields" class="gain-reference-section">
                 <div class="form-group">
                     <label for="gainFileName">Please enter the gain file name (e.g., 20241023_110835_EER_GainReference.gain):</label>
                     <input type="text" id="gainFileName" name="gainFileName">
@@ -404,7 +466,7 @@
                 </div>
                 
                 <!-- Advanced Parameters Section if "yes" is selected -->
-                <div id="advancedParamsSectionYes" class="additional-advanced-field" style="display: none;">
+                <div id="advancedParamsSectionYes" class="additional-advanced-field">
                     <div class="form-group">
                         <label for="tiltAxisYes">Enter the tilt axis (default is -1):</label>
                         <input type="number" id="tiltAxisYes" name="tiltAxisYes" value="-1">
@@ -873,25 +935,24 @@
             window.location.href = '/umbrella';
         }
 
-        // Functionality for Basic and Advanced Buttons
-        document.getElementById('basicBtn').addEventListener('click', () => {
-            // Set Active Button Styles
-            document.getElementById('basicBtn').classList.add('active');
-            document.getElementById('advancedBtn').classList.remove('active');
+        // Functionality for Toggle Switch
+        const modeToggle = document.getElementById('modeToggle');
+        const toggleLabel = document.getElementById('toggleLabel');
+        const basicForm = document.getElementById('basicForm');
+        const advancedForm = document.getElementById('advancedForm');
 
-            // Show Basic Form and Hide Advanced Form
-            document.getElementById('basicForm').style.display = 'block';
-            document.getElementById('advancedForm').style.display = 'none';
-        });
-
-        document.getElementById('advancedBtn').addEventListener('click', () => {
-            // Set Active Button Styles
-            document.getElementById('advancedBtn').classList.add('active');
-            document.getElementById('basicBtn').classList.remove('active');
-
-            // Hide Basic Form and Show Advanced Form
-            document.getElementById('basicForm').style.display = 'none';
-            document.getElementById('advancedForm').style.display = 'block';
+        modeToggle.addEventListener('change', () => {
+            if (modeToggle.checked) {
+                // Advanced Mode
+                toggleLabel.textContent = 'Advanced';
+                basicForm.style.display = 'none';
+                advancedForm.style.display = 'block';
+            } else {
+                // Basic Mode
+                toggleLabel.textContent = 'Basic';
+                basicForm.style.display = 'block';
+                advancedForm.style.display = 'none';
+            }
         });
 
         // Handle Use Old Gain Reference Selection
@@ -959,7 +1020,10 @@
 
         // Initialize the form to Basic mode on page load
         window.onload = () => {
-            document.getElementById('basicBtn').click();
+            modeToggle.checked = false; // Ensure toggle is in Basic mode
+            toggleLabel.textContent = 'Basic';
+            basicForm.style.display = 'block';
+            advancedForm.style.display = 'none';
         };
     </script>
 </body>
