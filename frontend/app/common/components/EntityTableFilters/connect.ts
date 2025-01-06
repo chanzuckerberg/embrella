@@ -7,10 +7,8 @@ import {
   TableStateContext,
 } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { UpdateFilterAction } from "@app/common/components/TableStateProvider/TableStateProvider";
-import {
-  CategoryFilter,
-  FilterConfig,
-} from "@app/common/components/Filter/common/types";
+import { CategoryFilter } from "@app/common/components/Filter/common/types";
+import { FilterConfig } from "@app/common/types/filter";
 import { UseFilterList } from "@app/common/components/Filter/hooks/useFilterList/types";
 import { useFilterList } from "@app/common/components/Filter/hooks/useFilterList/useFilterList";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";

@@ -1,8 +1,8 @@
 import {
   AutocompleteOption,
   FILTER_VALUE,
-  FilterValue,
 } from "@app/common/components/Filter/common/types";
+import { FilterValue } from "@app/common/types/filter";
 
 /**
  * Returns an array of filter values from the given selected options.

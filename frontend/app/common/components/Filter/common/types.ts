@@ -1,13 +1,7 @@
 import { ComplexFilterProps } from "@czi-sds/components";
-import { FilterOption } from "@app/common/types/filter";
+import { FilterOption, FilterValue } from "@app/common/types/filter";
 
 export type AutocompleteOption = Omit<FilterOption, "name"> & { name: string };
-
-export interface BaseFilterConfig<FilterId, FilterCategory extends string> {
-  filterCategory: FilterCategory; // Key in result set row values to filter on.
-  filterId: FilterId;
-  label: string;
-}
 
 export interface CategoryFilter<FilterCategory extends string> {
   category: FilterCategory;
@@ -21,23 +15,11 @@ export type EntityTableComplexFilterProps = ComplexFilterProps<
   false
 >;
 
-export interface FilterConfig<FilterId, FilterCategory extends string> {
-  filterCategory: FilterCategory; // Key in result set row values to filter on.
-  filterId: FilterId;
-  label: string;
-}
-
-export type FilterState<FilterCategory extends string> = Partial<{
-  [K in FilterCategory]: FilterValue[];
-}>;
-
 export enum FILTER_VALUE {
   FALSE = "false",
   TRUE = "true",
   UNSPECIFIED = "null",
 }
-
-export type FilterValue = boolean | string | null;
 
 export type FilterView<
   FilterId,
