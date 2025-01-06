@@ -1,4 +1,4 @@
-import { ComplexFilterProps as SDSComplexFilterProps } from "@czi-sds/components";
+import { ComplexFilterProps } from "@czi-sds/components";
 import { FilterOption } from "@app/common/types/filter";
 
 export type AutocompleteOption = Omit<FilterOption, "name"> & { name: string };
@@ -14,7 +14,7 @@ export interface CategoryFilter<FilterCategory extends string> {
   value: FilterValue[];
 }
 
-export type ComplexFilterProps = SDSComplexFilterProps<
+export type EntityTableComplexFilterProps = ComplexFilterProps<
   AutocompleteOption,
   true,
   false,
@@ -53,6 +53,6 @@ export interface SelectFilterView<FilterId, FilterCategory extends string> {
   disabled: boolean;
   filterId: FilterId;
   label: string;
-  options: ComplexFilterProps["options"];
-  value: ComplexFilterProps["value"];
+  options: EntityTableComplexFilterProps["options"];
+  value: EntityTableComplexFilterProps["value"];
 }
