@@ -1,7 +1,7 @@
 import React, { Fragment } from "react";
 import { FilterDivider, StyledFilters } from "./style";
 import { Props } from "@/app/common/components/Filter/components/Filters/types";
-import { Filter } from "@/app/common/components/Filter/components/Filter";
+import { Filter } from "@/app/common/components/Filter/components/Filter/Filter";
 
 export const Filters = <FilterId, FilterCategory extends string>({
   className,
