@@ -21,7 +21,7 @@ jest.mock("../../hooks/useFetchFilters/useFetchFilters", () => ({
   useFetchFilters: jest.fn(),
 }));
 
-jest.mock("../Filter/hooks/useFilterList/useFilterList", () => ({
+jest.mock("./hooks/useFilterList/useFilterList", () => ({
   useFilterList: jest.fn(),
 }));
 
