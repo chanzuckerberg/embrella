@@ -18,7 +18,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="text"], input[type="number"], input[type="password"], .styled-input {
+        input[type="text"], input[type="number"], input[type="password"], select {
             width: 100%;
             padding: 12px;
             box-sizing: border-box;
@@ -26,10 +26,10 @@
             border-radius: 4px;
             font-size: 16px;
         }
-        input[type="text"]:hover, input[type="number"]:hover, input[type="password"]:hover, .styled-input:hover {
+        input[type="text"]:hover, input[type="number"]:hover, input[type="password"]:hover, select:hover {
             border-color: #4CAF50;
         }
-        input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus, .styled-input:focus {
+        input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus, select:focus {
             border-color: #4CAF50;
             outline: none;
             box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
@@ -62,13 +62,14 @@
             cursor: pointer;
         }
         button {
-            padding: 12px 24px;
+            padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            margin: 5px 0;
         }
         button:hover {
             background-color: #45a049;
@@ -81,6 +82,7 @@
             border-radius: 8px;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
             margin-bottom: 40px;
+            position: relative;
         }
         h1 {
             text-align: center;
@@ -154,6 +156,44 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+        /* New Styles for Small Buttons */
+        .button-group {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .small-button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 0 5px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .small-button:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+        .small-button:active {
+            transform: scale(0.95);
+        }
+        .separator {
+            font-size: 16px;
+            color: #555;
+            margin: 0 5px;
+        }
+        /* Optional: Highlight active button */
+        .active {
+            background-color: #388E3C;
+        }
+        /* Optional: Additional Advanced Fields */
+        .additional-advanced-field, .gain-reference-section {
+            display: none; /* Hidden by default */
+        }
     </style>
 </head>
 <body>
@@ -161,7 +201,17 @@
     <div class="form-container">
         <h1>Run Aretomo3 Job</h1>
         <p><strong style="color:red;">Note:</strong> User credentials are SSH credentials for the HPC node.</p>
-        <form id="sessionForm" autocomplete="off">
+        
+        <!-- Button Group for Basic and Advanced -->
+        <div class="button-group">
+            <button type="button" class="small-button active" id="basicBtn">Basic</button>
+            <span class="separator">|</span>
+            <button type="button" class="small-button" id="advancedBtn">Advanced</button>
+        </div>
+        
+        <!-- Basic Mode Form -->
+        <form id="basicForm">
+            <!-- Session Name -->
             <div class="form-group">
                 <label for="sessionName">Session Name:</label>
                 <input list="sessionNames" id="sessionName" name="sessionName" placeholder="Select or type..." required autocomplete="off">
@@ -169,38 +219,226 @@
                     <!-- Options populated dynamically -->
                 </datalist>
             </div>
+            
+            <!-- Run Number -->
             <div class="form-group">
                 <label for="runNumber">Run Number: (e.g., 001)</label>
                 <input type="number" id="runNumber" name="runNumber" required>
             </div>
+            
+            <!-- Pixel Size -->
             <div class="form-group">
-                <label for="pixelSize">Pixel Size:</label>
+                <label for="pixelSize">Pixel Size :</label>
                 <input type="number" step="any" id="pixelSize" name="pixelSize" required>
             </div>
+            
+            <!-- Calibrated Total Dose -->
             <div class="form-group">
-                <label for="runNumber">Calibrated total dose over vacuum for the entire tilt series in e-/Å^2:</label>
+                <label for="dosenumber">Calibrated total dose over vacuum for the entire tilt series in e-/Å²:</label>
                 <input type="number" id="dosenumber" name="dosenumber" required>
             </div>
+            
+            <!-- Estimated Number of Tilt Series -->
             <div class="form-group">
-                <label for="numChecks">Estimated number of tilt series: (e.g. 300; Please be generous!)</label>
+                <label for="numChecks">Estimated number of tilt series: (e.g., 300; please be generous!)</label>
                 <input type="number" id="numChecks" name="numChecks" required>
             </div>
+            
+            <!-- User ID -->
             <div class="form-group">
                 <label for="userId">User ID:</label>
                 <input type="text" id="userId" name="userId">
             </div>
+            
+            <!-- Password -->
             <div class="form-group">
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
             </div>
+            
+            <!-- Run Button -->
             <button type="button" onclick="runFunction()">Run</button>
+            
+            <!-- Error Message -->
             <div id="errorMessage" class="error-message"></div>
         </form>
+        
+        <!-- Output Directory -->
         <div id="outputContainer">
             <strong>Output Directory:</strong> <span id="outputDirectory"></span>
         </div>
+        
+        <!-- Advanced Mode Section -->
+        <form id="advancedForm" style="display:none;">
+            <!-- Project Name -->
+            <div class="form-group">
+                <label for="projectName">Session Name:</label>
+                <input type="text" id="projectName" name="projectName" required>
+            </div>
+            
+            <!-- Use Old Gain Reference -->
+            <div class="form-group">
+                <label for="useOldGain">Do you want to use an old gain reference? (yes/no):</label>
+                <select id="useOldGain" name="useOldGain" required>
+                    <option value="">Select...</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                </select>
+            </div>
+
+            <!-- Show if "no" is selected -->
+            <div id="additionalFields" class="additional-advanced-field" style="display: none;">
+                <!-- Enter the run number -->
+                <div class="form-group">
+                    <label for="advancedRunNumber">Enter the run number (e.g., 001):</label>
+                    <input type="number" id="advancedRunNumber" name="advancedRunNumber" required>
+                </div>
+                
+                <!-- Will you use this run for DenoisET training? -->
+                <div class="form-group">
+                    <label for="denoisetTraining">Will you use this run for DenoisET training? (yes/no):</label>
+                    <select id="denoisetTraining" name="denoisetTraining" required>
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+                
+                <!-- EVN & ODD Split Option -->
+                <div class="form-group">
+                    <label for="evnOddSplit">EVN & ODD split option is:</label>
+                    <select id="evnOddSplit" name="evnOddSplit" required>
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+                
+                <!-- Enter the pixel size (A): -->
+                <div class="form-group">
+                    <label for="advancedPixelSize">Enter the pixel size (Å):</label>
+                    <input type="number" step="any" id="advancedPixelSize" name="advancedPixelSize" required>
+                </div>
+                
+                <!-- Do you want to use advanced parameters? (yes/no) -->
+                <div class="form-group">
+                    <label for="useAdvancedParams">Do you want to use advanced parameters? (yes/no):</label>
+                    <select id="useAdvancedParams" name="useAdvancedParams" required>
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+                
+                <!-- Advanced Parameters Section -->
+                <div id="advancedParamsSection" class="additional-advanced-field" style="display: none;">
+                    <div class="form-group">
+                        <label for="tiltAxis">Enter the tilt axis (default is -1):</label>
+                        <input type="number" id="tiltAxis" name="tiltAxis" value="-1">
+                    </div>
+                    <div class="form-group">
+                        <label for="alignZ">Enter the AlignZ (default is -1):</label>
+                        <input type="number" id="alignZ" name="alignZ" value="-1">
+                    </div>
+                    <div class="form-group">
+                        <label for="volZ">Enter the VolZ (default is -1):</label>
+                        <input type="number" id="volZ" name="volZ" value="-1">
+                    </div>
+                </div>
+                
+                <!-- Enter the calibrated total dose in e-/A^2: -->
+                <div class="form-group">
+                    <label for="advancedDoseNumber">Enter the calibrated total dose in e-/Å²:</label>
+                    <input type="number" id="advancedDoseNumber" name="advancedDoseNumber" required>
+                </div>
+                
+                <!-- Enter the estimated number of tilt series: -->
+                <div class="form-group">
+                    <label for="advancedNumChecks">Enter the estimated number of tilt series: (e.g., 300; please be generous!)</label>
+                    <input type="number" id="advancedNumChecks" name="advancedNumChecks" required>
+                </div>
+            </div>
+            
+            <!-- Show if "yes" is selected -->
+            <div id="oldGainFields" class="gain-reference-section" style="display: none;">
+                <div class="form-group">
+                    <label for="gainFileName">Please enter the gain file name (e.g., 20241023_110835_EER_GainReference.gain):</label>
+                    <input type="text" id="gainFileName" name="gainFileName">
+                </div>
+                
+                <div class="form-group">
+                    <label for="advancedRunNumberYes">Enter the run number (e.g., 001):</label>
+                    <input type="number" id="advancedRunNumberYes" name="advancedRunNumberYes">
+                </div>
+                
+                <div class="form-group">
+                    <label for="denoisetTrainingYes">Will you use this run for DenoisET training? (yes/no):</label>
+                    <select id="denoisetTrainingYes" name="denoisetTrainingYes">
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="evnOddSplitYes">EVN & ODD split option is:</label>
+                    <select id="evnOddSplitYes" name="evnOddSplitYes">
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="advancedPixelSizeYes">Enter the pixel size (Å):</label>
+                    <input type="number" step="any" id="advancedPixelSizeYes" name="advancedPixelSizeYes">
+                </div>
+                
+                <div class="form-group">
+                    <label for="useAdvancedParamsYes">Do you want to use advanced parameters? (yes/no):</label>
+                    <select id="useAdvancedParamsYes" name="useAdvancedParamsYes">
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+                
+                <!-- Advanced Parameters Section if "yes" is selected -->
+                <div id="advancedParamsSectionYes" class="additional-advanced-field" style="display: none;">
+                    <div class="form-group">
+                        <label for="tiltAxisYes">Enter the tilt axis (default is -1):</label>
+                        <input type="number" id="tiltAxisYes" name="tiltAxisYes" value="-1">
+                    </div>
+                    <div class="form-group">
+                        <label for="alignZYes">Enter the AlignZ (default is -1):</label>
+                        <input type="number" id="alignZYes" name="alignZYes" value="-1">
+                    </div>
+                    <div class="form-group">
+                        <label for="volZYes">Enter the VolZ (default is -1):</label>
+                        <input type="number" id="volZYes" name="volZYes" value="-1">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="advancedDoseNumberYes">Enter the calibrated total dose in e-/Å²:</label>
+                    <input type="number" id="advancedDoseNumberYes" name="advancedDoseNumberYes">
+                </div>
+                
+                <div class="form-group">
+                    <label for="advancedNumChecksYes">Enter the estimated number of tilt series: (e.g., 300; please be generous!)</label>
+                    <input type="number" id="advancedNumChecksYes" name="advancedNumChecksYes">
+                </div>
+            </div>
+            
+            <!-- Run Button for Advanced Form -->
+            <button type="button" onclick="runAdvancedFunction()">Run</button>
+            
+            <!-- Error Message for Advanced Form -->
+            <div id="advancedErrorMessage" class="error-message"></div>
+        </form>
     </div>
 
+    <!-- JobCanceler Section -->
     <div class="form-container cancel-container">
         <h1>JobCanceler</h1>
         <p><strong style="color:red;">Note:</strong> If you have submitted a job within the last 7 days, there’s no need to enter your credentials. However, if you encounter an error, please provide the credentials.</p>
@@ -221,6 +459,7 @@
         </form>
     </div>
 
+    <!-- JobTracker Section -->
     <div class="form-container">
         <h1>JobTracker</h1>
         <form id="trackForm">
@@ -253,6 +492,7 @@
     </div>
 
     <script>
+        // Event Listener for Page Load
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await fetchUserInfo();
@@ -262,6 +502,7 @@
             }
         });
 
+        // Populate Session Dropdown
         async function populateSessionDropdown() {
             try {
                 const response = await fetch('/workflow/get_msisession_list');
@@ -288,6 +529,8 @@
                 alert('An error occurred while fetching session names.');
             }
         }
+
+        // Get Cookie Function
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -303,6 +546,7 @@
             return cookieValue;
         }
 
+        // Fetch User Info
         async function fetchUserInfo() {
             try {
                 const response = await fetch('/workflow/user_info');
@@ -319,6 +563,7 @@
             }
         }
 
+        // Run Function for Basic Form
         async function runFunction() {
             const sessionName = document.getElementById('sessionName').value;
             const runNumber = document.getElementById('runNumber').value;
@@ -333,21 +578,23 @@
 
             const csrftoken = getCookie('csrftoken');
 
+            const requestBody = {
+                session_name: sessionName,
+                run_number: runNumber,
+                pixel_size: pixelSize,
+                dose_number: dosenumber,
+                num_checks: numChecks,
+                user_id: userId,
+                password: encodedPassword,
+            };
+
             const response = await fetch('/workflow/run_aretomo3', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({
-                    session_name: sessionName,
-                    run_number: runNumber,
-                    pixel_size: pixelSize,
-                    dose_number: dosenumber,
-                    num_checks: numChecks,
-                    user_id: userId,
-                    password: encodedPassword,
-                })
+                body: JSON.stringify(requestBody)
             });
 
             const result = await response.json();
@@ -363,6 +610,123 @@
             }
         }
 
+        // Run Function for Advanced Form
+        async function runAdvancedFunction() {
+            const projectName = document.getElementById('projectName').value;
+            const useOldGain = document.getElementById('useOldGain').value;
+
+            // Common data:
+            const userId = document.getElementById('userId').value;
+            const password = document.getElementById('password').value;
+            const encodedPassword = btoa(password);
+
+            let requestBody = {
+                project_name: projectName,
+                use_old_gain: useOldGain,
+                user_id: userId,
+                password: encodedPassword
+            };
+
+            if (!useOldGain) {
+                alert("Please select yes or no for 'Do you want to use an old gain reference?'");
+                return;
+            }
+
+            // If user selected "yes" for old gain reference
+            if (useOldGain === 'yes') {
+                const gainFileName = document.getElementById('gainFileName').value;
+                const advancedRunNumberYes = document.getElementById('advancedRunNumberYes').value;
+                const denoisetTrainingYes = document.getElementById('denoisetTrainingYes').value;
+                const evnOddSplitYes = document.getElementById('evnOddSplitYes').value;
+                const advancedPixelSizeYes = document.getElementById('advancedPixelSizeYes').value;
+                const useAdvancedParamsYes = document.getElementById('useAdvancedParamsYes').value;
+
+                let tiltAxisYes = -1;
+                let alignZYes = -1;
+                let volZYes = -1;
+
+                if (useAdvancedParamsYes === 'yes') {
+                    tiltAxisYes = document.getElementById('tiltAxisYes').value;
+                    alignZYes = document.getElementById('alignZYes').value;
+                    volZYes = document.getElementById('volZYes').value;
+                }
+
+                const advancedDoseNumberYes = document.getElementById('advancedDoseNumberYes').value;
+                const advancedNumChecksYes = document.getElementById('advancedNumChecksYes').value;
+
+                // Extend requestBody for the "yes" case
+                requestBody.gain_file_name = gainFileName;
+                requestBody.run_number = advancedRunNumberYes;
+                requestBody.denoiset_training = denoisetTrainingYes;
+                requestBody.evn_odd_split = evnOddSplitYes;
+                requestBody.pixel_size = advancedPixelSizeYes;
+                requestBody.use_advanced_params = useAdvancedParamsYes;
+                requestBody.tilt_axis = tiltAxisYes;
+                requestBody.align_z = alignZYes;
+                requestBody.vol_z = volZYes;
+                requestBody.dose_number = advancedDoseNumberYes;
+                requestBody.num_checks = advancedNumChecksYes;
+                
+            // If user selected "no" for old gain reference
+            } else if (useOldGain === 'no') {
+                const advancedRunNumber = document.getElementById('advancedRunNumber').value;
+                const denoisetTraining = document.getElementById('denoisetTraining').value;
+                const evnOddSplit = document.getElementById('evnOddSplit').value;
+                const advancedPixelSize = document.getElementById('advancedPixelSize').value;
+                const useAdvancedParams = document.getElementById('useAdvancedParams').value;
+
+                let tiltAxis = -1;
+                let alignZ = -1;
+                let volZ = -1;
+
+                if (useAdvancedParams === 'yes') {
+                    tiltAxis = document.getElementById('tiltAxis').value;
+                    alignZ = document.getElementById('alignZ').value;
+                    volZ = document.getElementById('volZ').value;
+                }
+
+                const advancedDoseNumber = document.getElementById('advancedDoseNumber').value;
+                const advancedNumChecks = document.getElementById('advancedNumChecks').value;
+
+                // Extend requestBody for the "no" case
+                requestBody.run_number = advancedRunNumber;
+                requestBody.denoiset_training = denoisetTraining;
+                requestBody.evn_odd_split = evnOddSplit;
+                requestBody.pixel_size = advancedPixelSize;
+                requestBody.use_advanced_params = useAdvancedParams;
+                requestBody.tilt_axis = tiltAxis;
+                requestBody.align_z = alignZ;
+                requestBody.vol_z = volZ;
+                requestBody.dose_number = advancedDoseNumber;
+                requestBody.num_checks = advancedNumChecks;
+            }
+
+            const csrftoken = getCookie('csrftoken');
+            const response = await fetch('/workflow/run_aretomo3', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert(`Message: ${result.message}`);
+                document.getElementById('outputDirectory').textContent =
+                    `/hpc/projects/group.czii/krios1.processing/aretomo3/${projectName}/run${requestBody.run_number}`;
+                document.getElementById('outputContainer').style.display = 'block';
+                document.getElementById('advancedErrorMessage').style.display = 'none';
+            } else {
+                document.getElementById('advancedErrorMessage').textContent =
+                    `Error: ${result.error || 'Failed to run the job.'}`;
+                document.getElementById('advancedErrorMessage').style.display = 'block';
+            }
+        }
+
+        // Confirm Cancel Function
         function confirmCancel() {
             const ignorePrompt = getCookie('ignoreCancelPrompt');
             if (ignorePrompt === 'true') {
@@ -379,6 +743,7 @@
             }
         }
 
+        // Set Cookie Function
         function setCookie(name, value, days) {
             const date = new Date();
             date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -386,6 +751,7 @@
             document.cookie = name + "=" + value + ";" + expires + ";path=/";
         }
 
+        // Cancel Function
         async function cancelFunction() {
             const jobNumber = document.getElementById('jobNumber').value;
             const userId = document.getElementById('cancelUserId').value;
@@ -398,8 +764,8 @@
             // Construct the request body dynamically
             const requestBody = {
                 job_number: jobNumber,
-                user_id: userId,  // Ensure user_id is always included
-                password: encodedPassword  // Ensure password is always included
+                user_id: userId,
+                password: encodedPassword
             };
 
             const response = await fetch('/workflow/cancel_aretomo3', {
@@ -408,7 +774,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify(requestBody)  // Send the request body with password
+                body: JSON.stringify(requestBody)
             });
 
             const result = await response.json();
@@ -420,6 +786,7 @@
             }
         }
 
+        // Track Jobs Function
         async function trackJobs() {
             const jobName = document.getElementById('jobName').value;
 
@@ -461,6 +828,7 @@
             }
         }
 
+        // Track All Jobs Function
         async function trackAllJobs() {
             const response = await fetch('/workflow/track_jobs', {
                 method: 'POST',
@@ -500,13 +868,99 @@
             }
         }
 
+        // Go Back Function
         function goBack() {
             window.location.href = '/umbrella';
         }
 
-        document.addEventListener('DOMContentLoaded', (event) => {
-            fetchUserInfo();
+        // Functionality for Basic and Advanced Buttons
+        document.getElementById('basicBtn').addEventListener('click', () => {
+            // Set Active Button Styles
+            document.getElementById('basicBtn').classList.add('active');
+            document.getElementById('advancedBtn').classList.remove('active');
+
+            // Show Basic Form and Hide Advanced Form
+            document.getElementById('basicForm').style.display = 'block';
+            document.getElementById('advancedForm').style.display = 'none';
         });
+
+        document.getElementById('advancedBtn').addEventListener('click', () => {
+            // Set Active Button Styles
+            document.getElementById('advancedBtn').classList.add('active');
+            document.getElementById('basicBtn').classList.remove('active');
+
+            // Hide Basic Form and Show Advanced Form
+            document.getElementById('basicForm').style.display = 'none';
+            document.getElementById('advancedForm').style.display = 'block';
+        });
+
+        // Handle Use Old Gain Reference Selection
+        document.getElementById('useOldGain').addEventListener('change', () => {
+            const useOldGain = document.getElementById('useOldGain').value;
+            const additionalFields = document.getElementById('additionalFields');
+            const oldGainFields = document.getElementById('oldGainFields');
+
+            if (useOldGain === 'no') {
+                additionalFields.style.display = 'block';
+                oldGainFields.style.display = 'none';
+            } else if (useOldGain === 'yes') {
+                oldGainFields.style.display = 'block';
+                additionalFields.style.display = 'none';
+            } else {
+                additionalFields.style.display = 'none';
+                oldGainFields.style.display = 'none';
+            }
+        });
+
+        // Handle DenoisET Training Selection (No branch)
+        document.getElementById('denoisetTraining').addEventListener('change', () => {
+            const denoiset = document.getElementById('denoisetTraining').value;
+            if (denoiset === 'yes') {
+                document.getElementById('evnOddSplit').value = 'yes';
+            } else {
+                document.getElementById('evnOddSplit').value = 'no';
+            }
+        });
+
+        // Handle Use Advanced Parameters (No branch)
+        document.getElementById('useAdvancedParams').addEventListener('change', () => {
+            const useAdvanced = document.getElementById('useAdvancedParams').value;
+            const advancedParamsSection = document.getElementById('advancedParamsSection');
+            if (useAdvanced === 'yes') {
+                advancedParamsSection.style.display = 'block';
+            } else {
+                advancedParamsSection.style.display = 'none';
+                // Set default values when not using advanced parameters
+                document.getElementById('tiltAxis').value = -1;
+                document.getElementById('alignZ').value = -1;
+                document.getElementById('volZ').value = -1;
+            }
+        });
+
+        // Prevent users from manually changing readonly fields (No branch)
+        document.getElementById('evnOddSplit').addEventListener('input', (e) => {
+            e.target.value = 'no';
+        });
+
+        // Handle Use Advanced Parameters (Yes branch)
+        document.getElementById('useAdvancedParamsYes').addEventListener('change', () => {
+            const useAdvancedYes = document.getElementById('useAdvancedParamsYes').value;
+            const advancedParamsSectionYes = document.getElementById('advancedParamsSectionYes');
+            if (useAdvancedYes === 'yes') {
+                advancedParamsSectionYes.style.display = 'block';
+            } else {
+                advancedParamsSectionYes.style.display = 'none';
+                // Set default values when not using advanced parameters
+                document.getElementById('tiltAxisYes').value = -1;
+                document.getElementById('alignZYes').value = -1;
+                document.getElementById('volZYes').value = -1;
+            }
+        });
+
+        // Initialize the form to Basic mode on page load
+        window.onload = () => {
+            document.getElementById('basicBtn').click();
+        };
     </script>
 </body>
 </html>
