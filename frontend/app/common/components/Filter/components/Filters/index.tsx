@@ -1,14 +1,26 @@
 import React, { Fragment } from "react";
-import { FilterDivider, StyledFilters } from "./style";
-import { Props } from "@/app/common/components/Filter/components/Filters/types";
+
+import {
+  FilterView,
+  OnFilterFn,
+} from "@/app/common/components/Filter/common/types";
+
 import { Filter } from "@/app/common/components/Filter/components/Filter/Filter";
+import { FilterDivider, StyledFilters } from "./style";
+
+interface FiltersProps<FilterId, FilterCategory extends string> {
+  className?: string;
+  dataTestId?: string;
+  filters: FilterView<FilterId, FilterCategory>[][];
+  onFilter: OnFilterFn<FilterCategory>;
+}
 
 export const Filters = <FilterId, FilterCategory extends string>({
   className,
   dataTestId,
   filters,
   onFilter,
-}: Props<FilterId, FilterCategory>): JSX.Element => {
+}: FiltersProps<FilterId, FilterCategory>): JSX.Element => {
   return (
     <StyledFilters className={className} data-testid={dataTestId}>
       {filters.map((filterViews, i) => (
