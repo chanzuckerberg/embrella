@@ -9,7 +9,7 @@ import {
   OnFilterFn,
 } from "@app/common/components/EntityTableFilters/types";
 
-import { getFilterValue } from "./utils";
+import { getFilterValue } from "../../utils/filterValue";
 
 interface FilterProps<FilterId, FilterCategory extends string> {
   category: FilterCategory;

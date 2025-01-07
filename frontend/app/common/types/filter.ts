@@ -52,4 +52,5 @@ export interface FilterConfig<FilterId, FilterCategory extends string> {
 export type FilterState<FilterCategory extends string> = Partial<{
   [K in FilterCategory]: FilterValue[];
 }>;
+
 export type FilterValue = boolean | string | null;
