@@ -214,9 +214,6 @@
             font-weight: bold;
             color: #555;
         }
-        /* Small Button Styles (Removed as replaced by toggle) */
-        /* ... existing small-button styles can remain if used elsewhere ... */
-
         /* Optional: Highlight active button (no longer needed with toggle) */
         /* .active {
             background-color: #388E3C;
@@ -225,6 +222,14 @@
         /* Optional: Additional Advanced Fields */
         .additional-advanced-field, .gain-reference-section {
             display: none; /* Hidden by default */
+        }
+
+        /* Shared Credentials Section */
+        .credentials-section {
+            margin-bottom: 20px;
+        }
+        .credentials-section .form-group {
+            margin-bottom: 15px;
         }
 
         /* Responsive Design Enhancements */
@@ -262,6 +267,21 @@
         <h1>Run Aretomo3 Job</h1>
         <p><strong style="color:red;">Note:</strong> User credentials are SSH credentials for the HPC node.</p>
         
+        <!-- Shared Credentials Section -->
+        <div class="credentials-section">
+            <!-- User ID -->
+            <div class="form-group">
+                <label for="userId">User ID:</label>
+                <input type="text" id="userId" name="userId" required>
+            </div>
+            
+            <!-- Password -->
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+        </div>
+
         <!-- Toggle Switch for Basic and Advanced -->
         <div class="toggle-switch">
             <label class="switch">
@@ -304,18 +324,6 @@
             <div class="form-group">
                 <label for="numChecks">Estimated number of tilt series: (e.g., 300; please be generous!)</label>
                 <input type="number" id="numChecks" name="numChecks" required>
-            </div>
-            
-            <!-- User ID -->
-            <div class="form-group">
-                <label for="userId">User ID:</label>
-                <input type="text" id="userId" name="userId">
-            </div>
-            
-            <!-- Password -->
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
             </div>
             
             <!-- Run Button -->
@@ -641,6 +649,7 @@
             const csrftoken = getCookie('csrftoken');
 
             const requestBody = {
+                mode: 'basic', // Indicate the mode
                 session_name: sessionName,
                 run_number: runNumber,
                 pixel_size: pixelSize,
@@ -683,6 +692,7 @@
             const encodedPassword = btoa(password);
 
             let requestBody = {
+                mode: 'advanced', // Indicate the mode
                 project_name: projectName,
                 use_old_gain: useOldGain,
                 user_id: userId,
