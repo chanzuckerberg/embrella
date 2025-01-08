@@ -1,10 +1,10 @@
 import {
   AutocompleteOption,
   FILTER_VALUE,
-  FilterConfig,
   FilterView,
   SelectFilterView,
-} from "@app/common/components/Filter/common/types";
+} from "@app/common/components/EntityTableFilters/types";
+import { FilterConfig } from "@app/common/types/filter";
 import {
   EntityFilterCategories,
   FilterOption,

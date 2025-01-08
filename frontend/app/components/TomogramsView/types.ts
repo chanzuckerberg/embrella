@@ -5,7 +5,7 @@ import {
   ProcRunField,
   UserField,
 } from "@app/common/types/entity";
-import { FilterConfig } from "@app/common/components/Filter/common/types";
+import { FilterConfig } from "@app/common/types/filter";
 
 export interface TomogramData {
   tomograms: EntityLinkField;

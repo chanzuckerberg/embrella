@@ -11,17 +11,17 @@ import {
   EntityFilterConfigs,
   FiltersList,
 } from "@app/common/types/filter";
-import { useFilterList } from "@app/common/components/Filter/hooks/useFilterList/useFilterList";
+import { useFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/useFilterList";
 import { API } from "@app/common/constants/api";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
-import { UseFilterList } from "../Filter/hooks/useFilterList/types";
+import { UseFilterList } from "./hooks/useFilterList/types";
 import { TestFilterCategory } from "@testing/types";
 
 jest.mock("../../hooks/useFetchFilters/useFetchFilters", () => ({
   useFetchFilters: jest.fn(),
 }));
 
-jest.mock("../Filter/hooks/useFilterList/useFilterList", () => ({
+jest.mock("./hooks/useFilterList/useFilterList", () => ({
   useFilterList: jest.fn(),
 }));
 
