@@ -20,90 +20,114 @@ class Aretomo3(object):
 
 
     def run_advanced_script(
-            self,
-            project_name,
-            run_number,
-            pix_size,
-            total_dose,
-            num_checks,
-            use_old_gain,
-            gain_file_name=None,
-            denoise_training=None,
-            even_odd_split=None,
-            use_advanced_params=None,
-            tilt_axis=-1,
-            align_z=-1,
-            vol_z=-1
-        ):
+        self,
+        project_name,
+        use_old_gain,
+        run_number,
+        pixel_size,
+        dose_number,
+        num_checks,
+        gain_file_name=None,
+        denoise_training=None,
+        even_odd_split=None,
+        use_advanced_params=None,
+        tilt_axis=None,
+        tilt_axis_refine=None,
+        align_z=None,
+        vol_z=None,
+        imod_option=None,
+        local_shift=None,
+        tilt_offset=None,
+        thickness_mesaure=None
+    ):
+        """
+        An updated method signature that aligns more closely with the parameters
+        parsed in run_aretomo3_advanced. Modify and/or rename these parameters as
+        needed to match your actual shell-script inputs.
+        """
         if self.ssh is None:
             raise Exception("SSH connection not established. Call connect() first.")
 
-        # Verify if the script exists on the remote server
         try:
             stdin, stdout, stderr = self.ssh.exec_command(f'ls -l {self.script_path}')
             file_check_output = stdout.read().decode('utf-8')
             file_check_error = stderr.read().decode('utf-8')
-
             logger.info(f"File Check Output: {file_check_output}")
             logger.info(f"File Check Error: {file_check_error}")
 
             if "No such file or directory" in file_check_error:
-                raise FileNotFoundError(f"The script path {self.script_path} does not exist on the remote server.")
+                raise FileNotFoundError(
+                    f"The script path {self.script_path} does not exist on the remote server."
+                )
         except Exception as e:
             logger.error(f"Error checking script existence: {e}")
             raise
 
-        # Execute the advanced shell script remotely
+        # 2. Execute the script
         try:
             stdin, stdout, stderr = self.ssh.exec_command(f'bash {self.script_path}')
         except Exception as e:
             logger.error(f"Error executing the script: {e}")
             raise
 
+        # Helper function for writing to stdin
         def write_input(value):
-            """Helper function to write input to the script."""
+            """Helper function to write a single line of input to the script."""
             stdin.write(f'{value}\n')
             stdin.flush()
 
+        # 3. Send inputs to the script in the correct order
         try:
-            # Mandatory initial input
+            # Project name
             write_input(project_name)
-            write_input(use_old_gain)
 
+            write_input(use_old_gain)
             if use_old_gain.lower() == 'yes':
                 if not gain_file_name:
                     raise ValueError("gain_file_name must be provided when use_old_gain is 'yes'.")
                 write_input(gain_file_name)
 
-            # Common inputs regardless of use_old_gain
-            write_input(run_number)
-            write_input(denoise_training)
-            write_input(even_odd_split)
-            write_input(pix_size)
+            # Common fields
+            write_input(run_number)           # e.g. '001'
+            write_input(denoise_training)    # e.g. 'yes'/'no'
+            write_input(even_odd_split)      # e.g. 'yes'/'no'
+            write_input(pixel_size)          # e.g. 1.09
 
+            # Advanced parameters only if user selected "yes"
+            # (Adjust or remove logic depending on how your script expects advanced inputs)
             if use_advanced_params and use_advanced_params.lower() == 'yes':
-                write_input(use_advanced_params)
-                write_input(tilt_axis)
-                write_input(align_z)
-                write_input(vol_z)
+                write_input(use_advanced_params)   # 'yes'
+                write_input('' if not tilt_axis else tilt_axis)
+                write_input(tilt_axis_refine)
+                write_input('' if not align_z else align_z)
+                write_input('' if not vol_z else vol_z)
+                write_input(imod_option)
+                write_input(local_shift)
+                write_input(tilt_offset)
+                write_input(thickness_mesaure)
             elif use_advanced_params and use_advanced_params.lower() == 'no':
-                write_input(use_advanced_params)
+                write_input(use_advanced_params)   # 'no'
 
-            write_input(total_dose)
-            write_input(num_checks)
+            # Dose number, checks, etc.
+            write_input(dose_number)  # e.g. '5' or '15'
+            write_input(num_checks)   # e.g. '3'
 
         except Exception as e:
             logger.error(f"Error during input writing: {e}")
             raise
 
-        # Read the output and error streams
+        # 4. Read back the output and error streams
         try:
             output = stdout.read().decode('utf-8')
             error = stderr.read().decode('utf-8')
 
-            if stderr.channel.recv_exit_status() != 0:
+            # If the script returned a non-zero exit code, raise an exception
+            exit_status = stderr.channel.recv_exit_status()
+            if exit_status != 0:
                 logger.error(f"Script execution failed with error: {error}")
-                raise subprocess.CalledProcessError(stderr.channel.recv_exit_status(), self.script_path, output, error)
+                raise subprocess.CalledProcessError(
+                    exit_status, self.script_path, output=output, stderr=error
+                )
 
             logger.info(f"Script Output: {output}")
             return output, error
