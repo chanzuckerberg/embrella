@@ -214,10 +214,6 @@
             font-weight: bold;
             color: #555;
         }
-        /* Optional: Highlight active button (no longer needed with toggle) */
-        /* .active {
-            background-color: #388E3C;
-        } */
 
         /* Optional: Additional Advanced Fields */
         .additional-advanced-field, .gain-reference-section {
@@ -659,24 +655,30 @@
                 password: encodedPassword,
             };
 
-            const response = await fetch('/workflow/run_aretomo3', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify(requestBody)
-            });
+            try {
+                const response = await fetch('/workflow/run_aretomo3', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(requestBody)
+                });
 
-            const result = await response.json();
+                const result = await response.json();
 
-            if (response.ok) {
-                alert(`Message: ${result.message}`);
-                document.getElementById('outputDirectory').textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${sessionName}/run${runNumber}`;
-                document.getElementById('outputContainer').style.display = 'block';
-                document.getElementById('errorMessage').style.display = 'none';
-            } else {
-                document.getElementById('errorMessage').textContent = `Error: ${result.error || 'Failed to run the job.'}`;
+                if (response.ok) {
+                    alert(`Message: ${result.message}`);
+                    document.getElementById('outputDirectory').textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${sessionName}/run${runNumber}`;
+                    document.getElementById('outputContainer').style.display = 'block';
+                    document.getElementById('errorMessage').style.display = 'none';
+                } else {
+                    document.getElementById('errorMessage').textContent = `Error: ${result.error || 'Failed to run the job.'}`;
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error during job submission:', error);
+                document.getElementById('errorMessage').textContent = `Error: ${error.message || 'Failed to run the job.'}`;
                 document.getElementById('errorMessage').style.display = 'block';
             }
         }
@@ -696,7 +698,7 @@
                 project_name: projectName,
                 use_old_gain: useOldGain,
                 user_id: userId,
-                password: encodedPassword
+                password: encodedPassword,
             };
 
             if (!useOldGain) {
@@ -704,96 +706,69 @@
                 return;
             }
 
-            // If user selected "yes" for old gain reference
-            if (useOldGain === 'yes') {
-                const gainFileName = document.getElementById('gainFileName').value;
-                const advancedRunNumberYes = document.getElementById('advancedRunNumberYes').value;
-                const denoisetTrainingYes = document.getElementById('denoisetTrainingYes').value;
-                const evnOddSplitYes = document.getElementById('evnOddSplitYes').value;
-                const advancedPixelSizeYes = document.getElementById('advancedPixelSizeYes').value;
-                const useAdvancedParamsYes = document.getElementById('useAdvancedParamsYes').value;
+            const useAdvancedParams = document.getElementById('useAdvancedParams').value;
 
-                let tiltAxisYes = -1;
-                let alignZYes = -1;
-                let volZYes = -1;
+            if (useAdvancedParams === 'yes') {
+                // Include tilt_axis, align_z, vol_z only if use_advanced_params is "yes"
+                const tiltAxis = document.getElementById('tiltAxis').value || -1;
+                const alignZ = document.getElementById('alignZ').value || -1;
+                const volZ = document.getElementById('volZ').value || -1;
 
-                if (useAdvancedParamsYes === 'yes') {
-                    tiltAxisYes = document.getElementById('tiltAxisYes').value;
-                    alignZYes = document.getElementById('alignZYes').value;
-                    volZYes = document.getElementById('volZYes').value;
-                }
-
-                const advancedDoseNumberYes = document.getElementById('advancedDoseNumberYes').value;
-                const advancedNumChecksYes = document.getElementById('advancedNumChecksYes').value;
-
-                // Extend requestBody for the "yes" case
-                requestBody.gain_file_name = gainFileName;
-                requestBody.run_number = advancedRunNumberYes;
-                requestBody.denoiset_training = denoisetTrainingYes;
-                requestBody.evn_odd_split = evnOddSplitYes;
-                requestBody.pixel_size = advancedPixelSizeYes;
-                requestBody.use_advanced_params = useAdvancedParamsYes;
-                requestBody.tilt_axis = tiltAxisYes;
-                requestBody.align_z = alignZYes;
-                requestBody.vol_z = volZYes;
-                requestBody.dose_number = advancedDoseNumberYes;
-                requestBody.num_checks = advancedNumChecksYes;
-                
-            // If user selected "no" for old gain reference
-            } else if (useOldGain === 'no') {
-                const advancedRunNumber = document.getElementById('advancedRunNumber').value;
-                const denoisetTraining = document.getElementById('denoisetTraining').value;
-                const evnOddSplit = document.getElementById('evnOddSplit').value;
-                const advancedPixelSize = document.getElementById('advancedPixelSize').value;
-                const useAdvancedParams = document.getElementById('useAdvancedParams').value;
-
-                let tiltAxis = -1;
-                let alignZ = -1;
-                let volZ = -1;
-
-                if (useAdvancedParams === 'yes') {
-                    tiltAxis = document.getElementById('tiltAxis').value;
-                    alignZ = document.getElementById('alignZ').value;
-                    volZ = document.getElementById('volZ').value;
-                }
-
-                const advancedDoseNumber = document.getElementById('advancedDoseNumber').value;
-                const advancedNumChecks = document.getElementById('advancedNumChecks').value;
-
-                // Extend requestBody for the "no" case
-                requestBody.run_number = advancedRunNumber;
-                requestBody.denoiset_training = denoisetTraining;
-                requestBody.evn_odd_split = evnOddSplit;
-                requestBody.pixel_size = advancedPixelSize;
-                requestBody.use_advanced_params = useAdvancedParams;
+                requestBody.use_advanced_params = 'yes';
                 requestBody.tilt_axis = tiltAxis;
                 requestBody.align_z = alignZ;
                 requestBody.vol_z = volZ;
-                requestBody.dose_number = advancedDoseNumber;
-                requestBody.num_checks = advancedNumChecks;
+            } else {
+                // Do not include these fields when use_advanced_params is "no"
+                requestBody.use_advanced_params = 'no';
+                delete requestBody.tilt_axis;
+                delete requestBody.align_z;
+                delete requestBody.vol_z;
             }
 
+            // Add other required fields
+            const advancedRunNumber = document.getElementById('advancedRunNumber').value;
+            const denoisetTraining = document.getElementById('denoisetTraining').value;
+            const evnOddSplit = document.getElementById('evnOddSplit').value;
+            const advancedPixelSize = document.getElementById('advancedPixelSize').value;
+            const advancedDoseNumber = document.getElementById('advancedDoseNumber').value;
+            const advancedNumChecks = document.getElementById('advancedNumChecks').value;
+
+            requestBody.run_number = advancedRunNumber;
+            requestBody.denoiset_training = denoisetTraining;
+            requestBody.evn_odd_split = evnOddSplit;
+            requestBody.pixel_size = advancedPixelSize;
+            requestBody.dose_number = advancedDoseNumber;
+            requestBody.num_checks = advancedNumChecks;
+
             const csrftoken = getCookie('csrftoken');
-            const response = await fetch('/workflow/run_aretomo3', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify(requestBody)
-            });
 
-            const result = await response.json();
+            try {
+                const response = await fetch('/workflow/run_advanced_aretomo3/', { // Updated endpoint
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken,
+                    },
+                    body: JSON.stringify(requestBody),
+                });
 
-            if (response.ok) {
-                alert(`Message: ${result.message}`);
-                document.getElementById('outputDirectory').textContent =
-                    `/hpc/projects/group.czii/krios1.processing/aretomo3/${projectName}/run${requestBody.run_number}`;
-                document.getElementById('outputContainer').style.display = 'block';
-                document.getElementById('advancedErrorMessage').style.display = 'none';
-            } else {
-                document.getElementById('advancedErrorMessage').textContent =
-                    `Error: ${result.error || 'Failed to run the job.'}`;
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(`Message: ${result.message}`);
+                    document.getElementById('outputDirectory').textContent =
+                        `/hpc/projects/group.czii/krios1.processing/aretomo3/${projectName}/run${requestBody.run_number}`;
+                    document.getElementById('outputContainer').style.display = 'block';
+                    document.getElementById('advancedErrorMessage').style.display = 'none';
+                } else {
+                    document.getElementById('advancedErrorMessage').textContent =
+                        `Error: ${result.error || 'Failed to run the job.'}`;
+                    document.getElementById('advancedErrorMessage').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error during advanced job submission:', error);
+                document.getElementById('advancedErrorMessage').textContent = `Error: ${error.message || 'Failed to run the job.'}`;
                 document.getElementById('advancedErrorMessage').style.display = 'block';
             }
         }
@@ -840,21 +815,26 @@
                 password: encodedPassword
             };
 
-            const response = await fetch('/workflow/cancel_aretomo3', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify(requestBody)
-            });
+            try {
+                const response = await fetch('/workflow/cancel_aretomo3', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(requestBody)
+                });
 
-            const result = await response.json();
+                const result = await response.json();
 
-            if (response.ok) {
-                alert(`Job ${jobNumber} has been canceled.`);
-            } else {
-                alert(`Failed to cancel the job. Error: ${result.error}`);
+                if (response.ok) {
+                    alert(`Job ${jobNumber} has been canceled.`);
+                } else {
+                    alert(`Failed to cancel the job. Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error during job cancellation:', error);
+                alert(`Failed to cancel the job. Error: ${error.message || 'Unknown error.'}`);
             }
         }
 
@@ -862,81 +842,91 @@
         async function trackJobs() {
             const jobName = document.getElementById('jobName').value;
 
-            const response = await fetch('/workflow/track_jobs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    job_name: jobName
-                })
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                const tbody = document.querySelector('#jobTable tbody');
-                tbody.innerHTML = ''; // Clear existing rows
-
-                result.jobs.forEach(job => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${job.JOBID}</td>
-                        <td>${job.PARTITION}</td>
-                        <td>${job.NAME}</td>
-                        <td>${job.USER}</td>
-                        <td>${job.ST}</td>
-                        <td>${job.TIME}</td>
-                        <td>${job.NODES}</td>
-                        <td>${job['NODELIST(REASON)']}</td>
-                    `;
-                    tbody.appendChild(row);
+            try {
+                const response = await fetch('/workflow/track_jobs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        job_name: jobName
+                    })
                 });
 
-                document.getElementById('trackingContainer').style.display = 'block';
-            } else {
-                alert(`Failed to track jobs. Error: ${result.error}`);
+                const result = await response.json();
+
+                if (response.ok) {
+                    const tbody = document.querySelector('#jobTable tbody');
+                    tbody.innerHTML = ''; // Clear existing rows
+
+                    result.jobs.forEach(job => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${job.JOBID}</td>
+                            <td>${job.PARTITION}</td>
+                            <td>${job.NAME}</td>
+                            <td>${job.USER}</td>
+                            <td>${job.ST}</td>
+                            <td>${job.TIME}</td>
+                            <td>${job.NODES}</td>
+                            <td>${job['NODELIST(REASON)']}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+
+                    document.getElementById('trackingContainer').style.display = 'block';
+                } else {
+                    alert(`Failed to track jobs. Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error during job tracking:', error);
+                alert(`Failed to track jobs. Error: ${error.message || 'Unknown error.'}`);
             }
         }
 
         // Track All Jobs Function
         async function trackAllJobs() {
-            const response = await fetch('/workflow/track_jobs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    job_name: null
-                })
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                const tbody = document.querySelector('#jobTable tbody');
-                tbody.innerHTML = ''; // Clear existing rows
-
-                result.jobs.forEach(job => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${job.JOBID}</td>
-                        <td>${job.PARTITION}</td>
-                        <td>${job.NAME}</td>
-                        <td>${job.USER}</td>
-                        <td>${job.ST}</td>
-                        <td>${job.TIME}</td>
-                        <td>${job.NODES}</td>
-                        <td>${job['NODELIST(REASON)']}</td>
-                    `;
-                    tbody.appendChild(row);
+            try {
+                const response = await fetch('/workflow/track_jobs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        job_name: null
+                    })
                 });
 
-                document.getElementById('trackingContainer').style.display = 'block';
-            } else {
-                alert(`Failed to track jobs. Error: ${result.error}`);
+                const result = await response.json();
+
+                if (response.ok) {
+                    const tbody = document.querySelector('#jobTable tbody');
+                    tbody.innerHTML = ''; // Clear existing rows
+
+                    result.jobs.forEach(job => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${job.JOBID}</td>
+                            <td>${job.PARTITION}</td>
+                            <td>${job.NAME}</td>
+                            <td>${job.USER}</td>
+                            <td>${job.ST}</td>
+                            <td>${job.TIME}</td>
+                            <td>${job.NODES}</td>
+                            <td>${job['NODELIST(REASON)']}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+
+                    document.getElementById('trackingContainer').style.display = 'block';
+                } else {
+                    alert(`Failed to track jobs. Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error during tracking all jobs:', error);
+                alert(`Failed to track jobs. Error: ${error.message || 'Unknown error.'}`);
             }
         }
 

@@ -3,7 +3,7 @@ from .utils import jsonify, ssh_connect, extract_parameters
 from django.http import JsonResponse
 from django.shortcuts import render
 from .agent import Aretomo3
-from umbrella.settings import ARETOMO3_SCRIPT_PATH
+from umbrella.settings import ARETOMO3_SCRIPT_PATH, ARETOMO3_ADVANCED_PATH
 import os
 import base64
 import re
@@ -53,7 +53,85 @@ def get_aretomo3_json(request):
         error_msg = f"Please check the server status: {str(err)}"
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=500)
+    
+# @login_required
+@csrf_exempt
+def run_aretomo3_advanced(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        project_name = data.get('project_name')
+        use_old_gain = data.get('use_old_gain')
+        user_id = data.get('user_id')
+        encoded_password = data.get('password')
+        decoded_password = base64.b64decode(encoded_password).decode('utf-8')
+        print('yaya')
+        # Validate project_name format
+        project_name_pattern = re.compile(r'^\d{2}[a-z]{3}\d{2}[a-z]$')
+        if not project_name_pattern.match(project_name):
+            return JsonResponse({'error': 'Invalid project_name format. Please check the project name: 422'}, status=422)
 
+        # Additional parameters based on `use_old_gain` selection
+        try:
+            if use_old_gain == 'yes':
+                gain_file_name = data.get('gain_file_name')
+                run_number = data.get('run_number')
+                denoiset_training = data.get('denoiset_training')
+                evn_odd_split = data.get('evn_odd_split')
+                pixel_size = data.get('pixel_size')
+                use_advanced_params = data.get('use_advanced_params')
+                if use_advanced_params == 'yes':
+                    tilt_axis = data.get('tilt_axis', -1)
+                    align_z = data.get('align_z', -1)
+                    vol_z = data.get('vol_z', -1)
+                else:
+                    tilt_axis = None
+                    align_z = None
+                    vol_z = None
+                dose_number = data.get('dose_number')
+                num_checks = data.get('num_checks')
+            elif use_old_gain == 'no':
+                run_number = data.get('run_number')
+                denoiset_training = data.get('denoiset_training')
+                evn_odd_split = data.get('evn_odd_split')
+                pixel_size = data.get('pixel_size')
+                use_advanced_params = data.get('use_advanced_params')
+                if use_advanced_params == 'yes':
+                    tilt_axis = data.get('tilt_axis', -1)
+                    align_z = data.get('align_z', -1)
+                    vol_z = data.get('vol_z', -1)
+                else:
+                    tilt_axis = None
+                    align_z = None
+                    vol_z = None
+                dose_number = data.get('dose_number')
+                num_checks = data.get('num_checks')
+            else:
+                return JsonResponse({'error': 'Invalid use_old_gain value. Must be "yes" or "no": 422'}, status=422)
+
+            # Store user credentials in session
+            request.session['user_id'] = user_id
+            request.session['decoded_password'] = decoded_password
+
+            # Initialize and connect to Aretomo
+            aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_ADVANCED_PATH)
+            aretomo.connect()
+            print(project_name,  run_number, denoiset_training, evn_odd_split, pixel_size, use_advanced_params, tilt_axis, dose_number)
+            # Run the advanced script
+            # output, error = aretomo.run_advanced_script(
+            #     project_name, run_number, pixel_size, dose_number, num_checks,
+            #     use_old_gain, gain_file_name if use_old_gain == 'yes' else None,
+            #     denoiset_training, evn_odd_split, use_advanced_params,
+            #     tilt_axis, align_z, vol_z
+            # )
+
+            # return JsonResponse({'message': f'Advanced job for project {project_name} submitted successfully.', 'output': output, 'error': error})
+            return JsonResponse({'messg': f'avanced {project_name}'})
+        except Exception as e:
+            return JsonResponse({'error': str(e) + ': 500'}, status=500)
+        finally:
+            aretomo.close()
+
+    return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
 
 @login_required
