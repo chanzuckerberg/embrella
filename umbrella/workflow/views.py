@@ -158,35 +158,39 @@ def run_aretomo3_advanced(request):
                 "IMOD_OPTION:", imod_option,
             )
 
-            # Example call to the advanced script (uncomment or revise to your actual logic)
-            # output, error = aretomo.run_advanced_script(
-            #     project_name=project_name,
-            #     run_number=run_number,
-            #     pixel_size=pixel_size,
-            #     dose_number=dose_number,
-            #     num_checks=num_checks,
-            #     use_old_gain=use_old_gain,
-            #     gain_file=gain_file_name if use_old_gain == 'yes' else None,
-            #     denoiset_training=denoiset_training,
-            #     evn_odd_split=evn_odd_split,
-            #     use_advanced_params=use_advanced_params,
-            #     tilt_axis=tilt_axis,
-            #     tilt_axis_refine=tilt_axis_refine,
-            #     align_z=align_z,
-            #     vol_z=vol_z,
-            #     imod_option=imod_option,
-            #     local_aln_1=local_aln_1,
-            #     local_aln_2=local_aln_2,
-            #     tilt_cor=tilt_cor,
-            #     temp=temp
-            # )
+            output, error = aretomo.run_advanced_script(
+                project_name=project_name,
+                use_old_gain=use_old_gain,
+                run_number=run_number,
+                pixel_size=pixel_size,
+                dose_number=dose_number,
+                num_checks=num_checks,
+                gain_file_name=gain_file_name,
+                denoise_training=denoiset_training,
+                even_odd_split=evn_odd_split,
+                use_advanced_params=use_advanced_params,
+                tilt_axis=tilt_axis,
+                tilt_axis_refine=tilt_axis_refine,
+                align_z=align_z,
+                vol_z=vol_z,
+                imod_option=imod_option,
+                local_shift=local_shift,
+                tilt_offset=tilt_offset,
+                thickness_mesaure=thickness_mesaure
+            )
+            if use_advanced_params.lower() == 'yes':
 
-            # Mock response
-            return JsonResponse({
-                'message': f'Advanced job for project {project_name} submitted successfully.'
-                # 'output': output, 
-                # 'error': error
-            })
+                return JsonResponse({
+                    'message': f'Advanced job for project {project_name} submitted successfully.',
+                    'output': output, 
+                    'error': error
+                })
+            else:
+                return JsonResponse({
+                    'message': f'Basic job for project {project_name} submitted successfully.',
+                    'output': output, 
+                    'error': error
+                })
 
         except Exception as e:
             return JsonResponse({'error': str(e) + ': 500'}, status=500)

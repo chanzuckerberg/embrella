@@ -98,13 +98,13 @@ class Aretomo3(object):
             if use_advanced_params and use_advanced_params.lower() == 'yes':
                 write_input(use_advanced_params)   # 'yes'
                 write_input('' if not tilt_axis else tilt_axis)
-                write_input(tilt_axis_refine)
+                write_input(tilt_axis_refine) # 'yes or no'
                 write_input('' if not align_z else align_z)
                 write_input('' if not vol_z else vol_z)
-                write_input(imod_option)
-                write_input(local_shift)
-                write_input(tilt_offset)
-                write_input(thickness_mesaure)
+                write_input(imod_option) #yes or no
+                write_input(local_shift) #yes or no
+                write_input(tilt_offset) #yes or no
+                write_input(thickness_mesaure) #yes or no
             elif use_advanced_params and use_advanced_params.lower() == 'no':
                 write_input(use_advanced_params)   # 'no'
 
