@@ -344,10 +344,7 @@
       <div id="errorMessage" class="error-message"></div>
     </form>
 
-    <!-- Output Directory -->
-    <div id="outputContainer">
-      <strong>Output Directory:</strong> <span id="outputDirectory"></span>
-    </div>
+    
 
     <!-- Advanced Mode Section -->
     <form id="advancedForm" style="display:none;">
@@ -408,14 +405,14 @@
           <!-- Tilt Axis -->
           <div class="form-group">
             <label for="tiltAxis">Enter the tilt axis initial value (default 0):</label>
-            <input type="number" id="tiltAxis" name="tiltAxis" value="0"/>
+            <input type="number" id="tiltAxis" name="tiltAxis" placeholder="(e.g. blank or numeric)"/>
           </div>
 
           <!-- Tilt Axis Refinement? -->
           <div class="form-group">
             <label for="tiltAxisRefine">Do you want Aretomo3 to refine tilt axis? (yes/no):</label>
             <select id="tiltAxisRefine" name="tiltAxisRefine">
-            <option value="">Select...</option>
+              <option value="">Select...</option>
               <option value="yes">Yes</option>
               <option value="no">No</option>
             </select>
@@ -437,7 +434,7 @@
           <div class="form-group">
             <label for="imodOption">Do you want aligned tilt series in _Imod folder? (yes/no):</label>
             <select id="imodOption" name="imodOption">
-            <option value="">Select...</option>
+              <option value="">Select...</option>
               <option value="yes">Yes (imod option: default 3)</option>
               <option value="no">No (imod option: default 1)</option>
             </select>
@@ -447,7 +444,7 @@
           <div class="form-group">
             <label for="localAln">Do you want to measure local shifts? (yes/no):</label>
             <select id="localAln" name="localAln">
-            <option value="">Select...</option>
+              <option value="">Select...</option>
               <option value="yes">Yes</option>
               <option value="no">No</option>
             </select>
@@ -457,7 +454,7 @@
           <div class="form-group">
             <label for="tiltCorr">Do you want to generate tilt offset corrected volumes? (yes/no):</label>
             <select id="tiltCorr" name="tiltCorr">
-            <option value="">Select...</option>
+              <option value="">Select...</option>
               <option value="yes">Yes</option>
               <option value="no">No</option>
             </select>
@@ -467,9 +464,10 @@
           <div class="form-group">
             <label for="tempOption">Do you want to save intermediate thickness measure results? (yes/no):</label>
             <select id="tempOption" name="tempOption">
-            <option value="">Select...</option>
-              <option value="no">No</option>
+              <option value="">Select...</option>
               <option value="yes">Yes</option>
+              <option value="no">No</option>
+              
             </select>
           </div>
         </div>
@@ -537,7 +535,7 @@
           <div class="form-group">
             <label for="tiltAxisRefineYes">Do you want Aretomo3 to refine tilt axis? (yes/no):</label>
             <select id="tiltAxisRefineYes" name="tiltAxisRefineYes">
-            <option value="">Select...</option>
+              <option value="">Select...</option>
               <option value="yes">Yes (default: 1)</option>
               <option value="no">No (default: -1)</option>
             </select>
@@ -553,7 +551,7 @@
           <div class="form-group">
             <label for="imodOptionYes">Do you want aligned tilt series in _Imod folder? (yes/no):</label>
             <select id="imodOptionYes" name="imodOptionYes">
-            <option value="">Select...</option>
+              <option value="">Select...</option>
               <option value="no">No (default: 1)</option>
               <option value="yes">Yes (default: 3)</option>
             </select>
@@ -561,7 +559,7 @@
           <div class="form-group">
             <label for="localAlnYes">Do you want to measure local shifts? (yes/no):</label>
             <select id="localAlnYes" name="localAlnYes">
-            <option value="">Select...</option>
+              <option value="">Select...</option>
               <option value="no">No</option>
               <option value="yes">Yes</option>
             </select>
@@ -569,7 +567,7 @@
           <div class="form-group">
             <label for="tiltCorrYes">Do you want to generate tilt offset corrected volumes? (yes/no):</label>
             <select id="tiltCorrYes" name="tiltCorrYes">
-            <option value="">Select...</option>
+              <option value="">Select...</option>
               <option value="no">No</option>
               <option value="yes">Yes</option>
             </select>
@@ -577,7 +575,7 @@
           <div class="form-group">
             <label for="tempOptionYes">Do you want to save intermediate thickness measure results? (yes/no):</label>
             <select id="tempOptionYes" name="tempOptionYes">
-            <option value="">Select...</option>
+              <option value="">Select...</option>
               <option value="no">No</option>
               <option value="yes">Yes</option>
             </select>
@@ -595,8 +593,12 @@
       </div>
 
       <!-- Run Button for Advanced Form -->
-      <button type="button" onclick="runAdvancedFunction()">Run</button>
+      <button type="button" onclick="runAdvancedFunction()">Submit</button>
 
+        <!-- Output Directory -->
+      <div id="outputContainer">
+        <strong>Output Directory:</strong> <span id="outputDirectory"></span>
+      </div>
       <!-- Error Message for Advanced Form -->
       <div id="advancedErrorMessage" class="error-message"></div>
     </form>
@@ -813,6 +815,12 @@
         const advancedNumChecks = document.getElementById("advancedNumChecks").value;
         const useAdvancedParams = document.getElementById("useAdvancedParams").value;
 
+        // Basic validation
+        if (!advancedRunNumber || !denoisetTraining || !evnOddSplit || !advancedPixelSize || !advancedDoseNumber || !advancedNumChecks || !useAdvancedParams) {
+          alert("Please fill in all required fields in the 'No Old Gain Reference' section.");
+          return;
+        }
+
         requestBody.run_number = advancedRunNumber;
         requestBody.denoiset_training = denoisetTraining;
         requestBody.evn_odd_split = evnOddSplit;
@@ -823,7 +831,7 @@
 
         if (useAdvancedParams === "yes") {
           // Grab advanced parameters
-          const tiltAxis = document.getElementById("tiltAxis").value || "0";
+          const tiltAxis = document.getElementById("tiltAxis").value || "";
           const tiltAxisRefine = document.getElementById("tiltAxisRefine").value || "no";
           const alignZ = document.getElementById("alignZ").value || "";
           const volZ = document.getElementById("volZ").value || "1200";
@@ -831,6 +839,8 @@
           const localAln = document.getElementById("localAln").value || "no";
           const tiltCorr = document.getElementById("tiltCorr").value || "no";
           const tempOption = document.getElementById("tempOption").value || "no";
+
+          // Additional validation if needed
 
           // Pass parameters directly
           requestBody.tilt_axis = tiltAxis;
@@ -855,6 +865,12 @@
         const advancedDoseNumberYes = document.getElementById("advancedDoseNumberYes").value;
         const advancedNumChecksYes = document.getElementById("advancedNumChecksYes").value;
 
+        // Basic validation
+        if (!gainFileName || !advancedRunNumberYes || !denoisetTrainingYes || !evnOddSplitYes || !advancedPixelSizeYes || !advancedDoseNumberYes || !advancedNumChecksYes || !useAdvancedParamsYes) {
+          alert("Please fill in all required fields in the 'Yes Old Gain Reference' section.");
+          return;
+        }
+
         requestBody.gain_file_name = gainFileName;
         requestBody.run_number = advancedRunNumberYes;
         requestBody.denoiset_training = denoisetTrainingYes;
@@ -875,6 +891,8 @@
           const tiltCorrYes = document.getElementById("tiltCorrYes").value || "no";
           const tempOptionYes = document.getElementById("tempOptionYes").value || "no";
 
+          // Additional validation if needed
+
           // Pass parameters directly
           requestBody.tilt_axis = tiltAxisYes;
           requestBody.tilt_axis_refine = tiltAxisRefineYes;
@@ -889,7 +907,7 @@
 
       const csrftoken = getCookie("csrftoken");
       try {
-        const response = await fetch("/workflow/run_advanced_aretomo3/", {
+        const response = await fetch("/workflow/run_advanced_aretomo3", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1101,10 +1119,6 @@
       }
     });
 
-    // (Removed auto-sync between denoisetTraining & evnOddSplit here)
-
-    // (Removed auto-sync between denoisetTrainingYes & evnOddSplitYes here)
-
     // Show/hide advanced params if "yes" is selected
     document.getElementById("useAdvancedParams").addEventListener("change", () => {
       const useAdvanced = document.getElementById("useAdvancedParams").value;
@@ -1124,6 +1138,40 @@
         advancedParamsSectionYes.style.display = "block";
       } else {
         advancedParamsSectionYes.style.display = "none";
+      }
+    });
+
+    // Sync denoisetTraining with evnOddSplit
+    document.getElementById("denoisetTraining").addEventListener("change", () => {
+      const denoisetVal = document.getElementById("denoisetTraining").value;
+      const evnOddSplit = document.getElementById("evnOddSplit");
+
+      if (denoisetVal === "yes") {
+        evnOddSplit.value = "yes";
+        evnOddSplit.disabled = true;
+      } else if (denoisetVal === "no") {
+        evnOddSplit.value = "no";
+        evnOddSplit.disabled = true;
+      } else {
+        evnOddSplit.value = "";
+        evnOddSplit.disabled = false;
+      }
+    });
+
+    // Sync denoisetTrainingYes with evnOddSplitYes
+    document.getElementById("denoisetTrainingYes").addEventListener("change", () => {
+      const denoisetValYes = document.getElementById("denoisetTrainingYes").value;
+      const evnOddSplitYes = document.getElementById("evnOddSplitYes");
+
+      if (denoisetValYes === "yes") {
+        evnOddSplitYes.value = "yes";
+        evnOddSplitYes.disabled = true;
+      } else if (denoisetValYes === "no") {
+        evnOddSplitYes.value = "no";
+        evnOddSplitYes.disabled = true;
+      } else {
+        evnOddSplitYes.value = "";
+        evnOddSplitYes.disabled = false;
       }
     });
 

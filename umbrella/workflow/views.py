@@ -57,10 +57,6 @@ def get_aretomo3_json(request):
 # @login_required
 @csrf_exempt
 def run_aretomo3_advanced(request):
-    """
-    Advanced endpoint for running Aretomo3 with or without an old gain reference
-    and optional advanced parameters (tilt axis, alignZ, volZ, etc.).
-    """
     if request.method == 'POST':
         data = json.loads(request.body)
 
@@ -78,8 +74,24 @@ def run_aretomo3_advanced(request):
                 status=422
             )
 
-        # Optional parameters shared by "yes"/"no" branches
-        gain_file_name = None  # Only set if use_old_gain == 'yes'
+        # -------------------------------------------
+        # Initialize all variables to a default value
+        # -------------------------------------------
+        gain_file_name = None
+        run_number = None
+        denoiset_training = None
+        pixel_size = None
+        use_advanced_params = None
+        tilt_axis = None
+        tilt_axis_refine = None
+        align_z = None
+        vol_z = None
+        imod_option = None
+        local_shift = None
+        tilt_offset = None
+        thickness_mesaure = None
+        dose_number = None
+        num_checks = None
 
         try:
             # Branch: old gain
@@ -87,45 +99,42 @@ def run_aretomo3_advanced(request):
                 gain_file_name = data.get('gain_file_name')
                 run_number = data.get('run_number')
                 denoiset_training = data.get('denoiset_training')
-                evn_odd_split = data.get('evn_odd_split')
+                # evn_odd_split = data.get('evn_odd_split')
                 pixel_size = data.get('pixel_size')
                 use_advanced_params = data.get('use_advanced_params')
 
                 # Only parse advanced params if user selected "yes"
                 if use_advanced_params == 'yes':
-                    tilt_axis = data.get('tilt_axis', None)
+                    tilt_axis = data.get('tilt_axis', "")
                     tilt_axis_refine = data.get('tilt_axis_refine')
-                    align_z = data.get('align_z',None)
+                    align_z = data.get('align_z', None)
                     vol_z = data.get('vol_z', 1200)
                     imod_option = data.get('imod_option')
                     local_shift = data.get('local_shift')
                     tilt_offset = data.get('tilt_offset')
                     thickness_mesaure = data.get('thickness_mesaure')
-                
+
             # Branch: no old gain
             elif use_old_gain == 'no':
                 run_number = data.get('run_number')
                 denoiset_training = data.get('denoiset_training')
-                evn_odd_split = data.get('evn_odd_split')
+                # evn_odd_split = data.get('evn_odd_split')
                 pixel_size = data.get('pixel_size')
                 use_advanced_params = data.get('use_advanced_params')
 
                 dose_number = data.get('dose_number')
                 num_checks = data.get('num_checks')
 
-                # Only parse advanced params if user selected "yes"
                 if use_advanced_params == 'yes':
-                    tilt_axis = data.get('tilt_axis', None)
+                    tilt_axis = data.get('tilt_axis', "")
                     tilt_axis_refine = data.get('tilt_axis_refine')
-                    align_z = data.get('align_z',None)
+                    align_z = data.get('align_z', "")
                     vol_z = data.get('vol_z', 1200)
                     imod_option = data.get('imod_option')
                     local_shift = data.get('local_shift')
                     tilt_offset = data.get('tilt_offset')
                     thickness_mesaure = data.get('thickness_mesaure')
-
-                dose_number = data.get('dose_number')
-                num_checks = data.get('num_checks')
+            
             else:
                 return JsonResponse(
                     {'error': 'Invalid use_old_gain value. Must be "yes" or "no": 422'},
@@ -142,22 +151,17 @@ def run_aretomo3_advanced(request):
             )
             aretomo.connect()
 
-            # Debug print of critical variables
-            print(
-                "PROJECT:", project_name,
-                "RUN_NUMBER:", run_number,
-                "DENOISET_TRAIN:", denoiset_training,
-                "EVN_ODD:", evn_odd_split,
-                "PIXEL_SIZE:", pixel_size,
-                "ADV_PARAMS:", use_advanced_params,
-                "TILT_AXIS:", tilt_axis,
-                "TILT_AXIS_REFINE:", tilt_axis_refine,
-                "ALIGN_Z:", align_z,
-                "VOL_Z:", vol_z,
-                "DOSE:", dose_number,
-                "IMOD_OPTION:", imod_option,
+            # Now you can safely call the script, because the variables
+            # you pass in are guaranteed to have *some* default value.
+            # Option 1: Provide a format string with placeholders
+            logger.info(
+                "Project: %s, Use Old Gain: %s, Advanced Params: %s, Pixel Size: %s, Denoise Training: %s",
+                project_name,
+                use_old_gain,
+                use_advanced_params,
+                pixel_size,
+                denoiset_training
             )
-
             output, error = aretomo.run_advanced_script(
                 project_name=project_name,
                 use_old_gain=use_old_gain,
@@ -167,7 +171,7 @@ def run_aretomo3_advanced(request):
                 num_checks=num_checks,
                 gain_file_name=gain_file_name,
                 denoise_training=denoiset_training,
-                even_odd_split=evn_odd_split,
+                # even_odd_split=evn_odd_split,
                 use_advanced_params=use_advanced_params,
                 tilt_axis=tilt_axis,
                 tilt_axis_refine=tilt_axis_refine,
@@ -178,22 +182,19 @@ def run_aretomo3_advanced(request):
                 tilt_offset=tilt_offset,
                 thickness_mesaure=thickness_mesaure
             )
-            if use_advanced_params.lower() == 'yes':
 
-                return JsonResponse({
-                    'message': f'Advanced job for project {project_name} submitted successfully.',
-                    'output': output, 
-                    'error': error
-                })
-            else:
-                return JsonResponse({
-                    'message': f'Basic job for project {project_name} submitted successfully.',
-                    'output': output, 
-                    'error': error
-                })
+            # Return your response
+
+            return JsonResponse({
+                'message': f'Session {project_name} for Advanced Aretomo3 is submitted successfully. Please check the below output directory',
+                'output': output,
+                'error': error
+            })
+
 
         except Exception as e:
-            return JsonResponse({'error': str(e) + ': 500'}, status=500)
+            logger.error(f'Error in run_aretomo3_advanced: {str(e)}')
+            return JsonResponse({'error': str(e)}, status=500)
 
         finally:
             # Ensure we always close the connection if we opened it
@@ -201,6 +202,8 @@ def run_aretomo3_advanced(request):
                 aretomo.close()
 
     return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
+
+
 @login_required
 @csrf_exempt
 def run_aretomo3(request):
