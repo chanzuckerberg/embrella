@@ -9,4 +9,4 @@ export const MUI_POPPER_ROOT = ".MuiPopper-root";
 // export const MUI_SVG_ICON_ROOT = ".MuiSvgIcon-root";
 // export const TABLE_BODY_ROW = "tbody tr";
 // export const TH = "th";
-export const TOOLTIP = "tooltip";
+// export const TOOLTIP = "tooltip";

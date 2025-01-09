@@ -21,6 +21,7 @@ import {
   TOOLTIP,
 } from "@testing/features/common/constants";
 import { EntityTablePage } from "@testing/page-objects/EntityTablePage";
+import { verify } from "crypto";
 
 const { describe } = test;
 
@@ -177,16 +178,16 @@ describe("Grids", () => {
   describe("grid filters", () => {
     let noFiltersAvailable = false;
     test.beforeEach(async () => {
-      filters = gridsPage.getFilterLocators();
+      filters = gridsPage.getFilterButtonLocators();
       noFiltersAvailable = await gridsPage.noFiltersAvailable();
     });
 
-    test("displays filters", async ({ page }) => {
-      await expect(page.getByTestId(TEST_IDS.SIDEBAR_FILTERS)).toBeVisible();
+    test("displays filters", async () => {
+      await expect(gridsPage.getSideBarFilters()).toBeVisible();
     });
 
     test("should display configured filters with correct filter label", async () => {
-      const FILTERS = FILTER_CONFIGS.flat();
+      const FILTERS = GRID_FILTER_CONFIGS.flat();
       // Verify the number of filters displayed.
       await expect(filters).toHaveCount(FILTERS.length);
       // Verify the filter name.
@@ -195,108 +196,127 @@ describe("Grids", () => {
       }
     });
 
-    test("should open filter popper when filter is clicked", async ({
-      page,
-    }) => {
+    test("should open filter popper when filter is clicked", async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
-      await openFilter(filters);
-      const filterPopper = getFilterPopperLocator(page);
-      await expect(filterPopper).toBeVisible();
+
+      await gridsPage.clickFirstFilter();
+      await gridsPage.verifyFilterPopperVisible();
     });
 
-    test("should close filter popper with escape key", async ({ page }) => {
+    test("should close filter popper with escape key", async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
-      await openFilter(filters);
-      const filterPopper = getFilterPopperLocator(page);
-      await expect(filterPopper).toBeVisible();
-      await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
-      await expect(filterPopper).not.toBeVisible();
+      await gridsPage.clickFirstFilter();
+      await gridsPage.verifyFilterPopperVisible();
+      await gridsPage.verifyFilterPopperClosed();
     });
 
-    test("should display filter options", async ({ page }) => {
+    test("should display filter options", async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
-      await openFilter(filters);
-      const filterOptions = getFilterOptionLocators(page).nth(0);
-      await expect(filterOptions).toBeVisible();
+      await gridsPage.clickFirstFilter();
+      await gridsPage.verifyFilterOptionsVisible();
+      // const filterOptions = getFilterOptionLocators(page).nth(0);
+      // await expect(filterOptions).toBeVisible();
     });
 
-    test("should keep the filter popper open after selecting a filter item", async ({
-      page,
-    }) => {
+    test("should keep the filter popper open after selecting a filter item", async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
-      await openFilter(filters);
-      const filterPopper = getFilterPopperLocator(page);
-      await getFilterOptionLocators(page).nth(0).click();
-      await expect(filterPopper).toBeVisible();
+      await gridsPage.clickFirstFilter();
+      await gridsPage.clickFirstFilterOption();
+      await gridsPage.verifyFilterPopperVisible();
+      // const filterPopper = getFilterPopperLocator(page);
+      // await getFilterOptionLocators(page).nth(0).click();
+      // await expect(filterPopper).toBeVisible();
     });
 
     test("should apply filter", async ({ page }) => {
       test.skip(noFiltersAvailable, DESCRIPTION);
-      const filter = filters.nth(0);
-      await filter.click();
-      const filterOption = getFilterOptionLocator(page);
-      const filterOptionValue = await filterOption
-        .locator(FILTER_OPTION_PRIMARY_TEXT)
-        .innerText();
-      // Apply filter.
-      await waitForRequest(page, filterOption, API.GRIDS_FILTERS_LIST);
-      // Verify filter option is selected.
-      await expect(filterOption).toHaveClass(/Mui-selected/);
-      await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
-      const filterChips = getFilterChipLocators(filter);
+      await gridsPage.clickFirstFilter();
+      // const filter = filters.nth(0);
+      // await filter.click();
+
+      const filterOptionValue = await gridsPage.getFirstFilterOptionText();
+      // const filterOption = getFilterOptionLocator(page);
+      // const filterOptionValue = await filterOption
+      //   .locator(FILTER_OPTION_PRIMARY_TEXT)
+      //   .innerText();
+
+      await gridsPage.applyFirstFilterOption();
+      // await waitForRequest(page, filterOption, API.GRIDS_FILTERS_LIST);
+
+      gridsPage.verifyFirstFilterOptionSelected();
+      // await expect(filterOption).toHaveClass(/Mui-selected/);
+
+      await gridsPage.closeFilterPopper();
+      // await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
+
+      await gridsPage.verifyNumFiltersSelected(1);
       // Verify the number of filter chips displayed.
-      await expect(filterChips).toHaveCount(1);
-      const filterChip = filterChips.nth(0);
-      const filterChipValue = await filterChip.innerText();
+      // const filterChips = getFilterChipLocators(filter);
+      // await expect(filterChips).toHaveCount(1);
+
+      await gridsPage.verifyFirstFilterChipValue(filterOptionValue);
       // Verify the filter chip value is equal to the filter option value.
-      expect(filterChipValue).toEqual(filterOptionValue);
+      // const filterChip = filterChips.nth(0);
+      // const filterChipValue = await filterChip.innerText();
+      // expect(filterChipValue).toEqual(filterOptionValue);
     });
 
     test("should clear applied filter after selecting filter chip", async ({
       page,
     }) => {
       test.skip(noFiltersAvailable, DESCRIPTION);
-      const filter = filters.nth(0);
-      await filter.click();
+
+      await gridsPage.clickFirstFilter();
+      // const filter = filters.nth(0);
+      // await filter.click();
+
+      await gridsPage.applyFirstFilterOption();
       // Apply filter.
-      await waitForRequest(
-        page,
-        getFilterOptionLocators(page).nth(0),
-        API.GRIDS_FILTERS_LIST,
-      );
-      await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
-      const filterChip = getFilterChipLocators(filter).nth(0);
+      // await waitForRequest(
+      //   page,
+      //   getFilterOptionLocators(page).nth(0),
+      //   API.GRIDS_FILTERS_LIST,
+      // );
+
+      await gridsPage.closeFilterPopper();
+      // await page.keyboard.press(KEYBOARD_KEY.ESCAPE);
+
+      const filterChip = gridsPage.getFirstFilterChip();
+      // const filterChip = getFilterChipLocators(filter).nth(0);
+
+      await gridsPage.removeFirstFilterChip();
       // Clear filter.
-      await waitForRequest(page, filterChip, API.GRIDS_FILTERS_LIST);
+      // await waitForRequest(page, filterChip, API.GRIDS_FILTERS_LIST);
+
       // Verify the filter chip is no longer visible.
       await expect(filterChip).not.toBeVisible();
+
       // Verify filter option is no longer selected.
-      await filter.click();
-      const filterOption = getFilterOptionLocator(page);
-      await expect(filterOption).not.toHaveClass(/Mui-selected/);
+      await gridsPage.clickFirstFilter();
+      gridsPage.verifyFirstFilterOptionNotSelected();
     });
   });
 });
 
-function getFilterChipLocators(filter: Locator): Locator {
-  return filter.locator("..").locator(MUI_CHIP_ROOT);
-}
+// function getFilterChipLocators(filter: Locator): Locator {
+//   return filter.locator("..").locator(MUI_CHIP_ROOT);
+// }
 
 // function getFilterLocators(page: Page): Locator {
 //   return page.getByTestId(TEST_IDS.SIDEBAR_FILTERS).locator(BUTTON);
 // }
 
-function getFilterOptionLocator(page: Page, nth = 0): Locator {
-  return getFilterOptionLocators(page).nth(nth);
-}
+// function getFilterOptionLocator(page: Page, nth = 0): Locator {
+//   return getFilterOptionLocators(page).nth(nth);
+// }
 
-function getFilterOptionLocators(page: Page): Locator {
-  return getFilterPopperLocator(page).locator(MUI_AUTOCOMPLETE_OPTION);
-}
+// function getFilterOptionLocators(page: Page): Locator {
+//   return getFilterPopperLocator(page).locator(MUI_AUTOCOMPLETE_OPTION);
+// }
 
-function getFilterPopperLocator(page: Page): Locator {
-  return page.locator(MUI_POPPER_ROOT).and(page.getByRole(TOOLTIP));
-}
+// function getFilterPopperLocator(page: Page): Locator {
+//   return page.locator(MUI_POPPER_ROOT).and(page.getByRole(TOOLTIP));
+// }
 
 // function getPaginationLocator(page: Page) {
 //   return page.getByTestId(TEST_IDS.ENTITY_TABLE_PAGINATION);
@@ -322,10 +342,10 @@ function getFilterPopperLocator(page: Page): Locator {
 //   await page.goto(ROUTES.CRYO_GRIDS);
 // }
 
-async function openFilter(filters: Locator) {
-  const filter = filters.nth(0);
-  await filter.click();
-}
+// async function openFilter(filters: Locator) {
+//   const filter = filters.nth(0);
+//   await filter.click();
+// }
 
 // async function shouldSkipGridTest(table?: Locator): Promise<boolean> {
 //   if (!table) return true;
@@ -337,19 +357,19 @@ async function openFilter(filters: Locator) {
 //   return await filter.isDisabled();
 // }
 
-async function waitForRequest(
-  page: Page,
-  locator: Locator,
-  requestURL: string,
-): Promise<void> {
-  await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.url().includes(requestURL) && response.status() === 200,
-    ),
-    locator.click(),
-  ]);
-}
+// async function waitForRequest(
+//   page: Page,
+//   locator: Locator,
+//   requestURL: string,
+// ): Promise<void> {
+//   await Promise.all([
+//     page.waitForResponse(
+//       (response) =>
+//         response.url().includes(requestURL) && response.status() === 200,
+//     ),
+//     locator.click(),
+//   ]);
+// }
 
 async function waitForResponse<R>(
   page: Page,
