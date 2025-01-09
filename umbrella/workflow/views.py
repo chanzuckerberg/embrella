@@ -107,8 +107,8 @@ def run_aretomo3_advanced(request):
                 if use_advanced_params == 'yes':
                     tilt_axis = data.get('tilt_axis', "")
                     tilt_axis_refine = data.get('tilt_axis_refine')
-                    align_z = data.get('align_z', None)
-                    vol_z = data.get('vol_z', 1200)
+                    align_z = data.get('align_z', "")
+                    vol_z = data.get('vol_z', "")
                     imod_option = data.get('imod_option')
                     local_shift = data.get('local_shift')
                     tilt_offset = data.get('tilt_offset')
