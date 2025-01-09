@@ -4,11 +4,11 @@ import { AccessorReturnType } from "@app/common/components/EntityTable/types";
 import { humanize } from "@app/common/utils/string";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import {
-  LinkCellProps,
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
-} from "@/app/common/components/Table/components/LinkCell/LinkCell";
-import { TomogramData } from "@app/components/TomogramsView/types";
+} from "@app/common/components/EntityTable/utils/linkUtils";
+import { LinkCellProps } from "@app/common/components/EntityTable/types";
+import { TomogramData } from "../types";
 
 export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: "tomograms",

@@ -7,12 +7,10 @@ import {
   TableStateContext,
 } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { UpdateFilterAction } from "@app/common/components/TableStateProvider/TableStateProvider";
-import {
-  CategoryFilter,
-  FilterConfig,
-} from "@app/common/components/Filter/common/types";
-import { UseFilterList } from "@app/common/components/Filter/hooks/useFilterList/types";
-import { useFilterList } from "@app/common/components/Filter/hooks/useFilterList/useFilterList";
+import { CategoryFilter } from "@app/common/components/EntityTableFilters/types";
+import { FilterConfig } from "@app/common/types/filter";
+import { UseFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/types";
+import { useFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/useFilterList";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
 import { API } from "@app/common/constants/api";
 import { SEARCH_PARAM_NAME } from "@app/common/types/search";
@@ -38,12 +36,11 @@ export const useConnect = <
   entityFilterConfigs: EntityFilterConfigs[][],
   entityFilterListApi: API,
 ): EntityTableFilterConnect<FilterId, FilterCategory> => {
-  console.log("entityFilterConfigs", entityFilterConfigs);
   const dispatch = useContext(TableDispatchContext);
 
   const state = useContext<TableState>(TableStateContext);
 
-  const filtersList = useFetchFilters(entityFilterListApi, {
+  const filtersList = useFetchFilters<FilterCategory>(entityFilterListApi, {
     [SEARCH_PARAM_NAME.QUERY]: getFilterSearchParamValues(state),
   });
 

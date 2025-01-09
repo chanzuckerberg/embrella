@@ -1,14 +1,14 @@
-import { initFetch } from "@/testing/utils";
-import { getRequestURL } from "@/app/common/queries/utils";
-import { fetchResource } from "@/app/common/queries/fetchResource";
+import { initFetch } from "@testing/utils";
+import { getRequestURL } from "@app/common/queries/utils";
+import { fetchResource } from "@app/common/queries/fetchResource";
 import {
   GRID_A,
   URL_BASE,
   URL_GRIDS,
   URL_NONEXISTENT,
-} from "@/testing/constants";
-import { GridData } from "@/app/common/types/types";
+} from "@testing/constants";
 import { ApiListResponse } from "@app/common/types/tableState";
+import { GridData } from "@app/components/GridsView/types";
 
 beforeAll(() => {
   initFetch();

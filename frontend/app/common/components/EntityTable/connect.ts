@@ -17,23 +17,23 @@ import {
   TableStateContext,
   UpdatePaginationAction,
   UpdateSortAction,
-} from "@/app/common/components/TableStateProvider/TableStateProvider";
-import { Pagination, SortBy } from "@/app/common/types/tableState";
+} from "@app/common/components/TableStateProvider/TableStateProvider";
+import { Pagination, SortBy } from "@app/common/types/tableState";
 import { AccessorReturnType } from "./types";
-import { EntityDataTypes } from "@/app/common/types/tableState";
+import { EntityDataTypes } from "@app/common/types/tableState";
 import { ApiPrimaryEntityAttribute } from "./types";
-import { API } from "@/app/common/constants/api";
-import { useFetchTableData } from "@/app/common/hooks/useFetchTableData/useFetchTableData";
-import { SEARCH_PARAM_NAME } from "@/app/common/types/search";
+import { API } from "@app/common/constants/api";
+import { useFetchTableData } from "@app/common/hooks/useFetchTableData/useFetchTableData";
+import { SEARCH_PARAM_NAME } from "@app/common/types/search";
 import {
   getFilterSearchParamValues,
   getPaginationSearchParamValues,
   getSortSearchParamValue,
-} from "@/app/common/utils/searchParam";
+} from "@app/common/utils/searchParam";
 import {
   EntityAPIPrimaryAttributeToDataType,
   EntityLinkField,
-} from "@/app/common/types/entity";
+} from "@app/common/types/entity";
 
 export const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   row: EntityDataTypes,

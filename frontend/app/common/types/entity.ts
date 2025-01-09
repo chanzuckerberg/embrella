@@ -1,6 +1,6 @@
 import { AnnotationData } from "@app/components/AnnotationsView/types";
+import { GridData } from "@app/components/GridsView/types";
 import { TomogramData } from "@app/components/TomogramsView/types";
-import { GridData } from "./types";
 
 export type EntityAPIPrimaryAttributeToDataType = {
   annotations: AnnotationData;

@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
-import { delay, getLastFetchResult, initFetch } from "@/testing/utils";
-import { useFetchData } from "@/hooks/useFetchData/useFetchData";
-import { URL_BASE, URL_FOO, URL_NONEXISTENT } from "@/testing/constants";
+import { delay, getLastFetchResult, initFetch } from "@testing/utils";
+import { useFetchData } from "@hooks/useFetchData/useFetchData";
+import { URL_BASE, URL_FOO, URL_NONEXISTENT } from "@testing/constants";
 
 beforeAll(() => {
   initFetch();
