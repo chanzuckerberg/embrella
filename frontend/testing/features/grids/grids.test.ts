@@ -85,17 +85,19 @@ describe("Grids", () => {
       page,
     }) => {
       test.skip(noDataAvailable, DESCRIPTION);
-      const {
-        pagination: { pageSize, totalResults },
-      } = await waitForResponse<EntityList>(page, API.GRIDS, () =>
-        page.reload(),
-      );
-      const pagination = gridsPage.getPaginationLocator();
-      if (pageSize < totalResults) {
-        await expect(pagination).toBeVisible();
-      } else {
-        await expect(pagination).not.toBeVisible();
-      }
+
+      await gridsPage.verifyPaginationPresence();
+      // const {
+      //   pagination: { pageSize, totalResults },
+      // } = await waitForResponse<EntityList>(page, API.GRIDS, () =>
+      //   page.reload(),
+      // );
+      // const pagination = gridsPage.getPaginationLocator();
+      // if (pageSize < totalResults) {
+      //   await expect(pagination).toBeVisible();
+      // } else {
+      //   await expect(pagination).not.toBeVisible();
+      // }
     });
   });
 
@@ -371,17 +373,17 @@ describe("Grids", () => {
 //   ]);
 // }
 
-async function waitForResponse<R>(
-  page: Page,
-  requestURL: string,
-  onRequest: () => Promise<Response | null>,
-): Promise<R> {
-  const [response] = await Promise.all([
-    page.waitForResponse(
-      (response) =>
-        response.url().includes(requestURL) && response.status() === 200,
-    ),
-    onRequest(),
-  ]);
-  return await response.json();
-}
+// async function waitForResponse<R>(
+//   page: Page,
+//   requestURL: string,
+//   onRequest: () => Promise<Response | null>,
+// ): Promise<R> {
+//   const [response] = await Promise.all([
+//     page.waitForResponse(
+//       (response) =>
+//         response.url().includes(requestURL) && response.status() === 200,
+//     ),
+//     onRequest(),
+//   ]);
+//   return await response.json();
+// }

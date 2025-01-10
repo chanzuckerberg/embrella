@@ -184,6 +184,27 @@ export class EntityTablePage extends PageObject {
   // #endregion UI inputs
 
   // #region Verifications
+  public async verifyPaginationPresence() {
+    const [response] = await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.url().includes(API.GRIDS) && response.status() === 200,
+      ),
+      this.page.reload(),
+    ]);
+
+    const {
+      pagination: { pageSize, totalResults },
+    } = await response.json();
+
+    const paginationElement = this.getPaginationLocator();
+    if (pageSize < totalResults) {
+      await expect(paginationElement).toBeVisible();
+    } else {
+      await expect(paginationElement).not.toBeVisible();
+    }
+  }
+
   public async verifySortableDateHeader() {
     const header = this.getDateHeaderLocator();
     await expect(header).toHaveCount(1);
