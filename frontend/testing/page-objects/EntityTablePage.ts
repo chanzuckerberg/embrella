@@ -1,18 +1,13 @@
 import { expect, Locator } from "@playwright/test";
 
+import { API } from "@app/common/constants/api";
 import { ROUTES } from "@app/common/constants/constants";
 import { TEST_IDS } from "@app/common/constants/testIds";
 
 import { PageObject } from "./PageObject";
-import { GRID_COLUMN_DEFS } from "@app/components/GridsView/constants/columns";
-import { GRID_FILTER_CONFIGS } from "@app/components/GridsView/constants/filters";
-import { API } from "@app/common/constants/api";
 
 const ATTRIBUTE = { DIRECTION: "direction" };
 const BUTTON = "button";
-const GRID_COLUMN_CONFIGS = GRID_COLUMN_DEFS;
-const DESCRIPTION = "Skip the test; BE is unavailable";
-const FILTER_CONFIGS = GRID_FILTER_CONFIGS;
 const FILTER_OPTION_PRIMARY_TEXT = ".primary-text";
 const HEADER_WITH_DIRECTION_ATTRIBUTE = "th[direction]";
 const KEYBOARD_KEY = {
