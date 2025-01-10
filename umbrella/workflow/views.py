@@ -3,7 +3,7 @@ from .utils import jsonify, ssh_connect, extract_parameters
 from django.http import JsonResponse
 from django.shortcuts import render
 from .agent import Aretomo3
-from umbrella.settings import ARETOMO3_SCRIPT_PATH
+from umbrella.settings import ARETOMO3_SCRIPT_PATH, ARETOMO3_ADVANCED_PATH
 import os
 import base64
 import re
@@ -53,7 +53,155 @@ def get_aretomo3_json(request):
         error_msg = f"Please check the server status: {str(err)}"
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=500)
+    
+# @login_required
+@csrf_exempt
+def run_aretomo3_advanced(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
 
+        project_name = data.get('project_name')
+        use_old_gain = data.get('use_old_gain')  # "yes" or "no"
+        user_id = data.get('user_id')
+        encoded_password = data.get('password', '')
+        decoded_password = base64.b64decode(encoded_password).decode('utf-8')
+
+        # Validate project_name format (e.g., 23sep23a)
+        project_name_pattern = re.compile(r'^\d{2}[a-z]{3}\d{2}[a-z]$')
+        if not project_name_pattern.match(project_name):
+            return JsonResponse(
+                {'error': 'Invalid project_name format. Please check the project name: 422'},
+                status=422
+            )
+
+        # -------------------------------------------
+        # Initialize all variables to a default value
+        # -------------------------------------------
+        gain_file_name = None
+        run_number = None
+        denoiset_training = None
+        pixel_size = None
+        use_advanced_params = None
+        tilt_axis = None
+        tilt_axis_refine = None
+        align_z = None
+        vol_z = None
+        imod_option = None
+        local_shift = None
+        tilt_offset = None
+        thickness_mesaure = None
+        dose_number = None
+        num_checks = None
+
+        try:
+            # Branch: old gain
+            if use_old_gain == 'yes':
+                gain_file_name = data.get('gain_file_name')
+                run_number = data.get('run_number')
+                denoiset_training = data.get('denoiset_training')
+                # evn_odd_split = data.get('evn_odd_split')
+                pixel_size = data.get('pixel_size')
+                use_advanced_params = data.get('use_advanced_params')
+
+                # Only parse advanced params if user selected "yes"
+                if use_advanced_params == 'yes':
+                    tilt_axis = data.get('tilt_axis', "")
+                    tilt_axis_refine = data.get('tilt_axis_refine')
+                    align_z = data.get('align_z', "")
+                    vol_z = data.get('vol_z', "")
+                    imod_option = data.get('imod_option')
+                    local_shift = data.get('local_shift')
+                    tilt_offset = data.get('tilt_offset')
+                    thickness_mesaure = data.get('thickness_mesaure')
+
+            # Branch: no old gain
+            elif use_old_gain == 'no':
+                run_number = data.get('run_number')
+                denoiset_training = data.get('denoiset_training')
+                # evn_odd_split = data.get('evn_odd_split')
+                pixel_size = data.get('pixel_size')
+                use_advanced_params = data.get('use_advanced_params')
+
+                dose_number = data.get('dose_number')
+                num_checks = data.get('num_checks')
+
+                if use_advanced_params == 'yes':
+                    tilt_axis = data.get('tilt_axis', "")
+                    tilt_axis_refine = data.get('tilt_axis_refine')
+                    align_z = data.get('align_z', "")
+                    vol_z = data.get('vol_z', 1200)
+                    imod_option = data.get('imod_option')
+                    local_shift = data.get('local_shift')
+                    tilt_offset = data.get('tilt_offset')
+                    thickness_mesaure = data.get('thickness_mesaure')
+            
+            else:
+                return JsonResponse(
+                    {'error': 'Invalid use_old_gain value. Must be "yes" or "no": 422'},
+                    status=422
+                )
+
+            # Store user credentials in session
+            request.session['user_id'] = user_id
+            request.session['decoded_password'] = decoded_password
+
+            # Initialize the Aretomo3 object and connect
+            aretomo = Aretomo3(
+                HOST, PORT, user_id, decoded_password, ARETOMO3_ADVANCED_PATH
+            )
+            aretomo.connect()
+
+            # Now you can safely call the script, because the variables
+            # you pass in are guaranteed to have *some* default value.
+            # Option 1: Provide a format string with placeholders
+            logger.info(
+                "Project: %s, Use Old Gain: %s, Advanced Params: %s, Pixel Size: %s, Denoise Training: %s",
+                project_name,
+                use_old_gain,
+                use_advanced_params,
+                pixel_size,
+                denoiset_training
+            )
+            output, error = aretomo.run_advanced_script(
+                project_name=project_name,
+                use_old_gain=use_old_gain,
+                run_number=run_number,
+                pixel_size=pixel_size,
+                dose_number=dose_number,
+                num_checks=num_checks,
+                gain_file_name=gain_file_name,
+                denoise_training=denoiset_training,
+                # even_odd_split=evn_odd_split,
+                use_advanced_params=use_advanced_params,
+                tilt_axis=tilt_axis,
+                tilt_axis_refine=tilt_axis_refine,
+                align_z=align_z,
+                vol_z=vol_z,
+                imod_option=imod_option,
+                local_shift=local_shift,
+                tilt_offset=tilt_offset,
+                thickness_mesaure=thickness_mesaure
+            )
+
+            # Return your response
+
+            return JsonResponse({
+                'message': f'Session {project_name} for Advanced Aretomo3 is submitted successfully. Please check the below output directory',
+                'output': output,
+                'error': error
+            })
+
+
+        except Exception as e:
+            logger.error(f'Error in run_aretomo3_advanced: {str(e)}')
+            return JsonResponse({'error': str(e)}, status=500)
+
+        finally:
+            # Ensure we always close the connection if we opened it
+            if 'aretomo' in locals():
+                aretomo.close()
+
+    return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
 
 @login_required
