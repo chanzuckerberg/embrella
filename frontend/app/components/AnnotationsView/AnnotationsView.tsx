@@ -14,7 +14,7 @@ import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
 import { API } from "@app/common/constants/api";
 import { AnnotationFilterId, AnnotationFilterCategory } from "./types";
 import { ANNOTATION_FILTER_CONFIGS } from "./constants/filters";
-import { EntityTableFilters } from "@/app/common/components/EntityTableFilters/EntityTableFilters";
+import { EntityTableFilters } from "@app/common/components/EntityTableFilters/EntityTableFilters";
 
 export const AnnotationsView = (): React.JSX.Element => {
   const initialSortState: SortingState = [
@@ -27,12 +27,12 @@ export const AnnotationsView = (): React.JSX.Element => {
         <Sidebar>
           <EntityTableFilters<AnnotationFilterId, AnnotationFilterCategory>
             entityFilterConfigs={ANNOTATION_FILTER_CONFIGS}
-            entityFilterListApi={API.ANNOTATIONS_FILTERLIST_V1}
+            entityFilterListApi={API.ANNOTATIONS_FILTERLIST}
           />
         </Sidebar>
         <TableWrapper>
           <EntityTable
-            entityApi={API.ANNOTATIONS_V1}
+            entityApi={API.ANNOTATIONS}
             entityApiResponseField="annotations"
             columnDefs={ANNOTATION_COLUMN_DEFS}
           />

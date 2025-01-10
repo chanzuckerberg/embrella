@@ -4,19 +4,22 @@ import {
   AnnotationFilterId,
 } from "@app/components/AnnotationsView/types";
 import {
-  GRID_FILTER_ID,
-  GridFilterConfig,
-} from "@/views/GridsView/components/Main/components/GridFilter/filters/types";
-import { GridFilterCategory } from "./types";
-import {
   TomogramFilterId,
   TomogramFilterCategory,
   TomogramFilterConfig,
 } from "@app/components/TomogramsView/types";
-
-export interface FiltersList {
-  filters: Record<EntityFilterCategories, FilterOption[]>;
+import {
+  GridFilterCategory,
+  GridFilterConfig,
+  GridFilterId,
+} from "@app/components/GridsView/types";
+// EntityFilterCategory extends EntityFilterCategories
+export interface FiltersList<FilterCategory extends EntityFilterCategories> {
+  filters: Record<FilterCategory, FilterOption[]>;
 }
+// export interface FiltersList<FilterCategory extends string> {
+//   filters: Record<FilterCategory, FilterOption[]>;
+// }
 
 export interface FilterOption {
   name: boolean | string | null;
@@ -28,7 +31,7 @@ export interface FilterOption {
 export type EntityFilterIdTypes =
   | AnnotationFilterId
   | TomogramFilterId
-  | GRID_FILTER_ID;
+  | GridFilterId;
 
 export type EntityFilterCategories =
   | AnnotationFilterCategory
@@ -39,3 +42,15 @@ export type EntityFilterConfigs =
   | AnnotationFilterConfig
   | TomogramFilterConfig
   | GridFilterConfig;
+
+export interface FilterConfig<FilterId, FilterCategory extends string> {
+  filterCategory: FilterCategory; // Key in result set row values to filter on.
+  filterId: FilterId;
+  label: string;
+}
+
+export type FilterState<FilterCategory extends string> = Partial<{
+  [K in FilterCategory]: FilterValue[];
+}>;
+
+export type FilterValue = boolean | string | null;

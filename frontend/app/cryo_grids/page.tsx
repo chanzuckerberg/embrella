@@ -1,12 +1,12 @@
-import { GridsView } from "@/views/GridsView";
 import { Metadata } from "next";
+import { GridsView } from "@app/components/GridsView/GridsView";
 
 export const metadata: Metadata = {
-  title: "Embrella Cryogrids",
+  title: "Embrella Grids",
 };
 
-const CryoGridsPage = () => {
+const GridsPage = () => {
   return <GridsView />;
 };
 
-export default CryoGridsPage;
+export default GridsPage;

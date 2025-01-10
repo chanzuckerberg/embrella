@@ -7,11 +7,10 @@ import {
   TableStateContext,
 } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { UpdateFilterAction } from "@app/common/components/TableStateProvider/TableStateProvider";
-import {
-  CategoryFilter,
-  FilterConfig,
-} from "@app/components/Filter/common/types";
-import { useFilterList } from "@app/components/Filter/hooks/useFilterList/useFilterList";
+import { CategoryFilter } from "@app/common/components/EntityTableFilters/types";
+import { FilterConfig } from "@app/common/types/filter";
+import { UseFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/types";
+import { useFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/useFilterList";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
 import { API } from "@app/common/constants/api";
 import { SEARCH_PARAM_NAME } from "@app/common/types/search";
@@ -20,7 +19,15 @@ import {
   EntityFilterCategories,
   EntityFilterConfigs,
   EntityFilterIdTypes,
-} from "../../types/filter";
+} from "@app/common/types/filter";
+
+export interface EntityTableFilterConnect<
+  FilterId extends EntityFilterIdTypes,
+  FilterCategory extends EntityFilterCategories,
+> {
+  filters: UseFilterList<FilterId, FilterCategory>;
+  onFilter: (categoryFilter: CategoryFilter<FilterCategory>) => void;
+}
 
 export const useConnect = <
   FilterId extends EntityFilterIdTypes,
@@ -28,12 +35,12 @@ export const useConnect = <
 >(
   entityFilterConfigs: EntityFilterConfigs[][],
   entityFilterListApi: API,
-) => {
+): EntityTableFilterConnect<FilterId, FilterCategory> => {
   const dispatch = useContext(TableDispatchContext);
 
   const state = useContext<TableState>(TableStateContext);
 
-  const filtersList = useFetchFilters(entityFilterListApi, {
+  const filtersList = useFetchFilters<FilterCategory>(entityFilterListApi, {
     [SEARCH_PARAM_NAME.QUERY]: getFilterSearchParamValues(state),
   });
 
@@ -47,13 +54,12 @@ export const useConnect = <
       const updateFilterAction: UpdateFilterAction = {
         payload: {
           categoryFilter,
-          filtersList,
         },
         type: TableStateActionTypes.UpdateFilter,
       };
       dispatch(updateFilterAction);
     },
-    [dispatch, filtersList],
+    [dispatch],
   );
 
   return { filters, onFilter };

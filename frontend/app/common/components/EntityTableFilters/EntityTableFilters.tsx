@@ -1,16 +1,21 @@
-import { Filters } from "@app/components/Filter/components/Filters";
+import { Fragment } from "react";
+
+import { API } from "@app/common/constants/api";
 import { TEST_IDS } from "@app/common/constants/testIds";
-import { useConnect } from "./connect";
 import {
   EntityFilterCategories,
   EntityFilterConfigs,
   EntityFilterIdTypes,
 } from "@app/common/types/filter";
-import { API } from "../../constants/api";
+
+import { Filter } from "./components/Filter/Filter";
+import { useConnect } from "./connect";
+import { FilterDivider, StyledFilters } from "./style";
 
 interface EntityTableFiltersProps {
   entityFilterConfigs: EntityFilterConfigs[][];
   entityFilterListApi: API;
+  className?: string;
 }
 
 export const EntityTableFilters = <
@@ -26,10 +31,20 @@ export const EntityTableFilters = <
   >(entityFilterConfigs, entityFilterListApi);
 
   return (
-    <Filters
-      dataTestId={TEST_IDS.SIDEBAR_FILTERS}
-      filters={filters}
-      onFilter={onFilter}
-    />
+    <StyledFilters data-testid={TEST_IDS.SIDEBAR_FILTERS}>
+      {filters.map((filterViews, i) => (
+        <Fragment key={i}>
+          {i !== 0 && <FilterDivider />}
+          {filterViews.map((filterView) => (
+            <Filter
+              category={filterView.category}
+              filterView={filterView}
+              key={filterView.category}
+              onFilter={onFilter}
+            />
+          ))}
+        </Fragment>
+      ))}
+    </StyledFilters>
   );
 };

@@ -1,9 +1,9 @@
-import { GridData } from "@app/common/types/types";
 import { ApiListResponse } from "@app/common/types/tableState";
-import { FiltersList } from "@/app/common/types/types";
-import { SEARCH_PARAM_NAME, SearchParamValue } from "@/app/common/types/search";
-import { FetchResponseInfo, TestFilterCategory } from "@/testing/types";
-import { getSearchParamFirstValue } from "@/testing/utils";
+import { FiltersList } from "@app/common/types/filter";
+import { SEARCH_PARAM_NAME, SearchParamValue } from "@app/common/types/search";
+import { GridData } from "@app/components/GridsView/types";
+import { FetchResponseInfo, TestFilterCategory } from "@testing/types";
+import { getSearchParamFirstValue } from "@testing/utils";
 
 const TEST_SORTABLE_GRID_FIELDS = [
   "grid",

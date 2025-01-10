@@ -1,9 +1,10 @@
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "@/app/globals.css";
+import "@app/globals.css";
 import { ThemeProvider } from "@mui/material/styles";
-import { theme } from "@/app/common/theme";
+import { theme } from "@app/common/theme";
+import { TopNavigation } from "./components/TopNavigation/TopNavigation";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,7 +25,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AppRouterCacheProvider options={CACHE_PROVIDER_OPTIONS}>
-          <ThemeProvider theme={theme}>{children}</ThemeProvider>
+          <ThemeProvider theme={theme}>
+            <TopNavigation />
+            {children}
+          </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
     </html>

@@ -10,33 +10,32 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
-  getReactTablePaginationState,
-  getReactTableSortingState,
+  DEFAULT_PAGE_SIZE,
   TableDispatchContext,
   TableState,
   TableStateActionTypes,
   TableStateContext,
   UpdatePaginationAction,
   UpdateSortAction,
-} from "@/app/common/components/TableStateProvider/TableStateProvider";
-import { Pagination, SortBy } from "@/app/common/types/tableState";
+} from "@app/common/components/TableStateProvider/TableStateProvider";
+import { Pagination, SortBy } from "@app/common/types/tableState";
 import { AccessorReturnType } from "./types";
-import { EntityDataTypes } from "@/app/common/types/tableState";
+import { EntityDataTypes } from "@app/common/types/tableState";
 import { ApiPrimaryEntityAttribute } from "./types";
-import { API } from "@/app/common/constants/api";
-import { useFetchTableData } from "@/app/common/hooks/useFetchTableData/useFetchTableData";
-import { SEARCH_PARAM_NAME } from "@/app/common/types/search";
+import { API } from "@app/common/constants/api";
+import { useFetchTableData } from "@app/common/hooks/useFetchTableData/useFetchTableData";
+import { SEARCH_PARAM_NAME } from "@app/common/types/search";
 import {
   getFilterSearchParamValues,
   getPaginationSearchParamValues,
   getSortSearchParamValue,
-} from "@/app/common/utils/searchParam";
+} from "@app/common/utils/searchParam";
 import {
   EntityAPIPrimaryAttributeToDataType,
   EntityLinkField,
-} from "@/app/common/types/entity";
+} from "@app/common/types/entity";
 
-const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
+export const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   row: EntityDataTypes,
   entityApiResponseField: K,
 ): string => {
@@ -63,6 +62,19 @@ const getDefaultTableOptions = (
   manualSorting: true,
 });
 
+const getPaginationStateForPayload = (
+  pagination: Pagination,
+): PaginationState =>
+  !pagination
+    ? { pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE }
+    : {
+        pageIndex: pagination.page - 1,
+        pageSize: pagination.pageSize,
+      };
+
+const getSortingStateForPayload = (sortBy: SortBy): SortingState =>
+  !sortBy ? [] : [{ id: sortBy.sort, desc: !sortBy.asc }];
+
 export const useConnect = (
   entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
@@ -84,17 +96,18 @@ export const useConnect = (
 
   const reactTableState: Partial<ReactTableTableState> = useMemo(
     () => ({
-      pagination: getReactTablePaginationState(entityPagination as Pagination),
-      sorting: getReactTableSortingState(entitySortBy as SortBy),
+      pagination: getPaginationStateForPayload(entityPagination),
+      sorting: getSortingStateForPayload(entitySortBy),
     }),
     [entityPagination, entitySortBy],
   );
 
   const onPaginationChange = useCallback(
     (updaterOrValue: Updater<PaginationState>): void => {
+      const pagination = getPaginationStateForPayload(entityPagination);
       const updatePaginationAction: UpdatePaginationAction = {
         payload: {
-          pagination: entityPagination,
+          pagination,
           updaterOrValue,
         },
         type: TableStateActionTypes.UpdatePagination,
@@ -107,9 +120,10 @@ export const useConnect = (
 
   const onSortingChange = useCallback(
     (updaterOrValue: Updater<SortingState>) => {
+      const sortBy = getSortingStateForPayload(entitySortBy);
       const updateSortAction: UpdateSortAction = {
         payload: {
-          sortBy: entitySortBy,
+          sortBy,
           updaterOrValue,
         },
         type: TableStateActionTypes.UpdateSort,

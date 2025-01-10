@@ -3,11 +3,11 @@ import { ColumnDef } from "@tanstack/react-table";
 import { AccessorReturnType } from "@app/common/components/EntityTable/types";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import {
-  LinkCellProps,
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
-} from "@app/components/Table/components/LinkCell/LinkCell";
-import { humanize } from "@/app/common/utils/string";
+} from "@app/common/components/EntityTable/utils/linkUtils";
+import { LinkCellProps } from "@app/common/components/EntityTable/types";
+import { humanize } from "@app/common/utils/string";
 import { AnnotationData } from "../types";
 
 export const ANNOTATION_COLUMN_IDS = {
