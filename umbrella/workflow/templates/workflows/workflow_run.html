@@ -349,9 +349,19 @@
     <!-- Advanced Mode Section -->
     <form id="advancedForm" style="display:none;">
       <!-- Project Name -->
-      <div class="form-group">
-        <label for="projectName">Session Name:</label>
-        <input type="text" id="projectName" name="projectName" required/>
+      <div class="form-group"></div>
+        <label for="sessionName">Session Name:</label>
+        <input
+          list="sessionNames"
+          id="sessionName"
+          name="sessionName"
+          placeholder="Select or type..."
+          required
+          autocomplete="off"
+        />
+        <datalist id="sessionNames">
+          <!-- Options populated dynamically -->
+        </datalist>
       </div>
 
       <!-- Use Old Gain Reference? -->
