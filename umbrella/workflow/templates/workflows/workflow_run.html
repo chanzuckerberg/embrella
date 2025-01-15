@@ -12,7 +12,7 @@
     }
     .form-group {
       margin-bottom: 15px;
-      position: relative;
+      position: relative; /* Ensures tooltip is positioned relative to this container */
     }
     label {
       display: block;
@@ -237,6 +237,62 @@
     .credentials-section .form-group {
       margin-bottom: 15px;
     }
+    /* Tooltip Styles */
+    .tooltip {
+      position: absolute;
+      top: 0;
+      left: calc(100% + 8px);  
+      transform: none;
+      width: 500px;
+      /* transform: translateY(-50%); */
+      max-width: 700px;         /* Larger tooltip box size */
+      background-color: #fff9c4;/* Yellow background */
+      color: #333;
+      /* text-align: left; */
+      border-radius: 6px;
+      padding: 25px;            /* Larger padding */
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;     /* Prevents tooltip from blocking clicks */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Show tooltip on hover over the info icon */
+    .info-icon:hover + .tooltip {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .tooltip::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: -5px; /* Arrow on the left side of the tooltip */
+      transform: translateY(-50%);
+      border-width: 5px;
+      border-style: solid;
+      border-color: transparent #fff9c4 transparent transparent;
+    }
+    /* Information Icon Styles */
+    .info-icon {
+      display: inline-block;
+      margin-left: 5px;
+      width: 20px;
+      height: 20px;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+    .info-icon:hover {
+      background-color: #45a049;
+    }
     /* Responsive Design Enhancements */
     @media (max-width: 600px) {
       .switch {
@@ -262,6 +318,10 @@
       button {
         padding: 8px 16px;
         font-size: 14px;
+      }
+      .tooltip {
+        max-width: 300px; /* Smaller width on mobile if desired */
+        padding: 15px;    /* Slightly reduced padding for smaller screens */
       }
     }
   </style>
@@ -299,7 +359,14 @@
     <form id="basicForm">
       <!-- Session Name -->
       <div class="form-group">
-        <label for="sessionName">Session Name:</label>
+        <label for="sessionName">
+          Session Name:
+        </label>
+        <!-- Hover the "i" icon -->
+        <span class="info-icon">i</span>
+        <div id="tooltipSessionName" class="tooltip">
+          Please register the MSI(Multi screen image) session name
+        </div>
         <input
           list="sessionNames"
           id="sessionName"
@@ -344,13 +411,17 @@
       <div id="errorMessage" class="error-message"></div>
     </form>
 
-    
-
     <!-- Advanced Mode Section -->
     <form id="advancedForm" style="display:none;">
       <!-- Project Name -->
       <div class="form-group">
-        <label for="projectName">Session Name:</label>
+        <label for="projectName">
+          Session Name:
+        </label>
+        <span class="info-icon">i</span>
+        <div id="tooltipProjectName" class="tooltip">
+          Please register
+        </div>
         <input
           list="sessionNames"
           id="projectName"
@@ -360,7 +431,6 @@
           autocomplete="off"
         />
       </div>
-
 
       <!-- Use Old Gain Reference? -->
       <div class="form-group">
@@ -435,7 +505,7 @@
           <!-- VolZ -->
           <div class="form-group">
             <label for="volZ">Enter the VolZ (leave blank for default(1200)):</label>
-            <input type="number" id="volZ" name="volZ" placeholder="(e.b. blank or numeric)"/>
+            <input type="number" id="volZ" name="volZ" placeholder="(e.g. blank or numeric)"/>
           </div>
 
           <!-- IMOD Option -->
@@ -603,7 +673,7 @@
       <!-- Run Button for Advanced Form -->
       <button type="button" onclick="runAdvancedFunction()">Submit</button>
 
-        <!-- Output Directory -->
+      <!-- Output Directory -->
       <div id="outputContainer">
         <strong>Output Directory:</strong> <span id="outputDirectory"></span>
       </div>
@@ -824,7 +894,15 @@
         const useAdvancedParams = document.getElementById("useAdvancedParams").value;
 
         // Basic validation
-        if (!advancedRunNumber || !denoisetTraining || !evnOddSplit || !advancedPixelSize || !advancedDoseNumber || !advancedNumChecks || !useAdvancedParams) {
+        if (
+          !advancedRunNumber ||
+          !denoisetTraining ||
+          !evnOddSplit ||
+          !advancedPixelSize ||
+          !advancedDoseNumber ||
+          !advancedNumChecks ||
+          !useAdvancedParams
+        ) {
           alert("Please fill in all required fields in the 'No Old Gain Reference' section.");
           return;
         }
@@ -848,17 +926,15 @@
           const tiltCorr = document.getElementById("tiltCorr").value || "no";
           const tempOption = document.getElementById("tempOption").value || "no";
 
-          // Additional validation if needed
-
           // Pass parameters directly
           requestBody.tilt_axis = tiltAxis;
           requestBody.tilt_axis_refine = tiltAxisRefine;
           requestBody.align_z = alignZ;
           requestBody.vol_z = volZ;
           requestBody.imod_option = imodOption;
-          requestBody.local_shift = localAln;         // updated
-          requestBody.tilt_offset = tiltCorr;         // updated
-          requestBody.thicness_mesaure = tempOption;  // updated
+          requestBody.local_shift = localAln;
+          requestBody.tilt_offset = tiltCorr;
+          requestBody.thicness_mesaure = tempOption;
         }
       }
 
@@ -874,7 +950,16 @@
         const advancedNumChecksYes = document.getElementById("advancedNumChecksYes").value;
 
         // Basic validation
-        if (!gainFileName || !advancedRunNumberYes || !denoisetTrainingYes || !evnOddSplitYes || !advancedPixelSizeYes || !advancedDoseNumberYes || !advancedNumChecksYes || !useAdvancedParamsYes) {
+        if (
+          !gainFileName ||
+          !advancedRunNumberYes ||
+          !denoisetTrainingYes ||
+          !evnOddSplitYes ||
+          !advancedPixelSizeYes ||
+          !advancedDoseNumberYes ||
+          !advancedNumChecksYes ||
+          !useAdvancedParamsYes
+        ) {
           alert("Please fill in all required fields in the 'Yes Old Gain Reference' section.");
           return;
         }
@@ -899,17 +984,15 @@
           const tiltCorrYes = document.getElementById("tiltCorrYes").value || "no";
           const tempOptionYes = document.getElementById("tempOptionYes").value || "no";
 
-          // Additional validation if needed
-
           // Pass parameters directly
           requestBody.tilt_axis = tiltAxisYes;
           requestBody.tilt_axis_refine = tiltAxisRefineYes;
           requestBody.align_z = alignZYes;
           requestBody.vol_z = volZYes;
           requestBody.imod_option = imodOptionYes;
-          requestBody.local_shift = localAlnYes;         // updated
-          requestBody.tilt_offset = tiltCorrYes;         // updated
-          requestBody.thicness_mesaure = tempOptionYes;  // updated
+          requestBody.local_shift = localAlnYes;
+          requestBody.tilt_offset = tiltCorrYes;
+          requestBody.thicness_mesaure = tempOptionYes;
         }
       }
 
