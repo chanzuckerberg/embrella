@@ -258,7 +258,7 @@
       content: "";
       position: absolute;
       top: 50%;
-      left: -5px; 
+      left: -5px;
       transform: translateY(-50%);
       border-width: 5px;
       border-style: solid;
@@ -425,6 +425,12 @@
         />
       </div>
 
+      <!-- If user picks or types the advanced projectName, automatically fill advancedRunNumber -->
+      <div class="form-group">
+        <label for="advancedRunNumber">Enter the run number (e.g., 001):</label>
+        <input type="number" id="advancedRunNumber" name="advancedRunNumber" required/>
+      </div>
+
       <!-- Use Old Gain Reference? -->
       <div class="form-group">
         <label for="useOldGain">Do you want to use an old gain reference? (yes/no):</label>
@@ -437,10 +443,7 @@
 
       <!-- If "no" for old gain -->
       <div id="additionalFields" class="additional-advanced-field">
-        <div class="form-group">
-          <label for="advancedRunNumber">Enter the run number (e.g., 001):</label>
-          <input type="number" id="advancedRunNumber" name="advancedRunNumber" required/>
-        </div>
+        <!-- The advancedRunNumber is above, so we can skip re-declaring it here -->
         <div class="form-group">
           <label for="denoisetTraining">Will you use this run for DenoisET training? (yes/no):</label>
           <select id="denoisetTraining" name="denoisetTraining" required>
@@ -740,8 +743,11 @@
         console.error("Error during initialization:", error);
       }
 
-      // Attach a listener to auto-fill runNumber (with +1)
+      // Attach a listener to auto-fill runNumber (Basic mode)
       attachSessionNameListener();
+
+      // Attach a separate listener to auto-fill advancedRunNumber (Advanced mode)
+      attachProjectNameListener();
     });
 
     // Populate Session Dropdown
@@ -809,7 +815,7 @@
         if (!sessionNameValue) return;
 
         try {
-          // Call your endpoint to fetch run numbers for the session name
+          // Basic mode uses /workflow/aretomo3_params?session_name=...
           const response = await fetch(`/workflow/aretomo3_params?session_name=${sessionNameValue}`, {
             method: "GET",
           });
@@ -818,33 +824,79 @@
           }
 
           const result = await response.json();
-          // Example result:
-          // {
-          //   "sessions": [
-          //     {
-          //       "name": "24sep26a",
-          //       "run_numbers": ["001","002","003"]
-          //     }
-          //   ]
-          // }
+          /*
+            Example result:
+            {
+              "sessions": [
+                {
+                  "name": "24sep26a",
+                  "run_numbers": ["001","002","003"]
+                }
+              ]
+            }
+          */
+          const runNumberInput = document.getElementById("runNumber");
 
           if (
-            result.sessions &&
-            result.sessions.length > 0 &&
-            result.sessions[0].run_numbers &&
-            result.sessions[0].run_numbers.length > 0
+            !result.sessions ||
+            result.sessions.length === 0 ||
+            !result.sessions[0].run_numbers ||
+            result.sessions[0].run_numbers.length === 0
           ) {
-            // 1) Get the FIRST run number from the array
+            // If no run_numbers exist, default to "001"
+            runNumberInput.value = "001";
+          } else {
+            // 1) Get the first run number
             const firstRunNumberStr = result.sessions[0].run_numbers[0]; // e.g. "001"
             // 2) Parse and add 1
             const runNumberInt = parseInt(firstRunNumberStr, 10) + 1;    // 1 + 1 = 2
-            // 3) If you want zero-padded 3 digits, e.g. "002"
+            // 3) Zero-pad to 3 digits
             const nextRunNumberStr = String(runNumberInt).padStart(3, '0');
-            // 4) Assign to runNumber input
-            document.getElementById("runNumber").value = nextRunNumberStr;
+            // 4) Assign
+            runNumberInput.value = nextRunNumberStr;
           }
         } catch (error) {
           console.error("Error fetching run numbers:", error);
+          // If there's an error, default to "001"
+          document.getElementById("runNumber").value = "001";
+        }
+      });
+    }
+
+    // Attach a listener to the projectName input for auto-filling advancedRunNumber (+1)
+    function attachProjectNameListener() {
+      const projectNameInput = document.getElementById("projectName");
+      projectNameInput.addEventListener("change", async () => {
+        const projectNameValue = projectNameInput.value.trim();
+        if (!projectNameValue) return;
+
+        try {
+          // Re-use the same endpoint in advanced mode
+          const response = await fetch(`/workflow/aretomo3_params?session_name=${projectNameValue}`, {
+            method: "GET",
+          });
+          if (!response.ok) {
+            throw new Error(`API call failed with status ${response.status}`);
+          }
+
+          const result = await response.json();
+          const advRunNumberInput = document.getElementById("advancedRunNumber");
+
+          if (
+            !result.sessions ||
+            result.sessions.length === 0 ||
+            !result.sessions[0].run_numbers ||
+            result.sessions[0].run_numbers.length === 0
+          ) {
+            advRunNumberInput.value = "001";
+          } else {
+            const firstRunNumberStr = result.sessions[0].run_numbers[0];
+            const runNumberInt = parseInt(firstRunNumberStr, 10) + 1;
+            advRunNumberInput.value = String(runNumberInt).padStart(3, '0');
+          }
+        } catch (error) {
+          console.error("Error fetching run numbers (advanced):", error);
+          document.getElementById("advancedRunNumber").value = "001";
         }
       });
     }
