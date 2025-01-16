@@ -14,6 +14,7 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from tem.models import MsiSession
+from django.db.models import F
 
 KEYS = ('PixSize',
         'AtBin',
@@ -354,6 +355,54 @@ def get_msi_session_list(request):
         session_names = list(MsiSession.objects.values_list('name', flat=True))
         
         return JsonResponse({'session_names': session_names}, status=200)
+
+    except Exception as e:
+        logger.error(f'An unexpected error occurred: {str(e)}')
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+    
+@require_http_methods(["GET"])
+def get_msi_params_list(request):
+    try:
+        # Get the msi_session name from request parameters
+        session_name_filter = request.GET.get('session_name', None)
+
+        # Perform the join between tem_msisession and processes_procrun
+        query = (
+            MsiSession.objects
+            .annotate(
+                run_number=F('procrun__name'),  # Map the 'name' field from the procrun table
+                run_created_at=F('procrun__created_at')  # Include the created_at field for sorting
+            )
+            .values('name', 'run_number', 'run_created_at')
+        )
+
+        # Apply filtering if a session name is provided
+        if session_name_filter:
+            query = query.filter(name=session_name_filter)
+
+        # Group results by name and collect unique run numbers with sorting by created_at
+        grouped_sessions = {}
+        for entry in query:
+            name = entry['name']
+            run_number = entry['run_number']
+            created_at = entry['run_created_at']
+            if name not in grouped_sessions:
+                grouped_sessions[name] = []
+            if run_number:
+                # Remove 'run' prefix if it exists
+                stripped_run_number = run_number.replace("run", "")
+                grouped_sessions[name].append((stripped_run_number, created_at))
+
+        # Sort run numbers by created_at (most recent first) and format the response
+        formatted_sessions = [
+            {
+                "name": name,
+                "run_numbers": [run[0] for run in sorted(run_numbers, key=lambda x: x[1], reverse=True)]
+            }
+            for name, run_numbers in grouped_sessions.items()
+        ]
+
+        return JsonResponse({'sessions': formatted_sessions}, status=200)
 
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
