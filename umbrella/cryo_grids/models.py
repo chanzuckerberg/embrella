@@ -89,7 +89,7 @@ class PlungeFreezingSession(models.Model):
     device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE,)
     device_temperature = models.FloatField(default=4.0, help_text='Temperature of the freezing chamber in degree Celsius')
     humidity = models.PositiveSmallIntegerField(default=95)
-    number_of_grids = models.PositiveSmallIntegerField(default=1)
+    # number_of_grids = models.PositiveSmallIntegerField(default=1)
     notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for freezing session')
 
     def __str__(self):
