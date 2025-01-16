@@ -241,39 +241,33 @@
     .tooltip {
       position: absolute;
       top: 0;
-      left: calc(100% + 8px);  
-      transform: none;
+      left: calc(100% + 8px);
       width: 500px;
-      /* transform: translateY(-50%); */
-      max-width: 700px;         /* Larger tooltip box size */
-      background-color: #fff9c4;/* Yellow background */
+      max-width: 700px;
+      background-color: #fff9c4;
       color: #333;
-      /* text-align: left; */
       border-radius: 6px;
-      padding: 25px;            /* Larger padding */
+      padding: 25px;
       z-index: 1000;
       opacity: 0;
       transition: opacity 0.3s;
-      pointer-events: none;     /* Prevents tooltip from blocking clicks */
+      pointer-events: none;  /* Prevent tooltip from blocking clicks */
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    /* Show tooltip on hover over the info icon */
-    .info-icon:hover + .tooltip {
-      opacity: 1;
-      pointer-events: auto;
     }
     .tooltip::after {
       content: "";
       position: absolute;
       top: 50%;
-      left: -5px; /* Arrow on the left side of the tooltip */
+      left: -5px; 
       transform: translateY(-50%);
       border-width: 5px;
       border-style: solid;
       border-color: transparent #fff9c4 transparent transparent;
     }
-    /* Information Icon Styles */
+    .info-icon:hover + .tooltip {
+      opacity: 1;
+      pointer-events: auto;
+    }
     .info-icon {
       display: inline-block;
       margin-left: 5px;
@@ -320,8 +314,8 @@
         font-size: 14px;
       }
       .tooltip {
-        max-width: 300px; /* Smaller width on mobile if desired */
-        padding: 15px;    /* Slightly reduced padding for smaller screens */
+        max-width: 300px;
+        padding: 15px;
       }
     }
   </style>
@@ -362,7 +356,6 @@
         <label for="sessionName">
           Session Name:
         </label>
-        <!-- Hover the "i" icon -->
         <span class="info-icon">i</span>
         <div id="tooltipSessionName" class="tooltip">
           Please register the MSI(Multi screen image) session name
@@ -545,7 +538,6 @@
               <option value="">Select...</option>
               <option value="yes">Yes</option>
               <option value="no">No</option>
-              
             </select>
           </div>
         </div>
@@ -743,10 +735,13 @@
     document.addEventListener("DOMContentLoaded", async () => {
       try {
         await fetchUserInfo();
-        await populateSessionDropdown(); // Populate session dropdown
+        await populateSessionDropdown();
       } catch (error) {
         console.error("Error during initialization:", error);
       }
+
+      // Attach a listener to auto-fill runNumber (with +1)
+      attachSessionNameListener();
     });
 
     // Populate Session Dropdown
@@ -804,6 +799,54 @@
       } catch (error) {
         alert("An error occurred while fetching user info.");
       }
+    }
+
+    // Attach a listener to the sessionName input for auto-filling runNumber (+1)
+    function attachSessionNameListener() {
+      const sessionNameInput = document.getElementById("sessionName");
+      sessionNameInput.addEventListener("change", async () => {
+        const sessionNameValue = sessionNameInput.value.trim();
+        if (!sessionNameValue) return;
+
+        try {
+          // Call your endpoint to fetch run numbers for the session name
+          const response = await fetch(`/workflow/aretomo3_params?session_name=${sessionNameValue}`, {
+            method: "GET",
+          });
+          if (!response.ok) {
+            throw new Error(`API call failed with status ${response.status}`);
+          }
+
+          const result = await response.json();
+          // Example result:
+          // {
+          //   "sessions": [
+          //     {
+          //       "name": "24sep26a",
+          //       "run_numbers": ["001","002","003"]
+          //     }
+          //   ]
+          // }
+
+          if (
+            result.sessions &&
+            result.sessions.length > 0 &&
+            result.sessions[0].run_numbers &&
+            result.sessions[0].run_numbers.length > 0
+          ) {
+            // 1) Get the FIRST run number from the array
+            const firstRunNumberStr = result.sessions[0].run_numbers[0]; // e.g. "001"
+            // 2) Parse and add 1
+            const runNumberInt = parseInt(firstRunNumberStr, 10) + 1;    // 1 + 1 = 2
+            // 3) If you want zero-padded 3 digits, e.g. "002"
+            const nextRunNumberStr = String(runNumberInt).padStart(3, '0');
+            // 4) Assign to runNumber input
+            document.getElementById("runNumber").value = nextRunNumberStr;
+          }
+        } catch (error) {
+          console.error("Error fetching run numbers:", error);
+        }
+      });
     }
 
     // Run (Basic)
@@ -893,7 +936,6 @@
         const advancedNumChecks = document.getElementById("advancedNumChecks").value;
         const useAdvancedParams = document.getElementById("useAdvancedParams").value;
 
-        // Basic validation
         if (
           !advancedRunNumber ||
           !denoisetTraining ||
@@ -926,7 +968,6 @@
           const tiltCorr = document.getElementById("tiltCorr").value || "no";
           const tempOption = document.getElementById("tempOption").value || "no";
 
-          // Pass parameters directly
           requestBody.tilt_axis = tiltAxis;
           requestBody.tilt_axis_refine = tiltAxisRefine;
           requestBody.align_z = alignZ;
@@ -949,7 +990,6 @@
         const advancedDoseNumberYes = document.getElementById("advancedDoseNumberYes").value;
         const advancedNumChecksYes = document.getElementById("advancedNumChecksYes").value;
 
-        // Basic validation
         if (
           !gainFileName ||
           !advancedRunNumberYes ||
@@ -984,7 +1024,6 @@
           const tiltCorrYes = document.getElementById("tiltCorrYes").value || "no";
           const tempOptionYes = document.getElementById("tempOptionYes").value || "no";
 
-          // Pass parameters directly
           requestBody.tilt_axis = tiltAxisYes;
           requestBody.tilt_axis_refine = tiltAxisRefineYes;
           requestBody.align_z = alignZYes;
