@@ -258,7 +258,7 @@
       content: "";
       position: absolute;
       top: 50%;
-      left: -5px;
+      left: -5px; 
       transform: translateY(-50%);
       border-width: 5px;
       border-style: solid;
@@ -425,7 +425,7 @@
         />
       </div>
 
-      <!-- If user picks or types the advanced projectName, automatically fill advancedRunNumber -->
+      <!-- advancedRunNumber (directly filled from the API, no +1) -->
       <div class="form-group">
         <label for="advancedRunNumber">Enter the run number (e.g., 001):</label>
         <input type="number" id="advancedRunNumber" name="advancedRunNumber" required/>
@@ -443,7 +443,7 @@
 
       <!-- If "no" for old gain -->
       <div id="additionalFields" class="additional-advanced-field">
-        <!-- The advancedRunNumber is above, so we can skip re-declaring it here -->
+        <!-- advancedRunNumber already above -->
         <div class="form-group">
           <label for="denoisetTraining">Will you use this run for DenoisET training? (yes/no):</label>
           <select id="denoisetTraining" name="denoisetTraining" required>
@@ -743,10 +743,10 @@
         console.error("Error during initialization:", error);
       }
 
-      // Attach a listener to auto-fill runNumber (Basic mode)
+      // Attach a listener to auto-fill runNumber (Basic mode) WITHOUT +1
       attachSessionNameListener();
 
-      // Attach a separate listener to auto-fill advancedRunNumber (Advanced mode)
+      // Attach a separate listener to auto-fill advancedRunNumber (Advanced mode) WITHOUT +1
       attachProjectNameListener();
     });
 
@@ -807,7 +807,7 @@
       }
     }
 
-    // Attach a listener to the sessionName input for auto-filling runNumber (+1)
+    // Basic form: attach a listener that DOES NOT add +1
     function attachSessionNameListener() {
       const sessionNameInput = document.getElementById("sessionName");
       sessionNameInput.addEventListener("change", async () => {
@@ -815,55 +815,34 @@
         if (!sessionNameValue) return;
 
         try {
-          // Basic mode uses /workflow/aretomo3_params?session_name=...
-          const response = await fetch(`/workflow/aretomo3_params?session_name=${sessionNameValue}`, {
-            method: "GET",
-          });
+          const response = await fetch(`/workflow/aretomo3_params?session_name=${sessionNameValue}`);
           if (!response.ok) {
             throw new Error(`API call failed with status ${response.status}`);
           }
 
           const result = await response.json();
-          /*
-            Example result:
-            {
-              "sessions": [
-                {
-                  "name": "24sep26a",
-                  "run_numbers": ["001","002","003"]
-                }
-              ]
-            }
-          */
           const runNumberInput = document.getElementById("runNumber");
 
+          // If there's no data or no run_numbers, use "001"
           if (
             !result.sessions ||
             result.sessions.length === 0 ||
             !result.sessions[0].run_numbers ||
             result.sessions[0].run_numbers.length === 0
           ) {
-            // If no run_numbers exist, default to "001"
             runNumberInput.value = "001";
           } else {
-            // 1) Get the first run number
-            const firstRunNumberStr = result.sessions[0].run_numbers[0]; // e.g. "001"
-            // 2) Parse and add 1
-            const runNumberInt = parseInt(firstRunNumberStr, 10) + 1;    // 1 + 1 = 2
-            // 3) Zero-pad to 3 digits
-            const nextRunNumberStr = String(runNumberInt).padStart(3, '0');
-            // 4) Assign
-            runNumberInput.value = nextRunNumberStr;
+            // Take the first run number as-is
+            runNumberInput.value = result.sessions[0].run_numbers[0];
           }
         } catch (error) {
-          console.error("Error fetching run numbers:", error);
-          // If there's an error, default to "001"
+          console.error("Error fetching run numbers (basic):", error);
           document.getElementById("runNumber").value = "001";
         }
       });
     }
 
-    // Attach a listener to the projectName input for auto-filling advancedRunNumber (+1)
+    // Advanced form: attach a listener that DOES NOT add +1
     function attachProjectNameListener() {
       const projectNameInput = document.getElementById("projectName");
       projectNameInput.addEventListener("change", async () => {
@@ -871,10 +850,7 @@
         if (!projectNameValue) return;
 
         try {
-          // Re-use the same endpoint in advanced mode
-          const response = await fetch(`/workflow/aretomo3_params?session_name=${projectNameValue}`, {
-            method: "GET",
-          });
+          const response = await fetch(`/workflow/aretomo3_params?session_name=${projectNameValue}`);
           if (!response.ok) {
             throw new Error(`API call failed with status ${response.status}`);
           }
@@ -890,9 +866,8 @@
           ) {
             advRunNumberInput.value = "001";
           } else {
-            const firstRunNumberStr = result.sessions[0].run_numbers[0];
-            const runNumberInt = parseInt(firstRunNumberStr, 10) + 1;
-            advRunNumberInput.value = String(runNumberInt).padStart(3, '0');
+            // Take the first run number as-is
+            advRunNumberInput.value = result.sessions[0].run_numbers[0];
           }
         } catch (error) {
           console.error("Error fetching run numbers (advanced):", error);
