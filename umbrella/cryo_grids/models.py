@@ -89,7 +89,6 @@ class PlungeFreezingSession(models.Model):
     device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE,)
     device_temperature = models.FloatField(default=4.0, help_text='Temperature of the freezing chamber in degree Celsius')
     humidity = models.PositiveSmallIntegerField(default=95)
-    # number_of_grids = models.PositiveSmallIntegerField(default=1)
     notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for freezing session')
 
     def __str__(self):
@@ -110,6 +109,19 @@ class MolecularTag(models.Model):
 
     def __str__(self):
         return self.name
+    
+class Specimen(models.Model):
+    name = models.TextField(max_length=150, blank=True)
+    protocol = models.TextField(max_length=255, blank=True)
+
+    def __str__(self):
+        return self.name
+    
+class GridPreparationLog(models.Model):
+    blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
+    blot_force = models.FloatField(default=None, help_text='Blot force')
+    blot_distance = models.FloatField(default=None, help_text='blot distance')
+
 
 class PlungeFreezingPlan(models.Model):
     # may be multiple samples that each needs history and metadata
@@ -135,6 +147,8 @@ class CryoGrid(models.Model):
     notes = models.TextField(max_length=255, blank=True, null=True,help_text='notes about freezing and grid condition on this grid')
     freezing_session = models.ForeignKey(PlungeFreezingSession, on_delete=models.CASCADE, help_text='who and when the grid was frozen')
     freezing_plan = models.ForeignKey(PlungeFreezingPlan, on_delete=models.CASCADE, help_text='reusable grid freezing plan')
+    # specimen = models.ForeignKey(Specimen, on_delete=models.CASCADE, blank=True, null=True, help_text='referring to specimen')
+    # grid_prep_log = models.ForeignKey(GridPreparationLog, on_delete=models.CASCADE, blank=True, null=True)
     grid_box = models.ForeignKey(CryoGridBox, on_delete=models.CASCADE, null=True, blank=True, help_text='cryo grid box fit in pucks')
     position_in_box = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
     clipped = models.BooleanField(default=False,help_text="Is this cryo-grid clipped ?")
