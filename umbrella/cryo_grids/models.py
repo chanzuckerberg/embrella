@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+from django import forms
 from confluence.models import Page
 from projects.models import Project
 
@@ -111,12 +111,15 @@ class MolecularTag(models.Model):
         return self.name
     
 class Specimen(models.Model):
-    name = models.TextField(max_length=150, blank=True)
+    name = models.CharField(
+        max_length=150,
+        help_text="Enter each specimen name on a new line."
+    )
     protocol = models.TextField(max_length=255, blank=True)
 
     def __str__(self):
         return self.name
-    
+
 class GridPreparationLog(models.Model):
     blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
     blot_force = models.FloatField(default=None, help_text='Blot force')

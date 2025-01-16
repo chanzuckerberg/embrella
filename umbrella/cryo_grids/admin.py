@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from .models import Site, Dewar, Cane, Puck,CryoGridBox, CryoGridCassette
-from .models import PlungeFreezingDevice, PlungeFreezingSession, GridPreparationLog, Specimen, CryoGrid
+from .models import PlungeFreezingDevice, PlungeFreezingSession, GridPreparationLog, Specimen, CryoGrid,PlungeFreezingPlan
 from .models import Sample, MolecularTag
 
 admin.site.register(Site)
@@ -12,7 +12,7 @@ admin.site.register(CryoGridBox)
 admin.site.register(CryoGridCassette)
 admin.site.register(PlungeFreezingDevice)
 admin.site.register(PlungeFreezingSession)
-# admin.site.register(PlungeFreezingPlan)
+admin.site.register(PlungeFreezingPlan)
 admin.site.register(Specimen)
 admin.site.register(GridPreparationLog)
 admin.site.register(CryoGrid)
