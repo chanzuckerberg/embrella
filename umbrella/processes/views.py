@@ -18,7 +18,7 @@ from datetime import timedelta
 from datetime import datetime
 from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
-from cryo_grids.models import CryoGrid, PlungeFreezingSession, PlungeFreezingPlan
+from cryo_grids.models import CryoGrid, PlungeFreezingSession
 from processes.models import *
 from processes.utils import QueryParams, InputTomogramModel,AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
@@ -170,15 +170,15 @@ def get_all_image_paths(request):
     return JsonResponse(data=error_response.dict(), status=404, safe=False)
 
 
-def get_freezing_plan_tags(fz_plan_id):
-    try:
-        freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
-        freezing_plan_list = []
-        for sample in freezing_plan.sample.all():
-            tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-        return f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag"
-    except Exception:
-        return None
+# def get_freezing_plan_tags(fz_plan_id):
+#     try:
+#         freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
+#         freezing_plan_list = []
+#         for sample in freezing_plan.sample.all():
+#             tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+#         return f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag"
+#     except Exception:
+#         return None
 
 #for tomo filter page
 @require_http_methods(["GET"])
@@ -439,7 +439,7 @@ def get_tomo_details(request):
             'msi_session__user',  # Join with the related user
             'msi_session__atlas_session',  # Join with tem_atlassession
             'msi_session__atlas_session__group',  # Join with tem_screensessiongroup
-            'msi_session__grid__freezing_plan'  # Join with plungefreezingplan
+            # 'msi_session__grid__freezing_plan'  # Join with plungefreezingplan
         ).prefetch_related(
             'msi_session__grid__freezing_plan__sample',  # Prefetch the many-to-many relationship
             'runpipedata_set__tomograms_set'

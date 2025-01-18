@@ -23,7 +23,7 @@ from functools import reduce
 
 # project app imports
 from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, CryoGridCassette, \
-    PlungeFreezingSession, PlungeFreezingPlan
+    PlungeFreezingSession
 from .models import CryoGrid, CryoGridBox
 from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingPlanModel, SampleModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
 from .forms import CopyGridForm, ClearCassetteForm, NumberToCopyGridForm
@@ -243,25 +243,25 @@ def available_filters(request):
         }
         # Process the 'sample' filter and replace sample_name with the detailed information
         processed_samples = []
-        for item in filters['sample']:
-            if 'name' in item:
-                # Get the associated freezing plans based on the sample name
-                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name'])
+        # for item in filters['sample']:
+        #     if 'name' in item:
+        #         # Get the associated freezing plans based on the sample name
+        #         freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name'])
 
-                # Create a string that summarizes the freezing plan details
-                freezing_plan_details = []
-                for freezing_plan in freezing_plans:
-                    tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-                    plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
-                    processed_samples.append({
-                        'name': plan_str,
-                        'count': item['count'],  # Retain the original count
-                        'selected': False  # Default selected status
-                    })
+        #         # Create a string that summarizes the freezing plan details
+        #         freezing_plan_details = []
+        #         for freezing_plan in freezing_plans:
+        #             tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+        #             plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
+        #             processed_samples.append({
+        #                 'name': plan_str,
+        #                 'count': item['count'],  # Retain the original count
+        #                 'selected': False  # Default selected status
+        #             })
 
-            else:
-                # If no 'name' exists, simply append the original item
-                processed_samples.append(item)
+        #     else:
+        #         # If no 'name' exists, simply append the original item
+        #         processed_samples.append(item)
 
         filters['sample'] = processed_samples
 
@@ -514,7 +514,8 @@ def format_queryset_results(queryset):
     formatted_result = {}
     for item in queryset:
         grid_id = item['id']
-        freezing_plan_list = get_freezing_plan_list(item['fz_plan_id'])
+        # freezing_plan_list = get_freezing_plan_list(item['fz_plan_id'])
+        
 
         fz_session_datetime_formatted = (
             item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
@@ -541,22 +542,22 @@ def format_queryset_results(queryset):
     return formatted_result
 
 
-def get_freezing_plan_list(fz_plan_id):
-    try:
-        freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
-        freezing_plan_list = []
-        base_url = get_base_url()
-        for sample in freezing_plan.sample.all():
-            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
-            tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-            freezing_plan_list.append({
-                'id': sample.id,
-                'name': f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag",
-                'url': sample_url
-            })
-        return freezing_plan_list
-    except ObjectDoesNotExist:
-        return []
+# def get_freezing_plan_list(fz_plan_id):
+#     try:
+#         freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
+#         freezing_plan_list = []
+#         base_url = get_base_url()
+#         for sample in freezing_plan.sample.all():
+#             sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
+#             tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
+#             freezing_plan_list.append({
+#                 'id': sample.id,
+#                 'name': f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag",
+#                 'url': sample_url
+#             })
+#         return freezing_plan_list
+#     except ObjectDoesNotExist:
+#         return []
 
 
 def filter_by_sample_name(formatted_result, sample_name_input):
@@ -606,8 +607,8 @@ def format_user(item):
     return UserModel(id=item['userID'], name=item['username'].split('@')[0] if '@' in item['username'] else item['username'])
 
 
-def format_freezing_plan(item):
-    return FreezingPlanModel(id=item['fz_plan_id'], sample=get_freezing_plan_list(item['fz_plan_id']))
+# def format_freezing_plan(item):
+#     return FreezingPlanModel(id=item['fz_plan_id'], sample=get_freezing_plan_list(item['fz_plan_id']))
 
 def format_freezing_session(item):
     return FreezingSessionModel(id=item['fz_session_id'], createdAt=str(item['fz_session_datetime']))

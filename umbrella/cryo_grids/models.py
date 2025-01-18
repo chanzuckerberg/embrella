@@ -89,28 +89,30 @@ class PlungeFreezingSession(models.Model):
     device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE,)
     device_temperature = models.FloatField(default=4.0, help_text='Temperature of the freezing chamber in degree Celsius')
     humidity = models.PositiveSmallIntegerField(default=95)
-    notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for freezing session')
+    # notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for freezing session')
 
     def __str__(self):
         return '%s' % self.datetime.date().isoformat()
 
 class Sample(models.Model):
     name = models.CharField(max_length=30, unique=True,help_text='unique sample name that you may use to search your grid for later. For example, lysosome')
+    tag = models.CharField(max_length=30, null=True, blank=True)
     description = models.TextField(max_length=255, blank=True)
     notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for sample prep')
     ontology = models.CharField(max_length=32, blank=True,help_text='ontology name and values to help database deposition. For example: "GO:0005764" for lysosome')
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.tag})" if self.tag else self.name
 
-class MolecularTag(models.Model):
-    name = models.CharField(max_length=30, unique=True,help_text='unique molecule attached to specific biological macromolecules to investigate the properties of the sample. For example, DAPI')
-    description = models.TextField(max_length=255, blank=True)
+# class MolecularTag(models.Model):
+#     name = models.CharField(max_length=30, unique=True,help_text='unique molecule attached to specific biological macromolecules to investigate the properties of the sample. For example, DAPI')
+#     description = models.TextField(max_length=255, blank=True)
 
-    def __str__(self):
-        return self.name
+#     def __str__(self):
+#         return self.name
     
 class Specimen(models.Model):
+    sample = models.ManyToManyField(Sample,)
     name = models.CharField(
         max_length=150,
         help_text="Enter each specimen name on a new line."
@@ -120,27 +122,34 @@ class Specimen(models.Model):
     def __str__(self):
         return self.name
 
+
+# class PlungeFreezingPlan(models.Model):
+#     # may be multiple samples that each needs history and metadata
+#     sample = models.ManyToManyField(Sample,)
+#     # tags = models.ManyToManyField(MolecularTag,blank=True) # remove
+#     sample_application_protocol = models.TextField(max_length=255, blank=True)
+#     blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
+#     wash_step = models.TextField(max_length=255, blank=True)
+
+#     def __str__(self):
+#         sample_str = ','.join(list(map((lambda x: x['name']),self.sample.values())))
+#         # tag_str = ','.join(list(map((lambda x: x['tag']),self.sample.values())))
+#         # if tag_str:
+#         #     return '%s with %s' % (sample_str, tag_str)
+#         # else:
+#         return '%s without tag' % (sample_str)
+        
 class GridPreparationLog(models.Model):
+    grids = models.ManyToManyField('CryoGrid', related_name='prep_logs', help_text='Associated cryo grids')
     blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
     blot_force = models.FloatField(default=None, help_text='Blot force')
-    blot_distance = models.FloatField(default=None, help_text='blot distance')
-
-
-class PlungeFreezingPlan(models.Model):
-    # may be multiple samples that each needs history and metadata
-    sample = models.ManyToManyField(Sample,)
-    tags = models.ManyToManyField(MolecularTag,blank=True)
-    sample_application_protocol = models.TextField(max_length=255, blank=True)
-    blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
-    wash_step = models.TextField(max_length=255, blank=True)
+    blot_distance = models.FloatField(default=None, help_text='Blot distance')
 
     def __str__(self):
-        sample_str = ','.join(list(map((lambda x: x['name']),self.sample.values())))
-        tag_str = ','.join(list(map((lambda x: x['name']),self.tags.values())))
-        if tag_str:
-            return '%s with %s' % (sample_str, tag_str)
-        else:
-            return '%s without tag' % (sample_str)
+        # Get the names of all associated grids
+        grid_names = ', '.join([grid.name for grid in self.grids.all()])
+        # Return the concatenated grid names
+        return f"{grid_names} log"
 
 class CryoGrid(models.Model):
     create_on = models.DateField(auto_now_add=True)
@@ -149,9 +158,9 @@ class CryoGrid(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True,help_text='notes about freezing and grid condition on this grid')
     freezing_session = models.ForeignKey(PlungeFreezingSession, on_delete=models.CASCADE, help_text='who and when the grid was frozen')
-    freezing_plan = models.ForeignKey(PlungeFreezingPlan, on_delete=models.CASCADE, help_text='reusable grid freezing plan')
-    # specimen = models.ForeignKey(Specimen, on_delete=models.CASCADE, blank=True, null=True, help_text='referring to specimen')
-    # grid_prep_log = models.ForeignKey(GridPreparationLog, on_delete=models.CASCADE, blank=True, null=True)
+    # freezing_plan = models.ForeignKey(PlungeFreezingPlan, on_delete=models.CASCADE, help_text='reusable grid freezing plan')
+    specimen = models.ForeignKey(Specimen, on_delete=models.CASCADE, blank=True, null=True, help_text='referring to specimen')
+    grid_prep_log = models.ForeignKey(GridPreparationLog, on_delete=models.CASCADE, blank=True, null=True)
     grid_box = models.ForeignKey(CryoGridBox, on_delete=models.CASCADE, null=True, blank=True, help_text='cryo grid box fit in pucks')
     position_in_box = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
     clipped = models.BooleanField(default=False,help_text="Is this cryo-grid clipped ?")
@@ -163,7 +172,7 @@ class CryoGrid(models.Model):
     copy_number = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
-        unique_together = ["name","freezing_session","freezing_plan","copy_number"]
+        unique_together = ["name","freezing_session","copy_number"]
         constraints = [
             models.UniqueConstraint(fields=["grid_box","position_in_box"], name="unique_box_position", condition=models.Q(trashed=False), nulls_distinct=True),
             models.UniqueConstraint(fields=["grid_cassette","slot_number_in_cassette"], name="unique_cassette_slot", condition=models.Q(trashed=False), nulls_distinct=True),
