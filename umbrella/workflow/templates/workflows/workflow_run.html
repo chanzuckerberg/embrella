@@ -242,13 +242,13 @@
       position: absolute;
       top: 0;
       left: calc(100% + 8px);
-      width: 500px;
-      max-width: 700px;
+      width: 200px;
+      max-width: 300px;
       background-color: #fff9c4;
       color: #333;
       border-radius: 6px;
       padding: 25px;
-      z-index: 1000;
+      z-index: 300;
       opacity: 0;
       transition: opacity 0.3s;
       pointer-events: none;  /* Prevent tooltip from blocking clicks */
@@ -358,7 +358,7 @@
         </label>
         <span class="info-icon">i</span>
         <div id="tooltipSessionName" class="tooltip">
-          Please register the MSI(Multi screen image) session name
+          MSI(Multi screen image) session name
         </div>
         <input
           list="sessionNames"
@@ -412,8 +412,8 @@
           Session Name:
         </label>
         <span class="info-icon">i</span>
-        <div id="tooltipProjectName" class="tooltip">
-          Please register the MSI(Multi screen image) session name
+        <div id="tooltipSessionName" class="tooltip">
+          MSI(Multi screen image) session name
         </div>
         <input
           list="sessionNames"
@@ -454,6 +454,10 @@
         </div>
         <div class="form-group">
           <label for="evnOddSplit">EVN &amp; ODD split option is:</label>
+          <span class="info-icon">i</span>
+          <div id="tooltipSessionName" class="tooltip">
+            SplitSum
+          </div>
           <select id="evnOddSplit" name="evnOddSplit" required>
             <option value="">Select...</option>
             <option value="yes">Yes</option>
@@ -479,12 +483,20 @@
           <!-- Tilt Axis -->
           <div class="form-group">
             <label for="tiltAxis">Enter the tilt axis initial value (default 0):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              TiltAxis first_input
+            </div>
             <input type="number" id="tiltAxis" name="tiltAxis" placeholder="(e.g. blank or numeric)"/>
           </div>
 
           <!-- Tilt Axis Refinement? -->
           <div class="form-group">
             <label for="tiltAxisRefine">Do you want Aretomo3 to refine tilt axis? (yes/no):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              TiltAxis second_input
+            </div>
             <select id="tiltAxisRefine" name="tiltAxisRefine">
               <option value="">Select...</option>
               <option value="yes">Yes</option>
@@ -495,18 +507,30 @@
           <!-- AlignZ -->
           <div class="form-group">
             <label for="alignZ">Enter the AlignZ (leave blank for default):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              AlignZ
+            </div>
             <input type="text" id="alignZ" name="alignZ" placeholder="(e.g. blank or numeric)"/>
           </div>
 
           <!-- VolZ -->
           <div class="form-group">
-            <label for="volZ">Enter the VolZ (leave blank for default(1200)):</label>
+            <label for="volZ">Enter the VolZ (leave blank for default(1600)):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              VolZ
+            </div>
             <input type="number" id="volZ" name="volZ" placeholder="(e.g. blank or numeric)"/>
           </div>
 
           <!-- IMOD Option -->
           <div class="form-group">
-            <label for="imodOption">Do you want aligned tilt series in _Imod folder? (yes/no):</label>
+            <label for="imodOption">Do you wantto save aligned tilt series in _Imod folder? (yes/no):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              OutImod
+            </div>
             <select id="imodOption" name="imodOption">
               <option value="">Select...</option>
               <option value="yes">Yes (imod option: default 3)</option>
@@ -517,6 +541,10 @@
           <!-- Local Shifts -->
           <div class="form-group">
             <label for="localAln">Do you want to measure local shifts? (yes/no):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              AtPatch
+            </div>
             <select id="localAln" name="localAln">
               <option value="">Select...</option>
               <option value="yes">Yes</option>
@@ -537,6 +565,10 @@
           <!-- Save Intermediate Thickness Measure -->
           <div class="form-group">
             <label for="tempOption">Do you want to save intermediate thickness measure results? (yes/no):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              TmpDir
+            </div>
             <select id="tempOption" name="tempOption">
               <option value="">Select...</option>
               <option value="yes">Yes</option>
@@ -600,10 +632,18 @@
         <div id="advancedParamsSectionYes" class="additional-advanced-field">
           <div class="form-group">
             <label for="tiltAxisYes">Enter the tilt axis initial value (default 0):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              TiltAxis first_input
+            </div>
             <input type="number" id="tiltAxisYes" name="tiltAxisYes" value="0"/>
           </div>
           <div class="form-group">
             <label for="tiltAxisRefineYes">Do you want Aretomo3 to refine tilt axis? (yes/no):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              TiltAxis second_input
+            </div>
             <select id="tiltAxisRefineYes" name="tiltAxisRefineYes">
               <option value="">Select...</option>
               <option value="yes">Yes (default: 1)</option>
@@ -612,22 +652,38 @@
           </div>
           <div class="form-group">
             <label for="alignZYes">Enter the AlignZ (leave blank for default):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              AlignZ
+            </div>
             <input type="text" id="alignZYes" name="alignZYes" placeholder="(e.g. blank or numeric)"/>
           </div>
           <div class="form-group">
-            <label for="volZYes">Enter the VolZ (default 1200):</label>
+            <label for="volZYes">Enter the VolZ (default 1600):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              VolZ
+            </div>
             <input type="number" id="volZYes" name="volZYes" placeholder="(e.g. blank for default)"/>
           </div>
           <div class="form-group">
-            <label for="imodOptionYes">Do you want aligned tilt series in _Imod folder? (yes/no):</label>
+            <label for="imodOptionYes">Do you want to save aligned tilt series in _Imod folder? (yes/no):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              OutImod
+            </div>
             <select id="imodOptionYes" name="imodOptionYes">
               <option value="">Select...</option>
-              <option value="no">No (default: 1)</option>
-              <option value="yes">Yes (default: 3)</option>
+              <option value="no">No (1)</option>
+              <option value="yes">Yes (3)</option>
             </select>
           </div>
           <div class="form-group">
             <label for="localAlnYes">Do you want to measure local shifts? (yes/no):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              AtPatch
+            </div>
             <select id="localAlnYes" name="localAlnYes">
               <option value="">Select...</option>
               <option value="no">No</option>
@@ -644,6 +700,10 @@
           </div>
           <div class="form-group">
             <label for="tempOptionYes">Do you want to save intermediate thickness measure results? (yes/no):</label>
+            <span class="info-icon">i</span>
+            <div id="tooltipSessionName" class="tooltip">
+              TmpDir
+            </div>
             <select id="tempOptionYes" name="tempOptionYes">
               <option value="">Select...</option>
               <option value="no">No</option>
