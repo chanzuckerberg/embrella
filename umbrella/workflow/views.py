@@ -185,7 +185,7 @@ def run_aretomo3_advanced(request):
             )
 
             # Return your response
-
+            
             return JsonResponse({
                 'message': f'Session {project_name} for Advanced Aretomo3 is submitted successfully. Please check the below output directory',
                 'output': output,
