@@ -103,7 +103,7 @@ def run_aretomo3_advanced(request):
                 # evn_odd_split = data.get('evn_odd_split')
                 pixel_size = data.get('pixel_size')
                 use_advanced_params = data.get('use_advanced_params')
-
+                num_checks = data.get('num_checks')
                 # Only parse advanced params if user selected "yes"
                 if use_advanced_params == 'yes':
                     tilt_axis = data.get('tilt_axis', "")
@@ -163,6 +163,7 @@ def run_aretomo3_advanced(request):
                 pixel_size,
                 denoiset_training
             )
+            print(num_checks)
             output, error = aretomo.run_advanced_script(
                 project_name=project_name,
                 use_old_gain=use_old_gain,
@@ -185,7 +186,7 @@ def run_aretomo3_advanced(request):
             )
 
             # Return your response
-            
+
             return JsonResponse({
                 'message': f'Session {project_name} for Advanced Aretomo3 is submitted successfully. Please check the below output directory',
                 'output': output,
