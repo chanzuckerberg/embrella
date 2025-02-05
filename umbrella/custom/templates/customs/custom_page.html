@@ -83,6 +83,7 @@
             </form>
             <a href="{% url 'admin:index' %}" class="button">Admin</a>
         </div>
+
         <h2>Workflow Management</h2>
         <table>
             <tr>
@@ -91,9 +92,10 @@
                 <th>Start a processing run</th>
             </tr>
             <tr>
+
                 <td>
-                    <a href="{% url 'admin:cryo_grids_plungefreezingplan_add' %}" class="button">Plan plunge freezing parameters</a>
-                    <p> such as what samples will be on the grid </p>
+                    <a href="{% url 'admin:cryo_grids_specimen_add' %}" class="button">Create new  Specimen</a>
+                    <p>record a new specimen</p>
                 </td>
                 <td>
                     <a href="{% url 'tem:reserve' %}" class="button">Create new single-grid TEM session</a>
@@ -125,12 +127,12 @@
                 </td>
                 <td>
                     <a href="{% url 'cryo_grids:clear_cassette' %}" class="button">Clear a cassette</a>
-                    <p>remove all grids from a cassette. choose between putting them back and desposing them</p>
+                    <p>remove all grids from a cassette. choose between putting them back and disposing them</p>
                 </td>
-                <td>
-                </td>
+                <td></td>
             </tr>
         </table>
+
         <h2>Search Filters</h2>
         <table>
             <tr>
@@ -177,9 +179,7 @@
                     <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
                     <p> View and manage tomograms </p>
                 </td>
-
-                <td>
-                </td>
+                <td></td>
             </tr>
             <tr>
                 <td>
@@ -192,10 +192,10 @@
                     <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
                     <p> View and manage Annotations </p>
                 </td>
-                <td>
-                </td>
+                <td></td>
             </tr>
         </table>
+
         <h2>Run Workflow</h2>
         <table>
             <tr>
@@ -216,4 +216,3 @@
     </div>
 </body>
 </html>
-

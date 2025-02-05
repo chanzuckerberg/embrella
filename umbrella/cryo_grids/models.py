@@ -94,15 +94,15 @@ class PlungeFreezingSession(models.Model):
     def __str__(self):
         return '%s' % self.datetime.date().isoformat()
 
-class Sample(models.Model):
-    name = models.CharField(max_length=30, unique=True,help_text='unique sample name that you may use to search your grid for later. For example, lysosome')
-    tag = models.CharField(max_length=30, null=True, blank=True)
-    description = models.TextField(max_length=255, blank=True)
-    notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for sample prep')
-    ontology = models.CharField(max_length=32, blank=True,help_text='ontology name and values to help database deposition. For example: "GO:0005764" for lysosome')
+# class Sample(models.Model):
+#     name = models.CharField(max_length=30, unique=True,help_text='unique sample name that you may use to search your grid for later. For example, lysosome')
+#     tag = models.CharField(max_length=30, null=True, blank=True)
+#     description = models.TextField(max_length=255, blank=True)
+#     notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for sample prep')
+#     ontology = models.CharField(max_length=32, blank=True,help_text='ontology name and values to help database deposition. For example: "GO:0005764" for lysosome')
 
-    def __str__(self):
-        return f"{self.name} ({self.tag})" if self.tag else self.name
+#     def __str__(self):
+#         return f"{self.name} ({self.tag})" if self.tag else self.name
 
 # class MolecularTag(models.Model):
 #     name = models.CharField(max_length=30, unique=True,help_text='unique molecule attached to specific biological macromolecules to investigate the properties of the sample. For example, DAPI')
@@ -112,15 +112,14 @@ class Sample(models.Model):
 #         return self.name
     
 class Specimen(models.Model):
-    sample = models.ManyToManyField(Sample,)
-    name = models.CharField(
-        max_length=150,
-        help_text="Enter each specimen name on a new line."
-    )
+    sample = models.CharField(max_length=150, unique=True,help_text='unique sample name that you may use to search your grid for later. For example, lysosome')
+    tag = models.CharField(max_length=30, null=True, blank=True)
+    notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for sample prep')
     protocol = models.TextField(max_length=255, blank=True)
+    ontology = models.CharField(max_length=32, blank=True,help_text='ontology name and values to help database deposition. For example: "GO:0005764" for lysosome')
 
     def __str__(self):
-        return self.name
+        return f"{self.sample} ({self.tag})" if self.tag else self.sample
 
 
 # class PlungeFreezingPlan(models.Model):
@@ -179,4 +178,4 @@ class CryoGrid(models.Model):
         ]
         
     def __str__(self):
-        return '%s.c%d (id=%d) from %s of %s' % (self.name, self.copy_number, self.pk, self.freezing_session, self.freezing_plan)
+        return '%s.c%d (id=%d) from %s of %s' % (self.name, self.copy_number, self.pk, self.freezing_session, self.specimen)
