@@ -18,7 +18,7 @@ from datetime import timedelta
 from datetime import datetime
 from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
-from cryo_grids.models import CryoGrid, PlungeFreezingSession, Specimen
+from cryo_grids.models import CryoGrid, PlungeFreezingSession, Specimen, GridPreparationLog
 from processes.models import *
 from processes.utils import QueryParams, InputTomogramModel,AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
@@ -390,7 +390,7 @@ def get_tomo_details(request):
                 return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
         else:
             q_param = []
-        print(q_param)
+
         query_data = request.GET.dict()
         query_data['q'] = q_param
 
@@ -659,12 +659,13 @@ def available_annotation_filter(request):
             'msi_session__project',
             'msi_session__user',
             'msi_session__grid',
-            'msi_session__grid__freezing_plan',
-            'msi_session__grid__freezing_plan__sample',
+            'msi_session__grid__specimen',
+            'msi_session__grid__specimen__sample',
+            'msi_session__grid__gridpreparationlog',
             'msi_session__atlas_session__group',
             'pipe_data__run__proc_plan'  # Traverse the relationship to proc_plan
         ).prefetch_related(
-            'msi_session__grid__freezing_plan__tags'
+            'msi_session__grid__specimen__tags'
         ).exclude(
             pipe_data__run__proc_plan__name__in=['czii-live', 'czii-denoise']  # Exclude specific proc p
         ).values(
@@ -674,10 +675,10 @@ def available_annotation_filter(request):
             project_display_name=F('msi_session__project__name'),
             user_display_name=F('msi_session__user__username'),
             grid_display_name=F('msi_session__grid__name'),
-            freezing_plan_protocol=F('msi_session__grid__freezing_plan__sample_application_protocol'),
-            freezing_plan_blot_time=F('msi_session__grid__freezing_plan__blot_time'),
-            freezing_plan_sample=F('msi_session__grid__freezing_plan__sample__name'),
-            freezing_plan_tags=F('msi_session__grid__freezing_plan__tags__id'),
+            specimen_protocol=F('msi_session__grid__specimen__protocol'),
+            grid_preparation_log_blot_time=F('msi_session__grid__grid_prep_log__blot_time'),
+            specimen_sample=F('msi_session__grid__specimen__sample'),
+            specimen_tags=F('msi_session__grid__specimen__tags'),
             screen_session_display_name=F('msi_session__atlas_session__group__name'),
             proc_plan_display_name=F('pipe_data__run__proc_plan__name')  # Access proc_plan name
         ).filter(filter_criteria)
@@ -750,7 +751,7 @@ def available_annotation_filter(request):
                 .values(name=F('screen_session_name'), count=F('count'))
             ),
             'sample': list(
-                queryset.values(sample_name=F('freezing_plan_sample'))  # Group by sample name
+                queryset.values(sample_name=F('specimen_sample'))  # Group by sample name
                 .annotate(count=Count('id', distinct=True))  # Ensure unique counts
                 .order_by('sample_name')
                 .values(name=F('sample_name'), count=F('count'))
@@ -778,8 +779,8 @@ def available_annotation_filter(request):
         # Process samples to ensure exclusive categorization as "with tag" or "without tag"
         sample_data = (
             queryset.values(
-                sample_name=F('msi_session__grid__freezing_plan__sample__name'),
-                tag_name=F('msi_session__grid__freezing_plan__tags__name')
+                sample_name=F('msi_session__grid__specimen__sample'),
+                tag_name=F('msi_session__grid__specimen__tags')
             )
             .annotate(count=Count('id'))
             .order_by('sample_name', 'tag_name')
@@ -791,7 +792,8 @@ def available_annotation_filter(request):
             tag_name = item['tag_name']
 
             if sample_name not in processed_samples:
-                # Default to "without tag" if no tags are encountered
+                if sample_name is None:
+                    continue
                 processed_samples[sample_name] = {
                     'name': f"{sample_name} without tag",
                     'count': 0,
@@ -988,19 +990,19 @@ def get_annotation_details(request):
                         tag_name = parts[1].strip() if len(parts) > 1 else None
                         # Match the sample name and the specific tag
                         sample_filter |= Q(
-                            msi_session__grid__freezing_plan__sample__name=sample_name,
-                            msi_session__grid__freezing_plan__tags__name__icontains=tag_name
+                            msi_session__grid__specimen__sample=sample_name,
+                            msi_session__grid__specimen__tags__icontains=tag_name
                         )
                     elif "without tag" in value:
                         sample_name = value.replace(" without tag", "").strip()
                         # Match the sample name and ensure no tags are associated
                         sample_filter |= Q(
-                            msi_session__grid__freezing_plan__sample__name=sample_name,
-                            msi_session__grid__freezing_plan__tags__isnull=True
+                            msi_session__grid__specimen__sample=sample_name,
+                            msi_session__grid__specimen__tags__isnull=True
                         )
                     else:
                         # General match for just sample names without tag qualifiers
-                        sample_filter |= Q(msi_session__grid__freezing_plan__sample__name=value)
+                        sample_filter |= Q(msi_session__grid__specimen__sample=value)
                 filter_criteria &= sample_filter
 
         queryset = queryset.filter(filter_criteria)
