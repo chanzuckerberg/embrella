@@ -16,7 +16,7 @@ export interface GridData {
     name: string;
   };
   user: UserField;
-  freezingPlan: {
+  specimen: {
     id: number;
     sample: EntityLinkField[];
   };

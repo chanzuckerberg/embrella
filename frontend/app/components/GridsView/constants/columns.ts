@@ -15,7 +15,8 @@ import { GridData } from "../types";
 
 export const GRID_COLUMN_IDS = {
   CRYOGRID: "cryogrid",
-  FREEZING_PLAN: "freezingPlan",
+  // FREEZING_PLAN: "freezingPlan",
+  SPECIMEN: "specimen",
   FREEZING_SESSION: "freezingSession",
   MSI_SESSION: "msiSession",
   PROJECT: "project",
@@ -43,12 +44,12 @@ export const GRID_COLUMN_DEFS: ColumnDef<
     header: humanize(GRID_COLUMN_IDS.PROJECT),
   },
   {
-    id: GRID_COLUMN_IDS.FREEZING_PLAN,
+    id: GRID_COLUMN_IDS.SPECIMEN,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps[] =>
-      getLinkPropsFromLinkFieldList((rowData as GridData).freezingPlan.sample),
+      getLinkPropsFromLinkFieldList((rowData as GridData).specimen.sample),
     cell: getLinkCellListFromCellContext,
     enableSorting: false,
-    header: humanize(GRID_COLUMN_IDS.FREEZING_PLAN),
+    header: humanize(GRID_COLUMN_IDS.SPECIMEN),
   },
   {
     id: GRID_COLUMN_IDS.MSI_SESSION,

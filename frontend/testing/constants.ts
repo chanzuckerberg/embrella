@@ -37,7 +37,7 @@ export const GRID_A: GridData = {
     id: 0,
     name: "foo",
   },
-  freezingPlan: {
+  specimen: {
     id: 0,
     sample: [{ id: 1, name: "foo baz bar foo", url: "bazfoobazbazbarbar" }],
   },
@@ -79,7 +79,7 @@ export const GRID_B: GridData = {
     id: 1,
     name: "bazbaz bar bazfoo bar",
   },
-  freezingPlan: {
+  specimen: {
     id: 1,
     sample: [{ id: 1, name: "bar baz bazfoo bazfoo", url: "foofoobarbar" }],
   },
