@@ -18,7 +18,7 @@ from datetime import timedelta
 from datetime import datetime
 from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
-from cryo_grids.models import CryoGrid, PlungeFreezingSession
+from cryo_grids.models import CryoGrid, PlungeFreezingSession, Specimen
 from processes.models import *
 from processes.utils import QueryParams, InputTomogramModel,AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
@@ -212,10 +212,10 @@ def available_filters(request):
             'msi_session__user',
             'msi_session__atlas_session',
             'msi_session__atlas_session__group',
-            'msi_session__grid__freezing_plan'
+            'msi_session__grid__specimen'
         ).prefetch_related(
-            'msi_session__grid__freezing_plan__sample',
-            'msi_session__grid__freezing_plan__tags',
+            'msi_session__grid__specimen',
+            'msi_session__grid__specimen__tags',
             'runpipedata_set__tomograms_set'
         ).filter(filter_criteria,proc_plan__name__in=['czii-live', 'czii-denoise'])
 
@@ -309,8 +309,8 @@ def available_filters(request):
         # Process samples with tags
         sample_data = (
             queryset.values(
-                sample_name=F('msi_session__grid__freezing_plan__sample__name'),
-                tag_name=F('msi_session__grid__freezing_plan__tags__name')
+                sample_name=F('msi_session__grid__specimen__sample'),
+                tag_name=F('msi_session__grid__specimen__tags')
             )
             .annotate(count=Count('id'))
             .order_by('sample_name', 'tag_name')
@@ -319,8 +319,8 @@ def available_filters(request):
         # Process samples to ensure exclusive categorization as "with tag" or "without tag"
         sample_data = (
             queryset.values(
-                sample_name=F('msi_session__grid__freezing_plan__sample__name'),
-                tag_name=F('msi_session__grid__freezing_plan__tags__name')
+                sample_name=F('msi_session__grid__specimen__sample'),
+                tag_name=F('msi_session__grid__specimen__tags')
             )
             .annotate(count=Count('id'))
             .order_by('sample_name', 'tag_name')
@@ -330,11 +330,13 @@ def available_filters(request):
         for item in sample_data:
             sample_name = item['sample_name']
             tag_name = item['tag_name']
-
+            
             if sample_name not in processed_samples:
+                if sample_name is None:
+                    continue
                 # Default to "without tag" if no tags are encountered
                 processed_samples[sample_name] = {
-                    'name': f"{sample_name} without tag",
+                    'name': f"{sample_name}",
                     'count': 0,
                     'selected': False
                 }
@@ -439,9 +441,9 @@ def get_tomo_details(request):
             'msi_session__user',  # Join with the related user
             'msi_session__atlas_session',  # Join with tem_atlassession
             'msi_session__atlas_session__group',  # Join with tem_screensessiongroup
-            # 'msi_session__grid__freezing_plan'  # Join with plungefreezingplan
+            'msi_session__grid__specimen'  # Join with plungefreezingplan
         ).prefetch_related(
-            'msi_session__grid__freezing_plan__sample',  # Prefetch the many-to-many relationship
+            'msi_session__grid__specimen__sample',  # Prefetch the many-to-many relationship
             'runpipedata_set__tomograms_set'
         ).filter(
             proc_plan__name__in=['czii-live', 'czii-denoise']
@@ -468,10 +470,10 @@ def get_tomo_details(request):
             project_name=F('msi_session__project__name'),
             user_id=F('msi_session__user__id'),
             user_name=F('msi_session__user__username'),
-            fz_plan_id=F('msi_session__grid__freezing_plan__id'),
+            specimen_id=F('msi_session__grid__specimen__id'),
             screening_session_name=F('msi_session__atlas_session__group__name'),
-            fz_plan_sample_id=F('msi_session__grid__freezing_plan__sample__id'),
-            fz_plan_sample_name=F('msi_session__grid__freezing_plan__sample__name')
+            specimen_sample_id=F('msi_session__grid__specimen__id'),
+            specimen_sample_name=F('msi_session__grid__specimen__sample')
         ).order_by(sort_order)
 
         date_mapping = {
@@ -538,27 +540,30 @@ def get_tomo_details(request):
             elif category == 'sample':
                 sample_filter = Q()
                 for value in values:
-                    # Check if the sample value contains "with " or "without tag"
-                    if "with " in value:
+                    # If the value is explicitly None, filter where sample is NULL
+                    if value is None:
+                        sample_filter |= Q(msi_session__grid__specimen__sample__isnull=True)
+                    elif "with " in value:
                         # Extract the sample name and specific tag
                         parts = value.split(" with ")
                         sample_name = parts[0].strip()
                         tag_name = parts[1].strip() if len(parts) > 1 else None
                         # Match the sample name and the specific tag
                         sample_filter |= Q(
-                            msi_session__grid__freezing_plan__sample__name=sample_name,
-                            msi_session__grid__freezing_plan__tags__name__icontains=tag_name
+                            msi_session__grid__specimen__sample=sample_name,
+                            msi_session__grid__specimen__tags__icontains=tag_name
                         )
                     elif "without tag" in value:
                         sample_name = value.replace(" without tag", "").strip()
                         # Match the sample name and ensure no tags are associated
                         sample_filter |= Q(
-                            msi_session__grid__freezing_plan__sample__name=sample_name,
-                            msi_session__grid__freezing_plan__tags__isnull=True
+                            msi_session__grid__specimen__sample=sample_name,
+                            msi_session__grid__specimen__tags__isnull=True
                         )
                     else:
                         # General match for just sample names without tag qualifiers
-                        sample_filter |= Q(msi_session__grid__freezing_plan__sample__name=value)
+                        sample_filter |= Q(msi_session__grid__specimen__sample=value)
+                
                 filter_criteria &= sample_filter
         queryset = queryset.filter(filter_criteria)
         # print(queryset)
