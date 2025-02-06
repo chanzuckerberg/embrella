@@ -20,10 +20,6 @@ export const getLinkPropsFromLinkField = (
   href: linkField.url,
 });
 
-// export const getLinkPropsFromLinkFieldList = (
-//   linkFields: EntityLinkField[],
-// ): LinkCellProps[] =>
-//   linkFields.map((linkField) => getLinkPropsFromLinkField(linkField));
 
 export const getLinkPropsFromLinkFieldList = (
   linkFields?: EntityLinkField[], // Ensure it's optional

@@ -15,7 +15,6 @@ import { GridData } from "../types";
 
 export const GRID_COLUMN_IDS = {
   CRYOGRID: "cryogrid",
-  // FREEZING_PLAN: "freezingPlan",
   SPECIMEN: "specimen",
   FREEZING_SESSION: "freezingSession",
   MSI_SESSION: "msiSession",

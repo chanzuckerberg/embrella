@@ -89,7 +89,6 @@ class PlungeFreezingSession(models.Model):
     device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE,)
     device_temperature = models.FloatField(default=4.0, help_text='Temperature of the freezing chamber in degree Celsius')
     humidity = models.PositiveSmallIntegerField(default=95)
-    # notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for freezing session')
 
     def __str__(self):
         return '%s' % self.datetime.date().isoformat()
@@ -126,7 +125,6 @@ class CryoGrid(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True,help_text='notes about freezing and grid condition on this grid')
     freezing_session = models.ForeignKey(PlungeFreezingSession, on_delete=models.CASCADE, help_text='who and when the grid was frozen')
-    # freezing_plan = models.ForeignKey(PlungeFreezingPlan, on_delete=models.CASCADE, help_text='reusable grid freezing plan')
     specimen = models.ForeignKey(Specimen, on_delete=models.CASCADE, blank=True, null=True, help_text='referring to specimen')
     grid_prep_log = models.ForeignKey(GridPreparationLog, on_delete=models.CASCADE, blank=True, null=True)
     grid_box = models.ForeignKey(CryoGridBox, on_delete=models.CASCADE, null=True, blank=True, help_text='cryo grid box fit in pucks')
