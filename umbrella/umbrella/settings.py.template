@@ -36,6 +36,8 @@ SECRET_KEY = 'django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*
 # Constant value
 ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/run_aretomo_sta_pipeline.sh'
 
+ARETOMO3_ADVANCED_PATH = '/hpc/projects/krios1.processing/aretomo3/scripts/run_aretomo_sta_pipeline_prod.sh'
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
