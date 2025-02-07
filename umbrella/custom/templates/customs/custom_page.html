@@ -27,6 +27,24 @@
             background-color: #fff;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: center;
+        }
+
+        /* Add vertical border between columns */
+        th:not(:last-child), 
+        td:not(:last-child) {
+            border-right: 4px solid #bbb; /* Thick vertical bar */
+        }
         th, td {
             padding: 15px;
             text-align: left;
@@ -92,7 +110,6 @@
                 <th>Start a processing run</th>
             </tr>
             <tr>
-
                 <td>
                     <a href="{% url 'admin:cryo_grids_specimen_add' %}" class="button">Create new  Specimen</a>
                     <p>record a new specimen</p>
