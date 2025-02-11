@@ -14,7 +14,9 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from tem.models import MsiSession
+from processes.models import JobLog
 from django.db.models import F
+import re
 
 KEYS = ('PixSize',
         'AtBin',
@@ -28,6 +30,15 @@ PORT = 22
 USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
 
+def store_log(request, data_sanitized, error, advanced_status=False, job_id = None):
+    JobLog.objects.create(
+                user=request.user,
+                job_name=f"Aretomo3",
+                advanced=advanced_status,
+                job_id=None,  # No job ID available in case of error
+                parameters=data_sanitized,
+                error_message=str(error)  # Store the error message
+            )
 @login_required
 def get_aretomo3_json(request):
     session_name = request.GET.get('session')
@@ -74,7 +85,8 @@ def run_aretomo3_advanced(request):
                 {'error': 'Invalid project_name format. Please check the project name: 422'},
                 status=422
             )
-
+        data_sanitized = dict(data)
+        data_sanitized.pop('password', None)
         # -------------------------------------------
         # Initialize all variables to a default value
         # -------------------------------------------
@@ -163,7 +175,7 @@ def run_aretomo3_advanced(request):
                 pixel_size,
                 denoiset_training
             )
-            print(num_checks)
+
             output, error = aretomo.run_advanced_script(
                 project_name=project_name,
                 use_old_gain=use_old_gain,
@@ -185,6 +197,12 @@ def run_aretomo3_advanced(request):
                 thickness_mesaure=thickness_mesaure
             )
 
+
+            found_ids = re.findall(r"Submitted batch job (\d+)", output)
+            job_id_str = ",".join(found_ids) if found_ids else None
+
+            store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=True, job_id=job_id_str)
+
             # Return your response
 
             return JsonResponse({
@@ -196,13 +214,14 @@ def run_aretomo3_advanced(request):
 
         except Exception as e:
             logger.error(f'Error in run_aretomo3_advanced: {str(e)}')
+            store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=True, job_id=None)
             return JsonResponse({'error': str(e)}, status=500)
 
         finally:
             # Ensure we always close the connection if we opened it
             if 'aretomo' in locals():
                 aretomo.close()
-
+    store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=True, job_id=None)
     return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
 
@@ -228,7 +247,8 @@ def run_aretomo3(request):
         # Store user_id and decoded_password in session
         request.session['user_id'] = user_id
         request.session['decoded_password'] = decoded_password
-
+        data_sanitized = dict(data)
+        data_sanitized.pop('password', None)
         try:
             aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
 
@@ -237,12 +257,19 @@ def run_aretomo3(request):
 
             # Run the script and get the output
             output, error = aretomo.run_script(session_name, run_number, pix_size, total_dose,num_checks, user_id)
+            
+            found_ids = re.findall(r"Submitted batch job (\d+)", output)
+            job_id_str = ",".join(found_ids) if found_ids else None
+
+            store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
+
             return JsonResponse({'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the below output directory', 'output': output, 'error': error})
         except Exception as e:
+            store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
             return JsonResponse({'error': str(e) + ': 500'}, status=500)
         finally:
             aretomo.close()
-
+    store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
     return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
 @csrf_exempt
@@ -407,4 +434,48 @@ def get_msi_params_list(request):
 
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+
+
+@require_http_methods(["GET"])
+def get_job_logs(request):
+    try:
+        # Extract user_name from query parameters
+        user_name = request.GET.get('user_name', None)
+
+        # Fetch all JobLog entries
+        job_logs = JobLog.objects.all().values(
+            'user', 
+            'job_name', 
+            'advanced', 
+            'job_id', 
+            'created_at', 
+            'parameters', 
+            'error_message'
+        )
+
+        job_logs_list = list(job_logs)
+
+        # Flip 'user' -> 'user_id' and 'parameters.user_id' -> 'parameters.user'
+        filtered_job_logs = []
+        for entry in job_logs_list:
+            # 1) Rename top-level 'user' to 'user_id'
+            entry['user_id'] = entry.pop('user', None)
+            
+            # 2) Inside 'parameters', rename 'user_id' to 'user'
+            params = entry.get('parameters', {})
+            if 'user_id' in params:
+                params['user'] = params.pop('user_id')
+            
+            # Update the entry's parameters
+            entry['parameters'] = params
+
+            # 3) Filter by user_name if provided
+            if user_name is None or (params.get('user') == user_name):
+                filtered_job_logs.append(entry)
+
+        return JsonResponse({'job_logs': filtered_job_logs}, status=200)
+
+    except Exception as e:
+        logger.error(f'An unexpected error occurred while fetching job logs: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)

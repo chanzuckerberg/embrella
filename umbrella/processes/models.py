@@ -4,6 +4,12 @@ from tem.models import MsiSession, SessionPlan
 from stores.models import StaticPath, Path, PathType, fill_place_holders
 import sys
 
+
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils.timezone import now
+
+
 '''
 from stores.models import DataRecord, 
 class ArrayData(DataRecord):
@@ -646,3 +652,21 @@ def select_plan_ids_by_input_data_types(selected_data_types):
     plan_ids = list(map((lambda x: x.plan.id), pipe_in_plans))
     return plan_ids
 
+
+
+
+class JobLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    job_name = models.CharField(max_length=150, null=True, blank=True)
+    advanced = models.BooleanField(default=False)
+    job_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    created_at = models.DateTimeField(default=now)
+
+    # <-- Add a JSONField to store all job parameters
+    parameters = models.JSONField(null=True, blank=True)
+
+    # Optionally store any error messages
+    error_message = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Aretomo Job {self.job_id} by {self.user.username}"
