@@ -13,5 +13,6 @@ urlpatterns = [
     path("user_info", views.user_info, name='user_details'),
     path("get_msisession_list", views.get_msi_session_list, name='get all msi session name'),
     path("run_advanced_aretomo3", views.run_aretomo3_advanced, name='run_advanced_aretomo3'),
-    path("aretomo3_params", views.get_msi_params_list, name='get parameters')
+    path("aretomo3_params", views.get_msi_params_list, name='get parameters'),
+    path("job_logs", views.get_job_logs, name='fetching logs')
 ]
