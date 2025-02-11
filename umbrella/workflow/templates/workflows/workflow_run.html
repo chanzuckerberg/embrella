@@ -809,6 +809,48 @@
     </div>
   </div>
 
+  <div class="form-container">
+    <h1>Job Logs</h1>
+    <div class="form-group">
+      <label for="logUserId">User Name:</label>
+      <input type="text" id="logUserId" name="logUserId" placeholder="Enter user name..." />
+      <p style="color: #888; font-size: 0.9em; margin-top: 5px;">
+        Note: User name should be in the format "firstname.lastname".
+      </p>
+    </div>
+    <div class="button-container">
+      <button type="button" onclick="trackUserJobs()">Track Jobs by User</button>
+      <button type="button" onclick="trackRecentJobs()">Track 10 Most Recent Jobs</button>
+    </div>
+    <div id="jobLogsContainer" style="display:none; margin-top: 20px;">
+      <table id="jobLogsTable" style="border-collapse: collapse; width: 100%;">
+        <thead>
+          <tr>
+            <th style="border: 1px solid #ccc; padding: 8px;">Job Name</th>
+            <th style="border: 1px solid #ccc; padding: 8px;">Advanced</th>
+            <th style="border: 1px solid #ccc; padding: 8px;">Job ID</th>
+            <th style="border: 1px solid #ccc; padding: 8px;">Created At</th>
+            <th style="border: 1px solid #ccc; padding: 8px;">Parameters</th>
+            <th style="border: 1px solid #ccc; padding: 8px;">Error Message</th>
+            <th style="border: 1px solid #ccc; padding: 8px;">User ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Example row for demonstration -->
+          <tr>
+            <td style="border: 1px solid #ccc; padding: 8px;">Example Job</td>
+            <td style="border: 1px solid #ccc; padding: 8px;">Yes</td>
+            <td style="border: 1px solid #ccc; padding: 8px;">12345</td>
+            <td style="border: 1px solid #ccc; padding: 8px;">2025-02-10T23:40:46.776Z</td>
+            <td style="border: 1px solid #ccc; padding: 8px;">{"mode": "basic"}</td>
+            <td style="border: 1px solid #ccc; padding: 8px;">None</td>
+            <td style="border: 1px solid #ccc; padding: 8px;">yongbaek.cho</td>
+          </tr>
+          <!-- Additional rows will be dynamically added here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
   <script>
     // Helper function to safely get element value
     function getElementValue(id) {
@@ -1530,6 +1572,83 @@
       if (loadingDiv) {
         document.body.removeChild(loadingDiv);
       }
+    }
+
+    async function fetchJobLogs(params) {
+      try {
+        // Show loading indicator
+        showLoadingIndicator();
+
+        // Construct query string from params
+        const queryString = new URLSearchParams(params).toString();
+        const url = `/workflow/job_logs?${queryString}`;
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+        });
+
+        // Read response as text first to check for issues
+        const responseText = await response.text();
+        console.log("Raw API Response:", responseText);
+
+        hideLoadingIndicator();
+
+        if (!responseText) {
+          alert("Error: Received an empty response from the server.");
+          return;
+        }
+
+        // Parse JSON
+        const result = JSON.parse(responseText);
+
+        if (response.ok) {
+          displayJobLogs(result.job_logs);
+        } else {
+          alert(`Failed to fetch job logs. Error: ${result.error}`);
+        }
+      } catch (error) {
+        hideLoadingIndicator();
+        console.error("Error fetching job logs:", error);
+        alert(`Failed to fetch job logs. Error: ${error.message || "Unknown error."}`);
+      }
+    }
+
+    function displayJobLogs(jobLogs) {
+      const tableBody = document.querySelector("#jobLogsTable tbody");
+      tableBody.innerHTML = "";
+      
+      jobLogs.forEach((log) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td style="border: 1px solid #ccc; padding: 8px;">${log.job_name}</td>
+          <td style="border: 1px solid #ccc; padding: 8px;">${log.advanced ? "Yes" : "No"}</td>
+          <td style="border: 1px solid #ccc; padding: 8px;">${log.job_id}</td>
+          <td style="border: 1px solid #ccc; padding: 8px;">${new Date(log.created_at).toLocaleString()}</td>
+          <td style="border: 1px solid #ccc; padding: 8px;">${JSON.stringify(log.parameters, null, 2)}</td>
+          <td style="border: 1px solid #ccc; padding: 8px;">${log.error_message || "None"}</td>
+          <td style="border: 1px solid #ccc; padding: 8px;">${log.user_id}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+      
+      document.getElementById("jobLogsContainer").style.display = "block";
+    }
+    
+    function trackUserJobs() {
+      const userName = document.getElementById("logUserId").value.trim();
+      if (!userName) {
+        alert("Please enter a user name.");
+        return;
+      }
+      fetchJobLogs({ user_name: userName });
+    }
+
+    function trackRecentJobs() {
+      fetchJobLogs({ limit: 10 });
     }
   </script>
 </body>
