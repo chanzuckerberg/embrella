@@ -68,6 +68,7 @@ def get_aretomo3_json(request):
 # @login_required
 @csrf_exempt
 def run_aretomo3_advanced(request):
+    data_sanitized = {}  # Initialize this variable at the start
     if request.method == 'POST':
         data = json.loads(request.body)
 
@@ -196,20 +197,18 @@ def run_aretomo3_advanced(request):
                 thickness_mesaure=thickness_mesaure
             )
 
-
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
             job_id_str = ",".join(found_ids) if found_ids else None
 
-            store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=True, job_id=job_id_str)
+            # Store log regardless of success or failure
+            store_log(request=request, data_sanitized=data_sanitized, error=None, advanced_status=True, job_id=job_id_str)
 
             # Return your response
-
             return JsonResponse({
                 'message': f'Session {project_name} for Advanced Aretomo3 is submitted successfully. Please check the below output directory',
                 'output': output,
                 'error': error
             })
-
 
         except Exception as e:
             logger.error(f'Error in run_aretomo3_advanced: {str(e)}')
@@ -220,7 +219,8 @@ def run_aretomo3_advanced(request):
             # Ensure we always close the connection if we opened it
             if 'aretomo' in locals():
                 aretomo.close()
-    store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=True, job_id=None)
+
+    # Handle invalid request method
     return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
 
