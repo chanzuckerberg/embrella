@@ -55,7 +55,6 @@ def get_aretomo3_json(request):
         json_data = ssh_connect(remote_path)
         full_data = jsonify(json_data)
         parsed_data = extract_parameters(full_data, KEYS)
-        print(parsed_data)
         return JsonResponse(parsed_data, safe=False)
     except FileNotFoundError as fnf_err:
         error_msg = f"File not found"

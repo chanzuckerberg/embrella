@@ -5,7 +5,7 @@ import os
 from umbrella_logger import logger
 from cryptography.fernet import Fernet
 # Other connection details
-hostname = '10.50.120.52'
+hostname = "10.50.120.90"
 port = 22
 username = os.getenv('REMOTE_ID')
 password = os.getenv('REMOTE_PASSWORD')
