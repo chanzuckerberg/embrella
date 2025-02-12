@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Guide - Embrella</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        p {
+            font-size: 16px;
+            color: #555;
+        }
+        ul {
+            text-align: left;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script>
+        function goBack() {
+            window.location.href = '/';
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>User Guide</h1>
+        <p>Follow these steps to use Embrella:</p>
+        <ul>
+            <li>Login with your credentials.</li>
+            <li>Use **Workflow Management** to start new tasks.</li>
+            <li>Use **Search Filters** to find specific data.</li>
+            <li>Use **Run Workflow** to start processing jobs.</li>
+            <li>For **Metadata Fetching**, go to the **Metadata Fetcher** section.</li>
+            <li>Click the **Go Back** button to return to the main page.</li>
+        </ul>
+        <button onclick="goBack()">Go Back</button>
+    </div>
+</body>
+</html>
