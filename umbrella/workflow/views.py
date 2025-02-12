@@ -194,7 +194,8 @@ def run_aretomo3_advanced(request):
                 imod_option=imod_option,
                 local_shift=local_shift,
                 tilt_offset=tilt_offset,
-                thickness_mesaure=thickness_mesaure
+                thickness_mesaure=thickness_mesaure,
+                user_id=user_id
             )
 
             found_ids = re.findall(r"Submitted batch job (\d+)", output)

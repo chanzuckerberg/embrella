@@ -38,7 +38,8 @@ class Aretomo3(object):
         imod_option=None,
         local_shift=None,
         tilt_offset=None,
-        thickness_mesaure=None
+        thickness_mesaure=None,
+        user_id=None,
     ):
         """
         An updated method signature that aligns more closely with the parameters
@@ -110,9 +111,9 @@ class Aretomo3(object):
             elif use_advanced_params.lower() == 'no':
                 write_input(use_advanced_params)
 
-            write_input("84")
+            write_input(dose_number)
             write_input(num_checks)
-            write_input("yongbaek.cho") #automatically handling by script - this is for user_id
+            write_input(user_id) #automatically handling by script - this is for user_id
 
             # Close stdin after writing all inputs
             stdin.close()
