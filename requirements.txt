@@ -32,3 +32,8 @@ pycryptodome
 django-cors-headers
 pytest
 pytest-django
+langchain
+langchain_openai
+langchain-community
+chromadb
+markdown
