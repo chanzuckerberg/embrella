@@ -35,7 +35,7 @@ def store_log(request, data_sanitized, error, advanced_status=False, job_id = No
                 user=request.user,
                 job_name=f"Aretomo3",
                 advanced=advanced_status,
-                job_id=None,  # No job ID available in case of error
+                job_id=job_id,  # No job ID available in case of error
                 parameters=data_sanitized,
                 error_message=str(error)  # Store the error message
             )
@@ -196,12 +196,13 @@ def run_aretomo3_advanced(request):
                 tilt_offset=tilt_offset,
                 thickness_mesaure=thickness_mesaure
             )
-
+            print(output)
 
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
+            print(found_ids)
             job_id_str = ",".join(found_ids) if found_ids else None
 
-            store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=True, job_id=job_id_str)
+            store_log(request=request, data_sanitized=data_sanitized, error=None, advanced_status=True, job_id=job_id_str)
 
             # Return your response
 
