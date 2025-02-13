@@ -5,7 +5,8 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain_openai.chat_models.base import BaseChatOpenAI
-
+import markdown
+from django.http import HttpResponse
 
 
 from django.http import JsonResponse
@@ -40,36 +41,49 @@ class ConfluenceQA:
         self.llm = ChatOpenAI(model_name=LLM_OPENAI_GPT40_MINI, temperature=0.)
 
 
-    def vector_db_confluence_docs(self,force_reload:bool= False) -> None:
+    def vector_db_confluence_docs(self, force_reload: bool = False) -> None:
         """
-        creates vector db for the embeddings and persists them or loads a vector db from the persist directory
+        Creates vector db for the embeddings and persists them or loads a vector db from the persist directory
         """
-        persist_directory = os.environ.get("persist_directory","chroma_db")
-        confluence_url = os.environ.get("CONFLUENCE_URL","chroma_db")
-        username = os.environ.get("USERNAME",None)
-        api_key = os.environ.get("CONFLUENCE_KEY",None)
-        space_key = os.environ.get("SPACE_KEY",None)
+        persist_directory = os.environ.get("persist_directory", "chroma_db")
+        confluence_url = os.environ.get("CONFLUENCE_URL", "chroma_db")
+        username = os.environ.get("USERNAME", None)
+        api_key = os.environ.get("CONFLUENCE_KEY", None)
+        space_key = os.environ.get("SPACE_KEY", None)
+
         if persist_directory and os.path.exists(persist_directory) and not force_reload:
-            ## Load from the persist db
+            # Load from the persist db
             self.vectordb = Chroma(persist_directory=persist_directory, embedding_function=self.embedding)
         else:
-            ## 1. Extract the documents
+            # 1. Extract the documents
             loader = ConfluenceLoader(
                 url=confluence_url,
-                username = username,
-                api_key= api_key
+                username=username,
+                api_key=api_key
             )
             documents = loader.load(
-                space_key=space_key, 
-                limit=400)
-            ## 2. Split the texts
+                space_key=space_key,
+                limit=400
+            )
+
+            # 2. Check for existing embeddings
+            existing_embeddings = self.vectordb.get_all_embeddings()  # Assuming this method exists
+            existing_ids = {doc['id'] for doc in existing_embeddings}  # Adjust based on your document structure
+
+            # 3. Filter out documents that already exist in the vector db
+            new_documents = [doc for doc in documents if doc['id'] not in existing_ids]  # Adjust based on your document structure
+
+            if not new_documents:
+                print("No new documents to embed.")
+                return  # Exit if there are no new documents
+
+            # 4. Split the texts
             text_splitter = CharacterTextSplitter(chunk_size=20, chunk_overlap=0)
-            texts = text_splitter.split_documents(documents)
-            text_splitter = TokenTextSplitter(chunk_size=100, chunk_overlap=10, encoding_name="cl100k_base")  # This the encoding for text-embedding-ada-002
+            texts = text_splitter.split_documents(new_documents)
+            text_splitter = TokenTextSplitter(chunk_size=100, chunk_overlap=10, encoding_name="cl100k_base")
             texts = text_splitter.split_documents(texts)
 
-            ## 3. Create Embeddings and add to chroma store
-            ##TODO: Validate if self.embedding is not None
+            # 5. Create Embeddings and add to chroma store
             self.vectordb = Chroma.from_documents(documents=texts, embedding=self.embedding, persist_directory=persist_directory)
 
     # def retreival_qa_chain(self):
@@ -104,12 +118,40 @@ class ConfluenceQA:
         Creates retrieval QA chain using vectordb as retriever and LLM to complete the prompt
         """
         # Define the custom prompt
-        custom_prompt_template = """You are a Confluence chatbot answering questions. Use the following pieces of context to answer the question at the end. If you don't know the answer, say that you don't know, don't try to make up an answer.
-        Please answer over 300 words.
+        custom_prompt_template = """You are a Confluence chatbot designed to answer questions about the company's wiki. Use the provided context to respond accurately and informatively. If you don't know the answer, say that you don't know; do not make up an answer.
+
+        ---
+
+        ## Response Rules
+
+        1. **General Questions (e.g., greetings, navigation, number of wikis, availability)**  
+        - Provide a **concise response (under 50 words)**.  
+        - Keep the tone **friendly and professional**.  
+
+        2. **Technical or Detailed Queries (e.g., CryoET, pipeline processes, workflows, or research topics)**  
+        - Provide a **thorough response (at least 250 words)**.  
+        - Use **clear headings** (e.g., "### Introduction", "### Key Details", "### Conclusion").  
+        - Separate headings with a **blank line** beneath them for readability.  
+        - Use **short paragraphs** (3–5 sentences), and put a **blank line** between paragraphs.  
+        - Use **bullet points** or **numbered lists** for enumerations or key points.  
+        - **Bold** or *italicize* key terms to emphasize important concepts or definitions.
+
+        3. **Output Formatting**  
+        - Do not create large blocks of text; use **blank lines** to break up sections.  
+        - Ensure the final output is **readable** and well-structured.
+
+        ---
+
+        ## Context
         {context}
 
-        Question: {question}
-        Helpful Answer:"""
+        ## User Question
+        {question}
+
+        ---
+
+        ## Helpful Answer:
+        """
 
         CUSTOM_PROMPT = PromptTemplate(
             template=custom_prompt_template, input_variables=["context", "question"]
@@ -155,8 +197,9 @@ def api_answer(request):
 
             # Get the answer from the LLM
             answer = agent.answer_confluence(question)
-
-            return JsonResponse({'answer': answer}, status=200)
+            html_answer = markdown.markdown(answer)
+            return HttpResponse(html_answer, content_type="text/html")
+            # return JsonResponse({'answer': answer}, status=200, json_dumps_params={'indent': 4})
 
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON payload.'}, status=400)
