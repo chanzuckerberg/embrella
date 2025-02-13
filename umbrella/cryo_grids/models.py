@@ -123,9 +123,9 @@ class CryoGrid(models.Model):
     trashed = models.BooleanField(default=False,help_text="Is this cryo-grid discarded ?")
     intended_project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, help_text='Optionally assign the project this grid is made for. This makes the grid easier to find.')
     copy_number = models.PositiveSmallIntegerField(default=1)
-    blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
-    blot_force = models.FloatField(default=None, help_text='Blot force')
-    blot_distance = models.FloatField(default=None, help_text='Blot distance')
+    blot_time = models.FloatField(default=6.0,null=True, help_text='Blot time in seconds')
+    blot_force = models.FloatField(default=0.0, blank=True,null=True,help_text='Blot force')
+    blot_distance = models.FloatField(default=0.0, blank=True, null=True, help_text="Blot distance")
     resource_link = models.URLField(max_length=200, blank=True, null=True, help_text='Link to additional resources related to this cryo-grid')
 
     class Meta:
