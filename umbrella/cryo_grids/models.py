@@ -107,19 +107,6 @@ class Specimen(models.Model):
         return f"{self.sample} with {self.tags}" if self.tags else self.sample
 
 
-        
-class GridPreparationLog(models.Model):
-    grids = models.ManyToManyField('CryoGrid', related_name='prep_logs', help_text='Associated cryo grids')
-    blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
-    blot_force = models.FloatField(default=None, help_text='Blot force')
-    blot_distance = models.FloatField(default=None, help_text='Blot distance')
-
-    def __str__(self):
-        # Get the names of all associated grids
-        grid_names = ', '.join([grid.name for grid in self.grids.all()])
-        # Return the concatenated grid names
-        return f"{grid_names} log"
-
 class CryoGrid(models.Model):
     create_on = models.DateField(auto_now_add=True)
     updated_on = models.DateField(auto_now=True) 
@@ -128,16 +115,18 @@ class CryoGrid(models.Model):
     notes = models.TextField(max_length=255, blank=True, null=True,help_text='notes about freezing and grid condition on this grid')
     freezing_session = models.ForeignKey(PlungeFreezingSession, on_delete=models.CASCADE, help_text='who and when the grid was frozen')
     specimen = models.ForeignKey(Specimen, on_delete=models.CASCADE, blank=True, null=True, help_text='referring to specimen')
-    grid_prep_log = models.ForeignKey(GridPreparationLog, on_delete=models.CASCADE, blank=True, null=True)
     grid_box = models.ForeignKey(CryoGridBox, on_delete=models.CASCADE, null=True, blank=True, help_text='cryo grid box fit in pucks')
     position_in_box = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
     clipped = models.BooleanField(default=False,help_text="Is this cryo-grid clipped ?")
     grid_cassette = models.ForeignKey(CryoGridCassette, on_delete=models.CASCADE, null=True, blank=True, help_text='choose a microscope grid loader cassette when in use')
     slot_number_in_cassette = models.PositiveSmallIntegerField(default=1, null=True, blank=True, help_text='The slot the grid is put in the cryo cassette if exists')
     trashed = models.BooleanField(default=False,help_text="Is this cryo-grid discarded ?")
-
     intended_project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, help_text='Optionally assign the project this grid is made for. This makes the grid easier to find.')
     copy_number = models.PositiveSmallIntegerField(default=1)
+    blot_time = models.FloatField(default=6.0, help_text='Blot time in seconds')
+    blot_force = models.FloatField(default=None, help_text='Blot force')
+    blot_distance = models.FloatField(default=None, help_text='Blot distance')
+    resource_link = models.URLField(max_length=200, blank=True, null=True, help_text='Link to additional resources related to this cryo-grid')
 
     class Meta:
         unique_together = ["name","freezing_session","copy_number"]

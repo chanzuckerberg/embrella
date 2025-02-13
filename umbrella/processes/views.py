@@ -18,7 +18,7 @@ from datetime import timedelta
 from datetime import datetime
 from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
-from cryo_grids.models import CryoGrid, PlungeFreezingSession, Specimen, GridPreparationLog
+from cryo_grids.models import CryoGrid, PlungeFreezingSession, Specimen
 from processes.models import *
 from processes.utils import QueryParams, InputTomogramModel,AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
