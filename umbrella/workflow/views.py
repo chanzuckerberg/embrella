@@ -197,7 +197,6 @@ def run_aretomo3_advanced(request):
                 thickness_mesaure=thickness_mesaure,
                 user_id=user_id
             )
-            print(output)
 
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
             print(found_ids)
