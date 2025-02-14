@@ -49,6 +49,9 @@
       font-size: 15px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       position: relative;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;  /* Adjusts for preserving spaces */
     }
 
     /* User message specific styling */
@@ -78,8 +81,13 @@
       align-self: center;
     }
 
+    /* Styling for the text within the bot message.
+       The addition of word-break forces very long words to break onto a new line. */
     .bot-message .message-text {
       flex: 1;
+      word-break: break-all;      /* Ensures long, unbroken strings wrap to the next line */
+      overflow-wrap: break-word;  /* Extra safety for wrapping long words */
+      white-space: normal;        /* Allow text to wrap normally */
     }
 
     /* Input box and button wrapper */
