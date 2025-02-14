@@ -1,247 +1,276 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Embrella Home</title>
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        h1 {
-            color: #444;
-            text-align: center;
-        }
-        h2 {
-            color: #555;
-            margin-top: 40px;
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 10px;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 20px 0;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        th, td {
-            padding: 20px;
-            text-align: center;
-            vertical-align: middle; /* Ensures middle alignment */
-        }
-
-        /* Add vertical border between columns */
-        th:not(:last-child), 
-        td:not(:last-child) {
-            border-right: 4px solid #bbb; /* Thick vertical bar */
-        }
-        th, td {
-            padding: 15px;
-            text-align: center;
-        }
-
-        .button {
-            display: inline-block;
-            padding: 12px 25px;
-            font-size: 16px;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            color: #fff;
-            background-color: #17a2b8;
-            border: none;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: background-color 0.3s ease;
-        }
-        .button:hover {
-            background-color: #138f99;
-        }
-        .button:active {
-            background-color: #0f7a83;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transform: translateY(2px);
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        p {
-            margin: 15px 0;
-        }
-        .center {
-            text-align: center;
-        }
-    </style>
+  <title>Embrella Home</title>
+  <style>
+    /* Base Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #eef2f7;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2 {
+      margin: 0;
+      font-weight: 300;
+    }
+    h1 {
+      font-size: 2.5em;
+    }
+    h2 {
+      font-size: 1.8em;
+      margin-bottom: 20px;
+    }
+    p {
+      margin: 10px 0;
+      line-height: 1.6;
+    }
+    /* Header Banner */
+    .header-banner {
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      color: #fff;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .header-banner p {
+      font-size: 1.2em;
+    }
+    /* Button Styles */
+    .button {
+      display: inline-block;
+      margin: 10px 5px;
+      padding: 12px 25px;
+      font-size: 16px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      color: #fff;
+      background-color: #4facfe;
+      border: none;
+      border-radius: 25px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .button:hover {
+      background-color: #3a8ad8;
+      transform: translateY(-2px);
+    }
+    .button:active {
+      background-color: #3276b1;
+      transform: translateY(0);
+    }
+    /* Card Container */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+      text-align: center;
+    }
+    .card p {
+      font-size: 0.95em;
+      color: #666;
+    }
+    /* Table-like layout for Workflow Management & Search Filters */
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      margin-bottom: 40px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .table th, .table td {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .table th {
+      background: #f7f7f7;
+      font-size: 1.1em;
+    }
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+    /* Logout & Admin Buttons */
+    .action-buttons {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .action-buttons form,
+    .action-buttons a {
+      display: inline-block;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to Embrella Startup Page!</h1>
-        <p class="center">You are logged in as {{ user.username }}.</p>
-        <div class="center">
-            <form method="post" action="{% url 'logout' %}" style="display: inline;">
-                {% csrf_token %}
-                <button type="submit" class="button">Logout</button>
-            </form>
-            <a href="{% url 'admin:index' %}" class="button">Admin</a>
-        </div>
-        <h2>User Guide</h2>
-        <table>
-            <tr>
-                <th>Instructions</th>
-            </tr>
-            <tr>
-                <td>
-                    <a href="umbrella/user_guide" class="button">Read User Guide</a>
-                    <p>Learn how to use the Embrella system effectively</p>
-                </td>
-            </tr>
-        </table>
-
-        <table>
-            <tr>
-                <th>ChatBot Agent</th>
-            </tr>
-            <tr>
-                <td>
-                    <a href="umbrella/chatbot" class="button">Chatbot (Beta Service)</a>
-                    <p>This is a beta service(only for CZII wiki). Click the button to access the chatbot</p>
-                </td>
-            </tr>
-        </table>
-
-        <h2>Workflow Management</h2>
-        <table>
-            <tr>
-                <th>Freeze some grids</th>
-                <th>Start a TEM session</th>
-                <th>Start a processing run</th>
-            </tr>
-            <tr>
-                <td>
-                    <a href="{% url 'admin:cryo_grids_specimen_add' %}" class="button">Create new  Specimen</a>
-                    <p>record a new specimen</p>
-                </td>
-                <td>
-                    <a href="{% url 'tem:reserve' %}" class="button">Create new single-grid TEM session</a>
-                    <p>start new TEM session</p>
-                </td>
-                <td>
-                    <a href="{% url 'processes:reserve' %}" class="button">Run processing on a TEM session with frames</a>
-                    <p>make new processing run name for processing</p>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <a href="{% url 'admin:cryo_grids_plungefreezingsession_add' %}" class="button">Create new freezing session</a>
-                    <p>record a new session on freezing day</p>
-                </td>
-                <td>
-                    <a href="{% url 'tem:scrnreserve' %}" class="button">Screen multiple grids in a cassette</a>
-                    <p>make new directory name for screening</p>
-                </td>
-                <td>
-                    <a href="{% url 'processes:ptreserve' %}" class="button">Run processing on a TEM session with tomograms</a>
-                    <p>make new processing run name for processing</p>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <a href="{% url 'admin:cryo_grids_cryogrid_add' %}" class="button">Add a new grid</a>
-                    <p>make a new grid</p>
-                </td>
-                <td>
-                    <a href="{% url 'cryo_grids:clear_cassette' %}" class="button">Clear a cassette</a>
-                    <p>remove all grids from a cassette. choose between putting them back and disposing them</p>
-                </td>
-                <td></td>
-            </tr>
-        </table>
-
-        <h2>Search Filters</h2>
-        <table>
-            <tr>
-                <th>Grids</th>
-                <th>TEM sessions</th>
-                <th>Processing runs</th>
-            </tr>
-            <script>
-                // Function to detect the base URL and append the `/next` endpoint
-                function getNextUrl() {
-                    const LOCALHOST_PORT = 8000;
-                    const LOCALHOST_NEXT_PORT = 3000;
-
-                    let baseUrl = window.location.origin; // Get the base URL (protocol + hostname)
-                    let nextBaseUrl = baseUrl.includes(LOCALHOST_PORT) ?
-                        baseUrl.replace(LOCALHOST_PORT, LOCALHOST_NEXT_PORT)
-                        : baseUrl;
-
-                    return `${nextBaseUrl}/next`;
-                }
-
-                function getCryoGridsUrl() {
-                    return `${getNextUrl()}/cryo_grids`;
-                }
-
-                function getTomogramsUrl() {
-                    return `${getNextUrl()}/tomograms`;
-                }
-
-                function getAnnotationsUrl() {
-                    return `${getNextUrl()}/annotations`;
-                }
-            </script>
-            <tr>
-                <td>
-                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getCryoGridsUrl()">Cryo Grids</a>
-                    <p> Stored Grid Filter Page </p>
-                </td>
-                <td>
-                    <a href="{% url 'admin:tem_msisession_changelist' %}" class="button">Single Grid Sessions</a>
-                    <p> multiscaled SPA or tomography data collection </p>
-                </td>
-                <td>
-                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
-                    <p> View and manage tomograms </p>
-                </td>
-                <td></td>
-            </tr>
-            <tr>
-                <td>
-                    <a href="{% url 'cryo_grids:detail' %}" class="button">Grid Boxes</a>
-                </td>
-                <td>
-                    <a href="{% url 'tem:render_screening_form' %}" class="button">Multigrid Screens</a>
-                </td>
-                <td>
-                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
-                    <p> View and manage Annotations </p>
-                </td>
-                <td></td>
-            </tr>
-        </table>
-
-        <h2>Run Workflow</h2>
-        <table>
-            <tr>
-                <th>Workflow Actions</th>
-                <th>Metadata Fetcher</th>
-            </tr>
-            <tr>
-                <td>
-                    <a href="/workflow/run" class="button">Aretomo Run</a>
-                    <p>Start an Aretomo run</p>
-                </td>
-                <td>
-                    <a href="/workflow" class="button">Metadata Fetcher</a>
-                    <p>Fetch metadata for processing</p>
-                </td>
-            </tr>
-        </table>
+  <div class="header-banner">
+    <h1>Welcome to Embrella Startup Page!</h1>
+    <p>You are logged in as {{ user.username }}.</p>
+  </div>
+  <div class="container">
+    <div class="action-buttons">
+      <form method="post" action="{% url 'logout' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="button">Logout</button>
+      </form>
+      <a href="{% url 'admin:index' %}" class="button">Admin</a>
     </div>
+
+    <h2>User Guide</h2>
+    <div class="card-grid">
+      <div class="card">
+        <a href="umbrella/user_guide" class="button">Read User Guide</a>
+        <p>Learn how to use the Embrella system effectively</p>
+      </div>
+    </div>
+
+    <h2>ChatBot Agent</h2>
+    <div class="card-grid">
+      <div class="card">
+        <a href="umbrella/chatbot" class="button">Chatbot (Beta Service)</a>
+        <p>This is a beta service (only for CZII wiki). Click to access the chatbot.</p>
+      </div>
+    </div>
+
+    <h2>Workflow Management</h2>
+    <table class="table">
+      <tr>
+        <th>Freeze some grids</th>
+        <th>Start a TEM session</th>
+        <th>Start a processing run</th>
+      </tr>
+      <tr>
+        <td>
+          <a href="{% url 'admin:cryo_grids_specimen_add' %}" class="button">Create New Specimen</a>
+          <p>Record a new specimen</p>
+        </td>
+        <td>
+          <a href="{% url 'tem:reserve' %}" class="button">New Single-Grid TEM Session</a>
+          <p>Start new TEM session</p>
+        </td>
+        <td>
+          <a href="{% url 'processes:reserve' %}" class="button">Run Processing with Frames</a>
+          <p>Create processing run name</p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <a href="{% url 'admin:cryo_grids_plungefreezingsession_add' %}" class="button">Create Freezing Session</a>
+          <p>Record a new freezing day session</p>
+        </td>
+        <td>
+          <a href="{% url 'tem:scrnreserve' %}" class="button">Screen Multiple Grids</a>
+          <p>New directory name for screening</p>
+        </td>
+        <td>
+          <a href="{% url 'processes:ptreserve' %}" class="button">Run Processing with Tomograms</a>
+          <p>Create processing run name</p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <a href="{% url 'admin:cryo_grids_cryogrid_add' %}" class="button">Add New Grid</a>
+          <p>Create a new grid</p>
+        </td>
+        <td>
+          <a href="{% url 'cryo_grids:clear_cassette' %}" class="button">Clear a Cassette</a>
+          <p>Remove grids from a cassette</p>
+        </td>
+        <td></td>
+      </tr>
+    </table>
+
+    <h2>Search Filters</h2>
+    <table class="table">
+      <tr>
+        <th>Grids</th>
+        <th>TEM Sessions</th>
+        <th>Processing Runs</th>
+      </tr>
+      <script>
+        // Function to detect the base URL and append the `/next` endpoint
+        function getNextUrl() {
+          const LOCALHOST_PORT = 8000;
+          const LOCALHOST_NEXT_PORT = 3000;
+
+          let baseUrl = window.location.origin;
+          let nextBaseUrl = baseUrl.includes(LOCALHOST_PORT) ?
+            baseUrl.replace(LOCALHOST_PORT, LOCALHOST_NEXT_PORT) :
+            baseUrl;
+          return `${nextBaseUrl}/next`;
+        }
+
+        function getCryoGridsUrl() {
+          return `${getNextUrl()}/cryo_grids`;
+        }
+
+        function getTomogramsUrl() {
+          return `${getNextUrl()}/tomograms`;
+        }
+
+        function getAnnotationsUrl() {
+          return `${getNextUrl()}/annotations`;
+        }
+      </script>
+      <tr>
+        <td>
+          <a href="javascript:void(0)" class="button" onclick="window.location.href=getCryoGridsUrl()">Cryo Grids</a>
+          <p>Stored Grid Filter Page</p>
+        </td>
+        <td>
+          <a href="{% url 'admin:tem_msisession_changelist' %}" class="button">Single Grid Sessions</a>
+          <p>Multiscaled SPA or tomography data collection</p>
+        </td>
+        <td>
+          <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
+          <p>View and manage tomograms</p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <a href="{% url 'cryo_grids:detail' %}" class="button">Grid Boxes</a>
+        </td>
+        <td>
+          <a href="{% url 'tem:render_screening_form' %}" class="button">Multigrid Screens</a>
+        </td>
+        <td>
+          <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
+          <p>Manage annotations</p>
+        </td>
+      </tr>
+    </table>
+
+    <h2>Run Workflow</h2>
+    <table class="table">
+      <tr>
+        <th>Workflow Actions</th>
+        <th>Metadata Fetcher</th>
+      </tr>
+      <tr>
+        <td>
+          <a href="/workflow/run" class="button">Aretomo Run</a>
+          <p>Start an Aretomo run</p>
+        </td>
+        <td>
+          <a href="/workflow" class="button">Metadata Fetcher</a>
+          <p>Fetch metadata for processing</p>
+        </td>
+      </tr>
+    </table>
+  </div>
 </body>
 </html>
