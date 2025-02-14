@@ -67,11 +67,11 @@
       align-self: flex-start;
       background: #e6e6e6;
       border-top-left-radius: 0;
-      display: flex;              /* to place icon and text side by side if you add an icon */
+      display: flex;              /* to place icon and text side by side */
       align-items: flex-start;    /* align icon and text at the top */
     }
 
-    /* Optional bot icon styling if you add an icon in the future */
+    /* Bot icon styling */
     .bot-message .bot-icon {
       width: 32px;
       height: 32px;
@@ -81,8 +81,7 @@
       align-self: center;
     }
 
-    /* Styling for the text within the bot message.
-       The addition of word-break forces very long words to break onto a new line. */
+    /* Styling for the text within the bot message */
     .bot-message .message-text {
       flex: 1;
       word-break: break-all;      /* Ensures long, unbroken strings wrap to the next line */
@@ -154,6 +153,9 @@
   </div>
 
   <script>
+    // Define the bot icon URL using Django's static tag.
+    const botIconUrl = "{% static 'customs/bot-icon.png' %}";
+
     async function sendMessage() {
       const userInput = document.getElementById("user-input").value;
       if (!userInput) return;
@@ -181,15 +183,21 @@
         // Since the server returns HTML directly, we need to read the text
         const htmlResponse = await response.text();
 
-        // Append bot message with rendered HTML
+        // Append bot message with the bot icon and rendered HTML response
         const botMessage = document.createElement("div");
         botMessage.className = "message bot-message";
-        botMessage.innerHTML = `<div class="message-text">Bot: ${htmlResponse}</div>`;
+        botMessage.innerHTML = `
+          <img src="${botIconUrl}" alt="Bot Icon" class="bot-icon">
+          <div class="message-text">${htmlResponse}</div>
+        `;
         chatBox.appendChild(botMessage);
       } catch (error) {
         const errorMessage = document.createElement("div");
         errorMessage.className = "message bot-message";
-        errorMessage.innerHTML = `<div class="message-text">Bot: Error fetching response.</div>`;
+        errorMessage.innerHTML = `
+          <img src="${botIconUrl}" alt="Bot Icon" class="bot-icon">
+          <div class="message-text">Error fetching response.</div>
+        `;
         chatBox.appendChild(errorMessage);
       }
 
