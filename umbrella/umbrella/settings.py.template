@@ -99,7 +99,6 @@ INSTALLED_APPS = [
     'workflow',
     'tem',
     'stores',
-    'social_django',
     'custom',
     'processes',
     'django.contrib.admin',
