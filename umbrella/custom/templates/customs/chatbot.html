@@ -15,26 +15,27 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
     }
 
-    /* Chat container styling (increased width) */
+    /* Chat container styling */
     .chat-container {
-      width: 600px; /* Increased from 420px */
+      width: 600px;
+      height: 600px; /* Fixed height for the entire chat container */
       background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
 
-    /* Chat box styling (increased height) */
+    /* Chat box styling */
     .chat-box {
-      height: 500px; /* Increased from 360px */
+      flex: 1; /* Allow chat box to grow and fill available space */
       padding: 15px;
-      overflow-y: auto;
-      background: #f5f5f5;
+      overflow-y: auto; /* Enable vertical scrolling */
+      background: #f9f9f9;
       display: flex;
       flex-direction: column;
     }
@@ -60,15 +61,17 @@
       background: #007bff;
       color: #fff;
       border-top-right-radius: 0;
+      border-radius: 12px;
     }
 
     /* Bot message specific styling */
     .bot-message {
       align-self: flex-start;
-      background: #e6e6e6;
+      background: #e0e0e0;
       border-top-left-radius: 0;
-      display: flex;              /* to place icon and text side by side */
-      align-items: flex-start;    /* align icon and text at the top */
+      border-radius: 12px;
+      display: flex;
+      align-items: flex-start;
     }
 
     /* Bot icon styling */
@@ -108,7 +111,7 @@
       transition: border 0.3s;
     }
     input[type="text"]:focus {
-      border: 2px solid #764ba2;
+      border: 2px solid #2575fc;
     }
 
     /* Button styling */
@@ -117,14 +120,14 @@
       margin-left: 10px;
       border: none;
       border-radius: 8px;
-      background: #764ba2;
+      background: #2575fc;
       color: #fff;
       font-size: 16px;
       cursor: pointer;
       transition: background 0.3s, transform 0.2s;
     }
     button:hover {
-      background: #5b3f84;
+      background: #1a5bb8;
       transform: translateY(-1px);
     }
 
