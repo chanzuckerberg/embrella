@@ -27,19 +27,19 @@ class Aretomo3(object):
         pixel_size,
         dose_number,
         num_checks,
+        gain_file_name=None,
         denoise_training=None,
-        even_odd_split=None,
+        # even_odd_split=None,
         use_advanced_params=None,
         tilt_axis=None,
         tilt_axis_refine=None,
         align_z=None,
         vol_z=None,
         imod_option=None,
-        user_id=None,
         local_shift=None,
         tilt_offset=None,
         thickness_mesaure=None,
-        gain_file_name=None,
+        user_id=None,
     ):
         """
         An updated method signature that aligns more closely with the parameters
@@ -95,9 +95,7 @@ class Aretomo3(object):
 
             write_input(run_number)
             write_input(denoise_training)
-            write_input(even_odd_split)
-            logger.info("denoise training:{}".format(denoise_training))
-            logger.info("denoise training:{}".format(denoise_training))
+            # write_input(even_odd_split)
             write_input(pixel_size)
 
             if use_advanced_params.lower() == 'yes':
