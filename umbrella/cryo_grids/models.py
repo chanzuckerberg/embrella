@@ -129,7 +129,7 @@ class CryoGrid(models.Model):
     resource_link = models.URLField(max_length=200, blank=True, null=True, help_text='Link to additional resources related to this cryo-grid')
 
     class Meta:
-        unique_together = ["name","freezing_session","copy_number"]
+        unique_together = ["name","freezing_session","specimen","copy_number"]
         constraints = [
             models.UniqueConstraint(fields=["grid_box","position_in_box"], name="unique_box_position", condition=models.Q(trashed=False), nulls_distinct=True),
             models.UniqueConstraint(fields=["grid_cassette","slot_number_in_cassette"], name="unique_cassette_slot", condition=models.Q(trashed=False), nulls_distinct=True),
