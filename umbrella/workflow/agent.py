@@ -35,6 +35,7 @@ class Aretomo3(object):
         align_z=None,
         vol_z=None,
         imod_option=None,
+        user_id=None,
         local_shift=None,
         tilt_offset=None,
         thickness_mesaure=None,
