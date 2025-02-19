@@ -18,7 +18,7 @@ from datetime import timedelta
 from datetime import datetime
 from tem.models import MsiSession
 from django.db.models import Case, When, F, Value, CharField, Count
-from cryo_grids.models import CryoGrid, PlungeFreezingSession, Specimen
+from cryo_grids.models import CryoGrid, PlungeFreezingSession, Specimen, Sample
 from processes.models import *
 from processes.utils import QueryParams, InputTomogramModel,AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
@@ -170,17 +170,6 @@ def get_all_image_paths(request):
     return JsonResponse(data=error_response.dict(), status=404, safe=False)
 
 
-# def get_freezing_plan_tags(fz_plan_id):
-#     try:
-#         freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
-#         freezing_plan_list = []
-#         for sample in freezing_plan.sample.all():
-#             tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-#         return f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag"
-#     except Exception:
-#         return None
-
-#for tomo filter page
 @require_http_methods(["GET"])
 def available_filters(request):
     try:
@@ -214,10 +203,9 @@ def available_filters(request):
             'msi_session__atlas_session__group',
             'msi_session__grid__specimen'
         ).prefetch_related(
-            'msi_session__grid__specimen',
-            'msi_session__grid__specimen__tags',
+            'msi_session__grid__specimen__samples',  # Updated: prefetch the samples (many-to-many)
             'runpipedata_set__tomograms_set'
-        ).filter(filter_criteria,proc_plan__name__in=['czii-live', 'czii-denoise'])
+        ).filter(filter_criteria, proc_plan__name__in=['czii-live', 'czii-denoise'])
 
         # Add date ranges
         current_time = now()
@@ -239,7 +227,9 @@ def available_filters(request):
                     if isinstance(item_name, bool):
                         item['selected'] = item_name in selected_values
                     elif isinstance(item_name, str):
-                        item['selected'] = item_name.strip().lower() in {val.lower() for val in selected_values if isinstance(val, str)}
+                        item['selected'] = item_name.strip().lower() in {
+                            val.lower() for val in selected_values if isinstance(val, str)
+                        }
                     else:
                         item['selected'] = False
 
@@ -257,7 +247,7 @@ def available_filters(request):
                     user_temp_name=Trim(
                         Case(
                             When(
-                                msi_session__user__username__contains='@',  # Ensure this path is correct
+                                msi_session__user__username__contains='@',
                                 then=Substr(
                                     F('msi_session__user__username'),
                                     1,
@@ -275,7 +265,7 @@ def available_filters(request):
                 .values(name=F('user_temp_name'), count=F('count'))
             ),
             'msiSession': list(
-                queryset.exclude(msi_session__name__isnull=True) 
+                queryset.exclude(msi_session__name__isnull=True)
                 .values(session_name=F('msi_session__name'))
                 .annotate(count=Count('id'))
                 .order_by('session_name')
@@ -306,57 +296,35 @@ def available_filters(request):
             ],
         }
 
-        # Process samples with tags
+        # Process samples from the many-to-many relationship (updated)
         sample_data = (
             queryset.values(
-                sample_name=F('msi_session__grid__specimen__sample'),
-                tag_name=F('msi_session__grid__specimen__tags')
+                sample_name=F('msi_session__grid__specimen__samples__name'),
             )
-            .annotate(count=Count('id'))
-            .order_by('sample_name', 'tag_name')
-        )
-
-        # Process samples to ensure exclusive categorization as "with tag" or "without tag"
-        sample_data = (
-            queryset.values(
-                sample_name=F('msi_session__grid__specimen__sample'),
-                tag_name=F('msi_session__grid__specimen__tags')
-            )
-            .annotate(count=Count('id'))
-            .order_by('sample_name', 'tag_name')
+            .annotate(count=Count('id', distinct=True))
+            .order_by('sample_name')
         )
 
         processed_samples = {}
         for item in sample_data:
             sample_name = item['sample_name']
-            tag_name = item['tag_name']
-            
-            if sample_name not in processed_samples:
-                if sample_name is None:
-                    continue
-                # Default to "without tag" if no tags are encountered
-                processed_samples[sample_name] = {
-                    'name': f"{sample_name}",
-                    'count': 0,
-                    'selected': False
-                }
-
-            if tag_name:  # If there's a tag, overwrite the entry with "with tag"
-                tag_names = ', '.join(
-                    sample_data.filter(sample_name=sample_name)
-                    .values_list('tag_name', flat=True)
-                    .distinct()
-                )
-                processed_samples[sample_name] = {
-                    'name': f"{sample_name} with {tag_names}",
-                    'count': processed_samples[sample_name]['count'] + item['count'],
-                    'selected': False
-                }
-            else:
-                # Count samples without tags
+            if sample_name is None:
+                continue
+            if sample_name in processed_samples:
                 processed_samples[sample_name]['count'] += item['count']
-
-        # Convert processed_samples to a list for the final 'sample' filter
+            else:
+                try:
+                    sample_obj = Sample.objects.get(name=sample_name)
+                    display_name = sample_obj.name
+                    if sample_obj.ontology:
+                        display_name += f" ({sample_obj.ontology})"
+                except Sample.DoesNotExist:
+                    display_name = sample_name
+                processed_samples[sample_name] = {
+                    'name': display_name,
+                    'count': item['count'],
+                    'selected': False
+                }
         filters['sample'] = list(processed_samples.values())
 
         # Apply 'selected' status to filters
@@ -375,14 +343,12 @@ def available_filters(request):
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-
     
 @require_http_methods(["GET"])
 def get_tomo_details(request):
     try:
         # Parse 'q' parameter if provided
         raw_q_param = request.GET.get('q', None)
-        # print(get_freezing_plan_tags(1))
         if raw_q_param:
             try:
                 q_param = json.loads(raw_q_param)
@@ -413,10 +379,9 @@ def get_tomo_details(request):
         # Override pagination and sorting if provided in q_param
         for item in q_param:
             if item['category'] == 'sort':
-                # Map 'createdAt' to the actual database field for sorting
                 sort_value = extract_value(item['value'])
                 if sort_value == 'updatedAt':
-                    sort_field = 'updated_at'  # Corresponding database field
+                    sort_field = 'updated_at'
             elif item['category'] == 'asc':
                 asc_value = extract_value(item['value'])
                 asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
@@ -425,25 +390,22 @@ def get_tomo_details(request):
             elif item['category'] == 'pageSize':
                 page_size = int(extract_value(item['value']))
 
-
-
         # Determine sort order
         sort_order = sort_field if asc else f'-{sort_field}'
 
-
         # Base queryset with selected related fields
         queryset = ProcRun.objects.select_related(
-            'proc_plan',  # Direct relationship
-            'msi_session',  # Join with tem_msisession
+            'proc_plan',
+            'msi_session',
             'freezing_session',
-            'msi_session__project',  # Join with the related project
-            'msi_session__grid',  # Join with the related grid
-            'msi_session__user',  # Join with the related user
-            'msi_session__atlas_session',  # Join with tem_atlassession
-            'msi_session__atlas_session__group',  # Join with tem_screensessiongroup
-            'msi_session__grid__specimen'  # Join with plungefreezingplan
+            'msi_session__project',
+            'msi_session__grid',
+            'msi_session__user',
+            'msi_session__atlas_session',
+            'msi_session__atlas_session__group',
+            'msi_session__grid__specimen'
         ).prefetch_related(
-            'msi_session__grid__specimen__sample',  # Prefetch the many-to-many relationship
+            'msi_session__grid__specimen__samples',  # Updated prefetch: use many-to-many field "samples"
             'runpipedata_set__tomograms_set'
         ).filter(
             proc_plan__name__in=['czii-live', 'czii-denoise']
@@ -472,8 +434,6 @@ def get_tomo_details(request):
             user_name=F('msi_session__user__username'),
             specimen_id=F('msi_session__grid__specimen__id'),
             screening_session_name=F('msi_session__atlas_session__group__name'),
-            specimen_sample_id=F('msi_session__grid__specimen__id'),
-            specimen_sample_name=F('msi_session__grid__specimen__sample')
         ).order_by(sort_order)
 
         date_mapping = {
@@ -491,21 +451,14 @@ def get_tomo_details(request):
             if category == 'procPlan':
                 filter_criteria &= Q(proc_plan__name__in=values)
             elif category == 'user':
-                # Automatically detect email-like usernames (contains '@') or general usernames
-
-                # Handle email-like usernames in the database
                 user_filter = Q()
                 for value in values:
-                    # Use `startswith` to match both exact usernames and email-like formats
                     user_filter |= Q(msi_session__user__username__startswith=value)
                 filter_criteria &= user_filter
-
             elif category == 'screeningSession':
-                # Support multiple `icontains` values with OR logic, including None
                 session_filter = Q()
                 for value in values:
                     if value is None:
-                        # Add a filter for NULL values in the database
                         session_filter |= Q(msi_session__atlas_session__group__name__isnull=True)
                     else:
                         session_filter |= Q(msi_session__atlas_session__group__name__icontains=value)
@@ -515,71 +468,74 @@ def get_tomo_details(request):
             elif category == 'project':
                 filter_criteria &= Q(msi_session__project__name__in=values)
             elif category == 'msiSession':
-                # Support multiple `icontains` values with OR logic, including None
                 session_name_filter = Q()
                 for value in values:
                     if value is None:
-                        # Add a filter for NULL values in the database
                         session_name_filter |= Q(msi_session__name__isnull=True)
                     else:
                         session_name_filter |= Q(msi_session__name__icontains=value)
                 filter_criteria &= session_name_filter
             elif category == 'tomograms':
                 filter_criteria &= Q(name__in=values)
-
             elif category == 'date' and values:
-                # Handle the possible values for the 'date' filter
                 date_value = values[0] if isinstance(values, list) else values
                 if date_value in date_mapping:
                     months = date_mapping[date_value]
-                    now = datetime.now()
-                    start_date = now - timedelta(days=months * 30)
-                    filter_criteria &= Q(updated_at__gte=start_date)  # Use 'created_at' column for filtering
+                    now_dt = datetime.now()
+                    start_date = now_dt - timedelta(days=months * 30)
+                    filter_criteria &= Q(updated_at__gte=start_date)
                 else:
                     return JsonResponse({'error': f'Invalid value for date filter: {date_value}'}, status=400)
             elif category == 'sample':
+                # Updated sample filtering using the many-to-many field "samples"
                 sample_filter = Q()
                 for value in values:
-                    # If the value is explicitly None, filter where sample is NULL
                     if value is None:
-                        sample_filter |= Q(msi_session__grid__specimen__sample__isnull=True)
+                        sample_filter |= Q(msi_session__grid__specimen__samples__isnull=True)
                     elif "with " in value:
-                        # Extract the sample name and specific tag
                         parts = value.split(" with ")
                         sample_name = parts[0].strip()
-                        tag_name = parts[1].strip() if len(parts) > 1 else None
-                        # Match the sample name and the specific tag
+                        ontology_value = parts[1].strip() if len(parts) > 1 else None
                         sample_filter |= Q(
-                            msi_session__grid__specimen__sample=sample_name,
-                            msi_session__grid__specimen__tags__icontains=tag_name
+                            msi_session__grid__specimen__samples__name=sample_name,
+                            msi_session__grid__specimen__samples__ontology__icontains=ontology_value
                         )
                     elif "without tag" in value:
                         sample_name = value.replace(" without tag", "").strip()
-                        # Match the sample name and ensure no tags are associated
                         sample_filter |= Q(
-                            msi_session__grid__specimen__sample=sample_name,
-                            msi_session__grid__specimen__tags__isnull=True
-                        )
+                            msi_session__grid__specimen__samples__name=sample_name
+                        ) & (Q(msi_session__grid__specimen__samples__ontology='') | Q(msi_session__grid__specimen__samples__ontology__isnull=True))
                     else:
-                        # General match for just sample names without tag qualifiers
-                        sample_filter |= Q(msi_session__grid__specimen__sample=value)
-                
+                        sample_filter |= Q(msi_session__grid__specimen__samples__name=value)
                 filter_criteria &= sample_filter
+
         queryset = queryset.filter(filter_criteria)
-        # print(queryset)
 
         # Prepare unique results for the response
         unique_results = {}
+        base_url = get_base_url()  # Assuming this function exists
         for entry in queryset:
             procrun_id = entry.get('id')
             tomogram_id = entry.get('run_pipe_run_id')
-            if procrun_id not in unique_results and tomogram_id is not None:  # Ensure we only count entries with tomograms
+            if procrun_id not in unique_results and tomogram_id is not None:
                 proc_run_updated_at = datetime.fromisoformat(str(entry.get('updated_at'))).strftime('%Y-%m-%d') if entry.get('updated_at') else None
                 cryogrid_created_at = datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d') if entry.get('cryogrid_created_at') else None
                 response_model = ResponseModel(
-                    tomograms=TomogramModel(id=tomogram_id, name="{} (id={})".format(entry.get('name'), tomogram_id), url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"),
-                    procPlan=ProcPlanModel(id=entry.get('proc_plan_plan_id'), name=entry.get('proc_plan_name'), url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"),
-                    procRun=ProcRunModel(id=procrun_id, notes=entry.get('notes'), updatedAt=str(proc_run_updated_at)),
+                    tomograms=TomogramModel(
+                        id=tomogram_id,
+                        name="{} (id={})".format(entry.get('name'), tomogram_id),
+                        url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"
+                    ),
+                    procPlan=ProcPlanModel(
+                        id=entry.get('proc_plan_plan_id'),
+                        name=entry.get('proc_plan_name'),
+                        url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"
+                    ),
+                    procRun=ProcRunModel(
+                        id=procrun_id,
+                        notes=entry.get('notes'),
+                        updatedAt=str(proc_run_updated_at)
+                    ),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
                         name="{} (id={})".format(entry.get('cryogrid_name'), entry.get('cryogrid_id')),
@@ -587,8 +543,15 @@ def get_tomo_details(request):
                         url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
                         createdAt=str(cryogrid_created_at)
                     ),
-                    project=ProjectModel(id=entry.get('project_id'), name=entry.get('project_name'), url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"),
-                    user=UserModel(id=entry.get('user_id'), name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')),
+                    project=ProjectModel(
+                        id=entry.get('project_id'),
+                        name=entry.get('project_name'),
+                        url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"
+                    ),
+                    user=UserModel(
+                        id=entry.get('user_id'),
+                        name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')
+                    ),
                     msiSession=MSISessionModel(
                         id=entry.get('msi_session_id'),
                         name=entry.get('msi_session_name'),
@@ -608,18 +571,17 @@ def get_tomo_details(request):
         except EmptyPage:
             paginated_data = paginator.page(paginator.num_pages)
 
-        # Final response structure with pagination applied to formatted response data
         result = {
-            'result': list(paginated_data),  # Contains only the paginated items for the current page
+            'result': list(paginated_data),
             'pagination': {
-                'page': paginated_data.number,  # Current page number
-                'pageSize': int(page_size),  # Items per page
-                'totalPages': paginator.num_pages,  # Total number of pages
-                'totalResults': paginator.count,  # Total number of items across all pages
+                'page': paginated_data.number,
+                'pageSize': int(page_size),
+                'totalPages': paginator.num_pages,
+                'totalResults': paginator.count,
             },
             'sortBy': SortMetadataModel(
-                sort= 'updatedAt' if sort_field is not None else None,
-                asc= asc
+                sort='updatedAt' if sort_field is not None else None,
+                asc=asc
             ).model_dump()
         }
 
@@ -651,23 +613,23 @@ def available_annotation_filter(request):
         for qf in query_params.q:
             selected_filters[qf.category] = set(qf.value)  # Store as a set for efficient lookup
 
-        # Base queryset with annotations for counting occurrences
+        # Build base filter criteria (if any additional criteria are needed)
         filter_criteria = Q()
 
+        # Updated queryset: prefetch the many-to-many "samples" field from Specimen.
         queryset = Annotation.objects.select_related(
             'msi_session',
             'msi_session__project',
             'msi_session__user',
             'msi_session__grid',
             'msi_session__grid__specimen',
-            'msi_session__grid__specimen__sample',
             'msi_session__grid__gridpreparationlog',
             'msi_session__atlas_session__group',
-            'pipe_data__run__proc_plan'  # Traverse the relationship to proc_plan
+            'pipe_data__run__proc_plan'
         ).prefetch_related(
-            'msi_session__grid__specimen__tags'
+            'msi_session__grid__specimen__samples'
         ).exclude(
-            pipe_data__run__proc_plan__name__in=['czii-live', 'czii-denoise']  # Exclude specific proc p
+            pipe_data__run__proc_plan__name__in=['czii-live', 'czii-denoise']
         ).values(
             'id',
             'updated_at',
@@ -675,12 +637,13 @@ def available_annotation_filter(request):
             project_display_name=F('msi_session__project__name'),
             user_display_name=F('msi_session__user__username'),
             grid_display_name=F('msi_session__grid__name'),
-            specimen_protocol=F('msi_session__grid__specimen__protocol'),
-            grid_preparation_log_blot_time=F('msi_session__grid__grid_prep_log__blot_time'),
-            specimen_sample=F('msi_session__grid__specimen__sample'),
-            specimen_tags=F('msi_session__grid__specimen__tags'),
+            specimen_protocol=F('msi_session__grid__specimen__notes'),
+            grid_preparation_log_blot_time=F('msi_session__grid__blot_time'),
+            # Updated: use the many-to-many "samples" field for specimen sample name and ontology
+            specimen_sample=F('msi_session__grid__specimen__samples__name'),
+            specimen_tags=F('msi_session__grid__specimen__samples__ontology'),
             screen_session_display_name=F('msi_session__atlas_session__group__name'),
-            proc_plan_display_name=F('pipe_data__run__proc_plan__name')  # Access proc_plan name
+            proc_plan_display_name=F('pipe_data__run__proc_plan__name')
         ).filter(filter_criteria)
 
         current_time = now()
@@ -702,7 +665,9 @@ def available_annotation_filter(request):
                     if isinstance(item_name, bool):
                         item['selected'] = item_name in selected_values
                     elif isinstance(item_name, str):
-                        item['selected'] = item_name.strip().lower() in {val.lower() for val in selected_values if isinstance(val, str)}
+                        item['selected'] = item_name.strip().lower() in {
+                            val.lower() for val in selected_values if isinstance(val, str)
+                        }
                     else:
                         item['selected'] = False
 
@@ -738,21 +703,21 @@ def available_annotation_filter(request):
             ),
             'msiSession': list(
                 queryset.exclude(msi_session__name__isnull=True)
-                .values(msi_session_name=F('msi_session__name'))  # Correct reference to session name
+                .values(msi_session_name=F('msi_session__name'))
                 .annotate(count=Count('id'))
                 .order_by('msi_session_name')
                 .values(name=F('msi_session_name'), count=F('count'))
             ),
             'screeningSession': list(
-                queryset.exclude(screen_session_display_name__isnull=True) 
-                .values(screen_session_name=F('screen_session_display_name'))  # Updated alias
+                queryset.exclude(screen_session_display_name__isnull=True)
+                .values(screen_session_name=F('screen_session_display_name'))
                 .annotate(count=Count('id'))
                 .order_by('screen_session_name')
                 .values(name=F('screen_session_name'), count=F('count'))
             ),
             'sample': list(
-                queryset.values(sample_name=F('specimen_sample'))  # Group by sample name
-                .annotate(count=Count('id', distinct=True))  # Ensure unique counts
+                queryset.values(sample_name=F('specimen_sample'))
+                .annotate(count=Count('id', distinct=True))
                 .order_by('sample_name')
                 .values(name=F('sample_name'), count=F('count'))
             ),
@@ -763,7 +728,7 @@ def available_annotation_filter(request):
                 .values(name=F('grid_name'), count=F('count'))
             ),
             'procPlan': list(
-                queryset.values(proc_plan_name=F('proc_plan_display_name'))  # Use updated alias
+                queryset.values(proc_plan_name=F('proc_plan_display_name'))
                 .annotate(count=Count('id'))
                 .order_by('proc_plan_name')
                 .values(name=F('proc_plan_name'), count=F('count'))
@@ -776,54 +741,40 @@ def available_annotation_filter(request):
                 for key, value in date_ranges.items()
             ],
         }
-        # Process samples to ensure exclusive categorization as "with tag" or "without tag"
+
+        # Process samples to ensure exclusive categorization as "with ontology" or "without ontology"
         sample_data = (
             queryset.values(
-                sample_name=F('msi_session__grid__specimen__sample'),
-                tag_name=F('msi_session__grid__specimen__tags')
+                sample_name=F('msi_session__grid__specimen__samples__name'),
+                ontology=F('msi_session__grid__specimen__samples__ontology')
             )
             .annotate(count=Count('id'))
-            .order_by('sample_name', 'tag_name')
+            .order_by('sample_name', 'ontology')
         )
 
         processed_samples = {}
         for item in sample_data:
             sample_name = item['sample_name']
-            tag_name = item['tag_name']
-
+            ontology = item.get('ontology')
+            if not sample_name:
+                continue
             if sample_name not in processed_samples:
-                if sample_name is None:
-                    continue
+                # Use ontology information if available
+                display_name = f"{sample_name}"
                 processed_samples[sample_name] = {
-                    'name': f"{sample_name} without tag",
-                    'count': 0,
-                    'selected': False
-                }
-
-            if tag_name:  # If there's a tag, overwrite the entry with "with tag"
-                tag_names = ', '.join(
-                    sample_data.filter(sample_name=sample_name)
-                    .values_list('tag_name', flat=True)
-                    .distinct()
-                )
-                processed_samples[sample_name] = {
-                    'name': f"{sample_name} with {tag_names}",
-                    'count': processed_samples[sample_name]['count'] + item['count'],
+                    'name': display_name,
+                    'count': item['count'],
                     'selected': False
                 }
             else:
-                # Count samples without tags
                 processed_samples[sample_name]['count'] += item['count']
 
-        # Convert processed_samples to a list for the final 'sample' filter
         filters['sample'] = list(processed_samples.values())
 
-
-        # Apply 'selected' status to filters
+        # Apply 'selected' status to all filters
         for key, filter_list in filters.items():
             add_selected_status(filter_list, key)
 
-        # Convert to the expected output format
         response_data = {
             "filters": filters
         }
@@ -831,7 +782,6 @@ def available_annotation_filter(request):
         return JsonResponse(response_data)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-    
 
 
 
@@ -926,12 +876,12 @@ def get_annotation_details(request):
             project_name=F('pipe_data__run__msi_session__project__name'),
             user_id=F('pipe_data__run__msi_session__user__id'),
             user_name=F('pipe_data__run__msi_session__user__username'),
-            msi_session_identifier=F('pipe_data__run__msi_session__id'),  # Updated alias
+            msi_session_identifier=F('pipe_data__run__msi_session__id'),
             msi_session_name=F('pipe_data__run__msi_session__name'),
             tomogram_id=F('tomograms__id'),
             tomogram_name=F('tomograms__pipe_data__run__name')
         ).order_by(sort_order)
-        print(queryset)
+        # print(queryset)
         # Apply filters from q_param
         filter_criteria = Q()
         for item in q_param:
@@ -954,27 +904,23 @@ def get_annotation_details(request):
                 date_value = values[0] if isinstance(values, list) else values
                 if date_value in date_mapping:
                     months = date_mapping[date_value]
-                    now = datetime.now()
-                    start_date = now - timedelta(days=months * 30)
-                    filter_criteria &= Q(updated_at__gte=start_date)  # Use 'created_at' column for filtering
+                    now_dt = datetime.now()
+                    start_date = now_dt - timedelta(days=months * 30)
+                    filter_criteria &= Q(updated_at__gte=start_date)
                 else:
                     return JsonResponse({'error': f'Invalid value for date filter: {date_value}'}, status=400)
             elif category == 'msiSession':
-                # Support multiple `icontains` values with OR logic, including None
                 session_name_filter = Q()
                 for value in values:
                     if value is None:
-                        # Add a filter for NULL values in the database
                         session_name_filter |= Q(msi_session__name__isnull=True)
                     else:
                         session_name_filter |= Q(msi_session__name__icontains=value)
                 filter_criteria &= session_name_filter
             elif category == 'screeningSession':
-                # Support multiple `icontains` values with OR logic, including None
                 session_filter = Q()
                 for value in values:
                     if value is None:
-                        # Add a filter for NULL values in the database
                         session_filter |= Q(msi_session__atlas_session__group__name__isnull=True)
                     else:
                         session_filter |= Q(msi_session__atlas_session__group__name__icontains=value)
@@ -982,33 +928,27 @@ def get_annotation_details(request):
             elif category == 'sample':
                 sample_filter = Q()
                 for value in values:
-                    # Check if the sample value contains "with " or "without tag"
+                    # Updated sample filter using the many-to-many relationship on specimens
                     if "with " in value:
-                        # Extract the sample name and specific tag
                         parts = value.split(" with ")
                         sample_name = parts[0].strip()
-                        tag_name = parts[1].strip() if len(parts) > 1 else None
-                        # Match the sample name and the specific tag
+                        ontology_value = parts[1].strip() if len(parts) > 1 else None
                         sample_filter |= Q(
-                            msi_session__grid__specimen__sample=sample_name,
-                            msi_session__grid__specimen__tags__icontains=tag_name
+                            pipe_data__run__msi_session__grid__specimen__samples__name=sample_name,
+                            pipe_data__run__msi_session__grid__specimen__samples__ontology__icontains=ontology_value
                         )
                     elif "without tag" in value:
                         sample_name = value.replace(" without tag", "").strip()
-                        # Match the sample name and ensure no tags are associated
                         sample_filter |= Q(
-                            msi_session__grid__specimen__sample=sample_name,
-                            msi_session__grid__specimen__tags__isnull=True
-                        )
+                            pipe_data__run__msi_session__grid__specimen__samples__name=sample_name
+                        ) & (Q(pipe_data__run__msi_session__grid__specimen__samples__ontology='') | Q(pipe_data__run__msi_session__grid__specimen__samples__ontology__isnull=True))
                     else:
-                        # General match for just sample names without tag qualifiers
-                        sample_filter |= Q(msi_session__grid__specimen__sample=value)
+                        sample_filter |= Q(pipe_data__run__msi_session__grid__specimen__samples__name=value)
                 filter_criteria &= sample_filter
 
         queryset = queryset.filter(filter_criteria)
 
         # Prepare unique results for the response
-        # unique_results = {}
         response_data = [] 
         for entry in queryset:
             procrun_id = entry.get('proc_run_id')  # Using `proc_run_id` from the query
@@ -1023,8 +963,6 @@ def get_annotation_details(request):
                 if entry.get('proc_run_updated_at') else None
             )
 
-            # if procrun_id not in unique_results:
-            # Create a response model instance
             response_model = AnnotationResponseModel(
                 annotations=AnnotationModel(
                     id=entry.get('annotation_id'),
@@ -1069,11 +1007,7 @@ def get_annotation_details(request):
                     url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_identifier')}"
                 )
             )
-            # unique_results[procrun_id] = response_model.dict()
-
-        # response_data = list(unique_results.values())
-            response_data.append(response_model.dict())  # Append the result directly
-
+            response_data.append(response_model.dict())
 
         # Paginate the formatted response data using Django's Paginator
         paginator = Paginator(response_data, page_size)
@@ -1084,18 +1018,17 @@ def get_annotation_details(request):
         except EmptyPage:
             paginated_data = paginator.page(paginator.num_pages)
 
-        # Final response structure with pagination applied to formatted response data
         result = {
             'result': list(paginated_data),  # Contains only the paginated items for the current page
             'pagination': {
                 'page': paginated_data.number,  # Current page number
-                'pageSize': int(page_size),  # Items per page
+                'pageSize': int(page_size),       # Items per page
                 'totalPages': paginator.num_pages,  # Total number of pages
-                'totalResults': paginator.count,  # Total number of items across all pages
+                'totalResults': paginator.count,    # Total number of items across all pages
             },
             'sortBy': SortMetadataModel(
-                sort= 'updatedAt' if sort_field is not None else None,
-                asc= asc
+                sort='updatedAt' if sort_field is not None else None,
+                asc=asc
             ).model_dump()
         }
 
