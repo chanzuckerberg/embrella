@@ -94,14 +94,24 @@ class PlungeFreezingSession(models.Model):
 
     def __str__(self):
         return '%s' % self.datetime.date().isoformat()
+    
+class Sample(models.Model):
+    name = models.CharField(max_length=150, unique=True,help_text='unique sample name that you may use to search your grid for later. For example, lysosome')
+    ontology = models.CharField(max_length=32, blank=True,help_text='ontology name and values to help database deposition. For example: "GO:0005764" for lysosome')
 
+    def __str__(self):
+        return self.name
     
 class Specimen(models.Model):
-    sample = models.CharField(max_length=150, unique=True,help_text='unique sample name that you may use to search your grid for later. For example, lysosome')
-    tags = models.CharField(max_length=30, null=True, blank=True)
+    
+    samples = models.ManyToManyField(
+        Sample, 
+        blank=True, 
+        help_text='Associated samples from the Sample'
+    )
     notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for sample prep')
-    protocol = models.TextField(max_length=255, blank=True)
-    ontology = models.CharField(max_length=32, blank=True,help_text='ontology name and values to help database deposition. For example: "GO:0005764" for lysosome')
+    notes = models.TextField(max_length=255, blank=True)
+    
 
     def __str__(self):
         return f"{self.sample} with {self.tags}" if self.tags else self.sample
