@@ -143,9 +143,9 @@ def available_filters(request):
         # Base queryset with annotations for counting occurrences
         queryset = CryoGrid.objects.select_related(
             'intended_project', 'freezing_session', 'grid_box__puck', 'user',
-            'grid_cassette', 'specimen'
+            'grid_cassette', 'specimen', 'sample'
         ).prefetch_related(
-            'msisession', 'specimen__sample', 'specimen__tags',
+            'msisession', 'specimen__samples',
             'atlassession__group'
         )
 
@@ -252,11 +252,9 @@ def available_filters(request):
                 # Create a string that summarizes the freezing plan details
                 specimen_details = []
                 for entry in specimens:
-                    tag_names = entry.tags
-                    print(tag_names)
                     # plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
                     processed_samples.append({
-                        'name': f"{entry.sample} with {tag_names}" if tag_names is not None else f"{entry.sample}",
+                        'name': f"{entry.sample}",
                         'count': item['count'],  # Retain the original count
                         'selected': False  # Default selected status
                     })
