@@ -23,7 +23,11 @@ def create_project():
     project = Project.objects.create(name='BD01', google_drive_folder=drive, confluence_space=confluence)
     return project
 
-def create_grid(user, project):
+def create_sample():
+    sample = Sample.objects.create(name='lysosome',ontology='GO:0005764')
+    return sample
+
+def create_grid(user, project, sample_input):
     site = Site.objects.create(name='3400Bridge',address='3400 Bridge Parkway')
     dewar = Dewar.objects.create(name='CZII 1', site=site)
     dewar2 = Dewar.objects.create(name='CZII 2', site=site)
@@ -38,7 +42,7 @@ def create_grid(user, project):
         Puck.objects.create(name=f'puck{i}', color=PUCK_COLORS[i-11][0],cane=cane2,position_in_cane=i-10)
 
     box = CryoGridBox.objects.create(name='box1', color='FFFFFF',puck=puck,position_in_puck=1)
-    specimen = Specimen.objects.create(sample='lysosome',tags=None, protocol='',ontology='GO:0005764')
+    specimen = Specimen.objects.create(samples=sample_input,notes='')
     device = PlungeFreezingDevice.objects.create(name='GP2',maker_model='Leica GP2',site=site)
     device_vitrobot = PlungeFreezingDevice.objects.create(name='Vitrobot', maker_model='Vitrobot', site=site)
     session = PlungeFreezingSession.objects.create(user=user,device=device,device_temperature=4.0,humidity=95,number_of_grids=1)
@@ -107,7 +111,8 @@ def run():
         print('Please create superuser first')
         sys.exit(1)
     project=create_project()
-    grid=create_grid(User.objects.get(pk=1), project)
+    sample=create_sample()
+    grid=create_grid(User.objects.get(pk=1), project, sample)
     scope,camera=create_scope_camera()
     plan=create_tomo5_plan(scope, camera)
 

@@ -18,6 +18,7 @@ export interface GridData {
   user: UserField;
   specimen: {
     id: number;
+    name: string;
     sample: EntityLinkField[];
   };
   freezingSession: {
