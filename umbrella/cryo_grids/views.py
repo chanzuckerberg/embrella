@@ -25,7 +25,7 @@ from functools import reduce
 # project app imports
 from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, CryoGridCassette, \
     PlungeFreezingSession
-from .models import CryoGrid, CryoGridBox, Specimen
+from .models import CryoGrid, CryoGridBox, Specimen, Sample
 from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
 from .forms import CopyGridForm, ClearCassetteForm, NumberToCopyGridForm
 from stores.models import Path
@@ -184,7 +184,7 @@ def available_filters(request):
                     else:
                         item['selected'] = False
 
-        # Aggregating counts for each filter (this part remains the same as your original logic)
+        # Aggregating counts for each filter
         filters = {
             'project': list(queryset.annotate(project_temp_name=F('intended_project__name'))
                         .values(project_temp_name=F('project_temp_name'))
@@ -192,15 +192,30 @@ def available_filters(request):
                         .order_by('project_temp_name')
                         .values(name=F('project_temp_name'), count=F('count'))),
             'puck': list(queryset.annotate(puck_temp_name=F('grid_box__puck__name'))
+                        .filter(puck_temp_name__isnull=False)  # Exclude null puck names
                         .values(puck_temp_name=F('puck_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('puck_temp_name')
                         .values(name=F('puck_temp_name'), count=F('count'))),
-            'sample': list(queryset.annotate(sample_temp_name=F('specimen__sample'))
+            'sample': list(queryset.annotate(sample_temp_name=F('specimen__samples__name'))
+                        .filter(sample_temp_name__isnull=False)  # Exclude null sample names
                         .values(sample_temp_name=F('sample_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('sample_temp_name')
                         .values(name=F('sample_temp_name'), count=F('count'))),
+            'cassette': list(queryset.annotate(cassette_temp_name=F('grid_cassette__name'))
+                        .filter(cassette_temp_name__isnull=False)  # Exclude null cassette names
+                        .values(cassette_temp_name=F('cassette_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('cassette_temp_name')
+                        .values(name=F('cassette_temp_name'), count=F('count'))),
+            'screeningSession': list(queryset.filter(freezing_session__isnull=False)
+                        .annotate(screen_session_temp_name=F('atlassession__group__name'))
+                        .filter(screen_session_temp_name__isnull=False)  # Exclude null screening session names
+                        .values(screen_session_temp_name=F('screen_session_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('screen_session_temp_name')
+                        .values(name=F('screen_session_temp_name'), count=F('count'))),
             'user': list(queryset.annotate(
                             user_temp_name=Trim(
                                 Case(
@@ -214,17 +229,6 @@ def available_filters(request):
                         .annotate(count=Count('id'))
                         .order_by('user_temp_name')
                         .values(name=Trim(F('user_temp_name')), count=F('count'))),
-            'cassette': list(queryset.annotate(cassette_temp_name=F('grid_cassette__name'))
-                        .values(cassette_temp_name=F('cassette_temp_name'))
-                        .annotate(count=Count('id'))
-                        .order_by('cassette_temp_name')
-                        .values(name=F('cassette_temp_name'), count=F('count'))),
-            'screeningSession': list(queryset.filter(freezing_session__isnull=False)
-                        .annotate(screen_session_temp_name=F('atlassession__group__name'))
-                        .values(screen_session_temp_name=F('screen_session_temp_name'))
-                        .annotate(count=Count('id'))
-                        .order_by('screen_session_temp_name')
-                        .values(name=F('screen_session_temp_name'), count=F('count'))),
             'msiSession': list(queryset.filter(msisession__isnull=False)  # Exclude null msisession relations
                         .annotate(msi_session_temp_name=F('msisession__name'))
                         .values(msi_session_temp_name=F('msi_session_temp_name'))
@@ -245,24 +249,21 @@ def available_filters(request):
         # Process the 'sample' filter and replace sample_name with the detailed information
         processed_samples = []
         for item in filters['sample']:
-            if 'name' in item:
-                # Get the associated freezing plans based on the sample name
-                specimens = Specimen.objects.filter(sample=item['name'])
-
-                # Create a string that summarizes the freezing plan details
-                specimen_details = []
-                for entry in specimens:
-                    # plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
+            if 'name' in item and item['name']:
+                try:
+                    sample_obj = Sample.objects.get(name=item['name'])
+                    display_name = sample_obj.name
+                    if sample_obj.ontology:
+                        display_name += f" ({sample_obj.ontology})"
                     processed_samples.append({
-                        'name': f"{entry.sample}",
-                        'count': item['count'],  # Retain the original count
-                        'selected': False  # Default selected status
+                        'name': display_name,
+                        'count': item['count'],
+                        'selected': False
                     })
-
+                except Sample.DoesNotExist:
+                    processed_samples.append(item)
             else:
-                # If no 'name' exists, simply append the original item
                 processed_samples.append(item)
-
         filters['sample'] = processed_samples
 
         # Apply 'selected' status to filters
@@ -358,8 +359,6 @@ def get_cryo_grids_details(request):
             fz_session_id=F('freezing_session__id'),
             fz_session_datetime=F('freezing_session__datetime'),
             specimen_uniq_id=F('specimen__id'),
-            # REPLACEMENT: use 'specimen_sample' as a string field
-            specimen_sample=F('specimen__sample'),
             screening_session_name=F('atlassession__group__name'),
         ).order_by(sort_order)
 
@@ -515,12 +514,11 @@ def get_specimen_list(specimen_id):
         specimen = Specimen.objects.get(id=specimen_id)
         specimen_list = []
         base_url = get_base_url()
-        for sample in specimen.sample.all():
+        for sample in specimen.samples.all():
             sample_url = f"{base_url}/admin/cryo_grids/specimen/{sample.id}"
-            tag_names = f"{specimen.tags}"
             specimen_list.append({
                 'id': sample.id,
-                'name': tag_names,
+                'name': sample.name,
                 'url': sample_url
             })
         return specimen_list
@@ -536,36 +534,29 @@ def extract_parts(text):
     main_match = re.match(r'^[^\(\[,]+', text)
     main_part = main_match.group(0).strip() if main_match else text.strip()  # Use full text if match fails
 
-    # Extract all words (tags) but remove main_part if present
-    tags = re.findall(r'\b\w+\b', text)
-    tags = [tag for tag in tags if tag.lower() != main_part.lower()]  # Case-insensitive removal
+    # # Extract all words (tags) but remove main_part if present
+    # tags = re.findall(r'\b\w+\b', text)
+    # tags = [tag for tag in tags if tag.lower() != main_part.lower()]  # Case-insensitive removal
 
-    return main_part, sorted(tags)  # Sorting ensures consistent comparison
+    return main_part #, sorted(tags)  # Sorting ensures consistent comparison
 
 def are_equivalent(text1, text2):
     return extract_parts(text1) == extract_parts(text2)
 
 def filter_by_sample_name(formatted_result, sample_name_input):
     """
-    Filter the final data by the raw 'specimen_sample' string 
-    (or a combination of 'sample + (tags)' if you store it that way).
+    Filter the final data by matching any of the specimen's sample names.
     """
     matching_results = {}
 
     if not sample_name_input or not isinstance(sample_name_input, list):
-        return matching_results  # Return empty if input is None or not a list
+        return matching_results
 
+    filter_value = sample_name_input[0]
     for grid_id, data in formatted_result.items():
-        sample_str = data['specimen'].get('sample')
-
-        if sample_str and isinstance(sample_str, list) and len(sample_str) > 0:
-            sample_str = sample_str[0].get('name', "")  # Handle missing 'name' key safely
-        else:
-            sample_str = ""
-
-        print(sample_str, sample_name_input[0])  # Debugging output
-
-        if are_equivalent(sample_str, sample_name_input[0]):
+        samples = data['specimen'].get('samples', [])
+        # Check if any sample's name is equivalent to the filter value
+        if any(are_equivalent(sample.get('name', ''), filter_value) for sample in samples):
             matching_results[grid_id] = data
 
     return matching_results
@@ -599,24 +590,25 @@ def format_user(item):
     return UserModel(id=item['userID'], name=item['username'].split('@')[0] if '@' in item['username'] else item['username'])
 
 
-
 def get_specimen_info(specimen_id):
-    """
-    Return a dict with specimen details or an empty dict if not found.
-    """
     try:
         specimen = Specimen.objects.get(id=specimen_id)
         base_url = get_base_url()
+        samples_list = []
+        for sample in specimen.samples.all():
+            sample_url = f"{base_url}/admin/cryo_grids/specimen/{sample.id}"
+            samples_list.append({
+                'id': sample.id,
+                'name': sample.name,
+                'url': sample_url,
+            })
+        # Extract all sample names
+        sample_names = [sample['name'] for sample in samples_list]
+
         return {
             'id': specimen.id,
-            "sample": [
-                {
-                    'id': specimen.id,
-                    'name': f"{specimen.sample} with {specimen.tags}" if specimen.tags is not None else f"{specimen.sample}",  # plain string
-                    'url': f"{base_url}/admin/cryo_grids/specimen/{specimen.id}",
-                }
-            ]
-            
+            'name': f"Specimen ({', '.join(sample_names)})" if sample_names else "Specimen (no samples)",
+            'samples': samples_list
         }
     except ObjectDoesNotExist:
         return {}

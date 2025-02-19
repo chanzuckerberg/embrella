@@ -114,7 +114,8 @@ class Specimen(models.Model):
     
 
     def __str__(self):
-        return f"{self.sample} with {self.tags}" if self.tags else self.sample
+        sample_names = ", ".join(sample.name for sample in self.samples.all())
+        return f"Specimen ({sample_names})" if sample_names else "Specimen (no samples)"
 
 
 class CryoGrid(models.Model):
