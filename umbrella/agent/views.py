@@ -22,6 +22,7 @@ EMB_SBERT = None # Chroma takes care
 
 LLM_OPENAI_GPT35 = "gpt-3.5-turbo"
 LLM_OPENAI_GPT40_MINI = "gpt-4o-mini"
+LLM_OPENAI_GPT40 = "gpt-4o"
 
 
 class ConfluenceQA:
@@ -38,80 +39,89 @@ class ConfluenceQA:
         self.embedding = OpenAIEmbeddings(model="text-embedding-3-small",api_key=os.environ['OPENAI_API_KEY'])
     def init_models(self) -> None:
         # OpenAI GPT 3.5 API
-        self.llm = ChatOpenAI(model_name=LLM_OPENAI_GPT40_MINI, temperature=0.)
+        self.llm = ChatOpenAI(model_name=LLM_OPENAI_GPT40, temperature=0.)
 
 
     def vector_db_confluence_docs(self, force_reload: bool = False) -> None:
-        """
-        Creates vector db for the embeddings and persists them or loads a vector db from the persist directory
-        """
         persist_directory = os.environ.get("persist_directory", "chroma_db")
-        confluence_url = os.environ.get("CONFLUENCE_URL", "chroma_db")
+        confluence_url = os.environ.get("CONFLUENCE_URL", None)
         username = os.environ.get("USERNAME", None)
         api_key = os.environ.get("CONFLUENCE_KEY", None)
-        space_key = os.environ.get("SPACE_KEY", None)
+        space_keys = [key.strip() for key in os.environ.get("SPACE_KEYS", "").split(",") if key.strip()]
 
-        if persist_directory and os.path.exists(persist_directory) and not force_reload:
-            # Load from the persist db
+        processed_keys_file = os.path.join(persist_directory, "processed_space_keys.json")
+        processed_keys = []
+        if os.path.exists(processed_keys_file):
+            with open(processed_keys_file, "r") as f:
+                processed_keys = json.load(f)
+
+        # Load existing vector database if available
+        if not force_reload and os.path.exists(persist_directory):
             self.vectordb = Chroma(persist_directory=persist_directory, embedding_function=self.embedding)
+            print("Loaded existing vector database.")
         else:
-            # 1. Extract the documents
+            self.vectordb = None
+
+        # Identify new space keys that haven't been processed
+        new_space_keys = [key for key in space_keys if key not in processed_keys]
+        
+        if not new_space_keys:
+            print("No new space keys detected. Skipping new embedding.")
+            # Here, if self.vectordb is already loaded, you can continue using it.
+            return
+
+        # Proceed with embedding for new space keys...
+        all_documents = []
+        for space_key in new_space_keys:
             loader = ConfluenceLoader(
                 url=confluence_url,
                 username=username,
-                api_key=api_key
+                api_key=api_key,
+                space_key=space_key
             )
-            documents = loader.load(
-                space_key=space_key,
-                limit=400
-            )
+            documents = loader.load(limit=400)
+            for doc in documents:
+                doc.metadata["space_key"] = space_key
+            all_documents.extend(documents)
+            print(f"Loaded {len(documents)} documents from new space: {space_key}")
 
-            # 2. Check for existing embeddings
-            existing_embeddings = self.vectordb.get_all_embeddings()  # Assuming this method exists
-            existing_ids = {doc['id'] for doc in existing_embeddings}  # Adjust based on your document structure
+        for doc in all_documents:
+            if "id" not in doc.metadata:
+                doc.metadata["id"] = str(hash(doc.page_content))
 
-            # 3. Filter out documents that already exist in the vector db
-            new_documents = [doc for doc in documents if doc['id'] not in existing_ids]  # Adjust based on your document structure
+        existing_ids = set()
+        if self.vectordb is not None:
+            try:
+                existing_data = self.vectordb._collection.get(where={}, include=["metadatas"])
+                existing_ids = {meta.get("id") for meta in existing_data.get("metadatas", []) if meta.get("id")}
+            except Exception as e:
+                print(f"Error fetching existing embeddings: {e}")
 
-            if not new_documents:
-                print("No new documents to embed.")
-                return  # Exit if there are no new documents
+        new_documents = [doc for doc in all_documents if doc.metadata["id"] not in existing_ids]
 
-            # 4. Split the texts
-            text_splitter = CharacterTextSplitter(chunk_size=20, chunk_overlap=0)
-            texts = text_splitter.split_documents(new_documents)
-            text_splitter = TokenTextSplitter(chunk_size=100, chunk_overlap=10, encoding_name="cl100k_base")
-            texts = text_splitter.split_documents(texts)
+        if not new_documents:
+            print("No new documents to embed.")
+            processed_keys.extend(new_space_keys)
+            with open(processed_keys_file, "w") as f:
+                json.dump(processed_keys, f)
+            return
 
-            # 5. Create Embeddings and add to chroma store
+        # Use text splitters and add documents to the vector database as before
+        char_splitter = CharacterTextSplitter(chunk_size=20, chunk_overlap=0)
+        texts = char_splitter.split_documents(new_documents)
+        token_splitter = TokenTextSplitter(chunk_size=100, chunk_overlap=10, encoding_name="cl100k_base")
+        texts = token_splitter.split_documents(texts)
+
+        if self.vectordb is None:
             self.vectordb = Chroma.from_documents(documents=texts, embedding=self.embedding, persist_directory=persist_directory)
+            print(f"Created a new vector database with {len(texts)} document chunks.")
+        else:
+            self.vectordb.add_documents(texts)
+            print(f"Added {len(texts)} new document chunks to the existing vector database.")
 
-    # def retreival_qa_chain(self):
-    #     """
-    #     Creates retrieval QA chain using vectordb as retriever and LLM to complete the prompt
-    #     """
-    #     # Define the custom prompt
-    #     custom_prompt_template = """You are a Confluence chatbot answering questions. Use the following pieces of context to answer the question at the end. If you don't know the answer, say that you don't know, don't try to make up an answer.
-    #
-    #     {context}
-    #
-    #     Question: {question}
-    #     Helpful Answer:"""
-    #
-    #     CUSTOM_PROMPT = PromptTemplate(
-    #         template=custom_prompt_template, input_variables=["context", "question"]
-    #     )
-    #
-    #     # Define a chain type with the custom prompt
-    #     from langchain.chains.question_answering import load_qa_chain
-    #     from langchain.chains import LLMChain
-    #
-    #     llm_chain = LLMChain(llm=self.llm, prompt=CUSTOM_PROMPT)
-    #     qa_chain = load_qa_chain(llm=self.llm, chain_type="stuff", retriever=self.vectordb.as_retriever())
-    #
-    #     # Update the QA chain with your custom prompt
-    #     self.retriever = self.vectordb.as_retriever(search_kwargs={"k": 4})
-    #     self.qa = RetrievalQA(llm_chain=qa_chain, retriever=self.retriever)
+        processed_keys.extend(new_space_keys)
+        with open(processed_keys_file, "w") as f:
+            json.dump(processed_keys, f)
 
     def retreival_qa_chain(self):
         """
@@ -125,14 +135,14 @@ class ConfluenceQA:
         ## Response Rules
 
         1. **General Questions (e.g., greetings, navigation, number of wikis, availability)**  
-        - Provide a **concise response (under 50 words)**.  
+        - Provide a **concise response (under 300 words)**.  
         - Keep the tone **friendly and professional**.  
 
         2. **Technical or Detailed Queries (e.g., CryoET, pipeline processes, workflows, or research topics)**  
         - Provide a **thorough response (at least 250 words)**.  
         - Use **clear headings** (e.g., "### Introduction", "### Key Details", "### Conclusion").  
         - Separate headings with a **blank line** beneath them for readability.  
-        - Use **short paragraphs** (3–5 sentences), and put a **blank line** between paragraphs.  
+        - Use **short paragraphs** (5–7 sentences), and put a **blank line** between paragraphs.  
         - Use **bullet points** or **numbered lists** for enumerations or key points.  
         - **Bold** or *italicize* key terms to emphasize important concepts or definitions.
 
