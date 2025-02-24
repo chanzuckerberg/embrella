@@ -239,7 +239,7 @@ class ConfluenceQA:
     def init_models(self) -> None:
         # Lower temperature for more deterministic answers
         self.llm = ChatOpenAI(
-            model_name=LLM_OPENAI_GPT40,
+            model_name=LLM_OPENAI_GPT40_MINI,
             temperature=0.2
         )
 
