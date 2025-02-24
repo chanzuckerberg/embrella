@@ -354,7 +354,7 @@ class ConfluenceQA:
         """
 
         # This is your custom prompt for the initial response
-        question_prompt_template = """You are a Confluence chatbot designed to answer questions about the company's wiki. Use the provided context to respond accurately and informatively. If you don't know the answer, say that you don't know; do not make up an answer.
+        question_prompt_template = """You are a Confluence chatbot designed to answer questions about the CZII wiki. Use the provided context to respond accurately and informatively. If you don't know the answer, say that you don't know; do not make up an answer.
 
         ---
 
