@@ -2,6 +2,9 @@ import paramiko
 
 from umbrella_logger import logger
 import subprocess
+import os
+from jinja2 import Environment, FileSystemLoader
+from umbrella_logger import logger
 
 class Aretomo3(object):
     def __init__(self, hostname, port, username, password, script_path):
@@ -217,3 +220,97 @@ class Aretomo3(object):
             logger.error(f"Track Jobs Error: {error}")
 
         return output, error
+
+
+
+import os
+import paramiko
+from jinja2 import Environment, FileSystemLoader
+from umbrella_logger import logger
+
+class Denoiset(object):
+    def __init__(self, hostname, port, username, password, remote_script_dir, local_template_path):
+        """
+        :param hostname: Remote host to connect to.
+        :param port: SSH port.
+        :param username: SSH username.
+        :param password: SSH password.
+        :param remote_script_dir: Remote directory where job scripts are stored.
+        :param local_template_path: Local file path to the Jinja2 template (e.g., 'denoiset_template.sh').
+        """
+        self.hostname = hostname
+        self.port = port
+        self.username = username
+        self.password = password
+        self.remote_script_dir = remote_script_dir  # e.g. "/hpc/projects/group.czii/krios1.processing/denoise/scripts"
+        self.local_template_path = local_template_path
+        self.ssh = None
+
+    def connect(self):
+        # Establish an SSH connection.
+        self.ssh = paramiko.SSHClient()
+        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssh.connect(self.hostname, self.port, self.username, self.password)
+        logger.info(f"Connected to {self.hostname}")
+
+    def run_script(self, session_name, run_number, model_name, user_id=None, live_denoising=False):
+        """
+        Loads an external Jinja2 template, renders it with the provided parameters,
+        uploads the rendered script to the remote server, and submits it via sbatch.
+        
+        :param session_name: The session identifier (e.g., "24aug30a")
+        :param run_number: The run number (e.g., "run001") to be used for both aretomo_run and denoise_run.
+        :param model_name: The model name (e.g., "lysosome.pth")
+        :param user_id: Optional user id (not used in the template above)
+        :param live_denoising: Flag to indicate if live denoising should be enabled.
+        :return: Submission output and error messages.
+        """
+        try:
+            # Set up the Jinja2 environment using the directory of the template.
+            template_dir = os.path.dirname(self.local_template_path)
+            template_file = os.path.basename(self.local_template_path)
+            print(self.local_template_path)
+            env = Environment(loader=FileSystemLoader(template_dir))
+            template = env.get_template(template_file)
+            print(template_dir)
+            # Render the template with the provided parameters.
+            rendered_script = template.render(
+                session=session_name,
+                aretomo_run=run_number,
+                denoise_run=run_number,  # Adjust if denoise_run should be different.
+                model_name=model_name,
+                live_denoising=live_denoising
+            )
+            logger.info(f"Rendered script for session {session_name}:\n{rendered_script}")
+            print(rendered_script)
+            # Define the remote file name and full path.
+            remote_script_filename = f"{session_name}_predict3d.sh"
+            remote_script_path = os.path.join(self.remote_script_dir, remote_script_filename)
+            
+            # Upload the rendered script to the remote server using SFTP.
+            sftp = self.ssh.open_sftp()
+            with sftp.file(remote_script_path, "w") as remote_file:
+                remote_file.write(rendered_script)
+            sftp.chmod(remote_script_path, 0o755)
+            sftp.close()
+            logger.info(f"Uploaded rendered script to {remote_script_path}")
+            
+            # Submit the job using sbatch.
+            submit_cmd = f"cd {self.remote_script_dir} && sbatch {remote_script_filename}"
+            stdin, stdout, stderr = self.ssh.exec_command(submit_cmd)
+            submit_output = stdout.read().decode('utf-8')
+            submit_error = stderr.read().decode('utf-8')
+            logger.info(f"Submission Output: {submit_output}")
+            if submit_error:
+                logger.error(f"Submission Error: {submit_error}")
+            return submit_output, submit_error
+
+        except Exception as e:
+            logger.error(f"Error during Denoiset job submission: {e}")
+            raise
+
+    def close(self):
+        if self.ssh is not None:
+            self.ssh.close()
+            self.ssh = None
+            logger.info("SSH connection closed.")

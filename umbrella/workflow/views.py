@@ -2,8 +2,8 @@ from umbrella_logger import logger
 from .utils import jsonify, ssh_connect, extract_parameters
 from django.http import JsonResponse
 from django.shortcuts import render
-from .agent import Aretomo3
-from umbrella.settings import ARETOMO3_SCRIPT_PATH, ARETOMO3_ADVANCED_PATH
+from .agent import Aretomo3, Denoiset
+from umbrella.settings import ARETOMO3_SCRIPT_PATH, ARETOMO3_ADVANCED_PATH, DENOISET_SCRIPT_PATH
 import os
 import base64
 import re
@@ -18,6 +18,9 @@ from processes.models import JobLog
 from django.db.models import F
 import re
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DENOISET_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'denoiset_template.sh')
+print(DENOISET_TEMPLATE_PATH, DENOISET_SCRIPT_PATH)
 KEYS = ('PixSize',
         'AtBin',
         'CorrCTF',
@@ -30,10 +33,10 @@ PORT = 22
 USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
 
-def store_log(request, data_sanitized, error, advanced_status=False, job_id = None):
+def store_log(job_name, request, data_sanitized, error, advanced_status=False, job_id = None):
     JobLog.objects.create(
                 user=request.user,
-                job_name=f"Aretomo3",
+                job_name=job_name,
                 advanced=advanced_status,
                 job_id=None,  # No job ID available in case of error
                 parameters=data_sanitized,
@@ -202,7 +205,7 @@ def run_aretomo3_advanced(request):
             job_id_str = ",".join(found_ids) if found_ids else None
 
             # Store log regardless of success or failure
-            store_log(request=request, data_sanitized=data_sanitized, error=None, advanced_status=True, job_id=job_id_str)
+            store_log(job_name='Aretomo3',request=request, data_sanitized=data_sanitized, error=None, advanced_status=True, job_id=job_id_str)
 
             # Return your response
             return JsonResponse({
@@ -213,7 +216,7 @@ def run_aretomo3_advanced(request):
 
         except Exception as e:
             logger.error(f'Error in run_aretomo3_advanced: {str(e)}')
-            store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=True, job_id=None)
+            store_log(job_name='Aretomo3',request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=True, job_id=None)
             return JsonResponse({'error': str(e)}, status=500)
 
         finally:
@@ -261,15 +264,15 @@ def run_aretomo3(request):
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
             job_id_str = ",".join(found_ids) if found_ids else None
 
-            store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
+            store_log(job_name='Aretomo3',request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
 
             return JsonResponse({'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the below output directory', 'output': output, 'error': error})
         except Exception as e:
-            store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
+            store_log(job_name='Aretomo3',request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
             return JsonResponse({'error': str(e) + ': 500'}, status=500)
         finally:
             aretomo.close()
-    store_log(request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
+    store_log(job_name='Aretomo3',request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
     return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
 @csrf_exempt
@@ -375,6 +378,9 @@ def custom_workflow_page(request):
 def custom_run_workflow_page(request):
     return render(request, 'workflows/workflow_run.html')
 
+def cutom_run_denoise_workflow_page(request):
+    return render(request, 'workflows/workflow_denoise_run.html')
+
 
 @require_http_methods(["GET"])
 def get_msi_session_list(request):
@@ -479,3 +485,97 @@ def get_job_logs(request):
     except Exception as e:
         logger.error(f'An unexpected error occurred while fetching job logs: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+    
+
+
+
+
+DENOISET_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/denoise/scripts'
+
+# @login_required
+@csrf_exempt
+def run_denoiset(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            session_name = data.get('session_name')
+            run_number = data.get('run_number')
+            model_name = data.get('model_name')
+            user_id = data.get('user_id')
+            encoded_password = data.get('password')
+            decoded_password = base64.b64decode(encoded_password).decode('utf-8')
+
+            # Store user_id and decoded_password in session
+            request.session['user_id'] = user_id
+            request.session['decoded_password'] = decoded_password
+
+            data_sanitized = dict(data)
+            print(data_sanitized)
+            data_sanitized.pop('password', None)
+
+            # Create the Denoiset instance.
+            denoiset = Denoiset(
+                HOST, 
+                PORT, 
+                user_id, 
+                decoded_password, 
+                DENOISET_SCRIPT_PATH, 
+                DENOISET_TEMPLATE_PATH
+            )
+
+            # Connect to the remote server.
+            denoiset.connect()
+
+            # Retrieve the live denoising flag; defaults to False if not provided.
+            live_denoising = data.get('live_denoising', False)
+
+            # Run the denoising script and get the output.
+            output, error = denoiset.run_script(session_name, run_number, model_name, user_id, live_denoising)
+
+            # Extract the job ID(s) from the output.
+            found_ids = re.findall(r"Submitted batch job (\d+)", output)
+            job_id_str = ",".join(found_ids) if found_ids else None
+
+            # Log the successful submission.
+            store_log(
+                job_name='DenoisET',
+                request=request, 
+                data_sanitized=data_sanitized, 
+                error="", 
+                advanced_status=True, 
+                job_id=job_id_str
+            )
+
+            return JsonResponse({
+                'message': f'Session {session_name} for Denoiset is submitted successfully. Please check the output directory.',
+                'output': output,
+                'error': error
+            })
+
+        except Exception as e:
+            # Log error details.
+            store_log(
+                job_name='DenoisET',
+                request=request, 
+                data_sanitized=data_sanitized if 'data_sanitized' in locals() else {}, 
+                error=str(e), 
+                advanced_status=False, 
+                job_id=None
+            )
+            return JsonResponse({'error': str(e) + ': 500'}, status=500)
+
+        finally:
+            # Ensure the SSH connection is closed.
+            if 'denoiset' in locals():
+                denoiset.close()
+
+    # For non-POST requests.
+    store_log(
+        job_name='DenoisET',
+        request=request, 
+        data_sanitized={}, 
+        error="Invalid request method", 
+        advanced_status=False, 
+        job_id=None
+    )
+    return JsonResponse({'error': 'Invalid request method: 400'}, status=400)

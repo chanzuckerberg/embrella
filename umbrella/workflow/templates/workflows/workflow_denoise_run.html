@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Run DenoisET Job</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .form-container {
+      max-width: 800px;
+      margin: auto;
+      padding: 30px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      background-color: white;
+    }
+    h1 {
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: #ecf0f1;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border: 1px solid #bdc3c7;
+      transition: background-color 0.3s ease;
+    }
+    .checkbox-container:hover {
+      background-color: #d5d8dc;
+    }
+    .styled-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      margin-right: 10px;
+      accent-color: #3498db;
+    }
+    .checkbox-label {
+      font-size: 16px;
+      color: #34495e;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h1>Run DenoisET Job</h1>
+    <p><strong style="color:red;">Note:</strong> User credentials are SSH credentials for the HPC node.</p>
+
+    <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="text" id="userId" required readonly/>
+      <!-- Hidden field for additional use -->
+      <input type="hidden" id="cancelUserId" />
+    </div>
+    
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" required/>
+    </div>
+    
+    <!-- Updated for a datalist approach to show session names. -->
+    <div class="form-group">
+      <label for="sessionName">Session Name:</label>
+      <input list="sessionNames" id="sessionName" required />
+      <datalist id="sessionNames"></datalist>
+    </div>
+    
+    <div class="form-group">
+      <label for="runNumber">Aretomo3 Run Number (e.g. <strong>run001</strong>):</label>
+      <!-- Changed to type="text" so we can display "run###" -->
+      <input type="text" id="runNumber" required placeholder="run001"/>
+    </div>
+    
+    <div class="form-group">
+      <label for="modelName">Model Name:</label>
+      <select id="modelName" required>
+        <option value="lysosome.pth">lysosome.pth</option>
+        <option value="minicell.pth">minicell.pth</option>
+        <option value="synaptosome.pth">synaptosome.pth</option>
+        <option value="cilia.pth">cilia.pth</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="liveDenoising">Live Denoising:</label>
+      <div class="checkbox-container">
+        <input type="checkbox" id="liveDenoising" class="styled-checkbox" value="true"/>
+        <label for="liveDenoising" class="checkbox-label">True</label>
+      </div>
+    </div>
+    
+    <button type="button" onclick="submitDenoisETJob()">Run</button>
+  </div>
+
+  <script>
+    // Fetch User Info from the API and pre-fill the user ID field.
+    async function fetchUserInfo() {
+      try {
+        const response = await fetch("/workflow/user_info");
+        const result = await response.json();
+
+        if (response.ok && result.username) {
+          document.getElementById("userId").value = result.username;
+          document.getElementById("cancelUserId").value = result.username;
+        } else {
+          alert("Failed to fetch user info.");
+        }
+      } catch (error) {
+        console.error("An error occurred while fetching user info:", error);
+        alert("An error occurred while fetching user info.");
+      }
+    }
+
+    // Populate the session dropdown.
+    async function populateSessionDropdown() {
+      const url = "/workflow/get_msisession_list";
+      console.log("Fetching session names from:", url);
+
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "same-origin", 
+        });
+
+        const responseText = await response.text();
+        console.log("Raw response text:", responseText);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status} | Body: ${responseText}`);
+        }
+
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (jsonErr) {
+          console.error("JSON parse error:", jsonErr);
+          throw new Error("Failed to parse JSON. Response was: " + responseText);
+        }
+
+        if (!result.session_names) {
+          console.error("No 'session_names' found in result:", result);
+          throw new Error("Missing session_names in response JSON.");
+        }
+
+        console.log("Fetched session names successfully:", result.session_names);
+
+        const sessionNamesList = document.getElementById("sessionNames");
+        sessionNamesList.innerHTML = "";
+        result.session_names.forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          sessionNamesList.appendChild(option);
+        });
+      } catch (error) {
+        console.error("Error while fetching session names:", error);
+        alert("Failed to fetch session names. " + error.message);
+      }
+    }
+
+    // When user selects/changes a session name, fetch the aretomo3 run number and populate the field.
+    function attachSessionNameListener() {
+      const sessionNameInput = document.getElementById("sessionName");
+      sessionNameInput.addEventListener("change", async () => {
+        const sessionNameValue = sessionNameInput.value.trim();
+        if (!sessionNameValue) return;
+
+        try {
+          const response = await fetch(
+            `/workflow/aretomo3_params?session_name=${encodeURIComponent(sessionNameValue)}`
+          );
+          if (!response.ok) {
+            throw new Error(`API call failed with status ${response.status}`);
+          }
+
+          const result = await response.json();
+          const runNumberInput = document.getElementById("runNumber");
+
+          // If there's no data or no run_numbers, default to run001.
+          if (
+            !result.sessions ||
+            result.sessions.length === 0 ||
+            !result.sessions[0].run_numbers ||
+            result.sessions[0].run_numbers.length === 0
+          ) {
+            runNumberInput.value = "run001";
+          } else {
+            // E.g., might be "run001", or just "003"
+            let rawRunNum = result.sessions[0].run_numbers[0];
+
+            // If the run number doesn't start with 'run', prepend it
+            if (!rawRunNum.toLowerCase().startsWith("run")) {
+              rawRunNum = "run" + rawRunNum;
+            }
+            
+            runNumberInput.value = rawRunNum;
+          }
+        } catch (error) {
+          console.error("Error fetching run numbers:", error);
+          document.getElementById("runNumber").value = "run001";
+        }
+      });
+    }
+
+    // Placeholder for attaching other listeners if needed.
+    function attachProjectNameListener() {
+      console.log("attachProjectNameListener called");
+      // Example logic:
+      // document.getElementById("projectName").addEventListener("input", async () => {
+      //   // ...
+      // });
+    }
+
+    // Submit the DenoisET Job by sending form data to the API endpoint.
+    async function submitDenoisETJob() {
+      // Retrieve form values.
+      const userId = document.getElementById("userId").value;
+      const password = document.getElementById("password").value;
+      const sessionName = document.getElementById("sessionName").value;
+      const runNumber = document.getElementById("runNumber").value;
+      const modelName = document.getElementById("modelName").value;
+      const liveDenoising = document.getElementById("liveDenoising").checked;
+
+      // Check if all required fields are filled.
+      if (!userId || !password || !sessionName || !runNumber || !modelName) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+
+      // Encode password in Base64.
+      const encodedPassword = btoa(password);
+
+      // Build the JSON payload with keys matching the API requirements.
+      const payload = {
+        user_id: userId,
+        password: encodedPassword,
+        session_name: sessionName,
+        // run_number must be something like "run001"
+        run_number: runNumber,
+        model_name: modelName,
+        live_denoising: liveDenoising
+      };
+
+      try {
+        // Make the POST request to the API endpoint.
+        const response = await fetch('/workflow/run_denoiset', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // Parse the JSON response.
+        const data = await response.json();
+        console.log(data)
+
+        if (!response.ok) {
+          // Display error from the API.
+          alert('Error: ' + data.error);
+        } else {
+          // Display success message or relevant logs.
+          alert(data.message);
+          console.log('Output:', data.output);
+          console.log('Error:', data.error);
+        }
+      } catch (error) {
+        alert('Request failed: ' + error.message);
+      }
+    }
+
+    // On Page Load
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        await fetchUserInfo();
+        await populateSessionDropdown();
+      } catch (error) {
+        console.error("Error during initialization:", error);
+      }
+      attachSessionNameListener();
+      // attachProjectNameListener();
+    });
+  </script>
+</body>
+</html>
