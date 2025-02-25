@@ -32,3 +32,4 @@ pycryptodome
 django-cors-headers
 pytest
 pytest-django
+jinja2
