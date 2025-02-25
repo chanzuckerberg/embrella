@@ -92,7 +92,7 @@
       <input type="password" id="password" required/>
     </div>
     
-    <!-- Updated for a datalist approach to show session names. -->
+    <!-- Session Name with datalist -->
     <div class="form-group">
       <label for="sessionName">Session Name:</label>
       <input list="sessionNames" id="sessionName" required />
@@ -101,8 +101,14 @@
     
     <div class="form-group">
       <label for="runNumber">Aretomo3 Run Number (e.g. <strong>run001</strong>):</label>
-      <!-- Changed to type="text" so we can display "run###" -->
-      <input type="text" id="runNumber" required placeholder="run001"/>
+      <!-- User can change this field independently -->
+      <input type="text" id="runNumber"/>
+    </div>
+
+    <div class="form-group">
+      <label for="denoiseRunNumber">Denoise Run Number (e.g. run001):</label>
+      <!-- User can modify this field independently -->
+      <input type="text" id="denoiseRunNumber" required />
     </div>
     
     <div class="form-group">
@@ -127,12 +133,11 @@
   </div>
 
   <script>
-    // Fetch User Info from the API and pre-fill the user ID field.
+    // Fetch user info and pre-fill the user ID.
     async function fetchUserInfo() {
       try {
         const response = await fetch("/workflow/user_info");
         const result = await response.json();
-
         if (response.ok && result.username) {
           document.getElementById("userId").value = result.username;
           document.getElementById("cancelUserId").value = result.username;
@@ -145,7 +150,7 @@
       }
     }
 
-    // Populate the session dropdown.
+    // Populate the session dropdown with session names.
     async function populateSessionDropdown() {
       const url = "/workflow/get_msisession_list";
       console.log("Fetching session names from:", url);
@@ -155,7 +160,6 @@
           method: "GET",
           credentials: "same-origin", 
         });
-
         const responseText = await response.text();
         console.log("Raw response text:", responseText);
 
@@ -177,7 +181,6 @@
         }
 
         console.log("Fetched session names successfully:", result.session_names);
-
         const sessionNamesList = document.getElementById("sessionNames");
         sessionNamesList.innerHTML = "";
         result.session_names.forEach((name) => {
@@ -191,7 +194,7 @@
       }
     }
 
-    // When user selects/changes a session name, fetch the aretomo3 run number and populate the field.
+    // When a session is selected, fetch the Aretomo3 run number and sync both fields once.
     function attachSessionNameListener() {
       const sessionNameInput = document.getElementById("sessionName");
       sessionNameInput.addEventListener("change", async () => {
@@ -205,11 +208,9 @@
           if (!response.ok) {
             throw new Error(`API call failed with status ${response.status}`);
           }
-
           const result = await response.json();
           const runNumberInput = document.getElementById("runNumber");
 
-          // If there's no data or no run_numbers, default to run001.
           if (
             !result.sessions ||
             result.sessions.length === 0 ||
@@ -218,64 +219,51 @@
           ) {
             runNumberInput.value = "run001";
           } else {
-            // E.g., might be "run001", or just "003"
             let rawRunNum = result.sessions[0].run_numbers[0];
-
-            // If the run number doesn't start with 'run', prepend it
             if (!rawRunNum.toLowerCase().startsWith("run")) {
               rawRunNum = "run" + rawRunNum;
             }
-            
             runNumberInput.value = rawRunNum;
           }
+          // Initially sync the denoise run number to the Aretomo3 run number.
+          document.getElementById("denoiseRunNumber").value = runNumberInput.value;
         } catch (error) {
           console.error("Error fetching run numbers:", error);
-          document.getElementById("runNumber").value = "run001";
+          const runNumberInput = document.getElementById("runNumber");
+          runNumberInput.value = "run001";
+          document.getElementById("denoiseRunNumber").value = "run001";
         }
       });
     }
 
-    // Placeholder for attaching other listeners if needed.
-    function attachProjectNameListener() {
-      console.log("attachProjectNameListener called");
-      // Example logic:
-      // document.getElementById("projectName").addEventListener("input", async () => {
-      //   // ...
-      // });
-    }
-
-    // Submit the DenoisET Job by sending form data to the API endpoint.
+    // Submit the DenoisET job with the form data.
     async function submitDenoisETJob() {
-      // Retrieve form values.
       const userId = document.getElementById("userId").value;
       const password = document.getElementById("password").value;
       const sessionName = document.getElementById("sessionName").value;
       const runNumber = document.getElementById("runNumber").value;
+      const denoiseRunNumber = document.getElementById("denoiseRunNumber").value;
       const modelName = document.getElementById("modelName").value;
       const liveDenoising = document.getElementById("liveDenoising").checked;
 
-      // Check if all required fields are filled.
-      if (!userId || !password || !sessionName || !runNumber || !modelName) {
+      if (!userId || !password || !sessionName || !runNumber || !denoiseRunNumber || !modelName) {
         alert("Please fill in all required fields.");
         return;
       }
 
       // Encode password in Base64.
       const encodedPassword = btoa(password);
-
-      // Build the JSON payload with keys matching the API requirements.
       const payload = {
         user_id: userId,
         password: encodedPassword,
         session_name: sessionName,
-        // run_number must be something like "run001"
         run_number: runNumber,
+        denoise_run_number: denoiseRunNumber,
         model_name: modelName,
         live_denoising: liveDenoising
       };
 
       try {
-        // Make the POST request to the API endpoint.
         const response = await fetch('/workflow/run_denoiset', {
           method: 'POST',
           headers: {
@@ -283,16 +271,11 @@
           },
           body: JSON.stringify(payload)
         });
-
-        // Parse the JSON response.
         const data = await response.json();
-        console.log(data)
-
+        console.log(data);
         if (!response.ok) {
-          // Display error from the API.
           alert('Error: ' + data.error);
         } else {
-          // Display success message or relevant logs.
           alert(data.message);
           console.log('Output:', data.output);
           console.log('Error:', data.error);
@@ -302,7 +285,7 @@
       }
     }
 
-    // On Page Load
+    // On page load, initialize user info, session dropdown, and attach the session listener.
     document.addEventListener("DOMContentLoaded", async () => {
       try {
         await fetchUserInfo();
@@ -311,7 +294,6 @@
         console.error("Error during initialization:", error);
       }
       attachSessionNameListener();
-      // attachProjectNameListener();
     });
   </script>
 </body>

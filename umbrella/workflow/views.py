@@ -501,6 +501,7 @@ def run_denoiset(request):
             session_name = data.get('session_name')
             run_number = data.get('run_number')
             model_name = data.get('model_name')
+            denoise_run_number = data.get('denoise_run_number')
             user_id = data.get('user_id')
             encoded_password = data.get('password')
             decoded_password = base64.b64decode(encoded_password).decode('utf-8')
@@ -530,7 +531,7 @@ def run_denoiset(request):
             live_denoising = data.get('live_denoising', False)
 
             # Run the denoising script and get the output.
-            output, error = denoiset.run_script(session_name, run_number, model_name, user_id, live_denoising)
+            output, error = denoiset.run_script(session_name, run_number, denoise_run_number, model_name, user_id, live_denoising)
 
             # Extract the job ID(s) from the output.
             found_ids = re.findall(r"Submitted batch job (\d+)", output)

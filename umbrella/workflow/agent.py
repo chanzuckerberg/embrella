@@ -253,7 +253,7 @@ class Denoiset(object):
         self.ssh.connect(self.hostname, self.port, self.username, self.password)
         logger.info(f"Connected to {self.hostname}")
 
-    def run_script(self, session_name, run_number, model_name, user_id=None, live_denoising=False):
+    def run_script(self, session_name, run_number, denoise_run_number, model_name, user_id=None, live_denoising=False):
         """
         Loads an external Jinja2 template, renders it with the provided parameters,
         uploads the rendered script to the remote server, and submits it via sbatch.
@@ -277,7 +277,7 @@ class Denoiset(object):
             rendered_script = template.render(
                 session=session_name,
                 aretomo_run=run_number,
-                denoise_run=run_number,  # Adjust if denoise_run should be different.
+                denoise_run=denoise_run_number,  # Adjust if denoise_run should be different.
                 model_name=model_name,
                 live_denoising=live_denoising
             )
