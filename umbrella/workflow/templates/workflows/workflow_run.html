@@ -5,11 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Run Aretomo3 Job</title>
   <style>
-    /* [Your existing CSS styles remain unchanged] */
+    /* Basic Page & Form Container Styles */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
       background-color: #f5f5f5;
+    }
+    .form-container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 30px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      margin-bottom: 40px;
+      background-color: white;
+      position: relative;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
     }
     .form-group {
       margin-bottom: 15px;
@@ -20,6 +35,12 @@
       margin-bottom: 5px;
       font-weight: bold;
     }
+    p {
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Inputs, Buttons, Selects */
     input[type="text"],
     input[type="number"],
     input[type="password"],
@@ -46,7 +67,6 @@
       outline: none;
       box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
     }
-
     input[list] {
       background-color: #f9f9f9;
       padding: 10px;
@@ -84,67 +104,16 @@
     button:hover {
       background-color: #45a049;
     }
-    .form-container {
-      max-width: 800px;
-      margin: auto;
-      padding: 30px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-      margin-bottom: 40px;
-      background-color: white;
-      position: relative;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    #outputContainer {
-      display: none;
-      margin-top: 20px;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background-color: #f9f9f9;
-    }
+
+    /* Cancel Container Button */
     .cancel-container button {
       background-color: #f44336;
     }
     .cancel-container button:hover {
       background-color: #e53935;
     }
-    #trackingContainer {
-      display: none;
-      margin-top: 20px;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background-color: #f9f9f9;
-    }
-    #jobTable {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    #jobTable th,
-    #jobTable td {
-      border: 1px solid #ddd;
-      padding: 12px;
-    }
-    #jobTable th {
-      background-color: #f2f2f2;
-      text-align: left;
-    }
-    .button-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .button-container button.track-all {
-      background-color: #2196F3;
-    }
-    .button-container button.track-all:hover {
-      background-color: #1e88e5;
-    }
+
+    /* Go Back Button */
     .go-back {
       position: absolute;
       top: 20px;
@@ -161,15 +130,7 @@
     .go-back:hover {
       background-color: #1e88e5;
     }
-    .error-message {
-      display: none;
-      margin-top: 20px;
-      padding: 15px;
-      border: 1px solid #e74c3c;
-      border-radius: 4px;
-      background-color: #f8d7da;
-      color: #721c24;
-    }
+
     /* Toggle Switch Styles */
     .toggle-switch {
       display: flex;
@@ -219,25 +180,33 @@
     input:checked + .slider:before {
       transform: translateX(26px);
     }
-    /* Labels for Toggle */
     .toggle-label {
       margin-left: 15px;
       font-size: 16px;
       font-weight: bold;
       color: #555;
     }
-    /* Hideable sections */
+
+    /* Error Message */
+    .error-message {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #e74c3c;
+      border-radius: 4px;
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    /* Basic/Advanced Hideable Sections */
+    #advancedForm {
+      display: none;
+    }
     .additional-advanced-field,
     .gain-reference-section {
       display: none; /* Hidden by default; shown if relevant. */
     }
-    /* Shared Credentials Section */
-    .credentials-section {
-      margin-bottom: 20px;
-    }
-    .credentials-section .form-group {
-      margin-bottom: 15px;
-    }
+
     /* Tooltip Styles */
     .tooltip {
       position: absolute;
@@ -288,7 +257,66 @@
     .info-icon:hover {
       background-color: #45a049;
     }
-    /* Responsive Design Enhancements */
+
+    /* Table for job tracking */
+    #trackingContainer {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    #jobTable {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #jobTable th,
+    #jobTable td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    #jobTable th {
+      background-color: #f2f2f2;
+      text-align: left;
+    }
+
+    /* Buttons in the JobTracker section */
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .button-container button.track-all {
+      background-color: #2196F3;
+    }
+    .button-container button.track-all:hover {
+      background-color: #1e88e5;
+    }
+
+    /* Job Logs Table: make columns aligned and allow JSON to wrap */
+    #jobLogsTable {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+      table-layout: auto;
+    }
+    #jobLogsTable th,
+    #jobLogsTable td {
+      border: 1px solid #ccc;
+      white-space: normal;         /* Allow wrapping */
+      word-wrap: break-word;       /* Breaks long words */
+    }
+    /* Wrap JSON in the 5th column (Parameters) */
+    #jobLogsTable td:nth-child(5) {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    /* Responsive design for smaller screens */
     @media (max-width: 600px) {
       .switch {
         width: 50px;
@@ -401,12 +429,12 @@
       <!-- Run Button -->
       <button type="button" onclick="runFunction()">Run</button>
 
-      <!-- Error Message -->
+      <!-- Error Message (Basic) -->
       <div id="errorMessage" class="error-message"></div>
     </form>
 
-    <!-- Advanced Mode Section -->
-    <form id="advancedForm" style="display:none;">
+    <!-- Advanced Mode Form -->
+    <form id="advancedForm">
       <!-- Project Name -->
       <div class="form-group">
         <label for="projectName">
@@ -745,11 +773,12 @@
       <!-- Run Button for Advanced Form -->
       <button type="button" onclick="runAdvancedFunction()">Submit</button>
 
-      <!-- Output Directory -->
-      <div id="outputContainer">
+      <!-- Output Directory (Advanced) -->
+      <div id="outputContainer" style="display: none; margin-top: 20px;">
         <strong>Output Directory:</strong> <span id="outputDirectory"></span>
       </div>
-      <!-- Error Message for Advanced Form -->
+
+      <!-- Error Message (Advanced) -->
       <div id="advancedErrorMessage" class="error-message"></div>
     </form>
   </div>
@@ -804,11 +833,12 @@
             <th>NODELIST(REASON)</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody><!-- Dynamically filled --></tbody>
       </table>
     </div>
   </div>
 
+  <!-- Job Logs Section -->
   <div class="form-container">
     <h1>Job Logs</h1>
     <div class="form-group">
@@ -822,35 +852,36 @@
       <button type="button" onclick="trackUserJobs()">Track Jobs by User</button>
       <button type="button" onclick="trackRecentJobs()">Track 10 Most Recent Jobs</button>
     </div>
-    <div id="jobLogsContainer" style="display:none; margin-top: 20px;">
-      <table id="jobLogsTable" style="border-collapse: collapse; width: 100%;">
+    <div id="jobLogsContainer" style="display: none;">
+      <table id="jobLogsTable">
         <thead>
           <tr>
-            <th style="border: 1px solid #ccc; padding: 8px;">Job Name</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Advanced</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Job ID</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Created At</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Parameters</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Error Message</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">User ID</th>
+            <th>Job Name</th>
+            <th>Advanced</th>
+            <th>Job ID</th>
+            <th>Created At</th>
+            <th>Parameters</th>
+            <th>Error Message</th>
+            <th>User ID</th>
           </tr>
         </thead>
         <tbody>
           <!-- Example row for demonstration -->
           <tr>
-            <td style="border: 1px solid #ccc; padding: 8px;">Example Job</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">Yes</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">12345</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">2025-02-10T23:40:46.776Z</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">{"mode": "basic"}</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">None</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">yongbaek.cho</td>
+            <td>Example Job</td>
+            <td>Yes</td>
+            <td>12345</td>
+            <td>2025-02-10T23:40:46.776Z</td>
+            <td>{"mode": "basic"}</td>
+            <td>None</td>
+            <td>yongbaek.cho</td>
           </tr>
           <!-- Additional rows will be dynamically added here -->
         </tbody>
       </table>
     </div>
   </div>
+
   <script>
     // Helper function to safely get element value
     function getElementValue(id) {
@@ -1467,7 +1498,7 @@
       }
     });
 
-    // Handle Old Gain
+    // Handle Old Gain (Advanced)
     document.getElementById("useOldGain").addEventListener("change", () => {
       const useOldGain = document.getElementById("useOldGain").value;
       const additionalFields = document.getElementById("additionalFields");
@@ -1624,13 +1655,13 @@
       jobLogs.forEach((log) => {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.job_name}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.advanced ? "Yes" : "No"}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.job_id}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${new Date(log.created_at).toLocaleString()}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${JSON.stringify(log.parameters, null, 2)}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.error_message || "None"}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.user_id}</td>
+          <td>${log.job_name}</td>
+          <td>${log.advanced ? "Yes" : "No"}</td>
+          <td>${log.job_id}</td>
+          <td>${new Date(log.created_at).toLocaleString()}</td>
+          <td>${JSON.stringify(log.parameters, null, 2)}</td>
+          <td>${log.error_message || "None"}</td>
+          <td>${log.user_id}</td>
         `;
         tableBody.appendChild(row);
       });
