@@ -37,4 +37,3 @@ langchain_openai
 langchain-community
 chromadb
 markdown
-jinja2
