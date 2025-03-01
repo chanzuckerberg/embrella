@@ -42,10 +42,12 @@ def create_grid(user, project, sample_input):
         Puck.objects.create(name=f'puck{i}', color=PUCK_COLORS[i-11][0],cane=cane2,position_in_cane=i-10)
 
     box = CryoGridBox.objects.create(name='box1', color='FFFFFF',puck=puck,position_in_puck=1)
-    specimen = Specimen.objects.create(samples=sample_input,notes='')
+    # specimen = Specimen.objects.create(samples=sample_input,notes='')
+    specimen = Specimen.objects.create(notes='')
+    specimen.samples.set([sample_input])  # Wrap the object in a list
     device = PlungeFreezingDevice.objects.create(name='GP2',maker_model='Leica GP2',site=site)
     device_vitrobot = PlungeFreezingDevice.objects.create(name='Vitrobot', maker_model='Vitrobot', site=site)
-    session = PlungeFreezingSession.objects.create(user=user,device=device,device_temperature=4.0,humidity=95,number_of_grids=1)
+    session = PlungeFreezingSession.objects.create(user=user,device=device,device_temperature=4.0,humidity=95)
     cryo_grid = CryoGrid.objects.create(name='grid1',specimen=specimen,freezing_session=session,notes='test',grid_box=box,user=user,intended_project=project, blot_time=6.0, blot_force=0.0, blot_distance=0.0)
     return cryo_grid
 
