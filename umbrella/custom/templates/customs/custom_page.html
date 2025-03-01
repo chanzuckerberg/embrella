@@ -1,220 +1,434 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Embrella Home</title>
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        h1 {
-            color: #444;
-            text-align: center;
-        }
-        h2 {
-            color: #555;
-            margin-top: 40px;
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 10px;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 20px 0;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f4f4f4;
-        }
-        td {
-            background-color: #fcfcfc;
-        }
-        .button {
-            display: inline-block;
-            padding: 12px 25px;
-            font-size: 16px;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            color: #fff;
-            background-color: #17a2b8;
-            border: none;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: background-color 0.3s ease;
-        }
-        .button:hover {
-            background-color: #138f99;
-        }
-        .button:active {
-            background-color: #0f7a83;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transform: translateY(2px);
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-        p {
-            margin: 15px 0;
-        }
-        .center {
-            text-align: center;
-        }
-    </style>
+  <title>Embrella Home</title>
+  <style>
+    /* Base Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #eef2f7;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1, h2 {
+      margin: 0;
+      font-weight: 300;
+    }
+    h1 {
+      font-size: 2.5em;
+    }
+    h2 {
+      font-size: 1.8em;
+      margin-bottom: 20px;
+    }
+    p {
+      margin: 10px 0;
+      line-height: 1.6;
+    }
+
+    /* Header Banner */
+    .header-banner {
+      background: linear-gradient(135deg, #2c8b4d, #277f48);
+      color: #fff;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .header-banner p {
+      font-size: 1.2em;
+    }
+
+    /* Button Styles */
+    .button {
+      display: inline-block;
+      margin: 10px 5px;
+      padding: 12px 25px;
+      font-size: 16px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      color: #fff;
+      background-color: #24712f;
+      border: none;
+      border-radius: 25px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    .button:hover {
+      background-color: #1f773e;
+      transform: translateY(-2px);
+    }
+    .button:active {
+      background-color: #3276b1;
+      transform: translateY(0);
+    }
+
+    /* Card Container */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+      text-align: center;
+    }
+    .card p {
+      font-size: 0.95em;
+      color: #666;
+    }
+
+    /* Table-like layout for Workflow Management & Search Filters */
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      margin-bottom: 40px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .table th, .table td {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    /* Vertical divider between columns */
+    .table th:not(:last-child), 
+    .table td:not(:last-child) {
+      border-right: 4px solid #bbb;
+    }
+    .table th {
+      background: #f7f7f7;
+      font-size: 1.1em;
+    }
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Logout & Admin Buttons */
+    .action-buttons {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .action-buttons form,
+    .action-buttons a {
+      display: inline-block;
+    }
+
+    /* Chatbot Popup Icon (fixed bottom-right) */
+    #chatbot-icon {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      background: #4facfe;
+      border-radius: 50%;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 1000;
+      font-size: 24px;
+      color: #fff;
+      user-select: none;
+    }
+
+    /* Chatbot Popup Box */
+    #chatbot-popup {
+      position: fixed;
+      bottom: 90px; /* above the icon */
+      right: 20px;
+      width: 600px;
+      height: 600px;
+      max-height: 80vh;  /* uses viewport height to remain on screen */
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transform: scale(0);
+      transform-origin: bottom right;
+      transition: transform 0.3s ease;
+      z-index: 1000;
+
+      /* Use flex layout to pin header & input box, let chat scroll */
+      display: flex;
+      flex-direction: column;
+    }
+    #chatbot-popup.open {
+      transform: scale(1);
+    }
+
+    /* Header pinned at top */
+    #chatbot-popup header {
+      flex-shrink: 0;
+      background: #4facfe;
+      color: #fff;
+      padding: 15px;
+      font-size: 1.2em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #chatbot-popup header .close-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1.5em;
+      cursor: pointer;
+    }
+
+    /* Chat Container (flex column) */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      flex: 1; /* fill remaining space after header */
+      overflow: hidden; /* contain the scroll inside chat-box */
+    }
+
+    /* Chat box can scroll if content is long */
+    .chat-box {
+      flex: 1;
+      min-height: 0; 
+      padding: 15px;
+      overflow-y: auto; 
+      background: #f5f5f5;
+    }
+
+    .message {
+      margin: 6px 0;
+      padding: 12px 16px;
+      border-radius: 12px;
+      max-width: 75%;
+      line-height: 1.4;
+      font-size: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .user-message {
+      align-self: flex-end;
+      background: #007bff;
+      color: #fff;
+      border-top-right-radius: 0;
+    }
+    .bot-message {
+      align-self: flex-start;
+      background: #e6e6e6;
+      border-top-left-radius: 0;
+    }
+    .bot-message .message-text {
+      word-break: break-all;
+      overflow-wrap: break-word;
+      white-space: normal;
+    }
+
+    /* Input area pinned at bottom */
+    .input-box {
+      flex-shrink: 0; 
+      display: flex;
+      padding: 10px;
+      background: #fff;
+      border-top: 1px solid #ddd;
+    }
+    .input-box input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+      transition: border 0.3s;
+    }
+    .input-box input[type="text"]:focus {
+      border: 2px solid #764ba2;
+    }
+    .input-box button {
+      padding: 12px 20px;
+      margin-left: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #764ba2;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    .input-box button:hover {
+      background: #5b3f84;
+      transform: translateY(-1px);
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to Embrella Startup Page!</h1>
-        <p class="center">You are logged in as {{ user.username }}.</p>
-        <div class="center">
-            <form method="post" action="{% url 'logout' %}" style="display: inline;">
-                {% csrf_token %}
-                <button type="submit" class="button">Logout</button>
-            </form>
-            <a href="{% url 'admin:index' %}" class="button">Admin</a>
-        </div>
-        <h2>Workflow Management</h2>
-        <table>
-            <tr>
-                <th>Freeze some grids</th>
-                <th>Start a TEM session</th>
-                <th>Start a processing run</th>
-            </tr>
-            <tr>
-                <td>
-                    <a href="{% url 'admin:cryo_grids_plungefreezingplan_add' %}" class="button">Plan plunge freezing parameters</a>
-                    <p> such as what samples will be on the grid </p>
-                </td>
-                <td>
-                    <a href="{% url 'tem:reserve' %}" class="button">Create new single-grid TEM session</a>
-                    <p>start new TEM session</p>
-                </td>
-                <td>
-                    <a href="{% url 'processes:reserve' %}" class="button">Run processing on a TEM session with frames</a>
-                    <p>make new processing run name for processing</p>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <a href="{% url 'admin:cryo_grids_plungefreezingsession_add' %}" class="button">Create new plunge freezing session</a>
-                    <p>record a new session on freezing day</p>
-                </td>
-                <td>
-                    <a href="{% url 'tem:scrnreserve' %}" class="button">Screen multiple grids in a cassette</a>
-                    <p>make new directory name for screening</p>
-                </td>
-                <td>
-                    <a href="{% url 'processes:ptreserve' %}" class="button">Run processing on a TEM session with tomograms</a>
-                    <p>make new processing run name for processing</p>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <a href="{% url 'admin:cryo_grids_cryogrid_add' %}" class="button">Add a new grid</a>
-                    <p>make a new grid</p>
-                </td>
-                <td>
-                    <a href="{% url 'cryo_grids:clear_cassette' %}" class="button">Clear a cassette</a>
-                    <p>remove all grids from a cassette. choose between putting them back and desposing them</p>
-                </td>
-                <td>
-                </td>
-            </tr>
-        </table>
-        <h2>Search Filters</h2>
-        <table>
-            <tr>
-                <th>Grids</th>
-                <th>TEM sessions</th>
-                <th>Processing runs</th>
-            </tr>
-            <script>
-                // Function to detect the base URL and append the `/next` endpoint
-                function getNextUrl() {
-                    const LOCALHOST_PORT = 8000;
-                    const LOCALHOST_NEXT_PORT = 3000;
 
-                    let baseUrl = window.location.origin; // Get the base URL (protocol + hostname)
-                    let nextBaseUrl = baseUrl.includes(LOCALHOST_PORT) ?
-                        baseUrl.replace(LOCALHOST_PORT, LOCALHOST_NEXT_PORT)
-                        : baseUrl;
+  <!-- HEADER BANNER -->
+  <div class="header-banner">
+    <h1>Welcome to Embrella Startup Page!</h1>
+    <p>You are logged in as {{ user.username }}.</p>
+  </div>
 
-                    return `${nextBaseUrl}/next`;
-                }
+  <!-- MAIN CONTENT -->
+  <div class="container">
+    <div class="action-buttons">
+      <form method="post" action="{% url 'logout' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="button">Logout</button>
+      </form>
+      <a href="{% url 'admin:index' %}" class="button">Admin</a>
+    </div>
 
-                function getCryoGridsUrl() {
-                    return `${getNextUrl()}/cryo_grids`;
-                }
+    <h2>User Guide</h2>
+    <div class="card-grid">
+      <div class="card">
+        <a href="umbrella/user_guide" class="button">Read User Guide</a>
+        <p>Learn how to use the Embrella system effectively</p>
+      </div>
+    </div>
 
-                function getTomogramsUrl() {
-                    return `${getNextUrl()}/tomograms`;
-                }
-
-                function getAnnotationsUrl() {
-                    return `${getNextUrl()}/annotations`;
-                }
-            </script>
-            <tr>
-                <td>
-                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getCryoGridsUrl()">Cryo Grids</a>
-                    <p> Stored Grid Filter Page </p>
-                </td>
-                <td>
-                    <a href="{% url 'admin:tem_msisession_changelist' %}" class="button">Single Grid Sessions</a>
-                    <p> multiscaled SPA or tomography data collection </p>
-                </td>
-                <td>
-                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
-                    <p> View and manage tomograms </p>
-                </td>
-
-                <td>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <a href="{% url 'cryo_grids:detail' %}" class="button">Grid Boxes</a>
-                </td>
-                <td>
-                    <a href="{% url 'tem:render_screening_form' %}" class="button">Multigrid Screens</a>
-                </td>
-                <td>
-                    <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
-                    <p> View and manage Annotations </p>
-                </td>
-                <td>
-                </td>
-            </tr>
-        </table>
-        <h2>Workflow Run</h2>
-    <table>
+    <h2>Workflow Management</h2>
+    <table class="table">
       <tr>
-        <th colspan="2">Workflow Actions</th>
+        <th>Freeze some grids</th>
+        <th>Start a TEM session</th>
+        <th>Start a processing run</th>
       </tr>
       <tr>
         <td>
-          <a href="/workflow/run" class="button">Aretomo3 Run</a>
-          <p>Start an Aretomo3 run</p>
+          <a href="{% url 'admin:cryo_grids_specimen_add' %}" class="button">Create New Specimen</a>
+          <p>Record a new specimen</p>
         </td>
         <td>
-          <a href="/workflow/denoiset_run" class="button">DeonisET Run</a>
-          <p>Start a DeonisET run</p>
+          <a href="{% url 'tem:reserve' %}" class="button">New Single-Grid TEM Session</a>
+          <p>Start new TEM session</p>
+        </td>
+        <td>
+          <a href="{% url 'processes:reserve' %}" class="button">Run Processing with Frames</a>
+          <p>Create processing run name</p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <a href="{% url 'admin:cryo_grids_plungefreezingsession_add' %}" class="button">Create Freezing Session</a>
+          <p>Record a new freezing day session</p>
+        </td>
+        <td>
+          <a href="{% url 'tem:scrnreserve' %}" class="button">Screen Multiple Grids</a>
+          <p>New directory name for screening</p>
+        </td>
+        <td>
+          <a href="{% url 'processes:ptreserve' %}" class="button">Run Processing with Tomograms</a>
+          <p>Create processing run name</p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <a href="{% url 'admin:cryo_grids_cryogrid_add' %}" class="button">Add New Grid</a>
+          <p>Create a new grid</p>
+        </td>
+        <td>
+          <a href="{% url 'cryo_grids:clear_cassette' %}" class="button">Clear a Cassette</a>
+          <p>Remove grids from a cassette</p>
+        </td>
+        <td></td>
+      </tr>
+    </table>
+
+    <h2>Search Filters</h2>
+    <table class="table">
+      <tr>
+        <th>Grids</th>
+        <th>TEM Sessions</th>
+        <th>Processing Runs</th>
+      </tr>
+      <script>
+        // Detect the base URL and append the `/next` endpoint
+        function getNextUrl() {
+          const LOCALHOST_PORT = 8000;
+          const LOCALHOST_NEXT_PORT = 3000;
+          let baseUrl = window.location.origin;
+          let nextBaseUrl = baseUrl.includes(LOCALHOST_PORT)
+            ? baseUrl.replace(LOCALHOST_PORT, LOCALHOST_NEXT_PORT)
+            : baseUrl;
+          return `${nextBaseUrl}/next`;
+        }
+        function getCryoGridsUrl() {
+          return `${getNextUrl()}/cryo_grids`;
+        }
+        function getTomogramsUrl() {
+          return `${getNextUrl()}/tomograms`;
+        }
+        function getAnnotationsUrl() {
+          return `${getNextUrl()}/annotations`;
+        }
+      </script>
+      <tr>
+        <td>
+          <a href="javascript:void(0)" class="button" onclick="window.location.href=getCryoGridsUrl()">Cryo Grids</a>
+          <p>Stored Grid Filter Page</p>
+        </td>
+        <td>
+          <a href="{% url 'admin:tem_msisession_changelist' %}" class="button">Single Grid Sessions</a>
+          <p>Multiscaled SPA or tomography data collection</p>
+        </td>
+        <td>
+          <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
+          <p>View and manage tomograms</p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <a href="{% url 'cryo_grids:detail' %}" class="button">Grid Boxes</a>
+        </td>
+        <td>
+          <a href="{% url 'tem:render_screening_form' %}" class="button">Multigrid Screens</a>
+        </td>
+        <td>
+          <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
+          <p>Manage annotations</p>
         </td>
       </tr>
     </table>
 
-    <h2>Metadata Fetcher</h2>
-    <table>
+    <!-- RUN WORKFLOW SECTION -->
+    <h2>Run Workflow</h2>
+    <table class="table">
+      <tr>
+        <th>Aretomo</th>
+        <th>DenoisET</th>
+      </tr>
+      <tr>
+        <!-- Make sure these two links point to DISTINCT routes: -->
+        <td>
+          <a href="/workflow/run" class="button">Aretomo Run</a>
+          <p>Start an Aretomo run</p>
+        </td>
+        <td>
+          <a href="/workflow/denoiset_run" class="button">DenoisET</a>
+          <p>Run the DenoisET process</p>
+        </td>
+      </tr>
+    </table>
+
+    <!-- METADATA SEARCH SECTION -->
+    <h2>Metadata Search</h2>
+    <table class="table">
+      <tr>
+        <th>Metadata Tools</th>
+      </tr>
       <tr>
         <td>
           <a href="/workflow" class="button">Metadata Fetcher</a>
@@ -222,6 +436,83 @@
         </td>
       </tr>
     </table>
+    
+  </div>
+
+  <!-- Chatbot Popup Icon (bottom-right) -->
+  <div id="chatbot-icon" onclick="toggleChatbot()">
+    &#128172;
+  </div>
+
+  <!-- Chatbot Popup -->
+  <div id="chatbot-popup">
+    <header>
+      <span>Chatbot Agent (Beta)</span>
+      <button class="close-btn" onclick="toggleChatbot()">&times;</button>
+    </header>
+    <p class="chatbot-disclaimer">
+      ⚠️ This is a beta service. Please understand that responses may have latency and inaccuracies.
+    </p>
+    <div class="chat-container">
+      <div class="chat-box" id="chat-box">
+        <!-- Chat messages dynamically inserted here -->
+      </div>
+      <div class="input-box">
+        <input type="text" id="user-input" placeholder="Type your message..."/>
+        <button onclick="sendMessage()">Send</button>
+      </div>
     </div>
+  </div>
+
+  <script>
+    // Toggle the chatbot popup
+    function toggleChatbot() {
+      const popup = document.getElementById('chatbot-popup');
+      popup.classList.toggle('open');
+    }
+
+    // Chatbot sendMessage function
+    async function sendMessage() {
+      const userInput = document.getElementById("user-input").value;
+      if (!userInput) return;
+
+      const chatBox = document.getElementById("chat-box");
+
+      // Append user message
+      const userMessage = document.createElement("div");
+      userMessage.className = "message user-message";
+      userMessage.innerText = "You: " + userInput;
+      chatBox.appendChild(userMessage);
+      document.getElementById("user-input").value = "";
+
+      // Scroll to bottom
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      // Fetch bot response
+      try {
+        const response = await fetch("/agent/confluence/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: userInput })
+        });
+
+        const htmlResponse = await response.text();
+
+        // Append bot message
+        const botMessage = document.createElement("div");
+        botMessage.className = "message bot-message";
+        botMessage.innerHTML = `<div class="message-text">${htmlResponse}</div>`;
+        chatBox.appendChild(botMessage);
+      } catch (error) {
+        const errorMessage = document.createElement("div");
+        errorMessage.className = "message bot-message";
+        errorMessage.innerHTML = `<div class="message-text">Error fetching response.</div>`;
+        chatBox.appendChild(errorMessage);
+      }
+
+      // Scroll to bottom again
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
 </body>
 </html>

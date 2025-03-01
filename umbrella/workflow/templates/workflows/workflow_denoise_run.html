@@ -3,18 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Run Aretomo3 Job</title>
+  <title>Run DenoisET Job</title>
   <style>
-    /* Basic Page & Form Container Styles */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
       background-color: #f5f5f5;
     }
-
-    /* All sections extended to 1200px */
     .form-container {
-      max-width: 1200px;
+      max-width: 800px;
       margin: auto;
       padding: 30px;
       border: 1px solid #ddd;
@@ -23,53 +20,24 @@
       background-color: white;
       margin-bottom: 40px;
     }
-
     h1 {
       text-align: center;
-      margin-bottom: 20px;
     }
-
     .form-group {
       margin-bottom: 15px;
-      position: relative; /* For positioning tooltips if needed */
     }
-
     label {
       display: block;
       font-weight: bold;
       margin-bottom: 5px;
     }
-
-    input[type="text"],
-    input[type="number"],
-    input[type="password"],
-    select {
+    input, select {
       width: 100%;
       padding: 10px;
       box-sizing: border-box;
       border: 1px solid #ccc;
       border-radius: 4px;
-      font-size: 16px;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
-
-    /* Hover & Focus on inputs */
-    input[type="text"]:hover,
-    input[type="number"]:hover,
-    input[type="password"]:hover,
-    select:hover {
-      border-color: #4CAF50;
-    }
-    input[type="text"]:focus,
-    input[type="number"]:focus,
-    input[type="password"]:focus,
-    select:focus {
-      border-color: #4CAF50;
-      outline: none;
-      box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
-    }
-
-    /* Buttons */
     button {
       padding: 10px 20px;
       background-color: #4CAF50;
@@ -77,15 +45,37 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 16px;
-      margin: 5px 0;
-      transition: background-color 0.3s ease;
     }
     button:hover {
       background-color: #45a049;
     }
-
-    /* Cancel Container */
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 10px;
+      background-color: #ecf0f1;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border: 1px solid #bdc3c7;
+      transition: background-color 0.3s ease;
+    }
+    .checkbox-container:hover {
+      background-color: #d5d8dc;
+    }
+    .styled-checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      margin-right: 10px;
+      accent-color: #3498db;
+    }
+    .checkbox-label {
+      font-size: 16px;
+      color: #34495e;
+      font-weight: bold;
+    }
+    /* Additional styles for JobCanceler */
     .cancel-container h1 {
       text-align: center;
       color: #34495e;
@@ -94,159 +84,7 @@
       text-align: center;
       color: #f44336;
     }
-    .cancel-container button {
-      background-color: #f44336;
-    }
-    .cancel-container button:hover {
-      background-color: #e53935;
-    }
-
-    /* Go Back Button */
-    .go-back {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      padding: 10px 20px;
-      background-color: #2196F3;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      transition: background-color 0.3s ease;
-    }
-    .go-back:hover {
-      background-color: #1e88e5;
-    }
-
-    /* Toggle Switch Styles */
-    .toggle-switch {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 60px;
-      height: 34px;
-    }
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      transition: 0.4s;
-      border-radius: 34px;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 26px;
-      width: 26px;
-      left: 4px;
-      bottom: 4px;
-      background-color: white;
-      transition: 0.4s;
-      border-radius: 50%;
-    }
-    input:checked + .slider {
-      background-color: #4CAF50;
-    }
-    input:focus + .slider {
-      box-shadow: 0 0 1px #4CAF50;
-    }
-    input:checked + .slider:before {
-      transform: translateX(26px);
-    }
-    .toggle-label {
-      margin-left: 15px;
-      font-size: 16px;
-      font-weight: bold;
-      color: #555;
-    }
-
-    /* Error Message */
-    .error-message {
-      display: none;
-      margin-top: 20px;
-      padding: 15px;
-      border: 1px solid #e74c3c;
-      border-radius: 4px;
-      background-color: #f8d7da;
-      color: #721c24;
-    }
-
-    /* Basic/Advanced Hideable Sections */
-    #advancedForm {
-      display: none;
-    }
-    .additional-advanced-field,
-    .gain-reference-section {
-      display: none; /* Hidden by default; shown if relevant. */
-    }
-
-    /* Tooltips (if any) */
-    .tooltip {
-      position: absolute;
-      top: 0;
-      left: calc(100% + 8px);
-      width: 200px;
-      max-width: 300px;
-      background-color: #fff9c4;
-      color: #333;
-      border-radius: 6px;
-      padding: 25px;
-      z-index: 300;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;  /* Prevent tooltip from blocking clicks */
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-    .tooltip::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: -5px;
-      transform: translateY(-50%);
-      border-width: 5px;
-      border-style: solid;
-      border-color: transparent #fff9c4 transparent transparent;
-    }
-    .info-icon:hover + .tooltip {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .info-icon {
-      display: inline-block;
-      margin-left: 5px;
-      width: 20px;
-      height: 20px;
-      background-color: #4CAF50;
-      color: white;
-      border-radius: 50%;
-      text-align: center;
-      line-height: 20px;
-      font-weight: bold;
-      cursor: pointer;
-      position: absolute;
-      top: 0;
-      right: 0;
-    }
-    .info-icon:hover {
-      background-color: #45a049;
-    }
-
-    /* Job Tracking Section */
+    /* Styles for JobTracker */
     #trackingContainer {
       display: none;
       margin-top: 20px;
@@ -263,11 +101,10 @@
     #jobTable td {
       border: 1px solid #ddd;
       padding: 12px;
-      text-align: left;
-      vertical-align: top;
     }
     #jobTable th {
       background-color: #f2f2f2;
+      text-align: left;
     }
     .button-container {
       display: flex;
@@ -280,537 +117,76 @@
     .button-container button.track-all:hover {
       background-color: #1e88e5;
     }
-
-    /* Job Logs Section */
-    /* Use horizontal scrolling + fixed layout + explicit column widths */
-    #jobLogsContainer {
-      display: none;
-      margin-top: 20px;
-      overflow-x: auto; /* Horizontal scroll if needed */
-    }
-    #jobLogsTable {
-      border-collapse: collapse;
-      width: 100%;
-      table-layout: fixed; /* Fixed layout for consistent column alignment */
-    }
-    #jobLogsTable th,
-    #jobLogsTable td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      word-wrap: break-word;
-      overflow: hidden;
-      text-align: left;
-      vertical-align: top;
-    }
-    /* Define fixed widths for each column (7 columns) */
-    #jobLogsTable th:nth-child(1),
-    #jobLogsTable td:nth-child(1) {
-      width: 150px; /* Job Name */
-    }
-    #jobLogsTable th:nth-child(2),
-    #jobLogsTable td:nth-child(2) {
-      width: 80px;  /* Advanced */
-    }
-    #jobLogsTable th:nth-child(3),
-    #jobLogsTable td:nth-child(3) {
-      width: 100px; /* Job ID */
-    }
-    #jobLogsTable th:nth-child(4),
-    #jobLogsTable td:nth-child(4) {
-      width: 180px; /* Created At */
-    }
-    #jobLogsTable th:nth-child(5),
-    #jobLogsTable td:nth-child(5) {
-      width: 300px; /* Parameters */
-    }
-    #jobLogsTable th:nth-child(6),
-    #jobLogsTable td:nth-child(6) {
-      width: 150px; /* Error Message */
-    }
-    #jobLogsTable th:nth-child(7),
-    #jobLogsTable td:nth-child(7) {
-      width: 120px; /* User ID */
-    }
-
-    /* Responsive design for smaller screens */
-    @media (max-width: 600px) {
-      .go-back {
-        padding: 8px 16px;
-        font-size: 14px;
-      }
-      button {
-        padding: 8px 16px;
-        font-size: 14px;
-      }
-      .toggle-label {
-        font-size: 14px;
-      }
-      .switch {
-        width: 50px;
-        height: 28px;
-      }
-      .slider:before {
-        height: 22px;
-        width: 22px;
-        left: 3px;
-        bottom: 3px;
-      }
-      input:checked + .slider:before {
-        transform: translateX(22px);
-      }
-      /* Table adjustments for narrow screens (they can scroll horizontally) */
-      #jobTable,
-      #jobLogsTable {
-        font-size: 14px;
-      }
-    }
   </style>
 </head>
 <body>
-  <!-- Go Back Button -->
-  <button class="go-back" onclick="goBack()">Go back to the startup page</button>
-
-  <!-- Primary Form Container -->
+  <!-- Run DenoisET Job Form -->
   <div class="form-container">
-    <h1>Run Aretomo3 Job</h1>
+    <h1>Run DenoisET Job</h1>
     <p><strong style="color:red;">Note:</strong> User credentials are SSH credentials for the HPC node.</p>
 
-    <!-- Shared Credentials Section -->
-    <div class="credentials-section">
-      <!-- User ID -->
-      <div class="form-group">
-        <label for="userId">User ID:</label>
-        <input type="text" id="userId" name="userId" required/>
-      </div>
-      <!-- Password -->
-      <div class="form-group">
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required/>
-      </div>
+    <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="text" id="userId" required readonly/>
+      <!-- Hidden field for additional use -->
+      <input type="hidden" id="cancelUserId" />
+    </div>
+    
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" required/>
+    </div>
+    
+    <!-- Session Name with datalist -->
+    <div class="form-group">
+      <label for="sessionName">Session Name:</label>
+      <input list="sessionNames" id="sessionName" required />
+      <datalist id="sessionNames"></datalist>
+    </div>
+    
+    <div class="form-group">
+      <label for="runNumber">Aretomo3 Run Number (e.g. <strong>run001</strong>):</label>
+      <!-- User can change this field independently -->
+      <input type="text" id="runNumber"/>
     </div>
 
-    <!-- Toggle Switch for Basic and Advanced -->
-    <div class="toggle-switch">
-      <label class="switch">
-        <input type="checkbox" id="modeToggle"/>
-        <span class="slider"></span>
-      </label>
-      <span class="toggle-label" id="toggleLabel">Basic</span>
+    <div class="form-group">
+      <label for="denoiseRunNumber">Denoise Run Number (e.g. run001):</label>
+      <!-- User can modify this field independently -->
+      <input type="text" id="denoiseRunNumber" required />
     </div>
-
-    <!-- Basic Mode Form -->
-    <form id="basicForm">
-      <!-- Session Name -->
-      <div class="form-group">
-        <label for="sessionName">
-          Session Name:
-        </label>
-        <span class="info-icon">i</span>
-        <div id="tooltipSessionNameBasic" class="tooltip">
-          MSI (Multi screen image) session name.
-        </div>
-        <input
-          list="sessionNames"
-          id="sessionName"
-          name="sessionName"
-          placeholder="Select or type..."
-          required
-          autocomplete="off"
-        />
-        <datalist id="sessionNames">
-          <!-- Options populated dynamically -->
-        </datalist>
+    
+    <div class="form-group">
+      <label for="modelName">Model Name:</label>
+      <select id="modelName" required>
+        <option value="lysosome.pth">lysosome.pth</option>
+        <option value="minicell.pth">minicell.pth</option>
+        <option value="synaptosome.pth">synaptosome.pth</option>
+        <option value="cilia.pth">cilia.pth</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="liveDenoising">Live Denoising:</label>
+      <div class="checkbox-container">
+        <input type="checkbox" id="liveDenoising" class="styled-checkbox" value="true"/>
+        <label for="liveDenoising" class="checkbox-label">True</label>
       </div>
-
-      <!-- Run Number -->
-      <div class="form-group">
-        <label for="runNumber">Run Number: (e.g., 001)</label>
-        <input type="number" id="runNumber" name="runNumber" required/>
-      </div>
-
-      <!-- Pixel Size -->
-      <div class="form-group">
-        <label for="pixelSize">Pixel Size (Å):</label>
-        <input type="number" step="any" id="pixelSize" name="pixelSize" required/>
-      </div>
-
-      <!-- Calibrated Total Dose -->
-      <div class="form-group">
-        <label for="dosenumber">Calibrated total dose (e-/Å²) for entire tilt series:</label>
-        <input type="number" id="dosenumber" name="dosenumber" required/>
-      </div>
-
-      <!-- Estimated Number of Tilt Series -->
-      <div class="form-group">
-        <label for="numChecks">Estimated number of tilt series (e.g., 300):</label>
-        <input type="number" id="numChecks" name="numChecks" required/>
-      </div>
-
-      <!-- Run Button (Basic) -->
-      <button type="button" onclick="runFunction()">Run</button>
-
-      <!-- Error Message (Basic) -->
-      <div id="errorMessage" class="error-message"></div>
-    </form>
-
-    <!-- Advanced Mode Form -->
-    <form id="advancedForm">
-      <!-- Project Name -->
-      <div class="form-group">
-        <label for="projectName">
-          Session Name:
-        </label>
-        <span class="info-icon">i</span>
-        <div id="tooltipProjectNameAdvanced" class="tooltip">
-          MSI (Multi screen image) session name.
-        </div>
-        <input
-          list="sessionNames"
-          id="projectName"
-          name="projectName"
-          placeholder="Select or type..."
-          required
-          autocomplete="off"
-        />
-      </div>
-
-      <!-- advancedRunNumber -->
-      <div class="form-group">
-        <label for="advancedRunNumber">Enter the run number (e.g., 001):</label>
-        <input type="number" id="advancedRunNumber" name="advancedRunNumber" required/>
-      </div>
-
-      <!-- Use Old Gain Reference? -->
-      <div class="form-group">
-        <label for="useOldGain">Do you want to use an old gain reference? (yes/no):</label>
-        <select id="useOldGain" name="useOldGain" required>
-          <option value="">Select...</option>
-          <option value="yes">Yes</option>
-          <option value="no">No</option>
-        </select>
-      </div>
-
-      <!-- If "no" for old gain -->
-      <div id="additionalFields" class="additional-advanced-field">
-        <!-- denoisetTraining -->
-        <div class="form-group">
-          <label for="denoisetTraining">Will you use this run for DenoisET training? (yes/no):</label>
-          <select id="denoisetTraining" name="denoisetTraining" required>
-            <option value="">Select...</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </div>
-        <!-- evnOddSplit -->
-        <div class="form-group">
-          <label for="evnOddSplit">EVN &amp; ODD split option is:</label>
-          <span class="info-icon">i</span>
-          <div id="tooltipEVNOddSplitNo" class="tooltip">
-            SplitSum
-          </div>
-          <select id="evnOddSplit" name="evnOddSplit" required>
-            <option value="">Select...</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </div>
-        <!-- advancedPixelSize -->
-        <div class="form-group">
-          <label for="advancedPixelSize">Enter the pixel size (Å):</label>
-          <input type="number" step="any" id="advancedPixelSize" name="advancedPixelSize" required/>
-        </div>
-        <!-- Use Advanced Parameters -->
-        <div class="form-group">
-          <label for="useAdvancedParams">Do you want to use advanced parameters? (yes/no):</label>
-          <select id="useAdvancedParams" name="useAdvancedParams" required>
-            <option value="">Select...</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </div>
-
-        <!-- Show only if "yes" for advanced parameters -->
-        <div id="advancedParamsSection" class="additional-advanced-field">
-          <!-- Tilt Axis -->
-          <div class="form-group">
-            <label for="tiltAxis">Enter the tilt axis initial value (default 0):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipTiltAxisNo" class="tooltip">
-              TiltAxis first_input
-            </div>
-            <input type="number" id="tiltAxis" name="tiltAxis" placeholder="(e.g. blank or numeric)"/>
-          </div>
-
-          <!-- Tilt Axis Refinement -->
-          <div class="form-group">
-            <label for="tiltAxisRefine">Do you want Aretomo3 to refine tilt axis? (yes/no):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipTiltAxisRefineNo" class="tooltip">
-              TiltAxis second_input
-            </div>
-            <select id="tiltAxisRefine" name="tiltAxisRefine">
-              <option value="">Select...</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-
-          <!-- AlignZ -->
-          <div class="form-group">
-            <label for="alignZ">Enter the AlignZ (leave blank for default):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipAlignZNo" class="tooltip">
-              AlignZ
-            </div>
-            <input type="text" id="alignZ" name="alignZ" placeholder="(e.g. blank or numeric)"/>
-          </div>
-
-          <!-- VolZ -->
-          <div class="form-group">
-            <label for="volZ">Enter the VolZ (leave blank for default 1600):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipVolZNo" class="tooltip">
-              VolZ
-            </div>
-            <input type="number" id="volZ" name="volZ" placeholder="(e.g. blank for default)" value="1600"/>
-          </div>
-
-          <!-- IMOD Option -->
-          <div class="form-group">
-            <label for="imodOption">Do you want to save aligned tilt series in _Imod folder? (yes/no):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipImodOptionNo" class="tooltip">
-              OutImod
-            </div>
-            <select id="imodOption" name="imodOption">
-              <option value="">Select...</option>
-              <option value="yes">Yes (imod option 3)</option>
-              <option value="no">No (imod option 1)</option>
-            </select>
-          </div>
-
-          <!-- Local Shifts -->
-          <div class="form-group">
-            <label for="localAln">Do you want to measure local shifts? (yes/no):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipLocalAlnNo" class="tooltip">
-              AtPatch
-            </div>
-            <select id="localAln" name="localAln">
-              <option value="">Select...</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-
-          <!-- Tilt Offset Correction -->
-          <div class="form-group">
-            <label for="tiltCorr">Do you want to generate tilt offset corrected volumes? (yes/no):</label>
-            <select id="tiltCorr" name="tiltCorr">
-              <option value="">Select...</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-
-          <!-- Save Intermediate Thickness Measure -->
-          <div class="form-group">
-            <label for="tempOption">Do you want to save intermediate thickness measure results? (yes/no):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipTempOptionNo" class="tooltip">
-              TmpDir
-            </div>
-            <select id="tempOption" name="tempOption">
-              <option value="">Select...</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Dose & Number of Tilt Series (No Old Gain) -->
-        <div class="form-group">
-          <label for="advancedDoseNumberNo">Enter the calibrated total dose in e-/Å²:</label>
-          <input type="number" id="advancedDoseNumberNo" name="advancedDoseNumberNo" required/>
-        </div>
-        <div class="form-group">
-          <label for="advancedNumChecksNo">Enter the estimated number of tilt series (e.g., 300):</label>
-          <input type="number" id="advancedNumChecksNo" name="advancedNumChecksNo" required/>
-        </div>
-      </div>
-
-      <!-- If "yes" for old gain -->
-      <div id="oldGainFields" class="gain-reference-section">
-        <div class="form-group">
-          <label for="gainFileName">
-            Please enter the gain file name (e.g., 20241023_110835_EER_GainReference.gain):
-          </label>
-          <input type="text" id="gainFileName" name="gainFileName" required/>
-        </div>
-
-        <div class="form-group">
-          <label for="denoisetTrainingYes">Will you use this run for DenoisET training? (yes/no):</label>
-          <select id="denoisetTrainingYes" name="denoisetTrainingYes" required>
-            <option value="">Select...</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="evnOddSplitYes">EVN &amp; ODD split option is:</label>
-          <span class="info-icon">i</span>
-          <div id="tooltipEVNOddSplitYes" class="tooltip">
-            SplitSum
-          </div>
-          <select id="evnOddSplitYes" name="evnOddSplitYes" required>
-            <option value="">Select...</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="advancedPixelSizeYes">Enter the pixel size (Å):</label>
-          <input type="number" step="any" id="advancedPixelSizeYes" name="advancedPixelSizeYes" required/>
-        </div>
-        <div class="form-group">
-          <label for="useAdvancedParamsYes">Do you want to use advanced parameters? (yes/no):</label>
-          <select id="useAdvancedParamsYes" name="useAdvancedParamsYes" required>
-            <option value="">Select...</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </div>
-
-        <!-- Advanced Parameters if "yes" with old gain -->
-        <div id="advancedParamsSectionYes" class="additional-advanced-field">
-          <!-- Tilt Axis -->
-          <div class="form-group">
-            <label for="tiltAxisYes">Enter the tilt axis initial value (default 0):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipTiltAxisYes" class="tooltip">
-              TiltAxis first_input
-            </div>
-            <input type="number" id="tiltAxisYes" name="tiltAxisYes" value="0"/>
-          </div>
-          <!-- Tilt Axis Refinement -->
-          <div class="form-group">
-            <label for="tiltAxisRefineYes">Do you want Aretomo3 to refine tilt axis? (yes/no):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipTiltAxisRefineYes" class="tooltip">
-              TiltAxis second_input
-            </div>
-            <select id="tiltAxisRefineYes" name="tiltAxisRefineYes">
-              <option value="">Select...</option>
-              <option value="yes">Yes (default: 1)</option>
-              <option value="no">No (default: -1)</option>
-            </select>
-          </div>
-
-          <!-- AlignZ -->
-          <div class="form-group">
-            <label for="alignZYes">Enter the AlignZ (leave blank for default):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipAlignZYes" class="tooltip">
-              AlignZ
-            </div>
-            <input type="text" id="alignZYes" name="alignZYes" placeholder="(e.g. blank or numeric)"/>
-          </div>
-
-          <!-- VolZ -->
-          <div class="form-group">
-            <label for="volZYes">Enter the VolZ (default 1600):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipVolZYes" class="tooltip">
-              VolZ
-            </div>
-            <input type="number" id="volZYes" name="volZYes" placeholder="(e.g. blank for default)" value="1600"/>
-          </div>
-
-          <!-- IMOD Option -->
-          <div class="form-group">
-            <label for="imodOptionYes">Do you want to save aligned tilt series in _Imod folder? (yes/no):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipImodOptionYes" class="tooltip">
-              OutImod
-            </div>
-            <select id="imodOptionYes" name="imodOptionYes">
-              <option value="">Select...</option>
-              <option value="no">No (1)</option>
-              <option value="yes">Yes (3)</option>
-            </select>
-          </div>
-
-          <!-- Local Shifts -->
-          <div class="form-group">
-            <label for="localAlnYes">Do you want to measure local shifts? (yes/no):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipLocalAlnYes" class="tooltip">
-              AtPatch
-            </div>
-            <select id="localAlnYes" name="localAlnYes">
-              <option value="">Select...</option>
-              <option value="no">No</option>
-              <option value="yes">Yes</option>
-            </select>
-          </div>
-
-          <!-- Tilt Offset Correction -->
-          <div class="form-group">
-            <label for="tiltCorrYes">Do you want to generate tilt offset corrected volumes? (yes/no):</label>
-            <select id="tiltCorrYes" name="tiltCorrYes">
-              <option value="">Select...</option>
-              <option value="no">No</option>
-              <option value="yes">Yes</option>
-            </select>
-          </div>
-
-          <!-- Save Intermediate Thickness Measure -->
-          <div class="form-group">
-            <label for="tempOptionYes">Do you want to save intermediate thickness measure results? (yes/no):</label>
-            <span class="info-icon">i</span>
-            <div id="tooltipTempOptionYes" class="tooltip">
-              TmpDir
-            </div>
-            <select id="tempOptionYes" name="tempOptionYes">
-              <option value="">Select...</option>
-              <option value="no">No</option>
-              <option value="yes">Yes</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Dose & Number of Tilt Series (Yes Old Gain) -->
-        <div class="form-group">
-          <label for="advancedDoseNumberYes">Enter the calibrated total dose in e-/Å²:</label>
-          <input type="number" id="advancedDoseNumberYes" name="advancedDoseNumberYes" required/>
-        </div>
-        <div class="form-group">
-          <label for="advancedNumChecksYes">Enter the estimated number of tilt series (e.g., 300):</label>
-          <input type="number" id="advancedNumChecksYes" name="advancedNumChecksYes" required/>
-        </div>
-      </div>
-
-      <!-- Run Button (Advanced) -->
-      <button type="button" onclick="runAdvancedFunction()">Submit</button>
-
-      <!-- Output Directory (Advanced) -->
-      <div id="outputContainer" style="display: none; margin-top: 20px;">
-        <strong>Output Directory:</strong> <span id="outputDirectory"></span>
-      </div>
-
-      <!-- Error Message (Advanced) -->
-      <div id="advancedErrorMessage" class="error-message"></div>
-    </form>
+    </div>
+    
+    <button type="button" onclick="submitDenoisETJob()">Run</button>
   </div>
 
   <!-- JobCanceler Section -->
   <div class="form-container cancel-container">
     <h1>JobCanceler</h1>
-    <p><strong style="color:red;">Note:</strong> If you encounter an Unexpected Token error, please log in again</p>
+    <p>
+      <strong style="color:red;">Note:</strong> If you encounter an Unexpected Token error, please log in again
+    </p>
     <form id="cancelForm">
       <div class="form-group">
-        <label for="cancelUserId">User ID: (e.g., firstname.lastname)</label>
-        <input type="text" id="cancelUserId" name="userId" required/>
+        <label for="cancelUserIdInput">User ID: (e.g., firstname.lastname)</label>
+        <input type="text" id="cancelUserIdInput" name="userId" required/>
       </div>
       <div class="form-group">
         <label for="cancelPassword">Password:</label>
@@ -851,58 +227,152 @@
             <th>NODELIST(REASON)</th>
           </tr>
         </thead>
-        <tbody><!-- Dynamically filled --></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Job Logs Section -->
-  <div class="form-container">
-    <h1>Job Logs</h1>
-    <div class="form-group">
-      <label for="logUserId">User Name:</label>
-      <input type="text" id="logUserId" name="logUserId" placeholder="Enter user name..." />
-      <p style="color: #888; font-size: 0.9em; margin-top: 5px;">
-        Note: User name should be in the format "firstname.lastname".
-      </p>
-    </div>
-    <div class="button-container">
-      <button type="button" onclick="trackUserJobs()">Track Jobs by User</button>
-      <button type="button" onclick="trackRecentJobs()">Track 10 Most Recent Jobs</button>
-    </div>
-    <!-- Scrollable container for job logs -->
-    <div id="jobLogsContainer">
-      <table id="jobLogsTable">
-        <thead>
-          <tr>
-            <th>Job Name</th>
-            <th>Advanced</th>
-            <th>Job ID</th>
-            <th>Created At</th>
-            <th>Parameters</th>
-            <th>Error Message</th>
-            <th>User ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Example row for demonstration -->
-          <tr>
-            <td>Example Job</td>
-            <td>Yes</td>
-            <td>12345</td>
-            <td>2025-02-10T23:40:46.776Z</td>
-            <td>{"mode": "basic"}</td>
-            <td>None</td>
-            <td>yongbaek.cho</td>
-          </tr>
-          <!-- Additional rows will be dynamically added here -->
-        </tbody>
+        <tbody></tbody>
       </table>
     </div>
   </div>
 
   <script>
-    // Helper function to safely get element value
+    // Fetch user info and pre-fill the user ID.
+    async function fetchUserInfo() {
+      try {
+        const response = await fetch("/workflow/user_info");
+        const result = await response.json();
+        if (response.ok && result.username) {
+          document.getElementById("userId").value = result.username;
+          document.getElementById("cancelUserId").value = result.username;
+          document.getElementById("cancelUserIdInput").value = result.username;
+        } else {
+          alert("Failed to fetch user info.");
+        }
+      } catch (error) {
+        console.error("An error occurred while fetching user info:", error);
+        alert("An error occurred while fetching user info.");
+      }
+    }
+
+    // Populate the session dropdown with session names.
+    async function populateSessionDropdown() {
+      const url = "/workflow/get_msisession_list";
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "same-origin", 
+        });
+        const responseText = await response.text();
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status} | Body: ${responseText}`);
+        }
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (jsonErr) {
+          console.error("JSON parse error:", jsonErr);
+          throw new Error("Failed to parse JSON. Response was: " + responseText);
+        }
+        if (!result.session_names) {
+          console.error("No 'session_names' found in result:", result);
+          throw new Error("Missing session_names in response JSON.");
+        }
+        const sessionNamesList = document.getElementById("sessionNames");
+        sessionNamesList.innerHTML = "";
+        result.session_names.forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          sessionNamesList.appendChild(option);
+        });
+      } catch (error) {
+        console.error("Error while fetching session names:", error);
+        alert("Failed to fetch session names. " + error.message);
+      }
+    }
+
+    // When a session is selected, fetch the Aretomo3 run number and sync both fields.
+    function attachSessionNameListener() {
+      const sessionNameInput = document.getElementById("sessionName");
+      sessionNameInput.addEventListener("change", async () => {
+        const sessionNameValue = sessionNameInput.value.trim();
+        if (!sessionNameValue) return;
+        try {
+          const response = await fetch(
+            `/workflow/aretomo3_params?session_name=${encodeURIComponent(sessionNameValue)}`
+          );
+          if (!response.ok) {
+            throw new Error(`API call failed with status ${response.status}`);
+          }
+          const result = await response.json();
+          const runNumberInput = document.getElementById("runNumber");
+          if (
+            !result.sessions ||
+            result.sessions.length === 0 ||
+            !result.sessions[0].run_numbers ||
+            result.sessions[0].run_numbers.length === 0
+          ) {
+            runNumberInput.value = "run001";
+          } else {
+            let rawRunNum = result.sessions[0].run_numbers[0];
+            if (!rawRunNum.toLowerCase().startsWith("run")) {
+              rawRunNum = "run" + rawRunNum;
+            }
+            runNumberInput.value = rawRunNum;
+          }
+          // Initially sync the denoise run number to the Aretomo3 run number.
+          document.getElementById("denoiseRunNumber").value = runNumberInput.value;
+        } catch (error) {
+          console.error("Error fetching run numbers:", error);
+          const runNumberInput = document.getElementById("runNumber");
+          runNumberInput.value = "run001";
+          document.getElementById("denoiseRunNumber").value = "run001";
+        }
+      });
+    }
+
+    // Submit the DenoisET job with the form data.
+    async function submitDenoisETJob() {
+      const userId = document.getElementById("userId").value;
+      const password = document.getElementById("password").value;
+      const sessionName = document.getElementById("sessionName").value;
+      const runNumber = document.getElementById("runNumber").value;
+      const denoiseRunNumber = document.getElementById("denoiseRunNumber").value;
+      const modelName = document.getElementById("modelName").value;
+      const liveDenoising = document.getElementById("liveDenoising").checked;
+      if (!userId || !password || !sessionName || !runNumber || !denoiseRunNumber || !modelName) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+      const encodedPassword = btoa(password);
+      const payload = {
+        user_id: userId,
+        password: encodedPassword,
+        session_name: sessionName,
+        run_number: runNumber,
+        denoise_run_number: denoiseRunNumber,
+        model_name: modelName,
+        live_denoising: liveDenoising
+      };
+      try {
+        const response = await fetch('/workflow/run_denoiset', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        console.log(data);
+        if (!response.ok) {
+          alert('Error: ' + data.error);
+        } else {
+          alert(data.message);
+          console.log('Output:', data.output);
+          console.log('Error:', data.error);
+        }
+      } catch (error) {
+        alert('Request failed: ' + error.message);
+      }
+    }
+
+    // Helper function to safely get element value.
     function getElementValue(id) {
       const elem = document.getElementById(id);
       if (!elem) {
@@ -913,47 +383,7 @@
       return elem.value.trim();
     }
 
-    // On Page Load
-    document.addEventListener("DOMContentLoaded", async () => {
-      try {
-        await fetchUserInfo();
-        await populateSessionDropdown();
-      } catch (error) {
-        console.error("Error during initialization:", error);
-      }
-
-      // Attach a listener to auto-fill runNumber (Basic mode)
-      attachSessionNameListener();
-
-      // Attach a separate listener to auto-fill advancedRunNumber (Advanced mode)
-      attachProjectNameListener();
-    });
-
-    // Populate Session Dropdown
-    async function populateSessionDropdown() {
-      try {
-        const response = await fetch("/workflow/get_msisession_list");
-        const result = await response.json();
-
-        if (response.ok && result.session_names) {
-          const sessionNamesList = document.getElementById("sessionNames");
-          sessionNamesList.innerHTML = "";
-          result.session_names.forEach((sessionName) => {
-            const option = document.createElement("option");
-            option.value = sessionName;
-            sessionNamesList.appendChild(option);
-          });
-        } else {
-          console.error("Failed to fetch session names:", result.error || "Unknown error");
-          alert("Failed to fetch session names. Please try again later.");
-        }
-      } catch (error) {
-        console.error("Error while fetching session names:", error);
-        alert("An error occurred while fetching session names.");
-      }
-    }
-
-    // CSRF Cookie
+    // Helper function to get cookie value.
     function getCookie(name) {
       let cookieValue = null;
       if (document.cookie && document.cookie !== "") {
@@ -969,335 +399,31 @@
       return cookieValue;
     }
 
-    // Fetch User Info
-    async function fetchUserInfo() {
-      try {
-        const response = await fetch("/workflow/user_info");
-        const result = await response.json();
+    // Loading Indicator Functions.
+    function showLoadingIndicator() {
+      const loadingDiv = document.createElement("div");
+      loadingDiv.id = "loadingIndicator";
+      loadingDiv.style.position = "fixed";
+      loadingDiv.style.top = "50%";
+      loadingDiv.style.left = "50%";
+      loadingDiv.style.transform = "translate(-50%, -50%)";
+      loadingDiv.style.padding = "20px";
+      loadingDiv.style.backgroundColor = "#fff";
+      loadingDiv.style.border = "1px solid #ccc";
+      loadingDiv.style.borderRadius = "4px";
+      loadingDiv.style.boxShadow = "0 0 10px rgba(0,0,0,0.1)";
+      loadingDiv.innerText = "Submitting...";
+      document.body.appendChild(loadingDiv);
+    }
 
-        if (response.ok && result.username) {
-          document.getElementById("userId").value = result.username;
-          document.getElementById("cancelUserId").value = result.username;
-        } else {
-          alert("Failed to fetch user info.");
-        }
-      } catch (error) {
-        alert("An error occurred while fetching user info.");
+    function hideLoadingIndicator() {
+      const loadingDiv = document.getElementById("loadingIndicator");
+      if (loadingDiv) {
+        document.body.removeChild(loadingDiv);
       }
     }
 
-    // Basic form: attach a listener
-    function attachSessionNameListener() {
-      const sessionNameInput = document.getElementById("sessionName");
-      sessionNameInput.addEventListener("change", async () => {
-        const sessionNameValue = sessionNameInput.value.trim();
-        if (!sessionNameValue) return;
-
-        try {
-          const response = await fetch(`/workflow/aretomo3_params?session_name=${encodeURIComponent(sessionNameValue)}`);
-          if (!response.ok) {
-            throw new Error(`API call failed with status ${response.status}`);
-          }
-
-          const result = await response.json();
-          const runNumberInput = document.getElementById("runNumber");
-
-          // If there's no data or no run_numbers, use "001"
-          if (
-            !result.sessions ||
-            result.sessions.length === 0 ||
-            !result.sessions[0].run_numbers ||
-            result.sessions[0].run_numbers.length === 0
-          ) {
-            runNumberInput.value = "001";
-          } else {
-            // Take the first run number as-is
-            runNumberInput.value = result.sessions[0].run_numbers[0];
-          }
-        } catch (error) {
-          console.error("Error fetching run numbers (basic):", error);
-          document.getElementById("runNumber").value = "001";
-        }
-      });
-    }
-
-    // Advanced form: attach a listener
-    function attachProjectNameListener() {
-      const projectNameInput = document.getElementById("projectName");
-      projectNameInput.addEventListener("change", async () => {
-        const projectNameValue = projectNameInput.value.trim();
-        if (!projectNameValue) return;
-
-        try {
-          const response = await fetch(`/workflow/aretomo3_params?session_name=${encodeURIComponent(projectNameValue)}`);
-          if (!response.ok) {
-            throw new Error(`API call failed with status ${response.status}`);
-          }
-
-          const result = await response.json();
-          const advRunNumberInput = document.getElementById("advancedRunNumber");
-
-          if (
-            !result.sessions ||
-            result.sessions.length === 0 ||
-            !result.sessions[0].run_numbers ||
-            result.sessions[0].run_numbers.length === 0
-          ) {
-            advRunNumberInput.value = "001";
-          } else {
-            // Take the first run number as-is
-            advRunNumberInput.value = result.sessions[0].run_numbers[0];
-          }
-        } catch (error) {
-          console.error("Error fetching run numbers (advanced):", error);
-          document.getElementById("advancedRunNumber").value = "001";
-        }
-      });
-    }
-
-    // Run (Basic)
-    async function runFunction() {
-      try {
-        const sessionName = getElementValue("sessionName");
-        const runNumber = getElementValue("runNumber");
-        const pixelSize = getElementValue("pixelSize");
-        const dosenumber = getElementValue("dosenumber");
-        const numChecks = getElementValue("numChecks");
-        const userId = getElementValue("userId");
-        const password = document.getElementById("password").value;
-        if (!password) {
-          alert("Password is required.");
-          return;
-        }
-        const encodedPassword = btoa(password); // Base64
-
-        const csrftoken = getCookie("csrftoken");
-        const requestBody = {
-          mode: "basic",
-          session_name: sessionName,
-          run_number: runNumber,
-          pixel_size: pixelSize,
-          dose_number: dosenumber,
-          num_checks: numChecks,
-          user_id: userId,
-          password: encodedPassword,
-        };
-
-        console.log("Submitting Basic Form with requestBody:", requestBody);
-
-        // Show loading
-        showLoadingIndicator();
-
-        const response = await fetch("/workflow/run_aretomo3", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": csrftoken,
-          },
-          body: JSON.stringify(requestBody),
-        });
-
-        // Hide loading
-        hideLoadingIndicator();
-
-        const result = await response.json();
-        if (response.ok) {
-          alert(`Message: ${result.message}`);
-          document.getElementById("outputDirectory").textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${sessionName}/run${runNumber}`;
-          document.getElementById("outputContainer").style.display = "block";
-          document.getElementById("errorMessage").style.display = "none";
-        } else {
-          document.getElementById("errorMessage").textContent = `Error: ${
-            result.error || "Failed to run the job."
-          }`;
-          document.getElementById("errorMessage").style.display = "block";
-        }
-      } catch (error) {
-        console.error("Error during job submission:", error);
-        document.getElementById("errorMessage").textContent = `Error: ${
-          error.message || "Failed to run the job."
-        }`;
-        document.getElementById("errorMessage").style.display = "block";
-      }
-    }
-
-    // Run (Advanced)
-    async function runAdvancedFunction() {
-      console.log("runAdvancedFunction called");
-
-      try {
-        const advancedRunNumber = getElementValue("advancedRunNumber");
-        const projectName = getElementValue("projectName");
-        const useOldGain = getElementValue("useOldGain");
-        const userId = getElementValue("userId");
-        const passwordElem = document.getElementById("password");
-        if (!passwordElem) {
-          console.error("Element with id 'password' not found.");
-          alert("Internal error: Element with id 'password' not found.");
-          return;
-        }
-        const password = passwordElem.value;
-        if (!password) {
-          alert("Password is required.");
-          return;
-        }
-        const encodedPassword = btoa(password); // Base64
-
-        let requestBody = {
-          mode: "advanced",
-          project_name: projectName,
-          use_old_gain: useOldGain,
-          user_id: userId,
-          password: encodedPassword,
-          run_number: advancedRunNumber 
-        };
-
-        if (!useOldGain) {
-          alert("Please select yes or no for 'Do you want to use an old gain reference?'");
-          return;
-        }
-
-        // If "no" for old gain
-        if (useOldGain === "no") {
-          const denoisetTraining = getElementValue("denoisetTraining");
-          const evnOddSplit = getElementValue("evnOddSplit");
-          const advancedPixelSize = getElementValue("advancedPixelSize");
-          const advancedDoseNumberNo = getElementValue("advancedDoseNumberNo");
-          const advancedNumChecksNo = getElementValue("advancedNumChecksNo");
-          const useAdvancedParams = getElementValue("useAdvancedParams");
-
-          if (
-            !advancedRunNumber ||
-            !denoisetTraining ||
-            !evnOddSplit ||
-            !advancedPixelSize ||
-            !advancedDoseNumberNo ||
-            !advancedNumChecksNo ||
-            !useAdvancedParams
-          ) {
-            alert("Please fill in all required fields in the 'No Old Gain Reference' section.");
-            return;
-          }
-
-          requestBody.denoiset_training = denoisetTraining;
-          requestBody.evn_odd_split = evnOddSplit;
-          requestBody.pixel_size = advancedPixelSize;
-          requestBody.dose_number = advancedDoseNumberNo;
-          requestBody.num_checks = advancedNumChecksNo;
-          requestBody.use_advanced_params = useAdvancedParams;
-
-          if (useAdvancedParams === "yes") {
-            const tiltAxis = getElementValue("tiltAxis") || "";
-            const tiltAxisRefine = getElementValue("tiltAxisRefine") || "no";
-            const alignZ = getElementValue("alignZ") || "";
-            const volZ = getElementValue("volZ") || "1600";
-            const imodOption = getElementValue("imodOption") || "no";
-            const localAln = getElementValue("localAln") || "no";
-            const tiltCorr = getElementValue("tiltCorr") || "no";
-            const tempOption = getElementValue("tempOption") || "no";
-
-            requestBody.tilt_axis = tiltAxis;
-            requestBody.tilt_axis_refine = tiltAxisRefine;
-            requestBody.align_z = alignZ;
-            requestBody.vol_z = volZ;
-            requestBody.imod_option = imodOption;
-            requestBody.local_shift = localAln;
-            requestBody.tilt_offset = tiltCorr;
-            requestBody.thickness_measure = tempOption;
-          }
-        }
-
-        // If "yes" for old gain
-        if (useOldGain === "yes") {
-          const gainFileName = getElementValue("gainFileName");
-          const denoisetTrainingYes = getElementValue("denoisetTrainingYes");
-          const evnOddSplitYes = getElementValue("evnOddSplitYes");
-          const advancedPixelSizeYes = getElementValue("advancedPixelSizeYes");
-          const useAdvancedParamsYes = getElementValue("useAdvancedParamsYes");
-          const advancedDoseNumberYes = getElementValue("advancedDoseNumberYes");
-          const advancedNumChecksYes = getElementValue("advancedNumChecksYes");
-
-          if (
-            !gainFileName ||
-            !denoisetTrainingYes ||
-            !evnOddSplitYes ||
-            !advancedPixelSizeYes ||
-            !advancedDoseNumberYes ||
-            !advancedNumChecksYes ||
-            !useAdvancedParamsYes
-          ) {
-            alert("Please fill in all required fields in the 'Yes Old Gain Reference' section.");
-            return;
-          }
-
-          requestBody.gain_file_name = gainFileName;
-          requestBody.denoiset_training = denoisetTrainingYes;
-          requestBody.evn_odd_split = evnOddSplitYes;
-          requestBody.pixel_size = advancedPixelSizeYes;
-          requestBody.dose_number = advancedDoseNumberYes;
-          requestBody.num_checks = advancedNumChecksYes;
-          requestBody.use_advanced_params = useAdvancedParamsYes;
-
-          if (useAdvancedParamsYes === "yes") {
-            const tiltAxisYes = getElementValue("tiltAxisYes") || "0";
-            const tiltAxisRefineYes = getElementValue("tiltAxisRefineYes") || "no";
-            const alignZYes = getElementValue("alignZYes") || "";
-            const volZYes = getElementValue("volZYes") || "1600";
-            const imodOptionYes = getElementValue("imodOptionYes") || "no";
-            const localAlnYes = getElementValue("localAlnYes") || "no";
-            const tiltCorrYes = getElementValue("tiltCorrYes") || "no";
-            const tempOptionYes = getElementValue("tempOptionYes") || "no";
-
-            requestBody.tilt_axis = tiltAxisYes;
-            requestBody.tilt_axis_refine = tiltAxisRefineYes;
-            requestBody.align_z = alignZYes;
-            requestBody.vol_z = volZYes;
-            requestBody.imod_option = imodOptionYes;
-            requestBody.local_shift = localAlnYes;
-            requestBody.tilt_offset = tiltCorrYes;
-            requestBody.thickness_measure = tempOptionYes;
-          }
-        }
-
-        const csrftoken = getCookie("csrftoken");
-        showLoadingIndicator();
-        try {
-          const response = await fetch("/workflow/run_advanced_aretomo3", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": csrftoken,
-            },
-            body: JSON.stringify(requestBody),
-          });
-
-          hideLoadingIndicator();
-          const result = await response.json();
-
-          if (response.ok) {
-            alert(`Message: ${result.message}`);
-            document.getElementById("outputDirectory").textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${projectName}/run${advancedRunNumber}`;
-            document.getElementById("outputContainer").style.display = "block";
-            document.getElementById("advancedErrorMessage").style.display = "none";
-          } else {
-            document.getElementById("advancedErrorMessage").textContent = `Error: ${
-              result.error || "Failed to run the job."
-            }`;
-            document.getElementById("advancedErrorMessage").style.display = "block";
-          }
-        } catch (error) {
-          console.error("Error during advanced job submission:", error);
-          document.getElementById("advancedErrorMessage").textContent = `Error: ${
-            error.message || "Failed to run the job."
-          }`;
-          document.getElementById("advancedErrorMessage").style.display = "block";
-        }
-      } catch (error) {
-        console.error("Error in runAdvancedFunction:", error);
-      }
-    }
-
-    // Confirm Cancel
+    // Confirm Cancel: prompt the user then call cancelFunction.
     function confirmCancel() {
       const ignorePrompt = getCookie("ignoreCancelPrompt");
       if (ignorePrompt === "true") {
@@ -1314,7 +440,7 @@
       }
     }
 
-    // Set Cookie
+    // Set cookie function.
     function setCookie(name, value, days) {
       const date = new Date();
       date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -1322,11 +448,11 @@
       document.cookie = name + "=" + value + ";" + expires + ";path=/";
     }
 
-    // Cancel Function
+    // Cancel function: submits a cancellation request.
     async function cancelFunction() {
       try {
         const jobNumber = getElementValue("jobNumber");
-        const userId = getElementValue("cancelUserId");
+        const userId = getElementValue("cancelUserIdInput");
         const passwordElem = document.getElementById("cancelPassword");
         if (!passwordElem) {
           console.error("Element with id 'cancelPassword' not found.");
@@ -1345,9 +471,7 @@
           user_id: userId,
           password: encodedPassword,
         };
-
         console.log("Submitting Cancel Form with requestBody:", requestBody);
-
         const response = await fetch("/workflow/cancel_aretomo3", {
           method: "POST",
           headers: {
@@ -1373,9 +497,7 @@
       try {
         const jobName = getElementValue("jobName") || null;
         console.log("Tracking Jobs with jobName:", jobName);
-
         showLoadingIndicator();
-
         const response = await fetch("/workflow/track_jobs", {
           method: "POST",
           headers: {
@@ -1384,12 +506,9 @@
           },
           body: JSON.stringify({ job_name: jobName }),
         });
-
         hideLoadingIndicator();
-
         const result = await response.json();
         console.log("Track Jobs response:", result);
-
         if (response.ok) {
           const tbody = document.querySelector("#jobTable tbody");
           tbody.innerHTML = "";
@@ -1421,9 +540,7 @@
     async function trackAllJobs() {
       try {
         console.log("Tracking All Jobs");
-
         showLoadingIndicator();
-
         const response = await fetch("/workflow/track_jobs", {
           method: "POST",
           headers: {
@@ -1432,12 +549,9 @@
           },
           body: JSON.stringify({ job_name: null }),
         });
-
         hideLoadingIndicator();
-
         const result = await response.json();
         console.log("Track All Jobs response:", result);
-
         if (response.ok) {
           const tbody = document.querySelector("#jobTable tbody");
           tbody.innerHTML = "";
@@ -1465,200 +579,16 @@
       }
     }
 
-    // Go Back
-    function goBack() {
-      window.location.href = "/umbrella";
-    }
-
-    // Toggle Basic/Advanced
-    const modeToggle = document.getElementById("modeToggle");
-    const toggleLabel = document.getElementById("toggleLabel");
-    const basicForm = document.getElementById("basicForm");
-    const advancedForm = document.getElementById("advancedForm");
-
-    modeToggle.addEventListener("change", () => {
-      if (modeToggle.checked) {
-        toggleLabel.textContent = "Advanced";
-        basicForm.style.display = "none";
-        advancedForm.style.display = "block";
-      } else {
-        toggleLabel.textContent = "Basic";
-        basicForm.style.display = "block";
-        advancedForm.style.display = "none";
-      }
-    });
-
-    // Handle Old Gain (Advanced)
-    document.getElementById("useOldGain").addEventListener("change", () => {
-      const useOldGain = document.getElementById("useOldGain").value;
-      const additionalFields = document.getElementById("additionalFields");
-      const oldGainFields = document.getElementById("oldGainFields");
-
-      if (useOldGain === "no") {
-        additionalFields.style.display = "block";
-        oldGainFields.style.display = "none";
-      } else if (useOldGain === "yes") {
-        oldGainFields.style.display = "block";
-        additionalFields.style.display = "none";
-      } else {
-        additionalFields.style.display = "none";
-        oldGainFields.style.display = "none";
-      }
-    });
-
-    // Show/hide advanced params if "yes" is selected (No Old Gain)
-    document.getElementById("useAdvancedParams").addEventListener("change", () => {
-      const useAdvanced = document.getElementById("useAdvancedParams").value;
-      const advancedParamsSection = document.getElementById("advancedParamsSection");
-      if (useAdvanced === "yes") {
-        advancedParamsSection.style.display = "block";
-      } else {
-        advancedParamsSection.style.display = "none";
-      }
-    });
-
-    // Show/hide advanced params if "yes" is selected for old gain
-    document.getElementById("useAdvancedParamsYes").addEventListener("change", () => {
-      const useAdvancedYes = document.getElementById("useAdvancedParamsYes").value;
-      const advancedParamsSectionYes = document.getElementById("advancedParamsSectionYes");
-      if (useAdvancedYes === "yes") {
-        advancedParamsSectionYes.style.display = "block";
-      } else {
-        advancedParamsSectionYes.style.display = "none";
-      }
-    });
-
-    // Sync denoisetTraining with evnOddSplit (No Old Gain)
-    document.getElementById("denoisetTraining").addEventListener("change", () => {
-      const denoisetVal = document.getElementById("denoisetTraining").value;
-      const evnOddSplit = document.getElementById("evnOddSplit");
-
-      // If using for DenoisET training, or not, we lock evnOddSplit
-      if (denoisetVal === "yes") {
-        evnOddSplit.value = "yes";
-        evnOddSplit.disabled = true;
-      } else if (denoisetVal === "no") {
-        evnOddSplit.value = "no";
-        evnOddSplit.disabled = true;
-      } else {
-        evnOddSplit.value = "";
-        evnOddSplit.disabled = false;
-      }
-    });
-
-    // Sync denoisetTrainingYes with evnOddSplitYes (Yes Old Gain)
-    document.getElementById("denoisetTrainingYes").addEventListener("change", () => {
-      const denoisetValYes = document.getElementById("denoisetTrainingYes").value;
-      const evnOddSplitYes = document.getElementById("evnOddSplitYes");
-
-      if (denoisetValYes === "yes") {
-        evnOddSplitYes.value = "yes";
-        evnOddSplitYes.disabled = true;
-      } else if (denoisetValYes === "no") {
-        evnOddSplitYes.value = "no";
-        evnOddSplitYes.disabled = true;
-      } else {
-        evnOddSplitYes.value = "";
-        evnOddSplitYes.disabled = false;
-      }
-    });
-
-    // Initialize the form to Basic mode on page load
-    window.onload = () => {
-      modeToggle.checked = false;
-      toggleLabel.textContent = "Basic";
-      basicForm.style.display = "block";
-      advancedForm.style.display = "none";
-    };
-
-    // Loading Indicator Functions
-    function showLoadingIndicator() {
-      const loadingDiv = document.createElement("div");
-      loadingDiv.id = "loadingIndicator";
-      loadingDiv.style.position = "fixed";
-      loadingDiv.style.top = "50%";
-      loadingDiv.style.left = "50%";
-      loadingDiv.style.transform = "translate(-50%, -50%)";
-      loadingDiv.style.padding = "20px";
-      loadingDiv.style.backgroundColor = "#fff";
-      loadingDiv.style.border = "1px solid #ccc";
-      loadingDiv.style.borderRadius = "4px";
-      loadingDiv.style.boxShadow = "0 0 10px rgba(0,0,0,0.1)";
-      loadingDiv.innerText = "Submitting...";
-      document.body.appendChild(loadingDiv);
-    }
-
-    function hideLoadingIndicator() {
-      const loadingDiv = document.getElementById("loadingIndicator");
-      if (loadingDiv) {
-        document.body.removeChild(loadingDiv);
-      }
-    }
-
-    // --- Job Logs Functions ---
-    async function fetchJobLogs(params) {
+    // Initialize the page.
+    document.addEventListener("DOMContentLoaded", async () => {
       try {
-        showLoadingIndicator();
-        const queryString = new URLSearchParams(params).toString();
-        const url = `/workflow/job_logs?${queryString}`;
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken"),
-          },
-        });
-        const responseText = await response.text();
-        console.log("Raw API Response:", responseText);
-        hideLoadingIndicator();
-        if (!responseText) {
-          alert("Error: Received an empty response from the server.");
-          return;
-        }
-        const result = JSON.parse(responseText);
-        if (response.ok) {
-          displayJobLogs(result.job_logs);
-        } else {
-          alert(`Failed to fetch job logs. Error: ${result.error}`);
-        }
+        await fetchUserInfo();
+        await populateSessionDropdown();
       } catch (error) {
-        hideLoadingIndicator();
-        console.error("Error fetching job logs:", error);
-        alert(`Failed to fetch job logs. Error: ${error.message || "Unknown error."}`);
+        console.error("Error during initialization:", error);
       }
-    }
-
-    function displayJobLogs(jobLogs) {
-      const tableBody = document.querySelector("#jobLogsTable tbody");
-      tableBody.innerHTML = "";
-      jobLogs.forEach((log) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${log.job_name}</td>
-          <td>${log.advanced ? "Yes" : "No"}</td>
-          <td>${log.job_id}</td>
-          <td>${new Date(log.created_at).toLocaleString()}</td>
-          <td>${JSON.stringify(log.parameters, null, 2)}</td>
-          <td>${log.error_message || "None"}</td>
-          <td>${log.user_id}</td>
-        `;
-        tableBody.appendChild(row);
-      });
-      document.getElementById("jobLogsContainer").style.display = "block";
-    }
-    
-    function trackUserJobs() {
-      const userName = document.getElementById("logUserId").value.trim();
-      if (!userName) {
-        alert("Please enter a user name.");
-        return;
-      }
-      fetchJobLogs({ user_name: userName });
-    }
-
-    function trackRecentJobs() {
-      fetchJobLogs({ limit: 10 });
-    }
+      attachSessionNameListener();
+    });
   </script>
 </body>
 </html>
