@@ -355,7 +355,7 @@
         <th>Processing Runs</th>
       </tr>
       <script>
-        // Function to detect the base URL and append the `/next` endpoint
+        // Detect the base URL and append the `/next` endpoint
         function getNextUrl() {
           const LOCALHOST_PORT = 8000;
           const LOCALHOST_NEXT_PORT = 3000;
@@ -403,23 +403,40 @@
       </tr>
     </table>
 
+    <!-- RUN WORKFLOW SECTION -->
     <h2>Run Workflow</h2>
     <table class="table">
       <tr>
-        <th>Workflow Actions</th>
-        <th>Metadata Fetcher</th>
+        <th>Aretomo</th>
+        <th>DenoisET</th>
       </tr>
       <tr>
+        <!-- Make sure these two links point to DISTINCT routes: -->
         <td>
           <a href="/workflow/run" class="button">Aretomo Run</a>
           <p>Start an Aretomo run</p>
         </td>
+        <td>
+          <a href="/workflow/denoiset_run" class="button">DenoisET</a>
+          <p>Run the DenoisET process</p>
+        </td>
+      </tr>
+    </table>
+
+    <!-- METADATA SEARCH SECTION -->
+    <h2>Metadata Search</h2>
+    <table class="table">
+      <tr>
+        <th>Metadata Tools</th>
+      </tr>
+      <tr>
         <td>
           <a href="/workflow" class="button">Metadata Fetcher</a>
           <p>Fetch metadata for processing</p>
         </td>
       </tr>
     </table>
+    
   </div>
 
   <!-- Chatbot Popup Icon (bottom-right) -->
