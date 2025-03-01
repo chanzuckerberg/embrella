@@ -21,9 +21,9 @@ export const getLinkPropsFromLinkField = (
 });
 
 export const getLinkPropsFromLinkFieldList = (
-  linkFields: EntityLinkField[],
-): LinkCellProps[] =>
-  linkFields.map((linkField) => getLinkPropsFromLinkField(linkField));
+  linkFields?: EntityLinkField[], // Ensure it's optional
+): LinkCellProps[] => 
+  Array.isArray(linkFields) ? linkFields.map(getLinkPropsFromLinkField) : [];
 
 export const getLinkCellFromCellContext = (
   props: CellContext<EntityDataTypes, AccessorReturnType>,

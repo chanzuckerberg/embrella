@@ -45,6 +45,7 @@ urlpatterns = [
     path('available_grids', get_available_grids, name='get_available_grids'),
     path('cryo_grids/', include('cryo_grids.urls'), name='cryo_grids'),
     path('workflow/', include('workflow.urls'), name='workflow pipeline'),
+    path('agent/', include('agent.urls'), name='AI Agent'),
     path('annotations/v1/filterlist/', available_annotation_filter, name='get filter list for annotations'),
 
 ]

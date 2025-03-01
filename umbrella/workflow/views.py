@@ -35,7 +35,7 @@ def store_log(request, data_sanitized, error, advanced_status=False, job_id = No
                 user=request.user,
                 job_name=f"Aretomo3",
                 advanced=advanced_status,
-                job_id=None,  # No job ID available in case of error
+                job_id=job_id,  # No job ID available in case of error
                 parameters=data_sanitized,
                 error_message=str(error)  # Store the error message
             )
@@ -115,6 +115,7 @@ def run_aretomo3_advanced(request):
                 # evn_odd_split = data.get('evn_odd_split')
                 pixel_size = data.get('pixel_size')
                 use_advanced_params = data.get('use_advanced_params')
+                dose_number = data.get('dose_number')
                 num_checks = data.get('num_checks')
                 # Only parse advanced params if user selected "yes"
                 if use_advanced_params == 'yes':
@@ -199,6 +200,7 @@ def run_aretomo3_advanced(request):
             )
 
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
+            print(found_ids)
             job_id_str = ",".join(found_ids) if found_ids else None
 
             # Store log regardless of success or failure
@@ -206,7 +208,7 @@ def run_aretomo3_advanced(request):
 
             # Return your response
             return JsonResponse({
-                'message': f'Session {project_name} for Advanced Aretomo3 is submitted successfully. Please check the below output directory',
+                'message': f'Advanced job for project {project_name} submitted successfully.',
                 'output': output,
                 'error': error
             })

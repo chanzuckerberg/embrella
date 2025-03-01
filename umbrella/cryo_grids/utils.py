@@ -19,7 +19,7 @@ class CryoGridsQueryParams(BaseModel):
     
     
     # Define the allowed category names in camelCase
-    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "puck", "user", "screeningSession", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "cassette", "sample", "date", "freezingPlan", "freezingSession", "date"}
+    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "puck", "user", "screeningSession", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "cassette", "sample", "date", "freezingSession", "date"}
 
     @validator('q')
     def validate_q(cls, value):
@@ -66,14 +66,6 @@ class SortMetadataModel(BaseModel):
     sort: Optional[str] = None
     asc: Optional[bool] = None
 
-class SampleModel(BaseModel):
-    id: Optional[int]
-    name: Optional[str]
-    url: Optional[str]  # Changed from HttpUrl to str
-
-class FreezingPlanModel(BaseModel):
-    id: Optional[int]
-    sample: Optional[List[SampleModel]]
 
 class FreezingSessionModel(BaseModel):
     id: Optional[int]
@@ -113,7 +105,6 @@ class CryoGridResultModel(BaseModel):
     project: Optional[ProjectModel] = None
     puck: Optional[PuckModel] = None
     user: Optional[UserModel] = None
-    freezingPlan: Optional[FreezingPlanModel] = None
     freezingSession: Optional[FreezingSessionModel] = None
     screeningSession: Optional[str] = None
     msiSession: Optional[List[MSISessionModel]] = None

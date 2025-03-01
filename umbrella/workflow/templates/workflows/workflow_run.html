@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Run Aretomo3 Job</title>
   <style>
-    /* [Your existing CSS styles remain unchanged] */
+    /* [Your existing CSS styles remain unchanged, except for new styling for job logs overflow handling] */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
@@ -318,6 +318,36 @@
         max-width: 300px;
         padding: 15px;
       }
+    }
+
+    /* ===== Job Logs Overflow Handling ===== */
+    #jobLogsContainer {
+      display: none; 
+      margin-top: 20px;
+      /* Limit the container's height and make it scrollable if needed */
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+      padding: 15px;
+    }
+    /* Force table to handle long text properly */
+    #jobLogsTable {
+      table-layout: fixed;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #jobLogsTable th,
+    #jobLogsTable td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    #jobLogsTable th {
+      background-color: #f2f2f2;
+      text-align: left;
     }
   </style>
 </head>
@@ -822,35 +852,37 @@
       <button type="button" onclick="trackUserJobs()">Track Jobs by User</button>
       <button type="button" onclick="trackRecentJobs()">Track 10 Most Recent Jobs</button>
     </div>
-    <div id="jobLogsContainer" style="display:none; margin-top: 20px;">
-      <table id="jobLogsTable" style="border-collapse: collapse; width: 100%;">
+    <!-- The container for job logs, now with proper overflow handling -->
+    <div id="jobLogsContainer">
+      <table id="jobLogsTable">
         <thead>
           <tr>
-            <th style="border: 1px solid #ccc; padding: 8px;">Job Name</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Advanced</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Job ID</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Created At</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Parameters</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">Error Message</th>
-            <th style="border: 1px solid #ccc; padding: 8px;">User ID</th>
+            <th>Job Name</th>
+            <th>Advanced</th>
+            <th>Job ID</th>
+            <th>Created At</th>
+            <th>Parameters</th>
+            <th>Error Message</th>
+            <th>User ID</th>
           </tr>
         </thead>
         <tbody>
           <!-- Example row for demonstration -->
           <tr>
-            <td style="border: 1px solid #ccc; padding: 8px;">Example Job</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">Yes</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">12345</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">2025-02-10T23:40:46.776Z</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">{"mode": "basic"}</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">None</td>
-            <td style="border: 1px solid #ccc; padding: 8px;">yongbaek.cho</td>
+            <td>Example Job</td>
+            <td>Yes</td>
+            <td>12345</td>
+            <td>2025-02-10T23:40:46.776Z</td>
+            <td>{"mode": "basic"}</td>
+            <td>None</td>
+            <td>yongbaek.cho</td>
           </tr>
           <!-- Additional rows will be dynamically added here -->
         </tbody>
       </table>
     </div>
   </div>
+
   <script>
     // Helper function to safely get element value
     function getElementValue(id) {
@@ -1624,13 +1656,13 @@
       jobLogs.forEach((log) => {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.job_name}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.advanced ? "Yes" : "No"}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.job_id}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${new Date(log.created_at).toLocaleString()}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${JSON.stringify(log.parameters, null, 2)}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.error_message || "None"}</td>
-          <td style="border: 1px solid #ccc; padding: 8px;">${log.user_id}</td>
+          <td>${log.job_name}</td>
+          <td>${log.advanced ? "Yes" : "No"}</td>
+          <td>${log.job_id}</td>
+          <td>${new Date(log.created_at).toLocaleString()}</td>
+          <td>${JSON.stringify(log.parameters, null, 2)}</td>
+          <td>${log.error_message || "None"}</td>
+          <td>${log.user_id}</td>
         `;
         tableBody.appendChild(row);
       });
