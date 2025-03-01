@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Run Aretomo3 Job</title>
   <style>
-    /* Basic Page & Form Container Styles */
+    /* [Your existing CSS styles remain unchanged] */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
@@ -346,6 +346,36 @@
         max-width: 300px;
         padding: 15px;
       }
+    }
+
+    /* ===== Job Logs Overflow Handling ===== */
+    #jobLogsContainer {
+      display: none; 
+      margin-top: 20px;
+      /* Limit the container's height and make it scrollable if needed */
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+      padding: 15px;
+    }
+    /* Force table to handle long text properly */
+    #jobLogsTable {
+      table-layout: fixed;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #jobLogsTable th,
+    #jobLogsTable td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    #jobLogsTable th {
+      background-color: #f2f2f2;
+      text-align: left;
     }
   </style>
 </head>
@@ -852,8 +882,8 @@
       <button type="button" onclick="trackUserJobs()">Track Jobs by User</button>
       <button type="button" onclick="trackRecentJobs()">Track 10 Most Recent Jobs</button>
     </div>
-    <div id="jobLogsContainer" style="display: none;">
-      <table id="jobLogsTable">
+    <div id="jobLogsContainer" style="display:none; margin-top: 20px;">
+      <table id="jobLogsTable" style="border-collapse: collapse; width: 100%;">
         <thead>
           <tr>
             <th>Job Name</th>

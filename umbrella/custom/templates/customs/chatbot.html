@@ -1,0 +1,212 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chatbot UI</title>
+  <link rel="stylesheet" href="{% static 'path/to/your/styles.css' %}">
+  <style>
+    /* Body and overall page styling */
+    body {
+      font-family: "Arial", sans-serif;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+    }
+
+    /* Chat container styling */
+    .chat-container {
+      width: 600px;
+      height: 600px; /* Fixed height for the entire chat container */
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Chat box styling */
+    .chat-box {
+      flex: 1; /* Allow chat box to grow and fill available space */
+      padding: 15px;
+      overflow-y: auto; /* Enable vertical scrolling */
+      background: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Shared message style */
+    .message {
+      margin: 6px 0;
+      padding: 12px 16px;
+      border-radius: 12px;
+      max-width: 75%;
+      line-height: 1.4;
+      font-size: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      position: relative;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;  /* Adjusts for preserving spaces */
+    }
+
+    /* User message specific styling */
+    .user-message {
+      align-self: flex-end;
+      background: #007bff;
+      color: #fff;
+      border-top-right-radius: 0;
+      border-radius: 12px;
+    }
+
+    /* Bot message specific styling */
+    .bot-message {
+      align-self: flex-start;
+      background: #e0e0e0;
+      border-top-left-radius: 0;
+      border-radius: 12px;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    /* Bot icon styling */
+    .bot-message .bot-icon {
+      width: 32px;
+      height: 32px;
+      margin-right: 8px;
+      object-fit: cover;
+      border-radius: 50%;
+      align-self: center;
+    }
+
+    /* Styling for the text within the bot message */
+    .bot-message .message-text {
+      flex: 1;
+      word-break: break-all;      /* Ensures long, unbroken strings wrap to the next line */
+      overflow-wrap: break-word;  /* Extra safety for wrapping long words */
+      white-space: normal;        /* Allow text to wrap normally */
+    }
+
+    /* Input box and button wrapper */
+    .input-box {
+      display: flex;
+      padding: 10px;
+      background: #fff;
+      border-top: 1px solid #ddd;
+    }
+
+    /* Text input styling */
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+      transition: border 0.3s;
+    }
+    input[type="text"]:focus {
+      border: 2px solid #2575fc;
+    }
+
+    /* Button styling */
+    button {
+      padding: 12px 20px;
+      margin-left: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #2575fc;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background: #1a5bb8;
+      transform: translateY(-1px);
+    }
+
+    /* Optional scrollbar styling */
+    .chat-box::-webkit-scrollbar {
+      width: 8px;
+    }
+    .chat-box::-webkit-scrollbar-thumb {
+      background-color: #ccc;
+      border-radius: 4px;
+    }
+    .chat-box::-webkit-scrollbar-thumb:hover {
+      background-color: #b3b3b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-box" id="chat-box">
+      <!-- Messages will be dynamically inserted here -->
+    </div>
+    <div class="input-box">
+      <input type="text" id="user-input" placeholder="Type your message..."/>
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // Define the bot icon URL using Django's static tag.
+    const botIconUrl = "{% static 'customs/bot-icon.png' %}";
+
+    async function sendMessage() {
+      const userInput = document.getElementById("user-input").value;
+      if (!userInput) return;
+
+      const chatBox = document.getElementById("chat-box");
+
+      // Append user message
+      const userMessage = document.createElement("div");
+      userMessage.className = "message user-message";
+      userMessage.innerText = `You: ${userInput}`;
+      chatBox.appendChild(userMessage);
+      document.getElementById("user-input").value = "";
+
+      // Scroll to bottom after adding a new message
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      // Fetch bot response
+      try {
+        const response = await fetch("/agent/confluence/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: userInput })
+        });
+
+        // Since the server returns HTML directly, we need to read the text
+        const htmlResponse = await response.text();
+
+        // Append bot message with the bot icon and rendered HTML response
+        const botMessage = document.createElement("div");
+        botMessage.className = "message bot-message";
+        botMessage.innerHTML = `
+          <img src="${botIconUrl}" alt="Bot Icon" class="bot-icon">
+          <div class="message-text">${htmlResponse}</div>
+        `;
+        chatBox.appendChild(botMessage);
+      } catch (error) {
+        const errorMessage = document.createElement("div");
+        errorMessage.className = "message bot-message";
+        errorMessage.innerHTML = `
+          <img src="${botIconUrl}" alt="Bot Icon" class="bot-icon">
+          <div class="message-text">Error fetching response.</div>
+        `;
+        chatBox.appendChild(errorMessage);
+      }
+
+      // Scroll to bottom after adding bot message
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>

@@ -64,7 +64,7 @@ def get_grids_by_cassette(request):
                 "grid_id": grid.id,
                 "grid_user": grid.user.username,
                 "grid_name": grid.name,
-                "grid_freezing": grid.freezing_plan.__str__(),
+                "grid_specimen": grid.specimen.__str__(),
                 "grid_slot_number": grid.slot_number_in_cassette,
                 "grid_project_name": grid.intended_project.name,
             })

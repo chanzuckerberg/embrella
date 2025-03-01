@@ -19,13 +19,14 @@ import datetime
 import json
 import os
 import logging
+import re
 from functools import reduce
 
 # project app imports
 from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, CryoGridCassette, \
-    PlungeFreezingSession, PlungeFreezingPlan
-from .models import CryoGrid, CryoGridBox
-from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingPlanModel, SampleModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
+    PlungeFreezingSession
+from .models import CryoGrid, CryoGridBox, Specimen, Sample
+from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
 from .forms import CopyGridForm, ClearCassetteForm, NumberToCopyGridForm
 from stores.models import Path
 
@@ -142,9 +143,9 @@ def available_filters(request):
         # Base queryset with annotations for counting occurrences
         queryset = CryoGrid.objects.select_related(
             'intended_project', 'freezing_session', 'grid_box__puck', 'user',
-            'grid_cassette', 'freezing_plan'
+            'grid_cassette', 'specimen', 'sample'
         ).prefetch_related(
-            'msisession', 'freezing_plan__sample', 'freezing_plan__tags',
+            'msisession', 'specimen__samples',
             'atlassession__group'
         )
 
@@ -183,7 +184,7 @@ def available_filters(request):
                     else:
                         item['selected'] = False
 
-        # Aggregating counts for each filter (this part remains the same as your original logic)
+        # Aggregating counts for each filter
         filters = {
             'project': list(queryset.annotate(project_temp_name=F('intended_project__name'))
                         .values(project_temp_name=F('project_temp_name'))
@@ -191,15 +192,30 @@ def available_filters(request):
                         .order_by('project_temp_name')
                         .values(name=F('project_temp_name'), count=F('count'))),
             'puck': list(queryset.annotate(puck_temp_name=F('grid_box__puck__name'))
+                        .filter(puck_temp_name__isnull=False)  # Exclude null puck names
                         .values(puck_temp_name=F('puck_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('puck_temp_name')
                         .values(name=F('puck_temp_name'), count=F('count'))),
-            'sample': list(queryset.annotate(sample_temp_name=F('freezing_plan__sample__name'))
+            'sample': list(queryset.annotate(sample_temp_name=F('specimen__samples__name'))
+                        .filter(sample_temp_name__isnull=False)  # Exclude null sample names
                         .values(sample_temp_name=F('sample_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('sample_temp_name')
                         .values(name=F('sample_temp_name'), count=F('count'))),
+            'cassette': list(queryset.annotate(cassette_temp_name=F('grid_cassette__name'))
+                        .filter(cassette_temp_name__isnull=False)  # Exclude null cassette names
+                        .values(cassette_temp_name=F('cassette_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('cassette_temp_name')
+                        .values(name=F('cassette_temp_name'), count=F('count'))),
+            'screeningSession': list(queryset.filter(freezing_session__isnull=False)
+                        .annotate(screen_session_temp_name=F('atlassession__group__name'))
+                        .filter(screen_session_temp_name__isnull=False)  # Exclude null screening session names
+                        .values(screen_session_temp_name=F('screen_session_temp_name'))
+                        .annotate(count=Count('id'))
+                        .order_by('screen_session_temp_name')
+                        .values(name=F('screen_session_temp_name'), count=F('count'))),
             'user': list(queryset.annotate(
                             user_temp_name=Trim(
                                 Case(
@@ -213,17 +229,6 @@ def available_filters(request):
                         .annotate(count=Count('id'))
                         .order_by('user_temp_name')
                         .values(name=Trim(F('user_temp_name')), count=F('count'))),
-            'cassette': list(queryset.annotate(cassette_temp_name=F('grid_cassette__name'))
-                        .values(cassette_temp_name=F('cassette_temp_name'))
-                        .annotate(count=Count('id'))
-                        .order_by('cassette_temp_name')
-                        .values(name=F('cassette_temp_name'), count=F('count'))),
-            'screeningSession': list(queryset.filter(freezing_session__isnull=False)
-                        .annotate(screen_session_temp_name=F('atlassession__group__name'))
-                        .values(screen_session_temp_name=F('screen_session_temp_name'))
-                        .annotate(count=Count('id'))
-                        .order_by('screen_session_temp_name')
-                        .values(name=F('screen_session_temp_name'), count=F('count'))),
             'msiSession': list(queryset.filter(msisession__isnull=False)  # Exclude null msisession relations
                         .annotate(msi_session_temp_name=F('msisession__name'))
                         .values(msi_session_temp_name=F('msi_session_temp_name'))
@@ -244,25 +249,21 @@ def available_filters(request):
         # Process the 'sample' filter and replace sample_name with the detailed information
         processed_samples = []
         for item in filters['sample']:
-            if 'name' in item:
-                # Get the associated freezing plans based on the sample name
-                freezing_plans = PlungeFreezingPlan.objects.filter(sample__name=item['name'])
-
-                # Create a string that summarizes the freezing plan details
-                freezing_plan_details = []
-                for freezing_plan in freezing_plans:
-                    tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-                    plan_str = f"{item['name']} with {tag_names}" if tag_names else f"{item['name']} without tag"
+            if 'name' in item and item['name']:
+                try:
+                    sample_obj = Sample.objects.get(name=item['name'])
+                    display_name = sample_obj.name
+                    if sample_obj.ontology:
+                        display_name += f" ({sample_obj.ontology})"
                     processed_samples.append({
-                        'name': plan_str,
-                        'count': item['count'],  # Retain the original count
-                        'selected': False  # Default selected status
+                        'name': display_name,
+                        'count': item['count'],
+                        'selected': False
                     })
-
+                except Sample.DoesNotExist:
+                    processed_samples.append(item)
             else:
-                # If no 'name' exists, simply append the original item
                 processed_samples.append(item)
-
         filters['sample'] = processed_samples
 
         # Apply 'selected' status to filters
@@ -288,63 +289,58 @@ def available_filters(request):
 def get_cryo_grids_details(request):
     """
     Retrieves details about the grid with pagination and sorting
-    :param request: HTTP request
-    :return: JSON Format response
     """
     try:
-        # Get the 'q' parameter from the request and parse it as JSON if it's present
         raw_q_param = request.GET.get('q', None)
         if raw_q_param:
             try:
-                q_param = json.loads(raw_q_param)  # Parse q as a list of dictionaries
+                q_param = json.loads(raw_q_param)
             except json.JSONDecodeError as e:
                 return JsonResponse({'error': f'Invalid JSON format for q parameter: {str(e)}'}, status=400)
         else:
             q_param = []
 
-        # Combine the 'q' parameter with the rest of the query params into a dictionary
         query_data = request.GET.dict()
-        query_data['q'] = q_param  # Replace the 'q' string with the parsed list
+        query_data['q'] = q_param
 
         try:
             query_params = CryoGridsQueryParams(**query_data)
         except ValidationError as e:
             raise UnprocessableEntity(detail=f"Validation error: {str(e)}")
 
-        # Default sort and asc values
         sort_field = 'updated_on'
         asc = False
-        page_size = 10  # Default page size
+        page_size = 10
 
-        # Generic function to extract value from different formats
         def extract_value(value):
             if isinstance(value, list) and len(value) > 0:
                 value = value[0]
             return value
 
-        # Extract sort, asc, and page_size from q_param if they exist
+        # Detect sort, asc, pageSize from 'q' filters:
         for item in q_param:
             if item['category'] == 'sort':
-                # Map updatedAt to updated_on
-                sort_field = 'updated_on' if extract_value(item['value']) == 'modifiedOn' else extract_value(item['value'])
+                # Map 'modifiedOn' to 'updated_on'
+                raw_sort_val = extract_value(item['value'])
+                sort_field = 'updated_on' if raw_sort_val == 'modifiedOn' else raw_sort_val
             elif item['category'] == 'asc':
                 asc_value = extract_value(item['value'])
                 asc = bool(asc_value) if isinstance(asc_value, bool) else asc_value.lower() == 'true'
             elif item['category'] == 'pageSize':
                 try:
-                    page_size = int(extract_value(item['value']))  # Ensure page_size is an integer
+                    page_size = int(extract_value(item['value']))
                 except ValueError:
                     return JsonResponse({'error': 'Invalid value for page_size, must be an integer'}, status=400)
 
-
-        # Construct the sort order based on the extracted values
         sort_order = sort_field if asc else f'-{sort_field}'
-        # Base queryset with consistent ordering
+
+        # Base queryset (NO prefetch for 'specimen__sample' since it's a CharField)
         queryset = CryoGrid.objects.select_related(
-            'intended_project', 'freezing_session', 'grid_box__puck', 'user',
-            'grid_cassette', 'freezing_plan'
+            'intended_project', 'freezing_session',
+            'grid_box__puck', 'user',
+            'grid_cassette', 'specimen'
         ).prefetch_related(
-            'msisession', 'freezing_plan__sample', 'freezing_plan__tags',
+            'msisession',
             'atlassession__group'
         ).values(
             'id',
@@ -362,70 +358,61 @@ def get_cryo_grids_details(request):
             msisession_name=F('msisession__name'),
             fz_session_id=F('freezing_session__id'),
             fz_session_datetime=F('freezing_session__datetime'),
-            fz_plan_id=F('freezing_plan__id'),
+            specimen_uniq_id=F('specimen__id'),
             screening_session_name=F('atlassession__group__name'),
-            fz_plan_sample_id=F('freezing_plan__sample__id')
         ).order_by(sort_order)
 
-        # Apply filters from q parameter
+        # Apply custom filters
         queryset = apply_filters(queryset, query_params.q)
 
-        # Format the queryset into grid items
+        # Format to dictionary
         formatted_result = format_queryset_results(queryset)
 
-        # Convert the formatted result into a list of grids
-        formatted_grid_list = list(formatted_result.values())
-
-        # Check if sample filtering is requested
+        # Check if sample name filtering is requested
         sample_filter = next((item for item in q_param if item['category'] == 'sample'), None)
         if sample_filter:
+            # 'value' could be a list or a single string
             sample_name_input = sample_filter['value'] if isinstance(sample_filter['value'], list) else [sample_filter['value']]
             formatted_result = filter_by_sample_name(formatted_result, sample_name_input)
 
-        # Convert the formatted result into a list of grids
+        # Convert final dict to list
         formatted_grid_list = list(formatted_result.values())
-        # Apply pagination to the formatted grid list
-        # page = q_param.get('page', 1)
-        # Extract pagination parameters from q_param
+
+        # Pagination
         page_param = next((item for item in q_param if item['category'] == 'page'), None)
         page_size_param = next((item for item in q_param if item['category'] == 'pageSize'), None)
 
-        # Default values if pagination params are not provided
         page = int(page_param['value'][0]) if page_param else 1
-        page_size = int(page_size_param['value'][0]) if page_size_param else 10
+        page_size = int(page_size_param['value'][0]) if page_size_param else page_size
 
         paginator = Paginator(formatted_grid_list, page_size)
 
         try:
             paginated_queryset = paginator.page(page)
-            print(paginated_queryset.number)
         except PageNotAnInteger:
             paginated_queryset = paginator.page(1)
         except EmptyPage:
             paginated_queryset = paginator.page(paginator.num_pages)
 
-        # Check if the paginated result is empty
         if not paginated_queryset.object_list:
             return JsonResponse({'result': []}, status=200)
 
-        # Prepare the response with paginated grids
         response_data = {
             'result': paginated_queryset.object_list,
             'pagination': PaginationMetadataModel(
-                page= paginated_queryset.number,
-                pageSize= int(page_size),
-                totalPages= paginator.num_pages,
-                totalResults= paginator.count,
+                page=paginated_queryset.number,
+                pageSize=int(page_size),
+                totalPages=paginator.num_pages,
+                totalResults=paginator.count,
             ).model_dump(),
             'sortBy': SortMetadataModel(
-                sort= 'modifiedOn' if sort_field is not None else None,
-                asc= asc
+                sort='modifiedOn' if sort_field == 'updated_on' else sort_field,
+                asc=asc
             ).model_dump(),
         }
 
         return JsonResponse(response_data)
     except UnprocessableEntity as e:
-        # Return a 422 response for invalid parameters
         return JsonResponse({'error': e.detail}, status=e.status_code)
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
@@ -435,14 +422,8 @@ def get_cryo_grids_details(request):
 def apply_filters(queryset, filters):
     """
     Apply filters to a queryset based on a list of filter items.
-
-    Args:
-        queryset (QuerySet): The initial queryset to filter.
-        filters (list): A list of filter items, where each item is a dict with 'category' and 'value' keys.
-
-    Returns:
-        QuerySet: The filtered queryset with distinct results.
     """
+    from django.db.models import Q
     filter_mappings = {
         'project': 'intended_project__name__in',
         'cassette': 'grid_cassette__name__in',
@@ -454,7 +435,6 @@ def apply_filters(queryset, filters):
 
     q_filters = Q()
     filter_type = 'OR'
-    # Process filters to determine filter_type and create Q objects
     filter_q_objects = []
 
     date_mapping = {
@@ -466,61 +446,49 @@ def apply_filters(queryset, filters):
     for filter_item in filters:
         category = filter_item.get('category')
         values = filter_item.get('value')
-
         if category == 'filterType' and values:
             filter_type = values[0].upper() if isinstance(values, list) else values.upper()
         elif category in filter_mappings:
             field = filter_mappings[category]
-
-            # Handle cases where 'null' is passed as a filter value
             if values is None or (isinstance(values, list) and None in values):
-                filter_q_objects.append(Q(**{f"{field.split('__')[0]}__isnull": True}))  # Check for NULL values
+                filter_q_objects.append(Q(**{f"{field.split('__')[0]}__isnull": True}))
             elif values:
                 if not isinstance(values, list):
                     values = [values]
                 filter_q_objects.append(Q(**{field: values}))
         elif category == 'user' and values:
-            # Handle username that could be in email format
             usernames = values if isinstance(values, list) else [values]
             q_username_filters = Q()
             for username in usernames:
                 if '@' in username:
-                    # Extract the part before '@' for the firstname.lastname format
                     username = username.split('@')[0]
-                q_username_filters |= Q(user__username__icontains=username)  # Case-insensitive match for username
+                q_username_filters |= Q(user__username__icontains=username)
             filter_q_objects.append(q_username_filters)
         elif category == 'date' and values:
-            # Handle the possible values for the 'date' filter
             date_value = values[0] if isinstance(values, list) else values
             if date_value in date_mapping:
                 months = date_mapping[date_value]
-                now = datetime.now()
-                start_date = now - timedelta(days=months * 30)
-                filter_q_objects.append(Q(grid_updated_on__gte=start_date))
-            else:
-                return JsonResponse({'error': f'Invalid value for date filter: {date_value}'}, status=400)
+                now_dt = datetime.now()
+                start_date = now_dt - timedelta(days=months * 30)
+                filter_q_objects.append(Q(updated_on__gte=start_date))
 
-    # Combine Q objects based on filter_type
+    from functools import reduce
+
     if filter_type == 'OR':
         q_filters = reduce(lambda x, y: x | y, filter_q_objects, Q())
     elif filter_type == 'AND':
-        print("hitting", filter_type)
         q_filters = reduce(lambda x, y: x & y, filter_q_objects, Q())
 
-    # Return the filtered queryset with distinct results
     return queryset.filter(q_filters).distinct()
 
 def format_queryset_results(queryset):
     formatted_result = {}
     for item in queryset:
         grid_id = item['id']
-        freezing_plan_list = get_freezing_plan_list(item['fz_plan_id'])
-
-        fz_session_datetime_formatted = (
+        fz_session_datetime = (
             item['fz_session_datetime'].strftime("%Y-%m-%d %H:%M")
             if item['fz_session_datetime'] else None
         )
-
         if grid_id not in formatted_result:
             formatted_result[grid_id] = {
                 'grid': format_grid(item).model_dump(),
@@ -528,67 +496,83 @@ def format_queryset_results(queryset):
                 'project': format_project(item).model_dump(),
                 'puck': format_puck(item).model_dump(),
                 'user': format_user(item).model_dump(),
-                'freezingPlan': format_freezing_plan(item).model_dump(),
+                'specimen': format_specimen(item),
                 'freezingSession': format_freezing_session(item).model_dump(),
                 'screeningSession': item['screening_session_name'],
                 'msiSession': []
             }
-
-        # Append MSI session details without duplicates
+        # Attach MSI session
         if item['msisession_id']:
             add_msi_session(formatted_result[grid_id]['msiSession'], item)
 
     return formatted_result
 
 
-def get_freezing_plan_list(fz_plan_id):
+
+def get_specimen_list(specimen_id):
     try:
-        freezing_plan = PlungeFreezingPlan.objects.get(id=fz_plan_id)
-        freezing_plan_list = []
+        specimen = Specimen.objects.get(id=specimen_id)
+        specimen_list = []
         base_url = get_base_url()
-        for sample in freezing_plan.sample.all():
-            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
-            tag_names = ', '.join(freezing_plan.tags.values_list('name', flat=True))
-            freezing_plan_list.append({
+        for sample in specimen.samples.all():
+            sample_url = f"{base_url}/admin/cryo_grids/specimen/{sample.id}"
+            specimen_list.append({
                 'id': sample.id,
-                'name': f"{sample.name} with {tag_names}" if tag_names else f"{sample.name} without tag",
+                'name': sample.name,
                 'url': sample_url
             })
-        return freezing_plan_list
+        return specimen_list
     except ObjectDoesNotExist:
         return []
 
 
+def extract_parts(text):
+    if not text or not isinstance(text, str):  # Ensure text is not None or non-string
+        return "", []
+
+    # Try extracting the main part safely
+    main_match = re.match(r'^[^\(\[,]+', text)
+    main_part = main_match.group(0).strip() if main_match else text.strip()  # Use full text if match fails
+
+    # # Extract all words (tags) but remove main_part if present
+    # tags = re.findall(r'\b\w+\b', text)
+    # tags = [tag for tag in tags if tag.lower() != main_part.lower()]  # Case-insensitive removal
+
+    return main_part #, sorted(tags)  # Sorting ensures consistent comparison
+
+def are_equivalent(text1, text2):
+    return extract_parts(text1) == extract_parts(text2)
+
 def filter_by_sample_name(formatted_result, sample_name_input):
+    """
+    Filter the final data by matching any of the specimen's sample names.
+    """
     matching_results = {}
 
+    if not sample_name_input or not isinstance(sample_name_input, list):
+        return matching_results
+
+    filter_value = sample_name_input[0]
     for grid_id, data in formatted_result.items():
-        matching_samples = []
-
-        for sample in data['freezingPlan']['sample']:
-            # Check if the sample's full name exactly matches any of the input names
-            if sample['name'] in sample_name_input:
-                matching_samples.append(sample)
-
-        if matching_samples:
-            data['freezingPlan']['sample'] = matching_samples
+        samples = data['specimen'].get('samples', [])
+        # Check if any sample's name is equivalent to the filter value
+        if any(are_equivalent(sample.get('name', ''), filter_value) for sample in samples):
             matching_results[grid_id] = data
 
     return matching_results
 
 
+
 def format_grid(item):
     base_url = get_base_url()
-    grid_url = f"{base_url}/cryo_grids/grid_detail/{item['id']}" #redirect to new grid detail page
-
-    # Return a GridModel instance
+    grid_url = f"{base_url}/cryo_grids/grid_detail/{item['id']}"
     return GridModel(
         id=item['id'],
         name=f"{item['grid_name']} (id={item['id']})",
         trashed=item['status'],
         url=grid_url,
-        createdAt=item['created_on'].isoformat() if item['created_on'] else None,  # Convert datetime to ISO string
-        updatedAt=item['grid_updated_on'].isoformat() if item['grid_updated_on'] else None  # Convert datetime to ISO string
+        createdAt=item['created_on'].isoformat() if item['created_on'] else None,
+        updatedAt=item['grid_updated_on'].isoformat() if item['grid_updated_on'] else None
     )
 
 def format_cassette(item):
@@ -606,8 +590,32 @@ def format_user(item):
     return UserModel(id=item['userID'], name=item['username'].split('@')[0] if '@' in item['username'] else item['username'])
 
 
-def format_freezing_plan(item):
-    return FreezingPlanModel(id=item['fz_plan_id'], sample=get_freezing_plan_list(item['fz_plan_id']))
+def get_specimen_info(specimen_id):
+    try:
+        specimen = Specimen.objects.get(id=specimen_id)
+        base_url = get_base_url()
+        samples_list = []
+        for sample in specimen.samples.all():
+            sample_url = f"{base_url}/admin/cryo_grids/specimen/{sample.id}"
+            samples_list.append({
+                'id': sample.id,
+                'name': sample.name,
+                'url': sample_url,
+            })
+        # Extract all sample names
+        sample_names = [sample['name'] for sample in samples_list]
+
+        return {
+            'id': specimen.id,
+            'name': f"Specimen ({', '.join(sample_names)})" if sample_names else "Specimen (no samples)",
+            'samples': samples_list
+        }
+    except ObjectDoesNotExist:
+        return {}
+    
+def format_specimen(item):
+    return get_specimen_info(item['specimen_uniq_id'])
+
 
 def format_freezing_session(item):
     return FreezingSessionModel(id=item['fz_session_id'], createdAt=str(item['fz_session_datetime']))
