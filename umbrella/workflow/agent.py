@@ -281,30 +281,41 @@ class Denoiset(object):
                 model_name=model_name,
                 live_denoising=live_denoising
             )
-            logger.info(f"Rendered script for session {session_name}_{run_number}:\n{rendered_script}")
+            logger.info(f"Rendered script for session {session_name}:\n{rendered_script}")
             print(rendered_script)
             # Define the remote file name and full path.
-            remote_script_filename = f"{session_name}_{run_number}_predict3d.sh"
+            remote_script_filename = f"{session_name}_predict3d.sh"
             remote_script_path = os.path.join(self.remote_script_dir, remote_script_filename)
             
             # Upload the rendered script to the remote server using SFTP.
             sftp = self.ssh.open_sftp()
+
+            # --- NEW LOGIC: Remove existing file if it exists ---
+            try:
+                sftp.stat(remote_script_path)  # Check if file exists
+                sftp.remove(remote_script_path) # Remove it if it does
+                logger.info(f"Removed existing script file: {remote_script_path}")
+            except FileNotFoundError:
+                # This just means the file doesn't exist—safe to ignore
+                pass
+
             with sftp.file(remote_script_path, "w") as remote_file:
                 remote_file.write(rendered_script)
             sftp.chmod(remote_script_path, 0o755)
             sftp.close()
             logger.info(f"Uploaded rendered script to {remote_script_path}")
-            
+
             # Submit the job using sbatch.
             submit_cmd = f"cd {self.remote_script_dir} && sbatch {remote_script_filename}"
             stdin, stdout, stderr = self.ssh.exec_command(submit_cmd)
             submit_output = stdout.read().decode('utf-8')
             submit_error = stderr.read().decode('utf-8')
+
             logger.info(f"Submission Output: {submit_output}")
             if submit_error:
                 logger.error(f"Submission Error: {submit_error}")
-            return submit_output, submit_error
 
+            return submit_output, submit_error
         except Exception as e:
             logger.error(f"Error during Denoiset job submission: {e}")
             raise
