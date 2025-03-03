@@ -17,10 +17,11 @@ from tem.models import MsiSession
 from processes.models import JobLog
 from django.db.models import F
 import re
+import requests
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DENOISET_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'denoiset_template.sh')
-print(DENOISET_TEMPLATE_PATH, DENOISET_SCRIPT_PATH)
+TRACK_JOB_API_URL='http://umbrella.czbiohub.org/workflow/track_jobs'
 KEYS = ('PixSize',
         'AtBin',
         'CorrCTF',
@@ -285,7 +286,7 @@ def user_info(request):
     return JsonResponse(response_data, safe=False, status=200)
 
 @login_required
-def cancel_aretomo3(request):
+def cancel_jobs(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         job_number = data.get('job_number')
@@ -382,6 +383,12 @@ def custom_run_workflow_page(request):
 
 def cutom_run_denoise_workflow_page(request):
     return render(request, 'workflows/workflow_denoise_run.html')
+
+def custom_workflow_cancel(request):
+    return render(request, 'workflows/workflow_cancel.html')
+
+def custom_workflow_track(request):
+    return render(request, 'workflows/workflow_track.html')
 
 
 @require_http_methods(["GET"])
@@ -582,3 +589,49 @@ def run_denoiset(request):
         job_id=None
     )
     return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
+
+# views.py
+def dashboard(request):
+    """
+    Render the dashboard page with the dynamic graph.
+    """
+    return render(request, 'workflows/workflow_dashboard.html')
+
+@csrf_exempt
+def workflow_get_data(request):
+    """
+    Fetch the job data from the external API via a POST request with payload {"job_name": None}.
+    Process it by counting jobs either per job name or per user based on the 'group_by' request parameter.
+    If grouping by user, it returns a nested structure with job names and their counts per user.
+    """
+    payload = {"job_name": None}
+    try:
+        response = requests.post(TRACK_JOB_API_URL, json=payload)
+        data = response.json()
+        jobs = data.get('jobs', [])
+
+        # Check for a 'group_by' GET parameter, defaulting to 'job' if not provided.
+        group_by = request.GET.get('group_by', 'job').lower()
+
+        if group_by == 'user':
+            # Group jobs by user and include job names with their counts.
+            user_counts = {}
+            for job in jobs:
+                user = job.get('USER', 'Unknown')
+                job_name = job.get('NAME', 'Unknown')
+                if user not in user_counts:
+                    user_counts[user] = {}
+                user_counts[user][job_name] = user_counts[user].get(job_name, 0) + 1
+            result = user_counts
+        else:
+            # Default: group jobs by job name.
+            name_counts = {}
+            for job in jobs:
+                job_name = job.get('NAME', 'Unknown')
+                name_counts[job_name] = name_counts.get(job_name, 0) + 1
+            result = name_counts
+    except Exception as e:
+        # Log the error in production; here we just return empty data.
+        result = {}
+
+    return JsonResponse(result)
