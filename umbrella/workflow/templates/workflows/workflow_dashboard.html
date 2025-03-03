@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Job Dashboard</title>
+  <!-- Bootstrap for basic styling -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- Include Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="container">
+  <h1 class="mb-4">Job Dashboard</h1>
+
+  <!-- Chart 1: Grouped by Job Name -->
+  <h2>Grouped by Job Name</h2>
+  <canvas id="jobChart" width="800" height="400"></canvas>
+
+  <!-- Chart 2: Grouped by User (Stacked Bar Chart) -->
+  <h2 class="mt-5">Grouped by User</h2>
+  <canvas id="userChart" width="800" height="400"></canvas>
+</div>
+
+<script>
+  /*****************************************************
+   * 1) Helper function to fetch grouped job data.
+   *    Accepts a group_by parameter ("job" or "user")
+   *****************************************************/
+  async function fetchGroupedJobData(group_by) {
+    // Append the group_by query parameter to the endpoint URL.
+    const url = "{% url 'workflow:dashboard_data' %}?group_by=" + group_by;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ /* any required POST data */ })
+    });
+    return await response.json();
+  }
+
+  /*************************************************************
+   * 2) Create Chart for "Grouped by Job Name"
+   *************************************************************/
+  const jobCtx = document.getElementById('jobChart').getContext('2d');
+  let jobChart = new Chart(jobCtx, {
+    type: 'bar',
+    data: {
+      labels: [], // Job names
+      datasets: [{
+        label: 'Job Count (by Job Name)',
+        data: [],
+        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 1,
+        borderRadius: 5,
+        barPercentage: 0.5,
+        categoryPercentage: 0.5,
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          title: { display: true, text: 'Job Name' }
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Job Count' },
+          ticks: { stepSize: 1 }
+        }
+      },
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      animation: {
+        duration: 1500,
+        easing: 'easeOutBounce'
+      }
+    }
+  });
+
+  /*************************************************************
+   * 3) Create Chart for "Grouped by User" as a stacked bar chart.
+   *************************************************************/
+  const userCtx = document.getElementById('userChart').getContext('2d');
+  let userChart = new Chart(userCtx, {
+    type: 'bar',
+    data: {
+      labels: [], // Users
+      datasets: [] // To be populated dynamically with job name counts
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          stacked: true,
+          title: { display: true, text: 'User' }
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          title: { display: true, text: 'Job Count' },
+          ticks: { stepSize: 1 }
+        }
+      },
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      animation: {
+        duration: 1500,
+        easing: 'easeOutBounce'
+      }
+    }
+  });
+
+  /*************************************************************
+   * 4) Update function to fetch data & refresh both charts.
+   *************************************************************/
+  async function updateCharts() {
+    // --- Update Chart 1: Grouped by Job Name ---
+    const jobData = await fetchGroupedJobData("job");
+    jobChart.data.labels = Object.keys(jobData);
+    jobChart.data.datasets[0].data = Object.values(jobData);
+    jobChart.update();
+
+    // --- Update Chart 2: Grouped by User (Stacked) ---
+    const userData = await fetchGroupedJobData("user");
+    // userData is an object where keys are users and values are objects mapping job names to counts.
+    const users = Object.keys(userData);
+
+    // Collect all unique job names across all users.
+    const jobNameSet = new Set();
+    users.forEach(user => {
+      const jobCounts = userData[user];
+      Object.keys(jobCounts).forEach(jobName => jobNameSet.add(jobName));
+    });
+    const jobNames = Array.from(jobNameSet);
+
+    // Predefined colors for datasets.
+    const backgroundColors = [
+      'rgba(255, 99, 132, 0.6)',
+      'rgba(54, 162, 235, 0.6)',
+      'rgba(255, 206, 86, 0.6)',
+      'rgba(75, 192, 192, 0.6)',
+      'rgba(153, 102, 255, 0.6)',
+      'rgba(255, 159, 64, 0.6)'
+    ];
+    const borderColors = [
+      'rgba(255, 99, 132, 1)',
+      'rgba(54, 162, 235, 1)',
+      'rgba(255, 206, 86, 1)',
+      'rgba(75, 192, 192, 1)',
+      'rgba(153, 102, 255, 1)',
+      'rgba(255, 159, 64, 1)'
+    ];
+
+    // Build datasets for each job name.
+    const datasets = jobNames.map((jobName, index) => {
+      // For each user, get the count of the jobName, defaulting to 0 if not found.
+      const data = users.map(user => {
+        return userData[user][jobName] || 0;
+      });
+      return {
+        label: jobName,
+        data: data,
+        backgroundColor: backgroundColors[index % backgroundColors.length],
+        borderColor: borderColors[index % borderColors.length],
+        borderWidth: 1
+      };
+    });
+
+    userChart.data.labels = users;
+    userChart.data.datasets = datasets;
+    userChart.update();
+  }
+
+  /*************************************************************
+   * 5) On page load, fetch data once and then refresh periodically.
+   *************************************************************/
+  updateCharts();
+  setInterval(updateCharts, 5000);
+</script>
+</body>
+</html>

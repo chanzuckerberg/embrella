@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Job Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .form-container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 30px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      margin-bottom: 40px;
+      background-color: white;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px 0;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .button-container button.track-all {
+      background-color: #2196F3;
+    }
+    .button-container button.track-all:hover {
+      background-color: #1e88e5;
+    }
+    #trackingContainer {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    #jobTable {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #jobTable th,
+    #jobTable td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    #jobTable th {
+      background-color: #f2f2f2;
+    }
+    #jobLogsContainer {
+      display: none; 
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+      padding: 15px;
+    }
+    #jobLogsTable {
+      table-layout: fixed;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #jobLogsTable th,
+    #jobLogsTable td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    #jobLogsTable th {
+      background-color: #f2f2f2;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <!-- Job Tracker Section -->
+  <div class="form-container">
+    <h1>Job Tracker</h1>
+    <form id="trackForm">
+      <div class="form-group">
+        <label for="jobName">Job Name:</label>
+        <input type="text" id="jobName" name="jobName" placeholder="Enter a job name (optional)" />
+      </div>
+      <div class="button-container">
+        <button type="button" onclick="trackJobs()">Track Jobs</button>
+        <button type="button" class="track-all" onclick="trackAllJobs()">Track All Jobs</button>
+      </div>
+    </form>
+    <div id="trackingContainer">
+      <table id="jobTable">
+        <thead>
+          <tr>
+            <th>JOBID</th>
+            <th>PARTITION</th>
+            <th>NAME</th>
+            <th>USER</th>
+            <th>ST</th>
+            <th>TIME</th>
+            <th>NODES</th>
+            <th>NODELIST(REASON)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Dynamically filled rows -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <script>
+    // Helper: Get element's trimmed value
+    function getElementValue(id) {
+      const elem = document.getElementById(id);
+      if (!elem) {
+        console.error(`Element with id '${id}' not found.`);
+        alert(`Internal error: Element with id '${id}' not found.`);
+        throw new Error(`Element with id '${id}' not found.`);
+      }
+      return elem.value.trim();
+    }
+
+    // Helper: Get CSRF token from cookies
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === name + "=") {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    // Loading Indicator Functions
+    function showLoadingIndicator() {
+      const loadingDiv = document.createElement("div");
+      loadingDiv.id = "loadingIndicator";
+      loadingDiv.style.position = "fixed";
+      loadingDiv.style.top = "50%";
+      loadingDiv.style.left = "50%";
+      loadingDiv.style.transform = "translate(-50%, -50%)";
+      loadingDiv.style.padding = "20px";
+      loadingDiv.style.backgroundColor = "#fff";
+      loadingDiv.style.border = "1px solid #ccc";
+      loadingDiv.style.borderRadius = "4px";
+      loadingDiv.style.boxShadow = "0 0 10px rgba(0,0,0,0.1)";
+      loadingDiv.innerText = "Loading...";
+      document.body.appendChild(loadingDiv);
+    }
+
+    function hideLoadingIndicator() {
+      const loadingDiv = document.getElementById("loadingIndicator");
+      if (loadingDiv) {
+        document.body.removeChild(loadingDiv);
+      }
+    }
+
+    // Display job logs in the Job Logs section
+    function displayJobLogs(jobLogs) {
+      const tableBody = document.querySelector("#jobLogsTable tbody");
+      tableBody.innerHTML = "";
+      
+      jobLogs.forEach((log) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${log.job_name}</td>
+          <td>${log.advanced ? "Yes" : "No"}</td>
+          <td>${log.job_id}</td>
+          <td>${new Date(log.created_at).toLocaleString()}</td>
+          <td>${JSON.stringify(log.parameters, null, 2)}</td>
+          <td>${log.error_message || "None"}</td>
+          <td>${log.user_id}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+      
+      document.getElementById("jobLogsContainer").style.display = "block";
+    }
+
+    // Fetch job logs from the server based on given parameters
+    async function fetchJobLogs(params) {
+      try {
+        showLoadingIndicator();
+        const queryString = new URLSearchParams(params).toString();
+        const url = `/workflow/job_logs?${queryString}`;
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+        });
+        const responseText = await response.text();
+        console.log("Raw API Response:", responseText);
+        hideLoadingIndicator();
+        if (!responseText) {
+          alert("Error: Received an empty response from the server.");
+          return;
+        }
+        const result = JSON.parse(responseText);
+        if (response.ok) {
+          displayJobLogs(result.job_logs);
+        } else {
+          alert(`Failed to fetch job logs. Error: ${result.error}`);
+        }
+      } catch (error) {
+        hideLoadingIndicator();
+        console.error("Error fetching job logs:", error);
+        alert(`Failed to fetch job logs. Error: ${error.message || "Unknown error."}`);
+      }
+    }
+
+    // Track jobs by job name (or all jobs if no name provided)
+    async function trackJobs() {
+      try {
+        const jobName = getElementValue("jobName") || null;
+        console.log("Tracking Jobs with jobName:", jobName);
+        showLoadingIndicator();
+        const response = await fetch("/workflow/track_jobs", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+          body: JSON.stringify({ job_name: jobName }),
+        });
+        hideLoadingIndicator();
+        const result = await response.json();
+        console.log("Track Jobs response:", result);
+        if (response.ok) {
+          const tbody = document.querySelector("#jobTable tbody");
+          tbody.innerHTML = "";
+          result.jobs.forEach((job) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${job.JOBID}</td>
+              <td>${job.PARTITION}</td>
+              <td>${job.NAME}</td>
+              <td>${job.USER}</td>
+              <td>${job.ST}</td>
+              <td>${job.TIME}</td>
+              <td>${job.NODES}</td>
+              <td>${job["NODELIST(REASON)"]}</td>
+            `;
+            tbody.appendChild(row);
+          });
+          document.getElementById("trackingContainer").style.display = "block";
+        } else {
+          alert(`Failed to track jobs. Error: ${result.error}`);
+        }
+      } catch (error) {
+        console.error("Error during job tracking:", error);
+        alert(`Failed to track jobs. Error: ${error.message || "Unknown error."}`);
+      }
+    }
+
+    // Track all jobs (ignoring job name)
+    async function trackAllJobs() {
+      try {
+        console.log("Tracking All Jobs");
+        showLoadingIndicator();
+        const response = await fetch("/workflow/track_jobs", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+          body: JSON.stringify({ job_name: null }),
+        });
+        hideLoadingIndicator();
+        const result = await response.json();
+        console.log("Track All Jobs response:", result);
+        if (response.ok) {
+          const tbody = document.querySelector("#jobTable tbody");
+          tbody.innerHTML = "";
+          result.jobs.forEach((job) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${job.JOBID}</td>
+              <td>${job.PARTITION}</td>
+              <td>${job.NAME}</td>
+              <td>${job.USER}</td>
+              <td>${job.ST}</td>
+              <td>${job.TIME}</td>
+              <td>${job.NODES}</td>
+              <td>${job["NODELIST(REASON)"]}</td>
+            `;
+            tbody.appendChild(row);
+          });
+          document.getElementById("trackingContainer").style.display = "block";
+        } else {
+          alert(`Failed to track jobs. Error: ${result.error}`);
+        }
+      } catch (error) {
+        console.error("Error during tracking all jobs:", error);
+        alert(`Failed to track jobs. Error: ${error.message || "Unknown error."}`);
+      }
+    }
+
+    // Track jobs by a specific user
+    async function trackUserJobs() {
+      const userName = document.getElementById("logUserId").value.trim();
+      if (!userName) {
+        alert("Please enter a user name.");
+        return;
+      }
+      fetchJobLogs({ user_name: userName });
+    }
+
+    // Track the 10 most recent jobs
+    async function trackRecentJobs() {
+      fetchJobLogs({ limit: 10 });
+    }
+  </script>
+</body>
+</html>
