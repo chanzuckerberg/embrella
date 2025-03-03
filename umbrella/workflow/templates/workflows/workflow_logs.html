@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Logs</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 20px;
+    }
+    .form-container {
+      max-width: 1200px;
+      width: 90%;
+      margin: auto;
+      background-color: #fff;
+      padding: 30px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    /* Responsive table container */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 20px;
+    }
+    #jobLogsTable {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px;
+    }
+    #jobLogsTable th,
+    #jobLogsTable td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    #jobLogsTable th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h1>Job Logs</h1>
+    <div class="form-group">
+      <label for="logUserId">User Name:</label>
+      <input type="text" id="logUserId" name="logUserId" placeholder="Enter user name..." />
+      <p style="color: #888; font-size: 0.9em; margin-top: 5px;">
+        Note: User name should be in the format "firstname.lastname".
+      </p>
+    </div>
+    <div class="button-container">
+      <button type="button" onclick="trackUserJobs()">Track Jobs by User</button>
+      <button type="button" onclick="trackRecentJobs()">Track 10 Most Recent Jobs</button>
+    </div>
+    <div id="jobLogsContainer" class="table-responsive" style="display: none;">
+      <table id="jobLogsTable">
+        <thead>
+          <tr>
+            <th>Job Name</th>
+            <th>Advanced</th>
+            <th>Job ID</th>
+            <th>Created At</th>
+            <th>Parameters</th>
+            <th>Error Message</th>
+            <th>User ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Job logs rows will be dynamically added here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Loading Indicator Functions
+    function showLoadingIndicator() {
+      const loadingDiv = document.createElement("div");
+      loadingDiv.id = "loadingIndicator";
+      loadingDiv.style.position = "fixed";
+      loadingDiv.style.top = "50%";
+      loadingDiv.style.left = "50%";
+      loadingDiv.style.transform = "translate(-50%, -50%)";
+      loadingDiv.style.padding = "20px";
+      loadingDiv.style.backgroundColor = "#fff";
+      loadingDiv.style.border = "1px solid #ccc";
+      loadingDiv.style.borderRadius = "4px";
+      loadingDiv.style.boxShadow = "0 0 10px rgba(0,0,0,0.1)";
+      loadingDiv.innerText = "Loading...";
+      document.body.appendChild(loadingDiv);
+    }
+
+    function hideLoadingIndicator() {
+      const loadingDiv = document.getElementById("loadingIndicator");
+      if (loadingDiv) {
+        document.body.removeChild(loadingDiv);
+      }
+    }
+
+    // Function to display job logs in the table
+    function displayJobLogs(jobLogs) {
+      const tableBody = document.querySelector("#jobLogsTable tbody");
+      tableBody.innerHTML = "";
+      
+      jobLogs.forEach((log) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${log.job_name}</td>
+          <td>${log.advanced ? "Yes" : "No"}</td>
+          <td>${log.job_id}</td>
+          <td>${new Date(log.created_at).toLocaleString()}</td>
+          <td>${JSON.stringify(log.parameters, null, 2)}</td>
+          <td>${log.error_message || "None"}</td>
+          <td>${log.user_id}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+      
+      document.getElementById("jobLogsContainer").style.display = "block";
+    }
+
+    // Fetch Job Logs from the server using query parameters
+    async function fetchJobLogs(params) {
+      try {
+        showLoadingIndicator();
+        const queryString = new URLSearchParams(params).toString();
+        const url = `/workflow/job_logs?${queryString}`;
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json"
+          },
+        });
+        const responseText = await response.text();
+        console.log("Raw API Response:", responseText);
+        hideLoadingIndicator();
+
+        if (!responseText) {
+          alert("Error: Received an empty response from the server.");
+          return;
+        }
+        
+        const result = JSON.parse(responseText);
+        if (response.ok) {
+          displayJobLogs(result.job_logs);
+        } else {
+          alert(`Failed to fetch job logs. Error: ${result.error}`);
+        }
+      } catch (error) {
+        hideLoadingIndicator();
+        console.error("Error fetching job logs:", error);
+        alert(`Failed to fetch job logs. Error: ${error.message || "Unknown error."}`);
+      }
+    }
+
+    // Track jobs by user
+    function trackUserJobs() {
+      const userName = document.getElementById("logUserId").value.trim();
+      if (!userName) {
+        alert("Please enter a user name.");
+        return;
+      }
+      fetchJobLogs({ user_name: userName });
+    }
+
+    // Track 10 most recent jobs
+    function trackRecentJobs() {
+      fetchJobLogs({ limit: 10 });
+    }
+  </script>
+</body>
+</html>

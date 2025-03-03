@@ -390,6 +390,8 @@ def custom_workflow_cancel(request):
 def custom_workflow_track(request):
     return render(request, 'workflows/workflow_track.html')
 
+def custom_workflow_logs(request):
+    return render(request, 'workflows/workflow_logs.html')
 
 @require_http_methods(["GET"])
 def get_msi_session_list(request):
