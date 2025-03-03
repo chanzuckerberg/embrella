@@ -151,39 +151,6 @@
     </div>
   </div>
 
-  <!-- Job Logs Section -->
-  <div class="form-container">
-    <h1>Job Logs</h1>
-    <div class="form-group">
-      <label for="logUserId">User Name:</label>
-      <input type="text" id="logUserId" name="logUserId" placeholder="Enter user name (e.g., firstname.lastname)" />
-      <p style="color: #888; font-size: 0.9em; margin-top: 5px;">
-        Note: User name should be in the format "firstname.lastname".
-      </p>
-    </div>
-    <div class="button-container">
-      <button type="button" onclick="trackUserJobs()">Track Jobs by User</button>
-      <button type="button" onclick="trackRecentJobs()">Track 10 Most Recent Jobs</button>
-    </div>
-    <div id="jobLogsContainer">
-      <table id="jobLogsTable">
-        <thead>
-          <tr>
-            <th>Job Name</th>
-            <th>Advanced</th>
-            <th>Job ID</th>
-            <th>Created At</th>
-            <th>Parameters</th>
-            <th>Error Message</th>
-            <th>User ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Dynamically filled rows -->
-        </tbody>
-      </table>
-    </div>
-  </div>
 
   <script>
     // Helper: Get element's trimmed value
