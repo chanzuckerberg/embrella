@@ -281,10 +281,10 @@ class Denoiset(object):
                 model_name=model_name,
                 live_denoising=live_denoising
             )
-            logger.info(f"Rendered script for session {session_name}:\n{rendered_script}")
+            logger.info(f"Rendered script for session {session_name}_{run_number}:\n{rendered_script}")
             print(rendered_script)
             # Define the remote file name and full path.
-            remote_script_filename = f"{session_name}_predict3d.sh"
+            remote_script_filename = f"{session_name}_{run_number}_predict3d.sh"
             remote_script_path = os.path.join(self.remote_script_dir, remote_script_filename)
             
             # Upload the rendered script to the remote server using SFTP.
