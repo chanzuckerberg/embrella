@@ -269,10 +269,8 @@ class Denoiset(object):
             # Set up the Jinja2 environment using the directory of the template.
             template_dir = os.path.dirname(self.local_template_path)
             template_file = os.path.basename(self.local_template_path)
-            print(self.local_template_path)
             env = Environment(loader=FileSystemLoader(template_dir))
             template = env.get_template(template_file)
-            print(template_dir)
             # Render the template with the provided parameters.
             rendered_script = template.render(
                 session=session_name,
@@ -282,7 +280,6 @@ class Denoiset(object):
                 live_denoising=live_denoising
             )
             logger.info(f"Rendered script for session {session_name}:\n{rendered_script}")
-            print(rendered_script)
             # Define the remote file name and full path.
             remote_script_filename = f"{session_name}_predict3d.sh"
             remote_script_path = os.path.join(self.remote_script_dir, remote_script_filename)

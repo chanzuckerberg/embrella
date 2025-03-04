@@ -123,6 +123,7 @@
     <form id="trackForm">
       <div class="form-group">
         <label for="jobName">Job Name:</label>
+        <!-- IMPORTANT: The ID here is 'jobName' -->
         <input type="text" id="jobName" name="jobName" placeholder="Enter a job name (optional)" />
       </div>
       <div class="button-container">
@@ -150,7 +151,6 @@
       </table>
     </div>
   </div>
-
 
   <script>
     // Helper: Get element's trimmed value
@@ -208,7 +208,7 @@
     function displayJobLogs(jobLogs) {
       const tableBody = document.querySelector("#jobLogsTable tbody");
       tableBody.innerHTML = "";
-      
+
       jobLogs.forEach((log) => {
         const row = document.createElement("tr");
         row.innerHTML = `
@@ -222,7 +222,7 @@
         `;
         tableBody.appendChild(row);
       });
-      
+
       document.getElementById("jobLogsContainer").style.display = "block";
     }
 
@@ -262,23 +262,32 @@
     // Track jobs by job name (or all jobs if no name provided)
     async function trackJobs() {
       try {
-        const jobName = getElementValue("jobName") || null;
+        // IMPORTANT: matching the input's actual id='jobName'
+        const jobName = document.getElementById("jobName").value.trim();
+        
         console.log("Tracking Jobs with jobName:", jobName);
         showLoadingIndicator();
-        const response = await fetch("/workflow/track_jobs", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken"),
-          },
-          body: JSON.stringify({ job_name: jobName }),
+
+        // Construct the URL with query parameters
+        const url = new URL("/workflow/track_jobs", window.location.origin);
+        if (jobName) {
+          // The server is presumably expecting 'job_name' as the query param
+          url.searchParams.append("job_name", jobName);
+        }
+
+        const response = await fetch(url.toString(), {
+          method: "GET",
         });
+
         hideLoadingIndicator();
+
         const result = await response.json();
         console.log("Track Jobs response:", result);
+
         if (response.ok) {
           const tbody = document.querySelector("#jobTable tbody");
           tbody.innerHTML = "";
+
           result.jobs.forEach((job) => {
             const row = document.createElement("tr");
             row.innerHTML = `
@@ -293,6 +302,7 @@
             `;
             tbody.appendChild(row);
           });
+
           document.getElementById("trackingContainer").style.display = "block";
         } else {
           alert(`Failed to track jobs. Error: ${result.error}`);
@@ -308,17 +318,15 @@
       try {
         console.log("Tracking All Jobs");
         showLoadingIndicator();
+
         const response = await fetch("/workflow/track_jobs", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken"),
-          },
-          body: JSON.stringify({ job_name: null }),
+          method: "GET",
         });
-        hideLoadingIndicator();
+
         const result = await response.json();
+        hideLoadingIndicator();
         console.log("Track All Jobs response:", result);
+
         if (response.ok) {
           const tbody = document.querySelector("#jobTable tbody");
           tbody.innerHTML = "";
@@ -338,9 +346,10 @@
           });
           document.getElementById("trackingContainer").style.display = "block";
         } else {
-          alert(`Failed to track jobs. Error: ${result.error}`);
+          alert(`Failed to track jobs. Error: ${result.error || "Unknown error from server."}`);
         }
       } catch (error) {
+        hideLoadingIndicator();
         console.error("Error during tracking all jobs:", error);
         alert(`Failed to track jobs. Error: ${error.message || "Unknown error."}`);
       }

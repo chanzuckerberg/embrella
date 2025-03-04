@@ -30,7 +30,7 @@
     // Append the group_by query parameter to the endpoint URL.
     const url = "{% url 'workflow:dashboard_data' %}?group_by=" + group_by;
     const response = await fetch(url, {
-      method: "POST",
+      method: "GET",
       headers: {
         "Content-Type": "application/json"
       },
@@ -181,7 +181,7 @@
    * 5) On page load, fetch data once and then refresh periodically.
    *************************************************************/
   updateCharts();
-  setInterval(updateCharts, 5000);
+  setInterval(updateCharts, 10000);
 </script>
 </body>
 </html>

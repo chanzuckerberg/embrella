@@ -21,7 +21,7 @@ import requests
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DENOISET_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'denoiset_template.sh')
-TRACK_JOB_API_URL='http://umbrella.czbiohub.org/workflow/track_jobs'
+# TRACK_JOB_API_URL='http://umbrella.czbiohub.org/'
 KEYS = ('PixSize',
         'AtBin',
         'CorrCTF',
@@ -33,6 +33,15 @@ HOST = "10.50.120.90"
 PORT = 22
 USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
+ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
+def get_base_url():
+       if ENVIRONMENT == 'staging':
+           return 'http://umbrella-dev.czbiohub.org/workflow/track_jobs'
+       elif ENVIRONMENT == 'production':
+           return 'http://umbrella.czbiohub.org/workflow/track_jobs'
+       else:  # development
+           return 'http://localhost:8000/workflow/track_jobs'
+
 
 def store_log(job_name, request, data_sanitized, error, advanced_status=False, job_id = None):
     JobLog.objects.create(
@@ -321,20 +330,23 @@ def cancel_jobs(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 @csrf_exempt
 def track_jobs(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        print(data)
-        job_name = data.get('job_name')
+    """
+    Handle a GET request to track jobs. If 'job_name' is specified in 
+    the query parameters, track only that job. Otherwise, track all jobs.
+    """
+    if request.method == 'GET':
+        job_name = request.GET.get('job_name')  # None if not provided
 
         aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
-
         try:
             # Connect to the remote server
             aretomo.connect()
+
             if job_name is None:
-                output, error = aretomo.track_jobs(job_name=None,all=True)
+                output, error = aretomo.track_jobs(job_name=None, all=True)
             else:
                 output, error = aretomo.track_jobs(job_name)
+
             formatted_output = format_job_output(output)
             return JsonResponse({'jobs': formatted_output})
         except Exception as e:
@@ -342,8 +354,8 @@ def track_jobs(request):
         finally:
             aretomo.close()
 
+    # If the request is not GET, return an error
     return JsonResponse({'error': 'Invalid request method'}, status=400)
-
 
 def format_job_output(output):
     # Split the output into lines
@@ -602,38 +614,44 @@ def dashboard(request):
 @csrf_exempt
 def workflow_get_data(request):
     """
-    Fetch the job data from the external API via a POST request with payload {"job_name": None}.
+    Fetch the job data from the external API via a GET request with job_name=None.
     Process it by counting jobs either per job name or per user based on the 'group_by' request parameter.
-    If grouping by user, it returns a nested structure with job names and their counts per user.
     """
-    payload = {"job_name": None}
     try:
-        response = requests.post(TRACK_JOB_API_URL, json=payload)
+        logger.info(f"Calling external API: {get_base_url()}")
+        # Make a GET request with job_name as None, 5 second timeout
+        response = requests.get(get_base_url(), params={"job_name": None}, timeout=5)
+        response.raise_for_status()  # Will raise an exception for 4xx/5xx errors
+        
         data = response.json()
         jobs = data.get('jobs', [])
 
         # Check for a 'group_by' GET parameter, defaulting to 'job' if not provided.
         group_by = request.GET.get('group_by', 'job').lower()
+        logger.debug(f"group_by parameter: {group_by}")
 
         if group_by == 'user':
-            # Group jobs by user and include job names with their counts.
+            # Group jobs by user -> user_counts[user][job_name] = count
             user_counts = {}
             for job in jobs:
                 user = job.get('USER', 'Unknown')
                 job_name = job.get('NAME', 'Unknown')
-                if user not in user_counts:
-                    user_counts[user] = {}
+                user_counts.setdefault(user, {})
                 user_counts[user][job_name] = user_counts[user].get(job_name, 0) + 1
             result = user_counts
         else:
-            # Default: group jobs by job name.
+            # Default: group jobs by job name -> name_counts[job_name] = count
             name_counts = {}
             for job in jobs:
                 job_name = job.get('NAME', 'Unknown')
                 name_counts[job_name] = name_counts.get(job_name, 0) + 1
             result = name_counts
+
+    except requests.exceptions.Timeout:
+        logger.error("Timeout occurred when calling the external API.")
+        result = {"error": "Timeout from external API"}
     except Exception as e:
-        # Log the error in production; here we just return empty data.
-        result = {}
+        logger.exception("An error occurred while fetching or processing data.")
+        result = {"error": str(e)}
 
     return JsonResponse(result)
