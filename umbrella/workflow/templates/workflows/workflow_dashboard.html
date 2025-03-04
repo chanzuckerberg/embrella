@@ -27,9 +27,8 @@
    *    Accepts a group_by parameter ("job" or "user")
    *****************************************************/
   async function fetchGroupedJobData(group_by) {
-    // Use the direct URL instead of the Django template tag.
-    // Ensure your local URL matches how you call it via curl.
-    const baseUrl = "http://127.0.0.1:8000/workflow/data/";
+    // Use a relative URL so the backend can handle the base path.
+    const baseUrl = "/workflow/data/";
     const fullUrl = `${baseUrl}?group_by=${group_by}`;
 
     try {
