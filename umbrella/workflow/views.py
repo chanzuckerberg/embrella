@@ -614,26 +614,32 @@ def dashboard(request):
 @csrf_exempt
 def workflow_get_data(request):
     """
-    Fetch the job data from the external API via a GET request with job_name=None.
-    Process it by counting jobs either per job name or per user based on the 'group_by' request parameter.
+    Fetch all job data directly from the internal track_jobs functionality.
+    Process it by counting jobs either per job name or per user based on 
+    the 'group_by' request parameter.
     """
     try:
-        logger.info(f"Calling external API: {get_base_url()}")
-        # Make a GET request with job_name as None, 5 second timeout
-        response = requests.get(get_base_url(), params={"job_name": None}, timeout=5)
-        response.raise_for_status()  # Will raise an exception for 4xx/5xx errors
-        
-        data = response.json()
-        jobs = data.get('jobs', [])
+        # Initialize and connect to Aretomo
+        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
+        aretomo.connect()
+
+        # Since we want all jobs, set job_name=None and all=True
+        output, error = aretomo.track_jobs(job_name=None, all=True)
+
+        # Close the connection in the finally block
+        formatted_output = format_job_output(output)
+        # `formatted_output` should be a list of job dicts, e.g.:
+        # [{'USER': '...', 'NAME': '...'}, ...]
 
         # Check for a 'group_by' GET parameter, defaulting to 'job' if not provided.
         group_by = request.GET.get('group_by', 'job').lower()
         logger.debug(f"group_by parameter: {group_by}")
 
+        # Now we reuse the grouping logic
         if group_by == 'user':
             # Group jobs by user -> user_counts[user][job_name] = count
             user_counts = {}
-            for job in jobs:
+            for job in formatted_output:
                 user = job.get('USER', 'Unknown')
                 job_name = job.get('NAME', 'Unknown')
                 user_counts.setdefault(user, {})
@@ -642,16 +648,19 @@ def workflow_get_data(request):
         else:
             # Default: group jobs by job name -> name_counts[job_name] = count
             name_counts = {}
-            for job in jobs:
+            for job in formatted_output:
                 job_name = job.get('NAME', 'Unknown')
                 name_counts[job_name] = name_counts.get(job_name, 0) + 1
             result = name_counts
 
-    except requests.exceptions.Timeout:
-        logger.error("Timeout occurred when calling the external API.")
-        result = {"error": "Timeout from external API"}
     except Exception as e:
         logger.exception("An error occurred while fetching or processing data.")
         result = {"error": str(e)}
+    finally:
+        # Ensure the connection is closed even if an exception is raised
+        try:
+            aretomo.close()
+        except:
+            pass
 
     return JsonResponse(result)
