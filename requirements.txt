@@ -38,3 +38,4 @@ langchain-community
 chromadb
 markdown
 jinja2
+celery
