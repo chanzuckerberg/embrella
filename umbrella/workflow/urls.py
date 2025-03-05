@@ -22,4 +22,5 @@ urlpatterns = [
     path("job_logs", views.get_job_logs, name='fetching logs'),
     path("dashboard/", views.dashboard, name='dashboard'),
     path('data/', views.workflow_get_data, name='dashboard_data'),
+    path("status/", views.status_check_api, name='workflow status')
 ]
