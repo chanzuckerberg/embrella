@@ -5,6 +5,7 @@ import subprocess
 import os
 from jinja2 import Environment, FileSystemLoader
 from umbrella_logger import logger
+import paramiko
 
 class Aretomo3(object):
     def __init__(self, hostname, port, username, password, script_path):
@@ -223,10 +224,6 @@ class Aretomo3(object):
 
 
 
-import os
-import paramiko
-from jinja2 import Environment, FileSystemLoader
-from umbrella_logger import logger
 
 class Denoiset(object):
     def __init__(self, hostname, port, username, password, remote_script_dir, local_template_path):
