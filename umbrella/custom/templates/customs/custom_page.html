@@ -27,7 +27,7 @@
     }
     h2 {
       font-size: 1.8em;
-      margin-bottom: 20px;
+      margin-bottom: 10px; /* Reduced from 20px */
     }
     p {
       margin: 10px 0;
@@ -75,7 +75,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
-      margin-bottom: 40px;
+      margin-bottom: 20px; /* Reduced from 40px */
     }
     .card {
       background: #fff;
@@ -94,7 +94,7 @@
       width: 100%;
       border-collapse: collapse;
       background: #fff;
-      margin-bottom: 40px;
+      margin-bottom: 20px; /* Reduced from 40px */
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
       border-radius: 8px;
       overflow: hidden;
@@ -120,7 +120,7 @@
     /* Logout & Admin Buttons */
     .action-buttons {
       text-align: center;
-      margin-bottom: 40px;
+      margin-bottom: 20px; /* Reduced from 40px */
     }
     .action-buttons form,
     .action-buttons a {
@@ -162,8 +162,6 @@
       transform-origin: bottom right;
       transition: transform 0.3s ease;
       z-index: 1000;
-
-      /* Use flex layout to pin header & input box, let chat scroll */
       display: flex;
       flex-direction: column;
     }
@@ -194,8 +192,8 @@
     .chat-container {
       display: flex;
       flex-direction: column;
-      flex: 1; /* fill remaining space after header */
-      overflow: hidden; /* contain the scroll inside chat-box */
+      flex: 1;
+      overflow: hidden;
     }
 
     /* Chat box can scroll if content is long */
@@ -411,7 +409,6 @@
         <th>DenoisET</th>
       </tr>
       <tr>
-        <!-- Make sure these two links point to DISTINCT routes: -->
         <td>
           <a href="/workflow/run" class="button">Aretomo Run</a>
           <p>Start an Aretomo run</p>
