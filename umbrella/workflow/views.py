@@ -2,7 +2,7 @@ from umbrella_logger import logger
 from .utils import jsonify, ssh_connect, extract_parameters
 from django.http import JsonResponse
 from django.shortcuts import render
-from .agent import Aretomo3, Denoiset
+from .agent import Aretomo3, Denoiset, StatusChecker
 from umbrella.settings import ARETOMO3_SCRIPT_PATH, ARETOMO3_ADVANCED_PATH, DENOISET_SCRIPT_PATH
 import os
 import base64
@@ -16,12 +16,27 @@ from django.views.decorators.http import require_http_methods
 from tem.models import MsiSession
 from processes.models import JobLog
 from django.db.models import F
+from celery import shared_task
+from django.core.cache import cache
 import re
 import requests
+from django.http import StreamingHttpResponse
+from django.core.cache import cache
+import time
+
+CELERY_BEAT_SCHEDULE = {
+    'update_job_data_cache_every_5_seconds': {
+        'task': 'workflow.tasks.update_job_data_cache',
+        'schedule': 5.0,  # every 5 seconds
+    },
+}
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DENOISET_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'denoiset_template.sh')
-# TRACK_JOB_API_URL='http://umbrella.czbiohub.org/'
+DENOISET_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/denoise/scripts'
+STATUS_CHECKER_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'status_checker.sh')
+STATUS_CHECKER_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/software/scripts'
 KEYS = ('PixSize',
         'AtBin',
         'CorrCTF',
@@ -510,11 +525,6 @@ def get_job_logs(request):
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
     
 
-
-
-
-DENOISET_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/denoise/scripts'
-
 # @login_required
 @csrf_exempt
 def run_denoiset(request):
@@ -611,6 +621,8 @@ def dashboard(request):
     """
     return render(request, 'workflows/workflow_dashboard.html')
 
+
+        
 @csrf_exempt
 def workflow_get_data(request):
     """
@@ -664,3 +676,108 @@ def workflow_get_data(request):
             pass
 
     return JsonResponse(result)
+
+def parse_script_output(raw_output):
+    """
+    Parse the raw output string from the status-check script into a structured dict.
+    
+    Expected raw_output example:
+        1) Number of raw data .mdoc files: 323
+        2) Alignment files in aretomo3:
+           run001: 298
+        3) SART volumes in aretomo3:
+           run001: 296
+        4) Denoise volumes in denoise:
+    
+    Returns a dict similar to:
+        {
+            "raw_data_files": 323,
+            "alignment_files": {"run001": 298},
+            "sart_volumes": {"run001": 296},
+            "denoise_volumes": {}
+        }
+    """
+    result = {}
+    current_section = None
+    for line in raw_output.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        if stripped.startswith("1)"):
+            # e.g., "1) Number of raw data .mdoc files: 323"
+            try:
+                number = int(stripped.split(":")[-1].strip())
+                result["raw_data_files"] = number
+            except Exception:
+                result["raw_data_files"] = None
+        elif stripped.startswith("2)"):
+            current_section = "alignment_files"
+            result[current_section] = {}
+        elif stripped.startswith("3)"):
+            current_section = "sart_volumes_aretomo"
+            result[current_section] = {}
+        elif stripped.startswith("4)"):
+            current_section = "denoise_volumes"
+            result[current_section] = {}
+        else:
+            # Lines in the indented sections like "run001: 298"
+            if current_section and ":" in stripped:
+                try:
+                    key, val = stripped.split(":", 1)
+                    result[current_section][key.strip()] = int(val.strip())
+                except Exception:
+                    result[current_section][key.strip()] = val.strip()
+    return result
+
+
+
+@require_http_methods(["GET"])
+@csrf_exempt
+def status_check_api(request):
+    """
+    API endpoint to trigger a remote status check via a GET call.
+    Expects a query parameter: ?session_name=your_session_id
+
+    The SSH credentials and configuration are read from environment variables/constants:
+      - HOST, PORT, USERNAME, PASSWORD
+      - STATUS_CHECKER_SCRIPT_PATH (remote_script_dir)
+      - STATUS_CHECKER_TEMPLATE_PATH (local_template_path)
+    """
+    session_name = request.GET.get('session_name')
+    if not session_name:
+        return JsonResponse({"error": "Missing 'session_name' parameter."}, status=400)
+
+    try:
+        # Load credentials and configuration from environment variables/constants
+        remote_script_dir = STATUS_CHECKER_SCRIPT_PATH
+        local_template_path = STATUS_CHECKER_TEMPLATE_PATH
+
+
+        if not all([HOST, PORT, USERNAME, PASSWORD, remote_script_dir, local_template_path]):
+            return JsonResponse(
+                {"error": "Server configuration incomplete. Please check environment variables."},
+                status=500
+            )
+
+        # Instantiate and use the StatusChecker
+        status_checker = StatusChecker(
+            HOST, PORT, USERNAME, PASSWORD, remote_script_dir, local_template_path
+        )
+        status_checker.connect()
+        # live_denoising is set to False by default
+        raw_output, script_error = status_checker.check_status(session_name, live_denoising=False)
+        status_checker.close()
+
+        # Parse the raw output into a structured dictionary
+        parsed_output = parse_script_output(raw_output)
+
+        response_data = {"result": parsed_output}
+        if script_error.strip():
+            response_data["error"] = script_error.strip()
+
+        return JsonResponse(response_data, status=200, json_dumps_params={'indent': 4})
+
+    except Exception as e:
+        logger.exception("Error during status check API")
+        return JsonResponse({"error": str(e)}, status=500)

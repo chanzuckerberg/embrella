@@ -5,6 +5,7 @@ import subprocess
 import os
 from jinja2 import Environment, FileSystemLoader
 from umbrella_logger import logger
+import paramiko
 
 class Aretomo3(object):
     def __init__(self, hostname, port, username, password, script_path):
@@ -223,10 +224,6 @@ class Aretomo3(object):
 
 
 
-import os
-import paramiko
-from jinja2 import Environment, FileSystemLoader
-from umbrella_logger import logger
 
 class Denoiset(object):
     def __init__(self, hostname, port, username, password, remote_script_dir, local_template_path):
@@ -318,6 +315,104 @@ class Denoiset(object):
             raise
 
     def close(self):
+        if self.ssh is not None:
+            self.ssh.close()
+            self.ssh = None
+            logger.info("SSH connection closed.")
+
+
+class StatusChecker(object):
+    def __init__(self, hostname, port, username, password, remote_script_dir, local_template_path):
+        """
+        :param hostname: Remote host to connect to.
+        :param port: SSH port.
+        :param username: SSH username.
+        :param password: SSH password.
+        :param remote_script_dir: Remote directory where the status-check script will be stored.
+        :param local_template_path: Local path to the Jinja2 template for the status-check script.
+        """
+        self.hostname = hostname
+        self.port = port
+        self.username = username
+        self.password = password
+        self.remote_script_dir = remote_script_dir
+        self.local_template_path = local_template_path
+        self.ssh = None
+
+    def connect(self):
+        """
+        Establish an SSH connection to the remote server.
+        """
+        self.ssh = paramiko.SSHClient()
+        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssh.connect(self.hostname, self.port, self.username, self.password)
+        logger.info(f"Connected to {self.hostname}")
+
+    def check_status(self, session_name, live_denoising=False):
+        """
+        Loads a Jinja2-based status-check script, renders it with the given parameters,
+        uploads it to the remote server, and then executes it with 'bash'.
+        
+        :param session_name: The session identifier (e.g., "24aug30a")
+        :return: (script_output, script_error) as a tuple of strings
+        """
+        try:
+            # 1) Prepare the Jinja2 environment
+            template_dir = os.path.dirname(self.local_template_path)
+            template_file = os.path.basename(self.local_template_path)
+            env = Environment(loader=FileSystemLoader(template_dir))
+            template = env.get_template(template_file)
+
+            # 2) Render the template
+            rendered_script = template.render(
+                session=session_name,
+            )
+            logger.info(f"Rendered script for session '{session_name}':\n{rendered_script}")
+
+            # 3) Define the remote file name and path
+            remote_script_filename = f"{session_name}_status_check.sh"
+            remote_script_path = os.path.join(self.remote_script_dir, remote_script_filename)
+
+            # 4) Use SFTP to upload the script (removing any existing version)
+            sftp = self.ssh.open_sftp()
+            try:
+                sftp.stat(remote_script_path)  # Check if file exists
+                sftp.remove(remote_script_path)
+                logger.info(f"Removed existing file: {remote_script_path}")
+            except FileNotFoundError:
+                pass  # It's fine if the file doesn't exist yet
+
+            with sftp.file(remote_script_path, "w") as remote_file:
+                remote_file.write(rendered_script)
+
+            # Make the remote script executable
+            sftp.chmod(remote_script_path, 0o755)
+            sftp.close()
+            logger.info(f"Uploaded rendered script to: {remote_script_path}")
+
+            # 5) Execute the script using bash
+            check_cmd = f"cd {self.remote_script_dir} && bash {remote_script_filename} {session_name}"
+            stdin, stdout, stderr = self.ssh.exec_command(check_cmd)
+
+            script_output = stdout.read().decode('utf-8', errors='replace')
+            script_error = stderr.read().decode('utf-8', errors='replace')
+
+            # Log results
+            if script_output.strip():
+                logger.info(f"Status check output:\n{script_output}")
+            if script_error.strip():
+                logger.error(f"Status check error:\n{script_error}")
+
+            return script_output, script_error
+
+        except Exception as e:
+            logger.error(f"Error during status check: {e}")
+            raise
+
+    def close(self):
+        """
+        Close the SSH connection.
+        """
         if self.ssh is not None:
             self.ssh.close()
             self.ssh = None
