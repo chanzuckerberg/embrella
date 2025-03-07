@@ -1,107 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Create Screening Group</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
-    <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            margin-top: 50px;
-            max-width: 1000px;
-            padding: 50px;
-            background-color: #ffffff;
-            box-shadow: 0px 0px 25px rgba(0,0,0,0.1);
-            border-radius: 12px;
-        }
-        h2 {
-            color: #007bff;
-            font-size: 32px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            font-weight: bold;
-            color: #333;
-        }
-        select {
-            width: 100%;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ced4da;
-            font-size: 16px;
-        }
-        input[type="submit"] {
-            width: 50%;
-            padding: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            display: block;
-            margin: 0 auto;
-        }
-        input[type="submit"]:hover {
-            background-color: #0056b3;
-        }
-        table {
-            margin-bottom: 30px;
-        }
-        .table-light {
-            background-color: #fdfdfe;
-        }
-        th, td {
-            text-align: center;
-            vertical-align: middle;
-        }
-        th {
-            background-color: #007bff;
-            color: white;
-        }
-        a {
-            color: #007bff;
-        }
-        a:hover {
-            color: #0056b3;
-            text-decoration: none;
-        }
-        .go-back-btn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .go-back-btn:hover {
-            background-color: #5a6268;
-        }
-        .warning {
-            color: red;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-    </style>
-</head>
-<body>
-  <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go back to the startup page</button>
-  <div class="container">
-    <h2 class="text-center"><u>Create Screening Group from Grids on a Cassette</u></h2>
-    <br>
+{% extends "tem/base.html" %}
+{% block title %}Screening Group Creation{% endblock %}
+{% block header %}Create Screening Group from Grids on a Cassette{% endblock %}
+{% block form %}
     <form id="scrnForm" action="{% url 'tem:scrncreate' %}" method="post">
       {% csrf_token %}
       {{ form }}
@@ -128,11 +28,9 @@
       </table>
       
     </form>
-    <div class="warning" id="warningMessage" style="display: none;">
-      Please fill out all required fields.
-    </div>
-  </div>
+{% endblock %}
 
+{% block endscript %}
   <script>
     $(document).ready(function() {
       $('#id_cassette').change(function() {
@@ -172,5 +70,6 @@
       });
     });
   </script>
+{% endblock %}
 </body>
 </html>
