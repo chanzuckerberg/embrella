@@ -49,7 +49,7 @@ class ConfluenceQA:
     def init_models(self) -> None:
         if self.llm is None:
             self.llm = ChatOpenAI(
-                model_name=LLM_OPENAI_GPT40_MINI,
+                model_name=LLM_OPENAI_GPT40,
                 temperature=0.2,
                 request_timeout=60  # Add timeout
             )
@@ -151,7 +151,7 @@ class ConfluenceQA:
 
         # Use a recursive text splitter with smaller chunks
         recursive_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=400,  # Smaller chunks
+            chunk_size=100,  # Smaller chunks
             chunk_overlap=30,
             separators=["\n\n", "\n", " ", ""]
         )
