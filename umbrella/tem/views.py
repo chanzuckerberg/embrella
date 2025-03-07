@@ -17,6 +17,7 @@ from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 import json
+import re
 
 def detail(request, session_id):
     session = get_object_or_404(MsiSession, pk=session_id)
@@ -60,20 +61,64 @@ def detail(request, session_id):
 def reserve_session(request):
     if request.method == 'POST':
         form = ReserveMsiSessionForm(request.POST)
-        name = models.suggest_name('t')
         plan_id=int(request.POST['session_plan'])
-        return render(request, reverse("tem:create"))
+        return render(request, "tem/create_msi_name.html")
     else:
         form = ReserveMsiSessionForm()
         return render(request, "tem/reserve.html", {"form": form})
 
+def create_msi_name(request, data={}):
+    """
+    Set template display of the session_plan and grid selection.
+    Suggest name of the session but allow user to change.
+    """
+    if request.method == 'POST':
+        plan_id=int(request.POST['session_plan'])
+        project_id=int(request.POST['project'])
+        grid_id=int(request.POST['grid'])
+        project=Project.objects.get(pk=project_id)
+        session_plan=SessionPlan.objects.get(pk=plan_id)
+        grid=CryoGrid.objects.get(pk=grid_id)
+        name = models.suggest_name('')
+        context = {
+            'default_name': name,
+            'session_plan': session_plan,
+            'project': project,
+            'grid': grid,
+
+        }
+        if 'error_msg' in data.keys():
+           context['error_msg'] = data['error_msg']
+    return render(request, "tem/create_msi_name.html", context)
+
+def validate_msi_name(request):
+    """
+    Make sure the name does not exists before creating the session.
+    """
+    if 'name' in request.POST.keys():
+        name_by_user = request.POST['name']
+        regex = re.compile('[@_!#$%^&*()<>?/\|}{~:]')
+        if regex.search(name_by_user) or len(name_by_user.split(' ')) > 1:
+            data = {'error_msg': 'Session name "%s" can not include special characters nor space.  Try again, please.' % name_by_user}
+            return create_msi_name(request,data)
+        sessions_with_name = MsiSession.objects.filter(name=name_by_user)
+        if sessions_with_name.count() == 0:
+            return create_session(request)
+        data = {'error_msg': 'Session name %s exists in Embrella. Try another one, please.' % name_by_user}
+    else:
+        data = {'error_msg': 'No session name chosen. Try again, please.'}
+
+    return create_msi_name(request,data)
+
 def create_session(request):
-    plan_id=int(request.POST['session_plan'])
-    project_id=int(request.POST['project'])
-    grid_id=int(request.POST['grid'])
-    user_id = int(request.POST['user'])
-    # TODO suggest name with prefix
-    name = models.suggest_name('')
+    """
+    Create session from posted values
+    """
+    plan_id=int(request.POST['session_plan'][0])
+    project_id=int(request.POST['project'][0])
+    grid_id=int(request.POST['grid'][0])
+    user_id = int(request.user.id)
+    name = request.POST['name']
     if request.method == 'POST':
         grid_instance = CryoGrid.objects.get(pk=grid_id)
         # print(request.POST['user'])
@@ -82,7 +127,7 @@ def create_session(request):
                     project=Project.objects.get(pk=project_id),
                     grid=grid_instance,
                     session_plan=SessionPlan.objects.get(pk=plan_id),
-                    user=User.objects.get(pk=user_id)
+                    user=request.user
         )
         session_instance.save()
         my_pk = session_instance.id
