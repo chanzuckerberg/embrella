@@ -1,44 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Session {{ data.name }}</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .container {
-            margin-top: 50px;
-            padding: 30px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .table th, .table td {
-            vertical-align: middle;
-        }
-        .btn-custom {
-            background-color: #007bff;
-            color: white;
-        }
-        .btn-custom:hover {
-            background-color: #0056b3;
-        }
-        .go-back-btn:hover {
-          background-color: #5a6268;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go back to the startup page</button>
-    <h2 class="text-center text-primary"><u>Multi-scaled Imaging (MSI) Session {{ data.name }}</u></h2><br>
+{% extends "tem/base.html" %}
+{% block title %}Session {{ data.name }}{% endblock %}
+{% block header %}Multi-Scaled Imaging (MSI) Session {{ data.name }}{% endblock %}
+{% block form %}
     <div class="alert alert-info" role="alert">
         ** Note: Please review the file directory below and ensure the data is stored correctly.
     </div>
@@ -82,7 +45,11 @@
             </tbody>
         </table>
     </form>
-</div>
+{% endblock %}
+{% block warning %}
+{% endblock %}
+{% block endscript %}
+{% endblock %}
 
 </body>
 </html>
