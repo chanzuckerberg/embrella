@@ -38,7 +38,25 @@ DENOISET_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/denoise/scrip
 STATUS_CHECKER_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'status_checker.sh')
 STATUS_CHECKER_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/software/scripts'
 KEYS = ('PixSize',
+        'SplitSum',
+        'Resume',
+        'EerSampling',
+        'McPatch',
+        'McIter',
+        'Group',
+        'RotGain',
+        'FlipGain',
+        'InvGain',
+        'TotalDose',
+        'AlignZ',
+        'VolZ',
+        'ExtZ',
         'AtBin',
+        'TiltAxis',
+        'TiltCor',
+        'AtPatch',
+        'OutImod',
+        'ExtPhase',
         'CorrCTF',
         'McBin',
         'Wbp')
@@ -82,8 +100,17 @@ def get_aretomo3_json(request):
     try:
         json_data = ssh_connect(remote_path)
         full_data = jsonify(json_data)
+
+        # Extract version first
+        version = full_data['software']['version']
+
+        # Extract other parameters
         parsed_data = extract_parameters(full_data, KEYS)
-        return JsonResponse(parsed_data, safe=False)
+
+        # Insert the version at the beginning
+        ordered_parsed_data = {"Version": version, **parsed_data}
+
+        return JsonResponse(ordered_parsed_data, safe=False)
     except FileNotFoundError as fnf_err:
         error_msg = f"File not found"
         logger.error(error_msg)
