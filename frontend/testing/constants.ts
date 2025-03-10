@@ -40,7 +40,7 @@ export const GRID_A: GridData = {
   specimen: {
     id: 0,
     name: "aaa",
-    sample: [{ id: 1, name: "foo baz bar foo", url: "bazfoobazbazbarbar" }],
+    samples: [{ id: 1, name: "foo baz bar foo", url: "bazfoobazbazbarbar" }],
   },
   freezingSession: {
     id: 0,
