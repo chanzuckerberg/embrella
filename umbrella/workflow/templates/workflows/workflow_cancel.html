@@ -53,9 +53,29 @@
     .cancel-container button:hover {
       background-color: #e53935;
     }
+
+    /* Go Back Button */
+    .go-back {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 8px 14px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+      z-index: 1000;
+    }
+    .go-back:hover {
+      background-color: #1e88e5;
+    }
   </style>
 </head>
 <body>
+  <button class="go-back" onclick="goBack()">Go back to the startup page</button>
   <div class="form-container cancel-container">
     <h1>Job Canceler</h1>
     <p>
@@ -197,6 +217,10 @@
 
     // Fetch user info when page loads so the user ID is auto-populated
     window.addEventListener("DOMContentLoaded", fetchUserInfo);
+
+    function goBack() {
+      window.location.href = "/umbrella";
+    }
   </script>
 </body>
 </html>

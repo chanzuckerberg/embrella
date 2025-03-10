@@ -80,9 +80,28 @@
     #jobLogsTable th {
       background-color: #f2f2f2;
     }
+    /* Go Back Button */
+    .go-back {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 8px 14px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+      z-index: 1000;
+    }
+    .go-back:hover {
+      background-color: #1e88e5;
+    }
   </style>
 </head>
 <body>
+  <button class="go-back" onclick="goBack()">Go back to the startup page</button>
   <div class="form-container">
     <h1>Job Logs</h1>
     <div class="form-group">
@@ -210,6 +229,10 @@
     // Track 10 most recent jobs
     function trackRecentJobs() {
       fetchJobLogs({ limit: 10 });
+    }
+
+    function goBack() {
+      window.location.href = "/umbrella";
     }
   </script>
 </body>
