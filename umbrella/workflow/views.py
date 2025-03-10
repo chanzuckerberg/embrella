@@ -101,14 +101,15 @@ def get_aretomo3_json(request):
         json_data = ssh_connect(remote_path)
         full_data = jsonify(json_data)
 
-        # Extract version first
+        # Extract version and gain
         version = full_data['software']['version']
+        gain = full_data['input']['Gain']
 
         # Extract other parameters
         parsed_data = extract_parameters(full_data, KEYS)
 
-        # Insert the version at the beginning
-        ordered_parsed_data = {"Version": version, **parsed_data}
+        # Insert version and gain at the beginning
+        ordered_parsed_data = {"Version": version, "Gain": gain, **parsed_data}
 
         return JsonResponse(ordered_parsed_data, safe=False)
     except FileNotFoundError as fnf_err:
