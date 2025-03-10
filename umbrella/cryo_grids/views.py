@@ -656,7 +656,7 @@ def grid_detail_view(request, grid_id=1, error_msg=''):
 
 def _save_copied_grid(old_grid, box, position):
     # grids sharing the same unique requirement except copy_number
-    existing_grids = CryoGrid.objects.filter(name=old_grid.name,freezing_session=old_grid.freezing_session, freezing_plan=old_grid.freezing_plan)
+    existing_grids = CryoGrid.objects.filter(name=old_grid.name,freezing_session=old_grid.freezing_session, specimen=old_grid.specimen)
     existing_numbers = list(map((lambda x:x.copy_number), existing_grids))
     copy_number = max(existing_numbers) + 1
     new_grid = CryoGrid.objects.get(id=old_grid.id)
