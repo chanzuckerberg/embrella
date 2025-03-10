@@ -45,11 +45,7 @@ export const GRID_COLUMN_DEFS: ColumnDef<
   {
     id: GRID_COLUMN_IDS.SPECIMEN,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps[] =>
-      getLinkPropsFromLinkFieldList([{
-        id: (rowData as GridData).specimen.id,
-        name: (rowData as GridData).specimen.name,
-        url: `/specimens/${(rowData as GridData).specimen.id}`
-      }]),
+      getLinkPropsFromLinkFieldList((rowData as GridData).specimen.samples),
     cell: getLinkCellListFromCellContext,
     enableSorting: false,
     header: humanize(GRID_COLUMN_IDS.SPECIMEN),
