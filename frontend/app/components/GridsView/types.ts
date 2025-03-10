@@ -19,7 +19,7 @@ export interface GridData {
   specimen: {
     id: number;
     name: string;
-    sample: EntityLinkField[];
+    samples: EntityLinkField[];
   };
   freezingSession: {
     id: number;
