@@ -306,30 +306,56 @@ def run_aretomo3(request):
         # Store user_id and decoded_password in session
         request.session['user_id'] = user_id
         request.session['decoded_password'] = decoded_password
+
         data_sanitized = dict(data)
         data_sanitized.pop('password', None)
+        job_id_str = None  # Initialize job_id_str to avoid referencing it before assignment
+
         try:
             aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
-
             # Connect to the remote server
             aretomo.connect()
 
             # Run the script and get the output
-            output, error = aretomo.run_script(session_name, run_number, pix_size, total_dose,num_checks, user_id)
-            
+            output, error = aretomo.run_script(session_name, run_number, pix_size, total_dose, num_checks, user_id)
+
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
             job_id_str = ",".join(found_ids) if found_ids else None
 
-            store_log(job_name='Aretomo3',request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
+            # Log success without an error message
+            store_log(job_name='Aretomo3',
+                      request=request,
+                      data_sanitized=data_sanitized,
+                      error="",
+                      advanced_status=False,
+                      job_id=job_id_str)
 
-            return JsonResponse({'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the below output directory', 'output': output, 'error': error})
+            return JsonResponse({
+                'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the output directory below',
+                'output': output,
+                'error': error
+            })
         except Exception as e:
-            store_log(job_name='Aretomo3',request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
+            # Log the error details
+            store_log(job_name='Aretomo3',
+                      request=request,
+                      data_sanitized=data_sanitized,
+                      error=str(e),
+                      advanced_status=False,
+                      job_id=job_id_str)
             return JsonResponse({'error': str(e) + ': 500'}, status=500)
         finally:
             aretomo.close()
-    store_log(job_name='Aretomo3',request=request, data_sanitized=data_sanitized, error=str(e), advanced_status=False, job_id=job_id_str)
-    return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
+    else:
+        # For non-POST requests, log the error and return a 400 status
+        default_data = {}
+        store_log(job_name='Aretomo3',
+                  request=request,
+                  data_sanitized=default_data,
+                  error="Invalid request method",
+                  advanced_status=False,
+                  job_id=None)
+        return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
 @csrf_exempt
 @login_required
