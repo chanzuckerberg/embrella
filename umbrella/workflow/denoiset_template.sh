@@ -17,7 +17,7 @@ in_dir="/hpc/projects/group.czii/krios1.processing/aretomo3/${session}/${aretomo
 out_dir="/hpc/projects/group.czii/krios1.processing/denoise/${session}/${denoise_run}"
 model="/hpc/projects/group.czii/krios1.processing/software/denoiset/denoiset/models/${model_name}"
 
-predict3d --model ${model} --in_dir ${in_dir} --out_dir ${out_dir}{% if live_denoising %} --live{% endif %}
+predict3d --model ${model} --in_dir ${in_dir} --out_dir ${out_dir}{% if live_denoising %} --live --t_exit 43000 {% endif %}
 
 julia /hpc/projects/group.czii/krios1.processing/software/php/DoPHplot.jl --dcroot /hpc/instruments/czii.krios1/OffloadData/${session}/ --apdroot /hpc/projects/group.czii/krios1.processing/aretomo3/${session}/${aretomo_run}/ --dnroot ${out_dir} --ExptName ${session} --comment "Aretomo v2.0.0, denoised"
 julia /hpc/projects/group.czii/krios1.processing/software/php/IndexWebRootDir.jl
