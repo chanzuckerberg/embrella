@@ -1,14 +1,17 @@
 from django.contrib import admin
 from django.urls import path
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.contrib import messages
 from django import forms
 import datetime
+import logging
 
 from .models import Site, Dewar, Cane, Puck, CryoGridBox, CryoGridCassette
 from .models import PlungeFreezingDevice, PlungeFreezingSession, Specimen, CryoGrid, Sample
-from .views import _save_copied_grid  # Import your existing function
+from .views import _save_copied_grid, get_available_positions
+
+logger = logging.getLogger(__name__)
 
 # Register standard models
 admin.site.register(Site)
@@ -137,20 +140,21 @@ class CryoGridAdmin(admin.ModelAdmin):
                             request, 
                             f"Grid duplicated successfully! New grid ID: {new_grid_ids[0]}"
                         )
-                        # Redirect to the duplicated grid's admin page
-                        return HttpResponseRedirect(
-                            f"/admin/cryo_grids/cryogrid/{new_grid_ids[0]}/change/"
-                        )
                     else:
                         messages.success(
                             request, 
                             f"Created {len(new_grid_ids)} copies of the grid! IDs: {', '.join(map(str, new_grid_ids))}"
                         )
-                        # Redirect to the grid list filtered by new box
-                        return HttpResponseRedirect(
-                            f"/admin/cryo_grids/cryogrid/?grid_box__id={new_box.id}"
-                        )
-                        
+                    
+                    # Return the same template but with success message
+                    return render(request, 'cryo_grids/copy_grid_popup.html', {
+                        'title': "Success",
+                        'object': obj,
+                        'form': form,
+                        'opts': self.model._meta,
+                        'success': True,
+                    })
+                    
                 except Exception as e:
                     # Return to popup with error message
                     return render(request, 'cryo_grids/copy_grid_popup.html', {
@@ -195,42 +199,70 @@ class CryoGridAdmin(admin.ModelAdmin):
                     'max_positions': max_positions,
                 })
         
-        # Get available positions for the initial box (GET request)
+        # For GET request, calculate available positions for initial box
         available_positions = []
         max_positions = 0
-        if obj.grid_box:
-            max_grids = obj.grid_box.max_grids or 4  # Default to 4 if max_grids is None
+        
+        # Get all boxes for selection
+        all_boxes = CryoGridBox.objects.all()
+        
+        # If a box is selected (either the grid's box or first available)
+        initial_box = obj.grid_box or (all_boxes.first() if all_boxes.exists() else None)
+        
+        if initial_box:
+            # Calculate available positions more carefully
+            max_grids = initial_box.max_grids
+            if not max_grids or max_grids <= 0:
+                max_grids = 4  # Default to 4 if max_grids is invalid
+                
+            # Get all positions already used in this box
             used_positions = list(CryoGrid.objects.filter(
-                grid_box=obj.grid_box, 
-                trashed=False
+                grid_box=initial_box,
+                trashed=False  # Only count non-trashed grids
             ).values_list('position_in_box', flat=True))
             
-            available_positions = sorted(list(
-                set(range(1, max_grids + 1)) - set(used_positions)
-            ))
+            # Calculate available positions
+            all_positions = list(range(1, max_grids + 1))
+            available_positions = [pos for pos in all_positions if pos not in used_positions]
             max_positions = len(available_positions)
+            
+            # Debug output (you can remove this later)
+            print(f"Box: {initial_box.name}, Max grids: {max_grids}")
+            print(f"Used positions: {used_positions}")
+            print(f"Available positions: {available_positions}")
+            print(f"Max positions: {max_positions}")
         
-        # If GET request, render the popup form
+        # Create the form
+        form = CopyGridForm(grid=obj)
+        
+        # Render the popup form
         context = {
             'title': f"Duplicate Grid: {obj.name}",
             'object': obj,
-            'form': CopyGridForm(grid=obj),
+            'form': form,
             'opts': self.model._meta,
             'available_positions': available_positions,
             'max_positions': max_positions,
         }
         return render(request, 'cryo_grids/copy_grid_popup.html', context)
 
+
     def get_urls(self):
         """Add a custom URL to handle the button action."""
         urls = super().get_urls()
         custom_urls = [
             path(
-                "<path:object_id>/duplicate/",
+                '<path:object_id>/duplicate/',
                 self.admin_site.admin_view(self.run_custom_action),
-                name="cryo_grid_run_action",
+                name='cryo_grid_run_action',
+            ),
+            path(
+                '<path:object_id>/available-positions/',
+                self.admin_site.admin_view(get_available_positions),
+                name='get_available_positions',
             ),
         ]
+        logger.debug(f"Custom URLs registered: {custom_urls}")  # Debug log
         return custom_urls + urls
 
 # Register CryoGrid with the custom admin

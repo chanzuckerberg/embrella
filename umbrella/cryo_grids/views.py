@@ -743,3 +743,31 @@ def clear_cassette_move(request, error_msg=''):
                     setattr(grid, 'trashed',True)
                 grid.save()
         return HttpResponseRedirect(reverse('cryo_grids:clear_cassette_filter', args=(cassette_id,)))
+
+
+@require_http_methods(["GET"])
+def get_available_positions(request, object_id):
+    """AJAX endpoint to get available positions for a selected box."""
+    try:
+        box = CryoGridBox.objects.get(pk=object_id)
+        max_grids = box.max_grids or 4
+        used_positions = list(CryoGrid.objects.filter(
+            grid_box=box,
+            trashed=False
+        ).values_list('position_in_box', flat=True))
+        
+        all_positions = list(range(1, max_grids + 1))
+        available_positions = [pos for pos in all_positions if pos not in used_positions]
+        max_positions = len(available_positions)
+        
+        print(f"Box: {box.name}, Max grids: {max_grids}")  # Debug log
+        print(f"Used positions: {used_positions}")  # Debug log
+        print(f"Available positions: {available_positions}")  # Debug log
+        print(f"Max positions: {max_positions}")  # Debug log
+        
+        return JsonResponse({
+            'max_positions': max_positions,
+            'available_positions': available_positions
+        })
+    except CryoGridBox.DoesNotExist:
+        return JsonResponse({'max_positions': 0, 'error': 'Box not found'})
