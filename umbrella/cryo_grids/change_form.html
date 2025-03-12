@@ -1,0 +1,12 @@
+{% extends "admin/cryo_grids/change_form.html" %}
+
+{% block submit_buttons_bottom %}
+    {{ block.super }}  <!-- Keep the existing Save, Delete, and History buttons -->
+
+    <div class="submit-row">
+        <a href="{% url 'admin:cryo_grid_run_action' original.id %}" 
+           class="button button-secondary">
+            🔄 Run Custom Action
+        </a>
+    </div>
+{% endblock %}

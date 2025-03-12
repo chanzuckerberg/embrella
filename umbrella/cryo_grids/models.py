@@ -148,3 +148,39 @@ class CryoGrid(models.Model):
         
     def __str__(self):
         return '%s.c%d (id=%d) from %s of %s' % (self.name, self.copy_number, self.pk, self.freezing_session, self.specimen)
+
+
+    
+# from django.contrib import admin
+# from django.urls import path
+# from django.http import HttpResponseRedirect
+# from django.shortcuts import render
+# from django.contrib import messages
+
+# # @admin.register(CryoGrid)
+# class extendAmin(admin.ModelAdmin):
+#     change_form_template = "admin/change_form.html"  # Custom template
+
+#     def process_custom_action(self, request, object_id):
+#         """Function to handle the button click."""
+#         obj = self.get_object(request, object_id)  # Get the specific object
+#         if not obj:
+#             messages.error(request, "Object not found!")
+#             return HttpResponseRedirect(request.META.get("HTTP_REFERER", "/admin/"))
+
+#         # Perform the custom action (example: print a success message)
+#         messages.success(request, f"Action completed for Cryo Grid {obj.name}!")
+
+#         return HttpResponseRedirect(request.META.get("HTTP_REFERER", "/admin/"))
+
+#     def get_urls(self):
+#         """Add a custom URL to handle the button action."""
+#         urls = super().get_urls()
+#         custom_urls = [
+#             path(
+#                 "<int:object_id>/custom-action/",
+#                 self.admin_site.admin_view(self.process_custom_action),
+#                 name="cryo_grid_custom_action",
+#             ),
+#         ]
+#         return custom_urls + urls

@@ -1,0 +1,56 @@
+<div class="modal-content">
+    <div class="modal-header">
+        <h3 class="modal-title">{{ title }}</h3>
+        <button type="button" class="close close-modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    
+    <div class="modal-body">
+        <p>You are about to duplicate grid: <strong>{{ object.name }}</strong> (Copy #{{ object.copy_number }})</p>
+        
+        {% if error_message %}
+        <!-- Error message display -->
+        <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+        </div>
+        {% endif %}
+        
+        <form id="copyGridForm" method="post" action="{% url 'admin:cryo_grid_run_action' object.pk %}">
+            {% csrf_token %}
+            
+            <div class="form-group mb-4">
+                <label for="id_new_box" class="font-weight-bold">{{ form.new_box.label }}</label>
+                {{ form.new_box }}
+                {% if form.new_box.errors %}
+                    <div class="text-danger mt-2">{{ form.new_box.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <!-- Number of times to copy - prominently displayed -->
+            <div class="form-group mb-4">
+                <label for="id_number_to_copy" class="font-weight-bold">
+                    {{ form.number_to_copy.label }}
+                </label>
+                {{ form.number_to_copy }}
+                <small class="form-text text-muted mt-2">
+                    {% if max_positions > 0 %}
+                        Available positions in selected box: <strong>{{ max_positions }}</strong>
+                    {% else %}
+                        <span class="text-danger">No available positions in selected box</span>
+                    {% endif %}
+                </small>
+                {% if form.number_to_copy.errors %}
+                    <div class="text-danger mt-2">{{ form.number_to_copy.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                <button type="submit" class="btn btn-primary" {% if max_positions == 0 %}disabled{% endif %}>
+                    <i class="fas fa-copy"></i> Duplicate Grid
+                </button>
+            </div>
+        </form>
+    </div>
+</div> 

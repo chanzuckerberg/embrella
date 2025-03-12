@@ -1,0 +1,121 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    <li>
+        <a href="{% url 'admin:cryo_grid_run_action' original.pk %}" 
+           class="btn btn-outline-primary"
+           onclick="return showPopup(this);">
+            <i class="fas fa-copy"></i> {% trans "Duplicate Grid" %}
+        </a>
+    </li>
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+    
+    <script>
+        function showPopup(link) {
+            // Create a modal container if it doesn't exist
+            var modal = document.getElementById('gridActionModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'gridActionModal';
+                modal.className = 'modal';
+                document.body.appendChild(modal);
+            }
+            
+            // Fetch the form content
+            fetch(link.href)
+                .then(response => response.text())
+                .then(html => {
+                    modal.innerHTML = html;
+                    modal.style.display = 'block';
+                    
+                    // Add close functionality
+                    var closeButtons = modal.querySelectorAll('.close-modal');
+                    closeButtons.forEach(button => {
+                        button.addEventListener('click', function() {
+                            modal.style.display = 'none';
+                        });
+                    });
+                    
+                    // Close when clicking outside
+                    window.addEventListener('click', function(event) {
+                        if (event.target == modal) {
+                            modal.style.display = 'none';
+                        }
+                    });
+                    
+                    // Add box change event listener
+                    var boxSelect = modal.querySelector('#id_new_box');
+                    if (boxSelect) {
+                        boxSelect.addEventListener('change', function() {
+                            updateAvailablePositions(this.value);
+                        });
+                    }
+                });
+            
+            return false; // Prevent default link behavior
+        }
+        
+        function updateAvailablePositions(boxId) {
+            if (!boxId) return;
+            
+            fetch(`/admin/cryo_grids/cryogridbox/${boxId}/available-positions/`)
+                .then(response => response.json())
+                .then(data => {
+                    var positionSelect = document.getElementById('id_position');
+                    var positionHelp = document.querySelector('.position-help');
+                    
+                    if (data.available_positions && data.available_positions.length > 0) {
+                        if (positionHelp) {
+                            positionHelp.textContent = `Available positions: ${data.available_positions.join(', ')}`;
+                        }
+                    } else {
+                        if (positionHelp) {
+                            positionHelp.textContent = 'No available positions in this box';
+                        }
+                    }
+                });
+        }
+    </script>
+{% endblock %} 
