@@ -148,3 +148,5 @@ class CryoGrid(models.Model):
         
     def __str__(self):
         return '%s.c%d (id=%d) from %s of %s' % (self.name, self.copy_number, self.pk, self.freezing_session, self.specimen)
+
+

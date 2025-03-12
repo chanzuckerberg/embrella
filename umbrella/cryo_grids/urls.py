@@ -19,4 +19,8 @@ urlpatterns = [
     path('clear_cassette/', views.clear_cassette_view, name='clear_cassette'),
     path('clear_cassette_filter/<int:cassette_id>/', views.clear_cassette_filter, name='clear_cassette_filter'),
     path('clear_cassette_move/', views.clear_cassette_move, name='clear_cassette_move'),
+    path('get_available_box/', views.get_available_positions, name='get'),
+    path('cryogrid/<int:object_id>/available-positions/', 
+         views.get_available_positions, 
+         name='get_available_positions'),
 ]
