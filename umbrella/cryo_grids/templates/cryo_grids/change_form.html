@@ -3,11 +3,14 @@
 
 {% block object-tools-items %}
     {{ block.super }}
-    <li>
+    <li style="margin-bottom: 10px;">
         <a href="{% url 'admin:cryo_grid_run_action' original.pk %}" 
-           class="btn btn-primary"
+           class="btn btn-success"
+           style="background-color: #28a745; border-color: #28a745; color: white; 
+                  padding: 6px 12px; font-size: 14px; border-radius: 4px; 
+                  text-decoration: none; margin-top: 10px;"
            onclick="return showDuplicateModal(this);">
-            <i class="fas fa-copy"></i> Duplicate Grid
+            <i class="fas fa-copy"></i> {% trans 'Duplicate Grid' %}
         </a>
     </li>
 {% endblock %}
@@ -15,6 +18,38 @@
 {% block extrahead %}
     {{ block.super }}
     <style>
+        /* Match Jazzmin save button styles */
+        .object-tools .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+            color: white;
+            font-weight: 400;
+            line-height: 1.5;
+            text-align: center;
+            vertical-align: middle;
+            width: 100%;
+            cursor: pointer;
+            user-select: none;
+            transition: color .15s ease-in-out,
+                        background-color .15s ease-in-out,
+                        border-color .15s ease-in-out,
+                        box-shadow .15s ease-in-out;
+        }
+
+        .object-tools .btn-success:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+            color: white;
+        }
+
+        .object-tools .btn-success:focus {
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.5);
+        }
+
+        .object-tools .btn-success i {
+            margin-right: 4px;
+        }
+
         .modal {
             display: none;
             position: fixed;
