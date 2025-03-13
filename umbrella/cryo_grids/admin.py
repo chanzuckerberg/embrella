@@ -75,37 +75,38 @@ class CopyGridForm(forms.Form):
         
         return cleaned_data
 
-# Custom admin for CryoGrid
 class CryoGridAdmin(admin.ModelAdmin):
     change_form_template = "cryo_grids/change_form.html"
-    
+
     def run_custom_action(self, request, object_id):
-        """Function to handle the button click."""
         obj = self.get_object(request, object_id)
-        
-        if request.method == 'POST':
-            form = CopyGridForm(request.POST, grid=obj)
+
+        # If GET parameters include duplication data, process the copy action.
+        if 'new_box' in request.GET and 'number_to_copy' in request.GET:
+            form = CopyGridForm(request.GET, grid=obj)
             if form.is_valid():
-                # Process the form data
                 new_box = form.cleaned_data['new_box']
                 number_to_copy = form.cleaned_data['number_to_copy']
-                
+                print(number_to_copy)
                 try:
-                    # Get used positions in the box
-                    used_positions = list(CryoGrid.objects.filter(
-                        grid_box=new_box,
-                        trashed=False
-                    ).values_list('position_in_box', flat=True))
-                    
-                    # Calculate available positions
-                    max_grids = new_box.max_grids or 4  # Default to 4 if max_grids is None
+                    used_positions = list(
+                        CryoGrid.objects.filter(
+                            grid_box=new_box,
+                            trashed=False
+                        ).values_list('position_in_box', flat=True)
+                    )
+
+                    max_grids = new_box.max_grids or 4  # Default to 4 if not set
                     available_positions = sorted(list(
                         set(range(1, max_grids + 1)) - set(used_positions)
                     ))
-                    
-                    # Check if there are enough available positions
+
+                    # Check if there are enough positions for the requested number of copies.
                     if number_to_copy > len(available_positions):
-                        error_msg = f'Box "{new_box}" only has {len(available_positions)} available positions. Cannot copy {number_to_copy} grids.'
+                        error_msg = (
+                            f'Box "{new_box}" only has {len(available_positions)} available positions. '
+                            f"Cannot copy {number_to_copy} grids."
+                        )
                         return render(request, 'cryo_grids/copy_grid_popup.html', {
                             'title': f"Duplicate Grid: {obj.name}",
                             'object': obj,
@@ -115,8 +116,7 @@ class CryoGridAdmin(admin.ModelAdmin):
                             'available_positions': available_positions,
                             'max_positions': len(available_positions),
                         })
-                    
-                    # No available positions
+
                     if not available_positions:
                         error_msg = f'Box "{new_box}" has no available positions. Choose a different box.'
                         return render(request, 'cryo_grids/copy_grid_popup.html', {
@@ -128,25 +128,24 @@ class CryoGridAdmin(admin.ModelAdmin):
                             'available_positions': [],
                             'max_positions': 0,
                         })
-                    
-                    # Create copies
+
+                    # Create copies for the requested number of grids.
                     new_grid_ids = []
                     for position in available_positions[:number_to_copy]:
                         new_grid = _save_copied_grid(obj, new_box, position)
                         new_grid_ids.append(new_grid.id)
-                    
+
                     if len(new_grid_ids) == 1:
                         messages.success(
-                            request, 
+                            request,
                             f"Grid duplicated successfully! New grid ID: {new_grid_ids[0]}"
                         )
                     else:
                         messages.success(
-                            request, 
+                            request,
                             f"Created {len(new_grid_ids)} copies of the grid! IDs: {', '.join(map(str, new_grid_ids))}"
                         )
-                    
-                    # Return the same template but with success message
+
                     return render(request, 'cryo_grids/copy_grid_popup.html', {
                         'title': "Success",
                         'object': obj,
@@ -154,9 +153,8 @@ class CryoGridAdmin(admin.ModelAdmin):
                         'opts': self.model._meta,
                         'success': True,
                     })
-                    
+
                 except Exception as e:
-                    # Return to popup with error message
                     return render(request, 'cryo_grids/copy_grid_popup.html', {
                         'title': f"Duplicate Grid: {obj.name}",
                         'object': obj,
@@ -167,88 +165,78 @@ class CryoGridAdmin(admin.ModelAdmin):
                         'max_positions': 0,
                     })
             else:
-                # Form validation failed, stay in the popup
-                # Get available positions for the selected box
+                # Form validation failed; try to compute available positions for the selected box.
                 available_positions = []
                 max_positions = 0
-                box_id = request.POST.get('new_box')
+                box_id = request.GET.get('new_box')
                 if box_id:
                     try:
                         box = CryoGridBox.objects.get(id=box_id)
-                        max_grids = box.max_grids or 4  # Default to 4 if max_grids is None
-                        used_positions = list(CryoGrid.objects.filter(
-                            grid_box=box, 
-                            trashed=False
-                        ).values_list('position_in_box', flat=True))
-                        
+                        max_grids = box.max_grids or 4
+                        used_positions = list(
+                            CryoGrid.objects.filter(
+                                grid_box=box,
+                                trashed=False
+                            ).values_list('position_in_box', flat=True)
+                        )
                         available_positions = sorted(list(
                             set(range(1, max_grids + 1)) - set(used_positions)
                         ))
                         max_positions = len(available_positions)
                     except Exception as e:
                         print(f"Error calculating available positions: {e}")
-                
-                # Render the form with errors
                 return render(request, 'cryo_grids/copy_grid_popup.html', {
                     'title': f"Duplicate Grid: {obj.name}",
                     'object': obj,
-                    'form': form,  # This contains the validation errors
+                    'form': form,
                     'opts': self.model._meta,
                     'error_message': "Please correct the errors below.",
                     'available_positions': available_positions,
                     'max_positions': max_positions,
                 })
-        
-        # For GET request, calculate available positions for initial box
-        available_positions = []
-        max_positions = 0
-        
-        # Get all boxes for selection
-        all_boxes = CryoGridBox.objects.all()
-        
-        # If a box is selected (either the grid's box or first available)
-        initial_box = obj.grid_box or (all_boxes.first() if all_boxes.exists() else None)
-        
-        if initial_box:
-            # Calculate available positions more carefully
-            max_grids = initial_box.max_grids
-            if not max_grids or max_grids <= 0:
-                max_grids = 4  # Default to 4 if max_grids is invalid
-                
-            # Get all positions already used in this box
-            used_positions = list(CryoGrid.objects.filter(
-                grid_box=initial_box,
-                trashed=False  # Only count non-trashed grids
-            ).values_list('position_in_box', flat=True))
-            
-            # Calculate available positions
-            all_positions = list(range(1, max_grids + 1))
-            available_positions = [pos for pos in all_positions if pos not in used_positions]
-            max_positions = len(available_positions)
-            
-            # Debug output (you can remove this later)
-            print(f"Box: {initial_box.name}, Max grids: {max_grids}")
-            print(f"Used positions: {used_positions}")
-            print(f"Available positions: {available_positions}")
-            print(f"Max positions: {max_positions}")
-        
-        # Create the form
-        form = CopyGridForm(grid=obj)
-        
-        # Render the popup form
-        context = {
-            'title': f"Duplicate Grid: {obj.name}",
-            'object': obj,
-            'form': form,
-            'opts': self.model._meta,
-            'available_positions': available_positions,
-            'max_positions': max_positions,
-        }
-        return render(request, 'cryo_grids/copy_grid_popup.html', context)
 
+        # If no duplication parameters are provided, simply render the form.
+        else:
+            available_positions = []
+            max_positions = 0
+
+            # Get all available boxes and use the current grid's box or the first box as the default.
+            all_boxes = CryoGridBox.objects.all()
+            initial_box = obj.grid_box or (all_boxes.first() if all_boxes.exists() else None)
+
+            if initial_box:
+                max_grids = initial_box.max_grids or 4
+                used_positions = list(
+                    CryoGrid.objects.filter(
+                        grid_box=initial_box,
+                        trashed=False
+                    ).values_list('position_in_box', flat=True)
+                )
+                all_positions = list(range(1, max_grids + 1))
+                available_positions = [pos for pos in all_positions if pos not in used_positions]
+                max_positions = len(available_positions)
+
+                # Debug output (optional)
+                print(f"Box: {initial_box.name}, Max grids: {max_grids}")
+                print(f"Used positions: {used_positions}")
+                print(f"Available positions: {available_positions}")
+                print(f"Max positions: {max_positions}")
+
+            # Prepopulate the form with the initial box if available.
+            form = CopyGridForm(initial={'new_box': initial_box.id if initial_box else None}, grid=obj)
+
+            context = {
+                'title': f"Duplicate Grid: {obj.name}",
+                'object': obj,
+                'form': form,
+                'opts': self.model._meta,
+                'available_positions': available_positions,
+                'max_positions': max_positions,
+            }
+            return render(request, 'cryo_grids/copy_grid_popup.html', context)
 
     def get_urls(self):
-        """Add a custom URL to handle the button action."""
+        """Register the custom URL for the duplication action."""
         urls = super().get_urls()
         custom_urls = [
             path(
@@ -256,14 +244,8 @@ class CryoGridAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.run_custom_action),
                 name='cryo_grid_run_action',
             ),
-            path(
-                '<path:object_id>/available-positions/',
-                self.admin_site.admin_view(get_available_positions),
-                name='get_available_positions',
-            ),
         ]
-        logger.debug(f"Custom URLs registered: {custom_urls}")  # Debug log
+        logger.debug(f"Custom URLs registered: {custom_urls}")
         return custom_urls + urls
-
 # Register CryoGrid with the custom admin
 admin.site.register(CryoGrid, CryoGridAdmin)

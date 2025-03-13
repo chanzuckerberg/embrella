@@ -164,7 +164,7 @@
                     boxSelect.addEventListener('change', function() {
                         updateAvailablePositions(this.value);
                     });
-                    // Trigger initial check
+                    // Trigger initial check if a value is set.
                     if (boxSelect.value) {
                         updateAvailablePositions(boxSelect.value);
                     }
@@ -181,8 +181,8 @@
             const helpText = document.getElementById('positions-help');
             helpText.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin mr-1"></i>Checking available positions...</span>';
 
-            // Use the correct URL pattern
-            const url = `/admin/cryo_grids/cryogrid/${boxId}/available-positions/`;
+            // Use the correct URL pattern to fetch available positions for the selected box.
+            const url = `/cryo_grids/available-positions/${boxId}`;
 
             fetch(url, {
                 headers: {
@@ -192,8 +192,13 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log('Received data:', data);  // Debug log
-                updatePositionsDisplay(data.max_positions);
+                console.log('Received data:', data);
+                if (data.error) {
+                    helpText.innerHTML = `<span class="text-danger"><i class="fas fa-exclamation-circle mr-1"></i>${data.error}</span>`;
+                    updatePositionsDisplay(0);
+                } else {
+                    updatePositionsDisplay(data.max_positions);
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -229,9 +234,11 @@
         }
 
         function submitForm(form) {
-            fetch(form.action, {
-                method: 'POST',
-                body: new FormData(form),
+            // Build query parameters from the form data and use GET for submission.
+            const params = new URLSearchParams(new FormData(form)).toString();
+            const url = form.action + "?" + params;
+            fetch(url, {
+                method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }

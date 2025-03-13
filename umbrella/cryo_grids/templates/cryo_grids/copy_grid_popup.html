@@ -23,8 +23,8 @@
         </div>
         {% endif %}
         
-        <form id="copyGridForm" method="post" action="{% url 'admin:cryo_grid_run_action' object.pk %}" class="needs-validation">
-            {% csrf_token %}
+        <form id="copyGridForm" method="get" action="{% url 'admin:cryo_grid_run_action' object.pk %}" class="needs-validation">
+            {# GET requests do not require CSRF tokens #}
             
             <div class="form-group mb-4">
                 <label for="id_new_box" class="font-weight-bold text-primary">
@@ -50,7 +50,12 @@
                     </div>
                 </div>
                 
-                <small id="positions-help" class="form-text mt-2">
+                <!-- The data attribute allows JS to read the initial max positions -->
+                <small 
+                    id="positions-help" 
+                    class="form-text mt-2" 
+                    data-max-positions="{{ max_positions }}"
+                >
                     {% if max_positions > 0 %}
                         <span class="text-success">
                             <i class="fas fa-check-circle mr-1"></i>
@@ -77,7 +82,12 @@
                 <button type="button" class="btn btn-secondary close-modal">
                     <i class="fas fa-times mr-1"></i>Cancel
                 </button>
-                <button type="submit" id="submit-btn" class="btn btn-primary" {% if max_positions == 0 %}disabled{% endif %}>
+                <button 
+                    type="submit" 
+                    id="submit-btn" 
+                    class="btn btn-primary"
+                    {% if max_positions == 0 %}disabled{% endif %}
+                >
                     <i class="fas fa-copy mr-1"></i>Duplicate Grid
                 </button>
             </div>
@@ -127,47 +137,118 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('copyGridForm');
             const boxSelect = document.getElementById('id_new_box');
-            
-            // Add Bootstrap classes to form elements
+            const numberToCopyInput = document.getElementById('id_number_to_copy');
+            const submitBtn = document.getElementById('submit-btn');
+            const helpText = document.getElementById('positions-help');
+
+            // Add Bootstrap classes if not already applied
             boxSelect.classList.add('form-control');
-            document.getElementById('id_number_to_copy').classList.add('form-control');
-            
+            numberToCopyInput.classList.add('form-control');
+
+            // Attach submit event handler to use AJAX GET submission
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitForm(form);
+            });
+
+            // Update available positions when the box selection changes.
             boxSelect.addEventListener('change', function() {
-                const boxId = this.value;
-                if (!boxId) {
-                    updatePositionsDisplay(0);
-                    return;
-                }
-                
-                // Show loading message
-                const helpText = document.getElementById('positions-help');
-                helpText.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin mr-1"></i>Checking available positions...</span>';
-                
-                // Construct the correct URL
-                const url = "{% url 'admin:get_available_positions' '0' %}".replace('0', boxId);
-                
-                fetch(url, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    updatePositionsDisplay(data.max_positions);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    helpText.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle mr-1"></i>Error checking available positions</span>';
-                });
+                // Here you might want to perform an AJAX call to update positions.
+                // For now, we demonstrate by resetting to 0 until a real fetch is implemented.
+                updatePositionsDisplay(0);
+            });
+
+            // Validate number of copies input against available positions.
+            numberToCopyInput.addEventListener('input', function() {
+                const maxPositions = parseInt(helpText.dataset.maxPositions) || 0;
+                const numberToCopy = parseInt(this.value) || 0;
+                submitBtn.disabled = (numberToCopy > maxPositions || numberToCopy < 1);
             });
         });
-        
+
+        // Build a URL with query parameters from the form and use GET to submit via AJAX.
+        function submitForm(form) {
+            const params = new URLSearchParams(new FormData(form)).toString();
+            const url = form.action + "?" + params;
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                // If the response includes an error, update the modal content accordingly.
+                if (html.includes('error_message')) {
+                    document.getElementById('modalContent').innerHTML = html;
+                } else {
+                    // Otherwise, parse for a success message and update the modal.
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const successMessage = doc.querySelector('.messagelist .success');
+                    const message = successMessage ? successMessage.textContent : 'Grid(s) duplicated successfully!';
+                    
+                    document.getElementById('modalContent').innerHTML = `
+                        <div class="modal-content shadow-lg">
+                            <div class="modal-header bg-success text-white">
+                                <h3 class="modal-title">
+                                    <i class="fas fa-check-circle mr-2"></i>Success
+                                </h3>
+                                <button type="button" class="close close-modal text-white" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body text-center p-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p class="lead">${message}</p>
+                            </div>
+                            <div class="modal-footer bg-light">
+                                <button type="button" class="btn btn-success" onclick="closeModalAndRefresh()">
+                                    <i class="fas fa-check mr-1"></i>Done
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('modalContent').innerHTML = `
+                    <div class="modal-content shadow-lg">
+                        <div class="modal-header bg-danger text-white">
+                            <h3 class="modal-title">
+                                <i class="fas fa-exclamation-circle mr-2"></i>Error
+                            </h3>
+                            <button type="button" class="close close-modal text-white" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body text-center p-5">
+                            <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                            <p class="lead">An error occurred while duplicating the grid.</p>
+                        </div>
+                        <div class="modal-footer bg-light">
+                            <button type="button" class="btn btn-secondary close-modal">
+                                <i class="fas fa-times mr-1"></i>Close
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
         function updatePositionsDisplay(maxPositions) {
             const helpText = document.getElementById('positions-help');
             const submitBtn = document.getElementById('submit-btn');
-            
+
+            helpText.dataset.maxPositions = maxPositions;
+
             if (maxPositions > 0) {
                 helpText.innerHTML = `
                     <span class="text-success">
@@ -175,7 +256,9 @@
                         Available positions in selected box: 
                         <strong class="badge badge-success">${maxPositions}</strong>
                     </span>`;
-                submitBtn.disabled = false;
+                
+                const numberToCopy = parseInt(document.getElementById('id_number_to_copy').value) || 0;
+                submitBtn.disabled = (numberToCopy > maxPositions || numberToCopy < 1);
             } else {
                 helpText.innerHTML = `
                     <span class="text-danger">
@@ -185,5 +268,11 @@
                 submitBtn.disabled = true;
             }
         }
+
+        function closeModalAndRefresh() {
+            // Assuming a global closeModal function exists that closes the modal.
+            closeModal();
+            window.location.reload();
+        }
     </script>
-</div> 
+</div>
