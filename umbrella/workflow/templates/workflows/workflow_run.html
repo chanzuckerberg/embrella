@@ -855,12 +855,12 @@
     </form>
   </div>
 
-  <!-- After the main form container, add the Processing Run Creation section -->
+  <!-- After the main form container, update the Processing Run Creation section -->
   <div class="form-container processing-run-section">
-    <h3>Create Processing Run with Frame Input</h3>
-    <p class="text-center">Create a new processing run using your selected session with the czii-live processing plan.</p>
+    <h3>Automatic Processing Run Creation</h3>
+    <p class="text-center">A processing run using the czii-live processing plan will be created automatically after successful job submission.</p>
     
-    <form id="createRunForm" onsubmit="return false;">
+    <form id="createRunForm" onsubmit="return false;" style="display: none;">
       <div class="form-group">
         <label>Processing Plan: <strong>czii-live</strong></label>
         <input type="hidden" id="procPlan" value="1"> <!-- We'll store the ID for czii-live -->
@@ -869,10 +869,6 @@
       <div class="form-group">
         <label>MSI Session: <strong id="selectedSessionDisplay">None selected</strong></label>
         <input type="hidden" id="msiSession">
-      </div>
-      
-      <div class="text-center">
-        <button type="button" class="btn btn-primary" onclick="createProcessingRun()">Create Processing Run</button>
       </div>
     </form>
     
@@ -1101,6 +1097,9 @@
           document.getElementById("outputDirectory").textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${sessionName}/run${runNumber}`;
           document.getElementById("outputContainer").style.display = "block";
           document.getElementById("errorMessage").style.display = "none";
+          
+          // Automatically create processing run after successful job submission
+          await createProcessingRun();
         } else {
           document.getElementById("errorMessage").textContent = `Error: ${
             result.error || "Failed to run the job."
@@ -1298,6 +1297,9 @@
             document.getElementById("outputDirectory").textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${projectName}/run${advancedRunNumber}`;
             document.getElementById("outputContainer").style.display = "block";
             document.getElementById("advancedErrorMessage").style.display = "none";
+            
+            // Automatically create processing run after successful job submission
+            await createProcessingRun();
           } else {
             document.getElementById("advancedErrorMessage").textContent = `Error: ${
               result.error || "Failed to run the job."
@@ -1586,11 +1588,24 @@
     
     // Update the createProcessingRun function to handle the new setup
     async function createProcessingRun() {
+      // Get the current session based on which form is active
+      let sessionName = "";
+      if (document.getElementById("basicForm").style.display !== "none") {
+        sessionName = document.getElementById("sessionName").value;
+      } else {
+        sessionName = document.getElementById("projectName").value;
+      }
+      
+      // Ensure we have the session ID
+      if (!document.getElementById("msiSession").value) {
+        await fetchSessionId(sessionName);
+      }
+      
       const procPlan = document.getElementById("procPlan").value;
       const msiSession = document.getElementById("msiSession").value;
       
-      if (!procPlan || !msiSession) {
-        document.getElementById("runErrorMessage").textContent = "Please select a session above before creating a processing run.";
+      if (!msiSession) {
+        document.getElementById("runErrorMessage").textContent = "Could not determine session ID for creating a processing run.";
         document.getElementById("runErrorMessage").style.display = "block";
         document.getElementById("runSuccessMessage").style.display = "none";
         return;

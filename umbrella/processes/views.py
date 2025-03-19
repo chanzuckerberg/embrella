@@ -1053,3 +1053,27 @@ def get_annotation_details(request):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {str(e)}")
         return JsonResponse({'error': f"An unexpected error occurred: {str(e)}"}, status=500)
+
+@require_http_methods(["GET"])
+def get_session_id(request):
+    """
+    API endpoint to get MSI session ID by session name.
+    URL: /processes/api/get-session-id?name=SESSION_NAME
+    """
+    try:
+        session_name = request.GET.get('name')
+        if not session_name:
+            return JsonResponse({'error': 'Session name parameter is required'}, status=400)
+        
+        # Query the MsiSession model to find a session with the provided name
+        session = MsiSession.objects.filter(name=session_name).first()
+        
+        if not session:
+            return JsonResponse({'error': f'No session found with name: {session_name}'}, status=404)
+        
+        # Return the session ID
+        return JsonResponse({'id': session.id, 'name': session.name})
+    
+    except Exception as e:
+        logger.error(f'Error getting session ID: {str(e)}')
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)

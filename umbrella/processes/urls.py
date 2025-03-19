@@ -16,6 +16,7 @@ urlpatterns = [
     path('v1/filterlist/', views.available_filters, name='get_processes_details'),
     path('v1/tomograms/', views.get_tomo_details, name='get proc run details'),
     path('v1/annotations/', views.get_annotation_details, name="annotation details"),
+    path('api/get-session-id', views.get_session_id, name='get_session_id'),
     # path('detail_params',views.detail_params, name='abc')
     #path("run_list/", views.get_all_sessions, name="get"),
     #path("path_list/", views.get_all_image_paths, name="path")
