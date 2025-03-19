@@ -19,13 +19,20 @@
       <div class="row form-group">
         <div class="col-md-12">
           <label for="project">Project</label>
-          <select id="project" name="project" required>
-            {% for option in form.project.field.choices %}
-              <option value="{{ option.0 }}" {% if option.0 == form.project.value %}selected{% endif %}>
-                {{ option.1 }}
-              </option>
-            {% endfor %}
-          </select>
+          <div class="mb-1">
+            <select id="project" name="project" required style="width: 100%;">
+              {% for option in form.project.field.choices %}
+                <option value="{{ option.0 }}" {% if option.0 == form.project.value %}selected{% endif %}>
+                  {{ option.1 }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="text-right">
+            <button type="button" class="btn btn-link text-primary p-0" id="addProjectBtn" title="Create New Project">
+              + Create New Project
+            </button>
+          </div>
         </div>
       </div>
       <div class="row form-group">
@@ -78,6 +85,48 @@
               }
           });
       });
+
+      // Add project popup functionality
+      $('#addProjectBtn').click(function() {
+        // Use a relative URL, or build it from the current domain
+        var adminUrl = window.location.origin + '/admin/projects/project/add/';
+        var popup = window.open(adminUrl, 'CreateProject', 'width=800,height=600,resizable=yes,scrollbars=yes');
+        
+        // Check if popup was created successfully
+        if (popup) {
+          // Poll for popup being closed
+          var popupChecker = setInterval(function() {
+            if (popup.closed) {
+              clearInterval(popupChecker);
+              // Refresh the projects dropdown
+              refreshProjects();
+            }
+          }, 500);
+        } else {
+          alert('Please allow popups for this site to create a new project.');
+        }
+      });
+      
+      // Function to refresh projects dropdown
+      function refreshProjects() {
+        $.ajax({
+          url: "{% url 'tem:get_projects' %}",  // You'll need to create this view
+          success: function(data) {
+            var $project = $('#project');
+            var selectedValue = $project.val(); // Store the current selection
+            $project.empty();
+            
+            $.each(data, function(index, item) {
+              $project.append('<option value="' + item.id + '">' + item.name + '</option>');
+            });
+            
+            // Try to restore the previous selection if it exists
+            if (selectedValue) {
+              $project.val(selectedValue);
+            }
+          }
+        });
+      }
 
       $('#sessionForm').submit(function(event) {
         var sessionPlan = $('#session_plan').val();

@@ -411,3 +411,7 @@ def get_specific_session(request):
         return JsonResponse({'sessions': session_data}, status=200)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+def get_projects(request):
+    projects = Project.objects.all().values('id', 'name')  # Adjust fields as needed
+    return JsonResponse(list(projects), safe=False)
