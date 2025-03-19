@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Run Aretomo3 Job</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
   <style>
     /* [Your existing CSS styles remain unchanged] */
     body {
@@ -376,6 +380,31 @@
     #jobLogsTable th {
       background-color: #f2f2f2;
       text-align: left;
+    }
+
+    /* Additional styles for the new section */
+    .processing-run-section {
+      margin-top: 40px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+    }
+    
+    .processing-run-section h3 {
+      color: #007bff;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .success-message {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #28a745;
+      border-radius: 4px;
+      background-color: #d4edda;
+      color: #155724;
     }
   </style>
 </head>
@@ -826,6 +855,36 @@
     </form>
   </div>
 
+  <!-- After the main form container, add the Processing Run Creation section -->
+  <div class="form-container processing-run-section">
+    <h3>Create Processing Run with Frame Input</h3>
+    <p class="text-center">Create a new processing run using your selected session with the czii-live processing plan.</p>
+    
+    <form id="createRunForm" onsubmit="return false;">
+      <div class="form-group">
+        <label>Processing Plan: <strong>czii-live</strong></label>
+        <input type="hidden" id="procPlan" value="1"> <!-- We'll store the ID for czii-live -->
+      </div>
+      
+      <div class="form-group">
+        <label>MSI Session: <strong id="selectedSessionDisplay">None selected</strong></label>
+        <input type="hidden" id="msiSession">
+      </div>
+      
+      <div class="text-center">
+        <button type="button" class="btn btn-primary" onclick="createProcessingRun()">Create Processing Run</button>
+      </div>
+    </form>
+    
+    <div id="runSuccessMessage" class="success-message">
+      Processing run created successfully! <a id="runDetailLink" href="#">View details</a>
+    </div>
+    
+    <div id="runErrorMessage" class="error-message">
+      Error creating processing run.
+    </div>
+  </div>
+
   <script>
     // Helper function to safely get element value
     function getElementValue(id) {
@@ -843,6 +902,10 @@
       try {
         await fetchUserInfo();
         await populateSessionDropdown();
+        
+        // Simplified calls for the processing run section
+        fetchProcPlans(); // Sets hardcoded value
+        // Don't fetch sessions - we'll get them from the form
       } catch (error) {
         console.error("Error during initialization:", error);
       }
@@ -852,6 +915,13 @@
 
       // Attach a separate listener to auto-fill advancedRunNumber (Advanced mode) WITHOUT +1
       attachProjectNameListener();
+
+      // Add event listeners to update the processing run section when session changes
+      document.getElementById("sessionName").addEventListener("change", updateSelectedSession);
+      document.getElementById("projectName").addEventListener("change", updateSelectedSession);
+      
+      // Add listener to the mode toggle to update session when switching modes
+      document.getElementById("modeToggle").addEventListener("change", updateSelectedSession);
     });
 
     // Populate Session Dropdown
@@ -1246,7 +1316,6 @@
       }
     }
 
-
     // Set Cookie
     function setCookie(name, value, days) {
       const date = new Date();
@@ -1460,6 +1529,125 @@
 
     function trackRecentJobs() {
       fetchJobLogs({ limit: 10 });
+    }
+
+    // We don't need to fetch plans anymore since we're hardcoding to czii-live
+    async function fetchProcPlans() {
+      // Instead of fetching, we just set the value to 1 (assuming 1 is the ID for czii-live)
+      // In a real implementation, you might want to verify this ID
+      document.getElementById("procPlan").value = "1";
+    }
+    
+    // We don't need to fetch all MSI sessions - we'll just look up the session ID when needed
+    async function fetchMsiSessions() {
+      // We'll update the session whenever the user selects one in the main form
+      updateSelectedSession();
+    }
+    
+    // This function updates the selected MSI session based on the Aretomo3 form
+    function updateSelectedSession() {
+      // Get the session name from the basic or advanced form (whichever is visible)
+      let sessionName = "";
+      if (document.getElementById("basicForm").style.display !== "none") {
+        sessionName = document.getElementById("sessionName").value;
+      } else {
+        sessionName = document.getElementById("projectName").value;
+      }
+      
+      if (sessionName) {
+        // Display the session name in the Processing Run section
+        document.getElementById("selectedSessionDisplay").textContent = sessionName;
+        
+        // We need to get the ID for this session name - make an API call
+        fetchSessionId(sessionName);
+      } else {
+        document.getElementById("selectedSessionDisplay").textContent = "None selected";
+        document.getElementById("msiSession").value = "";
+      }
+    }
+    
+    // New function to fetch the session ID by name
+    async function fetchSessionId(sessionName) {
+      try {
+        const response = await fetch(`/processes/api/get-session-id?name=${encodeURIComponent(sessionName)}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById("msiSession").value = data.id;
+        } else {
+          console.error("Failed to get session ID for name:", sessionName);
+          document.getElementById("msiSession").value = "";
+        }
+      } catch (error) {
+        console.error("Error fetching session ID:", error);
+        document.getElementById("msiSession").value = "";
+      }
+    }
+    
+    // Update the createProcessingRun function to handle the new setup
+    async function createProcessingRun() {
+      const procPlan = document.getElementById("procPlan").value;
+      const msiSession = document.getElementById("msiSession").value;
+      
+      if (!procPlan || !msiSession) {
+        document.getElementById("runErrorMessage").textContent = "Please select a session above before creating a processing run.";
+        document.getElementById("runErrorMessage").style.display = "block";
+        document.getElementById("runSuccessMessage").style.display = "none";
+        return;
+      }
+      
+      try {
+        // Show loading indicator
+        showLoadingIndicator();
+        
+        const formData = {
+          proc_plan: procPlan,
+          msi_session: msiSession
+        };
+        
+        const response = await fetch("/processes/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken")
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        // Hide loading indicator
+        hideLoadingIndicator();
+        
+        if (response.redirected) {
+          // For redirects, get the URL
+          const redirectUrl = response.url;
+          document.getElementById("runDetailLink").href = redirectUrl;
+          document.getElementById("runSuccessMessage").style.display = "block";
+          document.getElementById("runErrorMessage").style.display = "none";
+        } else {
+          const result = await response.json();
+          
+          if (response.ok) {
+            if (result.id) {
+              const detailUrl = `/processes/${result.id}/`;
+              document.getElementById("runDetailLink").href = detailUrl;
+              document.getElementById("runSuccessMessage").style.display = "block";
+              document.getElementById("runErrorMessage").style.display = "none";
+            } else {
+              throw new Error("Unexpected response format");
+            }
+          } else {
+            document.getElementById("runErrorMessage").textContent = `Error: ${result.error || "Failed to create processing run."}`;
+            document.getElementById("runErrorMessage").style.display = "block";
+            document.getElementById("runSuccessMessage").style.display = "none";
+          }
+        }
+      } catch (error) {
+        hideLoadingIndicator();
+        console.error("Error creating processing run:", error);
+        document.getElementById("runErrorMessage").textContent = `Error: ${error.message || "Failed to create processing run."}`;
+        document.getElementById("runErrorMessage").style.display = "block";
+        document.getElementById("runSuccessMessage").style.display = "none";
+      }
     }
   </script>
 </body>
