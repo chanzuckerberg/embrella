@@ -4,22 +4,27 @@ from cryo_grids.models import CryoGrid
 from projects.models import Project
 from tem.models import MsiSession
 from processes.models import Tomograms, Annotation, Pipe, PipeInPlan, ProcPlan, PipeJoint
-
+from django.db.models import F, Case, When, Value, BooleanField
 
 def get_grids_by_user(request):
     user_id = request.GET.get('user_id')
-
+    
+    # Annotate each grid with an is_default flag based on the grid name.
+    queryset = CryoGrid.objects.select_related('intended_project', 'user').annotate(
+        project_name=F('intended_project__name'),
+        username=F('user__username'),
+        is_default=Case(
+            When(name__icontains="default grid", then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField()
+        )
+    )
+    
     if user_id:
-        grids = CryoGrid.objects.filter(user_id=user_id).select_related('intended_project', 'user').annotate(
-            project_name=F('intended_project__name'),
-            username=F('user__username')
-        ).values('id', 'name', 'project_name', 'username')
-    else:
-        grids = CryoGrid.objects.select_related('intended_project', 'user').annotate(
-            project_name=F('intended_project__name'),
-            username=F('user__username')
-        ).values('id', 'name', 'project_name', 'username')
-
+        queryset = queryset.filter(user_id=user_id)
+    
+    # Return the data including the computed is_default field
+    grids = queryset.values('id', 'name', 'project_name', 'username', 'is_default')
     return JsonResponse(list(grids), safe=False)
 
 def get_available_grids(request):

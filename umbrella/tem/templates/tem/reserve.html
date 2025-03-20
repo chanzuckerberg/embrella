@@ -68,22 +68,63 @@
 {% block endscript %}
   <script>
     $(document).ready(function() {
+      // Load all grids and set default grid on page load
+      function loadAllGrids() {
+        $.ajax({
+          url: "{% url 'get_grids_by_user' %}",
+          success: function(data) {
+            populateGridDropdown(data);
+          }
+        });
+      }
+
+      // Load grids for a specific user
+      function loadGridsForUser(userId) {
+        $.ajax({
+          url: "{% url 'get_grids_by_user' %}",
+          data: {
+            'user_id': userId
+          },
+          success: function(data) {
+            populateGridDropdown(data);
+          }
+        });
+      }
+
+      // Populate the grid dropdown and set default if available
+      function populateGridDropdown(data) {
+        var $grid = $('#grid');
+        $grid.empty();
+        
+        // Add all grid options and check for default
+        var defaultGridId = null;
+        $.each(data, function(index, item) {
+          var isDefault = item.is_default || false;
+          if (isDefault) {
+            defaultGridId = item.id;
+          }
+          $grid.append('<option value="' + item.id + '">' + item.name + '</option>');
+        });
+        
+        // Set the default grid if one is found
+        if (defaultGridId !== null) {
+          $grid.val(defaultGridId);
+        } else {
+          $grid.prepend('<option value="">Select a grid</option>');
+          $grid.val('');
+        }
+        
+        // Trigger change event so any dependent elements update
+        $grid.trigger('change');
+      }
+      
+      // Load all grids on page load
+      loadAllGrids();
+      
+      // Handle user dropdown change
       $('#user').change(function() {
-          var userId = $(this).val();
-          $.ajax({
-              url: "{% url 'get_grids_by_user' %}",
-              data: {
-                  'user_id': userId
-              },
-              success: function(data) {
-                  var $grid = $('#grid');
-                  $grid.empty();
-                  $grid.append('<option value="">Select a grid</option>');
-                  $.each(data, function(index, item) {
-                      $grid.append('<option value="' + item.id + '">' + item.name + '</option>');
-                  });
-              }
-          });
+        var userId = $(this).val();
+        loadGridsForUser(userId);
       });
 
       // Add project popup functionality
