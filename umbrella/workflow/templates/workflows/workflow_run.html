@@ -8,6 +8,8 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
   <style>
     /* [Your existing CSS styles remain unchanged] */
     body {
@@ -461,17 +463,10 @@
         <div id="tooltipSessionNameBasic" class="tooltip">
           MSI (Multi screen image) session name.
         </div>
-        <input
-          list="sessionNames"
-          id="sessionName"
-          name="sessionName"
-          placeholder="Select or type..."
-          required
-          autocomplete="off"
-        />
-        <datalist id="sessionNames">
+        <select id="sessionName" name="sessionName" required>
+          <option value="">Select a session...</option>
           <!-- Options populated dynamically -->
-        </datalist>
+        </select>
       </div>
 
       <!-- Run Number -->
@@ -516,14 +511,10 @@
         <div id="tooltipProjectNameAdvanced" class="tooltip">
           MSI (Multi screen image) session name.
         </div>
-        <input
-          list="sessionNames"
-          id="projectName"
-          name="projectName"
-          placeholder="Select or type..."
-          required
-          autocomplete="off"
-        />
+        <select id="projectName" name="projectName" required>
+          <option value="">Select a session...</option>
+          <!-- Options populated dynamically -->
+        </select>
       </div>
 
       <!-- advancedRunNumber (directly filled from the API, no +1) -->
@@ -899,6 +890,17 @@
         await fetchUserInfo();
         await populateSessionDropdown();
         
+        // Initialize Select2 on the dropdowns
+        $('#sessionName').select2({
+          placeholder: "Select a session...",
+          allowClear: true
+        }).on('change', updateSelectedSession);
+
+        $('#projectName').select2({
+          placeholder: "Select a session...",
+          allowClear: true
+        }).on('change', updateSelectedSession);
+
         // Simplified calls for the processing run section
         fetchProcPlans(); // Sets hardcoded value
         // Don't fetch sessions - we'll get them from the form
@@ -912,10 +914,6 @@
       // Attach a separate listener to auto-fill advancedRunNumber (Advanced mode) WITHOUT +1
       attachProjectNameListener();
 
-      // Add event listeners to update the processing run section when session changes
-      document.getElementById("sessionName").addEventListener("change", updateSelectedSession);
-      document.getElementById("projectName").addEventListener("change", updateSelectedSession);
-      
       // Add listener to the mode toggle to update session when switching modes
       document.getElementById("modeToggle").addEventListener("change", updateSelectedSession);
     });
@@ -927,12 +925,16 @@
         const result = await response.json();
 
         if (response.ok && result.session_names) {
-          const sessionNamesList = document.getElementById("sessionNames");
-          sessionNamesList.innerHTML = "";
+          const sessionNamesList = document.getElementById("sessionName");
+          const projectNamesList = document.getElementById("projectName");
+          sessionNamesList.innerHTML = "<option value=''>Select a session...</option>";
+          projectNamesList.innerHTML = "<option value=''>Select a session...</option>";
           result.session_names.forEach((sessionName) => {
             const option = document.createElement("option");
             option.value = sessionName;
+            option.textContent = sessionName;
             sessionNamesList.appendChild(option);
+            projectNamesList.appendChild(option.cloneNode(true));
           });
         } else {
           console.error("Failed to fetch session names:", result.error || "Unknown error");
@@ -979,9 +981,8 @@
 
     // Basic form: attach a listener that DOES NOT add +1
     function attachSessionNameListener() {
-      const sessionNameInput = document.getElementById("sessionName");
-      sessionNameInput.addEventListener("change", async () => {
-        const sessionNameValue = sessionNameInput.value.trim();
+      $('#sessionName').on('change', async () => {
+        const sessionNameValue = $('#sessionName').val().trim();
         if (!sessionNameValue) return;
 
         try {
@@ -1014,9 +1015,8 @@
 
     // Advanced form: attach a listener that DOES NOT add +1
     function attachProjectNameListener() {
-      const projectNameInput = document.getElementById("projectName");
-      projectNameInput.addEventListener("change", async () => {
-        const projectNameValue = projectNameInput.value.trim();
+      $('#projectName').on('change', async () => {
+        const projectNameValue = $('#projectName').val().trim();
         if (!projectNameValue) return;
 
         try {
