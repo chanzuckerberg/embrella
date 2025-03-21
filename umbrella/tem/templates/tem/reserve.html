@@ -78,6 +78,25 @@
         });
       }
 
+      // Set default session plan
+      function setDefaultSessionPlan() {
+        const targetText = "tem tomography collected with tomo5 on krios1 and falcon4i";
+        const $sessionPlan = $('#session_plan option');
+        
+        $sessionPlan.each(function() {
+          if ($(this).text().trim().toLowerCase() === targetText.toLowerCase()) {
+            $('#session_plan').val($(this).val());
+            return false; // Break the loop once found
+          }
+        });
+      }
+      
+      // Call the function to set default session plan
+      setDefaultSessionPlan();
+      
+      // Load all grids on page load
+      loadAllGrids();
+      
       // Load grids for a specific user
       function loadGridsForUser(userId) {
         $.ajax({
@@ -117,9 +136,6 @@
         // Trigger change event so any dependent elements update
         $grid.trigger('change');
       }
-      
-      // Load all grids on page load
-      loadAllGrids();
       
       // Handle user dropdown change
       $('#user').change(function() {
