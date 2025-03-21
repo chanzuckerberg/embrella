@@ -465,7 +465,7 @@
         </div>
         <select id="sessionName" name="sessionName" required>
           <option value="">Select a session...</option>
-          <!-- Options populated dynamically -->
+          <option value="new-session">Not seeing your session?</option>
         </select>
       </div>
 
@@ -513,7 +513,7 @@
         </div>
         <select id="projectName" name="projectName" required>
           <option value="">Select a session...</option>
-          <!-- Options populated dynamically -->
+          <option value="new-session">Not seeing your session?</option>
         </select>
       </div>
 
@@ -927,8 +927,12 @@
         if (response.ok && result.session_names) {
           const sessionNamesList = document.getElementById("sessionName");
           const projectNamesList = document.getElementById("projectName");
+
+          // Reset the dropdowns
           sessionNamesList.innerHTML = "<option value=''>Select a session...</option>";
           projectNamesList.innerHTML = "<option value=''>Select a session...</option>";
+
+          // Add dynamic session options
           result.session_names.forEach((sessionName) => {
             const option = document.createElement("option");
             option.value = sessionName;
@@ -936,6 +940,13 @@
             sessionNamesList.appendChild(option);
             projectNamesList.appendChild(option.cloneNode(true));
           });
+
+          // Append "Not seeing your session?" option
+          const newSessionOption = document.createElement("option");
+          newSessionOption.value = "new-session";
+          newSessionOption.textContent = "Not seeing your session?";
+          sessionNamesList.appendChild(newSessionOption);
+          projectNamesList.appendChild(newSessionOption.cloneNode(true));
         } else {
           console.error("Failed to fetch session names:", result.error || "Unknown error");
           alert("Failed to fetch session names. Please try again later.");
@@ -1664,6 +1675,21 @@
         document.getElementById("runSuccessMessage").style.display = "none";
       }
     }
+
+    // Function to handle the "Not seeing your session?" option
+    function handleNewSessionOption() {
+      const sessionName = document.getElementById("sessionName").value;
+      const projectName = document.getElementById("projectName").value;
+
+      if (sessionName === "new-session" || projectName === "new-session") {
+        // Display a popup or redirect to the /tem/reserver endpoint
+        window.open("/tem/reserver", "_blank", "width=600,height=400");
+      }
+    }
+
+    // Attach event listeners to the dropdowns
+    document.getElementById("sessionName").addEventListener("change", handleNewSessionOption);
+    document.getElementById("projectName").addEventListener("change", handleNewSessionOption);
   </script>
 </body>
 </html>
