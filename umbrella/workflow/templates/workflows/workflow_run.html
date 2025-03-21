@@ -900,15 +900,17 @@
         await fetchUserInfo();
         await populateSessionDropdown();
         
-        // Initialize Select2 on the dropdowns
+        // Initialize Select2 on the dropdowns with consistent width settings
         $('#sessionName').select2({
           placeholder: "Select a session...",
-          allowClear: true
+          allowClear: true,
+          width: '100%' // Ensure full width
         }).on('change', updateSelectedSession);
 
         $('#projectName').select2({
           placeholder: "Select a session...",
-          allowClear: true
+          allowClear: true,
+          width: '100%' // Ensure full width
         }).on('change', updateSelectedSession);
 
         // Simplified calls for the processing run section
@@ -969,7 +971,7 @@
           // Append "Not seeing your session?" option
           const newSessionOption = document.createElement("option");
           newSessionOption.value = "new-session";
-          newSessionOption.textContent = "Not seeing your session?";
+          // newSessionOption.textContent = "Not seeing your session?";
           sessionNamesList.appendChild(newSessionOption);
           projectNamesList.appendChild(newSessionOption.cloneNode(true));
           
@@ -1730,39 +1732,7 @@
       }
     }
 
-    // Function to handle the "Not seeing your session?" option
-    function handleNewSessionOption() {
-      const sessionName = document.getElementById("sessionName").value;
-      const projectName = document.getElementById("projectName").value;
-      
-      console.log("Session selection changed:", sessionName);
-      console.log("Project selection changed:", projectName);
-
-      if (sessionName === "new-session" || projectName === "new-session") {
-        console.log("Opening new session popup...");
-        // Open in a small popup window with specified dimensions
-        const popupWindow = window.open("http://127.0.0.1:8000/tem/reserve", "_blank", "width=800,height=600,resizable=yes,scrollbars=yes");
-        
-        // Reset dropdown to prevent repeated selection
-        if (sessionName === "new-session") {
-          setTimeout(() => document.getElementById("sessionName").selectedIndex = 0, 100);
-        }
-        if (projectName === "new-session") {
-          setTimeout(() => document.getElementById("projectName").selectedIndex = 0, 100);
-        }
-        
-        // Check when the popup is closed to refresh sessions
-        if (popupWindow) {
-          const checkPopupClosed = setInterval(function() {
-            if (popupWindow.closed) {
-              clearInterval(checkPopupClosed);
-              console.log("Popup closed, refreshing session list...");
-              populateSessionDropdown();
-            }
-          }, 1000); // Check every second
-        }
-      }
-    }
+    
 
     // Update link clicks to also refresh session list when popup closes
     function openSessionCreationPopup() {
