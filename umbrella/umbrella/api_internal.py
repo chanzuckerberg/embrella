@@ -23,8 +23,11 @@ def get_grids_by_user(request):
     if user_id:
         queryset = queryset.filter(user_id=user_id)
     
+    # Order by create_on in descending order (newest first)
+    queryset = queryset.order_by('-create_on')
+    
     # Return the data including the computed is_default field
-    grids = queryset.values('id', 'name', 'project_name', 'username', 'is_default')
+    grids = queryset.values('id', 'name', 'project_name', 'username', 'is_default', 'create_on')
     return JsonResponse(list(grids), safe=False)
 
 def get_available_grids(request):
