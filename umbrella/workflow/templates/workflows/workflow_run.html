@@ -1766,7 +1766,9 @@
 
     // Update link clicks to also refresh session list when popup closes
     function openSessionCreationPopup() {
-      const popupWindow = window.open("http://127.0.0.1:8000/tem/reserve", "_blank", "width=800,height=600,resizable=yes,scrollbars=yes");
+      // Use current domain instead of hardcoded localhost
+      const baseUrl = window.location.origin;
+      const popupWindow = window.open(baseUrl + "/tem/reserve", "_blank", "width=800,height=600,resizable=yes,scrollbars=yes");
       
       // Check when the popup is closed to refresh sessions
       if (popupWindow) {
