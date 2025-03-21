@@ -19,38 +19,32 @@
   </style>
 </head>
 <body>
-  <!-- 여기에 reserve 페이지 콘텐츠 -->
   
   <script>
-    // URL 파라미터를 확인하고 새 세션 UI 강조 표시
+
     document.addEventListener("DOMContentLoaded", function() {
       console.log("DOM Content Loaded - reserve page");
-      
-      // URL에서 new_session 파라미터 확인
+
       const urlParams = new URLSearchParams(window.location.search);
       const isNewSession = urlParams.get('new_session') === 'true';
       
       console.log("new_session parameter:", isNewSession);
       
       if (isNewSession) {
-        // 새 세션 생성 UI 표시
         const sessionNameInput = document.getElementById('session-name-input');
         if (sessionNameInput) {
           console.log("Found session-name-input, applying focus");
-          // 새 세션 이름 필드에 포커스
+
           sessionNameInput.focus();
           
-          // 선택적: 안내 메시지 표시
           const helpText = document.createElement('div');
           helpText.className = 'help-text';
-          helpText.textContent = '새로운 세션 이름을 입력해주세요';
           
           sessionNameInput.parentNode.insertBefore(helpText, sessionNameInput);
         } else {
           console.error("Could not find session-name-input element");
         }
-        
-        // 선택적: 새 세션 강조 처리
+
         const newSessionSection = document.querySelector('.new-session-section');
         if (newSessionSection) {
           console.log("Found new-session-section, adding highlight class");
