@@ -10,6 +10,7 @@
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
     /* [Your existing CSS styles remain unchanged] */
     body {
@@ -408,6 +409,25 @@
       background-color: #d4edda;
       color: #155724;
     }
+
+    /* Add this CSS to your existing styles */
+    .password-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .toggle-password {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #888;
+    }
+
+    .toggle-password:hover {
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -437,9 +457,10 @@
         <input type="text" id="userId" name="userId" required/>
       </div>
       <!-- Password -->
-      <div class="form-group">
+      <div class="form-group password-container">
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required/>
+        <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility()"></i>
       </div>
     </div>
 
@@ -900,17 +921,15 @@
         await fetchUserInfo();
         await populateSessionDropdown();
         
-        // Initialize Select2 on the dropdowns with consistent width settings
+        // Initialize Select2 on the dropdowns
         $('#sessionName').select2({
           placeholder: "Select a session...",
-          allowClear: true,
-          width: '100%' // Ensure full width
+          allowClear: true
         }).on('change', updateSelectedSession);
 
         $('#projectName').select2({
           placeholder: "Select a session...",
-          allowClear: true,
-          width: '100%' // Ensure full width
+          allowClear: true
         }).on('change', updateSelectedSession);
 
         // Simplified calls for the processing run section
@@ -1757,6 +1776,15 @@
     // Attach event listeners to the dropdowns
     document.getElementById("sessionName").addEventListener("change", handleNewSessionOption);
     document.getElementById("projectName").addEventListener("change", handleNewSessionOption);
+
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById("password");
+      const toggleIcon = document.querySelector(".toggle-password");
+      const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+      passwordInput.setAttribute("type", type);
+      toggleIcon.classList.toggle("fa-eye");
+      toggleIcon.classList.toggle("fa-eye-slash");
+    }
   </script>
 </body>
 </html>
