@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Session Reservation</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    .highlight {
+      border: 2px solid #4a90e2;
+      background-color: #f0f7ff;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .help-text {
+      color: #4a90e2;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  
+  <script>
+
+    document.addEventListener("DOMContentLoaded", function() {
+      console.log("DOM Content Loaded - reserve page");
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const isNewSession = urlParams.get('new_session') === 'true';
+      
+      console.log("new_session parameter:", isNewSession);
+      
+      if (isNewSession) {
+        const sessionNameInput = document.getElementById('session-name-input');
+        if (sessionNameInput) {
+          console.log("Found session-name-input, applying focus");
+
+          sessionNameInput.focus();
+          
+          const helpText = document.createElement('div');
+          helpText.className = 'help-text';
+          
+          sessionNameInput.parentNode.insertBefore(helpText, sessionNameInput);
+        } else {
+          console.error("Could not find session-name-input element");
+        }
+
+        const newSessionSection = document.querySelector('.new-session-section');
+        if (newSessionSection) {
+          console.log("Found new-session-section, adding highlight class");
+          newSessionSection.classList.add('highlight');
+        } else {
+          console.error("Could not find new-session-section element");
+        }
+      }
+    });
+  </script>
+</body>
+</html> 

@@ -42,7 +42,7 @@
       border: 1px solid #ced4da;
       font-size: 16px;
     }
-    input[type="submit"] {
+    input[type="submit"], button {
       width: 50%;
       padding: 10px;
       background-color: #007bff;
@@ -54,7 +54,7 @@
       display: block;
       margin: 0 auto;
     }
-    input[type="submit"]:hover {
+    input[type="submit"]:hover, button:hover {
       background-color: #0056b3;
     }
     .warning {
@@ -83,8 +83,7 @@
   <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go back to the startup page</button>
   <div class="container">
     <h2 class="text-center"><u>Create Processing Run with frame input</u></h2><br>
-    <form id="runForm" action="{% url 'processes:create' %}" method="post">
-      {% csrf_token %}
+    <form id="runForm" onsubmit="return false;">
       <div class="row form-group">
         <div class="col-md-12">
         {{ form }}
@@ -92,7 +91,7 @@
       </div>
       <div class="row form-group">
         <div class="col-md-12">
-            <input type="submit" value="Create a processing run name">
+            <button type="button" id="submitButton">Create a processing run name</button>
         </div>
       </div>
     </form>
@@ -102,17 +101,86 @@
   </div>
 
   <script>
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          // Does this cookie string begin with the name we want?
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
     $(document).ready(function() {
-      $('#runForm').submit(function(event) {
+      // Ensure the form doesn't submit normally
+      $('#runForm').submit(function(e) {
+        e.preventDefault();
+        return false;
+      });
+
+      $('#submitButton').click(function(e) {
+        // Prevent any default behavior
+        e.preventDefault();
+        
         var procPlan = $('#id_proc_plan').val();
         var session = $('#id_msi_session').val();
 
         if (!procPlan || !session) {
-          event.preventDefault();
           $('#warningMessage').show();
-        } else {
-          $('#warningMessage').hide();
+          return false;
         }
+        
+        $('#warningMessage').hide();
+        
+        // Prepare the data to be sent as JSON
+        var formData = {
+          'proc_plan': procPlan,
+          'msi_session': session
+        };
+        
+        console.log("Sending data:", formData);
+        
+        // Send data as JSON to the create_run endpoint
+        $.ajax({
+          url: "{% url 'processes:create' %}",
+          type: "POST",
+          data: JSON.stringify(formData),
+          contentType: "application/json",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken")
+          },
+          success: function(response) {
+            console.log("Success response:", response);
+            // On successful creation, redirect to the detail page
+            if (response.id) {
+              window.location.href = `/processes/${response.id}/`;
+            } else if (response.redirect_url) {
+              window.location.href = response.redirect_url;
+            } else {
+              console.log("Unexpected success response format");
+            }
+          },
+          error: function(xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+            // Display error message
+            var errorMsg = "Error: ";
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+              errorMsg += xhr.responseJSON.error;
+            } else {
+              errorMsg += error;
+            }
+            $('#warningMessage').text(errorMsg);
+            $('#warningMessage').show();
+          }
+        });
+        
+        return false;
       });
     });
   </script>

@@ -18,5 +18,6 @@ urlpatterns = [
     path("path_list/", views.get_all_image_paths, name="path"),
     path("scrn_filter/", views.get_all_scrns, name="get all scrn sessions"),
     path('detail/', views.render_screening_form, name='render_screening_form'),
-    path("specific_scrn/", views.get_specific_session, name='specific_scrn')
+    path("specific_scrn/", views.get_specific_session, name='specific_scrn'),
+    path('get_projects/', views.get_projects, name='get_projects'),
 ]

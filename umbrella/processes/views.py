@@ -5,6 +5,7 @@ from django.urls import reverse
 from .forms import ProcRunForm, ReserveFrameProcRunForm, UpdateNotesForm
 from django.contrib.auth.decorators import login_required
 from . import models
+from django.views.decorators.csrf import csrf_exempt
 from processes.models import ProcRun, ProcPlan, ProcSoftware, RunPipeData
 from tem.models import MsiSession
 from django.core.serializers import serialize
@@ -29,6 +30,7 @@ from typing import List
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 import logging
 import os
+from django.forms.models import model_to_dict  # ensure this is imported
 # from umbrella.settings import ENVIRONMENT
 logger = logging.getLogger(__name__)
 
@@ -84,27 +86,39 @@ def reserve_run(request):
     else:
         form = ReserveFrameProcRunForm()
         return render(request, "processes/reserve.html", {"form": form})
-@login_required
+    
+@csrf_exempt
+# @login_required
 def create_run(request):
-    plan_id=int(request.POST['proc_plan'])
-    session_id=int(request.POST['msi_session'])
-    msi_session=MsiSession.objects.get(pk=session_id)
-    proc_plan=ProcPlan.objects.get(pk=plan_id)
-    name = suggest_name('run',msi_session,proc_plan)
-
     if request.method == 'POST':
-        run_instance = ProcRun.objects.create(
-                    name=name,
-                    msi_session=msi_session,
-                    proc_plan=proc_plan,
-        )
-        run_instance.save()
-        my_pk = run_instance.id
-        path_dicts = {}
-        run_instance.save()
-        run_instance.save_pipe_run_data()
-        run_instance.create_tomogram_collection()
-        return HttpResponseRedirect(reverse('processes:detail', args=(run_instance.id,)))
+        try:
+            data = json.loads(request.body.decode('utf-8'))  # Parse JSON data
+            plan_id = int(data.get('proc_plan'))  # Extract `proc_plan`
+            session_id = int(data.get('msi_session'))  # Extract `msi_session`
+
+            msi_session = MsiSession.objects.get(pk=session_id)
+            proc_plan = ProcPlan.objects.get(pk=plan_id)
+            name = suggest_name('run', msi_session, proc_plan)
+
+            run_instance = ProcRun.objects.create(
+                name=name,
+                msi_session=msi_session,
+                proc_plan=proc_plan,
+            )
+            run_instance.save()
+            run_instance.save_pipe_run_data()
+            run_instance.create_tomogram_collection()
+
+            return HttpResponseRedirect(reverse('processes:detail', args=(run_instance.id,)))
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except KeyError as e:
+            return JsonResponse({'error': f'Missing key: {str(e)}'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 @require_http_methods(["GET"])
 def get_all_runs(request):
@@ -1039,3 +1053,27 @@ def get_annotation_details(request):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {str(e)}")
         return JsonResponse({'error': f"An unexpected error occurred: {str(e)}"}, status=500)
+
+@require_http_methods(["GET"])
+def get_session_id(request):
+    """
+    API endpoint to get MSI session ID by session name.
+    URL: /processes/api/get-session-id?name=SESSION_NAME
+    """
+    try:
+        session_name = request.GET.get('name')
+        if not session_name:
+            return JsonResponse({'error': 'Session name parameter is required'}, status=400)
+        
+        # Query the MsiSession model to find a session with the provided name
+        session = MsiSession.objects.filter(name=session_name).first()
+        
+        if not session:
+            return JsonResponse({'error': f'No session found with name: {session_name}'}, status=404)
+        
+        # Return the session ID
+        return JsonResponse({'id': session.id, 'name': session.name})
+    
+    except Exception as e:
+        logger.error(f'Error getting session ID: {str(e)}')
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
