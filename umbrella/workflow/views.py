@@ -21,8 +21,12 @@ from django.core.cache import cache
 import re
 import requests
 from django.http import StreamingHttpResponse
+from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
 import time
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from rest_framework.decorators import api_view, permission_classes
 
 CELERY_BEAT_SCHEDULE = {
     'update_job_data_cache_every_5_seconds': {
@@ -86,6 +90,23 @@ def store_log(job_name, request, data_sanitized, error, advanced_status=False, j
                 parameters=data_sanitized,
                 error_message=str(error)  # Store the error message
             )
+    
+@extend_schema(
+    methods=["GET"],
+    description="Fetches parsed Aretomo3 JSON metadata for a given session and run ID.",
+    parameters=[
+        OpenApiParameter(name='session', required=True, type=OpenApiTypes.STR, description='Session name (e.g. 23sep23a)'),
+        OpenApiParameter(name='run_id', required=True, type=OpenApiTypes.STR, description='Run ID (e.g. 001)'),
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT
+    }
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 @login_required
 def get_aretomo3_json(request):
     session_name = request.GET.get('session')
@@ -122,7 +143,42 @@ def get_aretomo3_json(request):
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=500)
     
-# @login_required
+@extend_schema(
+    methods=["POST"],
+    description="Submits an advanced Aretomo3 processing job with optional gain and parameter customization.",
+    request={
+        "type": "object",
+        "properties": {
+            "project_name": {"type": "string"},
+            "use_old_gain": {"type": "string", "enum": ["yes", "no"]},
+            "user_id": {"type": "string"},
+            "password": {"type": "string", "description": "Base64-encoded password"},
+            "run_number": {"type": "string"},
+            "denoiset_training": {"type": "string"},
+            "pixel_size": {"type": "string"},
+            "dose_number": {"type": "string"},
+            "num_checks": {"type": "string"},
+            "gain_file_name": {"type": "string"},
+            "use_advanced_params": {"type": "string", "enum": ["yes", "no"]},
+            "tilt_axis": {"type": "string"},
+            "tilt_axis_refine": {"type": "string"},
+            "align_z": {"type": "string"},
+            "vol_z": {"type": "string"},
+            "imod_option": {"type": "string"},
+            "local_shift": {"type": "string"},
+            "tilt_offset": {"type": "string"},
+            "thickness_mesaure": {"type": "string"},
+        },
+        "required": ["project_name", "use_old_gain", "user_id", "password"]
+    },
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        422: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT,
+    }
+)
+@api_view(["POST"])
 @csrf_exempt
 def run_aretomo3_advanced(request):
     data_sanitized = {}  # Initialize this variable at the start
@@ -284,8 +340,34 @@ def run_aretomo3_advanced(request):
     return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
 
-@login_required
+
+@extend_schema(
+    methods=["POST"],
+    description="Submits a standard Aretomo3 job for the specified session.",
+    request={
+        "type": "object",
+        "properties": {
+            "session_name": {"type": "string", "description": "Session identifier (e.g. 23sep23a)"},
+            "run_number": {"type": "string"},
+            "pixel_size": {"type": "string"},
+            "total_dose": {"type": "string"},
+            "num_checks": {"type": "string"},
+            "user_id": {"type": "string"},
+            "password": {"type": "string", "description": "Base64-encoded SSH password"},
+        },
+        "required": ["session_name", "run_number", "pixel_size", "total_dose", "num_checks", "user_id", "password"]
+    },
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        422: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT,
+    }
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
+@login_required
 def run_aretomo3(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -357,6 +439,18 @@ def run_aretomo3(request):
                   job_id=None)
         return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
+
+
+@extend_schema(
+    methods=["GET"],
+    description="Returns the currently authenticated user's username (email prefix).",
+    responses={
+        200: OpenApiTypes.OBJECT,
+        401: OpenApiTypes.OBJECT,
+    }
+)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @login_required
 def user_info(request):
@@ -364,6 +458,26 @@ def user_info(request):
     response_data = {"username": username}
     return JsonResponse(response_data, safe=False, status=200)
 
+@extend_schema(
+    methods=["POST"],
+    description="Cancels a submitted SLURM job on the remote server.",
+    request={
+        "type": "object",
+        "properties": {
+            "job_number": {"type": "string", "description": "The job ID to cancel"},
+            "user_id": {"type": "string", "description": "Remote login user ID"},
+            "password": {"type": "string", "description": "Base64-encoded remote password"},
+        },
+        "required": ["job_number"]
+    },
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT
+    }
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @login_required
 def cancel_jobs(request):
     if request.method == 'POST':
@@ -475,6 +589,15 @@ def custom_workflow_track(request):
 def custom_workflow_logs(request):
     return render(request, 'workflows/workflow_logs.html')
 
+@extend_schema(
+    methods=["GET"],
+    description="Returns a list of all MSI session names.",
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_msi_session_list(request):
     try:
@@ -486,7 +609,20 @@ def get_msi_session_list(request):
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-    
+
+
+@extend_schema(
+    methods=["GET"],
+    description="Returns MSI sessions and associated run numbers. Filters by session name if provided.",
+    parameters=[
+        OpenApiParameter(name='session_name', required=False, type=OpenApiTypes.STR, description='Optional MSI session name to filter')
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_msi_params_list(request):
     try:
@@ -535,7 +671,18 @@ def get_msi_params_list(request):
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-
+@extend_schema(
+    methods=["GET"],
+    description="Returns job logs for all users or filters by a specific username if provided.",
+    parameters=[
+        OpenApiParameter(name='user_name', required=False, type=OpenApiTypes.STR, description='Filter logs by user name')
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_job_logs(request):
     try:
@@ -579,7 +726,29 @@ def get_job_logs(request):
         logger.error(f'An unexpected error occurred while fetching job logs: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
     
-
+@extend_schema(
+    methods=["POST"],
+    description="Submits a DenoisET job for a given MSI session and run number.",
+    request={
+        "type": "object",
+        "properties": {
+            "session_name": {"type": "string"},
+            "run_number": {"type": "string"},
+            "model_name": {"type": "string"},
+            "denoise_run_number": {"type": "string"},
+            "user_id": {"type": "string"},
+            "password": {"type": "string", "description": "Base64-encoded password"},
+            "live_denoising": {"type": "boolean", "default": False}
+        },
+        "required": ["session_name", "run_number", "model_name", "denoise_run_number", "user_id", "password"]
+    },
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT
+    }
+)
+@api_view(["POST"])
 # @login_required
 @csrf_exempt
 def run_denoiset(request):
@@ -786,7 +955,24 @@ def parse_script_output(raw_output):
     return result
 
 
-
+@extend_schema(
+    methods=["GET"],
+    description="Triggers a remote status check for a given session via SSH.",
+    parameters=[
+        OpenApiParameter(
+            name='session_name',
+            required=True,
+            type=OpenApiTypes.STR,
+            description="MSI session name used to run the status-check script"
+        )
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 @csrf_exempt
 def status_check_api(request):

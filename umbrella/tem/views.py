@@ -16,6 +16,16 @@ from django.core.serializers import serialize
 from django.core.exceptions import ValidationError
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
+from rest_framework.decorators import api_view
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+
+
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from .models import ScreenSessionGroup
+
 import json
 import re
 
@@ -235,7 +245,19 @@ def _create_scrn_session(user,group_instance,grid):
     session_instance.atlas = session_instance.get_session_path('atlas')
     session_instance.save()
     return
-
+@extend_schema(
+    methods=["GET"],
+    description="Returns all MSI sessions and their related paths and metadata. Supports optional filtering by session name.",
+    parameters=[
+        OpenApiParameter(name="valid", required=True, type=OpenApiTypes.BOOL, description="Must be 'true'"),
+        OpenApiParameter(name="name", required=False, type=OpenApiTypes.STR, description="Optional session name filter"),
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_all_sessions(request):
     if request.GET.get('valid', 'true') != 'true':
@@ -289,6 +311,20 @@ def get_all_sessions(request):
     # Use JsonResponse to send back a list of dictionaries
     return JsonResponse(session_list, safe=False)
 
+@extend_schema(
+    methods=["GET"],
+    description="Returns all image path data from the Software table. Can filter by software name.",
+    parameters=[
+        OpenApiParameter(name="valid", required=True, type=OpenApiTypes.BOOL, description="Must be 'true'"),
+        OpenApiParameter(name="name", required=False, type=OpenApiTypes.STR, description="Software name to filter by"),
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_all_image_paths(request):
     # Check for a valid request
@@ -346,13 +382,19 @@ def get_all_image_paths(request):
     # Return error if no matching software is found
     return JsonResponse({'error': 'No matching software found'}, status=404, safe=False)
 
-
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from .models import ScreenSessionGroup
-
-
+@extend_schema(
+    methods=["GET"],
+    description="Returns all unique screen session group names.",
+    parameters=[
+        OpenApiParameter(name="valid", required=True, type=OpenApiTypes.BOOL, description="Must be 'true'")
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT,
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_all_scrns(request):
     if request.GET.get('valid', 'true') != 'true':
@@ -376,6 +418,25 @@ def render_screening_form(request):
     }
     return render(request, 'tem/filter.html', context)
 
+
+@extend_schema(
+    methods=["GET"],
+    description="Returns screening session group and associated atlas sessions by `session_name`.",
+    parameters=[
+        OpenApiParameter(
+            name="session_name",
+            required=True,
+            type=OpenApiTypes.STR,
+            description="Name of the screen session group to fetch"
+        )
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_specific_session(request):
     session_name = request.GET.get('session_name')
@@ -412,6 +473,12 @@ def get_specific_session(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+@extend_schema(
+    methods=["GET"],
+    description="Fetches all project records with `id` and `name` fields.",
+    responses={200: OpenApiTypes.OBJECT}
+)
+@api_view(["GET"])
 def get_projects(request):
     projects = Project.objects.all().values('id', 'name')  # Adjust fields as needed
     return JsonResponse(list(projects), safe=False)
