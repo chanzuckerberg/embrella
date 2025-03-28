@@ -114,14 +114,24 @@ def create_session(request):
     """
     Create session from posted values
     """
-    plan_id=int(request.POST['session_plan'][0])
-    project_id=int(request.POST['project'][0])
-    grid_id=int(request.POST['grid'][0])
-    user_id = int(request.user.id)
-    name = request.POST['name']
+    # Get values from POST with error handling
+    try:
+        plan_id = int(request.POST.get('session_plan')[0])
+        project_id = int(request.POST.get('project')[0])
+        grid_id = int(request.POST.get('grid')[0])
+        user_id = int(request.user.id)
+        name = request.POST.get('name')
+        
+        if not all([plan_id, project_id, grid_id, name]):
+            raise ValueError("Missing required fields")
+
+    except (TypeError, ValueError, IndexError) as e:
+        # Return to form with error message
+        data = {'error_msg': 'Invalid form data. Please ensure all fields are filled correctly.'}
+        return create_msi_name(request, data)
+
     if request.method == 'POST':
         grid_instance = CryoGrid.objects.get(pk=grid_id)
-        # print(request.POST['user'])
         session_instance = MsiSession.objects.create(
                     name=name,
                     project=Project.objects.get(pk=project_id),
