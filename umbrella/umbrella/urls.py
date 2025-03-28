@@ -19,6 +19,7 @@ from django.urls import include, path
 from umbrella.ping import ping
 from umbrella.api_internal import get_tomo_by_msi_session
 from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
@@ -46,6 +47,8 @@ urlpatterns = [
     path('cryo_grids/', include('cryo_grids.urls'), name='cryo_grids'),
     path('workflow/', include('workflow.urls'), name='workflow pipeline'),
     path('agent/', include('agent.urls'), name='AI Agent'),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('annotations/v1/filterlist/', available_annotation_filter, name='get filter list for annotations'),
 
 ]

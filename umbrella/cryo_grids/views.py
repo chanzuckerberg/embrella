@@ -11,7 +11,7 @@ from django.utils.timezone import now
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
-
+from drf_spectacular.types import OpenApiTypes
 # python library import
 from datetime import timedelta
 from datetime import datetime
@@ -29,7 +29,8 @@ from .models import CryoGrid, CryoGridBox, Specimen, Sample
 from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
 from .forms import CopyGridForm, ClearCassetteForm, NumberToCopyGridForm
 from stores.models import Path
-
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rest_framework.decorators import api_view
 # from umbrella.settings import ENVIRONMENT
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,19 @@ def get_base_url():
            return 'http://localhost:8000'
 
 
-
+@extend_schema(
+    methods=["GET"],
+    description="Returns all unique CryoGridBox names if `valid=true` is passed.",
+    parameters=[
+        OpenApiParameter(name='valid', required=False, type=bool, description='Must be true to get results'),
+    ],
+    responses={
+        200: 'List of unique grid box names',
+        400: 'Invalid request if `valid` is not true',
+        500: 'Server error',
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_all_grid_boxes(request):
     if request.GET.get('valid', 'true') != 'true':
@@ -80,7 +93,20 @@ def grid_cassetes_view(request):
     data_id = request.GET.get('id')  # Example way to get data.id, adjust as needed.
 
 
-
+@extend_schema(
+    methods=["GET"],
+    description="Fetches specific CryoGrids filtered by optional grid box name and/or username.",
+    parameters=[
+        OpenApiParameter(name='grid_box_name', required=False, type=str, description='Name of the grid box'),
+        OpenApiParameter(name='username', required=False, type=str, description='Username who owns the grid'),
+    ],
+    responses={
+        200: 'List of specific grids with metadata',
+        404: 'Grid box not found',
+        500: 'Server error',
+    }
+)
+@api_view(["GET"])
 def get_specific_grids(request):
     grid_box_name = request.GET.get('grid_box_name')
     username = request.GET.get('username')
@@ -118,7 +144,29 @@ def get_specific_grids(request):
 from django.views.decorators.csrf import csrf_exempt
 
 
-
+@extend_schema(
+    methods=["GET"],
+    description="""
+    Returns filter categories and values for CryoGrid filtering UI.  
+    Accepts a single query parameter `q` (as a JSON array string) representing selected filter values.
+    Each item must include `category` and `value`.
+    """,
+    parameters=[
+        OpenApiParameter(
+            name='q',
+            required=True,
+            type={'type': 'array', 'items': {'type': 'object'}},
+            description='A JSON array of selected filter objects, each with "category" and "value".'
+        ),
+    ],
+    responses={
+        200: 'Dictionary of filter categories with values, counts, and selected flags.',
+        400: 'Validation error from Pydantic or malformed input',
+        422: 'Missing or extra query parameters',
+        500: 'Server error'
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def available_filters(request):
     try:
@@ -283,8 +331,32 @@ def available_filters(request):
     except Exception as e:
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
-# If you want to test locally, you can comment out the @login_required decorator
-# @login_required
+@extend_schema(
+    methods=["GET"],
+    description="""
+    Retrieves CryoGrid records with filtering, sorting, and pagination support.  
+    Accepts a single query parameter `q`, which is a JSON-encoded array of filter objects.
+    
+    Each object in `q` must contain:
+    - `category`: one of ['sort', 'asc', 'pageSize', 'page', 'sample', ...]
+    - `value`: the corresponding value (string, bool, or list)
+    """,
+    parameters=[
+        OpenApiParameter(
+            name='q',
+            required=False,
+            type={'type': 'array', 'items': {'type': 'object'}},
+            description='A JSON array of filter objects, e.g. [{"category": "sort", "value": "modifiedOn"}]'
+        )
+    ],
+    responses={
+        200: 'Paginated, sorted list of CryoGrids',
+        400: 'Bad request or invalid JSON input',
+        422: 'Validation failed (e.g., required query format)',
+        500: 'Server error'
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_cryo_grids_details(request):
     """
@@ -744,7 +816,24 @@ def clear_cassette_move(request, error_msg=''):
                 grid.save()
         return HttpResponseRedirect(reverse('cryo_grids:clear_cassette_filter', args=(cassette_id,)))
 
-
+@extend_schema(
+    methods=["GET"],
+    description="Returns available grid positions for a given CryoGridBox.",
+    parameters=[
+        OpenApiParameter(
+            name='object_id',
+            required=True,
+            type=int,
+            location=OpenApiParameter.PATH,
+            description='Primary key of the CryoGridBox'
+        ),
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+    }
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_available_positions(request, object_id):
     """AJAX endpoint to get available positions for a selected box."""
