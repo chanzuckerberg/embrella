@@ -420,7 +420,7 @@ def get_tomo_details(request):
             'msi_session__grid__specimen'
         ).prefetch_related(
             'msi_session__grid__specimen__samples',  # Updated prefetch: use many-to-many field "samples"
-            'runpipedata_set__tomograms_set'
+            'runpipedata_set'
         ).filter(
             proc_plan__name__in=['czii-live', 'czii-denoise']
         ).values(
@@ -431,6 +431,7 @@ def get_tomo_details(request):
             'updated_at',
             'proc_plan_id',
             'msi_session_id',
+            tomograms_id=F('runpipedata__tomograms__id'),
             proc_plan_plan_id=F('proc_plan__id'),
             proc_plan_name=F('proc_plan__name'),
             run_pipe_run_id=F('runpipedata__run_id'),
@@ -530,7 +531,7 @@ def get_tomo_details(request):
         base_url = get_base_url()  # Assuming this function exists
         for entry in queryset:
             procrun_id = entry.get('id')
-            tomogram_id = entry.get('run_pipe_run_id')
+            tomogram_id = entry.get('tomograms_id')
             if procrun_id not in unique_results and tomogram_id is not None:
                 proc_run_updated_at = datetime.fromisoformat(str(entry.get('updated_at'))).strftime('%Y-%m-%d') if entry.get('updated_at') else None
                 cryogrid_created_at = datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d') if entry.get('cryogrid_created_at') else None
