@@ -93,7 +93,9 @@ class PlungeFreezingSession(models.Model):
     notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for freezing session')
 
     def __str__(self):
-        return '%s' % self.datetime.date().isoformat()
+        date_str = self.datetime.date().isoformat()
+        username = self.user.username.split("@")[0] if self.user and self.user.username else "unknown"
+        return f"{date_str}-{username}-{self.id}"
     
 class Sample(models.Model):
     name = models.CharField(max_length=150, unique=True,help_text='unique sample name that you may use to search your grid for later. For example, lysosome')
