@@ -65,8 +65,33 @@ def detail(request, session_id):
 def reserve_session(request):
     if request.method == 'POST':
         form = ReserveMsiSessionForm(request.POST)
-        plan_id=int(request.POST['session_plan'])
-        return render(request, "tem/create_msi_name.html")
+        if form.is_valid():
+            # Extract the form data
+            plan_id = form.cleaned_data['session_plan'].id
+            project_id = form.cleaned_data['project'].id
+            grid_id = form.cleaned_data['grid'].id
+            
+            # Get the project, session plan, and grid objects
+            project = Project.objects.get(pk=project_id)
+            session_plan = SessionPlan.objects.get(pk=plan_id)
+            grid = CryoGrid.objects.get(pk=grid_id)
+            
+            # Generate a default name
+            name = models.suggest_name('')
+            
+            # Create the context for the next template
+            context = {
+                'default_name': name,
+                'session_plan': session_plan,
+                'project': project,
+                'grid': grid,
+            }
+            
+            # Render the create_msi_name template with the context
+            return render(request, "tem/create_msi_name.html", context)
+        else:
+            # If the form is invalid, render the form with errors
+            return render(request, "tem/reserve.html", {"form": form})
     else:
         form = ReserveMsiSessionForm()
         return render(request, "tem/reserve.html", {"form": form})
@@ -120,9 +145,9 @@ def create_session(request):
     """
     # Get values from POST with error handling
     try:
-        plan_id = int(request.POST.get('session_plan')[0])
-        project_id = int(request.POST.get('project')[0])
-        grid_id = int(request.POST.get('grid')[0])
+        plan_id = int(request.POST.get('session_plan'))
+        project_id = int(request.POST.get('project'))
+        grid_id = int(request.POST.get('grid'))
         user_id = int(request.user.id)
         name = request.POST.get('name')
         

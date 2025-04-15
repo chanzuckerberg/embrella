@@ -36,12 +36,24 @@
                     <td>{{ v }}</td>
                 </tr>
                 {% endfor %}
-                <!-- Model form is added automatically, it seems -->
+                <!-- Render the form fields -->
+                <tr>
+                    <td>Update Project</td>
+                    <td>{{ update_notes.project }}</td>
+                </tr>
+                <tr>
+                    <td>Update Atlas Session</td>
+                    <td>{{ update_notes.atlas_session }}</td>
+                </tr>
+                <tr>
+                    <td>Update Notes</td>
+                    <td>{{ update_notes.notes }}</td>
+                </tr>
                 <!-- Line up submit button with the entry -->
                 <tr>
                     <td></td>
                     <td>
-                        <button type="submit" class="btn btn-custom">Update the session notes</button>
+                        <button type="submit" class="btn btn-custom">Update the session</button>
                     </td>
                 </tr>
             </tbody>
