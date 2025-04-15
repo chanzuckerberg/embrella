@@ -21,7 +21,7 @@ class MsiSessionForm(ModelForm):
 class UpdateNotesForm(ModelForm):
     class Meta:
         model = MsiSession
-        fields = ["atlas_session","notes"]
+        fields = ["atlas_session", "notes", "project"]
 
 class ReserveScreenSessionGroupForm(ModelForm):
     class Meta:

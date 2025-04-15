@@ -24,11 +24,14 @@ def detail(request, session_id):
     if request.method == 'POST':
         new_notes=request.POST['notes']
         new_atlas_session=request.POST['atlas_session']
+        new_project=request.POST.get('project')
         session.notes = new_notes
         if new_atlas_session:
             session.atlas_session = AtlasSession.objects.get(pk=new_atlas_session)
         else:
             session.atlas_session = None
+        if new_project:
+            session.project = Project.objects.get(pk=new_project)
         session.save()
     field_objs = session._meta.get_fields()
     fields = {}
