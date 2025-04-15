@@ -392,6 +392,9 @@ def suggest_name(prefix, model_name='MsiSession'):
         try:
             my_index = alphabet.index(last_char)
             return last_name[:-1] + alphabet[my_index + 1]
+        except ValueError:
+            # If the last character is not in the alphabet, just append 'a'
+            return last_name + 'a'
         except IndexError:
             return last_name + 'a'
         except Exception:
