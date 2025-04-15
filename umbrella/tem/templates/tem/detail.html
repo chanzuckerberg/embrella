@@ -23,6 +23,8 @@
                         <td><a href="{% url 'admin:cryo_grids_cryogrid_change' v.id %}">{{ v }}</a></td>
                     {% elif f == "atlas_session" and v %}
                         <td><a href= "{% url 'admin:tem_atlassession_change' v.id %}">{{ v }}</a></td>
+                    {% elif f == "project" and v %}
+                        <td><a href="{% url 'admin:projects_project_change' v.id %}">{{ v.name }}</a></td>
                     {% else %}
                         <td>{{ v }}</td>
                     {% endif %}
