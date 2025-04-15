@@ -44,6 +44,7 @@ def detail(request, session_id):
         if hasattr(fields[f.name],'all'):
             fields[f.name] = list(map((lambda x: x.__str__()),fields[f.name].all()))
     form = UpdateNotesForm(instance=session)
+    print(fields)
     context = {
             "data": session,
             "fields": fields,
