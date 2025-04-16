@@ -577,6 +577,19 @@ def get_tomo_details(request):
 
         response_data = list(unique_results.values())
 
+        # Add metadata_url to each result
+        for item in response_data:
+            session_name = item.get('msiSession', {}).get('name')
+            run_number = item.get('tomograms', {}).get('name')
+            print(run_number)
+            if session_name and run_number:
+                # Extract just the run number part before the ID
+                if " (id=" in run_number:
+                    run_number = run_number.split(" (id=")[0]
+                item['metadata_url'] = f"{base_url}/metadata/view/{session_name}/{run_number}"
+            else:
+                item['metadata_url'] = None        
+
         # Paginate the formatted response data using Django's Paginator
         paginator = Paginator(response_data, page_size)
         try:
