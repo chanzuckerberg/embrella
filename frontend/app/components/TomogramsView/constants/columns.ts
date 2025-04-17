@@ -14,6 +14,7 @@ export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: "tomograms",
   PROC_PLAN: "procPlan",
   MSI_SESSION: "msiSession",
+  METADATA:"metadata",
   PROJECT: "project",
   GRID: "grid",
   NOTES: "notes",
@@ -47,6 +48,24 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
     cell: getLinkCellFromCellContext,
     enableSorting: false,
     header: "MSI Session",
+  },
+
+  {
+  id: TOMOGRAM_COLUMN_IDS.METADATA,
+  accessorFn: (rowData: EntityDataTypes): LinkCellProps => {
+    const tomogramData = rowData as TomogramData;
+    const sessionName = tomogramData.msiSession?.name || '';
+    let runNumber = tomogramData.tomograms?.name || '';
+     // Clean the run number by removing (id=XX) and trimming whitespace
+     runNumber = runNumber.replace(/\s*\(id=\d+\)/g, '').trim();
+    return {
+      children: 'View Metadata',
+      href: `metadata/view/${encodeURIComponent(sessionName)}/${encodeURIComponent(runNumber)}`,
+    };
+  },
+  cell: getLinkCellFromCellContext,
+  enableSorting: false,
+  header: humanize(TOMOGRAM_COLUMN_IDS.METADATA),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROJECT,

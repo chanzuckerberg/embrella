@@ -16,6 +16,7 @@ export interface TomogramData {
   project: EntityLinkField;
   user: UserField;
   msiSession: MSISessionField;
+  metadata_url: string | null;
 }
 
 export enum TomogramFilterId {
