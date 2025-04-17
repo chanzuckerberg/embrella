@@ -4,7 +4,8 @@ const nextConfig = {
   compiler: {
     emotion: true,
   },
-  output: "export",
+  // output: "export",
+  reactStrictMode: true,
 };
 
 module.exports = nextConfig;
