@@ -3,8 +3,9 @@ import { useRouter } from "next/router";
 import { useCallback } from "react";
 
 export enum SEARCH_PARAMS {
-  EXAMPLE = "example",
-  REVIEW = "review",
+  // Adding ?enable=yourFlag or ?disable=yourFlag will record your setting in cookies.
+  ENABLE_FEATURE_FLAG = "enable",
+  DISABLE_FEATURE_FLAG = "disable",
 }
 
 export function useSearchParamsHelper() {

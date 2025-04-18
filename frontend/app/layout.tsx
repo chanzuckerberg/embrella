@@ -23,7 +23,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const featureFlagsCookie = await cookies().get("feature-flags")?.value;
+  const featureFlagsCookie = await cookies().get("feature_flags")?.value;
 
   return (
     <html lang="en">

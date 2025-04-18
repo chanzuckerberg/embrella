@@ -5,7 +5,10 @@ import styled from "@emotion/styled";
 import { Link } from "@czi-sds/components";
 
 import { spacesL, spacesS, spacesXxxs } from "@app/common/theme";
-import { FeatureFlagsContext } from "@app/common/context/featureFlagsProvider";
+import {
+  FEATURE_FLAGS,
+  FeatureFlagsContext,
+} from "@app/common/context/featureFlagsProvider";
 
 const TAB_PATHS_TO_LABELS: Record<string, string> = {
   cryo_grids: "Grids",
@@ -33,6 +36,7 @@ export const TopNavigation = () => {
   const [baseNextUrl, setBaseNextUrl] = useState("");
   const [adminUrl, setAdminUrl] = useState("");
   const featureFlags = useContext(FeatureFlagsContext);
+  const isReviewEnabled = featureFlags.includes(FEATURE_FLAGS.REVIEW);
 
   useEffect(() => {
     setAdminUrl(getAdminUrl());
