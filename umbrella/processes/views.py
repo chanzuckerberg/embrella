@@ -1091,3 +1091,4 @@ def get_session_id(request):
     except Exception as e:
         logger.error(f'Error getting session ID: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+    

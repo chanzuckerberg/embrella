@@ -1,5 +1,5 @@
 from umbrella_logger import logger
-from .utils import jsonify, ssh_connect, extract_parameters
+from .utils import jsonify, ssh_connect, extract_parameters, hostname, port, username, password, ssh_file_exists, ssh_list_directory
 from django.http import JsonResponse
 from django.shortcuts import render
 from .agent import Aretomo3, Denoiset, StatusChecker
@@ -22,8 +22,11 @@ import re
 import requests
 from django.http import StreamingHttpResponse
 from django.core.cache import cache
+from workflow.utils import ssh_connect
 import time
-
+import pandas as pd
+import paramiko
+from io import StringIO
 CELERY_BEAT_SCHEDULE = {
     'update_job_data_cache_every_5_seconds': {
         'task': 'workflow.tasks.update_job_data_cache',
@@ -68,6 +71,10 @@ PORT = 22
 USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
+METADATA_SUMMARY_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/'
+DATA_COLLECTION_PATH = '/hpc/instruments/czii.krios1/OffloadData/'
+ARETOMO3_PROCESSING_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/'
+
 def get_base_url():
        if ENVIRONMENT == 'staging':
            return 'http://umbrella-dev.czbiohub.org/workflow/track_jobs'
@@ -836,3 +843,122 @@ def status_check_api(request):
     except Exception as e:
         logger.exception("Error during status check API")
         return JsonResponse({"error": str(e)}, status=500)
+    
+"""
+Metadata Summary
+"""
+
+# Helper function for natural sorting
+def natural_key(s):
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
+
+
+def preprocess_csv(metrics_path, timestamp_path):
+    try:
+        # Load data from remote server using ssh_connect
+        print(f"Attempting to read metrics file: {metrics_path}")
+        metrics_content = ssh_connect(metrics_path)
+        print(f"Successfully read metrics file")
+        
+        print(f"Attempting to read timestamp file: {timestamp_path}")
+        timestamp_content = ssh_connect(timestamp_path)
+        print(f"Successfully read timestamp file")
+        
+        # Convert string content to pandas DataFrames
+        metrics_df = pd.read_csv(StringIO(metrics_content))
+        timestamp_df = pd.read_csv(StringIO(timestamp_content))
+
+        # Normalize
+        metrics_df["Tilt_Series"] = metrics_df["Tilt_Series"].str.replace(".mrc", "", regex=False)
+
+        # Merge
+        merged_df = pd.merge(timestamp_df, metrics_df, on="Tilt_Series", how="left")
+
+        # Sort Tilt_Series using natural sort
+        merged_df = merged_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(drop=True)
+
+        return merged_df
+    except Exception as e:
+        print(f"Error in preprocess_csv: {str(e)}")
+        raise
+
+
+def compute_stats(df: pd.DataFrame) -> list:
+    column_mapping = {
+        'CTF_Score': 'CTF',
+        'CTF_Res(A)': 'Resolution',
+        'Global_Shift(Pix)': 'Defocus',
+        'Thickness(Pix)': 'Tilt Angle',
+        'Tilt_Axis': 'Tilt Axis',
+        'Global_Shift(Pix)': 'Global Shift',
+        'Bad_Patch_Low': 'Bad Patch Low',
+        'Bad_Patch_All': 'Bad Patch All',
+    }
+
+    # Select only columns to report
+    columns_of_interest = list(column_mapping.keys())
+    stats_df = df[columns_of_interest].agg(['mean', 'median', 'std'])
+
+    result = []
+    for col in columns_of_interest:
+        result.append({
+            "name": column_mapping[col],
+            "mean": round(stats_df[col]["mean"], 3),
+            "median": round(stats_df[col]["median"], 3),
+            "std": round(stats_df[col]["std"], 3)
+        })
+
+    return result
+
+@require_http_methods(["GET"])
+def get_metadata_summary(request):
+    session_name = request.GET.get("session_name")
+    run_number = request.GET.get("run_number")
+
+    print(session_name, run_number)
+    if not session_name or not run_number:
+        return JsonResponse({"error": "Missing session_name or run_number"}, status=400)
+
+    # Use the METADATA_SUMMARY_PATH constant
+    base_data_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
+    base_proc_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
+
+    metrics_path = os.path.join(base_proc_dir, "TiltSeries_Metrics.csv")
+    timestamp_path = os.path.join(base_proc_dir, "TiltSeries_TimeStamp.csv")
+
+    try:
+        # First check if the directory exists
+        remote_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
+        
+        try:
+            # List files in the directory
+            files = ssh_list_directory(remote_dir)
+            # print(f"Files in directory: {files}")
+        except Exception as dir_err:
+
+            return JsonResponse({"error": f"Directory not found: {remote_dir}"}, status=404)
+        
+        # Check if the required files exist
+        if not ssh_file_exists(metrics_path):
+            return JsonResponse({"error": f"Metrics file not found: {metrics_path}"}, status=404)
+        
+        if not ssh_file_exists(timestamp_path):
+            return JsonResponse({"error": f"Timestamp file not found: {timestamp_path}"}, status=404)
+        
+        # Now try to read the files
+        df = preprocess_csv(metrics_path, timestamp_path)
+        computed_metrics = compute_stats(df)
+        data_collection_dir = f"{DATA_COLLECTION_PATH}{session_name}/{run_number}/"
+        aretomo3_processing_dir = f"{ARETOMO3_PROCESSING_PATH}{session_name}/{run_number}/"
+        response = {
+            "session_name": session_name,
+            "run_number": run_number,
+            "data_collection_directory": data_collection_dir,
+            "aretomo3_processing_directory": aretomo3_processing_dir,
+            "computed_metrics": computed_metrics
+        }
+
+        return JsonResponse(response, json_dumps_params={"indent": 2})
+    except Exception as e:
+        logger.error(f"Error processing metadata: {str(e)}")
+        return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
