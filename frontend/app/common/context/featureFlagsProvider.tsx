@@ -22,9 +22,9 @@ export const FeatureFlagsProvider = ({
   featureFlagsCookieValue,
 }: FeatureFlagsProviderProps) => {
   const cookieValues: string[] = featureFlagsCookieValue?.split(",") ?? [];
-
   const router = useRouter();
   const searchParams = useSearchParams();
+
   // Sync cookies with query params.
   useEffect(() => {
     const enableFlag = searchParams.get(SEARCH_PARAMS.ENABLE_FEATURE_FLAG);
