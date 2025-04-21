@@ -7,6 +7,7 @@ import { theme } from "@app/common/theme";
 import { TopNavigation } from "./components/TopNavigation/TopNavigation";
 import { cookies } from "next/headers";
 import { FeatureFlagsProvider } from "./common/context/FeatureFlagsProvider";
+import { COOKIE_NAME } from "./common/types/cookies";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,7 +24,8 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const featureFlagsCookie = await cookies().get("feature_flags")?.value;
+  const featureFlagsCookie = await cookies().get(COOKIE_NAME.FEATURE_FLAGS)
+    ?.value;
 
   return (
     <html lang="en">

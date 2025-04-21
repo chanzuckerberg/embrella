@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, PropsWithChildren, useEffect } from "react";
 import { SEARCH_PARAM_NAME } from "../types/search";
+import { COOKIE_NAME } from "../types/cookies";
 
 export enum FEATURE_FLAG {
   EXAMPLE = "example",
@@ -37,13 +38,13 @@ export const FeatureFlagsProvider = ({
       isFeatureFlag(enableFlag) &&
       !manuallyEnabledFlags.includes(enableFlag)
     ) {
-      document.cookie = `feature_flags=${[...manuallyEnabledFlags, enableFlag].join(",")}; max-age=34560000`;
+      document.cookie = `${COOKIE_NAME.FEATURE_FLAGS}=${[...manuallyEnabledFlags, enableFlag].join(",")}; max-age=34560000`;
       router.refresh();
     } else if (
       isFeatureFlag(disableFlag) &&
       manuallyEnabledFlags.includes(disableFlag)
     ) {
-      document.cookie = `feature_flags=${manuallyEnabledFlags.filter((flag) => flag !== disableFlag).join(",")}; max-age=34560000`;
+      document.cookie = `${COOKIE_NAME.FEATURE_FLAGS}=${manuallyEnabledFlags.filter((flag) => flag !== disableFlag).join(",")}; max-age=34560000`;
       router.refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only needs to run once.
