@@ -35,6 +35,75 @@ def ssh_connect(remote_path, shell=False):
     return file_contents.decode('utf-8')
 
 
+def ssh_file_exists(remote_path):
+    """
+    Check if a file exists on the remote server.
+    
+    Args:
+        remote_path: The path to the file on the remote server
+        
+    Returns:
+        bool: True if the file exists, False otherwise
+    """
+    # Check if password is retrieved successfully
+    if password is None:
+        raise ValueError("Password not found in environment variables. Please set REMOTE_PASSWORD.")
+
+    # Create an SSH client
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname, port, username, password)
+
+    # Open an SFTP session
+    sftp = ssh.open_sftp()
+    
+    try:
+        # Try to get file attributes
+        sftp.stat(remote_path)
+        return True
+    except FileNotFoundError:
+        return False
+    except Exception as e:
+        logger.error(f"Error checking if file exists: {str(e)}")
+        raise
+    finally:
+        # Close the SFTP session and SSH client
+        sftp.close()
+        ssh.close()
+
+
+def ssh_list_directory(remote_dir):
+    """
+    List the contents of a directory on the remote server.
+    
+    Args:
+        remote_dir: The path to the directory on the remote server
+        
+    Returns:
+        list: A list of file and directory names in the directory
+    """
+    # Check if password is retrieved successfully
+    if password is None:
+        raise ValueError("Password not found in environment variables. Please set REMOTE_PASSWORD.")
+
+    # Create an SSH client
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname, port, username, password)
+
+    # Open an SFTP session
+    sftp = ssh.open_sftp()
+    
+    try:
+        # List the directory contents
+        return sftp.listdir(remote_dir)
+    except Exception as e:
+        logger.error(f"Error listing directory: {str(e)}")
+        raise
+    finally:
+        # Close the SFTP session and SSH client
+        sftp.close()
+        ssh.close()
 
 
 def jsonify(data):
@@ -46,7 +115,7 @@ def jsonify(data):
         return json_data
     except json.JSONDecodeError as e:
         logger.exception(f"JSONDecodeError: {e}")
-        raise e
+        raise
 
 
 def extract_parameters(json_data, parameter_names):
