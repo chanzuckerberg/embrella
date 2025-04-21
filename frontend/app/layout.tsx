@@ -19,13 +19,12 @@ const CACHE_PROVIDER_OPTIONS = {
   key: "css",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const featureFlagsCookie = await cookies().get(COOKIE_NAME.FEATURE_FLAGS)
-    ?.value;
+  const featureFlagsCookie = cookies().get(COOKIE_NAME.FEATURE_FLAGS)?.value;
 
   return (
     <html lang="en">
