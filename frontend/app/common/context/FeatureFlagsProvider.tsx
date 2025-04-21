@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, PropsWithChildren, useEffect } from "react";
-import { SEARCH_PARAMS } from "../hooks/useSearchParamsHelper/useSearchParamsHelper";
+import { SEARCH_PARAM_NAME } from "../types/search";
 
 export enum FEATURE_FLAG {
   EXAMPLE = "example",
@@ -29,8 +29,10 @@ export const FeatureFlagsProvider = ({
 
   // Sync manually enabled flags in cookies with query params.
   useEffect(() => {
-    const enableFlag = searchParams.get(SEARCH_PARAMS.ENABLE_FEATURE_FLAG);
-    const disableFlag = searchParams.get(SEARCH_PARAMS.DISABLE_FEATURE_FLAG);
+    const enableFlag = searchParams.get(SEARCH_PARAM_NAME.ENABLE_FEATURE_FLAG);
+    const disableFlag = searchParams.get(
+      SEARCH_PARAM_NAME.DISABLE_FEATURE_FLAG,
+    );
     if (
       isFeatureFlag(enableFlag) &&
       !manuallyEnabledFlags.includes(enableFlag)
