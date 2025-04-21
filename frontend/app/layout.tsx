@@ -6,7 +6,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "@app/common/theme";
 import { TopNavigation } from "./components/TopNavigation/TopNavigation";
 import { cookies } from "next/headers";
-import { FeatureFlagsProvider } from "./common/context/FeatureFlagsProviders";
+import { FeatureFlagsProvider } from "./common/context/FeatureFlagsProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
