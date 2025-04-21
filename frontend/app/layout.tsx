@@ -30,7 +30,7 @@ export default async function RootLayout({
       <body className={inter.className}>
         <AppRouterCacheProvider options={CACHE_PROVIDER_OPTIONS}>
           <ThemeProvider theme={theme}>
-            <FeatureFlagsProvider featureFlagsCookieValue={featureFlagsCookie}>
+            <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
               <TopNavigation />
               {children}
             </FeatureFlagsProvider>

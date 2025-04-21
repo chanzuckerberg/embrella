@@ -6,7 +6,7 @@ import { Link } from "@czi-sds/components";
 
 import { spacesL, spacesS, spacesXxxs } from "@app/common/theme";
 import {
-  FEATURE_FLAGS,
+  FEATURE_FLAG,
   FeatureFlagsContext,
 } from "@app/common/context/FeatureFlagsProvider";
 
@@ -36,7 +36,7 @@ export const TopNavigation = () => {
   const [baseNextUrl, setBaseNextUrl] = useState("");
   const [adminUrl, setAdminUrl] = useState("");
   const featureFlags = useContext(FeatureFlagsContext);
-  const isReviewEnabled = featureFlags.includes(FEATURE_FLAGS.REVIEW);
+  const isReviewEnabled = featureFlags.includes(FEATURE_FLAG.REVIEW);
 
   useEffect(() => {
     setAdminUrl(getAdminUrl());
