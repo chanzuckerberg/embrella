@@ -8,7 +8,7 @@ import { spacesL, spacesS, spacesXxxs } from "@app/common/theme";
 import {
   FEATURE_FLAGS,
   FeatureFlagsContext,
-} from "@app/common/context/featureFlagsProvider";
+} from "@app/common/context/FeatureFlagsProvider";
 
 const TAB_PATHS_TO_LABELS: Record<string, string> = {
   cryo_grids: "Grids",
