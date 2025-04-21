@@ -35,7 +35,7 @@ export const FeatureFlagsProvider = ({
       document.cookie = `feature_flags=${newCookieValues.join(",")}; max-age=34560000`;
       router.refresh();
     } else if (disableFlag !== null && cookieValues.includes(disableFlag)) {
-      document.cookie = `feature_flags=${cookieValues.filter((flag) => flag !== disableFlag).join(",")}`;
+      document.cookie = `feature_flags=${cookieValues.filter((flag) => flag !== disableFlag).join(",")}; max-age=34560000`;
       router.refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only needs to run once.
