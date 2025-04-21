@@ -22,11 +22,7 @@ export const FeatureFlagsProvider = ({
   featureFlagsCookie,
 }: FeatureFlagsProviderProps) => {
   const manuallyEnabledFlags: FEATURE_FLAG[] =
-    featureFlagsCookie
-      ?.split(",")
-      .filter((flag): flag is FEATURE_FLAG =>
-        Object.values<string>(FEATURE_FLAG).includes(flag),
-      ) ?? [];
+    featureFlagsCookie?.split(",").filter(isFeatureFlag) ?? [];
 
   const router = useRouter();
   const searchParams = useSearchParams();
