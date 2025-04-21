@@ -38,13 +38,13 @@ export const FeatureFlagsProvider = ({
       isFeatureFlag(enableFlag) &&
       !manuallyEnabledFlags.includes(enableFlag)
     ) {
-      document.cookie = `${COOKIE_NAME.FEATURE_FLAGS}=${[...manuallyEnabledFlags, enableFlag].join(",")}; max-age=34560000`;
+      document.cookie = `${COOKIE_NAME.FEATURE_FLAGS}=${[...manuallyEnabledFlags, enableFlag].join(",")}; path=/; max-age=34560000`;
       router.refresh();
     } else if (
       isFeatureFlag(disableFlag) &&
       manuallyEnabledFlags.includes(disableFlag)
     ) {
-      document.cookie = `${COOKIE_NAME.FEATURE_FLAGS}=${manuallyEnabledFlags.filter((flag) => flag !== disableFlag).join(",")}; max-age=34560000`;
+      document.cookie = `${COOKIE_NAME.FEATURE_FLAGS}=${manuallyEnabledFlags.filter((flag) => flag !== disableFlag).join(",")}; path=/; max-age=34560000`;
       router.refresh();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only needs to run once.
