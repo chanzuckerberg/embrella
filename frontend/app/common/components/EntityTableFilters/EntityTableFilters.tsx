@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 
-import { API } from "@app/common/constants/api";
+import { GET_API } from "@app/common/constants/api";
 import { TEST_IDS } from "@app/common/constants/testIds";
 import {
   EntityFilterCategories,
@@ -14,7 +14,7 @@ import { FilterDivider, StyledFilters } from "./style";
 
 interface EntityTableFiltersProps {
   entityFilterConfigs: EntityFilterConfigs[][];
-  entityFilterListApi: API;
+  entityFilterListApi: GET_API;
   className?: string;
 }
 

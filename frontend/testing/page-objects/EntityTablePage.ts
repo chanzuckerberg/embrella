@@ -1,6 +1,6 @@
 import { expect, Locator } from "@playwright/test";
 
-import { API } from "@app/common/constants/api";
+import { GET_API } from "@app/common/constants/api";
 import { ROUTES } from "@app/common/constants/constants";
 import { TEST_IDS } from "@app/common/constants/testIds";
 
@@ -150,7 +150,7 @@ export class EntityTablePage extends PageObject {
       this.clickDateHeader(),
       this.page.waitForResponse(
         (response) =>
-          response.url().includes(API.GRIDS) && response.status() === 200,
+          response.url().includes(GET_API.GRIDS) && response.status() === 200,
       ),
     ]);
   }
@@ -160,7 +160,7 @@ export class EntityTablePage extends PageObject {
       this.clickFirstFilterOption(),
       this.page.waitForResponse(
         (response) =>
-          response.url().includes(API.GRIDS_FILTERS_LIST) &&
+          response.url().includes(GET_API.GRIDS_FILTERS_LIST) &&
           response.status() === 200,
       ),
     ]);
@@ -171,7 +171,7 @@ export class EntityTablePage extends PageObject {
       this.clickFirstFilterChip(),
       this.page.waitForResponse(
         (response) =>
-          response.url().includes(API.GRIDS_FILTERS_LIST) &&
+          response.url().includes(GET_API.GRIDS_FILTERS_LIST) &&
           response.status() === 200,
       ),
     ]);
@@ -183,7 +183,7 @@ export class EntityTablePage extends PageObject {
     const [response] = await Promise.all([
       this.page.waitForResponse(
         (response) =>
-          response.url().includes(API.GRIDS) && response.status() === 200,
+          response.url().includes(GET_API.GRIDS) && response.status() === 200,
       ),
       this.page.reload(),
     ]);

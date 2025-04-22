@@ -12,7 +12,7 @@ import {
   FiltersList,
 } from "@app/common/types/filter";
 import { useFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/useFilterList";
-import { API } from "@app/common/constants/api";
+import { GET_API } from "@app/common/constants/api";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
 import { UseFilterList } from "./hooks/useFilterList/types";
 import { TestFilterCategory } from "@testing/types";
@@ -103,7 +103,7 @@ describe("useConnect", () => {
     (useFilterList as jest.Mock).mockReturnValue(filters);
 
     const { result } = renderHook(
-      () => useConnect(entityFilterConfigs, API.TOMOGRAMS_FILTERLIST),
+      () => useConnect(entityFilterConfigs, GET_API.TOMOGRAMS_FILTERLIST),
       { wrapper },
     );
 
@@ -122,7 +122,7 @@ describe("useConnect", () => {
     (useFilterList as jest.Mock).mockReturnValue(filtersList);
 
     const { result } = renderHook(
-      () => useConnect(entityFilterConfigs, API.TOMOGRAMS_FILTERLIST),
+      () => useConnect(entityFilterConfigs, GET_API.TOMOGRAMS_FILTERLIST),
       { wrapper },
     );
 
