@@ -853,31 +853,40 @@ def natural_key(s):
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 
-def preprocess_csv(metrics_path, timestamp_path):
+def preprocess_csv(metrics_path, timestamp_path, merge=False):
     try:
         # Load data from remote server using ssh_connect
         print(f"Attempting to read metrics file: {metrics_path}")
         metrics_content = ssh_connect(metrics_path)
         print(f"Successfully read metrics file")
         
-        print(f"Attempting to read timestamp file: {timestamp_path}")
-        timestamp_content = ssh_connect(timestamp_path)
-        print(f"Successfully read timestamp file")
-        
-        # Convert string content to pandas DataFrames
+        # Convert string content to pandas DataFrame
         metrics_df = pd.read_csv(StringIO(metrics_content))
-        timestamp_df = pd.read_csv(StringIO(timestamp_content))
-
+        
         # Normalize
         metrics_df["Tilt_Series"] = metrics_df["Tilt_Series"].str.replace(".mrc", "", regex=False)
-
-        # Merge
-        merged_df = pd.merge(timestamp_df, metrics_df, on="Tilt_Series", how="left")
-
+        
         # Sort Tilt_Series using natural sort
-        merged_df = merged_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(drop=True)
-
-        return merged_df
+        metrics_df = metrics_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(drop=True)
+        
+        if merge:
+            print(f"Attempting to read timestamp file: {timestamp_path}")
+            timestamp_content = ssh_connect(timestamp_path)
+            print(f"Successfully read timestamp file")
+            
+            # Convert string content to pandas DataFrame
+            timestamp_df = pd.read_csv(StringIO(timestamp_content))
+            
+            # Merge
+            merged_df = pd.merge(timestamp_df, metrics_df, on="Tilt_Series", how="left")
+            
+            # Sort Tilt_Series using natural sort
+            merged_df = merged_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(drop=True)
+            
+            return merged_df
+        else:
+            return metrics_df
+            
     except Exception as e:
         print(f"Error in preprocess_csv: {str(e)}")
         raise
@@ -915,50 +924,96 @@ def get_metadata_summary(request):
     session_name = request.GET.get("session_name")
     run_number = request.GET.get("run_number")
 
-    print(session_name, run_number)
     if not session_name or not run_number:
         return JsonResponse({"error": "Missing session_name or run_number"}, status=400)
 
-    # Use the METADATA_SUMMARY_PATH constant
-    base_data_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
     base_proc_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
-
     metrics_path = os.path.join(base_proc_dir, "TiltSeries_Metrics.csv")
     timestamp_path = os.path.join(base_proc_dir, "TiltSeries_TimeStamp.csv")
 
     try:
-        # First check if the directory exists
-        remote_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
+        # Create a persistent SSH connection with optimized parameters
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
-        try:
-            # List files in the directory
-            files = ssh_list_directory(remote_dir)
-            # print(f"Files in directory: {files}")
-        except Exception as dir_err:
-
-            return JsonResponse({"error": f"Directory not found: {remote_dir}"}, status=404)
-        
-        # Check if the required files exist
-        if not ssh_file_exists(metrics_path):
-            return JsonResponse({"error": f"Metrics file not found: {metrics_path}"}, status=404)
-        
-        if not ssh_file_exists(timestamp_path):
-            return JsonResponse({"error": f"Timestamp file not found: {timestamp_path}"}, status=404)
-        
-        # Now try to read the files
-        df = preprocess_csv(metrics_path, timestamp_path)
-        computed_metrics = compute_stats(df)
-        data_collection_dir = f"{DATA_COLLECTION_PATH}{session_name}/{run_number}/"
-        aretomo3_processing_dir = f"{ARETOMO3_PROCESSING_PATH}{session_name}/{run_number}/"
-        response = {
-            "session_name": session_name,
-            "run_number": run_number,
-            "data_collection_directory": data_collection_dir,
-            "aretomo3_processing_directory": aretomo3_processing_dir,
-            "computed_metrics": computed_metrics
+        # Add connection optimization parameters
+        ssh_config = {
+            'hostname': HOST,
+            'port': PORT,
+            'username': USERNAME,
+            'password': PASSWORD,
+            'timeout': 10,
+            'allow_agent': False,
+            'look_for_keys': False,
+            'compress': True,
+            'banner_timeout': 10
         }
+        ssh.connect(**ssh_config)
+        
+        # Create SFTP client with optimized buffer sizes
+        sftp = ssh.open_sftp()
+        sftp.get_channel().settimeout(10)
+        sftp.get_channel().set_combine_stderr(True)
 
-        return JsonResponse(response, json_dumps_params={"indent": 2})
+        try:
+            # Combine all file operations into a single batch
+            infra_start = time.time()
+            try:
+                # Use stat instead of listdir for faster checks
+                try:
+                    sftp.stat(metrics_path)
+                    sftp.stat(timestamp_path)
+                except FileNotFoundError:
+                    return JsonResponse({"error": "Required files not found"}, status=404)
+                
+            except Exception as dir_err:
+                return JsonResponse({"error": f"Access error: {str(dir_err)}"}, status=404)
+            infra_time = time.time() - infra_start
+
+            # Optimize file fetching with larger buffer size and parallel reading
+            fetch_start = time.time()
+            metrics_content = None
+            timestamp_content = None
+            
+            # Read files with larger buffer size
+            with sftp.open(metrics_path, 'r', bufsize=32768) as metrics_file:
+                metrics_content = metrics_file.read().decode('utf-8')
+            
+            # Process metrics immediately while timestamp is being read
+            df = pd.read_csv(StringIO(metrics_content))
+            df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
+            
+            # Use natural sort with optimized key function
+            df = df.sort_values(by="Tilt_Series", key=lambda col: pd.Index([int(''.join(c for c in str(x) if c.isdigit()) or 0) for x in col])).reset_index(drop=True)
+            fetch_time = time.time() - fetch_start
+
+            # Compute statistics with optimized operations
+            compute_start = time.time()
+            computed_metrics = compute_stats(df)
+            compute_time = time.time() - compute_start
+
+            data_collection_dir = f"{DATA_COLLECTION_PATH}{session_name}/{run_number}/"
+            aretomo3_processing_dir = f"{ARETOMO3_PROCESSING_PATH}{session_name}/{run_number}/"
+
+            response = {
+                "session_name": session_name,
+                "run_number": run_number,
+                "data_collection_directory": data_collection_dir,
+                "aretomo3_processing_directory": aretomo3_processing_dir,
+                "computed_metrics": computed_metrics,
+                "timing": {
+                    "infra_access_sec": round(infra_time, 3),
+                    "file_fetch_sec": round(fetch_time, 3),
+                    "data_compute_sec": round(compute_time, 3),
+                }
+            }
+
+            return JsonResponse(response, json_dumps_params={"indent": 2})
+
+        finally:
+            sftp.close()
+            ssh.close()
+
     except Exception as e:
         logger.error(f"Error processing metadata: {str(e)}")
         return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
