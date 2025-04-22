@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import styled from "@emotion/styled";
 import { Link } from "@czi-sds/components";
 
 import { spacesL, spacesS, spacesXxxs } from "@app/common/theme";
+import {
+  FEATURE_FLAG,
+  FeatureFlagsContext,
+} from "@app/common/context/FeatureFlagsProvider";
 
 const TAB_PATHS_TO_LABELS: Record<string, string> = {
   cryo_grids: "Grids",
   tomograms: "Tomograms",
   annotations: "Annotations",
+  reviews: "Reviews",
 };
 
 const StyledNavbar = styled.span`
@@ -30,6 +35,8 @@ const StyledNavLink = styled(Link)`
 export const TopNavigation = () => {
   const [baseNextUrl, setBaseNextUrl] = useState("");
   const [adminUrl, setAdminUrl] = useState("");
+  const featureFlags = useContext(FeatureFlagsContext);
+  const isReviewEnabled = featureFlags.includes(FEATURE_FLAG.REVIEW);
 
   useEffect(() => {
     setAdminUrl(getAdminUrl());
@@ -43,15 +50,18 @@ export const TopNavigation = () => {
           <StyledNavLink href={adminUrl} fontWeight="bold">
             Startup Page
           </StyledNavLink>
-          {Object.entries(TAB_PATHS_TO_LABELS).map(([path, label]) => (
-            <StyledNavLink
-              key={path}
-              href={`${baseNextUrl}/${path}`}
-              fontWeight="bold"
-            >
-              {label}
-            </StyledNavLink>
-          ))}
+          {Object.entries(TAB_PATHS_TO_LABELS).map(
+            ([path, label]) =>
+              (path !== "reviews" || isReviewEnabled) && (
+                <StyledNavLink
+                  key={path}
+                  href={`${baseNextUrl}/${path}`}
+                  fontWeight="bold"
+                >
+                  {label}
+                </StyledNavLink>
+              ),
+          )}
         </span>
       </StyledNavbar>
     </nav>

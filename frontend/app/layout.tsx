@@ -5,6 +5,9 @@ import "@app/globals.css";
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "@app/common/theme";
 import { TopNavigation } from "./components/TopNavigation/TopNavigation";
+import { cookies } from "next/headers";
+import { FeatureFlagsProvider } from "./common/context/FeatureFlagsProvider";
+import { COOKIE_NAME } from "./common/types/cookies";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,13 +24,17 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const featureFlagsCookie = cookies().get(COOKIE_NAME.FEATURE_FLAGS)?.value;
+
   return (
     <html lang="en">
       <body className={inter.className}>
         <AppRouterCacheProvider options={CACHE_PROVIDER_OPTIONS}>
           <ThemeProvider theme={theme}>
-            <TopNavigation />
-            {children}
+            <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
+              <TopNavigation />
+              {children}
+            </FeatureFlagsProvider>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
