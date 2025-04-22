@@ -27,53 +27,99 @@ export enum POST_API {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MOCKED_APIS: Partial<Record<API, any>> = {
-  [API.REVIEWS]: [
-    {
-      reviewId: "rev_abcdef123456",
-      reviewName: "Tomogram Quality - 24nov10 - run001 - denoised",
-      reviewType: "tomogram_quality",
-      sessionId: "24nov10",
-      runId: "run001",
-      updatedAt: "2025-04-08T15:20:00Z",
-      status: "in_progress",
-      reviewedCount: 75,
-      totalCount: 100,
-      reviewer: {
-        id: "user_abc",
-        name: "Yue Yu",
+  [API.REVIEWS]: {
+    data: [
+      {
+        review: {
+          id: 123456,
+          name: "Tomogram Quality - 24nov10 - run001 - denoised",
+          url: "/api/reviews/rev_abcdef123456",
+          type: "tomogram_quality",
+        },
+        session: {
+          id: 24110,
+          name: "Grid6_2025-04-22",
+          url: "/api/sessions/24nov10",
+        },
+        updatedAt: "2025-04-22T15:20:00Z",
+        status: "in_progress",
+        reviewer: {
+          id: 101,
+          name: "Yue Yu",
+          url: "/api/users/101",
+        },
       },
-    },
-    {
-      reviewId: "rev_456789abcdef",
-      reviewName: "Tomogram Quality - 24oct30 - run001 - DCTF",
-      reviewType: "tomogram_quality",
-      sessionId: "24oct30",
-      runId: "run001",
-      updatedAt: "2025-04-01T10:15:00Z",
-      status: "complete",
-      reviewedCount: 84,
-      totalCount: 84,
-      reviewer: {
-        id: "user_def",
-        name: "Bryan Chu",
+      {
+        review: {
+          id: 456789,
+          name: "Tomogram Quality - 24oct30 - run001 - DCTF",
+          url: "/api/reviews/rev_456789abcdef",
+          type: "tomogram_quality",
+        },
+        session: {
+          id: 24030,
+          name: "Grid5_2025-04-08",
+          url: "/api/sessions/24oct30",
+        },
+        runId: "run001",
+        updatedAt: "2025-04-18T10:15:00Z",
+        status: "complete",
+        reviewedCount: 84,
+        totalCount: 84,
+        reviewer: {
+          id: 102,
+          name: "Bryan Chu",
+          url: "/api/users/102",
+        },
       },
-    },
-    {
-      reviewId: "rev_fedcba654321",
-      reviewName: "Tomogram Quality - Grid4_TestRun - run002 - Denoised",
-      reviewType: "tomogram_quality",
-      sessionId: "session_4321",
-      runId: "run002",
-      updatedAt: "2025-03-25T14:30:00Z",
-      status: "not_started",
-      reviewedCount: 0,
-      totalCount: 20,
-      reviewer: {
-        id: "user_xyz",
-        name: "John Doe",
+      {
+        review: {
+          id: 654321,
+          name: "Tomogram Quality - Grid4_TestRun - run002 - Denoised",
+          url: "/api/reviews/rev_fedcba654321",
+          type: "tomogram_quality",
+        },
+        session: {
+          id: 4321,
+          name: "Grid4_TestRun",
+          url: "/api/sessions/session_4321",
+        },
+        runId: "run002",
+        updatedAt: "2025-04-15T14:30:00Z",
+        status: "not_started",
+        reviewedCount: 0,
+        totalCount: 20,
+        reviewer: {
+          id: 103,
+          name: "John Doe",
+          url: "/api/users/103",
+        },
       },
-    },
-  ],
+      {
+        review: {
+          id: 789012,
+          name: "Segmentation Labeling - 24nov10 - run001",
+          url: "/api/reviews/rev_789012ghijkl",
+          type: "segmentation_labeling",
+        },
+        session: {
+          id: 24110,
+          name: "Grid6_2025-04-22",
+          url: "/api/sessions/24nov10",
+        },
+        runId: "run001",
+        updatedAt: "2025-04-21T11:45:00Z",
+        status: "in_progress",
+        reviewedCount: 30,
+        totalCount: 100,
+        reviewer: {
+          id: 101,
+          name: "Yue Yu",
+          url: "/api/users/101",
+        },
+      },
+    ],
+  },
   [API.TEM_SESSIONS]: [
     {
       sessionId: "24oct30",
@@ -139,12 +185,12 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     reviewId: "rev_abcdef123456",
     reviewName: "Tomogram Quality - 24nov10 - run001 - denoised",
     owner: {
-      id: "user_abc",
+      id: 101,
       name: "Yue Yu",
+      url: "/api/users/101",
     },
     tomograms: [
       { tomogramId: "tomo_001", status: "accepted" },
-      { tomogramId: "tomo_002", status: "rejected" },
       { tomogramId: "tomo_003", status: "uncertain" },
       { tomogramId: "tomo_004", status: "pending" },
       // Additional tomograms would be listed here...

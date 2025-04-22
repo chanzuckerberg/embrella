@@ -19,7 +19,6 @@ import {
   UpdateSortAction,
 } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { Pagination, SortBy } from "@app/common/types/tableState";
-import { AccessorReturnType } from "./types";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import { ApiPrimaryEntityAttribute } from "./types";
 import { API } from "@app/common/constants/api";
@@ -44,7 +43,7 @@ export const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   // Example of data access: row.tomograms.id
   const typedRow = row as EntityAPIPrimaryAttributeToDataType[K];
   const typedEntityAttribute =
-    entityApiResponseField as keyof EntityAPIPrimaryAttributeToDataType[K];
+    entityApiResponseField as unknown as keyof EntityAPIPrimaryAttributeToDataType[K];
   const entity = typedRow[typedEntityAttribute] as EntityLinkField;
 
   return entity.id.toString();
@@ -78,7 +77,7 @@ const getSortingStateForPayload = (sortBy: SortBy): SortingState =>
 export const useConnect = (
   entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
-  columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[],
+  columnDefs: ColumnDef<EntityDataTypes>[],
 ) => {
   const state = useContext<TableState>(TableStateContext);
   const dispatch = useContext(TableDispatchContext);

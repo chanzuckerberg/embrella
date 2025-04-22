@@ -5,7 +5,7 @@ export type ApiPrimaryEntityAttribute =
   | "annotations"
   | "tomograms"
   | "grid"
-  | "reviews";
+  | "review";
 export type AccessorReturnType = LinkCellProps | LinkCellProps[] | string;
 
 export interface LinkCellProps {

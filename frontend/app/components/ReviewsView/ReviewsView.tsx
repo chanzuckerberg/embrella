@@ -5,23 +5,6 @@ import { FilterableTableMain } from "@app/common/components/FilterableTableMain/
 import { TableStateProvider } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { REVIEW_COLUMN_DEFS, REVIEW_COLUMN_IDS } from "./constants/columns";
 
-// Define the review data interface based on the API response format
-interface ReviewData {
-  reviewId: string;
-  reviewName: string;
-  reviewType: string;
-  sessionId: string;
-  runId: string;
-  updatedAt: string;
-  status: "not_started" | "in_progress" | "complete";
-  reviewedCount: number;
-  totalCount: number;
-  reviewer: {
-    id: string;
-    name: string;
-  };
-}
-
 export const ReviewsView = () => {
   return (
     <TableStateProvider
@@ -31,7 +14,7 @@ export const ReviewsView = () => {
         <TableWrapper>
           <EntityTable
             entityApi={API.REVIEWS}
-            entityApiResponseField="reviews"
+            entityApiResponseField="review"
             columnDefs={REVIEW_COLUMN_DEFS}
           />
         </TableWrapper>

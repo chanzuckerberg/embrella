@@ -17,17 +17,18 @@ import { TEST_IDS } from "@app/common/constants/testIds";
 import { EntityDataTypes } from "@app/common/types/tableState";
 
 import { useConnect } from "./connect";
-import { AccessorReturnType, ApiPrimaryEntityAttribute } from "./types";
+import { ApiPrimaryEntityAttribute } from "./types";
 import {
   getCellHeaderActive,
   getCellHeaderDirection,
   getCellHeaderHideSortIcon,
 } from "./utils/cellHeader";
+import { ReviewData } from "@app/components/ReviewsView/types";
 
 interface EntityTableProps {
   entityApi: API;
   entityApiResponseField: ApiPrimaryEntityAttribute;
-  columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[];
+  columnDefs: ColumnDef<EntityDataTypes>[];
 }
 
 export const StyledPagination = styled(Pagination)`

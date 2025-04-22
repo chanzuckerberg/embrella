@@ -7,7 +7,7 @@ export type EntityAPIPrimaryAttributeToDataType = {
   annotations: AnnotationData;
   tomograms: TomogramData;
   grid: GridData;
-  reviews: ReviewData;
+  review: ReviewData;
 };
 
 export interface EntityLinkField {
