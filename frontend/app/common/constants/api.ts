@@ -1,6 +1,4 @@
-export type API = GET_API | POST_API;
-
-export enum GET_API {
+export enum API {
   GRIDS = "/cryo_grids/v1/grids",
   GRIDS_FILTERS_LIST = "/cryo_grids/v1/filterlist",
   TOMOGRAMS = "/processes/v1/tomograms",
@@ -28,8 +26,8 @@ export enum POST_API {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const MOCKED_APIS: Partial<Record<API, Record<string, any>>> = {
-  [GET_API.GET_REVIEWS]: [
+export const MOCKED_APIS: Partial<Record<API, any>> = {
+  [API.GET_REVIEWS]: [
     {
       reviewId: "rev_abcdef123456",
       reviewName: "Tomogram Quality - 24nov10 - run001 - denoised",
@@ -76,17 +74,7 @@ export const MOCKED_APIS: Partial<Record<API, Record<string, any>>> = {
       },
     },
   ],
-  [GET_API.CREATE_REVIEW]: {
-    reviewId: "rev_abcdef123456",
-    sessionId: "24nov10",
-    runId: "run001",
-    reconstructionType: "Denoised",
-    reviewName: "Tomogram Quality - 24nov10 - run001 - denoised",
-    totalCount: 100,
-    status: "not_started",
-    createdAt: "2025-04-22T15:20:00Z",
-  },
-  [GET_API.GET_SESSIONS]: [
+  [API.GET_SESSIONS]: [
     {
       sessionId: "24oct30",
       sessionName: "Grid5_2025-04-08",
@@ -129,7 +117,7 @@ export const MOCKED_APIS: Partial<Record<API, Record<string, any>>> = {
       ],
     },
   ],
-  [GET_API.GET_SESSION]: {
+  [API.GET_SESSION]: {
     sessionId: "24nov10",
     sessionName: "Grid6_2025-04-22",
     createdAt: "2025-04-22T09:10:00Z",
@@ -147,7 +135,7 @@ export const MOCKED_APIS: Partial<Record<API, Record<string, any>>> = {
       },
     ],
   },
-  [GET_API.GET_REVIEW]: {
+  [API.GET_REVIEW]: {
     reviewId: "rev_abcdef123456",
     reviewName: "Tomogram Quality - 24nov10 - run001 - denoised",
     owner: {
@@ -162,25 +150,25 @@ export const MOCKED_APIS: Partial<Record<API, Record<string, any>>> = {
       // Additional tomograms would be listed here...
     ],
   },
-  [GET_API.SAVE_REVIEW]: {
+  [API.SAVE_REVIEW]: {
     ok: true,
     savedAt: "2025-04-22T16:42:10Z",
     savePath: "/mnt/data/reviews/rev_abcdef123456/review.json",
     reviewedCount: 75,
     totalCount: 100,
   },
-  [GET_API.COMPLETE_REVIEW]: {
+  [API.COMPLETE_REVIEW]: {
     ok: true,
     finishedAt: "2025-04-22T17:30:15Z",
     savePath: "/mnt/data/reviews/rev_abcdef123456/review.json",
   },
-  [GET_API.EXPORT_REVIEW]: {
+  [API.EXPORT_REVIEW]: {
     // This would typically return a file download
     // Mock just indicates success
     ok: true,
     exportPath: "/mnt/data/reviews/rev_abcdef123456/review_export.json",
   },
-  [GET_API.GET_REVIEW_TOMOGRAMS]: [
+  [API.GET_REVIEW_TOMOGRAMS]: [
     { tomogramId: "tomo_001", status: "accepted" },
     { tomogramId: "tomo_002", status: "rejected" },
     { tomogramId: "tomo_003", status: "uncertain" },
@@ -188,7 +176,7 @@ export const MOCKED_APIS: Partial<Record<API, Record<string, any>>> = {
     { tomogramId: "tomo_005", status: "pending" },
     // Additional tomograms would be listed here...
   ],
-  [GET_API.GET_REVIEW_TOMOGRAM]: {
+  [API.GET_REVIEW_TOMOGRAM]: {
     tomogramId: "tomo_002",
     displayName: "Grid6_Tomo002",
     zarrPath:
@@ -198,7 +186,21 @@ export const MOCKED_APIS: Partial<Record<API, Record<string, any>>> = {
       rejectionReasons: ["ice contamination", "low contrast"],
     },
   },
-  [GET_API.UPDATE_TOMOGRAM_REVIEW]: {
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const MOCKED_POST_APIS: Partial<Record<API, any>> = {
+  [POST_API.CREATE_REVIEW]: {
+    reviewId: "rev_abcdef123456",
+    sessionId: "24nov10",
+    runId: "run001",
+    reconstructionType: "Denoised",
+    reviewName: "Tomogram Quality - 24nov10 - run001 - denoised",
+    totalCount: 100,
+    status: "not_started",
+    createdAt: "2025-04-22T15:20:00Z",
+  },
+  [POST_API.UPDATE_TOMOGRAM_REVIEW]: {
     ok: true,
   },
 };

@@ -6,12 +6,12 @@ import {
 } from "@app/common/types/tableState";
 import { SearchParam } from "@app/common/types/search";
 import { useFetchData } from "@hooks/useFetchData/useFetchData";
-import { GET_API } from "@app/common/constants/api";
+import { API } from "@app/common/constants/api";
 
 // TODO: May be able to move hook into EntityTable component if it's the only component using this
 
 export const useFetchTableData = (
-  dataEndpoint: GET_API,
+  dataEndpoint: API,
   searchParam: SearchParam,
 ): EntityList => {
   const { data } = useFetchData<ApiListResponse<EntityDataTypes>>(

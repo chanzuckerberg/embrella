@@ -12,7 +12,7 @@ import { FilterConfig } from "@app/common/types/filter";
 import { UseFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/types";
 import { useFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/useFilterList";
 import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
-import { GET_API } from "@app/common/constants/api";
+import { API } from "@app/common/constants/api";
 import { SEARCH_PARAM_NAME } from "@app/common/types/search";
 import { getFilterSearchParamValues } from "@app/common/utils/searchParam";
 import {
@@ -34,7 +34,7 @@ export const useConnect = <
   FilterCategory extends EntityFilterCategories,
 >(
   entityFilterConfigs: EntityFilterConfigs[][],
-  entityFilterListApi: GET_API,
+  entityFilterListApi: API,
 ): EntityTableFilterConnect<FilterId, FilterCategory> => {
   const dispatch = useContext(TableDispatchContext);
 

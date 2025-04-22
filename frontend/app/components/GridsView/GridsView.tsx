@@ -8,7 +8,7 @@ import { Sidebar } from "@app/common/components/Sidebar/Sidebar";
 import { GRID_COLUMN_DEFS, GRID_COLUMN_IDS } from "./constants/columns";
 import { SortingState } from "@tanstack/react-table";
 import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
-import { GET_API } from "@app/common/constants/api";
+import { API } from "@app/common/constants/api";
 import { GridFilterId, GridFilterCategory } from "./types";
 import { GRID_FILTER_CONFIGS } from "./constants/filters";
 import { EntityTableFilters } from "@app/common/components/EntityTableFilters/EntityTableFilters";
@@ -24,12 +24,12 @@ export const GridsView = (): React.JSX.Element => {
         <Sidebar>
           <EntityTableFilters<GridFilterId, GridFilterCategory>
             entityFilterConfigs={GRID_FILTER_CONFIGS}
-            entityFilterListApi={GET_API.GRIDS_FILTERS_LIST}
+            entityFilterListApi={API.GRIDS_FILTERS_LIST}
           />
         </Sidebar>
         <TableWrapper>
           <EntityTable
-            entityApi={GET_API.GRIDS}
+            entityApi={API.GRIDS}
             entityApiResponseField="grid"
             columnDefs={GRID_COLUMN_DEFS}
           />

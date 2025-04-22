@@ -22,7 +22,7 @@ import { Pagination, SortBy } from "@app/common/types/tableState";
 import { AccessorReturnType } from "./types";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import { ApiPrimaryEntityAttribute } from "./types";
-import { GET_API } from "@app/common/constants/api";
+import { API } from "@app/common/constants/api";
 import { useFetchTableData } from "@app/common/hooks/useFetchTableData/useFetchTableData";
 import { SEARCH_PARAM_NAME } from "@app/common/types/search";
 import {
@@ -76,7 +76,7 @@ const getSortingStateForPayload = (sortBy: SortBy): SortingState =>
   !sortBy ? [] : [{ id: sortBy.sort, desc: !sortBy.asc }];
 
 export const useConnect = (
-  entityApi: GET_API,
+  entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
   columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[],
 ) => {

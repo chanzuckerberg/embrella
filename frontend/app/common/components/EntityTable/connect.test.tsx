@@ -3,7 +3,7 @@ import {
   TableDispatchContext,
   TableStateContext,
 } from "@app/common/components/TableStateProvider/TableStateProvider";
-import { GET_API } from "@app/common/constants/api";
+import { API } from "@app/common/constants/api";
 import { EntityAPIPrimaryAttributeToDataType } from "@app/common/types/entity";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import { AnnotationData } from "@app/components/AnnotationsView/types";
@@ -73,7 +73,7 @@ describe("useConnect", () => {
 
   it("should set up table options correctly", () => {
     const { result } = renderHook(
-      () => useConnect(GET_API.TOMOGRAMS, "tomograms", []),
+      () => useConnect(API.TOMOGRAMS, "tomograms", []),
       { wrapper },
     );
 
@@ -82,7 +82,7 @@ describe("useConnect", () => {
 
   it("should dispatch UpdatePagination action on pagination change", () => {
     const { result } = renderHook(
-      () => useConnect(GET_API.TOMOGRAMS, "tomograms", []),
+      () => useConnect(API.TOMOGRAMS, "tomograms", []),
       { wrapper },
     );
 
@@ -101,7 +101,7 @@ describe("useConnect", () => {
 
   it("should dispatch UpdateSort action on sorting change", () => {
     const { result } = renderHook(
-      () => useConnect(GET_API.TOMOGRAMS, "tomograms", []),
+      () => useConnect(API.TOMOGRAMS, "tomograms", []),
       { wrapper },
     );
 

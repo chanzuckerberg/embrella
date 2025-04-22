@@ -12,7 +12,7 @@ import styled from "@emotion/styled";
 import { TableBody } from "@mui/material";
 import { ColumnDef, flexRender } from "@tanstack/react-table";
 
-import { GET_API } from "@app/common/constants/api";
+import { API } from "@app/common/constants/api";
 import { TEST_IDS } from "@app/common/constants/testIds";
 import { EntityDataTypes } from "@app/common/types/tableState";
 
@@ -25,7 +25,7 @@ import {
 } from "./utils/cellHeader";
 
 interface EntityTableProps {
-  entityApi: GET_API;
+  entityApi: API;
   entityApiResponseField: ApiPrimaryEntityAttribute;
   columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[];
 }
