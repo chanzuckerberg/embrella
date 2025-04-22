@@ -9,25 +9,25 @@ export enum API {
   METADATA_VIZ = "/metadata/api/v1/data",
 
   // Mocked out:
-  GET_REVIEWS = "/api/reviews",
-  GET_SESSIONS = "/api/sessions",
-  GET_SESSION = "/api/sessions/:sessionId",
-  GET_REVIEW = "/api/reviews/:reviewId",
-  SAVE_REVIEW = "/api/reviews/:reviewId/save",
-  COMPLETE_REVIEW = "/api/reviews/:reviewId/complete",
-  EXPORT_REVIEW = "/api/reviews/:reviewId/export",
-  GET_REVIEW_TOMOGRAMS = "/api/reviews/:reviewId/tomograms",
-  GET_REVIEW_TOMOGRAM = "/api/reviews/:reviewId/tomograms/:tomogramId",
+  REVIEWS = "/api/reviews",
+  TEM_SESSIONS = "/api/sessions",
+  TEM_SESSION = "/api/sessions/:sessionId",
+  REVIEW = "/api/reviews/:reviewId",
+  REVIEW_EXPORT = "/api/reviews/:reviewId/export",
+  REVIEW_TOMOGRAMS = "/api/reviews/:reviewId/tomograms",
+  REVIEW_TOMOGRAM = "/api/reviews/:reviewId/tomograms/:tomogramId",
 }
 
 export enum POST_API {
   CREATE_REVIEW = "/api/reviews",
+  SAVE_REVIEW = "/api/reviews/:reviewId/save",
+  COMPLETE_REVIEW = "/api/reviews/:reviewId/complete",
   UPDATE_TOMOGRAM_REVIEW = "/api/reviews/:reviewId/tomograms/:tomogramId",
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MOCKED_APIS: Partial<Record<API, any>> = {
-  [API.GET_REVIEWS]: [
+  [API.REVIEWS]: [
     {
       reviewId: "rev_abcdef123456",
       reviewName: "Tomogram Quality - 24nov10 - run001 - denoised",
@@ -74,7 +74,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       },
     },
   ],
-  [API.GET_SESSIONS]: [
+  [API.TEM_SESSIONS]: [
     {
       sessionId: "24oct30",
       sessionName: "Grid5_2025-04-08",
@@ -117,7 +117,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       ],
     },
   ],
-  [API.GET_SESSION]: {
+  [API.TEM_SESSION]: {
     sessionId: "24nov10",
     sessionName: "Grid6_2025-04-22",
     createdAt: "2025-04-22T09:10:00Z",
@@ -135,7 +135,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       },
     ],
   },
-  [API.GET_REVIEW]: {
+  [API.REVIEW]: {
     reviewId: "rev_abcdef123456",
     reviewName: "Tomogram Quality - 24nov10 - run001 - denoised",
     owner: {
@@ -150,25 +150,13 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       // Additional tomograms would be listed here...
     ],
   },
-  [API.SAVE_REVIEW]: {
-    ok: true,
-    savedAt: "2025-04-22T16:42:10Z",
-    savePath: "/mnt/data/reviews/rev_abcdef123456/review.json",
-    reviewedCount: 75,
-    totalCount: 100,
-  },
-  [API.COMPLETE_REVIEW]: {
-    ok: true,
-    finishedAt: "2025-04-22T17:30:15Z",
-    savePath: "/mnt/data/reviews/rev_abcdef123456/review.json",
-  },
-  [API.EXPORT_REVIEW]: {
+  [API.REVIEW_EXPORT]: {
     // This would typically return a file download
     // Mock just indicates success
     ok: true,
     exportPath: "/mnt/data/reviews/rev_abcdef123456/review_export.json",
   },
-  [API.GET_REVIEW_TOMOGRAMS]: [
+  [API.REVIEW_TOMOGRAMS]: [
     { tomogramId: "tomo_001", status: "accepted" },
     { tomogramId: "tomo_002", status: "rejected" },
     { tomogramId: "tomo_003", status: "uncertain" },
@@ -176,7 +164,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     { tomogramId: "tomo_005", status: "pending" },
     // Additional tomograms would be listed here...
   ],
-  [API.GET_REVIEW_TOMOGRAM]: {
+  [API.REVIEW_TOMOGRAM]: {
     tomogramId: "tomo_002",
     displayName: "Grid6_Tomo002",
     zarrPath:
@@ -189,7 +177,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const MOCKED_POST_APIS: Partial<Record<API, any>> = {
+export const MOCKED_POST_APIS: Partial<Record<POST_API, any>> = {
   [POST_API.CREATE_REVIEW]: {
     reviewId: "rev_abcdef123456",
     sessionId: "24nov10",
@@ -199,6 +187,18 @@ export const MOCKED_POST_APIS: Partial<Record<API, any>> = {
     totalCount: 100,
     status: "not_started",
     createdAt: "2025-04-22T15:20:00Z",
+  },
+  [POST_API.SAVE_REVIEW]: {
+    ok: true,
+    savedAt: "2025-04-22T16:42:10Z",
+    savePath: "/mnt/data/reviews/rev_abcdef123456/review.json",
+    reviewedCount: 75,
+    totalCount: 100,
+  },
+  [POST_API.COMPLETE_REVIEW]: {
+    ok: true,
+    finishedAt: "2025-04-22T17:30:15Z",
+    savePath: "/mnt/data/reviews/rev_abcdef123456/review.json",
   },
   [POST_API.UPDATE_TOMOGRAM_REVIEW]: {
     ok: true,

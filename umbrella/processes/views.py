@@ -186,7 +186,6 @@ def get_all_image_paths(request):
 
 @require_http_methods(["GET"])
 def available_filters(request):
-    print("asdf")
     try:
         # Validate that only the 'q' parameter is present in the request
         if 'q' not in request.GET or len(request.GET) > 1:
