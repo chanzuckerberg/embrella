@@ -111,7 +111,7 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
                               hideSortIcon={!col.enableSorting}
                               onClick={col.enableSorting ? () => {} : undefined}
                             >
-                              {flexRender(col.header, {})}
+                              {typeof col.header === 'function' ? 'Column' : col.header}
                             </CellHeader>
                           ))}
                       </TableHeader>
@@ -120,9 +120,9 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
                           <TableRow key={i}>
                             {METADATA_COLUMN_DEFS.map((col) => (
                               <CellComponent key={col.id}>
-                                  {col.cell ? 
-                                    col.cell({ getValue: () => row[col.accessorKey as keyof typeof row] }) :
-                                    row[col.accessorKey as keyof typeof row]
+                                  {typeof col.cell === 'function' ? 
+                                    'Data' : 
+                                    row[col.id as keyof typeof row]
                                   }
                               </CellComponent>
                             ))}
