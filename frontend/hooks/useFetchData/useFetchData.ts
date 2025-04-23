@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getRequestURL } from "@app/common/queries/utils";
 import { fetchResource } from "@app/common/queries/fetchResource";
+import { API, MOCKED_APIS } from "@app/common/constants/api";
 
 interface UseFetchData<D> {
   data?: D;
@@ -9,7 +10,7 @@ interface UseFetchData<D> {
 
 export const useFetchData = <D>(
   baseURL: string,
-  relativeURL: string,
+  relativeURL: API,
   searchParam: Record<string, unknown> = {},
   shouldFetch = true,
 ): UseFetchData<D> => {
@@ -23,6 +24,14 @@ export const useFetchData = <D>(
 
   useEffect(() => {
     if (!shouldFetch) return;
+    const mockResponse = MOCKED_APIS[relativeURL];
+    if (mockResponse !== undefined) {
+      setDataState({
+        data: mockResponse,
+        isSuccess: true,
+      });
+      return;
+    }
     (async (): Promise<D> => {
       setDataState((d) => ({
         ...d,
@@ -43,7 +52,7 @@ export const useFetchData = <D>(
       .catch((err) => {
         console.error(err);
       });
-  }, [requestURL, shouldFetch]);
+  }, [requestURL, shouldFetch, relativeURL]);
 
   return dataState;
 };

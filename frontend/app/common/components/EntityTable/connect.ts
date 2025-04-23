@@ -19,7 +19,6 @@ import {
   UpdateSortAction,
 } from "@app/common/components/TableStateProvider/TableStateProvider";
 import { Pagination, SortBy } from "@app/common/types/tableState";
-import { AccessorReturnType } from "./types";
 import { EntityDataTypes } from "@app/common/types/tableState";
 import { ApiPrimaryEntityAttribute } from "./types";
 import { API } from "@app/common/constants/api";
@@ -44,17 +43,17 @@ export const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   // Example of data access: row.tomograms.id
   const typedRow = row as EntityAPIPrimaryAttributeToDataType[K];
   const typedEntityAttribute =
-    entityApiResponseField as keyof EntityAPIPrimaryAttributeToDataType[K];
+    entityApiResponseField as unknown as keyof EntityAPIPrimaryAttributeToDataType[K];
   const entity = typedRow[typedEntityAttribute] as EntityLinkField;
 
   return entity.id.toString();
 };
 
-const getDefaultTableOptions = (
+const getDefaultTableOptions = <T extends EntityDataTypes>(
   entityApiResponseField: ApiPrimaryEntityAttribute,
-): Omit<TableOptions<EntityDataTypes>, "data" | "columns"> => ({
+): Omit<TableOptions<T>, "data" | "columns"> => ({
   getCoreRowModel: getCoreRowModel(),
-  getRowId: (row: EntityDataTypes) => getRowId(row, entityApiResponseField),
+  getRowId: (row: T) => getRowId(row, entityApiResponseField),
   enableMultiSort: false,
   enableSorting: true,
   enableSortingRemoval: false,
@@ -75,15 +74,16 @@ const getPaginationStateForPayload = (
 const getSortingStateForPayload = (sortBy: SortBy): SortingState =>
   !sortBy ? [] : [{ id: sortBy.sort, desc: !sortBy.asc }];
 
-export const useConnect = (
+export const useConnect = <T extends EntityDataTypes>(
   entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
-  columnDefs: ColumnDef<EntityDataTypes, AccessorReturnType>[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- This is the Tanstack Table type
+  columnDefs: ColumnDef<T, any>[],
 ) => {
   const state = useContext<TableState>(TableStateContext);
   const dispatch = useContext(TableDispatchContext);
 
-  const entityList = useFetchTableData(entityApi, {
+  const entityList = useFetchTableData<T>(entityApi, {
     [SEARCH_PARAM_NAME.QUERY]: [
       ...getFilterSearchParamValues(state),
       ...getPaginationSearchParamValues(state),
@@ -134,7 +134,7 @@ export const useConnect = (
     [dispatch, entitySortBy],
   );
 
-  const table = useReactTable<EntityDataTypes>({
+  const table = useReactTable<T>({
     ...getDefaultTableOptions(entityApiResponseField),
     columns: columnDefs,
     data: entityList?.entities || [],

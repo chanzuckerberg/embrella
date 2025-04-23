@@ -1,15 +1,20 @@
 import { AnnotationData } from "@app/components/AnnotationsView/types";
 import { GridData } from "@app/components/GridsView/types";
+import { ReviewData } from "@app/components/ReviewsView/types";
 import { TomogramData } from "@app/components/TomogramsView/types";
 
-export type EntityDataTypes = AnnotationData | GridData | TomogramData;
+export type EntityDataTypes =
+  | AnnotationData
+  | GridData
+  | TomogramData
+  | ReviewData;
 
 /*
  * Type for a formatted API response
  * Usage: EntityList<TomogramData, "tomograms">
  */
-export type EntityList = {
-  entities: EntityDataTypes[];
+export type EntityList<T extends EntityDataTypes> = {
+  entities: T[];
   pagination: Pagination;
   sortBy: SortBy;
 };

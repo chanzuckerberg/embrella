@@ -1,11 +1,13 @@
 import { AnnotationData } from "@app/components/AnnotationsView/types";
 import { GridData } from "@app/components/GridsView/types";
+import { ReviewData } from "@app/components/ReviewsView/types";
 import { TomogramData } from "@app/components/TomogramsView/types";
 
 export type EntityAPIPrimaryAttributeToDataType = {
   annotations: AnnotationData;
   tomograms: TomogramData;
   grid: GridData;
+  review: ReviewData;
 };
 
 export interface EntityLinkField {
