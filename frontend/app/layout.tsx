@@ -4,7 +4,8 @@ import { Inter } from "next/font/google";
 import "@app/globals.css";
 import { ThemeProvider } from "@mui/material/styles";
 import { theme } from "@app/common/theme";
-import { TopNavigation } from "./components/TopNavigation/TopNavigation";
+// import { TopNavigation } from "./components/TopNavigation/TopNavigation";
+import { NavbarWrapper } from "@app/common/components/NavBarWrapper";
 import { cookies } from "next/headers";
 import { FeatureFlagsProvider } from "./common/context/FeatureFlagsProvider";
 import { COOKIE_NAME } from "./common/types/cookies";
@@ -32,7 +33,7 @@ export default function RootLayout({
         <AppRouterCacheProvider options={CACHE_PROVIDER_OPTIONS}>
           <ThemeProvider theme={theme}>
             <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
-              <TopNavigation />
+              <NavbarWrapper />
               {children}
             </FeatureFlagsProvider>
           </ThemeProvider>

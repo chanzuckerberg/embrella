@@ -39,6 +39,7 @@ export const EntityTable = <T extends EntityDataTypes>({
   entityApiResponseField,
   columnDefs,
 }: EntityTableProps<T>): React.JSX.Element => {
+  console.log("entityApi", entityApi);
   const { table } = useConnect<T>(
     entityApi,
     entityApiResponseField,
