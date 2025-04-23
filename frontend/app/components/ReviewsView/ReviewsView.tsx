@@ -1,3 +1,5 @@
+"use client";
+
 import { EntityTable } from "@app/common/components/EntityTable/EntityTable";
 import { TableWrapper } from "@app/common/components/TableWrapper/TableWrapper";
 import { API } from "@app/common/constants/api";

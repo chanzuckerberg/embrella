@@ -2,6 +2,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ReviewData } from "../types";
 import Link from "next/link";
 import { Button } from "@czi-sds/components";
+import { AccessorReturnType } from "@app/common/components/EntityTable/types";
 
 export const REVIEW_COLUMN_IDS = {
   REVIEW_NAME: "reviewName",
@@ -13,7 +14,7 @@ export const REVIEW_COLUMN_IDS = {
   GO_TO_REVIEW: "goToReview",
 };
 
-export const REVIEW_COLUMN_DEFS: ColumnDef<ReviewData>[] = [
+export const REVIEW_COLUMN_DEFS: ColumnDef<ReviewData, AccessorReturnType>[] = [
   {
     id: REVIEW_COLUMN_IDS.REVIEW_NAME,
     header: "Review Name",

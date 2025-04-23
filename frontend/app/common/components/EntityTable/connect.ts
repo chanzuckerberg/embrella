@@ -49,11 +49,11 @@ export const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   return entity.id.toString();
 };
 
-const getDefaultTableOptions = (
+const getDefaultTableOptions = <T extends EntityDataTypes>(
   entityApiResponseField: ApiPrimaryEntityAttribute,
-): Omit<TableOptions<EntityDataTypes>, "data" | "columns"> => ({
+): Omit<TableOptions<T>, "data" | "columns"> => ({
   getCoreRowModel: getCoreRowModel(),
-  getRowId: (row: EntityDataTypes) => getRowId(row, entityApiResponseField),
+  getRowId: (row: T) => getRowId(row, entityApiResponseField),
   enableMultiSort: false,
   enableSorting: true,
   enableSortingRemoval: false,
@@ -74,15 +74,16 @@ const getPaginationStateForPayload = (
 const getSortingStateForPayload = (sortBy: SortBy): SortingState =>
   !sortBy ? [] : [{ id: sortBy.sort, desc: !sortBy.asc }];
 
-export const useConnect = (
+export const useConnect = <T extends EntityDataTypes>(
   entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
-  columnDefs: ColumnDef<EntityDataTypes>[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  columnDefs: ColumnDef<T, any>[],
 ) => {
   const state = useContext<TableState>(TableStateContext);
   const dispatch = useContext(TableDispatchContext);
 
-  const entityList = useFetchTableData(entityApi, {
+  const entityList = useFetchTableData<T>(entityApi, {
     [SEARCH_PARAM_NAME.QUERY]: [
       ...getFilterSearchParamValues(state),
       ...getPaginationSearchParamValues(state),
@@ -133,7 +134,7 @@ export const useConnect = (
     [dispatch, entitySortBy],
   );
 
-  const table = useReactTable<EntityDataTypes>({
+  const table = useReactTable<T>({
     ...getDefaultTableOptions(entityApiResponseField),
     columns: columnDefs,
     data: entityList?.entities || [],

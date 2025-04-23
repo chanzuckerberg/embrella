@@ -10,10 +10,10 @@ import { API } from "@app/common/constants/api";
 
 // TODO: May be able to move hook into EntityTable component if it's the only component using this
 
-export const useFetchTableData = (
+export const useFetchTableData = <T extends EntityDataTypes>(
   dataEndpoint: API,
   searchParam: SearchParam,
-): EntityList => {
+): EntityList<T> => {
   const { data } = useFetchData<ApiListResponse<EntityDataTypes>>(
     configs.API_URL,
     dataEndpoint,
@@ -24,5 +24,5 @@ export const useFetchTableData = (
     entities: data?.result,
     pagination: data?.pagination,
     sortBy: data?.sortBy,
-  } as EntityList;
+  } as EntityList<T>;
 };

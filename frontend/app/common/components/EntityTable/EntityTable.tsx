@@ -17,30 +17,33 @@ import { TEST_IDS } from "@app/common/constants/testIds";
 import { EntityDataTypes } from "@app/common/types/tableState";
 
 import { useConnect } from "./connect";
-import { ApiPrimaryEntityAttribute } from "./types";
+import { AccessorReturnType, ApiPrimaryEntityAttribute } from "./types";
 import {
   getCellHeaderActive,
   getCellHeaderDirection,
   getCellHeaderHideSortIcon,
 } from "./utils/cellHeader";
-import { ReviewData } from "@app/components/ReviewsView/types";
 
-interface EntityTableProps {
+interface EntityTableProps<T> {
   entityApi: API;
   entityApiResponseField: ApiPrimaryEntityAttribute;
-  columnDefs: ColumnDef<EntityDataTypes>[];
+  columnDefs: ColumnDef<T, AccessorReturnType>[];
 }
 
 export const StyledPagination = styled(Pagination)`
   margin-top: 16px;
 `;
 
-export const EntityTable = ({
+export const EntityTable = <T extends EntityDataTypes>({
   entityApi,
   entityApiResponseField,
   columnDefs,
-}: EntityTableProps): React.JSX.Element => {
-  const { table } = useConnect(entityApi, entityApiResponseField, columnDefs);
+}: EntityTableProps<T>): React.JSX.Element => {
+  const { table } = useConnect<T>(
+    entityApi,
+    entityApiResponseField,
+    columnDefs,
+  );
 
   const { getRowCount, getState, nextPage, previousPage, setPageIndex } = table;
   const {

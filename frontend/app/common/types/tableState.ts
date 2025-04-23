@@ -13,8 +13,8 @@ export type EntityDataTypes =
  * Type for a formatted API response
  * Usage: EntityList<TomogramData, "tomograms">
  */
-export type EntityList = {
-  entities: EntityDataTypes[];
+export type EntityList<T extends EntityDataTypes> = {
+  entities: T[];
   pagination: Pagination;
   sortBy: SortBy;
 };
