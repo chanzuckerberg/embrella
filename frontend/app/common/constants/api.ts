@@ -27,97 +27,109 @@ export enum POST_API {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MOCKED_APIS: Partial<Record<API, any>> = {
-  [API.REVIEWS]: [
-    {
-      review: {
-        id: 123456,
-        name: "Tomogram Quality - 24nov10 - run001 - denoised",
-        url: "/api/reviews/rev_abcdef123456",
-        type: "tomogram_quality",
+  [API.REVIEWS]: {
+    result: [
+      {
+        review: {
+          id: 123456,
+          name: "Tomogram Quality - 24nov10 - run001 - denoised",
+          url: "/api/reviews/rev_abcdef123456",
+          type: "tomogram_quality",
+        },
+        session: {
+          id: 24110,
+          name: "Grid6_2025-04-22",
+          url: "/api/sessions/24nov10",
+        },
+        updatedAt: "2025-04-22T15:20:00Z",
+        status: "in_progress",
+        reviewer: {
+          id: 101,
+          name: "Yue Yu",
+          url: "/api/users/101",
+        },
       },
-      session: {
-        id: 24110,
-        name: "Grid6_2025-04-22",
-        url: "/api/sessions/24nov10",
+      {
+        review: {
+          id: 456789,
+          name: "Tomogram Quality - 24oct30 - run001 - DCTF",
+          url: "/api/reviews/rev_456789abcdef",
+          type: "tomogram_quality",
+        },
+        session: {
+          id: 24030,
+          name: "Grid5_2025-04-08",
+          url: "/api/sessions/24oct30",
+        },
+        runId: "run001",
+        updatedAt: "2025-04-18T10:15:00Z",
+        status: "complete",
+        reviewedCount: 84,
+        totalCount: 84,
+        reviewer: {
+          id: 102,
+          name: "Bryan Chu",
+          url: "/api/users/102",
+        },
       },
-      updatedAt: "2025-04-22T15:20:00Z",
-      status: "in_progress",
-      reviewer: {
-        id: 101,
-        name: "Yue Yu",
-        url: "/api/users/101",
+      {
+        review: {
+          id: 654321,
+          name: "Tomogram Quality - Grid4_TestRun - run002 - Denoised",
+          url: "/api/reviews/rev_fedcba654321",
+          type: "tomogram_quality",
+        },
+        session: {
+          id: 4321,
+          name: "Grid4_TestRun",
+          url: "/api/sessions/session_4321",
+        },
+        runId: "run002",
+        updatedAt: "2025-04-15T14:30:00Z",
+        status: "not_started",
+        reviewedCount: 0,
+        totalCount: 20,
+        reviewer: {
+          id: 103,
+          name: "John Doe",
+          url: "/api/users/103",
+        },
       },
+      {
+        review: {
+          id: 789012,
+          name: "Segmentation Labeling - 24nov10 - run001",
+          url: "/api/reviews/rev_789012ghijkl",
+          type: "segmentation_labeling",
+        },
+        session: {
+          id: 24110,
+          name: "Grid6_2025-04-22",
+          url: "/api/sessions/24nov10",
+        },
+        runId: "run001",
+        updatedAt: "2025-04-21T11:45:00Z",
+        status: "in_progress",
+        reviewedCount: 30,
+        totalCount: 100,
+        reviewer: {
+          id: 101,
+          name: "Yue Yu",
+          url: "/api/users/101",
+        },
+      },
+    ],
+    pagination: {
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+      totalResults: 4,
     },
-    {
-      review: {
-        id: 456789,
-        name: "Tomogram Quality - 24oct30 - run001 - DCTF",
-        url: "/api/reviews/rev_456789abcdef",
-        type: "tomogram_quality",
-      },
-      session: {
-        id: 24030,
-        name: "Grid5_2025-04-08",
-        url: "/api/sessions/24oct30",
-      },
-      runId: "run001",
-      updatedAt: "2025-04-18T10:15:00Z",
-      status: "complete",
-      reviewedCount: 84,
-      totalCount: 84,
-      reviewer: {
-        id: 102,
-        name: "Bryan Chu",
-        url: "/api/users/102",
-      },
+    sortBy: {
+      sort: "updatedAt",
+      asc: false,
     },
-    {
-      review: {
-        id: 654321,
-        name: "Tomogram Quality - Grid4_TestRun - run002 - Denoised",
-        url: "/api/reviews/rev_fedcba654321",
-        type: "tomogram_quality",
-      },
-      session: {
-        id: 4321,
-        name: "Grid4_TestRun",
-        url: "/api/sessions/session_4321",
-      },
-      runId: "run002",
-      updatedAt: "2025-04-15T14:30:00Z",
-      status: "not_started",
-      reviewedCount: 0,
-      totalCount: 20,
-      reviewer: {
-        id: 103,
-        name: "John Doe",
-        url: "/api/users/103",
-      },
-    },
-    {
-      review: {
-        id: 789012,
-        name: "Segmentation Labeling - 24nov10 - run001",
-        url: "/api/reviews/rev_789012ghijkl",
-        type: "segmentation_labeling",
-      },
-      session: {
-        id: 24110,
-        name: "Grid6_2025-04-22",
-        url: "/api/sessions/24nov10",
-      },
-      runId: "run001",
-      updatedAt: "2025-04-21T11:45:00Z",
-      status: "in_progress",
-      reviewedCount: 30,
-      totalCount: 100,
-      reviewer: {
-        id: 101,
-        name: "Yue Yu",
-        url: "/api/users/101",
-      },
-    },
-  ],
+  },
   [API.TEM_SESSIONS]: [
     {
       sessionId: "24oct30",

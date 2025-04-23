@@ -24,19 +24,10 @@ export const useFetchData = <D>(
 
   useEffect(() => {
     if (!shouldFetch) return;
-    if (MOCKED_APIS[relativeURL] !== undefined) {
+    const mockResponse = MOCKED_APIS[relativeURL];
+    if (mockResponse !== undefined) {
       setDataState({
-        data: {
-          result: MOCKED_APIS[relativeURL],
-          pagination: Array.isArray(MOCKED_APIS[relativeURL])
-            ? {
-                page: 1,
-                pageSize: 10,
-                totalPages: 1,
-                totalResults: MOCKED_APIS[relativeURL].length,
-              }
-            : undefined,
-        } as D,
+        data: mockResponse,
         isSuccess: true,
       });
       return;
