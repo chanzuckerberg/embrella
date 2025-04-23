@@ -27,7 +27,10 @@ export const useFetchData = <D>(
     const mockResponse = MOCKED_APIS[relativeURL];
     if (mockResponse !== undefined) {
       setDataState({
-        data: mockResponse,
+        data:
+          typeof mockResponse === "function"
+            ? mockResponse(requestURL)
+            : mockResponse,
         isSuccess: true,
       });
       return;

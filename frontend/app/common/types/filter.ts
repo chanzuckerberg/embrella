@@ -13,6 +13,7 @@ import {
   GridFilterConfig,
   GridFilterId,
 } from "@app/components/GridsView/types";
+import { ReviewFilterCategory } from "@app/components/ReviewsView/types";
 // EntityFilterCategory extends EntityFilterCategories
 export interface FiltersList<FilterCategory extends EntityFilterCategories> {
   filters: Record<FilterCategory, FilterOption[]>;
@@ -36,7 +37,8 @@ export type EntityFilterIdTypes =
 export type EntityFilterCategories =
   | AnnotationFilterCategory
   | GridFilterCategory
-  | TomogramFilterCategory;
+  | TomogramFilterCategory
+  | ReviewFilterCategory;
 
 export type EntityFilterConfigs =
   | AnnotationFilterConfig

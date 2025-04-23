@@ -11,3 +11,5 @@ export interface ReviewData {
   status: string;
   reviewer: EntityLinkField;
 }
+
+export type ReviewFilterCategory = "search";
