@@ -18,8 +18,6 @@ export const useFetchData = <D>(
   const [dataState, setDataState] = useState<UseFetchData<D>>({
     isSuccess: false,
   });
-  console.log("relativeURL", relativeURL);
-  console.log("baseURL", baseURL);
   const requestURL = useMemo(
     () => getRequestURL(baseURL, relativeURL, searchParam),
     [baseURL, relativeURL, searchParam],
