@@ -77,7 +77,7 @@ const getSortingStateForPayload = (sortBy: SortBy): SortingState =>
 export const useConnect = <T extends EntityDataTypes>(
   entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- This is the Tanstack Table type
   columnDefs: ColumnDef<T, any>[],
 ) => {
   const state = useContext<TableState>(TableStateContext);
