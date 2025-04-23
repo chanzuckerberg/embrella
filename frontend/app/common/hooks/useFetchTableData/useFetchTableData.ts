@@ -14,7 +14,6 @@ export const useFetchTableData = <T extends EntityDataTypes>(
   dataEndpoint: API,
   searchParam: SearchParam,
 ): EntityList<T> => {
-  console.log("dataEndpoint", dataEndpoint);
   const { data } = useFetchData<ApiListResponse<EntityDataTypes>>(
     configs.API_URL,
     dataEndpoint,
