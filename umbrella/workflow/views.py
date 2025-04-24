@@ -1084,6 +1084,28 @@ def apply_filters(df, filters):
     
     return filtered_df
 
+def natural_position_sort_key(name):
+    """
+    Custom sort key function for position names.
+    Handles names like Position_1, Position_1_1, Position_1_2, etc.
+    """
+    # Remove 'Position_' prefix and split by underscore
+    parts = name.replace('Position_', '').split('_')
+    
+    # Convert each part to integer, defaulting to 0 if conversion fails
+    numbers = []
+    for part in parts:
+        try:
+            numbers.append(int(part))
+        except ValueError:
+            numbers.append(0)
+    
+    # Pad with zeros to ensure consistent sorting (for cases with different depths)
+    while len(numbers) < 3:  # Support up to Position_X_Y_Z
+        numbers.append(0)
+        
+    return numbers
+
 @require_http_methods(["GET"])
 def get_metadata_viz_data(request):
     try:
@@ -1177,8 +1199,11 @@ def get_metadata_viz_data(request):
 
             df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
 
-            # Use natural sort with optimized key function
-            df = df.sort_values(by="Tilt_Series", key=lambda col: pd.Index([int(''.join(c for c in str(x) if c.isdigit()) or 0) for x in col])).reset_index(drop=True)
+            # Use the new custom sorting function
+            df = df.sort_values(
+                by="Tilt_Series",
+                key=lambda col: col.map(natural_position_sort_key)
+            ).reset_index(drop=True)
             fetch_time = time.time() - fetch_start
         
             # Calculate metric ranges before applying filters
