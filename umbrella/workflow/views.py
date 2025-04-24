@@ -1017,3 +1017,231 @@ def get_metadata_summary(request):
     except Exception as e:
         logger.error(f"Error processing metadata: {str(e)}")
         return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
+
+
+"""
+Metadata Vizdata
+"""
+
+# Helper functions to calculate(min and max) metric ranges
+def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
+    column_mapping = {
+        'Thickness(Pix)': 'thickness_pix',
+        'Tilt_Axis': 'tilt_axis',
+        'Global_Shift(Pix)': 'global_shift_pix',
+        'Bad_Patch_Low': 'bad_patch_low',
+        'Bad_Patch_All': 'bad_patch_all',
+        'CTF_Res(A)': 'ctf_resolution_a',
+        'CTF_Score': 'ctf_score',
+        'DF_Hand': 'df_hand',
+        'Pix_Size(A)': 'pixel_size_a',
+        'Cs(nm)': 'cs_nm',
+        'Kv': 'kv',
+        'Alpha0': 'alpha0',
+        'Beta0': 'beta0'
+    }
+    
+    ranges = {}
+    for csv_column, metric_name in column_mapping.items():
+        if csv_column in df.columns:
+            ranges[metric_name] = [float(df[csv_column].min()), float(df[csv_column].max())]
+    
+    return ranges
+
+# Helper function to apply filters
+def apply_filters(df, filters):
+    filtered_df = df.copy()
+    
+    for field, range_values in filters.items():
+        if len(range_values) != 2:
+            continue
+            
+        min_val, max_val = range_values
+        
+        # Map the filter field names to CSV column names
+        column_mapping = {
+            'thickness_pix': 'Thickness(Pix)',
+            'tilt_axis': 'Tilt_Axis',
+            'global_shift_pix': 'Global_Shift(Pix)',
+            'bad_patch_low': 'Bad_Patch_Low',
+            'bad_patch_all': 'Bad_Patch_All',
+            'ctf_resolution_a': 'CTF_Res(A)',
+            'ctf_score': 'CTF_Score',
+            'df_hand': 'DF_Hand',
+            'pixel_size_a': 'Pix_Size(A)',
+            'cs_nm': 'Cs(nm)',
+            'kv': 'Kv',
+            'alpha0': 'Alpha0',
+            'beta0': 'Beta0'
+        }
+        
+        if field in column_mapping:
+            column_name = column_mapping[field]
+            filtered_df = filtered_df[
+                (filtered_df[column_name] >= min_val) & 
+                (filtered_df[column_name] <= max_val)
+            ]
+    
+    return filtered_df
+
+@require_http_methods(["GET"])
+def get_metadata_viz_data(request):
+    try:
+        # Get request parameters
+        session_name = request.GET.get("session_name")
+        run_number = request.GET.get("run_number")
+        q = request.GET.get("q",{})
+
+        # Pagination parameters
+        page = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("page_size", 15))
+        
+        if page < 1:
+            return JsonResponse({"error": "Page number must be greater than 0"}, status=400)
+        if page_size < 1:
+            return JsonResponse({"error": "Page size must be greater than 0"}, status=400)
+
+        if not session_name or not run_number:
+            return JsonResponse({"error": "Missing session_name or run_number"}, status=400)
+
+
+        # Parse filters if provided
+        filters = json.loads(q) if q else None
+
+        # Read the CSV file 
+        base_proc_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
+        metrics_path = os.path.join(base_proc_dir, "TiltSeries_Metrics.csv")
+        
+        # Create a persistent SSH connection with optimized parameters
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        # Add connection optimization parameters
+        ssh_config = {
+            'hostname': HOST,
+            'port': PORT,
+            'username': USERNAME,
+            'password': PASSWORD,
+            'timeout': 10,
+            'allow_agent': False,
+            'look_for_keys': False,
+            'compress': True,
+            'banner_timeout': 10
+        }
+        
+        ssh.connect(**ssh_config)
+       
+        # Create SFTP client with optimized buffer sizes
+        sftp = ssh.open_sftp()
+        sftp.get_channel().settimeout(10)
+        sftp.get_channel().set_combine_stderr(True)
+
+        try:
+            # Combine all file operations into a single batch
+            infra_start = time.time()
+            try:
+                # Use stat instead of listdir for faster checks
+                try:
+                    sftp.stat(metrics_path)
+                except FileNotFoundError:
+                    return JsonResponse({"error": "Required files not found"}, status=404)
+            except Exception as dir_err:
+                return JsonResponse({"error": f"Access error: {str(dir_err)}"}, status=404)
+            
+            infra_time = time.time() - infra_start
+
+            # Optimize file fetching with larger buffer size and parallel reading
+            fetch_start = time.time()
+            metrics_content = None
+            timestamp_content = None
+            
+            # Read files with larger buffer size
+            with sftp.open(metrics_path, 'r', bufsize=32768) as metrics_file:
+                metrics_content = metrics_file.read().decode('utf-8')
+            
+            # Process metrics immediately while timestamp is being read
+            df = pd.read_csv(StringIO(metrics_content))
+            print(f"Total positions in CSV before filtering: {len(df)}")
+
+            # Required column
+            required_columns = [
+                'Tilt_Series', 'Thickness(Pix)', 'Tilt_Axis', 'Global_Shift(Pix)',
+                'Bad_Patch_Low', 'Bad_Patch_All', 'CTF_Res(A)', 'CTF_Score',
+                'DF_Hand', 'Pix_Size(A)', 'Cs(nm)', 'Kv', 'Alpha0', 'Beta0', 'Tilt_Series'
+            ]
+
+            # for missing columns
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                raise ValueError(f"Missing required columns in CSV: {', '.join(missing_columns)}")
+
+            df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
+
+            # Use natural sort with optimized key function
+            df = df.sort_values(by="Tilt_Series", key=lambda col: pd.Index([int(''.join(c for c in str(x) if c.isdigit()) or 0) for x in col])).reset_index(drop=True)
+            fetch_time = time.time() - fetch_start
+        
+            # Calculate metric ranges before applying filters
+            metric_ranges = calculate_metric_ranges(df)
+        
+            # Apply filters if provided
+            if filters:
+                df = apply_filters(df, filters)
+        
+            # Prepare the result list
+            result = []
+            for _, row in df.iterrows():
+                metrics = {
+                    'thickness_pix': float(row['Thickness(Pix)']),
+                    'tilt_axis': float(row['Tilt_Axis']),
+                    'global_shift_pix': float(row['Global_Shift(Pix)']),
+                    'bad_patch_low': float(row['Bad_Patch_Low']),
+                    'bad_patch_all': float(row['Bad_Patch_All']),
+                    'ctf_resolution_a': float(row['CTF_Res(A)']),
+                    'ctf_score': float(row['CTF_Score']),
+                    'df_hand': float(row['DF_Hand']),
+                    'pixel_size_a': float(row['Pix_Size(A)']),
+                    'cs_nm': float(row['Cs(nm)']),
+                    'kv': float(row['Kv']),
+                    'alpha0': float(row['Alpha0']),
+                    'beta0': float(row['Beta0'])
+                }
+                result.append({
+                    'name': str(row['Tilt_Series']),
+                    'metrics': metrics
+                })
+            
+            # Calculate pagination values
+            total_items = len(result)
+            total_pages = (total_items + page_size - 1) // page_size
+            start_idx = (page - 1) * page_size
+            end_idx = min(start_idx + page_size, total_items)
+            
+            # Slice the results for the current page
+            paginated_result = result[start_idx:end_idx]
+
+
+            # The final response
+            response_data = {
+                'session_name': session_name,
+                'run_number': run_number,
+                'num_tomograms': len(result),
+                'filters_applied': filters if filters else None,
+                'metric_ranges': metric_ranges,
+                'pagination': {
+                    'page': page,
+                    'page_size': page_size,
+                    'total_pages': total_pages,
+                    'total_items': total_items
+                },
+                'result': paginated_result
+            }
+         
+            print(f"Result length: {len(result)}")
+            return JsonResponse(response_data, json_dumps_params={"indent": 2})
+        finally:
+            sftp.close()
+            ssh.close()
+
+    except Exception as e:
+        return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
