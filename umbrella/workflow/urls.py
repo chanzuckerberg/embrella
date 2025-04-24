@@ -24,4 +24,5 @@ urlpatterns = [
     path('data/', views.workflow_get_data, name='dashboard_data'),
     path("status/", views.status_check_api, name='workflow status'),
     path('metadata/api/v1/summary/', views.get_metadata_summary, name='get_metadata_summary'),
+    path('metadata/api/v1/data/', views.get_metadata_viz_data, name='get_metadata_viz_data')
 ]
