@@ -6,7 +6,7 @@ export enum API {
   ANNOTATIONS = "/processes/v1/annotations",
   ANNOTATIONS_FILTERLIST = "/annotations/v1/filterlist",
   METADATA_SUMMARY = "/workflow/metadata/api/v1/summary",
-  METADATA_VIZ = "/metadata/api/v1/data",
+  METADATA_VIZ = "/workflow/metadata/api/v1/data",
 
   // Mocked out:
   REVIEWS = "/api/reviews",
