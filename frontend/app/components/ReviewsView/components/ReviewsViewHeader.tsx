@@ -3,7 +3,8 @@ import {
   TableStateActionTypes,
   TableStateContext,
 } from "@app/common/components/TableStateProvider/TableStateProvider";
-import { InputSearch } from "@czi-sds/components";
+import { Button, Icon, InputSearch } from "@czi-sds/components";
+import Link from "next/link";
 import { useContext, useState } from "react";
 
 export const ReviewsViewHeader = () => {
@@ -14,7 +15,7 @@ export const ReviewsViewHeader = () => {
   );
 
   return (
-    <div>
+    <div className="flex justify-between">
       <InputSearch
         value={searchValue}
         onChange={(event) => setSearchValue(event.target.value)}
@@ -34,6 +35,15 @@ export const ReviewsViewHeader = () => {
         label="Search Reviews"
         id="search-reviews"
       />
+      <Link href="/next/reviews/create">
+        <Button
+          variant="contained"
+          startIcon={<Icon sdsIcon="Plus" sdsSize="xs" sdsType="button" />}
+          className="h-[32px] !text-[13px] !font-semibold !mt-auto !mb-auto"
+        >
+          Create Review
+        </Button>
+      </Link>
     </div>
   );
 };
