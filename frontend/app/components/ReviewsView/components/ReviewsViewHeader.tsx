@@ -35,7 +35,7 @@ export const ReviewsViewHeader = () => {
         label="Search Reviews"
         id="search-reviews"
       />
-      <Link href="/next/reviews/create">
+      <Link href="/reviews/create">
         <Button
           variant="contained"
           startIcon={<Icon sdsIcon="Plus" sdsSize="xs" sdsType="button" />}
