@@ -5,8 +5,6 @@ export const metadata: Metadata = {
   title: "Embrella Reviews",
 };
 
-const ReviewsPage = () => {
+export default function ReviewsPage() {
   return <ReviewsView />;
-};
-
-export default ReviewsPage;
+}

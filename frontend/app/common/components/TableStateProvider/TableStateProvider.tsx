@@ -28,7 +28,7 @@ interface TableStateProviderProps {
 type FilterValue = boolean | string | null;
 
 type FilterState = Partial<{
-  [K in EntityFilterCategories]: FilterValue[];
+  [K in EntityFilterCategories]: FilterValue | FilterValue[];
 }>;
 
 export interface TableState {
@@ -46,7 +46,7 @@ export enum TableStateActionTypes {
 
 interface CategoryFilter {
   category: EntityFilterCategories;
-  value: FilterValue[];
+  value: FilterValue | FilterValue[];
 }
 
 export type UpdateFilterAction = {
@@ -86,7 +86,9 @@ export const tableStateReducer = (
   switch (type) {
     case TableStateActionTypes.UpdateFilter: {
       const { category, value } = payload.categoryFilter;
-      const valueSelected = value.length > 0;
+      const valueSelected = Array.isArray(value)
+        ? value.length > 0
+        : value !== null;
       const filterState = {
         ...state.filterState,
         [category]: value,
