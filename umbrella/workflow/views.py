@@ -1066,13 +1066,7 @@ def apply_filters(df, filters):
             'bad_patch_low': 'Bad_Patch_Low',
             'bad_patch_all': 'Bad_Patch_All',
             'ctf_resolution_a': 'CTF_Res(A)',
-            'ctf_score': 'CTF_Score',
-            'df_hand': 'DF_Hand',
-            'pixel_size_a': 'Pix_Size(A)',
-            'cs_nm': 'Cs(nm)',
-            'kv': 'Kv',
-            'alpha0': 'Alpha0',
-            'beta0': 'Beta0'
+            'ctf_score': 'CTF_Score'
         }
         
         if field in column_mapping:

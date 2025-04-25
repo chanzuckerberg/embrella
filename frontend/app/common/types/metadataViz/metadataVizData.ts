@@ -36,12 +36,6 @@ export interface FiltersApplied {
   bad_patch_all?: [number, number];
   ctf_resolution_a?: [number, number];
   ctf_score?: [number, number];
-  df_hand?: [number, number];
-  pixel_size_a?: [number, number];
-  cs_nm?: [number, number];
-  kv?: [number, number];
-  alpha0?: [number, number];
-  beta0?: [number, number];
 }
 
 export interface MetricRanges {
