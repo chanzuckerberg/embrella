@@ -1,0 +1,39 @@
+.headerContainer {
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.alertContainer {
+  margin: 1rem;
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.leftColumn {
+  flex: 3;
+  min-width: 250px;
+  padding: 1rem;
+  border: 1px solid #ccc;
+}
+
+.middleColumn {
+  flex: 9;
+  min-width: 500px;
+  padding: 1rem;
+  border: 1px solid #ccc;
+}
