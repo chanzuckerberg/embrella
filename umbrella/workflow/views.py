@@ -1114,15 +1114,6 @@ def get_metadata_viz_data(request):
         run_number = request.GET.get("run_number")
         q = request.GET.get("q",{})
 
-        # Pagination parameters
-        page = int(request.GET.get("page", 1))
-        page_size = int(request.GET.get("page_size", 15))
-        
-        if page < 1:
-            return JsonResponse({"error": "Page number must be greater than 0"}, status=400)
-        if page_size < 1:
-            return JsonResponse({"error": "Page size must be greater than 0"}, status=400)
-
         if not session_name or not run_number:
             return JsonResponse({"error": "Missing session_name or run_number"}, status=400)
 
@@ -1235,16 +1226,6 @@ def get_metadata_viz_data(request):
                     'name': str(row['Tilt_Series']),
                     'metrics': metrics
                 })
-            
-            # Calculate pagination values
-            total_items = len(result)
-            total_pages = (total_items + page_size - 1) // page_size
-            start_idx = (page - 1) * page_size
-            end_idx = min(start_idx + page_size, total_items)
-            
-            # Slice the results for the current page
-            paginated_result = result[start_idx:end_idx]
-
 
             # The final response
             response_data = {
@@ -1253,13 +1234,7 @@ def get_metadata_viz_data(request):
                 'num_tomograms': len(result),
                 'filters_applied': filters if filters else None,
                 'metric_ranges': metric_ranges,
-                'pagination': {
-                    'page': page,
-                    'page_size': page_size,
-                    'total_pages': total_pages,
-                    'total_items': total_items
-                },
-                'result': paginated_result
+                'result': result
             }
          
             print(f"Result length: {len(result)}")
