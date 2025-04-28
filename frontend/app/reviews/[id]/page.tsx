@@ -1,8 +1,14 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { TomogramViewer } from "@app/components/TomogramViewerView/TomogramViewerView";
+// import { TomogramViewer } from "@app/components/TomogramViewerView/TomogramViewerView";
 import { useFetchReviewData } from "@hooks/useFetchData/useFetchData";
+import dynamic from "next/dynamic";
+
+const TomogramViewer = dynamic(
+    () => import("@app/components/TomogramViewerView").then(mod => mod.TomogramViewer),
+    { ssr: false }
+);
 
 type ReviewParams = {
     id: string;
