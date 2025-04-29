@@ -9,6 +9,8 @@ export interface ReviewData {
   session: EntityLinkField;
   updatedAt: string;
   status: string;
+  reviewedCount: number;
+  totalCount: number;
   reviewer: EntityLinkField;
 }
 

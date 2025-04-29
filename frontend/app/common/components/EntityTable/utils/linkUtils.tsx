@@ -22,7 +22,7 @@ export const getLinkPropsFromLinkField = (
 
 export const getLinkPropsFromLinkFieldList = (
   linkFields?: EntityLinkField[], // Ensure it's optional
-): LinkCellProps[] => 
+): LinkCellProps[] =>
   Array.isArray(linkFields) ? linkFields.map(getLinkPropsFromLinkField) : [];
 
 export const getLinkCellFromCellContext = (
@@ -54,5 +54,17 @@ export const getLinkCellListFromCellContext = (
         </div>
       ))}
     </>
+  );
+};
+
+export interface CellLinkProps {
+  linkField: EntityLinkField;
+}
+
+export const CellLink = ({ linkField }: CellLinkProps) => {
+  return (
+    <Link href={linkField.url} sdsStyle="default" target="_blank">
+      {linkField.name}
+    </Link>
   );
 };
