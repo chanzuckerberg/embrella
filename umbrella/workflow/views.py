@@ -894,14 +894,13 @@ def preprocess_csv(metrics_path, timestamp_path, merge=False):
 
 def compute_stats(df: pd.DataFrame) -> list:
     column_mapping = {
-        'CTF_Score': 'CTF',
-        'CTF_Res(A)': 'Resolution(A)',
-        'Global_Shift(Pix)': 'Defocus(Pix)',
-        'Thickness(Pix)': 'Tilt Angle(Pix)',
-        'Tilt_Axis': 'Tilt Axis',
-        'Global_Shift(Pix)': 'Global Shift(Pix)',   
-        'Bad_Patch_Low': 'Bad Patch Low',
-        'Bad_Patch_All': 'Bad Patch All',
+        'CTF_Score': 'CTF score',
+        'CTF_Res(A)': 'Resolution (Å)',
+        'Thickness(Pix)': 'Thickness (Pix)',
+        'Tilt_Axis': 'Tilt Axis (°)',
+        'Global_Shift(Pix)': 'Global Shift (Pix)',   
+        'Bad_Patch_Low': 'Bad patch low_angle (fraction)',
+        'Bad_Patch_All': 'Bad patch all_angle (fraction)',
     }
 
     # Select only columns to report
