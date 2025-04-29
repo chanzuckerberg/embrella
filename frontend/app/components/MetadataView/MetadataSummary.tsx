@@ -5,8 +5,9 @@ import {
   Alert
 } from "@czi-sds/components";
 import { useFetchMetadataSummary } from "@app/common/hooks/useFetchMetadata/useFetchMetadataSummary";
-import { SummaryTable } from './summaryTable';
+import { SummaryTable } from './SummaryTable';
 import styles from './MetadataViz.module.css';
+import{ RawJson } from './RawJson';
 
 interface MetadataSummaryProps {
   sessionName: string;
@@ -18,6 +19,7 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
   const [isLoading, setIsLoading] = useState(false);
   const [shouldFetchData, setShouldFetchData] = useState(false);
   const [showError, setShowError] = useState(true);
+  const [isJsonViewOpen, setIsJsonViewOpen] = useState(false);
   const { data, isSuccess, error } = useFetchMetadataSummary(sessionName, runNumber, shouldFetchData);
 
   const handleToggleSummary = () => {
@@ -64,7 +66,7 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
           <ButtonDropdown 
             sdsType="primary" 
             sdsStyle="rounded" 
-            onClick={handleToggleSummary}
+            onClick={() => handleToggleSummary()}
             disabled={isLoading && !isSuccess}
           >
             {showSummary ? 'Hide Summary' : 'Show Summary'}
@@ -72,11 +74,15 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
           <Button 
             sdsType="primary" 
             sdsStyle="rounded" 
-            onClick={() => {}}
+            onClick={() =>  setIsJsonViewOpen(!isJsonViewOpen)}
             className={styles.generateButton}
           >
             Generate Json
           </Button>
+          <RawJson 
+            isOpen={isJsonViewOpen} 
+            onClose={() => setIsJsonViewOpen(false)} 
+          />
         </div>
       </div>
       {renderContent()}
