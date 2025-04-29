@@ -34,6 +34,9 @@ export const SummaryTable = ({ data }) => {
               <Typography variant="body1" sx={{ mb: 1 }}>
                 <strong>Run:</strong> {data.run_number}
               </Typography>
+              <Typography variant="body1" sx={{ mb: 1 }}>
+                <strong>Total number of Tomograms:</strong> {data.num_tomograms}
+              </Typography>
               <Divider sx={{  my:3 }} />
               <Typography variant="body1" sx={{ mb: 1, wordBreak: 'break-all' }}>
                 <strong>Data Collection Path:</strong> {data.data_collection_directory}

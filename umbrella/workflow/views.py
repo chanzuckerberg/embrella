@@ -895,11 +895,11 @@ def preprocess_csv(metrics_path, timestamp_path, merge=False):
 def compute_stats(df: pd.DataFrame) -> list:
     column_mapping = {
         'CTF_Score': 'CTF',
-        'CTF_Res(A)': 'Resolution',
-        'Global_Shift(Pix)': 'Defocus',
-        'Thickness(Pix)': 'Tilt Angle',
+        'CTF_Res(A)': 'Resolution(A)',
+        'Global_Shift(Pix)': 'Defocus(Pix)',
+        'Thickness(Pix)': 'Tilt Angle(Pix)',
         'Tilt_Axis': 'Tilt Axis',
-        'Global_Shift(Pix)': 'Global Shift',
+        'Global_Shift(Pix)': 'Global Shift(Pix)',   
         'Bad_Patch_Low': 'Bad Patch Low',
         'Bad_Patch_All': 'Bad Patch All',
     }
@@ -998,6 +998,7 @@ def get_metadata_summary(request):
             response = {
                 "session_name": session_name,
                 "run_number": run_number,
+                "num_tomograms": len(df),
                 "data_collection_directory": data_collection_dir,
                 "aretomo3_processing_directory": aretomo3_processing_dir,
                 "computed_metrics": computed_metrics,
