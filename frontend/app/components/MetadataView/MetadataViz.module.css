@@ -26,14 +26,104 @@
 
 .leftColumn {
   flex: 3;
-  min-width: 250px;
+  min-width: 375px;
   padding: 1rem;
-  border: 1px solid #ccc;
 }
 
 .middleColumn {
   flex: 9;
-  min-width: 500px;
+  min-width: 400px;
   padding: 1rem;
-  border: 1px solid #ccc;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: -400px;
+  width: 400px;
+  height: 100vh;
+  background: white;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  transition: right 0.3s ease-in-out;
+  z-index: 1000;
+}
+
+.sidebar.open {
+  right: 0;
+}
+
+.sidebarContent {
+  padding: 20px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.jsonContainer {
+  margin: 15px;
+}
+
+.filterPaper {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 375px;
+}
+
+.filterRow {
+  margin-bottom: 1rem;
+}
+
+.filterLabel {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.input {
+  padding: 4px 8px !important;
+  font-size: 0.875rem !important;
+  
+}
+
+.filterContent {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.histogram {
+  width: 40px;
+  height: 20px;
+  background: #f0f0f0;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.minMaxInput {
+  width: 70px;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.slider {
+  flex: 1;
+  min-width: 100px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.miniHistogram {
+  display: flex;
+  align-items: flex-end;
+  width: 50px;
+  height: 40px;
+  gap: 1px;
+}
+
+.bar {
+  flex: 1;
+  background-color: black;
+  min-width: 2px;
 }
