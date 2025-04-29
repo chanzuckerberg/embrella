@@ -69,7 +69,7 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
             onClick={() => handleToggleSummary()}
             disabled={isLoading && !isSuccess}
           >
-            {showSummary ? 'Hide Summary' : 'Show Summary'}
+            {showSummary ? 'Hide Session Summary' : 'Show Session Summary'}
           </ButtonDropdown>
           <Button 
             sdsType="primary" 
