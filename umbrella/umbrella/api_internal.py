@@ -3,7 +3,7 @@ from django.db.models import F
 from cryo_grids.models import CryoGrid
 from projects.models import Project
 from tem.models import MsiSession
-from processes.models import Tomograms, Annotation, Pipe, PipeInPlan, ProcPlan, PipeJoint
+from processes.models import Tomograms, Annotation, Pipe, PipeInPlan, ProcPlan, PipeJoint, ProcRun
 from django.db.models import F, Case, When, Value, BooleanField
 
 def get_grids_by_user(request):
@@ -23,7 +23,7 @@ def get_grids_by_user(request):
     if user_id:
         queryset = queryset.filter(user_id=user_id)
     
-    # Order by create_on in descending order (newest first)
+    # Order by create_on in descending order (newest first)get_tomoget_tomo
     queryset = queryset.order_by('-create_on')
     
     # Return the data including the computed is_default field
@@ -105,6 +105,7 @@ def get_tomo_by_msi_session(request):
     """
     plan_id = request.GET.get('plan_id')
     session_id = request.GET.get('session_id')
+    run_number = request.GET.get('run_number')
     if not plan_id:
         return JsonResponse({"error": "Processing Plan ID not provided."}, status=400)
     else:
@@ -131,7 +132,10 @@ def get_tomo_by_msi_session(request):
     for valid_pipe in valid_pipes:
         tomo = Tomograms.objects.filter(
             msi_session=session, pipe_data__pipe=valid_pipe
-        ).distinct()
+        )
+        if run_number and run_number.strip():  # Check if run_number exists and is not empty
+            tomo = tomo.filter(pipe_data__run__name=run_number)
+        tomo = tomo.distinct()
         input_tomos.extend(list(tomo))
     tomo_data = []
     for tomo in input_tomos:
@@ -150,7 +154,10 @@ def get_tomo_by_msi_session(request):
     for valid_pipe in valid_pipes:
         pick = Annotation.objects.filter(
             msi_session=session, pipe_data__pipe=valid_pipe, annotation_type='point'
-        ).distinct()
+        )
+        if run_number and run_number.strip():  # Check if run_number exists and is not empty
+            pick = pick.filter(pipe_data__run__name=run_number)
+        pick = pick.distinct()
         input_picks.extend(list(pick))
     pick_data = []
     for pick in input_picks:
@@ -158,7 +165,6 @@ def get_tomo_by_msi_session(request):
             "id": pick.id,
             "name": pick.pipe_data.__str__(),
         })
-
 
     return JsonResponse([tomo_data, pick_data], safe=False)
 

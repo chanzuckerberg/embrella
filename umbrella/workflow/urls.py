@@ -15,7 +15,7 @@ urlpatterns = [
     path("cancel_jobs", views.cancel_jobs, name='cancel_jobs'),
     path("track_jobs", views.track_jobs, name='track_jobs'),
     path("user_info", views.user_info, name='user_details'),
-    path("get_msisession_list", views.get_msi_session_list, name='get all msi session name'),
+    path("get_msi_session_list", views.get_msi_session_list, name='get all msi session name'),
     path("run_advanced_aretomo3", views.run_aretomo3_advanced, name='run_advanced_aretomo3'),
     path("run_denoiset", views.run_denoiset, name='run denoiset'),
     path("aretomo3_params", views.get_msi_params_list, name='get parameters'),
@@ -24,5 +24,7 @@ urlpatterns = [
     path('data/', views.workflow_get_data, name='dashboard_data'),
     path("status/", views.status_check_api, name='workflow status'),
     path('metadata/api/v1/summary/', views.get_metadata_summary, name='get_metadata_summary'),
-    path('metadata/api/v1/data/', views.get_metadata_viz_data, name='get_metadata_viz_data')
+    path('metadata/api/v1/data/', views.get_metadata_viz_data, name='get_metadata_viz_data'),
+    path('get_plan_id', views.get_plan_id, name='get_plan_id'),
+    path('get_msisession_id', views.get_msisession_id, name='get_msisession_id'),
 ]
