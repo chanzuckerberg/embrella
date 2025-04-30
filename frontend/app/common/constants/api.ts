@@ -1,6 +1,7 @@
 import { SearchParamValue } from "../types/search";
 
 export enum API {
+  USER = "/user",
   GRIDS = "/cryo_grids/v1/grids",
   GRIDS_FILTERS_LIST = "/cryo_grids/v1/filterlist",
   TOMOGRAMS = "/processes/v1/tomograms",
@@ -45,6 +46,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
         },
         updatedAt: "2025-04-22T15:20:00Z",
         status: "in_progress",
+        reviewedCount: 45,
+        totalCount: 100,
         reviewer: {
           id: 101,
           name: "Yue Yu",
@@ -69,7 +72,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
         reviewedCount: 84,
         totalCount: 84,
         reviewer: {
-          id: 102,
+          id: 1,
           name: "Bryan Chu",
           url: "/api/users/102",
         },
@@ -203,11 +206,11 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
         },
         runId: "run001",
         updatedAt: "2025-01-06T11:10:00Z",
-        status: "complete",
+        status: "in_progress",
         reviewedCount: 120,
         totalCount: 120,
         reviewer: {
-          id: 102,
+          id: 1,
           name: "Bryan Chu",
           url: "/api/users/102",
         },

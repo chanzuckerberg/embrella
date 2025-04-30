@@ -24,6 +24,7 @@ from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 import google
 from processes.views import available_annotation_filter
+from umbrella.user import get_user_info
 
 
 urlpatterns = [
@@ -37,6 +38,7 @@ urlpatterns = [
     path('tem/', include('tem.urls')),
     path('processes/', include('processes.urls')),
     path('ping/', ping),
+    path('user', get_user_info, name='user_info'),
     path('admin/login/', auth_views.LoginView.as_view(), name='login'),
     path('admin/logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
     path('get_grids_by_user/', get_grids_by_user, name='get_grids_by_user'),

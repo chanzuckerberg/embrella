@@ -35,11 +35,11 @@ export const ReviewsViewHeader = () => {
         label="Search Reviews"
         id="search-reviews"
       />
-      <Link href="/reviews/create">
+      <Link href="/reviews/create" className="!mt-auto !mb-auto">
         <Button
           variant="contained"
           startIcon={<Icon sdsIcon="Plus" sdsSize="xs" sdsType="button" />}
-          className="h-[32px] !text-[13px] !font-semibold !mt-auto !mb-auto"
+          className="h-[32px] !text-[13px] !font-semibold"
         >
           Create Review
         </Button>
