@@ -80,6 +80,20 @@ def create_run(request):
             input_objects['pick']=False
         msi_session=MsiSession.objects.get(pk=session_id)
         proc_plan=ProcPlan.objects.get(pk=plan_id)
+        
+        # Check if run number already exists
+        run_number = request.POST.get('run_number', 'run001')
+        existing_run = ProcRun.objects.filter(
+            name=run_number,
+            msi_session=msi_session,
+            proc_plan=proc_plan
+        ).first()
+        
+        if existing_run:
+            return JsonResponse({
+                'error': f'Run number {run_number} already exists for this session and plan. Please choose a different run number.'
+            }, status=400)
+            
         name = models.suggest_name('run',msi_session,proc_plan)
         run_instance = ProcRun.objects.create(
                     name=name,
