@@ -31,12 +31,10 @@ export const DropdownSelect = <T extends AutocompleteOptionBasic>({
     inputRef.current = event.currentTarget;
     setIsDropdownOpen((prev) => !prev);
   };
-
   const handleOptionChange = (_event: SyntheticEvent, option: T) => {
     onChange(option);
     setIsDropdownOpen(false);
   };
-
   const handleClickAway = () => {
     setIsDropdownOpen(false);
   };
@@ -57,7 +55,7 @@ export const DropdownSelect = <T extends AutocompleteOptionBasic>({
         options={options}
         open={isDropdownOpen}
         value={value}
-        // @ts-expect-error -- SDS type system isn't compatible with our generic approach
+        // @ts-expect-error -- SDS type is not specific enough.
         onChange={handleOptionChange}
         onClickAway={handleClickAway}
         anchorEl={inputRef.current}
