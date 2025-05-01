@@ -1,32 +1,32 @@
-import { expect, Locator } from "@playwright/test";
+import { expect, Locator } from '@playwright/test';
 
-import { API } from "@app/common/constants/api";
-import { ROUTES } from "@app/common/constants/constants";
-import { TEST_IDS } from "@app/common/constants/testIds";
+import { API } from '@app/common/constants/api';
+import { ROUTES } from '@app/common/constants/constants';
+import { TEST_IDS } from '@app/common/constants/testIds';
 
-import { PageObject } from "./PageObject";
+import { PageObject } from './PageObject';
 
-const ATTRIBUTE = { DIRECTION: "direction" };
-const BUTTON = "button";
-const FILTER_OPTION_PRIMARY_TEXT = ".primary-text";
-const HEADER_WITH_DIRECTION_ATTRIBUTE = "th[direction]";
+const ATTRIBUTE = { DIRECTION: 'direction' };
+const BUTTON = 'button';
+const FILTER_OPTION_PRIMARY_TEXT = '.primary-text';
+const HEADER_WITH_DIRECTION_ATTRIBUTE = 'th[direction]';
 const KEYBOARD_KEY = {
-  ESCAPE: "Escape",
+  ESCAPE: 'Escape',
 };
-const MUI_AUTOCOMPLETE_OPTION = ".MuiAutocomplete-option";
-const MUI_CHIP_ROOT = ".MuiChip-root";
-const MUI_POPPER_ROOT = ".MuiPopper-root";
+const MUI_AUTOCOMPLETE_OPTION = '.MuiAutocomplete-option';
+const MUI_CHIP_ROOT = '.MuiChip-root';
+const MUI_POPPER_ROOT = '.MuiPopper-root';
 const MUI_SELECTED_CLASS_REGEX = /Mui-selected/;
-const MUI_SVG_ICON_ROOT = ".MuiSvgIcon-root";
-const TABLE_BODY_ROW_SELECTOR = "tbody tr";
-const TABLE_HEAD = "th";
-const TOOLTIP = "tooltip";
+const MUI_SVG_ICON_ROOT = '.MuiSvgIcon-root';
+const TABLE_BODY_ROW_SELECTOR = 'tbody tr';
+const TABLE_HEAD = 'th';
+const TOOLTIP = 'tooltip';
 
 export class EntityTablePage extends PageObject {
   public async navigateToCryoGrids() {
     await this.page.goto(ROUTES.CRYO_GRIDS);
     await this.page.waitForURL(ROUTES.CRYO_GRIDS, {
-      waitUntil: "networkidle",
+      waitUntil: 'networkidle',
     });
   }
 
@@ -99,7 +99,7 @@ export class EntityTablePage extends PageObject {
   }
 
   public getFilterChipLocators(filter: Locator): Locator {
-    return filter.locator("..").locator(MUI_CHIP_ROOT);
+    return filter.locator('..').locator(MUI_CHIP_ROOT);
   }
 
   public getFirstFilterChip(): Locator {
@@ -110,9 +110,7 @@ export class EntityTablePage extends PageObject {
 
   // #region Text
   public async getFirstFilterOptionText(): Promise<string> {
-    return await this.getFirstFilterOptionLocator()
-      .locator(FILTER_OPTION_PRIMARY_TEXT)
-      .innerText();
+    return await this.getFirstFilterOptionLocator().locator(FILTER_OPTION_PRIMARY_TEXT).innerText();
   }
   // #endregion Text
 
@@ -148,10 +146,7 @@ export class EntityTablePage extends PageObject {
   public async toggleDateSort() {
     await Promise.all([
       this.clickDateHeader(),
-      this.page.waitForResponse(
-        (response) =>
-          response.url().includes(API.GRIDS) && response.status() === 200,
-      ),
+      this.page.waitForResponse((response) => response.url().includes(API.GRIDS) && response.status() === 200),
     ]);
   }
 
@@ -159,9 +154,7 @@ export class EntityTablePage extends PageObject {
     await Promise.all([
       this.clickFirstFilterOption(),
       this.page.waitForResponse(
-        (response) =>
-          response.url().includes(API.GRIDS_FILTERS_LIST) &&
-          response.status() === 200,
+        (response) => response.url().includes(API.GRIDS_FILTERS_LIST) && response.status() === 200
       ),
     ]);
   }
@@ -170,9 +163,7 @@ export class EntityTablePage extends PageObject {
     await Promise.all([
       this.clickFirstFilterChip(),
       this.page.waitForResponse(
-        (response) =>
-          response.url().includes(API.GRIDS_FILTERS_LIST) &&
-          response.status() === 200,
+        (response) => response.url().includes(API.GRIDS_FILTERS_LIST) && response.status() === 200
       ),
     ]);
   }
@@ -181,10 +172,7 @@ export class EntityTablePage extends PageObject {
   // #region Verifications
   public async verifyPaginationPresence() {
     const [response] = await Promise.all([
-      this.page.waitForResponse(
-        (response) =>
-          response.url().includes(API.GRIDS) && response.status() === 200,
-      ),
+      this.page.waitForResponse((response) => response.url().includes(API.GRIDS) && response.status() === 200),
       this.page.reload(),
     ]);
 

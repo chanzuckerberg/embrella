@@ -1,8 +1,8 @@
-import { Metadata } from "next";
-import { TomogramsView } from "../components/TomogramsView/TomogramsView";
+import { Metadata } from 'next';
+import { TomogramsView } from '../components/TomogramsView/TomogramsView';
 
 export const metadata: Metadata = {
-  title: "Embrella Tomograms",
+  title: 'Embrella Tomograms',
 };
 
 const TomogramsPage = () => {

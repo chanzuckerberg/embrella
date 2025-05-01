@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Button,
-  ButtonDropdown,
-  Alert
-} from "@czi-sds/components";
-import { useFetchMetadataSummary } from "@app/common/hooks/useFetchMetadata/useFetchMetadataSummary";
+import { ButtonDropdown, Alert } from '@czi-sds/components';
+import { useFetchMetadataSummary } from '@app/common/hooks/useFetchMetadata/useFetchMetadataSummary';
 import { SummaryTable } from './SummaryTable';
 import styles from './MetadataViz.module.css';
-import{ RawJson } from './RawJson';
+import { RawJson } from './RawJson';
 
 interface MetadataSummaryProps {
   sessionName: string;
@@ -16,7 +12,7 @@ interface MetadataSummaryProps {
 
 export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, runNumber }) => {
   const [showSummary, setShowSummary] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [shouldFetchData, setShouldFetchData] = useState(false);
   const [showError, setShowError] = useState(true);
   const [isJsonViewOpen, setIsJsonViewOpen] = useState(false);
@@ -25,10 +21,10 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
   const handleToggleSummary = () => {
     if (!showSummary) {
       setShouldFetchData(true);
-    } 
+    }
     setShowSummary(!showSummary);
   };
-   
+
   useEffect(() => {
     if (error) {
       setShowError(true);
@@ -43,10 +39,7 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
     if (error && showError) {
       return (
         <div className={styles.alertContainer}>
-          <Alert 
-            severity="error"
-            onClose={() => setShowError(false)}
-          >
+          <Alert severity="error" onClose={() => setShowError(false)}>
             {error.status === 404
               ? 'Required files not found. Please check if the session and run number are correct.'
               : error.status === 500
@@ -63,26 +56,23 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
     <div className="w-full">
       <div className={styles.headerContainer}>
         <div className={styles.buttonGroup}>
-          <ButtonDropdown 
-            sdsType="primary" 
-            sdsStyle="rounded" 
+          <ButtonDropdown
+            sdsType="primary"
+            sdsStyle="rounded"
             onClick={() => handleToggleSummary()}
             disabled={isLoading && !isSuccess}
           >
             {showSummary ? 'Hide Session Summary' : 'Show Session Summary'}
           </ButtonDropdown>
-          <Button 
-            sdsType="primary" 
-            sdsStyle="rounded" 
-            onClick={() =>  setIsJsonViewOpen(!isJsonViewOpen)}
+          {/* <Button
+            sdsType="primary"
+            sdsStyle="rounded"
+            onClick={() => setIsJsonViewOpen(!isJsonViewOpen)}
             className={styles.generateButton}
           >
             Generate Json
-          </Button>
-          <RawJson 
-            isOpen={isJsonViewOpen} 
-            onClose={() => setIsJsonViewOpen(false)} 
-          />
+          </Button> */}
+          <RawJson isOpen={isJsonViewOpen} onClose={() => setIsJsonViewOpen(false)} />
         </div>
       </div>
       {renderContent()}

@@ -1,13 +1,13 @@
-import { expect, Locator, test } from "@playwright/test";
+import { expect, Locator, test } from '@playwright/test';
 
-import { GRID_COLUMN_DEFS } from "@app/components/GridsView/constants/columns";
-import { GRID_FILTER_CONFIGS } from "@app/components/GridsView/constants/filters";
+import { GRID_COLUMN_DEFS } from '@app/components/GridsView/constants/columns';
+import { GRID_FILTER_CONFIGS } from '@app/components/GridsView/constants/filters';
 
-import { EntityTablePage } from "@testing/page-objects/EntityTablePage";
+import { EntityTablePage } from '@testing/page-objects/EntityTablePage';
 
 const { describe } = test;
 
-const DESCRIPTION = "Skip the test; BE is unavailable";
+const DESCRIPTION = 'Skip the test; BE is unavailable';
 
 let gridsPage: EntityTablePage;
 
@@ -22,21 +22,21 @@ test.afterEach(async () => {
   await gridsPage.reload();
 });
 
-describe("Grids", () => {
-  describe("grid list", () => {
-    test("displays grid list", async () => {
+describe('Grids', () => {
+  describe('grid list', () => {
+    test('displays grid list', async () => {
       await expect(gridsPage.getTableLocator()).toBeVisible();
     });
   });
 
-  describe("grid list columns", () => {
+  describe('grid list columns', () => {
     let noDataAvailable = false;
     test.beforeEach(async () => {
       await expect(gridsPage.getTableLocator()).toBeVisible();
       noDataAvailable = await gridsPage.noDataAvailable();
     });
 
-    test("displays configured headers with header label", async () => {
+    test('displays configured headers with header label', async () => {
       test.skip(noDataAvailable, DESCRIPTION);
 
       const tableHeaders = gridsPage.getTableHeaderLocators();
@@ -50,7 +50,7 @@ describe("Grids", () => {
     });
   });
 
-  describe("grid list pagination", () => {
+  describe('grid list pagination', () => {
     let noDataAvailable = false;
 
     test.beforeEach(async () => {
@@ -65,7 +65,7 @@ describe("Grids", () => {
     });
   });
 
-  describe("grid list sorting", () => {
+  describe('grid list sorting', () => {
     let noDataAvailable = false;
 
     test.beforeEach(async () => {
@@ -73,16 +73,14 @@ describe("Grids", () => {
       noDataAvailable = await gridsPage.noDataAvailable();
     });
 
-    test("displays sortable headers", async () => {
+    test('displays sortable headers', async () => {
       test.skip(noDataAvailable, DESCRIPTION);
-      const sortableColumnDef = GRID_COLUMN_DEFS.filter(
-        ({ enableSorting }) => enableSorting,
-      );
+      const sortableColumnDef = GRID_COLUMN_DEFS.filter(({ enableSorting }) => enableSorting);
       const sortIcons = gridsPage.getTableSortIconLocator();
       await expect(sortIcons).toHaveCount(sortableColumnDef.length);
     });
 
-    test("displays a sorted header with sort icon", async () => {
+    test('displays a sorted header with sort icon', async () => {
       test.skip(noDataAvailable, DESCRIPTION);
 
       await gridsPage.verifySortableDateHeader();
@@ -90,7 +88,7 @@ describe("Grids", () => {
       await gridsPage.verifySortIconVisible();
     });
 
-    test("sorted header changes sort direction when header is clicked", async () => {
+    test('sorted header changes sort direction when header is clicked', async () => {
       test.skip(noDataAvailable, DESCRIPTION);
 
       await gridsPage.verifySortableDateHeader();
@@ -116,7 +114,7 @@ describe("Grids", () => {
       await gridsPage.verifySortableDateHeader();
     });
 
-    test("header should not sort when sorting is not enabled", async () => {
+    test('header should not sort when sorting is not enabled', async () => {
       test.skip(noDataAvailable, DESCRIPTION);
 
       for (let i = 0; i < GRID_COLUMN_DEFS.length; i++) {
@@ -130,18 +128,18 @@ describe("Grids", () => {
     });
   });
 
-  describe("grid filters", () => {
+  describe('grid filters', () => {
     let noFiltersAvailable = false;
     test.beforeEach(async () => {
       filters = gridsPage.getFilterButtonLocators();
       noFiltersAvailable = await gridsPage.noFiltersAvailable();
     });
 
-    test("displays filters", async () => {
+    test('displays filters', async () => {
       await expect(gridsPage.getSideBarFilters()).toBeVisible();
     });
 
-    test("should display configured filters with correct filter label", async () => {
+    test('should display configured filters with correct filter label', async () => {
       const FILTERS = GRID_FILTER_CONFIGS.flat();
 
       await expect(filters).toHaveCount(FILTERS.length);
@@ -151,14 +149,14 @@ describe("Grids", () => {
       }
     });
 
-    test("should open filter popper when filter is clicked", async () => {
+    test('should open filter popper when filter is clicked', async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
 
       await gridsPage.clickFirstFilter();
       await gridsPage.verifyFilterPopperVisible();
     });
 
-    test("should close filter popper with escape key", async () => {
+    test('should close filter popper with escape key', async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
 
       await gridsPage.clickFirstFilter();
@@ -166,14 +164,14 @@ describe("Grids", () => {
       await gridsPage.verifyFilterPopperClosed();
     });
 
-    test("should display filter options", async () => {
+    test('should display filter options', async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
 
       await gridsPage.clickFirstFilter();
       await gridsPage.verifyFilterOptionsVisible();
     });
 
-    test("should keep the filter popper open after selecting a filter item", async () => {
+    test('should keep the filter popper open after selecting a filter item', async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
 
       await gridsPage.clickFirstFilter();
@@ -181,7 +179,7 @@ describe("Grids", () => {
       await gridsPage.verifyFilterPopperVisible();
     });
 
-    test("should apply filter", async () => {
+    test('should apply filter', async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
 
       await gridsPage.clickFirstFilter();
@@ -195,7 +193,7 @@ describe("Grids", () => {
       await gridsPage.verifyFirstFilterChipValue(filterOptionValue);
     });
 
-    test("should clear applied filter after selecting filter chip", async () => {
+    test('should clear applied filter after selecting filter chip', async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
 
       await gridsPage.clickFirstFilter();

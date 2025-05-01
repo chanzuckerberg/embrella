@@ -1,25 +1,21 @@
-import { useCallback, useContext } from "react";
+import { useCallback, useContext } from 'react';
 
 import {
   TableDispatchContext,
   TableState,
   TableStateActionTypes,
   TableStateContext,
-} from "@app/common/components/TableStateProvider/TableStateProvider";
-import { UpdateFilterAction } from "@app/common/components/TableStateProvider/TableStateProvider";
-import { CategoryFilter } from "@app/common/components/EntityTableFilters/types";
-import { FilterConfig } from "@app/common/types/filter";
-import { UseFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/types";
-import { useFilterList } from "@app/common/components/EntityTableFilters/hooks/useFilterList/useFilterList";
-import { useFetchFilters } from "@app/common/hooks/useFetchFilters/useFetchFilters";
-import { API } from "@app/common/constants/api";
-import { SEARCH_PARAM_NAME } from "@app/common/types/search";
-import { getFilterSearchParamValues } from "@app/common/utils/searchParam";
-import {
-  EntityFilterCategories,
-  EntityFilterConfigs,
-  EntityFilterIdTypes,
-} from "@app/common/types/filter";
+} from '@app/common/components/TableStateProvider/TableStateProvider';
+import { UpdateFilterAction } from '@app/common/components/TableStateProvider/TableStateProvider';
+import { CategoryFilter } from '@app/common/components/EntityTableFilters/types';
+import { FilterConfig } from '@app/common/types/filter';
+import { UseFilterList } from '@app/common/components/EntityTableFilters/hooks/useFilterList/types';
+import { useFilterList } from '@app/common/components/EntityTableFilters/hooks/useFilterList/useFilterList';
+import { useFetchFilters } from '@app/common/hooks/useFetchFilters/useFetchFilters';
+import { API } from '@app/common/constants/api';
+import { SEARCH_PARAM_NAME } from '@app/common/types/search';
+import { getFilterSearchParamValues } from '@app/common/utils/searchParam';
+import { EntityFilterCategories, EntityFilterConfigs, EntityFilterIdTypes } from '@app/common/types/filter';
 
 export interface EntityTableFilterConnect<
   FilterId extends EntityFilterIdTypes,
@@ -29,12 +25,9 @@ export interface EntityTableFilterConnect<
   onFilter: (categoryFilter: CategoryFilter<FilterCategory>) => void;
 }
 
-export const useConnect = <
-  FilterId extends EntityFilterIdTypes,
-  FilterCategory extends EntityFilterCategories,
->(
+export const useConnect = <FilterId extends EntityFilterIdTypes, FilterCategory extends EntityFilterCategories>(
   entityFilterConfigs: EntityFilterConfigs[][],
-  entityFilterListApi: API,
+  entityFilterListApi: API
 ): EntityTableFilterConnect<FilterId, FilterCategory> => {
   const dispatch = useContext(TableDispatchContext);
 
@@ -46,7 +39,7 @@ export const useConnect = <
 
   const filters = useFilterList<FilterId, FilterCategory>(
     entityFilterConfigs as FilterConfig<FilterId, FilterCategory>[][],
-    filtersList,
+    filtersList
   );
 
   const onFilter = useCallback(
@@ -59,7 +52,7 @@ export const useConnect = <
       };
       dispatch(updateFilterAction);
     },
-    [dispatch],
+    [dispatch]
   );
 
   return { filters, onFilter };

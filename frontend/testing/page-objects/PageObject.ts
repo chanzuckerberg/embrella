@@ -1,4 +1,4 @@
-import test, { Page } from "@playwright/test";
+import test, { Page } from '@playwright/test';
 
 export abstract class PageObject {
   public page: Page;

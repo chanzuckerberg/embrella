@@ -1,5 +1,5 @@
-import { FiltersList } from "@app/common/types/filter";
-import { TestFilterCategory } from "@testing/types";
+import { FiltersList } from '@app/common/types/filter';
+import { TestFilterCategory } from '@testing/types';
 
 /**
  * Partial test data representing a list of filters typed as `TestFilterCategory`.
@@ -11,7 +11,7 @@ export const INITIAL_FILTERS_LIST = {
   filters: {
     cassette: [
       {
-        name: "cassette 01",
+        name: 'cassette 01',
         count: 1,
         selected: false,
       },
@@ -28,12 +28,12 @@ export const INITIAL_FILTERS_LIST = {
     ],
     msiSession: [
       {
-        name: "msi session 01",
+        name: 'msi session 01',
         count: 1,
         selected: false,
       },
       {
-        name: "msi session 02",
+        name: 'msi session 02',
         count: 1,
         selected: false,
       },
@@ -52,12 +52,12 @@ export const SELECTED_FILTERS_LIST = {
   filters: {
     cassette: [
       {
-        name: "cassette 01",
+        name: 'cassette 01',
         count: 1,
         selected: true,
       },
       {
-        name: "cassette 02",
+        name: 'cassette 02',
         count: 1,
         selected: false,
       },
@@ -74,7 +74,7 @@ export const SELECTED_FILTERS_LIST = {
     ],
     msiSession: [
       {
-        name: "msi session 01",
+        name: 'msi session 01',
         count: 1,
         selected: false,
       },

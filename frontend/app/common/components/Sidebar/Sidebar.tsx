@@ -1,7 +1,7 @@
-import React, { ReactNode } from "react";
-import styled from "@emotion/styled";
+import React, { ReactNode } from 'react';
+import styled from '@emotion/styled';
 
-import { gray300, spacesL, spacesS } from "@app/common/theme";
+import { gray300, spacesL, spacesS } from '@app/common/theme';
 
 const StyledSidebar = styled.div`
   box-shadow: inset -0.5px 0 ${gray300};

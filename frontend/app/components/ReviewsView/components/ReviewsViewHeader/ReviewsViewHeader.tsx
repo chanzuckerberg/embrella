@@ -2,17 +2,15 @@ import {
   TableDispatchContext,
   TableStateActionTypes,
   TableStateContext,
-} from "@app/common/components/TableStateProvider/TableStateProvider";
-import { Button, Icon, InputSearch } from "@czi-sds/components";
-import Link from "next/link";
-import { useContext, useState } from "react";
+} from '@app/common/components/TableStateProvider/TableStateProvider';
+import { Button, Icon, InputSearch } from '@czi-sds/components';
+import Link from 'next/link';
+import { useContext, useState } from 'react';
 
 export const ReviewsViewHeader = () => {
   const tableState = useContext(TableStateContext);
   const dispatchTableState = useContext(TableDispatchContext);
-  const [searchValue, setSearchValue] = useState(
-    (tableState.filterState.search ?? "") as string,
-  );
+  const [searchValue, setSearchValue] = useState((tableState.filterState.search ?? '') as string);
 
   return (
     <div className="flex justify-between">
@@ -23,7 +21,7 @@ export const ReviewsViewHeader = () => {
           dispatchTableState({
             payload: {
               categoryFilter: {
-                category: "search",
+                category: 'search',
                 value,
               },
             },

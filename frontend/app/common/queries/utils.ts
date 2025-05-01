@@ -5,11 +5,7 @@
  * @param searchParam - Search parameters.
  * @returns request URL.
  */
-export function getRequestURL(
-  base: string,
-  url: string,
-  searchParam: Record<string, unknown> = {},
-): string {
+export function getRequestURL(base: string, url: string, searchParam: Record<string, unknown> = {}): string {
   const requestURL = new URL(url, base);
   for (const [name, value] of Object.entries(searchParam)) {
     requestURL.searchParams.set(name, getRequestURLSearchParamValue(value));
@@ -23,7 +19,5 @@ export function getRequestURL(
  * @returns search parameter value.
  */
 function getRequestURLSearchParamValue(value: unknown): string {
-  return value && typeof value === "object"
-    ? JSON.stringify(value)
-    : String(value);
+  return value && typeof value === 'object' ? JSON.stringify(value) : String(value);
 }

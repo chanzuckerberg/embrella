@@ -34,7 +34,7 @@ interface UseFetchMetadataVizResult {
 export const useFetchMetadataViz = (
   sessionName: string,
   runNumber: string,
-  filters?: MetadataFilters,
+  filters?: MetadataFilters
 ): UseFetchMetadataVizResult => {
   const [data, setData] = useState<MetadataVizResponse>();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -67,10 +67,11 @@ export const useFetchMetadataViz = (
         setData(jsonData);
         setIsSuccess(true);
         setError(undefined);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const apiError = err as FetchError;
         setError({
-          status: err.status || 500,
-          message: err.message || "An error occurred while fetching data",
+          status: apiError.status || 500,
+          message: apiError.message || 'An error occurred while fetching data',
         });
         setIsSuccess(false);
       } finally {

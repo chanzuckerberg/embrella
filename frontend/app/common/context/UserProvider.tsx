@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useFetchData } from "@hooks/useFetchData/useFetchData";
 import { createContext, PropsWithChildren } from "react";

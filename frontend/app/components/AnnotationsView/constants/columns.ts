@@ -1,29 +1,26 @@
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef } from '@tanstack/react-table';
 
-import { AccessorReturnType } from "@app/common/components/EntityTable/types";
-import { EntityDataTypes } from "@app/common/types/tableState";
+import { AccessorReturnType } from '@app/common/components/EntityTable/types';
+import { EntityDataTypes } from '@app/common/types/tableState';
 import {
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
-} from "@app/common/components/EntityTable/utils/linkUtils";
-import { LinkCellProps } from "@app/common/components/EntityTable/types";
-import { humanize } from "@app/common/utils/string";
-import { AnnotationData } from "../types";
+} from '@app/common/components/EntityTable/utils/linkUtils';
+import { LinkCellProps } from '@app/common/components/EntityTable/types';
+import { humanize } from '@app/common/utils/string';
+import { AnnotationData } from '../types';
 
 export const ANNOTATION_COLUMN_IDS = {
-  ANNOTATIONS: "annotations",
-  PROC_PLAN: "procPlan",
-  INPUT_TOMORGRAM: "inputTomogram",
-  MSI_SESSION: "msiSession",
-  PROJECT: "project",
-  GRID: "grid",
-  NOTES: "notes",
-  UPDATED_AT: "updatedAt",
+  ANNOTATIONS: 'annotations',
+  PROC_PLAN: 'procPlan',
+  INPUT_TOMORGRAM: 'inputTomogram',
+  MSI_SESSION: 'msiSession',
+  PROJECT: 'project',
+  GRID: 'grid',
+  NOTES: 'notes',
+  UPDATED_AT: 'updatedAt',
 };
-export const ANNOTATION_COLUMN_DEFS: ColumnDef<
-  EntityDataTypes,
-  AccessorReturnType
->[] = [
+export const ANNOTATION_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] = [
   {
     id: ANNOTATION_COLUMN_IDS.ANNOTATIONS,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
@@ -54,7 +51,7 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
       getLinkPropsFromLinkField((rowData as AnnotationData).msiSession),
     cell: getLinkCellFromCellContext,
     enableSorting: false,
-    header: "MSI Session",
+    header: 'MSI Session',
   },
   {
     id: ANNOTATION_COLUMN_IDS.PROJECT,
@@ -74,15 +71,13 @@ export const ANNOTATION_COLUMN_DEFS: ColumnDef<
   },
   {
     id: ANNOTATION_COLUMN_IDS.NOTES,
-    accessorFn: (rowData: EntityDataTypes): string =>
-      (rowData as AnnotationData).annotations.notes,
+    accessorFn: (rowData: EntityDataTypes): string => (rowData as AnnotationData).annotations.notes,
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.NOTES),
   },
   {
     id: ANNOTATION_COLUMN_IDS.UPDATED_AT,
-    accessorFn: (rowData: EntityDataTypes): string =>
-      (rowData as AnnotationData).annotations.updatedAt,
+    accessorFn: (rowData: EntityDataTypes): string => (rowData as AnnotationData).annotations.updatedAt,
     enableSorting: true,
     header: humanize(ANNOTATION_COLUMN_IDS.UPDATED_AT),
   },

@@ -1,1 +1,1 @@
-export { NavbarWrapper } from "./NavBarWrapper";
+export { NavbarWrapper } from './NavBarWrapper';

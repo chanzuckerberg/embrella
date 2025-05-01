@@ -1,16 +1,16 @@
-import { ColumnDef } from "@tanstack/react-table";
-import { AccessorReturnType } from "@app/common/components/EntityTable/types";
-import { ComputedMetric } from "@app/common/types/metadataViz/metadataSummary";
-import { humanize } from "@app/common/utils/string";
+import { ColumnDef } from '@tanstack/react-table';
+import { AccessorReturnType } from '@app/common/components/EntityTable/types';
+import { ComputedMetric } from '@app/common/types/metadataViz/metadataSummary';
+import { humanize } from '@app/common/utils/string';
 
 export const METADATA_COLUMN_IDS = {
-  NAME: "name",
-  MEAN: "mean",
-  MEDIAN: "median",
-  STD: "std",
+  NAME: 'name',
+  MEAN: 'mean',
+  MEDIAN: 'median',
+  STD: 'std',
 } as const;
 
-type MetadataColumnIds = typeof METADATA_COLUMN_IDS[keyof typeof METADATA_COLUMN_IDS];
+// type MetadataColumnIds = (typeof METADATA_COLUMN_IDS)[keyof typeof METADATA_COLUMN_IDS];
 
 export const METADATA_COLUMN_DEFS: ColumnDef<ComputedMetric, AccessorReturnType>[] = [
   {
