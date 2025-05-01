@@ -17,6 +17,7 @@ export const CreateReviewView = () => {
     configs.API_URL,
     API.TEM_SESSIONS,
   ).data;
+
   const temSessionOptions = useMemo(
     () =>
       temSessions?.map((session) => ({ name: session.sessionName, session })) ??
@@ -26,11 +27,16 @@ export const CreateReviewView = () => {
   const [selectedTemSession, setSelectedTemSession] = useState<
     TemSessionOption | undefined
   >(undefined);
-
   const [reconstructionTypeOptions, setReconstructionTypeOptions] = useState<
     Array<AutocompleteOptionBasic>
   >([]);
   const [selectedReconstructionType, setSelectedReconstructionType] = useState<
+    AutocompleteOptionBasic | undefined
+  >(undefined);
+  const [runOptions, setRunOptions] = useState<Array<AutocompleteOptionBasic>>(
+    [],
+  );
+  const [selectedRun, setSelectedRun] = useState<
     AutocompleteOptionBasic | undefined
   >(undefined);
 
@@ -48,10 +54,10 @@ export const CreateReviewView = () => {
             topLabelClass="!mt-[16px]"
             value={selectedTemSession}
             options={temSessionOptions}
-            onChange={(option) => {
-              setSelectedTemSession(option);
+            onChange={(temSessionOption) => {
+              setSelectedTemSession(temSessionOption);
               setReconstructionTypeOptions(
-                option?.session.runs
+                temSessionOption?.session.runs
                   .flatMap((run) => run.reconstructionTypes)
                   .map((reconstructionType) => ({
                     name: reconstructionType,
@@ -66,8 +72,30 @@ export const CreateReviewView = () => {
               topLabelClass="!mt-[16px]"
               value={selectedReconstructionType}
               options={reconstructionTypeOptions}
+              onChange={(reconstructionTypeOption) => {
+                setSelectedReconstructionType(reconstructionTypeOption);
+                setRunOptions(
+                  reconstructionTypeOption !== undefined
+                    ? selectedTemSession.session.runs
+                        .filter((run) =>
+                          run.reconstructionTypes.includes(
+                            reconstructionTypeOption.name,
+                          ),
+                        )
+                        .map((run) => ({ name: run.runId }))
+                    : [],
+                );
+              }}
+            />
+          )}
+          {selectedReconstructionType !== undefined && (
+            <DropdownSelect
+              topLabel="Run:"
+              topLabelClass="!mt-[16px]"
+              value={selectedRun}
+              options={runOptions}
               onChange={(option) => {
-                setSelectedReconstructionType(option);
+                setSelectedRun(option);
               }}
             />
           )}
