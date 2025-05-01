@@ -1,24 +1,38 @@
 "use client";
 
-import { DropdownMenu, InputDropdown } from "@czi-sds/components";
 import { useFetchData } from "@hooks/useFetchData/useFetchData";
 import { TemSession } from "../ReviewsView/types";
 import configs from "@configs/local";
 import { API } from "@app/common/constants/api";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { DropdownSelect } from "@app/common/components/DropdownSelect";
+import { AutocompleteOptionBasic } from "@czi-sds/components";
+
+interface TemSessionOption extends AutocompleteOptionBasic {
+  session: TemSession;
+}
 
 export const CreateReviewView = () => {
-  const temSessionInputRef = useRef<HTMLElement | null>(null);
   const temSessions = useFetchData<Array<TemSession>>(
     configs.API_URL,
     API.TEM_SESSIONS,
   ).data;
   const temSessionOptions = useMemo(
-    () => temSessions?.map((session) => ({ name: session.sessionName })) ?? [],
+    () =>
+      temSessions?.map((session) => ({ name: session.sessionName, session })) ??
+      [],
     [temSessions],
   );
-  const [isTemSessionDropdownOpen, setIsTemSessionDropdownOpen] =
-    useState(false);
+  const [selectedTemSession, setSelectedTemSession] = useState<
+    TemSessionOption | undefined
+  >(undefined);
+
+  const [reconstructionTypeOptions, setReconstructionTypeOptions] = useState<
+    Array<AutocompleteOptionBasic>
+  >([]);
+  const [selectedReconstructionType, setSelectedReconstructionType] = useState<
+    AutocompleteOptionBasic | undefined
+  >(undefined);
 
   return (
     <div className="flex flex-col !p-[25px] relative">
@@ -29,25 +43,34 @@ export const CreateReviewView = () => {
           <div className="text-[#6c6c6c] !mt-[4px]">
             Select data from Embrella to use in your review.
           </div>
-          <div className="font-semibold !mt-[16px]">TEM Session:</div>
-          <InputDropdown
-            label="Select"
-            onClick={(e) => {
-              temSessionInputRef.current = e.currentTarget;
-              setIsTemSessionDropdownOpen((prev) => !prev);
-            }}
-            sdsStage={"default"}
-          />
-          <DropdownMenu
-            search
+          <DropdownSelect
+            topLabel="TEM Sessions:"
+            topLabelClass="!mt-[16px]"
+            value={selectedTemSession}
             options={temSessionOptions}
-            open={isTemSessionDropdownOpen}
-            onClickAway={() => {
-              setIsTemSessionDropdownOpen(false);
+            onChange={(option) => {
+              setSelectedTemSession(option);
+              setReconstructionTypeOptions(
+                option?.session.runs
+                  .flatMap((run) => run.reconstructionTypes)
+                  .map((reconstructionType) => ({
+                    name: reconstructionType,
+                  })) ?? [],
+              );
             }}
-            anchorEl={temSessionInputRef.current}
-            width={temSessionInputRef.current?.clientWidth}
+            disabled={temSessions === undefined}
           />
+          {selectedTemSession !== undefined && (
+            <DropdownSelect
+              topLabel="Reconstruction Type:"
+              topLabelClass="!mt-[16px]"
+              value={selectedReconstructionType}
+              options={reconstructionTypeOptions}
+              onChange={(option) => {
+                setSelectedReconstructionType(option);
+              }}
+            />
+          )}
         </div>
       </main>
     </div>
