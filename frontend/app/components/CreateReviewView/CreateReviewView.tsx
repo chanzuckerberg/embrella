@@ -44,7 +44,7 @@ export const CreateReviewView = () => {
             Select data from Embrella to use in your review.
           </div>
           <DropdownSelect
-            topLabel="TEM Sessions:"
+            topLabel="TEM Session:"
             topLabelClass="!mt-[16px]"
             value={selectedTemSession}
             options={temSessionOptions}
