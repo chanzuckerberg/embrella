@@ -1,4 +1,4 @@
-import { API, API_URL } from "@app/common/constants/api";
+import { API, DJANGO_URL } from "@app/common/constants/api";
 import { useState, useEffect } from "react";
 import { MetadataVizResponse } from "@app/common/types/metadataViz/metadataVizData";
 
@@ -47,7 +47,7 @@ export const useFetchMetadataViz = (
       setError(undefined);
 
       try {
-        let url = `${API_URL}${API.METADATA_VIZ}?session_name=${sessionName}&run_number=${runNumber}`;
+        let url = `${DJANGO_URL}${API.METADATA_VIZ}?session_name=${sessionName}&run_number=${runNumber}`;
 
         if (filters) {
           const queryFilters = { filters };
