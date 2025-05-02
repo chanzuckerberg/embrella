@@ -2,8 +2,8 @@ import { SearchParamValue } from "../types/search";
 
 export const API_URL =
   window.location.hostname === "localhost"
-    ? "http://localhost:8000"
-    : window.location.origin;
+    ? "http://localhost:8000" // Local Django server.
+    : window.location.origin; // Deployed envs use same origin for both Django and Next.
 
 export enum API {
   USER = "/user",
