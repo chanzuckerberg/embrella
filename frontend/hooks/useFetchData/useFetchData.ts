@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getRequestURL } from "@app/common/queries/utils";
 import { fetchResource } from "@app/common/queries/fetchResource";
-import { API, MOCKED_APIS } from "@app/common/constants/api";
+import { API, API_URL, MOCKED_APIS } from "@app/common/constants/api";
 import { Review } from "@app/components/TomogramViewerView/TomogramViewerView";
 
 interface UseFetchData<D> {
@@ -10,7 +10,6 @@ interface UseFetchData<D> {
 }
 
 export const useFetchData = <D>(
-  baseURL: string,
   relativeURL: API,
   searchParam: Record<string, unknown> = {},
   shouldFetch = true,
@@ -19,8 +18,8 @@ export const useFetchData = <D>(
     isSuccess: false,
   });
   const requestURL = useMemo(
-    () => getRequestURL(baseURL, relativeURL, searchParam),
-    [baseURL, relativeURL, searchParam],
+    () => getRequestURL(API_URL, relativeURL, searchParam),
+    [relativeURL, searchParam],
   );
 
   useEffect(() => {
@@ -71,24 +70,24 @@ export const useFetchReviewData = (reviewId: string): UseFetchReviewData => {
   const [dataState, setDataState] = useState<UseFetchReviewData>({
     data: undefined,
     isSuccess: false,
-    isLoading: true
+    isLoading: true,
   });
 
   useEffect(() => {
     const fetchData = async () => {
-      setDataState(prev => ({ ...prev, isLoading: true }));
+      setDataState((prev) => ({ ...prev, isLoading: true }));
 
       const mockResponse = MOCKED_APIS[API.REVIEW];
       if (mockResponse !== undefined) {
         setDataState({
           data: mockResponse,
           isSuccess: true,
-          isLoading: false
+          isLoading: false,
         });
         return;
       }
 
-      setDataState(prev => ({ ...prev, isLoading: false }));
+      setDataState((prev) => ({ ...prev, isLoading: false }));
     };
 
     fetchData();

@@ -1,5 +1,10 @@
 import { SearchParamValue } from "../types/search";
 
+export const API_URL =
+  window.location.hostname === "localhost"
+    ? "http://localhost:8000"
+    : window.location.origin;
+
 export enum API {
   USER = "/user",
   GRIDS = "/cryo_grids/v1/grids",

@@ -1,4 +1,4 @@
-import configs from "@configs/local";
+import { API_URL } from "../constants/api";
 
 /**
  * Fetch request.
@@ -12,7 +12,7 @@ export async function fetchResource(requestURL: string): Promise<Response> {
 
   // Check if the response status is 302 (redirect) or if the URL includes the login page
   if (response.status === 302 || response.url.includes("/admin/login")) {
-    window.location.href = `${configs.API_URL}/admin/login`;
+    window.location.href = `${API_URL}/admin/login`;
     return Promise.reject(
       new Error("User is not authenticated, redirecting to login."),
     );

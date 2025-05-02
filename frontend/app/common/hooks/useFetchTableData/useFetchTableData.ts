@@ -1,4 +1,3 @@
-import configs from "@configs/local";
 import {
   ApiListResponse,
   EntityDataTypes,
@@ -15,7 +14,6 @@ export const useFetchTableData = <T extends EntityDataTypes>(
   searchParam: SearchParam,
 ): EntityList<T> => {
   const { data } = useFetchData<ApiListResponse<EntityDataTypes>>(
-    configs.API_URL,
     dataEndpoint,
     searchParam,
   );

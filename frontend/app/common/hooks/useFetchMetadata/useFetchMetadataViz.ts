@@ -1,6 +1,4 @@
-
-import configs from "@configs/local";
-import { API } from "@app/common/constants/api";
+import { API, API_URL } from "@app/common/constants/api";
 import { useState, useEffect } from "react";
 import { MetadataVizResponse } from "@app/common/types/metadataViz/metadataVizData";
 
@@ -47,10 +45,10 @@ export const useFetchMetadataViz = (
     const fetchData = async () => {
       setIsLoading(true);
       setError(undefined);
-      
+
       try {
-        let url = `${configs.API_URL}${API.METADATA_VIZ}?session_name=${sessionName}&run_number=${runNumber}`;
-        
+        let url = `${API_URL}${API.METADATA_VIZ}?session_name=${sessionName}&run_number=${runNumber}`;
+
         if (filters) {
           const queryFilters = { filters };
           url += `&q=${encodeURIComponent(JSON.stringify(queryFilters))}`;
@@ -61,7 +59,7 @@ export const useFetchMetadataViz = (
         if (!response.ok) {
           throw {
             status: response.status,
-            message: response.statusText
+            message: response.statusText,
           };
         }
 
@@ -72,7 +70,7 @@ export const useFetchMetadataViz = (
       } catch (err: any) {
         setError({
           status: err.status || 500,
-          message: err.message || 'An error occurred while fetching data'
+          message: err.message || "An error occurred while fetching data",
         });
         setIsSuccess(false);
       } finally {
