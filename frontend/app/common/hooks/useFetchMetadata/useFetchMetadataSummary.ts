@@ -1,5 +1,4 @@
-import configs from "@configs/local";
-import { API } from "@app/common/constants/api";
+import { API, DJANGO_URL } from "@app/common/constants/api";
 import { MetadataSummaryResponse } from "@app/common/types/metadataViz/metadataSummary";
 import { useState, useEffect } from "react";
 
@@ -31,16 +30,16 @@ export const useFetchMetadataSummary = (
     const fetchData = async () => {
       setIsLoading(true);
       setError(undefined);
-      
+
       try {
         const response = await fetch(
-          `${configs.API_URL}${API.METADATA_SUMMARY}?session_name=${sessionName}&run_number=${runNumber}`
+          `${DJANGO_URL}${API.METADATA_SUMMARY}?session_name=${sessionName}&run_number=${runNumber}`,
         );
 
         if (!response.ok) {
           throw {
             status: response.status,
-            message: response.statusText
+            message: response.statusText,
           };
         }
 
@@ -51,7 +50,7 @@ export const useFetchMetadataSummary = (
       } catch (err: any) {
         setError({
           status: err.status || 500,
-          message: err.message || 'An error occurred while fetching metadata'
+          message: err.message || "An error occurred while fetching metadata",
         });
         setIsSuccess(false);
       } finally {

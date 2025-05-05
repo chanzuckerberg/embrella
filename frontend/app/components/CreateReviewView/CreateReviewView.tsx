@@ -2,7 +2,6 @@
 
 import { useFetchData } from "@hooks/useFetchData/useFetchData";
 import { TemSession } from "../ReviewsView/types";
-import configs from "@configs/local";
 import { API } from "@app/common/constants/api";
 import { useMemo, useState } from "react";
 import { DropdownSelect } from "@app/common/components/DropdownSelect";
@@ -13,10 +12,7 @@ interface TemSessionOption extends AutocompleteOptionBasic {
 }
 
 export const CreateReviewView = () => {
-  const temSessions = useFetchData<Array<TemSession>>(
-    configs.API_URL,
-    API.TEM_SESSIONS,
-  ).data;
+  const temSessions = useFetchData<Array<TemSession>>(API.TEM_SESSIONS).data;
   const temSessionOptions = useMemo(
     () =>
       temSessions?.map((session) => ({ name: session.sessionName, session })) ??

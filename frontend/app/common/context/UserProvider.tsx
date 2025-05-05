@@ -1,6 +1,5 @@
 "use client";
 
-import configs from "@configs/local";
 import { useFetchData } from "@hooks/useFetchData/useFetchData";
 import { createContext, PropsWithChildren } from "react";
 import { API } from "../constants/api";
@@ -13,6 +12,6 @@ export interface User {
 export const UserContext = createContext<User | undefined>(undefined);
 
 export const UserProvider = ({ children }: PropsWithChildren) => {
-  const user = useFetchData<User>(configs.API_URL, API.USER).data;
+  const user = useFetchData<User>(API.USER).data;
   return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
 };
