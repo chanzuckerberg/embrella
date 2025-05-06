@@ -16,7 +16,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
   const currentUser = useContext(UserContext);
 
   if (currentUser === undefined) {
-    return null;
+    return <div>Loading...</div>;
   }
 
   const userCanReview =
