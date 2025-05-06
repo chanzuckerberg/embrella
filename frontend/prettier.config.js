@@ -8,9 +8,5 @@ module.exports = {
     useTabs: false,
     bracketSpacing: true,
     jsxSingleQuote: false,
-    arrowParens: 'always',
-    endOfLine: 'lf',
-    htmlWhitespaceSensitivity: 'css',
-    vueIndentScriptAndStyle: false,
     embeddedLanguageFormatting: 'auto',
   };
