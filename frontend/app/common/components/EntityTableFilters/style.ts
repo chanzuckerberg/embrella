@@ -1,5 +1,5 @@
-import styled from "@emotion/styled";
-import { gray300, spacesS } from "@app/common/theme";
+import styled from '@emotion/styled';
+import { gray300, spacesS } from '@app/common/theme';
 
 export const StyledFilters = styled.div`
   display: grid;

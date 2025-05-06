@@ -1,8 +1,8 @@
-import { ReviewsView } from "@app/components/ReviewsView/ReviewsView";
-import { Metadata } from "next";
+import { ReviewsView } from '@app/components/ReviewsView/ReviewsView';
+import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "Embrella Reviews",
+  title: 'Embrella Reviews',
 };
 
 export default function ReviewsPage() {

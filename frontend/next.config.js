@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: "/next",
+  basePath: '/next',
   compiler: {
     emotion: true,
   },

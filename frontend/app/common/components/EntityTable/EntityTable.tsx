@@ -1,28 +1,17 @@
-import { Fragment } from "react";
+import { Fragment } from 'react';
 
-import {
-  CellComponent,
-  CellHeader,
-  Pagination,
-  Table,
-  TableHeader,
-  TableRow,
-} from "@czi-sds/components";
-import styled from "@emotion/styled";
-import { TableBody } from "@mui/material";
-import { ColumnDef, flexRender } from "@tanstack/react-table";
+import { CellComponent, CellHeader, Pagination, Table, TableHeader, TableRow } from '@czi-sds/components';
+import styled from '@emotion/styled';
+import { TableBody } from '@mui/material';
+import { ColumnDef, flexRender } from '@tanstack/react-table';
 
-import { API } from "@app/common/constants/api";
-import { TEST_IDS } from "@app/common/constants/testIds";
-import { EntityDataTypes } from "@app/common/types/tableState";
+import { API } from '@app/common/constants/api';
+import { TEST_IDS } from '@app/common/constants/testIds';
+import { EntityDataTypes } from '@app/common/types/tableState';
 
-import { useConnect } from "./connect";
-import { AccessorReturnType, ApiPrimaryEntityAttribute } from "./types";
-import {
-  getCellHeaderActive,
-  getCellHeaderDirection,
-  getCellHeaderHideSortIcon,
-} from "./utils/cellHeader";
+import { useConnect } from './connect';
+import { AccessorReturnType, ApiPrimaryEntityAttribute } from './types';
+import { getCellHeaderActive, getCellHeaderDirection, getCellHeaderHideSortIcon } from './utils/cellHeader';
 
 interface EntityTableProps<T> {
   entityApi: API;
@@ -39,11 +28,7 @@ export const EntityTable = <T extends EntityDataTypes>({
   entityApiResponseField,
   columnDefs,
 }: EntityTableProps<T>): React.JSX.Element => {
-  const { table } = useConnect<T>(
-    entityApi,
-    entityApiResponseField,
-    columnDefs,
-  );
+  const { table } = useConnect<T>(entityApi, entityApiResponseField, columnDefs);
 
   const { getRowCount, getState, nextPage, previousPage, setPageIndex } = table;
   const {

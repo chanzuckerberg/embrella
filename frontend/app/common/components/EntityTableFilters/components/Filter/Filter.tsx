@@ -1,15 +1,15 @@
-import React, { useCallback } from "react";
+import React, { useCallback } from 'react';
 
-import { ComplexFilter, InputDropdownProps } from "@czi-sds/components";
+import { ComplexFilter, InputDropdownProps } from '@czi-sds/components';
 
 import {
   AutocompleteOption,
   EntityTableComplexFilterProps,
   FilterView,
   OnFilterFn,
-} from "@app/common/components/EntityTableFilters/types";
+} from '@app/common/components/EntityTableFilters/types';
 
-import { getFilterValue } from "../../utils/filterValue";
+import { getFilterValue } from '../../utils/filterValue';
 
 interface FilterProps<FilterId, FilterCategory extends string> {
   category: FilterCategory;
@@ -19,22 +19,19 @@ interface FilterProps<FilterId, FilterCategory extends string> {
 
 const COMPLEX_FILTER_PROPS: Pick<
   EntityTableComplexFilterProps,
-  "isTriggerChangeOnOptionClick" | "multiple" | "search"
+  'isTriggerChangeOnOptionClick' | 'multiple' | 'search'
 > = {
   isTriggerChangeOnOptionClick: true,
   multiple: true,
   search: true,
 };
 
-const INPUT_DROPDOWN_PROPS: Pick<
-  InputDropdownProps,
-  "intent" | "sdsStage" | "sdsStyle" | "sdsType" | "state"
-> = {
-  intent: "default",
-  sdsStage: "default",
-  sdsStyle: "minimal",
-  sdsType: "label",
-  state: "default",
+const INPUT_DROPDOWN_PROPS: Pick<InputDropdownProps, 'intent' | 'sdsStage' | 'sdsStyle' | 'sdsType' | 'state'> = {
+  intent: 'default',
+  sdsStage: 'default',
+  sdsStyle: 'minimal',
+  sdsType: 'label',
+  state: 'default',
 };
 
 export const Filter = <FilterId, FilterCategory extends string>({
@@ -49,7 +46,7 @@ export const Filter = <FilterId, FilterCategory extends string>({
         value: getFilterValue(options),
       });
     },
-    [category, onFilter],
+    [category, onFilter]
   );
   return (
     <ComplexFilter

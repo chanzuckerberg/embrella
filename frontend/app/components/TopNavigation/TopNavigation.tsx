@@ -1,20 +1,17 @@
-"use client";
+'use client';
 
-import { useContext, useEffect, useState } from "react";
-import styled from "@emotion/styled";
-import { Link } from "@czi-sds/components";
+import { useContext, useEffect, useState } from 'react';
+import styled from '@emotion/styled';
+import { Link } from '@czi-sds/components';
 
-import { spacesL, spacesS, spacesXxxs } from "@app/common/theme";
-import {
-  FEATURE_FLAG,
-  FeatureFlagsContext,
-} from "@app/common/context/FeatureFlagsProvider";
+import { spacesL, spacesS, spacesXxxs } from '@app/common/theme';
+import { FEATURE_FLAG, FeatureFlagsContext } from '@app/common/context/FeatureFlagsProvider';
 
 const TAB_PATHS_TO_LABELS: Record<string, string> = {
-  cryo_grids: "Grids",
-  tomograms: "Tomograms",
-  annotations: "Annotations",
-  reviews: "Reviews",
+  cryo_grids: 'Grids',
+  tomograms: 'Tomograms',
+  annotations: 'Annotations',
+  reviews: 'Reviews',
 };
 
 const StyledNavbar = styled.span`
@@ -33,8 +30,8 @@ const StyledNavLink = styled(Link)`
 `;
 
 export const TopNavigation = () => {
-  const [baseNextUrl, setBaseNextUrl] = useState("");
-  const [adminUrl, setAdminUrl] = useState("");
+  const [baseNextUrl, setBaseNextUrl] = useState('');
+  const [adminUrl, setAdminUrl] = useState('');
   const featureFlags = useContext(FeatureFlagsContext);
   const isReviewEnabled = featureFlags.includes(FEATURE_FLAG.REVIEW);
 
@@ -46,21 +43,17 @@ export const TopNavigation = () => {
   return (
     <nav>
       <StyledNavbar>
-        <span className={"sds-font-body-xl"}>
+        <span className={'sds-font-body-xl'}>
           <StyledNavLink href={adminUrl} fontWeight="bold">
             Startup Page
           </StyledNavLink>
           {Object.entries(TAB_PATHS_TO_LABELS).map(
             ([path, label]) =>
-              (path !== "reviews" || isReviewEnabled) && (
-                <StyledNavLink
-                  key={path}
-                  href={`${baseNextUrl}/${path}`}
-                  fontWeight="bold"
-                >
+              (path !== 'reviews' || isReviewEnabled) && (
+                <StyledNavLink key={path} href={`${baseNextUrl}/${path}`} fontWeight="bold">
                   {label}
                 </StyledNavLink>
-              ),
+              )
           )}
         </span>
       </StyledNavbar>
@@ -69,14 +62,14 @@ export const TopNavigation = () => {
 };
 
 const getBaseUrl = (localhostPort: string): string => {
-  if (typeof window === "undefined") {
-    return "";
+  if (typeof window === 'undefined') {
+    return '';
   }
 
   const { protocol, hostname } = window.location;
   let baseUrl = `${protocol}//${hostname}`;
 
-  const isLocalhost = hostname === "localhost";
+  const isLocalhost = hostname === 'localhost';
   if (isLocalhost) {
     baseUrl += `:${localhostPort}`;
   }
@@ -85,11 +78,11 @@ const getBaseUrl = (localhostPort: string): string => {
 };
 
 const getAdminUrl = (): string => {
-  const LOCALHOST_ADMIN_PORT = "8000";
+  const LOCALHOST_ADMIN_PORT = '8000';
   return getBaseUrl(LOCALHOST_ADMIN_PORT);
 };
 
 const getBaseNextUrl = (): string => {
-  const LOCALHOST_NEXT_PORT = "3000";
+  const LOCALHOST_NEXT_PORT = '3000';
   return `${getBaseUrl(LOCALHOST_NEXT_PORT)}/next`;
 };

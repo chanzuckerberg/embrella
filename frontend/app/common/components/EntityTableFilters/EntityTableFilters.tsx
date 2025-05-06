@@ -1,16 +1,12 @@
-import { Fragment } from "react";
+import { Fragment } from 'react';
 
-import { API } from "@app/common/constants/api";
-import { TEST_IDS } from "@app/common/constants/testIds";
-import {
-  EntityFilterCategories,
-  EntityFilterConfigs,
-  EntityFilterIdTypes,
-} from "@app/common/types/filter";
+import { API } from '@app/common/constants/api';
+import { TEST_IDS } from '@app/common/constants/testIds';
+import { EntityFilterCategories, EntityFilterConfigs, EntityFilterIdTypes } from '@app/common/types/filter';
 
-import { Filter } from "./components/Filter/Filter";
-import { useConnect } from "./connect";
-import { FilterDivider, StyledFilters } from "./style";
+import { Filter } from './components/Filter/Filter';
+import { useConnect } from './connect';
+import { FilterDivider, StyledFilters } from './style';
 
 interface EntityTableFiltersProps {
   entityFilterConfigs: EntityFilterConfigs[][];
@@ -25,10 +21,10 @@ export const EntityTableFilters = <
   entityFilterConfigs,
   entityFilterListApi,
 }: EntityTableFiltersProps): React.JSX.Element => {
-  const { filters, onFilter } = useConnect<
-    ENTITY_FILTER_ID,
-    EntityFilterCategory
-  >(entityFilterConfigs, entityFilterListApi);
+  const { filters, onFilter } = useConnect<ENTITY_FILTER_ID, EntityFilterCategory>(
+    entityFilterConfigs,
+    entityFilterListApi
+  );
 
   return (
     <StyledFilters data-testid={TEST_IDS.SIDEBAR_FILTERS}>

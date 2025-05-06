@@ -1,30 +1,23 @@
-import { TestResponse } from "@testing/types";
-import { FETCH_RESPONSES } from "@testing/constants";
-import { SearchParamValue } from "@app/common/types/search";
+import { TestResponse } from '@testing/types';
+import { FETCH_RESPONSES } from '@testing/constants';
+import { SearchParamValue } from '@app/common/types/search';
 
 /**
  * Initialize mock `fetch` function in global scope, since `fetch` is normally unavailable in tests.
  * @param getBlocker - Function returning a promise that the mock-fetch will await before returning.
  */
-export function initFetch(
-  getBlocker: () => Promise<void> | undefined = () => undefined,
-): void {
+export function initFetch(getBlocker: () => Promise<void> | undefined = () => undefined): void {
   global.fetch = jest.fn(async (url): Promise<TestResponse> => {
     await getBlocker();
     const urlObj = new URL(url);
     const relativeURL = urlObj.pathname;
-    const responseInfo =
-      Object.hasOwn(FETCH_RESPONSES, relativeURL) &&
-      FETCH_RESPONSES[relativeURL];
-    if (!responseInfo) throw new TypeError("Failed to fetch");
-    const body =
-      typeof responseInfo.body === "function"
-        ? responseInfo.body(urlObj)
-        : responseInfo.body;
+    const responseInfo = Object.hasOwn(FETCH_RESPONSES, relativeURL) && FETCH_RESPONSES[relativeURL];
+    if (!responseInfo) throw new TypeError('Failed to fetch');
+    const body = typeof responseInfo.body === 'function' ? responseInfo.body(urlObj) : responseInfo.body;
     return {
       status: responseInfo.status ?? 200,
-      text: async () => body ?? "",
-      json: async () => JSON.parse(body ?? ""),
+      text: async () => body ?? '',
+      json: async () => JSON.parse(body ?? ''),
       url: url.toString(),
     };
   }) as unknown as typeof fetch;
@@ -35,11 +28,7 @@ export function initFetch(
  * @returns promise with resolvers.
  */
 // Adapted from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/withResolvers#description
-export function promiseWithResolvers<T>(): [
-  Promise<T>,
-  (v: T) => void,
-  (v: unknown) => void,
-] {
+export function promiseWithResolvers<T>(): [Promise<T>, (v: T) => void, (v: unknown) => void] {
   let resolve: (v: T) => void;
   let reject: (v: unknown) => void;
   const promise = new Promise<T>((res, rej) => {
@@ -75,13 +64,15 @@ export function getLastFetchResult(): Promise<TestResponse | undefined> {
  * @param defaultValue - Default value.
  * @returns search param category value.
  */
-export function getSearchParamFirstValue<T extends boolean | number | string>(
+export function getSearchParamFirstValue<T>(
   values: SearchParamValue[],
   category: string,
   index = 0,
-  defaultValue?: T,
+  defaultValue?: T
 ): T | undefined {
-  const value = values.find((v) => v.category === category)?.value;
-  if (!value) return defaultValue;
-  return Array.isArray(value) ? value[index] : value || defaultValue;
+  const foundValue = values.find((v) => v.category === category)?.value;
+  if (!foundValue) return defaultValue;
+
+  const value = Array.isArray(foundValue) ? foundValue[index] : foundValue;
+  return (value as T) ?? defaultValue;
 }

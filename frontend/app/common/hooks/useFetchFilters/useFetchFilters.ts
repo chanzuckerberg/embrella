@@ -5,11 +5,11 @@ import { useFetchData } from "@hooks/useFetchData/useFetchData";
 
 export const useFetchFilters = <FilterCategory extends EntityFilterCategories>(
   filterlistEndpoint: API,
-  searchParam: SearchParam,
+  searchParam: SearchParam
 ): FiltersList<FilterCategory> | undefined => {
   const { data: filtersData } = useFetchData<FiltersList<FilterCategory>>(
     filterlistEndpoint,
-    searchParam,
+    searchParam
   );
 
   return filtersData;

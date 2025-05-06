@@ -1,15 +1,13 @@
-import { TableState } from "@app/common/components/TableStateProvider/TableStateProvider";
-import { SearchParamValue } from "@app/common/types/search";
-import { ColumnSort } from "@tanstack/react-table";
+import { TableState } from '@app/common/components/TableStateProvider/TableStateProvider';
+import { SearchParamValue } from '@app/common/types/search';
+import { ColumnSort } from '@tanstack/react-table';
 
 /**
  * Returns the filter related search param values for the given filter state.
  * @param state - State.
  * @returns filter search param value.
  */
-export function getFilterSearchParamValues(
-  state: TableState,
-): SearchParamValue[] {
+export function getFilterSearchParamValues(state: TableState): SearchParamValue[] {
   return Object.entries(state.filterState).map(([category, value]) => {
     return {
       category,
@@ -24,20 +22,16 @@ export function getFilterSearchParamValues(
  * @param state - State.
  * @returns search params "page".
  */
-export const getPaginationSearchParamValues = (
-  state: TableState,
-): SearchParamValue[] => {
+export const getPaginationSearchParamValues = (state: TableState): SearchParamValue[] => {
   const {
     paginationState: { pageIndex },
   } = state;
 
-  const pageNumbersForIndexes = [pageIndex].map(
-    (pageIndex: number) => pageIndex + 1,
-  );
+  const pageNumbersForIndexes = [pageIndex].map((pageIndex: number) => pageIndex + 1);
 
   return [
     {
-      category: "page",
+      category: 'page',
       value: pageNumbersForIndexes,
     },
   ];
@@ -52,11 +46,11 @@ export function getSortSearchParamValue(state: TableState): SearchParamValue[] {
   const { sortState } = state;
   return [
     {
-      category: "asc",
+      category: 'asc',
       value: sortState.map((columnSort: ColumnSort) => !columnSort.desc),
     },
     {
-      category: "sort",
+      category: 'sort',
       value: sortState.map((columnSort: ColumnSort) => columnSort.id),
     },
   ];

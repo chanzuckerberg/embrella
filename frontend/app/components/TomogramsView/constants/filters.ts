@@ -1,41 +1,41 @@
-import { TomogramFilterConfig, TomogramFilterId } from "../types";
+import { TomogramFilterConfig, TomogramFilterId } from '../types';
 
 export const TOMOGRAM_FILTER_CONFIGS: TomogramFilterConfig[][] = [
   [
     {
-      filterCategory: "project",
+      filterCategory: 'project',
       filterId: TomogramFilterId.PROJECT,
-      label: "Project",
+      label: 'Project',
     },
     {
-      filterCategory: "sample",
+      filterCategory: 'sample',
       filterId: TomogramFilterId.SAMPLE,
-      label: "Sample",
+      label: 'Sample',
     },
     {
-      filterCategory: "user",
+      filterCategory: 'user',
       filterId: TomogramFilterId.USER,
-      label: "User",
+      label: 'User',
     },
     {
-      filterCategory: "msiSession",
+      filterCategory: 'msiSession',
       filterId: TomogramFilterId.MSI_SESSION,
-      label: "MSI Session",
+      label: 'MSI Session',
     },
     {
-      filterCategory: "screeningSession",
+      filterCategory: 'screeningSession',
       filterId: TomogramFilterId.SCREENING_SESSION,
-      label: "Screening Session",
+      label: 'Screening Session',
     },
     {
-      filterCategory: "procPlan",
+      filterCategory: 'procPlan',
       filterId: TomogramFilterId.PROC_PLAN,
-      label: "Proc Plan",
+      label: 'Proc Plan',
     },
     {
-      filterCategory: "date",
+      filterCategory: 'date',
       filterId: TomogramFilterId.DATE,
-      label: "Date",
+      label: 'Date',
     },
   ],
 ];

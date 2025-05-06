@@ -12,7 +12,7 @@ interface UseFetchData<D> {
 export const useFetchData = <D>(
   relativeURL: API,
   searchParam: Record<string, unknown> = {},
-  shouldFetch = true,
+  shouldFetch = true
 ): UseFetchData<D> => {
   const [dataState, setDataState] = useState<UseFetchData<D>>({
     isSuccess: false,
@@ -27,10 +27,7 @@ export const useFetchData = <D>(
     const mockResponse = MOCKED_APIS[relativeURL];
     if (mockResponse !== undefined) {
       setDataState({
-        data:
-          typeof mockResponse === "function"
-            ? mockResponse(requestURL)
-            : mockResponse,
+        data: typeof mockResponse === 'function' ? mockResponse(requestURL) : mockResponse,
         isSuccess: true,
       });
       return;

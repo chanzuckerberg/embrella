@@ -1,4 +1,4 @@
 module.exports = {
-  extends: "stylelint-config-recommended",
-  ignoreFiles: ["packages/**/*"],
+  extends: 'stylelint-config-recommended',
+  ignoreFiles: ['packages/**/*'],
 };

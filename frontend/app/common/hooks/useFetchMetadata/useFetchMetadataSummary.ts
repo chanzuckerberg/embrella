@@ -17,7 +17,7 @@ interface UseFetchMetadataResult {
 export const useFetchMetadataSummary = (
   sessionName: string,
   runNumber: string,
-  shouldFetch: boolean = false,
+  shouldFetch: boolean = false
 ): UseFetchMetadataResult => {
   const [data, setData] = useState<MetadataSummaryResponse>();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -47,10 +47,11 @@ export const useFetchMetadataSummary = (
         setData(jsonData);
         setIsSuccess(true);
         setError(undefined);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const apiError = err as FetchError;
         setError({
-          status: err.status || 500,
-          message: err.message || "An error occurred while fetching metadata",
+          status: apiError.status || 500,
+          message: apiError.message || 'An error occurred while fetching data',
         });
         setIsSuccess(false);
       } finally {
