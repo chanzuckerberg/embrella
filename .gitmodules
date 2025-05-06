@@ -1,0 +1,3 @@
+[submodule "frontend/imaging-active-learning"]
+	path = frontend/imaging-active-learning
+	url = git@github.com:chanzuckerberg/imaging-active-learning.git
