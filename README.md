@@ -8,9 +8,11 @@ django project for data integration.  This should become the go-to place for peo
 conda create -n umbrella-django python=3.11
 conda activate umbrella-django
 ```
-2. Clone git repository
+2. Clone git repository and initialize submodules
 ```
 git clone https://github.com/czimaginginstitute/czii-umbrella-django.git _your_clone_dir_
+git submodule update --init --recursive
+
 ```
 3. install requirements (I use pip even in conda env)
 ```
@@ -18,7 +20,7 @@ cd _your_clone_dir_
 pip install -r ./requirements.txt
 ```
 4. create settings.py for yourself in the project directory
-   
+
    Django organizes its apps under a project directory that is duplicated in this repository.  The global settines are saved in a directory named also by the django project name.
 ```
 cd umbrella
