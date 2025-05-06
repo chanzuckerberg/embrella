@@ -15,8 +15,15 @@ A list of recommended node version managers is below:
 1. `cd` into the `frontend` directory.
 2. Run `yarn`.
 
-## Run Frontend
 
+## Update `imaging-active-learning` Submodule
+To pull the latest commit from the `main` branch of the submodule:
+
+```bash
+git submodule update --remote --merge
+```
+
+## Run Frontend
 1. `cd` into the `frontend` directory.
 2. Run `yarn dev`.
 3. Open browser at http://localhost:3000/next.
