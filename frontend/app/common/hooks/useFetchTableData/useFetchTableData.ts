@@ -11,7 +11,7 @@ import { API } from "@app/common/constants/api";
 
 export const useFetchTableData = <T extends EntityDataTypes>(
   dataEndpoint: API,
-  searchParam: SearchParam,
+  searchParam: SearchParam
 ): EntityList<T> => {
   const { data } = useFetchData<ApiListResponse<EntityDataTypes>>(
     dataEndpoint,

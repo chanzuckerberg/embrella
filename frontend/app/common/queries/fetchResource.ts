@@ -7,7 +7,7 @@ import { DJANGO_URL } from "../constants/api";
  */
 export async function fetchResource(requestURL: string): Promise<Response> {
   const response = await fetch(requestURL, {
-    credentials: "include", // Include cookies in the request
+    credentials: 'include', // Include cookies in the request
   });
 
   // Check if the response status is 302 (redirect) or if the URL includes the login page

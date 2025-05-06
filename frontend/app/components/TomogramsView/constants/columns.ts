@@ -1,30 +1,27 @@
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef } from '@tanstack/react-table';
 
-import { AccessorReturnType } from "@app/common/components/EntityTable/types";
-import { humanize } from "@app/common/utils/string";
-import { EntityDataTypes } from "@app/common/types/tableState";
+import { AccessorReturnType } from '@app/common/components/EntityTable/types';
+import { humanize } from '@app/common/utils/string';
+import { EntityDataTypes } from '@app/common/types/tableState';
 import {
   getLinkPropsFromLinkField,
   getLinkCellFromCellContext,
-} from "@app/common/components/EntityTable/utils/linkUtils";
-import { LinkCellProps } from "@app/common/components/EntityTable/types";
-import { TomogramData } from "../types";
+} from '@app/common/components/EntityTable/utils/linkUtils';
+import { LinkCellProps } from '@app/common/components/EntityTable/types';
+import { TomogramData } from '../types';
 
 export const TOMOGRAM_COLUMN_IDS = {
-  TOMOGRAMS: "tomograms",
-  PROC_PLAN: "procPlan",
-  MSI_SESSION: "msiSession",
-  METADATA: "metadata",
-  PROJECT: "project",
-  GRID: "grid",
-  NOTES: "notes",
-  UPDATED_AT: "updatedAt",
+  TOMOGRAMS: 'tomograms',
+  PROC_PLAN: 'procPlan',
+  MSI_SESSION: 'msiSession',
+  METADATA: 'metadata',
+  PROJECT: 'project',
+  GRID: 'grid',
+  NOTES: 'notes',
+  UPDATED_AT: 'updatedAt',
 };
 
-export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
-  EntityDataTypes,
-  AccessorReturnType
->[] = [
+export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] = [
   {
     id: TOMOGRAM_COLUMN_IDS.TOMOGRAMS,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
@@ -47,19 +44,19 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
       getLinkPropsFromLinkField((rowData as TomogramData).msiSession),
     cell: getLinkCellFromCellContext,
     enableSorting: false,
-    header: "MSI Session",
+    header: 'MSI Session',
   },
 
   {
     id: TOMOGRAM_COLUMN_IDS.METADATA,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps => {
       const tomogramData = rowData as TomogramData;
-      const sessionName = tomogramData.msiSession?.name || "";
-      let runNumber = tomogramData.tomograms?.name || "";
+      const sessionName = tomogramData.msiSession?.name || '';
+      let runNumber = tomogramData.tomograms?.name || '';
       // Clean the run number by removing (id=XX) and trimming whitespace
-      runNumber = runNumber.replace(/\s*\(id=\d+\)/g, "").trim();
+      runNumber = runNumber.replace(/\s*\(id=\d+\)/g, '').trim();
       return {
-        children: "View Metadata",
+        children: 'View Metadata',
         href: `metadata/view/${encodeURIComponent(sessionName)}/${encodeURIComponent(runNumber)}`,
       };
     },
@@ -77,23 +74,20 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<
   },
   {
     id: TOMOGRAM_COLUMN_IDS.GRID,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as TomogramData).grid),
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps => getLinkPropsFromLinkField((rowData as TomogramData).grid),
     cell: getLinkCellFromCellContext,
     enableSorting: false,
     header: humanize(TOMOGRAM_COLUMN_IDS.GRID),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.NOTES,
-    accessorFn: (rowData: EntityDataTypes): string =>
-      (rowData as TomogramData).procRun.notes,
+    accessorFn: (rowData: EntityDataTypes): string => (rowData as TomogramData).procRun.notes,
     enableSorting: false,
     header: humanize(TOMOGRAM_COLUMN_IDS.NOTES),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.UPDATED_AT,
-    accessorFn: (rowData: EntityDataTypes): string =>
-      (rowData as TomogramData).procRun.updatedAt,
+    accessorFn: (rowData: EntityDataTypes): string => (rowData as TomogramData).procRun.updatedAt,
     enableSorting: true,
     header: humanize(TOMOGRAM_COLUMN_IDS.UPDATED_AT),
   },

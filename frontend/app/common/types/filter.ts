@@ -2,18 +2,10 @@ import {
   AnnotationFilterCategory,
   AnnotationFilterConfig,
   AnnotationFilterId,
-} from "@app/components/AnnotationsView/types";
-import {
-  TomogramFilterId,
-  TomogramFilterCategory,
-  TomogramFilterConfig,
-} from "@app/components/TomogramsView/types";
-import {
-  GridFilterCategory,
-  GridFilterConfig,
-  GridFilterId,
-} from "@app/components/GridsView/types";
-import { ReviewFilterCategory } from "@app/components/ReviewsView/types";
+} from '@app/components/AnnotationsView/types';
+import { TomogramFilterId, TomogramFilterCategory, TomogramFilterConfig } from '@app/components/TomogramsView/types';
+import { GridFilterCategory, GridFilterConfig, GridFilterId } from '@app/components/GridsView/types';
+import { ReviewFilterCategory } from '@app/components/ReviewsView/types';
 // EntityFilterCategory extends EntityFilterCategories
 export interface FiltersList<FilterCategory extends EntityFilterCategories> {
   filters: Record<FilterCategory, FilterOption[]>;
@@ -29,10 +21,7 @@ export interface FilterOption {
 }
 
 // TODO: Consider moving these types under EntityTableFilters
-export type EntityFilterIdTypes =
-  | AnnotationFilterId
-  | TomogramFilterId
-  | GridFilterId;
+export type EntityFilterIdTypes = AnnotationFilterId | TomogramFilterId | GridFilterId;
 
 export type EntityFilterCategories =
   | AnnotationFilterCategory
@@ -40,10 +29,7 @@ export type EntityFilterCategories =
   | TomogramFilterCategory
   | ReviewFilterCategory;
 
-export type EntityFilterConfigs =
-  | AnnotationFilterConfig
-  | TomogramFilterConfig
-  | GridFilterConfig;
+export type EntityFilterConfigs = AnnotationFilterConfig | TomogramFilterConfig | GridFilterConfig;
 
 export interface FilterConfig<FilterId, FilterCategory extends string> {
   filterCategory: FilterCategory; // Key in result set row values to filter on.

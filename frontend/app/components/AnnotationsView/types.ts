@@ -4,8 +4,8 @@ import {
   MSISessionField,
   // ProcRunField,
   UserField,
-} from "@app/common/types/entity";
-import { FilterConfig } from "@app/common/types/filter";
+} from '@app/common/types/entity';
+import { FilterConfig } from '@app/common/types/filter';
 
 interface AnnotationsField extends EntityLinkField {
   updatedAt: string;
@@ -22,25 +22,22 @@ export interface AnnotationData {
   msiSession: MSISessionField;
 }
 export enum AnnotationFilterId {
-  PROJECT = "PROJECT",
-  SAMPLE = "SAMPLE",
-  USER = "USER",
-  SCREENING_SESSION = "SCREENING_SESSION",
-  MSI_SESSION = "MSI_SESSION",
-  DATE = "DATE",
-  PROC_PLAN = "PROC_PLAN",
+  PROJECT = 'PROJECT',
+  SAMPLE = 'SAMPLE',
+  USER = 'USER',
+  SCREENING_SESSION = 'SCREENING_SESSION',
+  MSI_SESSION = 'MSI_SESSION',
+  DATE = 'DATE',
+  PROC_PLAN = 'PROC_PLAN',
 }
 
 export type AnnotationFilterCategory =
-  | "project"
-  | "sample"
-  | "user"
-  | "screeningSession"
-  | "msiSession"
-  | "date"
-  | "procPlan";
+  | 'project'
+  | 'sample'
+  | 'user'
+  | 'screeningSession'
+  | 'msiSession'
+  | 'date'
+  | 'procPlan';
 
-export type AnnotationFilterConfig = FilterConfig<
-  AnnotationFilterId,
-  AnnotationFilterCategory
->;
+export type AnnotationFilterConfig = FilterConfig<AnnotationFilterId, AnnotationFilterCategory>;

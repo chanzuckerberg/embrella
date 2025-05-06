@@ -1,8 +1,8 @@
-import { Metadata } from "next";
-import { GridsView } from "@app/components/GridsView/GridsView";
+import { Metadata } from 'next';
+import { GridsView } from '@app/components/GridsView/GridsView';
 
 export const metadata: Metadata = {
-  title: "Embrella Grids",
+  title: 'Embrella Grids',
 };
 
 const GridsPage = () => {

@@ -3,13 +3,9 @@ import {
   FILTER_VALUE,
   FilterView,
   SelectFilterView,
-} from "@app/common/components/EntityTableFilters/types";
-import { FilterConfig } from "@app/common/types/filter";
-import {
-  EntityFilterCategories,
-  FilterOption,
-  FiltersList,
-} from "@app/common/types/filter";
+} from '@app/common/components/EntityTableFilters/types';
+import { FilterConfig } from '@app/common/types/filter';
+import { EntityFilterCategories, FilterOption, FiltersList } from '@app/common/types/filter';
 
 /**
  * Build view model of filter groups.
@@ -17,12 +13,9 @@ import {
  * @param filters - Filters list filters.
  * @returns filter groups view model.
  */
-export function buildFilterGroups<
-  FilterId,
-  FilterCategory extends EntityFilterCategories,
->(
+export function buildFilterGroups<FilterId, FilterCategory extends EntityFilterCategories>(
   filterConfigs: FilterConfig<FilterId, FilterCategory>[][],
-  filters?: FiltersList<FilterCategory>["filters"],
+  filters?: FiltersList<FilterCategory>['filters']
 ): FilterView<FilterId, FilterCategory>[][] {
   return filterConfigs.map((configs) => {
     return configs.map((config) => {
@@ -46,8 +39,8 @@ export function buildFilterGroups<
  * @returns an array of filter view options.
  */
 function buildFilterViewOptions<FilterId, FilterCategory extends string>(
-  filterOptions?: FilterOption[],
-): SelectFilterView<FilterId, FilterCategory>["options"] {
+  filterOptions?: FilterOption[]
+): SelectFilterView<FilterId, FilterCategory>['options'] {
   if (!filterOptions) return [];
   return filterOptions.map(mapOption);
 }
@@ -58,8 +51,8 @@ function buildFilterViewOptions<FilterId, FilterCategory extends string>(
  * @returns an array of selected values.
  */
 function buildFilterViewValue<FilterId, FilterCategory extends string>(
-  filterOptions?: FilterOption[],
-): SelectFilterView<FilterId, FilterCategory>["value"] {
+  filterOptions?: FilterOption[]
+): SelectFilterView<FilterId, FilterCategory>['value'] {
   if (!filterOptions) return [];
   return filterOptions.filter(isSelected).map(mapOption);
 }
@@ -98,11 +91,11 @@ function mapOption(filterOption: FilterOption): AutocompleteOption {
  * @param name - Name.
  * @returns sanitized name.
  */
-function sanitizeFilterName(name: FilterOption["name"]): string {
+function sanitizeFilterName(name: FilterOption['name']): string {
   // sanitize null value to unspecified.
   if (name === null) return FILTER_VALUE.UNSPECIFIED;
   // sanitize boolean value to string.
-  if (typeof name === "boolean") {
+  if (typeof name === 'boolean') {
     return name.toString();
   }
   return name;

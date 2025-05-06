@@ -1,41 +1,41 @@
-import { AnnotationFilterConfig, AnnotationFilterId } from "../types";
+import { AnnotationFilterConfig, AnnotationFilterId } from '../types';
 
 export const ANNOTATION_FILTER_CONFIGS: AnnotationFilterConfig[][] = [
   [
     {
-      filterCategory: "project",
+      filterCategory: 'project',
       filterId: AnnotationFilterId.PROJECT,
-      label: "Project",
+      label: 'Project',
     },
     {
-      filterCategory: "sample",
+      filterCategory: 'sample',
       filterId: AnnotationFilterId.SAMPLE,
-      label: "Sample",
+      label: 'Sample',
     },
     {
-      filterCategory: "user",
+      filterCategory: 'user',
       filterId: AnnotationFilterId.USER,
-      label: "User",
+      label: 'User',
     },
     {
-      filterCategory: "date",
+      filterCategory: 'date',
       filterId: AnnotationFilterId.DATE,
-      label: "Date",
+      label: 'Date',
     },
     {
-      filterCategory: "screeningSession",
+      filterCategory: 'screeningSession',
       filterId: AnnotationFilterId.SCREENING_SESSION,
-      label: "Screening Session",
+      label: 'Screening Session',
     },
     {
-      filterCategory: "msiSession",
+      filterCategory: 'msiSession',
       filterId: AnnotationFilterId.MSI_SESSION,
-      label: "MSI Session",
+      label: 'MSI Session',
     },
     {
-      filterCategory: "procPlan",
+      filterCategory: 'procPlan',
       filterId: AnnotationFilterId.PROC_PLAN,
-      label: "Proc Plan",
+      label: 'Proc Plan',
     },
   ],
 ];

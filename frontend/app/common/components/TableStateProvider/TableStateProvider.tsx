@@ -1,17 +1,10 @@
-import { createContext, Dispatch, ReactNode, useReducer } from "react";
-import {
-  noop,
-  PaginationState,
-  SortingState,
-  Updater,
-} from "@tanstack/react-table";
-import { EntityFilterCategories } from "@app/common/types/filter";
+import { createContext, Dispatch, ReactNode, useReducer } from 'react';
+import { noop, PaginationState, SortingState, Updater } from '@tanstack/react-table';
+import { EntityFilterCategories } from '@app/common/types/filter';
 
 export const DEFAULT_PAGE_SIZE = 10;
 
-export const getInitialTableState = (
-  sortState: SortingState = [],
-): TableState => ({
+export const getInitialTableState = (sortState: SortingState = []): TableState => ({
   filterState: {},
   paginationState: {
     pageIndex: 0,
@@ -39,9 +32,9 @@ export interface TableState {
 
 // #region Table state action types for reducer
 export enum TableStateActionTypes {
-  UpdateFilter = "UPDATE_FILTER_ACTION",
-  UpdatePagination = "UPDATE_PAGINATION_ACTION",
-  UpdateSort = "UPDATE_SORT_ACTION",
+  UpdateFilter = 'UPDATE_FILTER_ACTION',
+  UpdatePagination = 'UPDATE_PAGINATION_ACTION',
+  UpdateSort = 'UPDATE_SORT_ACTION',
 }
 
 interface CategoryFilter {
@@ -72,23 +65,15 @@ export type UpdateSortAction = {
   type: TableStateActionTypes.UpdateSort;
 };
 
-export type TableStateAction =
-  | UpdateFilterAction
-  | UpdatePaginationAction
-  | UpdateSortAction;
+export type TableStateAction = UpdateFilterAction | UpdatePaginationAction | UpdateSortAction;
 // #endregion Table state action types for reducer
 
-export const tableStateReducer = (
-  state: TableState,
-  action: TableStateAction,
-): TableState => {
+export const tableStateReducer = (state: TableState, action: TableStateAction): TableState => {
   const { payload, type } = action;
   switch (type) {
     case TableStateActionTypes.UpdateFilter: {
       const { category, value } = payload.categoryFilter;
-      const valueSelected = Array.isArray(value)
-        ? value.length > 0
-        : value !== null;
+      const valueSelected = Array.isArray(value) ? value.length > 0 : value !== null;
       const filterState = {
         ...state.filterState,
         [category]: value,
@@ -106,10 +91,7 @@ export const tableStateReducer = (
     }
     case TableStateActionTypes.UpdatePagination: {
       const { pagination, updaterOrValue } = payload;
-      const paginationState =
-        typeof updaterOrValue === "function"
-          ? updaterOrValue(pagination)
-          : updaterOrValue;
+      const paginationState = typeof updaterOrValue === 'function' ? updaterOrValue(pagination) : updaterOrValue;
 
       return {
         ...state,
@@ -118,10 +100,7 @@ export const tableStateReducer = (
     }
     case TableStateActionTypes.UpdateSort: {
       const { sortBy, updaterOrValue } = payload;
-      const sortState =
-        typeof updaterOrValue === "function"
-          ? updaterOrValue(sortBy)
-          : updaterOrValue;
+      const sortState = typeof updaterOrValue === 'function' ? updaterOrValue(sortBy) : updaterOrValue;
       return {
         ...state,
         sortState,
@@ -132,27 +111,16 @@ export const tableStateReducer = (
   }
 };
 
-export const TableDispatchContext =
-  createContext<Dispatch<TableStateAction>>(noop);
-export const TableStateContext = createContext<TableState>(
-  getInitialTableState(),
-);
+export const TableDispatchContext = createContext<Dispatch<TableStateAction>>(noop);
+export const TableStateContext = createContext<TableState>(getInitialTableState());
 
-export const TableStateProvider = ({
-  children,
-  initialSortState,
-}: TableStateProviderProps): JSX.Element => {
+export const TableStateProvider = ({ children, initialSortState }: TableStateProviderProps): JSX.Element => {
   const sortState = initialSortState || [];
-  const [state, dispatch] = useReducer(
-    tableStateReducer,
-    getInitialTableState(sortState),
-  );
+  const [state, dispatch] = useReducer(tableStateReducer, getInitialTableState(sortState));
 
   return (
     <TableStateContext.Provider value={state}>
-      <TableDispatchContext.Provider value={dispatch}>
-        {children}
-      </TableDispatchContext.Provider>
+      <TableDispatchContext.Provider value={dispatch}>{children}</TableDispatchContext.Provider>
     </TableStateContext.Provider>
   );
 };

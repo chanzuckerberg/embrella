@@ -13,7 +13,8 @@
     "e2e": "playwright test --project chromium",
     "e2e:chrome": "playwright test --project chromium",
     "e2e:ff": "playwright test --project firefox",
-    "e2e:ie": "playwright test --project edge"
+    "e2e:ie": "playwright test --project edge",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@czi-sds/components": "^20.2.0",
@@ -35,8 +36,8 @@
     "postcss": "^8.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwindcss": "^4.1.4",
-    "react-json-view": "^1.21.3"
+    "react-json-view": "^1.21.3",
+    "tailwindcss": "^4.1.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.1",
@@ -56,6 +57,7 @@
     "eslint-plugin-prettier": "^5.0.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-sonarjs": "^0.23.0",
+    "husky": "^8.0.3",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "jest-junit": "^16.0.0",

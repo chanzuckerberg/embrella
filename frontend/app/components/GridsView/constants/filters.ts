@@ -1,55 +1,55 @@
-import { GridFilterConfig, GridFilterId } from "../types";
+import { GridFilterConfig, GridFilterId } from '../types';
 
 export const GRID_FILTER_CONFIGS: GridFilterConfig[][] = [
   [
     {
-      filterCategory: "project",
+      filterCategory: 'project',
       filterId: GridFilterId.PROJECT,
-      label: "Project",
+      label: 'Project',
     },
     {
-      filterCategory: "puck",
+      filterCategory: 'puck',
       filterId: GridFilterId.PUCK,
-      label: "Puck",
+      label: 'Puck',
     },
     {
-      filterCategory: "sample",
+      filterCategory: 'sample',
       filterId: GridFilterId.SAMPLE,
-      label: "Sample",
+      label: 'Sample',
     },
     {
-      filterCategory: "user",
+      filterCategory: 'user',
       filterId: GridFilterId.USER,
-      label: "User",
+      label: 'User',
     },
     {
-      filterCategory: "cassette",
+      filterCategory: 'cassette',
       filterId: GridFilterId.CASSETTE,
-      label: "Cassette",
+      label: 'Cassette',
     },
     {
-      filterCategory: "date",
+      filterCategory: 'date',
       filterId: GridFilterId.DATE,
-      label: "Date",
+      label: 'Date',
     },
   ],
   [
     {
-      filterCategory: "screeningSession",
+      filterCategory: 'screeningSession',
       filterId: GridFilterId.SCREENING_SESSION,
-      label: "Screening Session",
+      label: 'Screening Session',
     },
     {
-      filterCategory: "msiSession",
+      filterCategory: 'msiSession',
       filterId: GridFilterId.MSI_SESSION,
-      label: "MSI Session",
+      label: 'MSI Session',
     },
   ],
   [
     {
-      filterCategory: "status",
+      filterCategory: 'status',
       filterId: GridFilterId.STATUS,
-      label: "Status",
+      label: 'Status',
     },
   ],
 ];
