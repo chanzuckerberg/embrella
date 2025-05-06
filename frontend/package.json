@@ -2,6 +2,9 @@
   "name": "create-sds-app",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "imaging-active-learning/packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -22,21 +25,17 @@
     "@emotion/css": "^11.11.2",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
+    "@idetik/core": "file:./imaging-active-learning/packages/core",
     "@mui/base": "^5.0.0-beta.30",
     "@mui/icons-material": "^5.15.3",
     "@mui/lab": "^5.0.0-alpha.159",
     "@mui/material": "^5.15.3",
     "@mui/material-nextjs": "^5.15.11",
-    "@tailwindcss/postcss": "^4.1.4",
     "@tanstack/react-table": "^8.20.5",
     "date-fns": "^3.6.0",
-    "echarts": "^5.6.0",
     "next": "^14.2.24",
-    "postcss": "^8.5.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tailwindcss": "^4.1.4",
-    "react-json-view": "^1.21.3"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.1",
@@ -66,5 +65,5 @@
     "stylelint-config-standard": "^34.0.0",
     "typescript": "^5"
   },
-  "packageManager": "yarn@4.9.1"
+  "packageManager": "yarn@4.1.1"
 }
