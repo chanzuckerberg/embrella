@@ -7,7 +7,7 @@ import { ViewerContainer, MainContent, ViewerArea, ZSliderContainer } from "./st
 import { Button } from "@czi-sds/components";
 import { Review, ReviewTomogramDetail } from "./types";
 import { QualityControls } from "./components/QualityControls";
-import { OmeZarrImageViewer } from "@idetik/react";
+import { useOmeZarrViewer, Renderer, OmeZarrImageViewer } from "@idetik/react";
 import { LayerManager, OrthographicCamera, Region } from "@idetik/core";
 
 
@@ -29,22 +29,18 @@ const region: Region = [
 const imagePaths = ["000000", "000001", "000002", "001000", "001001", "001002"];
 
 export const TomogramViewer = ({ review }: TomogramViewerProps) => {
+    const [imageIndex, setImageIndex] = useState(0);
+    const imagePath = imagePaths[imageIndex];
+    const imageUrl = `${sourceUrl}/${wellPath}/${imagePath}`;
+    const layerCreatedTime = useRef<number | undefined>(undefined);
+    const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
+
     const [selectedTomogram, setSelectedTomogram] = useState<string | null>(null);
     const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
     const [contrast, setContrast] = useState(50);
     const [slabThickness, setSlabThickness] = useState(1000);
     const [zPosition, setZPosition] = useState(50);
-    const [imageIndex, setImageIndex] = useState(0);
-    const [layerManager, setLayerManager] = useState<LayerManager>(
-        new LayerManager()
-    );
-    const [camera, setCamera] = useState<OrthographicCamera | null>(null);
-
-    const imagePath = imagePaths[imageIndex];
-    const imageUrl = `${sourceUrl}/${wellPath}/${imagePath}`;
-
-    const layerCreatedTime = useRef<number | undefined>(undefined);
-    const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
+    const [seriesDimensionName, setSeriesDimensionName] = useState("Z");
 
 
     const handleLayerCreated = useCallback(() => {
@@ -125,6 +121,37 @@ export const TomogramViewer = ({ review }: TomogramViewerProps) => {
         fetchTomogramDetail();
     }, [selectedTomogram]);
 
+    const {
+        layerManager,
+        camera,
+        imageLayer,
+        controlProps,
+        zRange,
+        zValue,
+        zIndex,
+        setZValue,
+        loading,
+        allSlicesLoaded,
+        resetChannelsCallback,
+        loadAllSlicesCallback,
+    } = useOmeZarrViewer({
+        sourceUrl,
+        region,
+        seriesDimensionName,
+        handleLayerCreated,
+        handleFirstSliceLoaded,
+        handleLoadAllSlicesClicked,
+        handleAllSlicesLoaded,
+        handleLoadAllSlicesAborted,
+    });
+
+    // Add the image layer to the layer manager when it's created
+    useEffect(() => {
+        if (imageLayer) {
+            layerManager.add(imageLayer);
+        }
+    }, [imageLayer, layerManager]);
+
     return (
         <ViewerContainer>
             <TopBar onMarkComplete={() => console.log("Mark as complete")} />
@@ -156,21 +183,14 @@ export const TomogramViewer = ({ review }: TomogramViewerProps) => {
                                     justifyContent: "center",
                                 }}
                             >
-                                <OmeZarrImageViewer
-                                    sourceUrl={imageUrl}
-                                    region={region}
-                                    seriesDimensionName="Z"
-                                    allSlicesSizeEstimate="250 MB"
-                                    onLayerCreated={handleLayerCreated}
-                                    onFirstSliceLoaded={handleFirstSliceLoaded}
-                                    onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
-                                    onAllSlicesLoaded={handleAllSlicesLoaded}
-                                    onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
-                                />
-                                {/* <Renderer
-                                    layerManager={layerManager}
-                                    camera={camera}
-                                /> */}
+                                <div style={{ width: "100%", height: "100%", position: "relative" }}>
+                                    <Renderer
+                                        layerManager={layerManager}
+                                        camera={camera}
+                                        cameraControls="panzoom"
+                                        canvasId="tomogram-viewer-canvas"
+                                    />
+                                </div>
                             </div>
                             <ZSliderContainer>
                                 <Button size="small">←</Button>

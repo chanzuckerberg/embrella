@@ -778,12 +778,12 @@ __metadata:
 
 "@idetik/core@file:./imaging-active-learning/packages/core::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/core@file:./imaging-active-learning/packages/core#./imaging-active-learning/packages/core::hash=33c6d4&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/core@file:./imaging-active-learning/packages/core#./imaging-active-learning/packages/core::hash=bf1465&locator=create-sds-app%40workspace%3A."
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/0f312a10117d39b2a94435b90134e806ba00d8fc231dd523f40e3236dd32eca1cee958ccfe06b1350e1fcaad45594dd4518e82d89d95c512e15faeede6f3c0af
+  checksum: 10c0/ba5b89e50fc73c52e819937b6f14344b8cb6b5fb29c97b7e1d8dff3d31e420505d505f1766d51db474d9e0fd658324fe377569709132abcaa4db8bacc4e6723f
   languageName: node
   linkType: hard
 
