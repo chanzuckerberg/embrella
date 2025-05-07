@@ -1,15 +1,15 @@
-import { act, renderHook } from "@testing-library/react";
-import { delay, getLastFetchResult, initFetch } from "@testing/utils";
-import { useFetchData } from "@hooks/useFetchData/useFetchData";
-import { URL_FOO, URL_NONEXISTENT } from "@testing/constants";
+import { act, renderHook } from '@testing-library/react';
+import { delay, getLastFetchResult, initFetch } from '@testing/utils';
+import { useFetchData } from '@hooks/useFetchData/useFetchData';
+import { URL_FOO, URL_NONEXISTENT } from '@testing/constants';
 
 beforeAll(() => {
   initFetch();
 });
 
-describe("useFetchData", () => {
-  it("does not change when data fails to fetch", async () => {
-    const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+describe('useFetchData', () => {
+  it('does not change when data fails to fetch', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
     const { result } = renderHook(() => useFetchData(URL_NONEXISTENT));
     expect(result.current).toEqual({ isSuccess: false });
     await act(async () => await delay());
@@ -18,7 +18,7 @@ describe("useFetchData", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("updates with successfully-fetched data", async () => {
+  it('updates with successfully-fetched data', async () => {
     const { result } = renderHook(() => useFetchData(URL_FOO));
     expect(result.current).toEqual({ isSuccess: false });
     await act(async () => await delay());
@@ -29,8 +29,7 @@ describe("useFetchData", () => {
   it("doesn't update until shouldFetch is true", async () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     const { rerender, result } = renderHook(
-      ({ relativeURL, searchParam, shouldFetch }) =>
-        useFetchData(relativeURL, searchParam, shouldFetch),
+      ({ relativeURL, searchParam, shouldFetch }) => useFetchData(relativeURL, searchParam, shouldFetch),
       {
         initialProps: {
           relativeURL: URL_FOO,
@@ -54,8 +53,8 @@ describe("useFetchData", () => {
     expect(result.current).toEqual({ data: 'foo', isSuccess: true });
   });
 
-  it("fetches using query parameter", async () => {
-    const { result } = renderHook(() => useFetchData(URL_FOO, { q: "true" }));
+  it('fetches using query parameter', async () => {
+    const { result } = renderHook(() => useFetchData(URL_FOO, { q: 'true' }));
     expect(result.current).toEqual({ isSuccess: false });
     await act(async () => await delay());
     expect(await getLastFetchResult()).toHaveProperty('status', 200);

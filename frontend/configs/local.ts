@@ -1,6 +1,4 @@
-import { Configs } from '@app/common/types/config';
-
-const configs: Configs = {
+const configs = {
   API_URL: 'http://localhost:8000',
 };
 

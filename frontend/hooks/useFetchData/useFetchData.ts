@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { getRequestURL } from "@app/common/queries/utils";
-import { fetchResource } from "@app/common/queries/fetchResource";
-import { API, DJANGO_URL, MOCKED_APIS } from "@app/common/constants/api";
-import { Review } from "@app/components/TomogramViewerView/TomogramViewerView";
+import { useEffect, useMemo, useState } from 'react';
+import { getRequestURL } from '@app/common/queries/utils';
+import { fetchResource } from '@app/common/queries/fetchResource';
+import { API, DJANGO_URL, MOCKED_APIS } from '@app/common/constants/api';
+import { Review } from '@app/components/TomogramViewerView/TomogramViewerView';
 
 interface UseFetchData<D> {
   data?: D;
@@ -17,10 +17,7 @@ export const useFetchData = <D>(
   const [dataState, setDataState] = useState<UseFetchData<D>>({
     isSuccess: false,
   });
-  const requestURL = useMemo(
-    () => getRequestURL(DJANGO_URL, relativeURL, searchParam),
-    [relativeURL, searchParam],
-  );
+  const requestURL = useMemo(() => getRequestURL(DJANGO_URL, relativeURL, searchParam), [relativeURL, searchParam]);
 
   useEffect(() => {
     if (!shouldFetch) return;

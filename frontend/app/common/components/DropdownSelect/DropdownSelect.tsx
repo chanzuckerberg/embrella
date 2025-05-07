@@ -1,9 +1,5 @@
-import {
-  AutocompleteOptionBasic,
-  DropdownMenu,
-  InputDropdown,
-} from "@czi-sds/components";
-import { SyntheticEvent, useRef, useState } from "react";
+import { AutocompleteOptionBasic, DropdownMenu, InputDropdown } from '@czi-sds/components';
+import { SyntheticEvent, useRef, useState } from 'react';
 
 interface DropdownSelectProps<T> {
   value?: T;

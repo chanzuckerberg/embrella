@@ -1,8 +1,8 @@
 'use client';
 
-import { useFetchData } from "@hooks/useFetchData/useFetchData";
-import { createContext, PropsWithChildren } from "react";
-import { API } from "../constants/api";
+import { useFetchData } from '@hooks/useFetchData/useFetchData';
+import { createContext, PropsWithChildren } from 'react';
+import { API } from '../constants/api';
 
 export interface User {
   id: number;

@@ -1,6 +1,6 @@
-import { API, DJANGO_URL } from "@app/common/constants/api";
-import { MetadataSummaryResponse } from "@app/common/types/metadataViz/metadataSummary";
-import { useState, useEffect } from "react";
+import { API, DJANGO_URL } from '@app/common/constants/api';
+import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
+import { useState, useEffect } from 'react';
 
 interface FetchError {
   status: number;
@@ -33,7 +33,7 @@ export const useFetchMetadataSummary = (
 
       try {
         const response = await fetch(
-          `${DJANGO_URL}${API.METADATA_SUMMARY}?session_name=${sessionName}&run_number=${runNumber}`,
+          `${DJANGO_URL}${API.METADATA_SUMMARY}?session_name=${sessionName}&run_number=${runNumber}`
         );
 
         if (!response.ok) {

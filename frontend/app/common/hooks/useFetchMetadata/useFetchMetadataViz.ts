@@ -1,6 +1,6 @@
-import { API, DJANGO_URL } from "@app/common/constants/api";
-import { useState, useEffect } from "react";
-import { MetadataVizResponse } from "@app/common/types/metadataViz/metadataVizData";
+import { API, DJANGO_URL } from '@app/common/constants/api';
+import { useState, useEffect } from 'react';
+import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
 
 interface FetchError {
   status: number;
