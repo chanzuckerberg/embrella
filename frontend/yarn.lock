@@ -972,12 +972,12 @@ __metadata:
 
 "@idetik/core@file:./imaging-active-learning/packages/core::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/core@file:./imaging-active-learning/packages/core#./imaging-active-learning/packages/core::hash=5d7aa4&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/core@file:./imaging-active-learning/packages/core#./imaging-active-learning/packages/core::hash=db59c5&locator=create-sds-app%40workspace%3A."
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/1078b9d820a25ff56d71062a2874ea4abce84cddd9c233152fa444723e51b33a1e023138145840993cfb3bf7bb783f8fb5f4eb9215e9e3e462c412a376ec0e31
+  checksum: 10c0/8cccd7dbad67f3f629a63b573d55e166bb6ba20de32fe4a0aee9780d1269e4cbb8b3b056f170aca8e60323d0f1f1a229fce4d8302a78044177c69a7ba8231418
   languageName: node
   linkType: hard
 
@@ -993,7 +993,7 @@ __metadata:
 
 "@idetik/react@file:./imaging-active-learning/packages/react::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/react@file:./imaging-active-learning/packages/react#./imaging-active-learning/packages/react::hash=26a981&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/react@file:./imaging-active-learning/packages/react#./imaging-active-learning/packages/react::hash=4403c8&locator=create-sds-app%40workspace%3A."
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
@@ -1011,7 +1011,7 @@ __metadata:
     "@czi-sds/components": ^22.3.0
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/aa69ba384bef2115a32ba93c64af623cdde93ba5e5fde92d1df68c453693826286e9cbbeaf5eb7c763ed423c182a5b72cc0846e5e27b97ca65fc0f913e7e434a
+  checksum: 10c0/fcaea163e2dedac43be515d87210e3c48e7094e9b40a95de3020f51ceb1c46bc5bc9f640c35e7e1d675c32540b690ac2db8147bbd5dfb53cc89616dc85039cbc
   languageName: node
   linkType: hard
 
