@@ -14,6 +14,7 @@ A list of recommended node version managers is below:
 
 1. `cd` into the `frontend` directory.
 2. Run `yarn`.
+3. Run `npm run bootstrap:submodule`
 
 
 ## Update `imaging-active-learning` Submodule
@@ -21,6 +22,7 @@ To pull the latest commit from the `main` branch of the submodule:
 
 ```bash
 git submodule update --remote --merge
+npm run bootstrap:submodule
 ```
 
 ## Run Frontend
