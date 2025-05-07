@@ -18,9 +18,7 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({ data }) => {
   const table = useReactTable({
     data: data.computed_metrics,
     columns: METADATA_COLUMN_DEFS,
-    state: {
-      sorting,
-    },
+    state: { sorting },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
   });
