@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ButtonDropdown, Alert } from '@czi-sds/components';
 import { useFetchMetadataSummary } from '@app/common/hooks/useFetchMetadata/useFetchMetadataSummary';
-import { SummaryTable } from './SummaryTable';
+import { SummaryTable } from './summaryTable';
 import styles from './MetadataViz.module.css';
 import { RawJson } from './RawJson';
 
