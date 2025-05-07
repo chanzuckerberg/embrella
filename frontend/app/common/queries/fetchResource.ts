@@ -1,4 +1,4 @@
-import { DJANGO_URL } from "../constants/api";
+import { DJANGO_URL } from '../constants/api';
 
 /**
  * Fetch request.
@@ -11,11 +11,9 @@ export async function fetchResource(requestURL: string): Promise<Response> {
   });
 
   // Check if the response status is 302 (redirect) or if the URL includes the login page
-  if (response.status === 302 || response.url.includes("/admin/login")) {
+  if (response.status === 302 || response.url.includes('/admin/login')) {
     window.location.href = `${DJANGO_URL}/admin/login`;
-    return Promise.reject(
-      new Error("User is not authenticated, redirecting to login."),
-    );
+    return Promise.reject(new Error('User is not authenticated, redirecting to login.'));
   }
 
   return response;

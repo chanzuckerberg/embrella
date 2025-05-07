@@ -8,7 +8,7 @@ import { NavbarWrapper } from '@app/common/components/NavBarWrapper';
 import { cookies } from 'next/headers';
 import { FeatureFlagsProvider } from './common/context/FeatureFlagsProvider';
 import { COOKIE_NAME } from './common/types/cookies';
-import { UserProvider } from "./common/context/UserProvider";
+import { UserProvider } from './common/context/UserProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
