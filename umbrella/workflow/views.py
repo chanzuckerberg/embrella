@@ -1320,7 +1320,7 @@ def get_metadata_viz_data(request):
                 'run_number': run_number,
                 'total_accepted': len(accepted_results),
                 'total_rejected': len(rejected_results),
-                 'filters_applied': {
+                'filters_applied': {
                     'filters': filter_config.get('filters'),
                     'filter_type': filter_config.get('filter_type', 'AND').upper()
                 },
