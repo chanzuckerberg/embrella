@@ -490,10 +490,6 @@ def get_msi_session_list(request):
         session_names = list(MsiSession.objects.values_list('name', flat=True))
         
         # Sort the session names
-        # First by year (descending)
-        # Then by month (descending)
-        # Then by day (descending)
-        # Finally by sequence letter (ascending)
         def sort_key(name):
             try:
                 # Extract components from the name
@@ -507,7 +503,16 @@ def get_msi_session_list(request):
                     'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
                     'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
                 }
-                month_num = month_map.get(month, 0)
+                
+                # Check if month is valid
+                if month not in month_map:
+                    return (0, 0, 0, 'z')  # Move invalid months to the end
+                
+                month_num = month_map[month]
+                
+                # Validate year and day
+                if not (0 <= year <= 99) or not (1 <= day <= 31):
+                    return (0, 0, 0, 'z')  # Move invalid dates to the end
                 
                 # Return tuple for sorting (negative year for descending order)
                 return (-year, -month_num, -day, seq)
@@ -515,7 +520,7 @@ def get_msi_session_list(request):
                 # If name doesn't match expected format, put it at the end
                 return (0, 0, 0, 'z')
         
-        # Sort the session names using our custom sort key and reverse to get most recent first
+        # Sort the session names using our custom sort key
         sorted_session_names = sorted(session_names, key=sort_key)
         
         return JsonResponse({'session_names': sorted_session_names}, status=200)
