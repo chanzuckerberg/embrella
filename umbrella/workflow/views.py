@@ -12,6 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.http import JsonResponse
+from processes.models import ProcPlan
 from django.views.decorators.http import require_http_methods
 from tem.models import MsiSession
 from processes.models import JobLog
@@ -1239,3 +1240,37 @@ def get_metadata_viz_data(request):
 
     except Exception as e:
         return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
+
+@csrf_exempt
+def get_plan_id(request):
+    if request.method == 'GET':
+        plan_name = request.GET.get('plan_name')
+        if not plan_name:
+            return JsonResponse({'error': 'Plan name not provided'}, status=400)
+        
+        try:
+            plan = ProcPlan.objects.get(name=plan_name)
+            return JsonResponse({'plan_id': plan.id})
+        except ProcPlan.DoesNotExist:
+            return JsonResponse({'error': f'Plan {plan_name} not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def get_msisession_id(request):
+    if request.method == 'GET':
+        session_name = request.GET.get('session_name')
+        if not session_name:
+            return JsonResponse({'error': 'Session name not provided'}, status=400)
+        
+        try:
+            session = MsiSession.objects.get(name=session_name)
+            return JsonResponse({'session_id': session.id})
+        except MsiSession.DoesNotExist:
+            return JsonResponse({'error': f'Session {session_name} not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=400)

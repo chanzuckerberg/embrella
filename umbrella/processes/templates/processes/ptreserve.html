@@ -133,7 +133,7 @@
           var sessionId = $(this).val();
           var planId = $('#id_proc_plan').val();
           $.ajax({
-              url: "{% url 'get_tomo_by_msi_session' %}",
+              url: "/umbrella/{% url 'get_tomo_by_msi_session' %}",
               data: {
                   'plan_id': planId,
                   'session_id': sessionId

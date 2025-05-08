@@ -135,6 +135,30 @@
     .go-back:hover {
       background-color: #1e88e5;
     }
+
+    /* Processing Run Section Styles */
+    .processing-run-section {
+      margin-top: 20px;
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+      padding: 20px;
+    }
+    .processing-run-section h3 {
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .processing-run-section p {
+      color: #34495e;
+      margin-bottom: 15px;
+    }
+    .processing-run-section .form-group {
+      margin-bottom: 10px;
+    }
+    .processing-run-section label {
+      color: #2c3e50;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -196,6 +220,18 @@
     <button type="button" onclick="submitDenoisETJob()">Run</button>
   </div>
 
+  <!-- Automatic Processing Run Creation Section -->
+  <div class="form-container processing-run-section">
+    <h3>Automatic Processing Run Creation</h3>
+    <p class="text-center">A processing run using the czii-denoise processing plan will be created automatically after successful job submission.</p>
+    
+    <form id="createRunForm" onsubmit="return false;" style="display: none;">
+      <div class="form-group">
+        <label>Processing Plan: <strong>czii-denoise</strong></label>
+        <input type="hidden" id="procPlan" value=""> <!-- Will be populated with czii-denoise plan ID -->
+      </div>
+    </form>
+  </div>
 
   <script>
     // Fetch user info and pre-fill the user ID.
@@ -218,7 +254,7 @@
 
     // Populate the session dropdown with session names.
     async function populateSessionDropdown() {
-      const url = "/workflow/get_msisession_list";
+      const url = "/workflow/get_msi_session_list";
       try {
         const response = await fetch(url, {
           method: "GET",
@@ -305,6 +341,26 @@
         alert("Please fill in all required fields.");
         return;
       }
+
+      // Check if run number already exists
+      try {
+        const checkResponse = await fetch(`/workflow/aretomo3_params?session_name=${encodeURIComponent(sessionName)}`);
+        if (!checkResponse.ok) {
+          throw new Error(`API call failed with status ${checkResponse.status}`);
+        }
+        const checkResult = await checkResponse.json();
+        if (checkResult.sessions && checkResult.sessions.length > 0 && 
+            checkResult.sessions[0].run_numbers && 
+            checkResult.sessions[0].run_numbers.includes(denoiseRunNumber.replace('run', ''))) {
+          alert(`Run number ${denoiseRunNumber} already exists for this session. Please choose a different run number.`);
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking run number:", error);
+        alert("Failed to check if run number exists. " + error.message);
+        return;
+      }
+
       const encodedPassword = btoa(password);
       const payload = {
         user_id: userId,
@@ -328,7 +384,54 @@
         if (!response.ok) {
           alert('Error: ' + data.error);
         } else {
-          alert(data.message);
+          // Get session ID from session name
+          const sessionResponse = await fetch(`/workflow/get_msisession_id?session_name=${encodeURIComponent(sessionName)}`);
+          const sessionData = await sessionResponse.json();
+          if (!sessionResponse.ok) {
+            throw new Error('Failed to get session ID');
+          }
+          
+          // Get czii-denoise plan ID
+          const planResponse = await fetch('/workflow/get_plan_id?plan_name=czii-denoise');
+          const planData = await planResponse.json();
+          if (!planResponse.ok) {
+            throw new Error('Failed to get plan ID');
+          }
+
+          // Get tomogram options for the session
+          const tomoResponse = await fetch(`/get_tomo_by_msi_session?plan_id=${planData.plan_id}&session_id=${sessionData.session_id}&run_number=${runNumber}`);
+          const tomoData = await tomoResponse.json();
+          if (!tomoResponse.ok) {
+            throw new Error('Failed to get tomogram options');
+          }
+
+          if (tomoData[0].length === 0) {
+            throw new Error('No tomograms found for the selected session and run number');
+          }
+
+          // Create processing run
+          const procRunPayload = {
+            proc_plan: planData.plan_id,
+            msi_session: sessionData.session_id,
+            input_tomo: tomoData[0][0].id, // Use the first tomogram
+            csrfmiddlewaretoken: getCookie('csrftoken')
+          };
+
+          const procRunResponse = await fetch('/processes/post_tomo/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: new URLSearchParams(procRunPayload)
+          });
+
+          if (!procRunResponse.ok) {
+            const errorData = await procRunResponse.json();
+            throw new Error(errorData.error || 'Failed to create processing run');
+          }
+
+          alert('DenoisET job submitted and processing run created successfully!');
           console.log('Output:', data.output);
           console.log('Error:', data.error);
         }
