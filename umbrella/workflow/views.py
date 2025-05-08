@@ -1312,13 +1312,6 @@ def get_metadata_viz_data(request):
             accepted_results = prepare_result_list(accepted_df)
             rejected_results = prepare_result_list(rejected_df)
 
-             # If no filters were applied, use the entire dataset as the result
-            # Otherwise, the result will be empty and client should use accepted_results and rejected_results
-            has_filters = filter_config and 'filters' in filter_config and filter_config['filters']
-            if not has_filters:
-                result = prepare_result_list(df)
-            else:
-                result = []
 
 
             # The final response
@@ -1327,11 +1320,10 @@ def get_metadata_viz_data(request):
                 'run_number': run_number,
                 'total_accepted': len(accepted_results),
                 'total_rejected': len(rejected_results),
-                 'filters_applied': {
+                'filters_applied': {
                     'filters': filter_config.get('filters'),
                     'filter_type': filter_config.get('filter_type', 'AND').upper()
                 },
-                'result':result,
                 'metric_ranges': metric_ranges,
                 'accepted_results': accepted_results,
                 'rejected_results': rejected_results
@@ -1347,16 +1339,6 @@ def get_metadata_viz_data(request):
     except Exception as e:
         return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
 
-    #     except FileNotFoundError:
-    #         return JsonResponse({"error": f"File not found: {metrics_path}"}, status=404)
-    #     except Exception as e:
-    #         return JsonResponse({"error": f"Error processing file: {str(e)}"}, status=500)
-
-    # except json.JSONDecodeError:
-    #     return JsonResponse({"error": "Invalid filter format"}, status=400)
-    # except Exception as e:
-    #     return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
-        
 
    
 @csrf_exempt
