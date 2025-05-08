@@ -1282,7 +1282,6 @@ def get_metadata_viz_data(request):
             accepted_df, rejected_df = apply_filters(df, filter_config)
         
         
-            # Prepare the result list
             # Prepare the result lists for both accepted and rejected
             def prepare_result_list(df):
                 if df is None or df.empty:
@@ -1313,6 +1312,14 @@ def get_metadata_viz_data(request):
             accepted_results = prepare_result_list(accepted_df)
             rejected_results = prepare_result_list(rejected_df)
 
+             # If no filters were applied, use the entire dataset as the result
+            # Otherwise, the result will be empty and client should use accepted_results and rejected_results
+            has_filters = filter_config and 'filters' in filter_config and filter_config['filters']
+            if not has_filters:
+                result = prepare_result_list(df)
+            else:
+                result = []
+
 
             # The final response
             response_data = {
@@ -1324,6 +1331,7 @@ def get_metadata_viz_data(request):
                     'filters': filter_config.get('filters'),
                     'filter_type': filter_config.get('filter_type', 'AND').upper()
                 },
+                'result':result,
                 'metric_ranges': metric_ranges,
                 'accepted_results': accepted_results,
                 'rejected_results': rejected_results
