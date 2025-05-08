@@ -10,8 +10,6 @@ export const METADATA_COLUMN_IDS = {
   STD: 'std',
 } as const;
 
-// type MetadataColumnIds = (typeof METADATA_COLUMN_IDS)[keyof typeof METADATA_COLUMN_IDS];
-
 export const METADATA_COLUMN_DEFS: ColumnDef<ComputedMetric, AccessorReturnType>[] = [
   {
     id: METADATA_COLUMN_IDS.NAME,

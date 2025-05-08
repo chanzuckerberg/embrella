@@ -3,7 +3,7 @@ import { ButtonDropdown, Alert } from '@czi-sds/components';
 import { useFetchMetadataSummary } from '@app/common/hooks/useFetchMetadata/useFetchMetadataSummary';
 import { SummaryTable } from './SummaryTable';
 import styles from './MetadataViz.module.css';
-import { RawJson } from './RawJson';
+// import { RawJson } from './RawJson';
 
 interface MetadataSummaryProps {
   sessionName: string;
@@ -15,7 +15,7 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
   const [isLoading] = useState(false);
   const [shouldFetchData, setShouldFetchData] = useState(false);
   const [showError, setShowError] = useState(true);
-  const [isJsonViewOpen, setIsJsonViewOpen] = useState(false);
+  // const [isJsonViewOpen, setIsJsonViewOpen] = useState(false);
   const { data, isSuccess, error } = useFetchMetadataSummary(sessionName, runNumber, shouldFetchData);
 
   const handleToggleSummary = () => {
@@ -72,7 +72,7 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({ sessionName, r
           >
             Generate Json
           </Button> */}
-          <RawJson isOpen={isJsonViewOpen} onClose={() => setIsJsonViewOpen(false)} />
+          {/* <RawJson isOpen={isJsonViewOpen} onClose={() => setIsJsonViewOpen(false)} /> */}
         </div>
       </div>
       {renderContent()}
