@@ -1321,6 +1321,7 @@ def get_metadata_viz_data(request):
                 result = []
 
 
+
             # The final response
             response_data = {
                 'session_name': session_name,
@@ -1347,16 +1348,6 @@ def get_metadata_viz_data(request):
     except Exception as e:
         return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
 
-    #     except FileNotFoundError:
-    #         return JsonResponse({"error": f"File not found: {metrics_path}"}, status=404)
-    #     except Exception as e:
-    #         return JsonResponse({"error": f"Error processing file: {str(e)}"}, status=500)
-
-    # except json.JSONDecodeError:
-    #     return JsonResponse({"error": "Invalid filter format"}, status=400)
-    # except Exception as e:
-    #     return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
-        
 
    
 @csrf_exempt
