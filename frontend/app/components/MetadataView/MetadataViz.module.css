@@ -34,6 +34,9 @@
   flex: 9;
   min-width: 400px;
   padding: 1rem;
+  height: calc(100vh - 100px); 
+  position: relative;
+  overflow: auto;
 }
 
 .sidebar {
@@ -81,6 +84,7 @@
 .input {
   padding: 4px 8px !important;
   font-size: 0.875rem !important;
+  
 }
 
 .filterContent {
@@ -125,4 +129,42 @@
   flex: 1;
   background-color: black;
   min-width: 2px;
+}
+
+ .chartContainer {
+  width: 100%;
+  height: calc(100vh - 100px);
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.dashboardContainer {
+  width: 100%;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border-radius: 4px;
+  padding: 1rem;
+} 
+
+/* Specific styles for scatter plot */
+.scatterPlotContainer {
+  composes: chartContainer;
+  height: calc(100vh - 150px);
+  min-height: 800px;
+}
+
+/* Specific styles for histogram */
+.histogramContainer {
+  composes: chartContainer;
+  height: calc(100vh - 200px);
+  min-height: 600px;
+}
+
+.noDataMessage {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-size: 16px;
 }
