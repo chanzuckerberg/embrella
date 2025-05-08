@@ -486,10 +486,39 @@ def custom_workflow_logs(request):
 @require_http_methods(["GET"])
 def get_msi_session_list(request):
     try:
-        # Fetch only the name field from MsiSession
+        # Fetch session names and sort them
         session_names = list(MsiSession.objects.values_list('name', flat=True))
         
-        return JsonResponse({'session_names': session_names}, status=200)
+        # Sort the session names
+        # First by year (descending)
+        # Then by month (descending)
+        # Then by day (descending)
+        # Finally by sequence letter (ascending)
+        def sort_key(name):
+            try:
+                # Extract components from the name
+                year = int(name[:2])
+                month = name[2:5].lower()  # Convert to lowercase for consistent comparison
+                day = int(name[5:7])
+                seq = name[7] if len(name) > 7 else 'a'  # Default to 'a' if no sequence letter
+                
+                # Convert month to number for proper sorting
+                month_map = {
+                    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                }
+                month_num = month_map.get(month, 0)
+                
+                # Return tuple for sorting (negative year for descending order)
+                return (-year, -month_num, -day, seq)
+            except (ValueError, IndexError):
+                # If name doesn't match expected format, put it at the end
+                return (0, 0, 0, 'z')
+        
+        # Sort the session names using our custom sort key and reverse to get most recent first
+        sorted_session_names = sorted(session_names, key=sort_key)
+        
+        return JsonResponse({'session_names': sorted_session_names}, status=200)
 
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
