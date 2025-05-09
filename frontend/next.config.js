@@ -3,7 +3,7 @@ const nextConfig = {
   basePath: '/next',
   compiler: {
     emotion: {
-      autoLabel: "never",
+      autoLabel: 'never',
       sourceMap: false,
     },
   },

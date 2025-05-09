@@ -4,11 +4,9 @@ import { SyntheticEvent, useRef, useState } from 'react';
 interface DropdownSelectProps<T> {
   value?: T;
   options: T[];
-
   topLabel: string;
   topLabelClass?: string;
   disabled?: boolean;
-
   onChange: (option?: T) => void;
 }
 
@@ -44,7 +42,6 @@ export const DropdownSelect = <T extends AutocompleteOptionBasic>({
         onClick={handleDropdownClick}
         disabled={disabled}
         sdsType="value"
-        sdsStage="default"
       />
       <DropdownMenu
         search

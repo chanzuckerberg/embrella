@@ -34,7 +34,7 @@
   flex: 9;
   min-width: 400px;
   padding: 1rem;
-  height: calc(100vh - 100px); 
+  height: calc(100vh - 100px);
   position: relative;
   overflow: auto;
 }
@@ -84,7 +84,6 @@
 .input {
   padding: 4px 8px !important;
   font-size: 0.875rem !important;
-  
 }
 
 .filterContent {
@@ -131,7 +130,7 @@
   min-width: 2px;
 }
 
- .chartContainer {
+.chartContainer {
   width: 100%;
   height: calc(100vh - 100px);
   position: relative;
@@ -146,7 +145,7 @@
   position: relative;
   border-radius: 4px;
   padding: 1rem;
-} 
+}
 
 /* Specific styles for scatter plot */
 .scatterPlotContainer {
