@@ -1,7 +1,4 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-yarn check
-
-yarn lint
-yarn format
+cd "$(dirname "$0")/../" && yarn lint-staged
