@@ -929,13 +929,15 @@ def preprocess_csv(metrics_path, timestamp_path, merge=False):
 
 def compute_stats(df: pd.DataFrame) -> list:
     column_mapping = {
-        'CTF_Score': 'CTF score',
-        'CTF_Res(A)': 'Resolution (Å)',
+        'CTF_Score': 'CTF Score',
+        'CTF_Res(A)': 'CTF Resolution (Å)',
         'Thickness(Pix)': 'Thickness (Pix)',
         'Tilt_Axis': 'Tilt Axis (°)',
         'Global_Shift(Pix)': 'Global Shift (Pix)',   
         'Bad_Patch_Low': 'Bad patch low_angle (fraction)',
         'Bad_Patch_All': 'Bad patch all_angle (fraction)',
+        'Alpha0': 'Alpha Offset (°)',
+        'Beta0': 'Beta Offset (°)'
     }
 
     # Select only columns to report
@@ -1033,6 +1035,7 @@ def get_metadata_summary(request):
                 "session_name": session_name,
                 "run_number": run_number,
                 "num_tomograms": len(df),
+                "pixel_size": df["Pix_Size(A)"][0],
                 "data_collection_directory": data_collection_dir,
                 "aretomo3_processing_directory": aretomo3_processing_dir,
                 "computed_metrics": computed_metrics,
@@ -1332,7 +1335,6 @@ def get_metadata_viz_data(request):
                     'filters': filter_config.get('filters'),
                     'filter_type': filter_config.get('filter_type', 'AND').upper()
                 },
-                'result':result,
                 'metric_ranges': metric_ranges,
                 'accepted_results': accepted_results,
                 'rejected_results': rejected_results
