@@ -18,7 +18,7 @@
     "e2e:chrome": "playwright test --project chromium",
     "e2e:ff": "playwright test --project firefox",
     "e2e:ie": "playwright test --project edge",
-    "prepare": "husky install",
+    "prepare": "cd .. && husky install frontend/.husky",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -76,6 +76,15 @@
     "stylelint-config-recommended": "^13.0.0",
     "stylelint-config-standard": "^34.0.0",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   },
   "packageManager": "yarn@4.9.1"
 }
