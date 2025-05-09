@@ -38,6 +38,9 @@ export const SummaryTable = ({ data }: SummaryTableProps) => {
             <Typography variant="body1" sx={{ mb: 1 }}>
               <strong>Total number of Tomograms:</strong> {data.num_tomograms}
             </Typography>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              <strong>Tilt Series Pixel Size (Å):</strong> {data.pixel_size}
+            </Typography>
             <Divider sx={{ my: 3 }} />
             <Typography variant="body1" sx={{ mb: 1, wordBreak: 'break-all' }}>
               <strong>Data Collection Path:</strong> {data.data_collection_directory}
@@ -70,7 +73,7 @@ export const SummaryTable = ({ data }: SummaryTableProps) => {
                       </TableHeader>
                       <TableBody>
                         {table.getRowModel().rows.map((row) => (
-                          <TableRow key={row.id}>
+                          <TableRow key={row.id}> 
                             {row.getVisibleCells().map((cell) => (
                               <CellComponent key={cell.id}>
                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}

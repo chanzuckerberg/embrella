@@ -27,7 +27,7 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({ data }) => {
 
   // Process data once for both visualizations
   const processedData = React.useMemo(() => {
-    if (!data?.result?.length) return null;
+    if (!data?.accepted_results?.length) return null;
 
     // Filter to only include the metrics we want to show
     const metricsConfig = Object.keys(METRICS_CONFIG).map((key) => ({
@@ -37,7 +37,7 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({ data }) => {
     }));
 
     const processedMetrics = metricsConfig.map((metric) => {
-      const values = data.result.map((item) => {
+      const values = data.accepted_results.map((item) => {
         return item.metrics[metric.key as keyof typeof item.metrics];
       });
 
@@ -50,7 +50,7 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({ data }) => {
 
     return {
       metricsConfig: processedMetrics,
-      totalPositions: data.result.length,
+      totalPositions: data.accepted_results.length,
     };
   }, [data]);
 

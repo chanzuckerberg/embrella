@@ -62,7 +62,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
     return function (params: echarts.TooltipComponentFormatterCallbackParams) {
       const param = Array.isArray(params) ? params[0] : params;
       const dataIndex = param.dataIndex as number;
-      const tiltSeries = data.result[dataIndex];
+      const tiltSeries = data.accepted_results[dataIndex];
       const metrics = tiltSeries.metrics;
 
       let tooltipContent = `<div style="font-weight: bold; margin-bottom: 5px;">Position : ${tiltSeries.name}</div>`;
@@ -125,19 +125,19 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
           wrap: true,
         },
         min: 0,
-        max: data.result.length - 1,
+        max: data.accepted_results.length - 1,
         splitLine: {
           show: false,
         },
       }));
     },
-    [data.result.length]
+    [data.accepted_results.length]
   );
 
   // Create Y-axis configuration
   const createYAxisConfig = useCallback(() => {
     return processedData?.metricsConfig.map((metric, index) => {
-      const values = data.result.map((item) => {
+      const values = data.accepted_results.map((item) => {
         const value = item.metrics[metric.key as keyof Metrics];
         return metric.key.includes('bad_patch') ? value * 100 : value;
       });
@@ -198,7 +198,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
           opacity: 0.6,
           color: METRIC_COLORS[metric.key as keyof typeof METRIC_COLORS],
         },
-        data: data.result.map((item, pos) => {
+        data: data.accepted_results.map((item, pos) => {
           const value = item.metrics[metric.key as keyof Metrics];
           return [pos, metric.key.includes('bad_patch') ? value * 100 : value];
         }),
@@ -210,8 +210,8 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
                 coord: [
                   processedData.totalPositions,
                   metric.key.includes('bad_patch')
-                    ? data.result[processedData.totalPositions]?.metrics[metric.key as keyof Metrics] * 100
-                    : data.result[processedData.totalPositions]?.metrics[metric.key as keyof Metrics],
+                    ? data.accepted_results[processedData.totalPositions]?.metrics[metric.key as keyof Metrics] * 100
+                    : data.accepted_results[processedData.totalPositions]?.metrics[metric.key as keyof Metrics],
                 ],
                 symbol: 'arrow',
                 symbolSize: 20,
@@ -231,7 +231,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
   );
 
   useEffect(() => {
-    if (!chartRef.current || !data?.result) return;
+    if (!chartRef.current || !data?.accepted_results) return;
 
     if (!chartInstance.current) {
       chartInstance.current = echarts.init(chartRef.current);

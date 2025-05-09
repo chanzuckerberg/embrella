@@ -41,7 +41,7 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
   const chartInstance = useRef<echarts.ECharts>();
 
   useEffect(() => {
-    if (!chartRef.current || !data?.result) return;
+    if (!chartRef.current || !data?.accepted_results?.length) return;
 
     if (!chartInstance.current) {
       chartInstance.current = echarts.init(chartRef.current);
