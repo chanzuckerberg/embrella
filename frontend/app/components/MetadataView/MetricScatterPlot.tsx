@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import * as echarts from 'echarts';
 import { MetadataVizResponse, Metrics } from '../../common/types/metadataViz/metadataVizData';
 import styles from './MetadataViz.module.css';
@@ -57,72 +57,58 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts>();
 
-  useEffect(() => {
-    if (!chartRef.current || !data?.result) return;
+  // Create tooltip formatter function
+  const createTooltipFormatter = useCallback(() => {
+    return function (params: echarts.TooltipComponentFormatterCallbackParams) {
+      const param = Array.isArray(params) ? params[0] : params;
+      const dataIndex = param.dataIndex as number;
+      const tiltSeries = data.result[dataIndex];
+      const metrics = tiltSeries.metrics;
 
-    if (!chartInstance.current) {
-      chartInstance.current = echarts.init(chartRef.current);
-    }
+      let tooltipContent = `<div style="font-weight: bold; margin-bottom: 5px;">Position : ${tiltSeries.name}</div>`;
 
-    // Generate metrics config from the data
-    const metricsConfig = Object.keys(data.metric_ranges)
-      .filter((key) => key in units) // Only include metrics with defined units
-      .map((key) => ({
-        key,
-        label: formatMetricLabel(key),
-      }));
+      // Helper function to format the metric line
+      const formatMetricLine = (key: keyof Metrics, label: string, unit: string, multiplier = 1) => {
+        const value = metrics[key] * multiplier;
+        return `<div>${label}: ${value.toFixed(2)}${unit}</div>`;
+      };
 
-    const option: echarts.EChartsOption = {
-      tooltip: {
-        trigger: 'item',
-        formatter: function (params: any) {
-          const tiltSeries = data.result[params.dataIndex];
-          const metrics = tiltSeries.metrics;
+      // Add all metric values to tooltip
+      tooltipContent += formatMetricLine('thickness_pix', 'Thickness', ' (Pix)');
+      tooltipContent += formatMetricLine('tilt_axis', 'Tilt Axis', '°');
+      tooltipContent += formatMetricLine('global_shift_pix', 'Global Shift', ' (Pix)');
+      tooltipContent += formatMetricLine('bad_patch_low', 'Bad Patch Low', '%', 100);
+      tooltipContent += formatMetricLine('bad_patch_all', 'Bad Patch All', '%', 100);
+      tooltipContent += formatMetricLine('ctf_resolution_a', 'CTF Resolution', ' Å');
+      tooltipContent += formatMetricLine('ctf_score', 'CTF Score', '');
 
-          let tooltipContent = `<div style="font-weight: bold; margin-bottom: 5px;">Position : ${tiltSeries.name}</div>`;
+      return tooltipContent;
+    };
+  }, [data]);
 
-          // Helper function to format the metric line
-          const formatMetricLine = (key: keyof Metrics, label: string, unit: string, multiplier = 1) => {
-            const value = metrics[key] * multiplier;
-            return `<div>${label}: ${value.toFixed(2)}${unit}</div>`;
-          };
+  // Create grid configuration
+  const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label: string }>) => {
+    return metricsConfig.map((_, index) => ({
+      containLabel: true,
+      top: `${2 + index * 14}%`,
+      height: '11%',
+      left: '6%',
+      right: '10%',
+      bottom: '20%',
+      offset: 8,
+      show: true,
+      padding: [15, 0, 15, 0],
+    }));
+  }, []);
 
-          // Add all metric values to tooltip
-          tooltipContent += formatMetricLine('thickness_pix', 'Thickness', ' (Pix)');
-          tooltipContent += formatMetricLine('tilt_axis', 'Tilt Axis', '°');
-          tooltipContent += formatMetricLine('global_shift_pix', 'Global Shift', ' (Pix)');
-          tooltipContent += formatMetricLine('bad_patch_low', 'Bad Patch Low', '%', 100);
-          tooltipContent += formatMetricLine('bad_patch_all', 'Bad Patch All', '%', 100);
-          tooltipContent += formatMetricLine('ctf_resolution_a', 'CTF Resolution', ' Å');
-          tooltipContent += formatMetricLine('ctf_score', 'CTF Score', '');
-
-          return tooltipContent;
-        },
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderColor: '#ccc',
-        borderWidth: 1,
-        padding: [10, 15],
-        textStyle: {
-          color: '#333',
-          fontSize: 13,
-        },
-      },
-      grid: metricsConfig.map((_, index) => ({
-        containLabel: true,
-        top: `${2 + index * 14}%`,
-        height: '11%',
-        left: '6%',
-        right: '10%',
-        bottom: '20%',
-        offset: 8,
-        show: true,
-        padding: [15, 0, 15, 0],
-      })),
-      xAxis: metricsConfig.map((metric, index) => ({
-        type: 'value',
+  // Create X-axis configuration
+  const createXAxisConfig = useCallback(
+    (metricsConfig: Array<{ key: string; label: string }>) => {
+      return metricsConfig.map((metric, index) => ({
+        type: 'value' as const,
         gridIndex: index,
         name: 'Position',
-        position: 'bottom',
+        position: 'bottom' as const,
         axisLabel: {
           show: false,
         },
@@ -135,7 +121,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
         nameGap: 40,
         nameTextStyle: {
           fontSize: 14,
-          fontWeight: 'bold',
+          fontWeight: 'bold' as const,
           wrap: true,
         },
         min: 0,
@@ -143,57 +129,67 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
         splitLine: {
           show: false,
         },
-      })),
-      yAxis: processedData.metricsConfig.map((metric, index) => {
-        const values = data.result.map((item) => {
-          const value = item.metrics[metric.key as keyof Metrics];
-          return metric.key.includes('bad_patch') ? value * 100 : value;
-        });
+      }));
+    },
+    [data.result.length]
+  );
 
-        const [min, max] = metric.key.includes('bad_patch')
-          ? [
-              data.metric_ranges[metric.key as keyof Metrics][0] * 100,
-              data.metric_ranges[metric.key as keyof Metrics][1] * 100,
-            ]
-          : data.metric_ranges[metric.key as keyof Metrics];
-        const range = max - min;
-        const padding = range * 0.05;
+  // Create Y-axis configuration
+  const createYAxisConfig = useCallback(() => {
+    return processedData?.metricsConfig.map((metric, index) => {
+      const values = data.result.map((item) => {
+        const value = item.metrics[metric.key as keyof Metrics];
+        return metric.key.includes('bad_patch') ? value * 100 : value;
+      });
 
-        return {
-          type: 'value',
-          gridIndex: index,
-          name: `${metric.label} \n${metric.unit}`,
-          nameLocation: 'middle',
-          nameGap: 45,
-          nameTextStyle: {
-            fontSize: 14,
-            fontWeight: 'bold',
-            align: 'center',
-            wrap: true,
-            padding: [0, 0, 15, 0],
-            margin: 8,
-          },
-          splitNumber: calculateBins(values),
-          min: min - padding,
-          max: max + padding,
-          splitLine: {
-            show: true,
-            lineStyle: {
-              type: 'dashed',
-              opacity: 0.3,
-            },
-          },
-          axisLabel: {
-            show: true,
-            margin: 8,
-            fontSize: 10,
-            formatter: (value: number) => value.toFixed(2),
-          },
-        };
-      }),
+      const [min, max] = metric.key.includes('bad_patch')
+        ? [
+            data.metric_ranges[metric.key as keyof Metrics][0] * 100,
+            data.metric_ranges[metric.key as keyof Metrics][1] * 100,
+          ]
+        : data.metric_ranges[metric.key as keyof Metrics];
+      const range = max - min;
+      const padding = range * 0.05;
 
-      series: metricsConfig.map((metric, index) => ({
-        type: 'scatter',
+      return {
+        type: 'value' as const,
+        gridIndex: index,
+        name: `${metric.label} \n${metric.unit}`,
+        nameLocation: 'middle' as const,
+        nameGap: 45,
+        nameTextStyle: {
+          fontSize: 14,
+          fontWeight: 'bold' as const,
+          align: 'center' as const,
+          wrap: true,
+          padding: [0, 0, 15, 0],
+          margin: 8,
+        },
+        splitNumber: calculateBins(Number(values)),
+        min: min - padding,
+        max: max + padding,
+        splitLine: {
+          show: true,
+          lineStyle: {
+            type: 'dashed' as const,
+            opacity: 0.3,
+          },
+        },
+        axisLabel: {
+          show: true,
+          margin: 8,
+          fontSize: 10,
+          formatter: (value: number) => value.toFixed(2),
+        },
+      };
+    });
+  }, [data, processedData]);
+
+  // Create series configuration
+  const createSeriesConfig = useCallback(
+    (metricsConfig: Array<{ key: string; label: string }>) => {
+      return metricsConfig.map((metric, index) => ({
+        type: 'scatter' as const,
         name: metric.label,
         xAxisIndex: index,
         yAxisIndex: index,
@@ -212,10 +208,10 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
               {
                 name: `Position_${processedData}`,
                 coord: [
-                  processedData,
+                  processedData.totalPositions,
                   metric.key.includes('bad_patch')
-                    ? data.result[processedData]?.metrics[metric.key as keyof Metrics] * 100
-                    : data.result[processedData]?.metrics[metric.key as keyof Metrics],
+                    ? data.result[processedData.totalPositions]?.metrics[metric.key as keyof Metrics] * 100
+                    : data.result[processedData.totalPositions]?.metrics[metric.key as keyof Metrics],
                 ],
                 symbol: 'arrow',
                 symbolSize: 20,
@@ -223,17 +219,61 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
                 label: {
                   show: true,
                   formatter: `Position_${processedData}`,
-                  position: 'top',
+                  position: 'top' as const,
                 },
               },
             ],
           },
         }),
-      })),
+      }));
+    },
+    [data, processedData]
+  );
+
+  useEffect(() => {
+    if (!chartRef.current || !data?.result) return;
+
+    if (!chartInstance.current) {
+      chartInstance.current = echarts.init(chartRef.current);
+    }
+
+    // Generate metrics config from the data
+    const metricsConfig = Object.keys(data.metric_ranges)
+      .filter((key) => key in units) // Only include metrics with defined units
+      .map((key) => ({
+        key,
+        label: formatMetricLabel(key),
+      }));
+
+    const option: echarts.EChartsOption = {
+      tooltip: {
+        trigger: 'item',
+        formatter: createTooltipFormatter(),
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: '#ccc',
+        borderWidth: 1,
+        padding: [10, 15],
+        textStyle: {
+          color: '#333',
+          fontSize: 13,
+        },
+      },
+      grid: createGridConfig(metricsConfig),
+      xAxis: createXAxisConfig(metricsConfig),
+      yAxis: createYAxisConfig(),
+      series: createSeriesConfig(metricsConfig),
     };
 
     chartInstance.current.setOption(option);
-  }, [data, processedData]);
+  }, [
+    data,
+    processedData,
+    createGridConfig,
+    createTooltipFormatter,
+    createXAxisConfig,
+    createYAxisConfig,
+    createSeriesConfig,
+  ]);
 
   useEffect(() => {
     const handleResize = () => {

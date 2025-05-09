@@ -30,7 +30,7 @@ type FilterState = {
 
 interface MetadataFiltersProps {
   metricRanges: MetricRanges;
-  onApplyFilters?: (filters: FilterState, selectedOption: string) => void;
+  // onApplyFilters?: (filters: FilterState, selectedOption: string) => void;
 }
 
 export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges }) => {
@@ -125,11 +125,11 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges }
       }));
     };
 
-  const handleApplyFilters = () => {
-    if (onApplyFilters) {
-      onApplyFilters(filters, selectedOption);
-    }
-  };
+  // const handleApplyFilters = () => {
+  //   if (onApplyFilters) {
+  //     onApplyFilters(filters, selectedOption);
+  //   }
+  // };
   const renderFilter = (key: keyof FilterState, label: string, unit: string = '', step: number = 1) => {
     const minValue = Number(filters[key]?.min ?? 0);
     const maxValue = Number(filters[key]?.max ?? 100);
@@ -154,7 +154,7 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges }
             size="small"
             value={currentMin}
             className={styles.minMaxInput}
-            onChange={(e) => handleInputChange(key, true)(e)}
+            onChange={(e) => handleInputChange(key, true)(e as React.ChangeEvent<HTMLInputElement>)}
             inputProps={{
               className: styles.input,
               type: 'number',
@@ -177,7 +177,7 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges }
             size="small"
             value={currentMax}
             className={styles.minMaxInput}
-            onChange={(e) => handleInputChange(key, false)(e)}
+            onChange={(e) => handleInputChange(key, false)(e as React.ChangeEvent<HTMLInputElement>)}
             inputProps={{
               className: styles.input,
               type: 'number',
@@ -220,7 +220,11 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges }
         <Button sdsType="secondary" sdsStyle="rounded" onClick={handleReset}>
           Reset
         </Button>
-        <Button sdsType="primary" sdsStyle="rounded" onClick={handleApplyFilters}>
+        <Button
+          sdsType="primary"
+          sdsStyle="rounded"
+          // onClick={handleApplyFilters}
+        >
           Apply Filter
         </Button>
       </div>

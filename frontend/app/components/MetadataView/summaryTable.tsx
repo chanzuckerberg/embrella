@@ -1,18 +1,25 @@
 import React, { Fragment } from 'react';
 import { Table, CellHeader, CellComponent, TableHeader, TableRow } from '@czi-sds/components';
-import { TableBody } from '@mui/material';
+import { TableBody, Card, CardContent, Divider, Typography, Paper } from '@mui/material';
 import { TableStateProvider } from '@app/common/components/TableStateProvider/TableStateProvider';
-import { flexRender } from '@tanstack/react-table';
+import { flexRender, SortingState, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { METADATA_COLUMN_DEFS } from './constants/columns';
 import { TableWrapper } from '@app/common/components/TableWrapper/TableWrapper';
-import { Card, CardContent, Divider } from '@mui/material';
 import { FilterableTableMain } from '@app/common/components/FilterableTableMain/FilterableTableMain';
-import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
-import { SortingState } from '@tanstack/react-table';
+import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
 
-export const SummaryTable = ({ data }) => {
-  if (!data || data.length === 0) {
+interface SummaryTableProps {
+  data: MetadataSummaryResponse;
+}
+
+export const SummaryTable = ({ data }: SummaryTableProps) => {
+  const table = useReactTable({
+    data: data.computed_metrics,
+    columns: METADATA_COLUMN_DEFS,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  if (!data || data.computed_metrics.length === 0) {
     return <Typography variant="body1">No metrics data available</Typography>;
   }
   const initialSortState: SortingState = [{ desc: false, id: 'name' }];
@@ -49,26 +56,24 @@ export const SummaryTable = ({ data }) => {
                   <TableWrapper>
                     <Table>
                       <TableHeader>
-                        {METADATA_COLUMN_DEFS.map((col) => (
+                        {table.getFlatHeaders().map((header) => (
                           <CellHeader
-                            key={col.id}
+                            key={header.id}
                             active={false}
-                            direction={col.enableSorting ? 'asc' : undefined}
-                            hideSortIcon={!col.enableSorting}
-                            onClick={col.enableSorting ? () => {} : undefined}
+                            direction={header.column.getCanSort() ? 'asc' : undefined}
+                            hideSortIcon={!header.column.getCanSort()}
+                            onClick={header.column.getToggleSortingHandler()}
                           >
-                            {flexRender(col.header, {})}
+                            {flexRender(header.column.columnDef.header, header.getContext())}
                           </CellHeader>
                         ))}
                       </TableHeader>
                       <TableBody>
-                        {data.computed_metrics.map((row, i) => (
-                          <TableRow key={i}>
-                            {METADATA_COLUMN_DEFS.map((col) => (
-                              <CellComponent key={col.id}>
-                                {col.cell
-                                  ? col.cell({ getValue: () => row[col.accessorKey as keyof typeof row] })
-                                  : row[col.accessorKey as keyof typeof row]}
+                        {table.getRowModel().rows.map((row) => (
+                          <TableRow key={row.id}>
+                            {row.getVisibleCells().map((cell) => (
+                              <CellComponent key={cell.id}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
                               </CellComponent>
                             ))}
                           </TableRow>

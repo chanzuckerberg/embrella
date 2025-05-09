@@ -50,12 +50,14 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
     const option: echarts.EChartsOption = {
       tooltip: processedData.metricsConfig.map((metric) => ({
         trigger: 'item',
-        formatter: function (params: any) {
-          const binValue = parseFloat(params.name);
-          const isBadPatch = params.seriesName.toLowerCase().includes('bad patch');
+        formatter: function (params: echarts.TooltipComponentFormatterCallbackParams) {
+          // Ensure params is treated as a single item, not an array
+          const param = Array.isArray(params) ? params[0] : params;
+          const binValue = parseFloat(param.name);
+          const isBadPatch = param.seriesName?.toLowerCase().includes('bad patch');
           const binWidth = (metric.range[1] - metric.range[0]) / calculateBins(metric.values.length);
           const binEnd = binValue + binWidth;
-          const value = params.value;
+          const value = param.value;
           const rangeText = isBadPatch
             ? `${binValue.toFixed(1)}%-${(binEnd * 100).toFixed(1)}%`
             : `${binValue.toFixed(1)}-${binEnd.toFixed(1)}`;
@@ -107,28 +109,30 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
           splitLine: { show: false },
         };
       }),
-
-      yAxis: processedData.metricsConfig.map((_, index) => ({
-        gridId: index.toString(),
-        type: 'value',
-        name: 'Number of tomograms',
-        nameLocation: 'middle',
-        nameGap: 42,
-        nameTextStyle: {
-          fontSize: 14,
-          padding: [0, 0, 5, 0],
-        },
-        axisLine: {
-          show: false,
-        },
-        axisTick: {
-          show: false,
-        },
-        axisLabel: {
-          formatter: (value: number) => Math.floor(value),
-        },
-        splitLine: { show: false },
-      })),
+      yAxis: processedData.metricsConfig.map((_, index) => {
+        return {
+          gridId: index.toString(),
+          type: 'value',
+          name: 'Number of tomograms',
+          nameLocation: 'middle',
+          nameGap: 42,
+          nameTextStyle: {
+            fontSize: 14,
+            padding: [0, 0, 5, 0],
+          },
+          axisLine: {
+            show: false,
+          },
+          axisTick: {
+            show: false,
+          },
+          axisLabel: {
+            show: true,
+            formatter: (value: number) => Math.floor(value),
+          },
+          splitLine: { show: false },
+        };
+      }),
       series: processedData.metricsConfig.map((metric, index) => {
         const [min, max] = metric.range;
         const bins = calculateBins(metric.values.length);
