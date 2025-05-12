@@ -176,14 +176,28 @@ def get_tomo_by_msi_session(request):
 
     return JsonResponse([tomo_data, pick_data], safe=False)
 
+from django.db.models import Q
+from django.http import JsonResponse
+
 def fetch_session_names(request):
-    sessions = MsiSession.objects.all().order_by('-created_at')
+    limit = int(request.GET.get("limit", 20))
+    offset = int(request.GET.get("offset", 0))
+    search = request.GET.get("search", "").strip()
+
+    sessions_qs = MsiSession.objects.all().order_by('-created_at')
+    if search:
+        sessions_qs = sessions_qs.filter(Q(name__icontains=search))
+
+    # Get total count before pagination
+    total_count = sessions_qs.count()
+    sessions = sessions_qs[offset:offset + limit]
+
     aretomo3_overlay_path = "/hpc/projects/krios1.processing/aretomo3"
     denoise_overlay_path = "/hpc/projects/krios1.processing/denoise"
 
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
+    
     ssh_config = {
         'hostname': HOST,
         'port': PORT,
@@ -220,11 +234,10 @@ def fetch_session_names(request):
                             f for f in file_list
                             if f.endswith('.mrc') and not f.endswith('_CTF.mrc') and not f.endswith('_Vol.mrc')
                         ])
-                        reconstruction_types = ["DCTF", "SART"]
                         session_runs.append({
                             "runId": run_folder,
                             "numTomograms": num_tomograms,
-                            "reconstructionTypes": reconstruction_types
+                            "reconstructionTypes": ["DCTF", "SART"]
                         })
                     except IOError:
                         continue
@@ -276,4 +289,11 @@ def fetch_session_names(request):
         except Exception:
             pass
 
-    return JsonResponse(sessions_data, safe=False)
+    return JsonResponse({
+        "data": sessions_data,
+        "pagination": {
+            "total": total_count,
+            "limit": limit,
+            "offset": offset
+        }
+    }, safe=False)
