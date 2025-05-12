@@ -209,12 +209,12 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges }
         </FormControl>
       </div>
 
-      {renderFilter('thickness_pix', 'Thickness', '(Pix)')}
+      {renderFilter('thickness_pix', 'Thickness', '(Å)')}
       {renderFilter('tilt_axis', 'Tilt axis', '(°)')}
       {renderFilter('global_shift_pix', 'Global shift')}
       {renderFilter('bad_patch_low', 'Bad patch low', '(%)', 0.1)}
       {renderFilter('bad_patch_all', 'Bad patch All', '(%)', 0.1)}
-      {renderFilter('ctf_resolution_a', 'CTF Resolution', '(A)')}
+      {renderFilter('ctf_resolution_a', 'CTF Resolution', '(Å)')}
       {renderFilter('ctf_score', 'CTF CC Score', '', 0.1)}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
         <Button sdsType="secondary" sdsStyle="rounded" onClick={handleReset}>

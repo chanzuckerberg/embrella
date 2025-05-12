@@ -7,12 +7,12 @@ import { MetricHistogram } from './MetricHistogram';
 
 // Object defining various metrics with their labels and units
 const METRICS_CONFIG = {
-  thickness_pix: { label: 'Thickness', unit: '(Pix)' },
+  thickness_pix: { label: 'Thickness', unit: '(Å)' },
   tilt_axis: { label: 'Tilt axis', unit: '(°)' },
-  global_shift_pix: { label: 'Global shift', unit: '(Pix)' },
+  global_shift_pix: { label: 'Global shift', unit: '(Å)' },
   bad_patch_low: { label: 'Bad patch low', unit: '(%)' },
   bad_patch_all: { label: 'Bad patch all', unit: '(%)' },
-  ctf_resolution_a: { label: 'CTF Resolution', unit: '(A)' },
+  ctf_resolution_a: { label: 'CTF Resolution', unit: '(Å)' },
   ctf_score: { label: 'CTF CC Score', unit: '' },
 };
 
