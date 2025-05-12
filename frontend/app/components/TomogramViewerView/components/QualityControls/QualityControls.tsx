@@ -11,7 +11,7 @@ export const QualityControls = ({ onAccept, onReject, onUncertain }: QualityCont
     <div className="w-[300px] p-4 bg-white border-l border-gray-300 flex flex-col gap-4">
       <h3 className="m-0 text-base font-semibold">Assign Tomogram Quality:</h3>
       <Button
-        startIcon={<Icon sdsIcon="Check" sdsSize="s" sdsType="iconButton" />}
+        startIcon={<Icon sdsIcon="Check" sdsSize="s" />}
         sdsStyle="square"
         sdsType="secondary"
         fullWidth
@@ -20,7 +20,7 @@ export const QualityControls = ({ onAccept, onReject, onUncertain }: QualityCont
         Accept [1]
       </Button>
       <Button
-        startIcon={<Icon sdsIcon="XMark" sdsSize="l" sdsType="iconButton" />}
+        startIcon={<Icon sdsIcon="XMark" sdsSize="l" />}
         sdsStyle="square"
         sdsType="secondary"
         fullWidth
@@ -29,7 +29,7 @@ export const QualityControls = ({ onAccept, onReject, onUncertain }: QualityCont
         Reject [2]
       </Button>
       <Button
-        startIcon={<Icon sdsIcon="QuestionMark" sdsSize="l" sdsType="iconButton" />}
+        startIcon={<Icon sdsIcon="QuestionMark" sdsSize="l" />}
         sdsStyle="square"
         sdsType="secondary"
         fullWidth

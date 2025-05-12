@@ -15,7 +15,7 @@ export const NavigationButtons = ({ currentIndex, totalItems, onPrevious, onNext
         sdsType="secondary"
         disabled={currentIndex <= 0}
         onClick={onPrevious}
-        startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="s" sdsType="iconButton" />}
+        startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="s" />}
         className="flex-1 text-sm text-blue-600 disabled:text-gray-400"
       >
         Previous
@@ -25,7 +25,7 @@ export const NavigationButtons = ({ currentIndex, totalItems, onPrevious, onNext
         sdsType="secondary"
         disabled={currentIndex >= totalItems - 1}
         onClick={onNext}
-        endIcon={<Icon sdsIcon="ChevronRight" sdsSize="s" sdsType="iconButton" />}
+        endIcon={<Icon sdsIcon="ChevronRight" sdsSize="s" />}
         className="flex-1 text-sm text-blue-600 disabled:text-gray-400"
       >
         Next

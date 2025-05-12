@@ -12,7 +12,7 @@ export const TopBar = ({ onMarkComplete }: TopBarProps) => {
       <Button
         sdsStyle="square"
         sdsType="secondary"
-        startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="xs" sdsType="iconButton" />}
+        startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="xs" />}
         onClick={() => router.push('/reviews')}
       >
         Exit review session

@@ -153,7 +153,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
               </div>
 
               <div className="flex items-center gap-4 p-4 bg-white rounded mt-6 border border-blue-300">
-                <Button size="small">←</Button>
+                <Button sdsStyle="square" size="small">
+                  ←
+                </Button>
                 <input
                   type="range"
                   min="0"
@@ -162,7 +164,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                   onChange={(e) => setZPosition(Number(e.target.value))}
                   className="flex-1"
                 />
-                <Button size="small">→</Button>
+                <Button sdsStyle="square" size="small">
+                  →
+                </Button>
               </div>
             </>
           ) : (
