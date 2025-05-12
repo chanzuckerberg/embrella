@@ -9,7 +9,7 @@ import { cookies } from 'next/headers';
 import { FeatureFlagsProvider } from './common/context/FeatureFlagsProvider';
 import { COOKIE_NAME } from './common/types/cookies';
 import { UserProvider } from './common/context/UserProvider';
-import { IdetikProvider } from '@idetik/react';
+import { IdetikProvider } from '../imaging-active-learning/packages/react/src/components/providers/IdetikProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -26,18 +26,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AppRouterCacheProvider options={CACHE_PROVIDER_OPTIONS}>
-          <ThemeProvider theme={theme}>
-            <UserProvider>
-              <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
-                <IdetikProvider>
+        <IdetikProvider>
+          <AppRouterCacheProvider options={CACHE_PROVIDER_OPTIONS}>
+            <ThemeProvider theme={theme}>
+              <UserProvider>
+                <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
                   <NavbarWrapper />
                   {children}
-                </IdetikProvider>
-              </FeatureFlagsProvider>
-            </UserProvider>
-          </ThemeProvider>
-        </AppRouterCacheProvider>
+                </FeatureFlagsProvider>
+              </UserProvider>
+            </ThemeProvider>
+          </AppRouterCacheProvider>
+        </IdetikProvider>
       </body>
     </html>
   );

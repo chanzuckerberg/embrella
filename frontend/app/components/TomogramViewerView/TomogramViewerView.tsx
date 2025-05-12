@@ -8,8 +8,8 @@ import { SideBar } from './components/SideBar';
 import { Button } from '@czi-sds/components';
 import { Review, ReviewTomogramDetail } from './types';
 import { QualityControls } from './components/QualityControls';
-import { OmeZarrImageViewer } from '@idetik/react';
-import { Region } from '@idetik/core';
+import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
+import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
 
 interface TomogramViewerProps {
   review: Review;
