@@ -245,7 +245,7 @@ def fetch_session_names(request):
                         file_list = sftp.listdir(run_path)
                         num_tomograms = len([
                             f for f in file_list
-                            if f.endswith('.mrc') and not f.endswith('_CTF.mrc') and not f.endswith('_Vol.mrc')
+                            if f.endswith('.mrc') and not f.endswith('_CTF.mrc')
                         ])
                         session_runs.append({
                             "runId": run_folder,
