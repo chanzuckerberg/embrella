@@ -21,9 +21,9 @@ interface ProcessedData {
 
 // Hardcoded units for metrics
 const units = {
-  thickness_pix: '(Pix)',
+  thickness_pix: '(Å)',
   tilt_axis: '(°)',
-  global_shift_pix: '(Pix)',
+  global_shift_pix: '(Å)',
   bad_patch_low: '(%)',
   bad_patch_all: '(%)',
   ctf_resolution_a: '(Å)',
@@ -74,9 +74,9 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
       };
 
       // Add all metric values to tooltip
-      tooltipContent += formatMetricLine('thickness_pix', 'Thickness', ' (Pix)');
+      tooltipContent += formatMetricLine('thickness_pix', 'Thickness', ' (Å)');
       tooltipContent += formatMetricLine('tilt_axis', 'Tilt Axis', '°');
-      tooltipContent += formatMetricLine('global_shift_pix', 'Global Shift', ' (Pix)');
+      tooltipContent += formatMetricLine('global_shift_pix', 'Global Shift', ' (Å)');
       tooltipContent += formatMetricLine('bad_patch_low', 'Bad Patch Low', '%', 100);
       tooltipContent += formatMetricLine('bad_patch_all', 'Bad Patch All', '%', 100);
       tooltipContent += formatMetricLine('ctf_resolution_a', 'CTF Resolution', ' Å');
