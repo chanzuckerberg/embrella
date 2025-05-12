@@ -35,8 +35,9 @@ export const ReviewsViewHeader = () => {
       />
       <Link href="/reviews/create" className="!mt-auto !mb-auto">
         <Button
+          sdsStyle="rounded"
           variant="contained"
-          startIcon={<Icon sdsIcon="Plus" sdsSize="xs" sdsType="button" />}
+          startIcon={<Icon sdsIcon="Plus" sdsSize="xs" />}
           className="h-[32px] !text-[13px] !font-semibold"
         >
           Create Review

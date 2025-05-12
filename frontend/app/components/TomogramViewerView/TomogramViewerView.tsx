@@ -28,7 +28,7 @@ export const TomogramViewer = ({ review }: TomogramViewerProps) => {
   return (
     <div style={{ padding: '24px' }}>
       <Link href="/reviews">
-        <Button size="small" color="primary" style={{ marginBottom: '16px' }}>
+        <Button sdsStyle="rounded" size="small" color="primary" style={{ marginBottom: '16px' }}>
           Back to Reviews
         </Button>
       </Link>

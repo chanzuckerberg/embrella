@@ -39,7 +39,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
           sdsStyle="square"
           size="small"
           className="w-[125px]"
-          endIcon={<Icon sdsIcon="ChevronDown" sdsSize="xs" sdsType="button" />}
+          endIcon={<Icon sdsIcon="ChevronDown" sdsSize="xs" />}
           onClick={() => {
             setIsDropdownOpen((prev) => !prev);
           }}
