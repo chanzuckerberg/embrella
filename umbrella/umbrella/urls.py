@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 from umbrella.ping import ping
 from umbrella.api_internal import get_tomo_by_msi_session
-from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette
+from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, fetch_session_names
 
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
@@ -49,7 +49,7 @@ urlpatterns = [
     path('workflow/', include('workflow.urls'), name='workflow pipeline'),
     path('agent/', include('agent.urls'), name='AI Agent'),
     path('annotations/v1/filterlist/', available_annotation_filter, name='get filter list for annotations'),
-
+    path('api/sessions/', fetch_session_names, name='fetch_session_names'),
 ]
 
 
