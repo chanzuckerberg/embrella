@@ -3,7 +3,6 @@
 import { useParams } from 'next/navigation';
 // import { TomogramViewer } from "@app/components/TomogramViewerView/TomogramViewerView";
 import { useFetchReviewData } from '@hooks/useFetchData/useFetchData';
-import dynamic from 'next/dynamic';
 import { TomogramViewerView } from '@app/components/TomogramViewerView/TomogramViewerView';
 
 // const TomogramViewer = dynamic(() => import('@app/components/TomogramViewerView').then((mod) => mod.TomogramViewer), {

@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeProvider theme={theme}>
             <UserProvider>
               <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
-                <IdetikProvider >
+                <IdetikProvider>
                   <NavbarWrapper />
                   {children}
                 </IdetikProvider>
