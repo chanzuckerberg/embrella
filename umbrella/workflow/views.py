@@ -928,14 +928,23 @@ def preprocess_csv(metrics_path, timestamp_path, merge=False):
 
 
 def compute_stats(df: pd.DataFrame) -> list:
+    # Get pixel size for conversion to Ångströms
+    pixel_size = df['Pix_Size(A)'].iloc[0]
+
+    # Create columns with Ångström values
+    df['Thickness(A)'] = df['Thickness(Pix)'] * pixel_size
+    df['Global_Shift(A)'] = df['Global_Shift(Pix)'] * pixel_size
+
     column_mapping = {
-        'CTF_Score': 'CTF score',
-        'CTF_Res(A)': 'Resolution (Å)',
-        'Thickness(Pix)': 'Thickness (Pix)',
+        'CTF_Score': 'CTF Score',
+        'CTF_Res(A)': 'CTF Resolution (Å)',
+        'Thickness(A)': 'Thickness (Å)',
         'Tilt_Axis': 'Tilt Axis (°)',
-        'Global_Shift(Pix)': 'Global Shift (Pix)',   
+        'Global_Shift(A)': 'Global Shift (Å)',   
         'Bad_Patch_Low': 'Bad patch low_angle (fraction)',
         'Bad_Patch_All': 'Bad patch all_angle (fraction)',
+        'Alpha0': 'Alpha Offset (°)',
+        'Beta0': 'Beta Offset (°)'
     }
 
     # Select only columns to report
@@ -1033,6 +1042,7 @@ def get_metadata_summary(request):
                 "session_name": session_name,
                 "run_number": run_number,
                 "num_tomograms": len(df),
+                "pixel_size": df["Pix_Size(A)"][0],
                 "data_collection_directory": data_collection_dir,
                 "aretomo3_processing_directory": aretomo3_processing_dir,
                 "computed_metrics": computed_metrics,
@@ -1060,10 +1070,16 @@ Metadata Vizdata
 
 # Helper functions to calculate(min and max) metric ranges
 def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
+     # Get pixel size for conversion to Ångströms
+    pixel_size = df['Pix_Size(A)'].iloc[0]
+
+    # Create temporary columns with Ångström values
+    df['Thickness(A)'] = df['Thickness(Pix)'] * pixel_size
+    df['Global_Shift(A)'] = df['Global_Shift(Pix)'] * pixel_size
     column_mapping = {
-        'Thickness(Pix)': 'thickness_pix',
+        'Thickness(A)': 'thickness_pix',
         'Tilt_Axis': 'tilt_axis',
-        'Global_Shift(Pix)': 'global_shift_pix',
+        'Global_Shift(A)': 'global_shift_pix',
         'Bad_Patch_Low': 'bad_patch_low',
         'Bad_Patch_All': 'bad_patch_all',
         'CTF_Res(A)': 'ctf_resolution_a',
@@ -1084,7 +1100,56 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
     return ranges
 
 # Helper function to apply filters
-def apply_filters(df, filters):
+def apply_filters(df, filter_config):
+    """
+    Apply filters to the dataframe based on filter type (AND/OR) and filter criteria
+    Returns both accepted and rejected dataframes
+    """
+
+    if not filter_config or 'filters' not in filter_config:
+        return df, pd.DataFrame(columns=df.columns)
+
+    filters=filter_config['filters']
+    filter_type=filter_config.get('filter_type', 'AND')
+
+    if not filters:
+        return df, pd.DataFrame(columns=df.columns)
+        
+    # Map the filter field names to CSV column names
+    column_mapping = {
+            'thickness_pix': 'Thickness(A)',
+            'tilt_axis': 'Tilt_Axis',
+            'global_shift_pix': 'Global_Shift(A)',
+            'bad_patch_low': 'Bad_Patch_Low',
+            'bad_patch_all': 'Bad_Patch_All',
+            'ctf_resolution_a': 'CTF_Res(A)',
+            'ctf_score': 'CTF_Score'
+    }
+        
+    mask = None
+    for field, range_values in filters.items():
+        if field not in column_mapping or len(range_values) != 2:
+            continue
+            
+        column_name = column_mapping[field]
+        min_val, max_val = range_values
+        current_mask = (df[column_name] >= min_val) & (df[column_name] <= max_val)
+        
+        if mask is None:
+            mask = current_mask
+        else:
+            if filter_type == 'AND':
+                mask = mask & current_mask
+            else:  # OR
+                mask = mask | current_mask
+    
+    if mask is None:
+        return df, pd.DataFrame(columns=df.columns)
+        
+    accepted_df = df[mask]
+    rejected_df = df[~mask]
+    
+    return accepted_df, rejected_df
     filtered_df = df.copy()
     
     for field, range_values in filters.items():
@@ -1148,7 +1213,7 @@ def get_metadata_viz_data(request):
 
 
         # Parse filters if provided
-        filters = json.loads(q) if q else None
+        filter_config = json.loads(q) if q else {}
 
         # Read the CSV file 
         base_proc_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
@@ -1229,45 +1294,68 @@ def get_metadata_viz_data(request):
             # Calculate metric ranges before applying filters
             metric_ranges = calculate_metric_ranges(df)
         
-            # Apply filters if provided
-            if filters:
-                df = apply_filters(df, filters)
+    # Apply filters if provided
+            accepted_df, rejected_df = apply_filters(df, filter_config)
         
-            # Prepare the result list
-            result = []
-            for _, row in df.iterrows():
-                metrics = {
-                    'thickness_pix': float(row['Thickness(Pix)']),
-                    'tilt_axis': float(row['Tilt_Axis']),
-                    'global_shift_pix': float(row['Global_Shift(Pix)']),
-                    'bad_patch_low': float(row['Bad_Patch_Low']),
-                    'bad_patch_all': float(row['Bad_Patch_All']),
-                    'ctf_resolution_a': float(row['CTF_Res(A)']),
-                    'ctf_score': float(row['CTF_Score']),
-                    'df_hand': float(row['DF_Hand']),
-                    'pixel_size_a': float(row['Pix_Size(A)']),
-                    'cs_nm': float(row['Cs(nm)']),
-                    'kv': float(row['Kv']),
-                    'alpha0': float(row['Alpha0']),
-                    'beta0': float(row['Beta0'])
-                }
-                result.append({
-                    'name': str(row['Tilt_Series']),
-                    'metrics': metrics
-                })
+        
+            # Prepare the result lists for both accepted and rejected
+            def prepare_result_list(df):
+                if df is None or df.empty:
+                    return []
+                result = []
+                for _, row in df.iterrows():
+                    metrics = {
+                        'thickness_pix': float(row['Thickness(A)']),
+                        'tilt_axis': float(row['Tilt_Axis']),
+                        'global_shift_pix': float(row['Global_Shift(A)']),
+                        'bad_patch_low': float(row['Bad_Patch_Low']),
+                        'bad_patch_all': float(row['Bad_Patch_All']),
+                        'ctf_resolution_a': float(row['CTF_Res(A)']),
+                        'ctf_score': float(row['CTF_Score']),
+                        'df_hand': float(row['DF_Hand']),
+                        'pixel_size_a': float(row['Pix_Size(A)']),
+                        'cs_nm': float(row['Cs(nm)']),
+                        'kv': float(row['Kv']),
+                        'alpha0': float(row['Alpha0']),
+                        'beta0': float(row['Beta0'])
+                    }
+                    result.append({
+                        'name': str(row['Tilt_Series']),
+                        'metrics': metrics
+                    })
+                return result
+
+            accepted_results = prepare_result_list(accepted_df)
+            rejected_results = prepare_result_list(rejected_df)
+
+             # If no filters were applied, use the entire dataset as the result
+            # Otherwise, the result will be empty and client should use accepted_results and rejected_results
+            has_filters = filter_config and 'filters' in filter_config and filter_config['filters']
+            if not has_filters:
+                result = prepare_result_list(df)
+            else:
+                result = []
+
+
 
             # The final response
             response_data = {
                 'session_name': session_name,
                 'run_number': run_number,
-                'num_tomograms': len(result),
-                'filters_applied': filters if filters else None,
+                'total_accepted': len(accepted_results),
+                'total_rejected': len(rejected_results),
+                 'filters_applied': {
+                    'filters': filter_config.get('filters'),
+                    'filter_type': filter_config.get('filter_type', 'AND').upper()
+                },
                 'metric_ranges': metric_ranges,
-                'result': result
+                'accepted_results': accepted_results,
+                'rejected_results': rejected_results
             }
-         
-            print(f"Result length: {len(result)}")
-            return JsonResponse(response_data, json_dumps_params={"indent": 2})
+            
+            print(f"Accepted results: {len(accepted_results)}, Rejected results: {len(rejected_results)}")
+            return JsonResponse(response_data, json_dumps_params={"indent": 2})\
+
         finally:
             sftp.close()
             ssh.close()
@@ -1275,6 +1363,8 @@ def get_metadata_viz_data(request):
     except Exception as e:
         return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
 
+
+   
 @csrf_exempt
 def get_plan_id(request):
     if request.method == 'GET':

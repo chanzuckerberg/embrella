@@ -2,7 +2,10 @@
 const nextConfig = {
   basePath: '/next',
   compiler: {
-    emotion: true,
+    emotion: {
+      autoLabel: 'never',
+      sourceMap: false,
+    },
   },
   // output: "export",
   reactStrictMode: true,

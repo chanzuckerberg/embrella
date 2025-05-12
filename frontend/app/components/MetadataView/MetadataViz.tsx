@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './MetadataViz.module.css';
 import { MetadataFilters } from './MetadataFilters';
 import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
+import { MetricDashboard } from './MetricDashBoard';
 
 interface MetadataVizProps {
   vizResponse?: MetadataVizResponse;
@@ -22,15 +23,14 @@ export const MetadataViz: React.FC<MetadataVizProps> = ({ vizResponse, isSuccess
   if (!isSuccess || !vizResponse) {
     return <div>No data available</div>;
   }
-
+  console.log(vizResponse, 'vizResponse');
   return (
     <div className={styles.container}>
       <div className={styles.leftColumn}>
         <MetadataFilters metricRanges={vizResponse?.metric_ranges} />
       </div>
       <div className={styles.middleColumn}>
-        <h2>AreTomo Metrics Dashboard</h2>
-        {/* Add visualization components here */}
+        <MetricDashboard data={vizResponse} />
       </div>
     </div>
   );

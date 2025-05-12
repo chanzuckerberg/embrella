@@ -16,8 +16,8 @@ A list of recommended node version managers is below:
 2. Run `yarn`.
 3. Run `npm run bootstrap:submodule`
 
-
 ## Update `imaging-active-learning` Submodule
+
 To pull the latest commit from the `main` branch of the submodule:
 
 ```bash
@@ -29,6 +29,7 @@ To check what hash the submodule is pointing to run:
 `git submodule status`
 
 ## Run Frontend
+
 1. `cd` into the `frontend` directory.
 2. Run `yarn dev`.
 3. Open browser at http://localhost:3000/next.

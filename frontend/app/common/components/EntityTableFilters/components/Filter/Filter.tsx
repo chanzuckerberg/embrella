@@ -26,9 +26,8 @@ const COMPLEX_FILTER_PROPS: Pick<
   search: true,
 };
 
-const INPUT_DROPDOWN_PROPS: Pick<InputDropdownProps, 'intent' | 'sdsStage' | 'sdsStyle' | 'sdsType' | 'state'> = {
+const INPUT_DROPDOWN_PROPS: Pick<InputDropdownProps, 'intent' | 'sdsStyle' | 'sdsType' | 'state'> = {
   intent: 'default',
-  sdsStage: 'default',
   sdsStyle: 'minimal',
   sdsType: 'label',
   state: 'default',

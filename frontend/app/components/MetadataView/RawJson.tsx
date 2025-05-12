@@ -53,21 +53,24 @@ export const RawJson: React.FC<RawJsonProps> = ({ isOpen, onClose }) => {
                     handleCopy();
                   }}
                 >
-                  <Icon color="green" sdsIcon="Copy" sdsSize="s" sdsType="interactive" />
+                  {/* <Icon color="green" sdsIcon="Copy" sdsSize="s"  sdsType="interactive" /> */}
+                  <Icon color="green" sdsIcon="Copy" sdsSize="s" />
                 </div>
                 <div
                   onClick={() => {
                     handleDownload();
                   }}
                 >
-                  <Icon color="green" sdsIcon="Download" sdsSize="s" sdsType="interactive" />
+                  {/* <Icon color="green" sdsIcon="Download" sdsSize="s"   sdsType="interactive"/> */}
+                  <Icon color="green" sdsIcon="Download" sdsSize="s" />
                 </div>
                 <div
                   onClick={() => {
                     onClose();
                   }}
                 >
-                  <Icon color="green" sdsIcon="XMark" sdsSize="s" sdsType="interactive" />
+                  {/* <Icon color="green" sdsIcon="XMark" sdsSize="s"  sdsType="interactive" /> */}
+                  <Icon color="green" sdsIcon="XMark" sdsSize="s" />
                 </div>
               </div>
             }

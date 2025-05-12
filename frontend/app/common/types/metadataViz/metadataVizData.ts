@@ -4,7 +4,8 @@ export interface MetadataVizResponse {
   num_tomograms: number;
   filters_applied?: FiltersApplied;
   metric_ranges: MetricRanges;
-  result: TiltSeries[];
+  accepted_results: TiltSeries[];
+  rejected_results: TiltSeries[];
 }
 
 export interface TiltSeries {
