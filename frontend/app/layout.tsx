@@ -9,7 +9,7 @@ import { cookies } from 'next/headers';
 import { FeatureFlagsProvider } from './common/context/FeatureFlagsProvider';
 import { COOKIE_NAME } from './common/types/cookies';
 import { UserProvider } from './common/context/UserProvider';
-
+import { IdetikProvider } from '@idetik/react';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -30,8 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeProvider theme={theme}>
             <UserProvider>
               <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
-                <NavbarWrapper />
-                {children}
+                <IdetikProvider >
+                  <NavbarWrapper />
+                  {children}
+                </IdetikProvider>
               </FeatureFlagsProvider>
             </UserProvider>
           </ThemeProvider>

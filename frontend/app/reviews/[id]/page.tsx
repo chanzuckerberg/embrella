@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useParams } from "next/navigation";
+import { useParams } from 'next/navigation';
 // import { TomogramViewer } from "@app/components/TomogramViewerView/TomogramViewerView";
-import { useFetchReviewData } from "@hooks/useFetchData/useFetchData";
-import dynamic from "next/dynamic";
+import { useFetchReviewData } from '@hooks/useFetchData/useFetchData';
+import dynamic from 'next/dynamic';
+import { TomogramViewerView } from '@app/components/TomogramViewerView/TomogramViewerView';
 
-const TomogramViewer = dynamic(
-  () => import("@app/components/TomogramViewerView").then(mod => mod.TomogramViewer),
-  { ssr: false }
-);
+// const TomogramViewer = dynamic(() => import('@app/components/TomogramViewerView').then((mod) => mod.TomogramViewer), {
+//   ssr: false,
+// });
 
 type ReviewParams = {
   id: string;
@@ -26,5 +26,5 @@ export default function ReviewPage() {
     return <div>No review data available</div>;
   }
 
-  return <TomogramViewer review={review} />;
+  return <TomogramViewerView review={review} />;
 }

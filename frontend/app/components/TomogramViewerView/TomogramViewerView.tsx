@@ -1,43 +1,46 @@
-"use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { TopBar } from "./components/TopBar";
-import { SideBar } from "./components/SideBar";
-import { Button } from "@czi-sds/components";
-import { Review, ReviewTomogramDetail } from "./types";
-import { QualityControls } from "./components/QualityControls";
-import { useOmeZarrViewer, Renderer } from "@idetik/react";
-import { Region } from "@idetik/core";
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { TopBar } from './components/TopBar';
+import { SideBar } from './components/SideBar';
+import { Button } from '@czi-sds/components';
+import { Review, ReviewTomogramDetail } from './types';
+import { QualityControls } from './components/QualityControls';
+import { OmeZarrImageViewer } from '@idetik/react';
+import { Region } from '@idetik/core';
 
 interface TomogramViewerProps {
     review: Review;
 }
 
-const sourceUrl =
-    "https://public.czbiohub.org/organelle_box/datasets/A549/organelle_box_crop_v1.zarr";
-const wellPath = "ATG101/MeOH";
+const sourceUrl = 'https://public.czbiohub.org/organelle_box/datasets/A549/organelle_box_crop_v1.zarr';
+const wellPath = 'ATG101/MeOH';
 const region: Region = [
-    { dimension: "T", index: { type: "point", value: 0 } },
-    { dimension: "C", index: { type: "full" } },
-    { dimension: "Z", index: { type: "full" } },
-    { dimension: "Y", index: { type: "full" } },
-    { dimension: "X", index: { type: "full" } },
+    { dimension: 'T', index: { type: 'point', value: 0 } },
+    { dimension: 'C', index: { type: 'full' } },
+    { dimension: 'Z', index: { type: 'full' } },
+    { dimension: 'Y', index: { type: 'full' } },
+    { dimension: 'X', index: { type: 'full' } },
 ];
-const imagePaths = ["000000", "000001", "000002", "001000", "001001", "001002"];
+const imagePaths = ['000000', '000001', '000002', '001000', '001001', '001002'];
 
 export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     const [imageIndex, setImageIndex] = useState(0);
     const imagePath = imagePaths[imageIndex];
     const imageUrl = `${sourceUrl}/${wellPath}/${imagePath}`;
+
     const layerCreatedTime = useRef<number | undefined>(undefined);
     const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
+
 
     const [selectedTomogram, setSelectedTomogram] = useState<string | null>(null);
     const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
     const [contrast, setContrast] = useState(50);
     const [slabThickness, setSlabThickness] = useState(1000);
     const [zPosition, setZPosition] = useState(50);
-    const [seriesDimensionName, setSeriesDimensionName] = useState("Z");
+    const [seriesDimensionName, setSeriesDimensionName] = useState('Z');
 
     const handleLayerCreated = useCallback(() => {
         layerCreatedTime.current = performance.now();
@@ -55,7 +58,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
     const handleLoadAllSlicesClicked = useCallback(() => {
         loadAllSlicesClickedTime.current = performance.now();
-        console.log(`Load all slices clicked at ${loadAllSlicesClickedTime.current}`);
+        console.log(
+            `Load all slices clicked at ${loadAllSlicesClickedTime.current}`
+        );
     }, []);
 
     const handleAllSlicesLoaded = useCallback(() => {
@@ -63,7 +68,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
             const time = performance.now() - loadAllSlicesClickedTime.current;
             console.log(`All slices loaded after ${time} ms`);
         } else {
-            console.log("All slices loaded, but load all slices clicked time is undefined");
+            console.log(
+                "All slices loaded, but load all slices clicked time is undefined"
+            );
         }
     }, []);
 
@@ -72,13 +79,14 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
             const time = performance.now() - loadAllSlicesClickedTime.current;
             console.log(`Load all slices aborted after ${time} ms`);
         } else {
-            console.log("Load all slices aborted, but load all slices clicked time is undefined");
+            console.log(
+                "Load all slices aborted, but load all slices clicked time is undefined"
+            );
         }
     }, []);
 
-    const currentIndex = selectedTomogram
-        ? review.tomograms.findIndex((t) => t.tomogramId === selectedTomogram)
-        : -1;
+
+    const currentIndex = selectedTomogram ? review.tomograms.findIndex((t) => t.tomogramId === selectedTomogram) : -1;
 
     const handlePrevious = () => {
         if (currentIndex > 0) {
@@ -101,7 +109,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                 displayName: `Grid5_${selectedTomogram}`,
                 zarrPath: `https://review-static.czbiohub.org/zarrs/Grid5_2025-04-10/${selectedTomogram}.zarr`,
                 existingReview: {
-                    quality: "uncertain" as const,
+                    quality: 'uncertain' as const,
                 },
             };
 
@@ -111,42 +119,10 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         fetchTomogramDetail();
     }, [selectedTomogram]);
 
-    // const {
-    //     layerManager,
-    //     camera,
-    //     imageLayer,
-    //     controlProps,
-    //     zRange,
-    //     zValue,
-    //     zIndex,
-    //     setZValue,
-    //     loading,
-    //     allSlicesLoaded,
-    //     resetChannelsCallback,
-    //     loadAllSlicesCallback,
-    // } = useOmeZarrViewer({
-    //     sourceUrl,
-    //     region,
-    //     seriesDimensionName,
-    //     onLayerCreated: handleLayerCreated,
-    //     onFirstSliceLoaded: handleFirstSliceLoaded,
-    //     onLoadAllSlicesClicked: handleLoadAllSlicesClicked,
-    //     onAllSlicesLoaded: handleAllSlicesLoaded,
-    //     onLoadAllSlicesAborted: handleLoadAllSlicesAborted,
-    // });
-
-    // useEffect(() => {
-    //     if (imageLayer) {
-    //         layerManager.add(imageLayer);
-    //     }
-    // }, [imageLayer, layerManager]);
 
     return (
         <div className="flex flex-col items-center min-h-screen gap-8 py-10 bg-yellow-50 px-6">
-            {/* <div className="w-full flex flex-col items-center"> */}
-            <TopBar
-                onMarkComplete={() => console.log("Mark as complete")}
-            />
+            <TopBar onMarkComplete={() => console.log('Mark as complete')} />
 
             <div className="flex flex-1 overflow-hidden gap-6 border border-red-500 p-6 bg-white">
                 <SideBar
@@ -168,7 +144,20 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                         <>
                             <div className="flex-1 flex items-center justify-center bg-white border border-blue-300">
                                 <div className="relative">
-                                    {/* <Renderer ... /> */}
+                                    <OmeZarrImageViewer
+                                        sourceUrl={imageUrl}
+                                        region={region}
+                                        seriesDimensionName="Z"
+                                        allSlicesSizeEstimate="250 MB"
+                                        classNames={{
+                                            root: "bg-dark-sds-color-primitive-gray-100",
+                                        }}
+                                        onLayerCreated={handleLayerCreated}
+                                        onFirstSliceLoaded={handleFirstSliceLoaded}
+                                        onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
+                                        onAllSlicesLoaded={handleAllSlicesLoaded}
+                                        onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
+                                    />
                                 </div>
                             </div>
 
@@ -186,21 +175,18 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                             </div>
                         </>
                     ) : (
-                        <div className="p-6 bg-white rounded border border-blue-300">
-                            Select a tomogram to view
-                        </div>
+                        <div className="p-6 bg-white rounded border border-blue-300">Select a tomogram to view</div>
                     )}
                 </div>
 
                 <div className="border border-green-500 p-4 bg-green-100 rounded">
                     <QualityControls
-                        onAccept={() => console.log("Accept")}
-                        onReject={() => console.log("Reject")}
-                        onUncertain={() => console.log("Uncertain")}
+                        onAccept={() => console.log('Accept')}
+                        onReject={() => console.log('Reject')}
+                        onUncertain={() => console.log('Uncertain')}
                     />
                 </div>
             </div>
-        </div >
+        </div>
     );
-
 };
