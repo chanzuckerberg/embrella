@@ -928,12 +928,19 @@ def preprocess_csv(metrics_path, timestamp_path, merge=False):
 
 
 def compute_stats(df: pd.DataFrame) -> list:
+    # Get pixel size for conversion to Ångströms
+    pixel_size = df['Pix_Size(A)'].iloc[0]
+
+    # Create columns with Ångström values
+    df['Thickness(A)'] = df['Thickness(Pix)'] * pixel_size
+    df['Global_Shift(A)'] = df['Global_Shift(Pix)'] * pixel_size
+
     column_mapping = {
         'CTF_Score': 'CTF Score',
         'CTF_Res(A)': 'CTF Resolution (Å)',
-        'Thickness(Pix)': 'Thickness (Pix)',
+        'Thickness(A)': 'Thickness (Å)',
         'Tilt_Axis': 'Tilt Axis (°)',
-        'Global_Shift(Pix)': 'Global Shift (Pix)',   
+        'Global_Shift(A)': 'Global Shift (Å)',   
         'Bad_Patch_Low': 'Bad patch low_angle (fraction)',
         'Bad_Patch_All': 'Bad patch all_angle (fraction)',
         'Alpha0': 'Alpha Offset (°)',
@@ -1063,10 +1070,16 @@ Metadata Vizdata
 
 # Helper functions to calculate(min and max) metric ranges
 def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
+     # Get pixel size for conversion to Ångströms
+    pixel_size = df['Pix_Size(A)'].iloc[0]
+
+    # Create temporary columns with Ångström values
+    df['Thickness(A)'] = df['Thickness(Pix)'] * pixel_size
+    df['Global_Shift(A)'] = df['Global_Shift(Pix)'] * pixel_size
     column_mapping = {
-        'Thickness(Pix)': 'thickness_pix',
+        'Thickness(A)': 'thickness_pix',
         'Tilt_Axis': 'tilt_axis',
-        'Global_Shift(Pix)': 'global_shift_pix',
+        'Global_Shift(A)': 'global_shift_pix',
         'Bad_Patch_Low': 'bad_patch_low',
         'Bad_Patch_All': 'bad_patch_all',
         'CTF_Res(A)': 'ctf_resolution_a',
@@ -1104,9 +1117,9 @@ def apply_filters(df, filter_config):
         
     # Map the filter field names to CSV column names
     column_mapping = {
-            'thickness_pix': 'Thickness(Pix)',
+            'thickness_pix': 'Thickness(A)',
             'tilt_axis': 'Tilt_Axis',
-            'global_shift_pix': 'Global_Shift(Pix)',
+            'global_shift_pix': 'Global_Shift(A)',
             'bad_patch_low': 'Bad_Patch_Low',
             'bad_patch_all': 'Bad_Patch_All',
             'ctf_resolution_a': 'CTF_Res(A)',
@@ -1292,9 +1305,9 @@ def get_metadata_viz_data(request):
                 result = []
                 for _, row in df.iterrows():
                     metrics = {
-                        'thickness_pix': float(row['Thickness(Pix)']),
+                        'thickness_pix': float(row['Thickness(A)']),
                         'tilt_axis': float(row['Tilt_Axis']),
-                        'global_shift_pix': float(row['Global_Shift(Pix)']),
+                        'global_shift_pix': float(row['Global_Shift(A)']),
                         'bad_patch_low': float(row['Bad_Patch_Low']),
                         'bad_patch_all': float(row['Bad_Patch_All']),
                         'ctf_resolution_a': float(row['CTF_Res(A)']),
