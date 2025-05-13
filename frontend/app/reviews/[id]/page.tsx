@@ -5,10 +5,6 @@ import { useParams } from 'next/navigation';
 import { useFetchReviewData } from '@hooks/useFetchData/useFetchData';
 import { TomogramViewerView } from '@app/components/TomogramViewerView/TomogramViewerView';
 
-// const TomogramViewer = dynamic(() => import('@app/components/TomogramViewerView').then((mod) => mod.TomogramViewer), {
-//   ssr: false,
-// });
-
 type ReviewParams = {
   id: string;
 };
