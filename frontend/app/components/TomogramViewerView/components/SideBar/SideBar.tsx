@@ -33,7 +33,7 @@ export const SideBar = ({
   onSlabThicknessChange,
 }: SideBarProps) => {
   return (
-    <div className="flex flex-1 flex-col justify-start items-stretch gap-8">
+    <div className="flex flex-1 flex-col justify-start gap-8">
       <SideBarSection>
         <div className="flex flex-col">
           <h2 className="p-8">{reviewName}</h2>

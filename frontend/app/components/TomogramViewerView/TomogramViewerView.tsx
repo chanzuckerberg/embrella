@@ -114,8 +114,8 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     return (
         <div className="flex flex-col items-center min-h-screen gap-8 py-10 px-6">
             <TopBar onMarkComplete={() => console.log('Mark as complete')} />
-
-            <div className="flex flex-1 overflow-hidden gap-6 p-6 border">
+            <div className="flex flex-row gap-6">
+                {/* <div className="flex flex-1 overflow-hidden gap-6 p-6 border"> */}
                 <SideBar
                     reviewName={review.reviewName}
                     tomograms={review.tomograms}
@@ -181,5 +181,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                 </div>
             </div>
         </div>
+        // </div>
     );
 };
