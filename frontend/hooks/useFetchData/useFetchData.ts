@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getRequestURL } from '@app/common/queries/utils';
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { API, DJANGO_URL, MOCKED_APIS } from '@app/common/constants/api';
-import { Review } from '@app/components/TomogramViewerView/TomogramViewerView';
+import { Review } from '@app/components/TomogramViewerView/types';
 
 interface UseFetchData<D> {
   data?: D;

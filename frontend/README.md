@@ -25,6 +25,9 @@ git submodule update --remote --merge
 npm run bootstrap:submodule
 ```
 
+To check what hash the submodule is pointing to run:
+`git submodule status`
+
 ## Run Frontend
 
 1. `cd` into the `frontend` directory.

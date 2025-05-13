@@ -1,0 +1,1 @@
+export { TomogramTable } from './TomogramTable';

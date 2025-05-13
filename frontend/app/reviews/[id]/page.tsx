@@ -1,8 +1,9 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { TomogramViewer } from '@app/components/TomogramViewerView/TomogramViewerView';
+// import { TomogramViewer } from "@app/components/TomogramViewerView/TomogramViewerView";
 import { useFetchReviewData } from '@hooks/useFetchData/useFetchData';
+import { TomogramViewerView } from '@app/components/TomogramViewerView/TomogramViewerView';
 
 type ReviewParams = {
   id: string;
@@ -20,5 +21,5 @@ export default function ReviewPage() {
     return <div>No review data available</div>;
   }
 
-  return <TomogramViewer review={review} />;
+  return <TomogramViewerView review={review} />;
 }

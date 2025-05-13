@@ -1,1 +1,1 @@
-export { TomogramViewer } from './TomogramViewerView';
+export { TomogramViewerView as TomogramViewer } from './TomogramViewerView';
