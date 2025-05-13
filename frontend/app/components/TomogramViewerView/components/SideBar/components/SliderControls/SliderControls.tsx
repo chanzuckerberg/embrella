@@ -17,7 +17,7 @@ export const SliderControls = ({
   return (
     <SideBarSection>
       <div className="flex flex-col gap-4">
-        <h3 className="m-0">View Controls</h3>
+        <h3 className="m-2">View Controls</h3>
 
         <div>
           <label className="block mb-2 font-medium">Tomogram Contrast</label>
@@ -27,7 +27,7 @@ export const SliderControls = ({
             max="100"
             value={contrast}
             onChange={(e: ChangeEvent<HTMLInputElement>) => onContrastChange(Number(e.target.value))}
-            className="my-2"
+            className="my-2 w-full"
           />
         </div>
 
@@ -39,7 +39,7 @@ export const SliderControls = ({
             max="1500"
             value={slabThickness}
             onChange={(e: ChangeEvent<HTMLInputElement>) => onSlabThicknessChange(Number(e.target.value))}
-            className="my-2"
+            className="my-2 w-full"
           />
           <div className="flex justify-between text-sm mt-1">
             <span>300Å</span>

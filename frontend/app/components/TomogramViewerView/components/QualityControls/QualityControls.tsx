@@ -8,7 +8,7 @@ interface QualityControlsProps {
 
 export const QualityControls = ({ onAccept, onReject, onUncertain }: QualityControlsProps) => {
   return (
-    <div className="w-[300px] p-4 bg-white border-l border-gray-300 flex flex-col gap-4">
+    <div className="w-[300px] p-4 flex flex-col gap-4">
       <h3 className="m-0 text-base font-semibold">Assign Tomogram Quality:</h3>
       <Button
         startIcon={<Icon sdsIcon="Check" sdsSize="s" />}

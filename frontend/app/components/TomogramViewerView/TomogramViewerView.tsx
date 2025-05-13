@@ -112,10 +112,10 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   }, [selectedTomogram]);
 
   return (
-    <div className="flex flex-col items-center min-h-screen gap-8 py-10 bg-yellow-50 px-6">
+    <div className="flex flex-col items-center min-h-screen gap-8 py-10 px-6">
       <TopBar onMarkComplete={() => console.log('Mark as complete')} />
 
-      <div className="flex flex-1 overflow-hidden gap-6 border border-red-500 p-6 bg-white">
+      <div className="flex flex-1 overflow-hidden gap-6 p-6 border">
         <SideBar
           reviewName={review.reviewName}
           tomograms={review.tomograms}
@@ -130,10 +130,10 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           onSlabThicknessChange={setSlabThickness}
         />
 
-        <div className="flex flex-col flex-1 bg-blue-100 p-6 rounded">
+        <div className="flex flex-col flex-1 p-6 rounded">
           {selectedTomogram ? (
             <>
-              <div className="flex-1 flex items-center justify-center bg-white border border-blue-300">
+              <div className="flex-1 flex items-center justify-center border-r border-l">
                 <div className="relative">
                   <OmeZarrImageViewer
                     sourceUrl={imageUrl}
@@ -152,7 +152,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 p-4 bg-white rounded mt-6 border border-blue-300">
+              <div className="flex items-center gap-4 p-4 rounded mt-6 border">
                 <Button sdsStyle="square" size="small">
                   ←
                 </Button>
@@ -170,11 +170,11 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
               </div>
             </>
           ) : (
-            <div className="p-6 bg-white rounded border border-blue-300">Select a tomogram to view</div>
+            <div className="p-6 bg-white rounded">Select a tomogram to view</div>
           )}
         </div>
 
-        <div className="border border-green-500 p-4 bg-green-100 rounded">
+        <div className=" p-4rounded">
           <QualityControls
             onAccept={() => console.log('Accept')}
             onReject={() => console.log('Reject')}
