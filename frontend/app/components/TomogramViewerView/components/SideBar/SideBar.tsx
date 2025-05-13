@@ -8,7 +8,7 @@ import { ReviewTomogramSummary } from '../../types';
 interface SideBarProps {
   reviewName: string;
   tomograms: ReviewTomogramSummary[];
-  selectedTomogram: string | null;
+  selectedTomogram?: string;
   currentIndex: number;
   onPrevious: () => void;
   onNext: () => void;
@@ -33,7 +33,7 @@ export const SideBar = ({
   onSlabThicknessChange,
 }: SideBarProps) => {
   return (
-    <div className="flex flex-1 flex-col justify-start gap-8">
+    <div className="basis-[280px] shrink-0 flex flex-col justify-start gap-8 !p-[20px]">
       <SideBarSection>
         <div className="flex flex-col">
           <h2 className="p-8">{reviewName}</h2>

@@ -34,7 +34,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   const layerCreatedTime = useRef<number | undefined>(undefined);
   const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
 
-  const [selectedTomogram, setSelectedTomogram] = useState<string | null>(null);
+  const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
   const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
   const [contrast, setContrast] = useState(50);
   const [slabThickness, setSlabThickness] = useState(1000);
@@ -112,9 +112,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   }, [selectedTomogram]);
 
   return (
-    <div className="flex flex-col items-center min-h-screen gap-8 py-10 px-6">
+    <div className="flex flex-col items-stretch min-h-screen gap-8">
       <TopBar onMarkComplete={() => console.log('Mark as complete')} />
-      <div className="flex flex-row gap-6">
+      <div className="flex-auto flex">
         <SideBar
           reviewName={review.reviewName}
           tomograms={review.tomograms}
@@ -128,8 +128,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           slabThickness={slabThickness}
           onSlabThicknessChange={setSlabThickness}
         />
-
-        <div className="flex flex-col flex-1 p-6 rounded">
+        <div className="flex-auto flex flex-col p-6 rounded">
           {selectedTomogram ? (
             <>
               <div className="flex-1 flex items-center justify-center border-r border-l">
@@ -170,8 +169,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
             <div className="p-6 bg-white rounded">Select a tomogram to view</div>
           )}
         </div>
-
-        <div className=" p-4rounded">
+        <div className="basis-[250px] shrink-0 !p-[20px]">
           <QualityControls
             onAccept={() => console.log('Accept')}
             onReject={() => console.log('Reject')}
