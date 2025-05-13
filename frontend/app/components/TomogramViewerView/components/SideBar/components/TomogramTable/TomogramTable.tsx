@@ -2,7 +2,7 @@ import { ReviewTomogramSummary } from '../../../../types';
 
 interface TomogramTableProps {
   tomograms: ReviewTomogramSummary[];
-  selectedTomogram: string | null;
+  selectedTomogram?: string;
   onSelectTomogram: (tomogramId: string) => void;
 }
 
