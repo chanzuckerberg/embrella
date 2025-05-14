@@ -7,6 +7,7 @@ from processes.models import Tomograms, Annotation, Pipe, PipeInPlan, ProcPlan, 
 from django.db.models import F, Case, When, Value, BooleanField
 import paramiko
 import os
+import socket
 from django.db.models import Q
 from django.contrib.auth.models import User
 from datetime import datetime
@@ -206,92 +207,83 @@ def fetch_session_names(request):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-    ssh_config = {
-        'hostname': HOST,
-        'port': PORT,
-        'username': USERNAME,
-        'password': PASSWORD,
-        'timeout': 10,
-        'allow_agent': False,
-        'look_for_keys': False,
-        'compress': True,
-        'banner_timeout': 10
-    }
-
     try:
-        ssh.connect(**ssh_config)
-        sftp = ssh.open_sftp()
+        ssh.connect(
+            hostname=HOST,
+            port=PORT,
+            username=USERNAME,
+            password=PASSWORD,
+            timeout=10,
+            allow_agent=False,
+            look_for_keys=False,
+            compress=True,
+            banner_timeout=10
+        )
         sessions_data = []
 
         for session in sessions:
-            session_runs = []
+            session_name = session.name
+            session_runs = {}
 
-            # ARETOMO3 directory
-            aretomo_session_path = f"{aretomo3_overlay_path}/{session.name}"
-            try:
-                run_folders = [
-                    f.filename for f in sftp.listdir_attr(aretomo_session_path)
-                    if f.filename.startswith('run') and f.filename[3:].isdigit()
-                ]
+            # Use find command to get all .mrc files in one go
+            find_cmd = f"""
+            find {aretomo3_overlay_path}/{session_name} {denoise_overlay_path}/{session_name} -type f -name "*.mrc" 2>/dev/null | 
+            grep -v "_CTF.mrc" | grep -v "_Vol.mrc" | 
+            sed -E 's|.*/(run[0-9]+)/.*|\\1|' | sort -u
+            """
+            
+            stdin, stdout, stderr = ssh.exec_command(find_cmd)
+            run_folders = [line.strip() for line in stdout if line.strip()]
+            
+            if not run_folders:
+                continue
 
-                for run_folder in sorted(run_folders):
-                    run_path = f"{aretomo_session_path}/{run_folder}"
-                    try:
-                        file_list = sftp.listdir(run_path)
-                        num_tomograms = len([
-                            f for f in file_list
-                            if f.endswith('.mrc') and not f.endswith('_CTF.mrc') and not f.endswith('_Vol.mrc')
-                        ])
-                        session_runs.append({
-                            "runId": run_folder,
-                            "numTomograms": num_tomograms,
-                            "reconstructionTypes": ["DCTF", "SART"]
-                        })
-                    except IOError:
-                        continue
-            except IOError:
-                pass
-
-            # DENOISE directory
-            denoise_session_path = f"{denoise_overlay_path}/{session.name}"
-            try:
-                run_folders = [
-                    f.filename for f in sftp.listdir_attr(denoise_session_path)
-                    if f.filename.startswith('run') and f.filename[3:].isdigit()
-                ]
-
-                for run_folder in sorted(run_folders):
-                    run_path = f"{denoise_session_path}/{run_folder}"
-                    try:
-                        file_list = sftp.listdir(run_path)
-                        num_tomograms = len([
-                            f for f in file_list
-                            if f.endswith('.mrc') and not f.endswith('_CTF.mrc')
-                        ])
-                        session_runs.append({
-                            "runId": run_folder,
-                            "numTomograms": num_tomograms,
-                            "reconstructionTypes": ["Denoised"]
-                        })
-                    except IOError:
-                        continue
-            except IOError:
-                pass
+            # Get tomogram counts and types for each run
+            for run_folder in run_folders:
+                count_cmd = f"""
+                echo "ARETOMO3:"; 
+                find {aretomo3_overlay_path}/{session_name}/{run_folder} -type f -name "*.mrc" 2>/dev/null | 
+                grep -v "_CTF.mrc" | grep -v "_Vol.mrc" | wc -l;
+                echo "DENOISE:";
+                find {denoise_overlay_path}/{session_name}/{run_folder} -type f -name "*.mrc" 2>/dev/null | 
+                grep -v "_CTF.mrc" | wc -l
+                """
+                
+                stdin, stdout, stderr = ssh.exec_command(count_cmd)
+                lines = [line.strip() for line in stdout if line.strip()]
+                
+                reconstruction_types = []
+                num_tomograms = 0
+                
+                if len(lines) >= 2:
+                    aretomo_count = int(lines[0])
+                    denoise_count = int(lines[1])
+                    
+                    if aretomo_count > 0:
+                        reconstruction_types.extend(['DCTF', 'SART'])
+                        num_tomograms = max(num_tomograms, aretomo_count)
+                    
+                    if denoise_count > 0:
+                        reconstruction_types.append('Denoised')
+                        num_tomograms = max(num_tomograms, denoise_count)
+                
+                if reconstruction_types:
+                    session_runs[run_folder] = {
+                        "runId": run_folder,
+                        "numTomograms": num_tomograms,
+                        "reconstructionTypes": reconstruction_types
+                    }
 
             sessions_data.append({
                 "sessionId": str(session.id),
-                "sessionName": session.name,
+                "sessionName": session_name,
                 "createdAt": session.created_at.isoformat() if session.created_at else None,
-                "runs": session_runs
+                "runs": list(session_runs.values())
             })
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
     finally:
-        try:
-            sftp.close()
-        except Exception:
-            pass
         try:
             ssh.close()
         except Exception:
@@ -308,102 +300,76 @@ def fetch_session_names(request):
 
 def get_session_runs(request, session_id):
     """
-    Get all runs and their reconstruction types for a specific session.
-    
-    Args:
-        request: HTTP request
-        session_id: ID of the session (e.g., '24oct10a')
-    
-    Returns:
-        JSON response with runs and their reconstruction types
+    Get all runs and their reconstruction types for a specific session with minimal SSH overhead.
     """
     try:
-        # Get the session
         session = MsiSession.objects.get(name=session_id)
     except MsiSession.DoesNotExist:
         return JsonResponse({"error": "Session not found"}, status=404)
-    
-    # Get all runs associated with this session
-    runs = ProcRun.objects.filter(
-        msi_session=session
-    ).distinct().values('name')
-    
-    # Format the response
+
+    runs = ProcRun.objects.filter(msi_session=session).distinct().values('name')
     runs_data = []
-    for run in runs:
-        run_id = run['name']
-        
-        # Check for DCTF/SART reconstructions
-        aretomo_path = f"/hpc/projects/krios1.processing/aretomo3/{session_id}/{run_id}"
-        has_dctf_sart = False
+
+    try:
+        # ✅ Open ONE SSH + SFTP connection for all path checks
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(
+            hostname=HOST,
+            port=PORT,
+            username=USERNAME,
+            password=PASSWORD,
+            timeout=10,
+            allow_agent=False,
+            look_for_keys=False,
+            compress=True,
+            banner_timeout=10
+        )
+        sftp = ssh.open_sftp()
         try:
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(
-                hostname=HOST,
-                port=PORT,
-                username=USERNAME,
-                password=PASSWORD,
-                timeout=10,
-                allow_agent=False,
-                look_for_keys=False,
-                compress=True,
-                banner_timeout=10
-            )
-            sftp = ssh.open_sftp()
+            # 🔧 Increase buffer sizes
             try:
-                file_list = sftp.listdir(aretomo_path)
-                has_dctf_sart = any(f.endswith('.mrc') and not f.endswith('_CTF.mrc') and not f.endswith('_Vol.mrc') for f in file_list)
-            except IOError:
-                pass
-            finally:
-                sftp.close()
-                ssh.close()
-        except Exception:
-            pass
-        
-        # Check for Denoised reconstructions
-        denoise_path = f"/hpc/projects/krios1.processing/denoise/{session_id}/{run_id}"
-        has_denoised = False
-        try:
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh.connect(
-                hostname=HOST,
-                port=PORT,
-                username=USERNAME,
-                password=PASSWORD,
-                timeout=10,
-                allow_agent=False,
-                look_for_keys=False,
-                compress=True,
-                banner_timeout=10
-            )
-            sftp = ssh.open_sftp()
-            try:
-                file_list = sftp.listdir(denoise_path)
-                has_denoised = any(f.endswith('.mrc') and not f.endswith('_CTF.mrc') for f in file_list)
-            except IOError:
-                pass
-            finally:
-                sftp.close()
-                ssh.close()
-        except Exception:
-            pass
-        
-        # Add reconstruction types based on available files
-        reconstruction_types = []
-        if has_dctf_sart:
-            reconstruction_types.extend(['DCTF', 'SART'])
-        if has_denoised:
-            reconstruction_types.append('Denoised')
-        
-        if reconstruction_types:  # Only add runs that have reconstruction types
-            runs_data.append({
-                "runId": run_id,
-                "reconstructionTypes": reconstruction_types
-            })
-    
+                sftp.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 262144)
+                sftp.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 262144)
+            except Exception:
+                pass  # If socket options fail, continue normally
+
+            # 🧠 Loop through runs with one SFTP session
+            for run in runs:
+                run_id = run['name']
+                reconstruction_types = []
+
+                # Check aretomo path
+                aretomo_path = f"/hpc/projects/krios1.processing/aretomo3/{session_id}/{run_id}"
+                try:
+                    aretomo_files = sftp.listdir(aretomo_path)
+                    if any(f.endswith('.mrc') and not f.endswith('_CTF.mrc') and not f.endswith('_Vol.mrc') for f in aretomo_files):
+                        reconstruction_types.extend(['DCTF', 'SART'])
+                except IOError:
+                    pass
+
+                # Check denoise path
+                denoise_path = f"/hpc/projects/krios1.processing/denoise/{session_id}/{run_id}"
+                try:
+                    denoise_files = sftp.listdir(denoise_path)
+                    if any(f.endswith('.mrc') and not f.endswith('_CTF.mrc') for f in denoise_files):
+                        reconstruction_types.append('Denoised')
+                except IOError:
+                    pass
+
+                if reconstruction_types:
+                    runs_data.append({
+                        "runId": run_id,
+                        "reconstructionTypes": reconstruction_types
+                    })
+
+        finally:
+            sftp.close()
+            ssh.close()
+
+    except Exception as e:
+        return JsonResponse({"error": f"SSH connection error: {str(e)}"}, status=500)
+
     return JsonResponse({
         "sessionId": session_id,
         "runs": runs_data
