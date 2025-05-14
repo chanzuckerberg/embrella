@@ -14,6 +14,8 @@ const METRICS_CONFIG = {
   bad_patch_all: { label: 'Bad patch all', unit: '(%)' },
   ctf_resolution_a: { label: 'CTF Resolution', unit: '(Å)' },
   ctf_score: { label: 'CTF CC Score', unit: '' },
+  alpha0: { label: 'Alpha Offset', unit: '(°)' },
+  beta0: { label: 'Beta Offset', unit: '(°)' },
 };
 
 interface MetricDashboardProps {

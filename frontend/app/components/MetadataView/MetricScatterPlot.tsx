@@ -28,15 +28,19 @@ const units = {
   bad_patch_all: '(%)',
   ctf_resolution_a: '(Å)',
   ctf_score: '',
+  alpha0: '(°)',
+  beta0: '(°)',
 };
 const METRIC_COLORS = {
-  thickness_pix: '#1f77b4',
-  tilt_axis: '#ff7f0e',
-  global_shift_pix: '#9467bd',
-  bad_patch_low: '#8c564b',
-  bad_patch_all: '#e377c2',
-  ctf_resolution_a: '#17becf',
-  ctf_score: '#ffd700',
+  thickness_pix: '#1f77b4',  
+  tilt_axis: '#ff7f0e',  
+  global_shift_pix: '#9370DB',       
+  bad_patch_low: '#e377c2',
+  bad_patch_all: '#58508d',  
+  ctf_resolution_a: '#17becf', 
+  ctf_score: '#FFD700',      
+  alpha0: '#8c564b',         
+  beta0: '#7f7f7f',         
 };
 
 // Helper to format metric key to label
@@ -81,30 +85,32 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
       tooltipContent += formatMetricLine('bad_patch_all', 'Bad Patch All', '%', 100);
       tooltipContent += formatMetricLine('ctf_resolution_a', 'CTF Resolution', ' Å');
       tooltipContent += formatMetricLine('ctf_score', 'CTF Score', '');
+      tooltipContent += formatMetricLine('alpha0', 'Alpha', '°');
+      tooltipContent += formatMetricLine('beta0', 'Beta', '°');
 
       return tooltipContent;
     };
   }, [data]);
 
-  // Create grid configuration
-  const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label: string }>) => {
-    return metricsConfig.map((_, index) => ({
-      containLabel: true,
-      top: `${2 + index * 14}%`,
-      height: '11%',
-      left: '6%',
-      right: '10%',
-      bottom: '20%',
-      offset: 8,
-      show: true,
-      padding: [15, 0, 15, 0],
-    }));
-  }, []);
+// Create grid configuration
+const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label: string }>) => {
+  const gridHeight = 140; 
+  const spacing = 38; 
+  
+  return metricsConfig.map((_, index) => ({
+    containLabel: true,
+    top: index * (gridHeight + spacing),
+    height: gridHeight,
+    left: '5%',
+    right: '8%',
+    show: true,
+  }));
+}, []);
 
   // Create X-axis configuration
   const createXAxisConfig = useCallback(
     (metricsConfig: Array<{ key: string; label: string }>) => {
-      return metricsConfig.map((metric, index) => ({
+      return metricsConfig.map((_, index) => ({
         type: 'value' as const,
         gridIndex: index,
         name: 'Position',
@@ -134,56 +140,59 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
     [data.accepted_results.length]
   );
 
-  // Create Y-axis configuration
-  const createYAxisConfig = useCallback(() => {
-    return processedData?.metricsConfig.map((metric, index) => {
-      const values = data.accepted_results.map((item) => {
-        const value = item.metrics[metric.key as keyof Metrics];
-        return metric.key.includes('bad_patch') ? value * 100 : value;
-      });
-
-      const [min, max] = metric.key.includes('bad_patch')
-        ? [
-            data.metric_ranges[metric.key as keyof Metrics][0] * 100,
-            data.metric_ranges[metric.key as keyof Metrics][1] * 100,
-          ]
-        : data.metric_ranges[metric.key as keyof Metrics];
-      const range = max - min;
-      const padding = range * 0.05;
-
-      return {
-        type: 'value' as const,
-        gridIndex: index,
-        name: `${metric.label} \n${metric.unit}`,
-        nameLocation: 'middle' as const,
-        nameGap: 45,
-        nameTextStyle: {
-          fontSize: 14,
-          fontWeight: 'bold' as const,
-          align: 'center' as const,
-          wrap: true,
-          padding: [0, 0, 15, 0],
-          margin: 8,
-        },
-        splitNumber: calculateBins(Number(values)),
-        min: min - padding,
-        max: max + padding,
-        splitLine: {
-          show: true,
-          lineStyle: {
-            type: 'dashed' as const,
-            opacity: 0.3,
-          },
-        },
-        axisLabel: {
-          show: true,
-          margin: 8,
-          fontSize: 10,
-          formatter: (value: number) => value.toFixed(2),
-        },
-      };
+ // Create Y-axis configuration
+const createYAxisConfig = useCallback(() => {
+  return processedData?.metricsConfig.map((metric, index) => {
+    const values = data.accepted_results.map((item) => {
+      const value = item.metrics[metric.key as keyof Metrics];
+      return metric.key.includes('bad_patch') ? value * 100 : value;
     });
-  }, [data, processedData]);
+
+    const [min, max] = metric.key.includes('bad_patch')
+      ? [
+          data.metric_ranges[metric.key as keyof Metrics][0] * 100,
+          data.metric_ranges[metric.key as keyof Metrics][1] * 100,
+        ]
+      : data.metric_ranges[metric.key as keyof Metrics];
+    const range = max - min;
+    const padding = range * 0.05;
+
+    return {
+      type: 'value' as const,
+      gridIndex: index,
+      name: `${metric.label} \n${metric.unit}`,
+      nameLocation: 'middle' as const,
+      nameGap: 65, 
+      nameTextStyle: {
+        fontSize: 15,
+        fontWeight: 'bold' as const,
+        align: 'center' as const,
+      },
+      splitNumber: calculateBins(Number(values)),
+      min: min - padding,
+      max: max + padding,
+      splitLine: {
+        show: true,
+        lineStyle: {
+          type: 'dashed' as const,
+          opacity: 0.3,
+        },
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLine: {
+        show: false,
+      },
+      axisLabel: {
+        show: true,
+        margin: 8,
+        fontSize: 10,
+        formatter: (value: number) => value.toFixed(2),
+      },
+    };
+  });
+}, [data, processedData]);
 
   // Create series configuration
   const createSeriesConfig = useCallback(
@@ -233,6 +242,13 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
   useEffect(() => {
     if (!chartRef.current || !data?.accepted_results) return;
 
+    // Calculate total height based on number of metrics
+    const gridHeight = 140;
+    const spacing = 35;
+    const totalHeight = processedData.metricsConfig.length * (gridHeight + spacing);
+    chartRef.current.style.height = `${totalHeight}px`;
+
+
     if (!chartInstance.current) {
       chartInstance.current = echarts.init(chartRef.current);
     }
@@ -265,6 +281,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
     };
 
     chartInstance.current.setOption(option);
+    chartInstance.current.resize();
   }, [
     data,
     processedData,
@@ -293,9 +310,9 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
   }, []);
 
   return (
-    <div className={styles.dashboardContainer}>
+    <div className={styles.scatterPlotContainer}>
       {data ? (
-        <div className={styles.chartContainer} ref={chartRef} />
+        <div className={styles.plotContainer} ref={chartRef} />
       ) : (
         <div className={styles.noDataMessage}>{'No data available'}</div>
       )}
