@@ -1,28 +1,12 @@
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { useState, useEffect } from 'react';
-import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
+import { MetadataVizResponse, FilterConfig } from '@app/common/types/metadataViz/metadataVizData';
 
 interface FetchError {
   status: number;
   message: string;
 }
 
-interface UseFetchMetadataVizResult {
-  data?: MetadataVizResponse;
-  isSuccess: boolean;
-  error?: FetchError;
-  isLoading: boolean;
-}
-
-interface MetadataFilters {
-  thickness_pix?: [number, number];
-  ctf_resolution_a?: [number, number];
-  tilt_axis?: [number, number];
-  global_shift_pix?: [number, number];
-  bad_patch_low?: [number, number];
-  bad_patch_all?: [number, number];
-  ctf_score?: [number, number];
-}
 
 interface UseFetchMetadataVizResult {
   data?: MetadataVizResponse;
@@ -34,7 +18,7 @@ interface UseFetchMetadataVizResult {
 export const useFetchMetadataViz = (
   sessionName: string,
   runNumber: string,
-  filters?: MetadataFilters
+  filters?: FilterConfig
 ): UseFetchMetadataVizResult => {
   const [data, setData] = useState<MetadataVizResponse>();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -50,8 +34,7 @@ export const useFetchMetadataViz = (
         let url = `${DJANGO_URL}${API.METADATA_VIZ}?session_name=${sessionName}&run_number=${runNumber}`;
 
         if (filters) {
-          const queryFilters = { filters };
-          url += `&q=${encodeURIComponent(JSON.stringify(queryFilters))}`;
+          url += `&q=${encodeURIComponent(JSON.stringify(filters))}`;
         }
 
         const response = await fetch(url);

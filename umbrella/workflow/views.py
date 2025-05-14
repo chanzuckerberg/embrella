@@ -1084,10 +1084,7 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
         'Bad_Patch_All': 'bad_patch_all',
         'CTF_Res(A)': 'ctf_resolution_a',
         'CTF_Score': 'ctf_score',
-        'DF_Hand': 'df_hand',
         'Pix_Size(A)': 'pixel_size_a',
-        'Cs(nm)': 'cs_nm',
-        'Kv': 'kv',
         'Alpha0': 'alpha0',
         'Beta0': 'beta0'
     }
@@ -1123,7 +1120,9 @@ def apply_filters(df, filter_config):
             'bad_patch_low': 'Bad_Patch_Low',
             'bad_patch_all': 'Bad_Patch_All',
             'ctf_resolution_a': 'CTF_Res(A)',
-            'ctf_score': 'CTF_Score'
+            'ctf_score': 'CTF_Score',
+            'alpha0': 'Alpha0',
+            'beta0': 'Beta0'
     }
         
     mask = None
@@ -1274,7 +1273,7 @@ def get_metadata_viz_data(request):
             required_columns = [
                 'Tilt_Series', 'Thickness(Pix)', 'Tilt_Axis', 'Global_Shift(Pix)',
                 'Bad_Patch_Low', 'Bad_Patch_All', 'CTF_Res(A)', 'CTF_Score',
-                'DF_Hand', 'Pix_Size(A)', 'Cs(nm)', 'Kv', 'Alpha0', 'Beta0', 'Tilt_Series'
+                 'Pix_Size(A)', 'Alpha0', 'Beta0'
             ]
 
             # for missing columns
@@ -1312,10 +1311,7 @@ def get_metadata_viz_data(request):
                         'bad_patch_all': float(row['Bad_Patch_All']),
                         'ctf_resolution_a': float(row['CTF_Res(A)']),
                         'ctf_score': float(row['CTF_Score']),
-                        'df_hand': float(row['DF_Hand']),
                         'pixel_size_a': float(row['Pix_Size(A)']),
-                        'cs_nm': float(row['Cs(nm)']),
-                        'kv': float(row['Kv']),
                         'alpha0': float(row['Alpha0']),
                         'beta0': float(row['Beta0'])
                     }
