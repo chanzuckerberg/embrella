@@ -25,3 +25,14 @@ export interface Review {
   owner: User;
   tomograms: ReviewTomogramSummary[];
 }
+
+export interface TomogramDetail {
+  tomogramId: string;
+  displayName: string;
+  zarrPath: string;
+  existingReview?: {
+    quality: 'accepted' | 'rejected' | 'uncertain';
+    rejectionReasons?: string[];
+    objectLabels?: string[];
+  };
+}
