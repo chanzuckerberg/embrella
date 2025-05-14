@@ -14,13 +14,10 @@ interface SideBarProps {
   onPrevious: () => void;
   onNext: () => void;
   onSelectTomogram: (tomogramId: string) => void;
-  contrast: number;
-  onContrastChange: (value: number) => void;
+  contrast: [number, number];
+  onContrastChange: (value: [number, number]) => void;
   slabThickness: number;
   onSlabThicknessChange: (value: number) => void;
-  imageIndex: number;
-  setImageIndex: (index: number) => void;
-  imagePaths: string[];
 }
 
 export const SideBar = ({
@@ -35,9 +32,6 @@ export const SideBar = ({
   onContrastChange,
   slabThickness,
   onSlabThicknessChange,
-  imageIndex,
-  setImageIndex,
-  imagePaths,
 }: SideBarProps) => {
   return (
     <div className="basis-[280px] shrink-0 flex flex-col justify-start gap-8 !p-[20px]">

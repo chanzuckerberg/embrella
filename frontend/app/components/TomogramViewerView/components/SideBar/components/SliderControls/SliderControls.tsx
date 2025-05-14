@@ -1,9 +1,10 @@
 import { ChangeEvent } from 'react';
 import { SideBarSection } from '../SideBarSection';
+import { InputSlider } from '@czi-sds/components';
 
 interface SliderControlsProps {
-  contrast: number;
-  onContrastChange: (value: number) => void;
+  contrast: [number, number];
+  onContrastChange: (value: [number, number]) => void;
   slabThickness: number;
   onSlabThicknessChange: (value: number) => void;
 }
@@ -21,12 +22,15 @@ export const SliderControls = ({
 
         <div>
           <label className="block mb-2 font-medium">Tomogram Contrast</label>
-          <input
-            type="range"
-            min="0"
-            max="100"
+          <InputSlider
+            min={-0.0001}
+            max={0.0001}
+            step={0.000001}
             value={contrast}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => onContrastChange(Number(e.target.value))}
+            onChange={(_, value) => {
+              console.log(value);
+              onContrastChange(value as [number, number]);
+            }}
             className="my-2 w-full"
           />
         </div>

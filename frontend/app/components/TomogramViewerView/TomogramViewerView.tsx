@@ -18,35 +18,21 @@ interface TomogramViewerProps {
 
 const sourceUrl =
     'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-sample/aretomo3/vol002/Position_10_Vol.zarr';
-// const sourceUrl = 'https://public.czbiohub.org/organelle_box/datasets/A549/organelle_box_crop_v1.zarr';
-const wellPath = 'ATG101/MeOH';
-// const region: Region = [
-//     { dimension: 'T', index: { type: 'point', value: 0 } },
-//     { dimension: 'C', index: { type: 'full' } },
-//     { dimension: 'Z', index: { type: 'full' } },
-//     { dimension: 'Y', index: { type: 'full' } },
-//     { dimension: 'X', index: { type: 'full' } },
-
-// ];
-
-const imagePaths = ['000000', '000001', '000002', '001000', '001001', '001002'];
 
 export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     const [region, setRegion] = useState<Region | null>(null);
     const [imageIndex, setImageIndex] = useState(0);
-    const imagePath = imagePaths[imageIndex];
     const imageUrl = `${sourceUrl}`;
-    // const imageUrl = `${sourceUrl}/${wellPath}/${imagePath}`;
 
     const layerCreatedTime = useRef<number | undefined>(undefined);
     const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
 
     const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
     const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
-    const [contrast, setContrast] = useState(50);
     const [slabThickness, setSlabThickness] = useState(1000);
     const [zPosition, setZPosition] = useState(0);
     const [seriesDimensionName, setSeriesDimensionName] = useState('Z');
+    const [contrast, setContrast] = useState<[number, number]>([-0.00001, 0.00001]);
 
     useEffect(() => {
         const fetchRegion = async () => {
@@ -54,7 +40,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
             setRegion(region);
         };
         fetchRegion();
-    }, []);
+    }, [imageUrl]);
 
     const handleLayerCreated = useCallback(() => {
         layerCreatedTime.current = performance.now();
@@ -142,9 +128,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                     onContrastChange={setContrast}
                     slabThickness={slabThickness}
                     onSlabThicknessChange={setSlabThickness}
-                    imageIndex={imageIndex}
-                    setImageIndex={setImageIndex}
-                    imagePaths={imagePaths}
                 />
                 <div className="flex-auto flex flex-col p-6 rounded">
                     {selectedTomogram && region ? (
@@ -165,23 +148,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                                     onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
                                 />
                             </div>
-
-                            {/* <div className="flex items-center gap-4 p-4 rounded mt-6 border">
-                                <Button sdsStyle="square" size="small">
-                                    ←
-                                </Button>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    value={zPosition}
-                                    onChange={(e) => setZPosition(Number(e.target.value))}
-                                    className="flex-1"
-                                />
-                                <Button sdsStyle="square" size="small">
-                                    →
-                                </Button>
-                            </div> */}
                         </>
                     ) : (
                         <div className="p-6 bg-white rounded">Select a tomogram to view</div>
