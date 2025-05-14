@@ -1,8 +1,8 @@
 export interface MetadataVizResponse {
   session_name: string;
   run_number: string;
+  filters_applied?: FilterConfig;
   num_tomograms: number;
-  filters_applied?: FiltersApplied;
   metric_ranges: MetricRanges;
   accepted_results: TiltSeries[];
   rejected_results: TiltSeries[];
@@ -21,22 +21,23 @@ export interface Metrics {
   bad_patch_all: number;
   ctf_resolution_a: number;
   ctf_score: number;
-  df_hand: number;
   pixel_size_a: number;
-  cs_nm: number;
-  kv: number;
   alpha0: number;
   beta0: number;
 }
-
-export interface FiltersApplied {
-  thickness_pix?: [number, number];
-  tilt_axis?: [number, number];
-  global_shift_pix?: [number, number];
-  bad_patch_low?: [number, number];
-  bad_patch_all?: [number, number];
-  ctf_resolution_a?: [number, number];
-  ctf_score?: [number, number];
+export interface FilterConfig {
+  filters: {
+    thickness_pix?: [number, number];
+    tilt_axis?: [number, number];
+    global_shift_pix?: [number, number];
+    bad_patch_low?: [number, number];
+    bad_patch_all?: [number, number];
+    ctf_resolution_a?: [number, number];
+    ctf_score?: [number, number];
+    alpha0?: [number, number];
+    beta0?: [number, number];
+  };
+  filter_type: 'AND' | 'OR';
 }
 
 export interface MetricRanges {
@@ -47,10 +48,7 @@ export interface MetricRanges {
   bad_patch_all: [number, number];
   ctf_resolution_a: [number, number];
   ctf_score: [number, number];
-  df_hand: [number, number];
   pixel_size_a: [number, number];
-  cs_nm: [number, number];
-  kv: [number, number];
   alpha0: [number, number];
   beta0: [number, number];
 }
