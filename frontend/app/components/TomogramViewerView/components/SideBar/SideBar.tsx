@@ -4,6 +4,7 @@ import { TomogramTable } from './components/TomogramTable';
 import { TomogramInfo } from './components/TomogramInfo';
 import { SliderControls } from './components/SliderControls';
 import { ReviewTomogramSummary } from '../../types';
+// import { ChannelControlsList } from '../../../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer/components/ChannelControlsList';
 
 interface SideBarProps {
   reviewName: string;
@@ -17,6 +18,9 @@ interface SideBarProps {
   onContrastChange: (value: number) => void;
   slabThickness: number;
   onSlabThicknessChange: (value: number) => void;
+  imageIndex: number;
+  setImageIndex: (index: number) => void;
+  imagePaths: string[];
 }
 
 export const SideBar = ({
@@ -31,6 +35,9 @@ export const SideBar = ({
   onContrastChange,
   slabThickness,
   onSlabThicknessChange,
+  imageIndex,
+  setImageIndex,
+  imagePaths,
 }: SideBarProps) => {
   return (
     <div className="flex flex-1 flex-col justify-start gap-8">
@@ -60,6 +67,16 @@ export const SideBar = ({
           onSlabThicknessChange={onSlabThicknessChange}
         />
       </SideBarSection>
+      {/* <SideBarSection>
+        <ChannelControlsList
+        />
+        <input
+          type="button"
+          value="Switch Image"
+          onClick={() => setImageIndex((imageIndex + 1) % imagePaths.length)}
+          className="h-12"
+        />
+      </SideBarSection> */}
     </div>
   );
 };
