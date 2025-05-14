@@ -38,7 +38,7 @@ const METRIC_COLORS = {
   bad_patch_low: '#e377c2',
   bad_patch_all: '#58508d',  
   ctf_resolution_a: '#17becf', 
-  ctf_score: '#FFD700',      
+  ctf_score: '#da9100',      
   alpha0: '#8c564b',         
   beta0: '#7f7f7f',         
 };
@@ -162,7 +162,7 @@ const createYAxisConfig = useCallback(() => {
       gridIndex: index,
       name: `${metric.label} \n${metric.unit}`,
       nameLocation: 'middle' as const,
-      nameGap: 65, 
+      nameGap: 60, 
       nameTextStyle: {
         fontSize: 15,
         fontWeight: 'bold' as const,

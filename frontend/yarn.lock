@@ -349,7 +349,6 @@ __metadata:
   linkType: hard
 
 "@babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.18.3, @babel/runtime@npm:^7.20.13, @babel/runtime@npm:^7.23.9, @babel/runtime@npm:^7.25.0, @babel/runtime@npm:^7.27.1, @babel/runtime@npm:^7.5.5, @babel/runtime@npm:^7.8.7":
-"@babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.18.3, @babel/runtime@npm:^7.20.13, @babel/runtime@npm:^7.23.9, @babel/runtime@npm:^7.25.0, @babel/runtime@npm:^7.27.1, @babel/runtime@npm:^7.5.5, @babel/runtime@npm:^7.8.7":
   version: 7.27.1
   resolution: "@babel/runtime@npm:7.27.1"
   checksum: 10c0/530a7332f86ac5a7442250456823a930906911d895c0b743bf1852efc88a20a016ed4cd26d442d0ca40ae6d5448111e02a08dd638a4f1064b47d080e2875dc05
@@ -798,12 +797,12 @@ __metadata:
 
 "@idetik/core@file:./imaging-active-learning/packages/core::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/core@file:./imaging-active-learning/packages/core#./imaging-active-learning/packages/core::hash=380b8a&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/core@file:./imaging-active-learning/packages/core#./imaging-active-learning/packages/core::hash=7cf119&locator=create-sds-app%40workspace%3A."
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/a28d4a5329cc659aebc02b478aa2ca61ae8ecff6cba32ad45b83a174e64440a77090f2823b19b6297fa189843c8e352b9b61497e78c0d10ad19230bcc8d0e11e
+  checksum: 10c0/4c21db8587dd6b2c6fc3a07493ee9738203a9f258e5dfa19a15bf8ddce8fe0acb412731de3a99d54ac1c636fa62b41803c3b18cb961dc8cc1baf3c8ffe9b6e0f
   languageName: node
   linkType: hard
 
@@ -819,17 +818,13 @@ __metadata:
 
 "@idetik/react@file:./imaging-active-learning/packages/react::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/react@file:./imaging-active-learning/packages/react#./imaging-active-learning/packages/react::hash=9c0234&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/react@file:./imaging-active-learning/packages/react#./imaging-active-learning/packages/react::hash=c76191&locator=create-sds-app%40workspace%3A."
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
     "@emotion/styled": "npm:^11.13.0"
     "@eslint/js": "npm:^9.9.0"
     "@idetik/core": "npm:^0.0.1"
-    "@mui/base": "npm:5.0.0-beta.58"
-    "@mui/icons-material": "npm:5.16.7"
-    "@mui/lab": "npm:5.0.0-alpha.173"
-    "@mui/material": "npm:5.16.7"
     "@mui/base": "npm:5.0.0-beta.58"
     "@mui/icons-material": "npm:5.16.7"
     "@mui/lab": "npm:5.0.0-alpha.173"
@@ -841,7 +836,7 @@ __metadata:
     "@czi-sds/components": ^22.3.0
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/f4a7971fac96926a868d53fdca08d86cbd71b5da66307f613d0d04d88d2bf9c08e118ef946908e2ab801ff17756aecba2e3d14e3b25e4e4569cdf9c9083d5aab
+  checksum: 10c0/a27d8196bdb18650e0f500d6071efbd21874ec48e86a1e2bb7ee1bec4ed2713bdf9a4547a1581b803130e582c0e08d4661d7392ae26c5dea9aa3a3a47dcb096b
   languageName: node
   linkType: hard
 
@@ -854,10 +849,6 @@ __metadata:
     "@emotion/styled": "npm:^11.13.0"
     "@eslint/js": "npm:^9.9.0"
     "@idetik/core": "npm:^0.0.1"
-    "@mui/base": "npm:5.0.0-beta.58"
-    "@mui/icons-material": "npm:5.16.7"
-    "@mui/lab": "npm:5.0.0-alpha.173"
-    "@mui/material": "npm:5.16.7"
     "@mui/base": "npm:5.0.0-beta.58"
     "@mui/icons-material": "npm:5.16.7"
     "@mui/lab": "npm:5.0.0-alpha.173"
@@ -1236,7 +1227,6 @@ __metadata:
   linkType: hard
 
 "@mui/core-downloads-tracker@npm:^5.16.7":
-"@mui/core-downloads-tracker@npm:^5.16.7":
   version: 5.17.1
   resolution: "@mui/core-downloads-tracker@npm:5.17.1"
   checksum: 10c0/c36641e274a27cdef8a75218021a5ebef0ce588cd0aec004802d56e8d59ac9d8603b8b4840df480de40ce2c3af8898d49929a8564ed5a784ff2b3100dce31366
@@ -1383,7 +1373,6 @@ __metadata:
   linkType: hard
 
 "@mui/system@npm:^5.16.5, @mui/system@npm:^5.16.7":
-"@mui/system@npm:^5.16.5, @mui/system@npm:^5.16.7":
   version: 5.17.1
   resolution: "@mui/system@npm:5.17.1"
   dependencies:
@@ -1412,7 +1401,6 @@ __metadata:
   linkType: hard
 
 "@mui/types@npm:^7.2.14, @mui/types@npm:^7.2.15":
-"@mui/types@npm:^7.2.14, @mui/types@npm:^7.2.15":
   version: 7.4.2
   resolution: "@mui/types@npm:7.4.2"
   dependencies:
@@ -1426,7 +1414,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mui/types@npm:~7.2.15":
 "@mui/types@npm:~7.2.15":
   version: 7.2.24
   resolution: "@mui/types@npm:7.2.24"
@@ -2241,7 +2228,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/prop-types@npm:*, @types/prop-types@npm:^15.7.12":
 "@types/prop-types@npm:*, @types/prop-types@npm:^15.7.12":
   version: 15.7.14
   resolution: "@types/prop-types@npm:15.7.14"
@@ -10731,10 +10717,6 @@ __metadata:
     "@emotion/styled": "npm:^11.13.0"
     "@eslint/js": "npm:^9.9.0"
     "@idetik/core": "npm:^0.0.1"
-    "@mui/base": "npm:5.0.0-beta.58"
-    "@mui/icons-material": "npm:5.16.7"
-    "@mui/lab": "npm:5.0.0-alpha.173"
-    "@mui/material": "npm:5.16.7"
     "@mui/base": "npm:5.0.0-beta.58"
     "@mui/icons-material": "npm:5.16.7"
     "@mui/lab": "npm:5.0.0-alpha.173"
