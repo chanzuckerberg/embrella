@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 from umbrella.ping import ping
 from umbrella.api_internal import get_tomo_by_msi_session
-from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, fetch_session_names, ReviewView, export_review_results
+from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, fetch_session_names, ReviewView, export_review_results, get_session_runs
 
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
@@ -50,6 +50,7 @@ urlpatterns = [
     path('agent/', include('agent.urls'), name='AI Agent'),
     path('annotations/v1/filterlist/', available_annotation_filter, name='get filter list for annotations'),
     path('api/sessions/', fetch_session_names, name='fetch_session_names'),
+    path('api/sessions/<str:session_id>/', get_session_runs, name='get_session_runs'),
     path('api/reviews/', ReviewView.as_view(), name='reviews'),
     path('api/reviews/<uuid:review_id>/export/', export_review_results, name='export_review_results'),
 ]

@@ -306,8 +306,110 @@ def fetch_session_names(request):
         }
     }, safe=False)
 
-@method_decorator(csrf_exempt, name='dispatch')
+def get_session_runs(request, session_id):
+    """
+    Get all runs and their reconstruction types for a specific session.
+    
+    Args:
+        request: HTTP request
+        session_id: ID of the session (e.g., '24oct10a')
+    
+    Returns:
+        JSON response with runs and their reconstruction types
+    """
+    try:
+        # Get the session
+        session = MsiSession.objects.get(name=session_id)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({"error": "Session not found"}, status=404)
+    
+    # Get all runs associated with this session
+    runs = ProcRun.objects.filter(
+        msi_session=session
+    ).distinct().values('name')
+    
+    # Format the response
+    runs_data = []
+    for run in runs:
+        run_id = run['name']
+        
+        # Check for DCTF/SART reconstructions
+        aretomo_path = f"/hpc/projects/krios1.processing/aretomo3/{session_id}/{run_id}"
+        has_dctf_sart = False
+        try:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(
+                hostname=HOST,
+                port=PORT,
+                username=USERNAME,
+                password=PASSWORD,
+                timeout=10,
+                allow_agent=False,
+                look_for_keys=False,
+                compress=True,
+                banner_timeout=10
+            )
+            sftp = ssh.open_sftp()
+            try:
+                file_list = sftp.listdir(aretomo_path)
+                has_dctf_sart = any(f.endswith('.mrc') and not f.endswith('_CTF.mrc') and not f.endswith('_Vol.mrc') for f in file_list)
+            except IOError:
+                pass
+            finally:
+                sftp.close()
+                ssh.close()
+        except Exception:
+            pass
+        
+        # Check for Denoised reconstructions
+        denoise_path = f"/hpc/projects/krios1.processing/denoise/{session_id}/{run_id}"
+        has_denoised = False
+        try:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(
+                hostname=HOST,
+                port=PORT,
+                username=USERNAME,
+                password=PASSWORD,
+                timeout=10,
+                allow_agent=False,
+                look_for_keys=False,
+                compress=True,
+                banner_timeout=10
+            )
+            sftp = ssh.open_sftp()
+            try:
+                file_list = sftp.listdir(denoise_path)
+                has_denoised = any(f.endswith('.mrc') and not f.endswith('_CTF.mrc') for f in file_list)
+            except IOError:
+                pass
+            finally:
+                sftp.close()
+                ssh.close()
+        except Exception:
+            pass
+        
+        # Add reconstruction types based on available files
+        reconstruction_types = []
+        if has_dctf_sart:
+            reconstruction_types.extend(['DCTF', 'SART'])
+        if has_denoised:
+            reconstruction_types.append('Denoised')
+        
+        if reconstruction_types:  # Only add runs that have reconstruction types
+            runs_data.append({
+                "runId": run_id,
+                "reconstructionTypes": reconstruction_types
+            })
+    
+    return JsonResponse({
+        "sessionId": session_id,
+        "runs": runs_data
+    }, safe=False)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ReviewView(View):
     def get(self, request):
         """
