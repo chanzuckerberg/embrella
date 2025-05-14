@@ -4,7 +4,6 @@ import { TomogramTable } from './components/TomogramTable';
 import { TomogramInfo } from './components/TomogramInfo';
 import { SliderControls } from './components/SliderControls';
 import { ReviewTomogramSummary } from '../../types';
-// import { ChannelControlsList } from '../../../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer/components/ChannelControlsList';
 
 interface SideBarProps {
   reviewName: string;
@@ -61,16 +60,6 @@ export const SideBar = ({
           onSlabThicknessChange={onSlabThicknessChange}
         />
       </SideBarSection>
-      {/* <SideBarSection>
-        <ChannelControlsList
-        />
-        <input
-          type="button"
-          value="Switch Image"
-          onClick={() => setImageIndex((imageIndex + 1) % imagePaths.length)}
-          className="h-12"
-        />
-      </SideBarSection> */}
     </div>
   );
 };

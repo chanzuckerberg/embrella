@@ -17,14 +17,10 @@ export async function getRegionFromZattrs(zarrUrl: string): Promise<Region> {
   const region: Region = axes.map((axis: { name: string; type: string }) => {
     const dim = axis.name;
     if (axis.type === 'time') {
-      console.log(`Time axis: ${dim}`);
       return { dimension: dim, index: { type: 'point', value: 0 } };
     } else {
-      console.log(`Other axis: ${dim}`);
       return { dimension: dim, index: { type: 'full' } };
     }
   });
-
-  console.log(`Region: ${JSON.stringify(region)}`);
   return region;
 }

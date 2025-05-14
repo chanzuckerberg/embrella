@@ -28,7 +28,6 @@ export const SliderControls = ({
             step={0.000001}
             value={contrast}
             onChange={(_, value) => {
-              console.log(value);
               onContrastChange(value as [number, number]);
             }}
             className="my-2 w-full"
