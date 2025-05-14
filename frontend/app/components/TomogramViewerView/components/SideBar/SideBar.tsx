@@ -14,8 +14,8 @@ interface SideBarProps {
   onPrevious: () => void;
   onNext: () => void;
   onSelectTomogram: (tomogramId: string) => void;
-  contrast: [number, number];
-  onContrastChange: (value: [number, number]) => void;
+  contrastLimits: [number, number];
+  onContrastLimitsChange: (value: [number, number]) => void;
 }
 
 export const SideBar = ({
@@ -27,8 +27,8 @@ export const SideBar = ({
   onPrevious,
   onNext,
   onSelectTomogram,
-  contrast,
-  onContrastChange,
+  contrastLimits: contrast,
+  onContrastLimitsChange: onContrastChange,
 }: SideBarProps) => {
   return (
     <div className="basis-[280px] shrink-0 flex flex-col justify-start gap-8 !p-[20px]">
