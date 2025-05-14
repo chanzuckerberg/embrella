@@ -5,8 +5,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
-import { Button } from '@czi-sds/components';
-import { Review, ReviewTomogramDetail } from './types';
+import { Review, ReviewTomogramDetail, TomogramDetail } from './types';
 import { QualityControls } from './components/QualityControls';
 import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
@@ -21,7 +20,6 @@ const sourceUrl =
 
 export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   const [region, setRegion] = useState<Region | null>(null);
-  const [imageIndex, setImageIndex] = useState(0);
   const imageUrl = `${sourceUrl}`;
 
   const layerCreatedTime = useRef<number | undefined>(undefined);
@@ -29,7 +27,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
   const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
   const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
-  const [slabThickness, setSlabThickness] = useState(1000);
   const [zPosition, setZPosition] = useState(0);
   const [seriesDimensionName, setSeriesDimensionName] = useState('Z');
   const [contrast, setContrast] = useState<[number, number]>([-0.00001, 0.00001]);
@@ -97,7 +94,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     const fetchTomogramDetail = async () => {
       if (!selectedTomogram) return;
 
-      const mockResponse = {
+      const mockResponse: TomogramDetail = {
         tomogramId: selectedTomogram,
         displayName: `Grid5_${selectedTomogram}`,
         zarrPath: `https://review-static.czbiohub.org/zarrs/Grid5_2025-04-10/${selectedTomogram}.zarr`,
@@ -108,7 +105,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
       setTomogramDetail(mockResponse);
     };
-
     fetchTomogramDetail();
   }, [selectedTomogram]);
 
@@ -120,14 +116,13 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           reviewName={review.reviewName}
           tomograms={review.tomograms}
           selectedTomogram={selectedTomogram}
+          tomogramDetail={tomogramDetail}
           currentIndex={currentIndex}
           onPrevious={handlePrevious}
           onNext={handleNext}
           onSelectTomogram={setSelectedTomogram}
           contrast={contrast}
           onContrastChange={setContrast}
-          slabThickness={slabThickness}
-          onSlabThicknessChange={setSlabThickness}
         />
         <div className="flex-auto flex flex-col p-6 rounded">
           {selectedTomogram && region ? (

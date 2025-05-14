@@ -1,4 +1,3 @@
-import { ChangeEvent } from 'react';
 import { SideBarSection } from '../SideBarSection';
 import { InputSlider } from '@czi-sds/components';
 
@@ -7,10 +6,7 @@ interface SliderControlsProps {
   onContrastChange: (value: [number, number]) => void;
 }
 
-export const SliderControls = ({
-  contrast,
-  onContrastChange,
-}: SliderControlsProps) => {
+export const SliderControls = ({ contrast, onContrastChange }: SliderControlsProps) => {
   return (
     <SideBarSection>
       <div className="flex flex-col gap-4">
