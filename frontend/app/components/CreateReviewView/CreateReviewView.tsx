@@ -23,9 +23,11 @@ export const CreateReviewView = () => {
   const [selectedReconstructionType, setSelectedReconstructionType] = useState<AutocompleteOptionBasic | undefined>(
     undefined
   );
+  const [runOptions, setRunOptions] = useState<Array<AutocompleteOptionBasic>>([]);
+  const [selectedRun, setSelectedRun] = useState<AutocompleteOptionBasic | undefined>(undefined);
 
   return (
-    <div className="flex flex-col !p-[25px] relative">
+    <div className="flex flex-col !p-[25px] relative gap-[40px]">
       <header className="text-[22px] font-semibold">Create New Review</header>
       <main className="flex justify-around">
         <div className="flex flex-col basis-[800px]">
@@ -36,10 +38,10 @@ export const CreateReviewView = () => {
             topLabelClass="!mt-[16px]"
             value={selectedTemSession}
             options={temSessionOptions}
-            onChange={(option) => {
-              setSelectedTemSession(option);
+            onChange={(temSessionOption) => {
+              setSelectedTemSession(temSessionOption);
               setReconstructionTypeOptions(
-                option?.session.runs
+                temSessionOption?.session.runs
                   .flatMap((run) => run.reconstructionTypes)
                   .map((reconstructionType) => ({
                     name: reconstructionType,
@@ -54,10 +56,47 @@ export const CreateReviewView = () => {
               topLabelClass="!mt-[16px]"
               value={selectedReconstructionType}
               options={reconstructionTypeOptions}
-              onChange={(option) => {
-                setSelectedReconstructionType(option);
+              onChange={(reconstructionTypeOption) => {
+                setSelectedReconstructionType(reconstructionTypeOption);
+                setRunOptions(
+                  reconstructionTypeOption !== undefined
+                    ? selectedTemSession.session.runs
+                        .filter((run) => run.reconstructionTypes.includes(reconstructionTypeOption.name))
+                        .map((run) => ({ name: run.runId }))
+                    : []
+                );
               }}
             />
+          )}
+          {selectedReconstructionType !== undefined && (
+            <DropdownSelect
+              topLabel="Run:"
+              topLabelClass="!mt-[16px]"
+              value={selectedRun}
+              options={runOptions}
+              onChange={(option) => {
+                setSelectedRun(option);
+              }}
+            />
+          )}
+          {selectedRun !== undefined && (
+            <>
+              <div className="!mt-[16px] font-semibold">Selection details:</div>
+              <div className="grid grid-rows-2 grid-cols-2 !p-[16px] bg-[#f3f3f3]">
+                <div>
+                  <div className="font-semibold">Project:</div>
+                  <div>{selectedTemSession?.session.projectName}</div>
+                </div>
+                <div>
+                  <div className="font-semibold">Project:</div>
+                  <div>{selectedTemSession?.session.projectName}</div>
+                </div>
+                <div className="col-span-full">
+                  <div className="font-semibold">Project:</div>
+                  <div>{selectedTemSession?.session.projectName}</div>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </main>
