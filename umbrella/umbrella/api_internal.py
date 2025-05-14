@@ -3,10 +3,18 @@ from django.db.models import F
 from cryo_grids.models import CryoGrid
 from projects.models import Project
 from tem.models import MsiSession
-from processes.models import Tomograms, Annotation, Pipe, PipeInPlan, ProcPlan, PipeJoint, ProcRun
+from processes.models import Tomograms, Annotation, Pipe, PipeInPlan, ProcPlan, PipeJoint, ProcRun, Review, ReviewTomogram
 from django.db.models import F, Case, When, Value, BooleanField
 import paramiko
 import os
+from django.db.models import Q
+from django.contrib.auth.models import User
+from datetime import datetime
+import json
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+import uuid
 
 HOST = "10.50.120.90"
 PORT = 22
@@ -297,3 +305,230 @@ def fetch_session_names(request):
             "offset": offset
         }
     }, safe=False)
+
+@method_decorator(csrf_exempt, name='dispatch')
+
+class ReviewView(View):
+    def get(self, request):
+        """
+        List all review sessions with pagination, search, and sorting.
+        """
+        # Get pagination parameters
+        limit = int(request.GET.get('limit', 20))
+        offset = int(request.GET.get('offset', 0))
+        
+        # Get search parameter
+        search = request.GET.get('search', '').strip()
+        
+        # Get sort parameter
+        order_by = request.GET.get('orderBy', 'requestedAt:desc')
+        sort_field, sort_order = order_by.split(':') if ':' in order_by else ('requestedAt', 'desc')
+        
+        # Start with base queryset
+        queryset = Review.objects.select_related('session', 'requestor').all()
+        
+        # Apply search filter
+        if search:
+            queryset = queryset.filter(
+                Q(review_name__icontains=search) |
+                Q(session__name__icontains=search)
+            )
+        
+        # Apply sorting
+        if sort_field == 'requestedAt':
+            sort_field = 'created_at'
+        elif sort_field == 'updatedAt':
+            sort_field = 'updated_at'
+        
+        if sort_order == 'desc':
+            queryset = queryset.order_by(f'-{sort_field}')
+        else:
+            queryset = queryset.order_by(sort_field)
+        
+        # Get total count before pagination
+        total_count = queryset.count()
+        
+        # Apply pagination
+        queryset = queryset[offset:offset + limit]
+        
+        # Format the response
+        reviews_data = []
+        for review in queryset:
+            # Determine status based on reviewed count
+            if review.reviewed_count == 0:
+                status = "Not Started"
+            elif review.reviewed_count < review.total_count:
+                status = "In Progress"
+            else:
+                status = "Complete"
+                
+            reviews_data.append({
+                "reviewId": str(review.review_id),
+                "reviewName": review.review_name,
+                "reviewType": review.review_type,
+                "sessionId": review.session.name,
+                "runId": review.run_id,
+                "reconstructionType": review.reconstruction_type,
+                "updatedAt": review.updated_at.isoformat(),
+                "status": status,
+                "reviewedCount": review.reviewed_count,
+                "totalCount": review.total_count,
+                "reviewer": {
+                    "id": str(review.requestor.id) if review.requestor else None,
+                    "name": review.requestor.username if review.requestor else None
+                }
+            })
+        
+        return JsonResponse({
+            "data": reviews_data,
+            "pagination": {
+                "total": total_count,
+                "limit": limit,
+                "offset": offset
+            }
+        }, safe=False)
+
+    def post(self, request):
+        """
+        Create a new review session from an embrElla sessionId.
+        
+        Request Body:
+        {
+            "reviewName": string,               // Display name for review
+            "reviewType": "tomogram_quality",   // Enum (e.g., "segmentation_labeling")
+            "sessionId": string,                // Selected EmbrElla TEM session ID
+            "runId": string,                    // Selected run within the session
+            "reconstructionType": string,       // "DCTF" | "Denoised" | "SART"
+            "requestor": number                 // User ID creating the review
+        }
+        """
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        
+        # Validate required fields
+        required_fields = ['reviewName', 'reviewType', 'sessionId', 'runId', 'reconstructionType', 'requestor']
+        for field in required_fields:
+            if field not in data:
+                return JsonResponse({"error": f"Missing required field: {field}"}, status=400)
+        
+        # Validate reconstruction type
+        valid_reconstruction_types = ['DCTF', 'Denoised', 'SART']
+        if data['reconstructionType'] not in valid_reconstruction_types:
+            return JsonResponse({"error": f"Invalid reconstruction type. Must be one of: {', '.join(valid_reconstruction_types)}"}, status=400)
+        
+        try:
+            # Get the session
+            session = MsiSession.objects.get(id=data['sessionId'])
+        except MsiSession.DoesNotExist:
+            return JsonResponse({"error": "Session not found"}, status=404)
+        
+        try:
+            # Get the requestor user
+            requestor = User.objects.get(id=data['requestor'])
+        except User.DoesNotExist:
+            return JsonResponse({"error": "Requestor user not found"}, status=404)
+        
+        # Create the review
+        try:
+            review = Review.objects.create(
+                review_name=data['reviewName'],
+                review_type=data['reviewType'],
+                run_id=data['runId'],
+                reconstruction_type=data['reconstructionType'],
+                session=session,
+                requestor=requestor,  # Use the User instance we just fetched
+                status='not_started',
+                total_count=0,  # Will be updated when tomograms are added
+                reviewed_count=0
+            )
+            
+            # Return the created review
+            return JsonResponse({
+                "reviewId": str(review.review_id),
+                "sessionId": review.session.name,
+                "runId": review.run_id,
+                "reconstructionType": review.reconstruction_type,
+                "reviewName": review.review_name,
+                "totalCount": review.total_count,
+                "status": "not_started",
+                "createdAt": review.created_at.isoformat()
+            }, status=201)
+            
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+def export_review_results(request, review_id):
+    """
+    Export final review annotations after completion.
+    
+    Args:
+        request: HTTP request
+        review_id: UUID of the review to export
+    
+    Returns:
+        JSON file containing the review annotations
+    """
+    print(f"Looking for review with ID: {review_id}")
+    print(f"Type of review_id: {type(review_id)}")
+    
+    try:
+        # Convert string to UUID if needed
+        if isinstance(review_id, str):
+            try:
+                review_id = uuid.UUID(review_id)
+                print(f"Converted to UUID: {review_id}")
+            except ValueError as e:
+                print(f"UUID conversion error: {str(e)}")
+                return JsonResponse({"error": "Invalid review ID format"}, status=400)
+        
+        # Get the review
+        print(f"Querying database with UUID: {review_id}")
+        review = Review.objects.get(review_id=review_id)
+        print(f"Found review: {review}")
+        print(f"Review ID: {review.review_id}")
+        print(f"Review Name: {review.review_name}")
+        print(f"Review Status: {review.status}")
+    except Review.DoesNotExist:
+        print(f"No review found with ID: {review_id}")
+        # List all available review IDs for debugging
+        all_reviews = Review.objects.all()
+        print("Available review IDs:")
+        for r in all_reviews:
+            print(f"- {r.review_id} (Name: {r.review_name}, Status: {r.status})")
+        return JsonResponse({"error": "Review not found"}, status=404)
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+    
+    # Check if review is completed
+    if review.status != 'completed':
+        return JsonResponse({"error": "Review must be completed before exporting"}, status=400)
+    
+    # Check if save_path exists
+    if not review.save_path:
+        return JsonResponse({"error": "No saved annotations found for this review"}, status=404)
+    
+    try:
+        # Read the saved JSON file
+        with open(review.save_path, 'r') as f:
+            annotations_data = json.load(f)
+        
+        # Create the response with the JSON file
+        response = JsonResponse(annotations_data)
+        
+        # Set headers for file download
+        filename = f"review_{review_id}_export.json"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Type'] = 'application/json'
+        
+        return response
+        
+    except FileNotFoundError:
+        return JsonResponse({"error": "Annotation file not found"}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid annotation file format"}, status=500)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+

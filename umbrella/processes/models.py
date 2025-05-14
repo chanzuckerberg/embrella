@@ -3,6 +3,7 @@ from django.db.models import Q
 from tem.models import MsiSession, SessionPlan
 from stores.models import StaticPath, Path, PathType, fill_place_holders
 import sys
+import uuid
 
 
 from django.db import models
@@ -670,3 +671,50 @@ class JobLog(models.Model):
 
     def __str__(self):
         return f"Aretomo Job {self.job_id} by {self.user.username}"
+
+class Review(models.Model):
+    """
+    A review record for an MSI session, containing review metadata and status.
+    """
+    review_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    review_name = models.CharField(max_length=255)
+    review_type = models.CharField(max_length=100)
+    run_id = models.CharField(max_length=100)
+    reconstruction_type = models.CharField(max_length=100)
+    total_count = models.IntegerField(default=0)
+    reviewed_count = models.IntegerField(default=0)
+    status = models.CharField(max_length=32, default='pending')  # pending, in_progress, completed, rejected
+    save_path = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name='reviews')
+    requestor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_reviews')
+
+    def __str__(self):
+        return f'Review {self.review_name} for {self.session.name}'
+
+class ReviewTomogram(models.Model):
+    """
+    A tomogram review record, linking specific tomograms to a review.
+    """
+    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='review_tomograms')
+    tomogram_id = models.CharField(max_length=100, primary_key=True)
+    quality = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('accepted', 'Accepted'),
+            ('rejected', 'Rejected'),
+            ('uncertain', 'Uncertain')
+        ],
+        default='pending'
+    )
+    rejection_reasons = models.JSONField(default=list, blank=True)  # Array of strings
+    object_labels = models.JSONField(default=list, blank=True)  # Array of objects
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['review', 'tomogram_id']
+
+    def __str__(self):
+        return f'Tomogram Review {self.tomogram_id} in {self.review}'
