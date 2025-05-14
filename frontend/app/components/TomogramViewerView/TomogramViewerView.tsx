@@ -31,7 +31,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   const [seriesDimensionName, setSeriesDimensionName] = useState('z');
   const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
 
-  console.log('contrastLimits', contrastLimits);
   useEffect(() => {
     const fetchRegion = async () => {
       const region = await getRegionFromZattrs(imageUrl);
