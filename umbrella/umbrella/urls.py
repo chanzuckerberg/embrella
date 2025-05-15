@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 from umbrella.ping import ping
 from umbrella.api_internal import get_tomo_by_msi_session
-from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, fetch_session_names, ReviewView, export_review_results, get_session_runs, get_review_tomograms, get_review_tomogram_detail
+from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, fetch_session_names, ReviewView, export_review_results, get_session_runs, get_review_tomograms, ReviewTomogramView
 
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
@@ -54,7 +54,7 @@ urlpatterns = [
     path('api/reviews/', ReviewView.as_view(), name='reviews'),
     path('api/reviews/<str:review_id>/export/', export_review_results, name='export_review_results'),
     path('api/reviews/<str:review_id>/tomograms/', get_review_tomograms, name='get_review_tomograms'),
-    path('api/reviews/<str:review_id>/tomograms/<str:tomogram_id>/', get_review_tomogram_detail, name='get_review_tomogram_detail'),
+    path('api/reviews/<str:review_id>/tomograms/<str:tomogram_id>', ReviewTomogramView.as_view(), name='review_tomogram_detail_no_slash'),
 ]
 
 
