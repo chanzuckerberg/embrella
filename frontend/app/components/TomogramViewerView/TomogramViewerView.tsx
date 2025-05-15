@@ -10,6 +10,7 @@ import { QualityControls } from './components/QualityControls';
 import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
 import { getRegionFromZattrs } from './utils';
+import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
 
 interface TomogramViewerProps {
   review: Review;
@@ -108,6 +109,22 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     fetchTomogramDetail();
   }, [selectedTomogram]);
 
+  const { imageSeriesLayer, channels } = useIdetik();
+  const handleContrastLimitsChange = useCallback(
+    (newLimits: [number, number]) => {
+      if (!imageSeriesLayer) return;
+
+      const updatedChannels = channels.map((channel) => ({
+        ...channel,
+        contrastLimits: newLimits,
+      }));
+
+      imageSeriesLayer.setChannelProps(updatedChannels);
+      imageSeriesLayer.update();
+    },
+    [imageSeriesLayer, channels]
+  );
+
   return (
     <div className="flex flex-col items-stretch min-h-screen gap-8">
       <TopBar onMarkComplete={() => console.log('Mark as complete')} />
@@ -122,7 +139,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           onNext={handleNext}
           onSelectTomogram={setSelectedTomogram}
           contrastLimits={contrastLimits}
-          onContrastLimitsChange={setContrastLimits}
+          onContrastLimitsChange={handleContrastLimitsChange}
         />
         <div className="flex-auto flex flex-col p-6 rounded">
           {selectedTomogram && region ? (
@@ -133,7 +150,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                   region={region}
                   seriesDimensionName={seriesDimensionName}
                   allSlicesSizeEstimate="250 MB"
-                  contrastLimits={contrastLimits}
+                  fallbackContrastLimits={contrastLimits}
                   classNames={{
                     root: 'bg-dark-sds-color-primitive-gray-100',
                   }}
