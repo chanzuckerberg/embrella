@@ -699,15 +699,17 @@ class ReviewTomogram(models.Model):
     """
     review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='review_tomograms')
     tomogram_id = models.CharField(max_length=100, primary_key=True)
+    position_id = models.CharField(max_length=100)
     quality = models.CharField(
         max_length=20,
         choices=[
+            ('', ''),
             ('pending', 'Pending'),
             ('accepted', 'Accepted'),
             ('rejected', 'Rejected'),
             ('uncertain', 'Uncertain')
         ],
-        default='pending'
+        default=''
     )
     rejection_reasons = models.JSONField(default=list, blank=True)  # Array of strings
     object_labels = models.JSONField(default=list, blank=True)  # Array of objects

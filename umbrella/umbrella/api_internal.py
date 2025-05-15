@@ -241,10 +241,8 @@ def fetch_session_names(request):
             # Get tomogram counts and types for each run
             for run_folder in run_folders:
                 count_cmd = f"""
-                echo "ARETOMO3:"; 
                 find {aretomo3_overlay_path}/{session_name}/{run_folder} -type f -name "*.mrc" 2>/dev/null | 
                 grep -v "_CTF.mrc" | grep -v "_Vol.mrc" | wc -l;
-                echo "DENOISE:";
                 find {denoise_overlay_path}/{session_name}/{run_folder} -type f -name "*.mrc" 2>/dev/null | 
                 grep -v "_CTF.mrc" | wc -l
                 """
@@ -598,5 +596,135 @@ def export_review_results(request, review_id):
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid annotation file format"}, status=500)
     except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+def get_review_tomograms(request, review_id):
+    """
+    Get all tomograms for a specific review.
+    
+    Args:
+        request: HTTP request
+        review_id: String ID of the review
+        
+    Returns:
+        JSON array of tomograms with their status
+        [
+            { "tomogramId": "tomo_001", "status": "pending" },
+            { "tomogramId": "tomo_002", "status": "rejected" }
+        ]
+    """
+    print(f"Getting tomograms for review_id: {review_id}")
+    print(f"Type of review_id: {type(review_id)}")
+    
+    try:
+        # First check if the review exists
+        try:
+            review = Review.objects.get(review_id=review_id)
+            print(f"Found review: {review.review_id}")
+        except Review.DoesNotExist:
+            print(f"Review not found with ID: {review_id}")
+            # List all available review IDs for debugging
+            all_reviews = Review.objects.all()
+            print("Available review IDs:")
+            for r in all_reviews:
+                print(f"- {r.review_id} (Name: {r.review_name})")
+            return JsonResponse({"error": "Review not found"}, status=404)
+        
+        # Get tomograms for the review
+        tomograms = ReviewTomogram.objects.filter(
+            review__review_id=review_id
+        ).values('tomogram_id', 'quality')
+        
+        print(f"Found {tomograms.count()} tomograms")
+        
+        # Format the response
+        tomograms_data = [
+            {
+                "tomogramId": tomo['tomogram_id'],
+                "status": tomo['quality'] if tomo['quality'] else 'pending'
+            }
+            for tomo in tomograms
+        ]
+        
+        return JsonResponse(tomograms_data, safe=False)
+        
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+def get_review_tomogram_detail(request, review_id, tomogram_id):
+    """
+    Get detailed information about a specific tomogram in a review.
+    
+    Args:
+        request: HTTP request
+        review_id: String ID of the review
+        tomogram_id: ID of the tomogram
+        
+    Returns:
+        JSON object with tomogram details:
+        {
+            "tomogramId": string,
+            "displayName": string,
+            "zarrPath": string,
+            "existingReview": {
+                "quality": "accepted" | "rejected" | "uncertain",
+                "rejectionReasons": string[],
+                "objectLabels": string[]
+            }
+        }
+    """
+    print(f"Getting tomogram details for review_id: {review_id}, tomogram_id: {tomogram_id}")
+    
+    try:
+        # First check if the review exists
+        try:
+            review = Review.objects.get(review_id=review_id)
+            print(f"Found review: {review.review_id}")
+        except Review.DoesNotExist:
+            print(f"Review not found with ID: {review_id}")
+            return JsonResponse({"error": "Review not found"}, status=404)
+        
+        # Get the specific tomogram
+        try:
+            tomogram = ReviewTomogram.objects.get(
+                review__review_id=review_id,
+                tomogram_id=tomogram_id
+            )
+            print(f"Found tomogram: {tomogram.tomogram_id}")
+        except ReviewTomogram.DoesNotExist:
+            print(f"Tomogram not found with ID: {tomogram_id}")
+            return JsonResponse({"error": "Tomogram not found"}, status=404)
+        
+        # Format the response
+        response_data = {
+            "tomogramId": tomogram.tomogram_id,
+            "displayName": f"Tomo_{tomogram.tomogram_id}",
+            "zarrPath":  f"https://czii-onsite.czbiohub.org/krios1.processing/{review.session.name}/{tomogram.position_id}_Vol.zarr",
+            "existingReview": None
+        }
+        
+        # Add review details if they exist
+        if tomogram.quality:
+            review_data = {
+                "quality": tomogram.quality,
+                "rejectionReasons": [],
+                "objectLabels": []
+            }
+            
+            # Add rejection reasons if quality is rejected
+            if tomogram.quality == "rejected" and tomogram.rejection_reasons:
+                review_data["rejectionReasons"] = tomogram.rejection_reasons.split(",")
+            
+            # Add object labels if they exist
+            if tomogram.object_labels:
+                review_data["objectLabels"] = tomogram.object_labels.split(",")
+            
+            response_data["existingReview"] = review_data
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
