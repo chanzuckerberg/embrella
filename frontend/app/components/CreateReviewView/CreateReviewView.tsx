@@ -82,18 +82,24 @@ export const CreateReviewView = () => {
           {selectedRun !== undefined && (
             <>
               <div className="!mt-[16px] font-semibold">Selection details:</div>
-              <div className="grid grid-rows-2 grid-cols-2 !p-[16px] bg-[#f3f3f3]">
+              <div className="grid grid-rows-2 grid-cols-2 gap-[12px] !p-[16px] bg-[#f3f3f3]">
                 <div>
                   <div className="font-semibold">Project:</div>
                   <div>{selectedTemSession?.session.projectName}</div>
                 </div>
                 <div>
-                  <div className="font-semibold">Project:</div>
-                  <div>{selectedTemSession?.session.projectName}</div>
+                  <div className="font-semibold">Tomograms selected for review:</div>
+                  <div>
+                    {selectedTemSession?.session.runs
+                      .filter((run) => run.reconstructionTypes.includes(selectedReconstructionType!.name))
+                      .reduce((prevCount, runB) => prevCount + runB.numTomograms, 0)}
+                  </div>
                 </div>
                 <div className="col-span-full">
-                  <div className="font-semibold">Project:</div>
-                  <div>{selectedTemSession?.session.projectName}</div>
+                  <div className="font-semibold">Review results will be saved to:</div>
+                  <div className="bg-[#dfdfdf] font-mono !px-[12px] !py-[4px]">
+                    {selectedTemSession?.session.savePath}
+                  </div>
                 </div>
               </div>
             </>

@@ -19,6 +19,7 @@ export interface TemSession {
   sessionName: string;
   projectName: string;
   createdAt: string;
+  savePath: string;
   runs: Run[];
 }
 
