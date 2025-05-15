@@ -352,6 +352,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       sessionId: '24oct30',
       sessionName: 'Grid5_2025-04-08',
       createdAt: '2025-04-08T13:22:00Z',
+      projectName: 'Project A',
+      savePath: '/mnt/data/tomograms/2025-04-08/Grid5',
       runs: [
         {
           runId: 'run001',
@@ -364,6 +366,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       sessionId: '24nov10',
       sessionName: 'Grid6_2025-04-22',
       createdAt: '2025-04-22T09:10:00Z',
+      projectName: 'Project B',
+      savePath: '/mnt/data/tomograms/2025-04-22/Grid6',
       runs: [
         {
           runId: 'run001',
@@ -376,6 +380,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       sessionId: 'session_4321',
       sessionName: 'Grid4_TestRun',
       createdAt: '2025-04-01T09:10:00Z',
+      projectName: 'Project C',
+      savePath: '/mnt/data/tomograms/2025-04-01/Grid4_TestRun',
       runs: [
         {
           runId: 'run001',
