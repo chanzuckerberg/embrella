@@ -14,6 +14,8 @@ const METRICS_CONFIG = {
   bad_patch_all: { label: 'Bad patch all', unit: '(%)' },
   ctf_resolution_a: { label: 'CTF Resolution', unit: '(Å)' },
   ctf_score: { label: 'CTF CC Score', unit: '' },
+  alpha0: { label: 'Alpha Offset', unit: '(°)' },
+  beta0: { label: 'Beta Offset', unit: '(°)' },
 };
 
 interface MetricDashboardProps {
@@ -22,8 +24,8 @@ interface MetricDashboardProps {
 }
 
 export const MetricDashboard: React.FC<MetricDashboardProps> = ({ data }) => {
-  console.log(data, 'data');
-  const [isHistogram, setIsHistogram] = useState(true);
+  console.log(data,'Dashboarddata');
+  const [isScatterPlot, setIsScatterPlot] = useState(true);
 
   // Process data once for both visualizations
   const processedData = React.useMemo(() => {
@@ -58,16 +60,16 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({ data }) => {
     <div className={styles.dashboardContainer}>
       <Box display="flex" justifyContent="flex-end">
         <FormControlLabel
-          control={<Switch checked={isHistogram} onChange={(e) => setIsHistogram(e.target.checked)} color="primary" />}
-          label={isHistogram ? 'Histogram View' : 'Scatter Plot View'}
+          control={<Switch checked={isScatterPlot} onChange={(e) => setIsScatterPlot(e.target.checked)} color="primary" />}
+          label={isScatterPlot ? 'Scatter Plot View' : 'Histogram View'}
         />
       </Box>
       {processedData ? (
         data ? (
-          isHistogram ? (
-            <MetricHistogram data={data} processedData={processedData} />
-          ) : (
+          isScatterPlot ? (
             <MetricScatterPlot data={data} processedData={processedData} />
+          ) : (
+            <MetricHistogram data={data} processedData={processedData} />
           )
         ) : (
           <div className={styles.noDataMessage}>No data available</div>

@@ -3,34 +3,32 @@ import { NavigationButtons } from './components/NavigationButtons';
 import { TomogramTable } from './components/TomogramTable';
 import { TomogramInfo } from './components/TomogramInfo';
 import { SliderControls } from './components/SliderControls';
-import { ReviewTomogramSummary } from '../../types';
+import { ReviewTomogramSummary, TomogramDetail } from '../../types';
 
 interface SideBarProps {
   reviewName: string;
   tomograms: ReviewTomogramSummary[];
   selectedTomogram?: string;
+  tomogramDetail: TomogramDetail | null;
   currentIndex: number;
   onPrevious: () => void;
   onNext: () => void;
   onSelectTomogram: (tomogramId: string) => void;
-  contrast: number;
-  onContrastChange: (value: number) => void;
-  slabThickness: number;
-  onSlabThicknessChange: (value: number) => void;
+  contrast: [number, number];
+  onContrastChange: (value: [number, number]) => void;
 }
 
 export const SideBar = ({
   reviewName,
   tomograms,
   selectedTomogram,
+  tomogramDetail,
   currentIndex,
   onPrevious,
   onNext,
   onSelectTomogram,
   contrast,
   onContrastChange,
-  slabThickness,
-  onSlabThicknessChange,
 }: SideBarProps) => {
   return (
     <div className="basis-[280px] shrink-0 flex flex-col justify-start gap-8 !p-[20px]">
@@ -52,13 +50,8 @@ export const SideBar = ({
       </SideBarSection>
 
       <SideBarSection>
-        <TomogramInfo tomogramId={selectedTomogram || ''} />
-        <SliderControls
-          contrast={contrast}
-          onContrastChange={onContrastChange}
-          slabThickness={slabThickness}
-          onSlabThicknessChange={onSlabThicknessChange}
-        />
+        <TomogramInfo tomogramDetail={tomogramDetail} />
+        <SliderControls contrast={contrast} onContrastChange={onContrastChange} />
       </SideBarSection>
     </div>
   );

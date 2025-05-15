@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './MetadataViz.module.css';
 import { MetadataFilters } from './MetadataFilters';
-import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
+import { MetadataVizResponse, FilterConfig } from '@app/common/types/metadataViz/metadataVizData';
 import { MetricDashboard } from './MetricDashBoard';
 
 interface MetadataVizProps {
@@ -9,9 +9,10 @@ interface MetadataVizProps {
   isSuccess: boolean;
   error?: { status: number; message: string };
   isLoading: boolean;
+  onApplyFilters?: (filters: FilterConfig, selectedOption: 'AND' | 'OR') => void;
 }
 
-export const MetadataViz: React.FC<MetadataVizProps> = ({ vizResponse, isSuccess, error, isLoading }) => {
+export const MetadataViz: React.FC<MetadataVizProps> = ({ vizResponse, isSuccess, error, isLoading,onApplyFilters }) => {
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -23,11 +24,10 @@ export const MetadataViz: React.FC<MetadataVizProps> = ({ vizResponse, isSuccess
   if (!isSuccess || !vizResponse) {
     return <div>No data available</div>;
   }
-  console.log(vizResponse, 'vizResponse');
   return (
     <div className={styles.container}>
       <div className={styles.leftColumn}>
-        <MetadataFilters metricRanges={vizResponse?.metric_ranges} />
+        <MetadataFilters metricRanges={vizResponse?.metric_ranges} onApplyFilters={onApplyFilters} />
       </div>
       <div className={styles.middleColumn}>
         <MetricDashboard data={vizResponse} />
