@@ -74,24 +74,20 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
       // Helper function to format the metric line
       const formatMetricLine = (key: keyof Metrics, label: string, unit: string, multiplier = 1) => {
         const value = metrics[key] * multiplier;
-        return `<div>${label}: ${value.toFixed(2)}${unit}</div>`;
+        return `<div>${label}: ${value.toFixed(2)} ${unit}</div>`;
       };
 
       // Add all metric values to tooltip
-      tooltipContent += formatMetricLine('thickness_pix', 'Thickness', ' (Å)');
-      tooltipContent += formatMetricLine('tilt_axis', 'Tilt Axis', '°');
-      tooltipContent += formatMetricLine('global_shift_pix', 'Global Shift', ' (Å)');
-      tooltipContent += formatMetricLine('bad_patch_low', 'Bad Patch Low', '%', 100);
-      tooltipContent += formatMetricLine('bad_patch_all', 'Bad Patch All', '%', 100);
-      tooltipContent += formatMetricLine('ctf_resolution_a', 'CTF Resolution', ' Å');
-      tooltipContent += formatMetricLine('ctf_score', 'CTF Score', '');
-      tooltipContent += formatMetricLine('alpha0', 'Alpha', '°');
-      tooltipContent += formatMetricLine('beta0', 'Beta', '°');
+      tooltipContent += processedData.metricsConfig
+        .map(({ key, label, unit }) => {
+          const multiplier = key.includes('bad_patch') ? 100 : 1;
+          return formatMetricLine(key as keyof Metrics, label, unit, multiplier);
+        })
+        .join('');
 
       return tooltipContent;
     };
   }, [data]);
-
 // Create grid configuration
 const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label: string }>) => {
   const gridHeight = 140; 
@@ -102,7 +98,7 @@ const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label:
     top: index * (gridHeight + spacing),
     height: gridHeight,
     left: '5%',
-    right: '8%',
+    right: '9%',
     show: true,
   }));
 }, []);
@@ -110,6 +106,11 @@ const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label:
   // Create X-axis configuration
   const createXAxisConfig = useCallback(
     (metricsConfig: Array<{ key: string; label: string }>) => {
+      const hasRejectedResults = data.rejected_results && data.rejected_results.length > 0;
+      const totalPoints = hasRejectedResults 
+        ? Math.max(data.accepted_results.length, data.rejected_results.length) - 1
+        : data.accepted_results.length - 1;
+
       return metricsConfig.map((_, index) => ({
         type: 'value' as const,
         gridIndex: index,
@@ -131,13 +132,13 @@ const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label:
           wrap: true,
         },
         min: 0,
-        max: data.accepted_results.length - 1,
+        max: totalPoints,
         splitLine: {
           show: false,
         },
       }));
     },
-    [data.accepted_results.length]
+    [data]
   );
 
  // Create Y-axis configuration
@@ -193,51 +194,80 @@ const createYAxisConfig = useCallback(() => {
     };
   });
 }, [data, processedData]);
+const createSeriesConfig = useCallback(
+  (metricsConfig: Array<{ key: string; label: string }>) => {
+    const hasRejectedResults = data.rejected_results && data.rejected_results.length > 0;
+    const maxLength = Math.max(data.accepted_results.length, data.rejected_results?.length || 0);
+    
+    // Pre-calculate normalized positions
+    const normalizedAcceptedPositions = data.accepted_results.map((_, pos) => 
+      pos * (data.accepted_results.length / maxLength)
+    );
+    const normalizedRejectedPositions = data.rejected_results?.map((_, pos) => 
+      pos * (data.rejected_results!.length / maxLength)
+    ) || [];
 
-  // Create series configuration
-  const createSeriesConfig = useCallback(
-    (metricsConfig: Array<{ key: string; label: string }>) => {
-      return metricsConfig.map((metric, index) => ({
-        type: 'scatter' as const,
-        name: metric.label,
-        xAxisIndex: index,
-        yAxisIndex: index,
-        symbolSize: 4,
-        itemStyle: {
-          opacity: 0.6,
-          color: METRIC_COLORS[metric.key as keyof typeof METRIC_COLORS],
-        },
-        data: data.accepted_results.map((item, pos) => {
-          const value = item.metrics[metric.key as keyof Metrics];
-          return [pos, metric.key.includes('bad_patch') ? value * 100 : value];
-        }),
-        ...(processedData !== undefined && {
-          markPoint: {
-            data: [
-              {
-                name: `Position_${processedData}`,
-                coord: [
-                  processedData.totalPositions,
-                  metric.key.includes('bad_patch')
-                    ? data.accepted_results[processedData.totalPositions]?.metrics[metric.key as keyof Metrics] * 100
-                    : data.accepted_results[processedData.totalPositions]?.metrics[metric.key as keyof Metrics],
-                ],
-                symbol: 'arrow',
-                symbolSize: 20,
-                itemStyle: { color: '#666' },
-                label: {
-                  show: true,
-                  formatter: `Position_${processedData}`,
-                  position: 'top' as const,
-                },
-              },
-            ],
+
+    return metricsConfig.map((metric, index) => {
+      if (!hasRejectedResults) {
+        // Default view with metric-specific colors
+        return {
+          type: 'scatter' as const,
+          name: metric.label,
+          xAxisIndex: index,
+          yAxisIndex: index,
+          symbolSize: 4,
+          itemStyle: {
+            opacity: 0.6,
+            color: METRIC_COLORS[metric.key as keyof typeof METRIC_COLORS],
           },
-        }),
-      }));
-    },
-    [data, processedData]
-  );
+          data: data.accepted_results.map((item, pos) => {
+            if (!item?.metrics) return [normalizedAcceptedPositions[pos], 0];
+            const value = item.metrics[metric.key as keyof Metrics];
+            return [normalizedAcceptedPositions[pos], metric.key.includes('bad_patch') ? value * 100 : value];
+          }),
+        };
+      } else {
+        // Filtered view with accepted (green) and rejected (red) points
+        return [
+          {
+            type: 'scatter' as const,
+            name: `${metric.label} (Accepted)`,
+            xAxisIndex: index,
+            yAxisIndex: index,
+            symbolSize: 4,
+            itemStyle: {
+              opacity: 0.6,
+              color: '#4CAF50',
+            },
+            data: data.accepted_results.map((item, pos) => {
+              if (!item?.metrics) return [normalizedAcceptedPositions[pos], 0];
+              const value = item.metrics[metric.key as keyof Metrics];
+              return [normalizedAcceptedPositions[pos], metric.key.includes('bad_patch') ? value * 100 : value];
+            }),
+          },
+          {
+            type: 'scatter' as const,
+            name: `${metric.label} (Rejected)`,
+            xAxisIndex: index,
+            yAxisIndex: index,
+            symbolSize: 4,
+            itemStyle: {
+              opacity: 0.6,
+              color: '#F44336',
+            },
+            data: data.rejected_results.map((item, pos) => {
+                if (!item?.metrics) return [normalizedRejectedPositions[pos], 0];
+                const value = item.metrics[metric.key as keyof Metrics];
+                return [normalizedRejectedPositions[pos], metric.key.includes('bad_patch') ? value * 100 : value];
+            }),
+          },
+        ];
+      }
+    }).flat();
+  },
+  [data, processedData]
+);
 
   useEffect(() => {
     if (!chartRef.current || !data?.accepted_results) return;
