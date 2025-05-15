@@ -42,6 +42,7 @@ export const DropdownSelect = <T extends AutocompleteOptionBasic>({
         onClick={handleDropdownClick}
         disabled={disabled}
         sdsType="value"
+        sdsStyle="square"
       />
       <DropdownMenu
         search
