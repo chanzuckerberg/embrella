@@ -1,3 +1,4 @@
+/*MetaDataSummary*/
 .headerContainer {
   width: 100%;
   padding: 1rem;
@@ -15,6 +16,7 @@
   margin: 1rem;
 }
 
+/*MetaDataViz*/
 .container {
   display: flex;
   flex-wrap: wrap;
@@ -25,19 +27,19 @@
 }
 
 .leftColumn {
-  flex: 3;
+  flex: 2;
   min-width: 375px;
   padding: 1rem;
 }
 
 .middleColumn {
-  flex: 9;
+  flex: 10;
   min-width: 400px;
   padding: 1rem;
-  height: calc(100vh - 100px);
   position: relative;
   overflow: auto;
 }
+/*RawJson*/
 
 .sidebar {
   position: fixed;
@@ -51,10 +53,6 @@
   z-index: 1000;
 }
 
-.sidebar.open {
-  right: 0;
-}
-
 .sidebarContent {
   padding: 20px;
   height: 100%;
@@ -64,6 +62,7 @@
 .jsonContainer {
   margin: 15px;
 }
+/*MetadataFilters*/
 
 .filterPaper {
   padding: 1rem;
@@ -95,14 +94,6 @@
   padding: 4px 0;
 }
 
-.histogram {
-  width: 40px;
-  height: 20px;
-  background: #f0f0f0;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
 .minMaxInput {
   width: 70px;
   min-width: 70px;
@@ -115,27 +106,7 @@
   padding: 10px 0;
   cursor: pointer;
 }
-
-.miniHistogram {
-  display: flex;
-  align-items: flex-end;
-  width: 50px;
-  height: 40px;
-  gap: 1px;
-}
-
-.bar {
-  flex: 1;
-  background-color: black;
-  min-width: 2px;
-}
-
-.chartContainer {
-  width: 100%;
-  height: calc(100vh - 100px);
-  position: relative;
-  margin-bottom: 2rem;
-}
+/*MetricDashboard*/
 
 .dashboardContainer {
   width: 100%;
@@ -147,23 +118,30 @@
   padding: 1rem;
 }
 
-/* Specific styles for scatter plot */
+/*MetricScatterPlot*/
 .scatterPlotContainer {
-  composes: chartContainer;
-  height: calc(100vh - 150px);
-  min-height: 800px;
+  height: calc(100vh - 100px);
+  width: 100%;
+  position: relative;
+  overflow-y: auto;
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
 
-/* Specific styles for histogram */
-.histogramContainer {
-  composes: chartContainer;
-  height: calc(100vh - 200px);
-  min-height: 600px;
+.plotContainer {
+  width: 100%;
+  position: relative;
+  /* Height will be set dynamically in the component */
 }
-
 .noDataMessage {
   text-align: center;
   padding: 20px;
   color: #666;
   font-size: 16px;
+}
+
+/*MetricHistogram*/
+.histogramContainer {
+  height: calc(100vh - 200px);
+  min-height: 600px;
 }

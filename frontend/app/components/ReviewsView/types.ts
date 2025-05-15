@@ -17,7 +17,9 @@ export interface ReviewData {
 export interface TemSession {
   id: number;
   sessionName: string;
+  projectName: string;
   createdAt: string;
+  savePath: string;
   runs: Run[];
 }
 
