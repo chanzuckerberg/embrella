@@ -32,6 +32,21 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   const [seriesDimensionName, setSeriesDimensionName] = useState('z');
   const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
 
+  const { imageSeriesLayer, channels } = useIdetik();
+  const handleContrastLimitsChange = useCallback(
+    (newLimits: [number, number]) => {
+      if (!imageSeriesLayer) return;
+
+      const updatedChannels = channels.map((channel) => ({
+        ...channel,
+        contrastLimits: newLimits,
+      }));
+
+      imageSeriesLayer.setChannelProps(updatedChannels);
+    },
+    [imageSeriesLayer, channels]
+  );
+
   useEffect(() => {
     const fetchRegion = async () => {
       const region = await getRegionFromZattrs(imageUrl);
@@ -108,22 +123,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     };
     fetchTomogramDetail();
   }, [selectedTomogram]);
-
-  const { imageSeriesLayer, channels } = useIdetik();
-  const handleContrastLimitsChange = useCallback(
-    (newLimits: [number, number]) => {
-      if (!imageSeriesLayer) return;
-
-      const updatedChannels = channels.map((channel) => ({
-        ...channel,
-        contrastLimits: newLimits,
-      }));
-
-      imageSeriesLayer.setChannelProps(updatedChannels);
-      imageSeriesLayer.update();
-    },
-    [imageSeriesLayer, channels]
-  );
 
   return (
     <div className="flex flex-col items-stretch min-h-screen gap-8">
