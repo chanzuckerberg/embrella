@@ -1,12 +1,11 @@
 'use client';
 
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
-import { Review, TemSession } from '../ReviewsView/types';
+import { ReviewData, TemSession } from '../ReviewsView/types';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { useMemo, useRef, useState } from 'react';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
 import { AutocompleteOptionBasic, Button, DropdownMenu, Icon, InputSearch, TagFilter } from '@czi-sds/components';
-import { ApiListResponse } from '@app/common/types/tableState';
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
 
@@ -94,7 +93,7 @@ export const CreateReviewView = () => {
 
   const previousSessionsButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousSessionsRequestMade = useRef(false);
-  const [previousSessions, setPreviousSessions] = useState<Array<Review> | undefined>(undefined);
+  const [previousSessions, setPreviousSessions] = useState<Array<ReviewData> | undefined>(undefined);
   const [isPreviousSessionsDropdownOpen, setIsPreviousSessionDropdownOpen] = useState(false);
 
   return (
@@ -275,13 +274,17 @@ export const CreateReviewView = () => {
                       search
                       loading={previousSessions === undefined}
                       options={
-                        previousSessions?.map((review) => ({ name: review.name, details: })) ??
-                        []
+                        previousSessions?.map((review) => ({
+                          name: review.review.name,
+                          details: review.review.annotationObjects.join(', '),
+                          annotationObjects: review.review.annotationObjects,
+                        })) ?? []
                       }
                       open={isPreviousSessionsDropdownOpen}
                       // @ts-expect-error -- SDS type is not specific enough.
                       onChange={(_event: SyntheticEvent, selection: { annotationObjects: string[] }) => {
                         setSelectedAnnotationObjects((prev) => [...new Set([...prev, ...selection.annotationObjects])]);
+                        setIsPreviousSessionDropdownOpen(false);
                       }}
                       onClickAway={() => {
                         setIsPreviousSessionDropdownOpen(false);
