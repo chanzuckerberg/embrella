@@ -26,8 +26,8 @@ from processes.models import ProcRun
 # Configuration
 FILE_SERVER_HOST = "https://czii-onsite.czbiohub.org"
 
-# Match files like Position_1_2_Vol.zarr
-ZARR_FILENAME_PATTERN = re.compile(r'^Position_\d+_\d+_Vol\.zarr$')
+# Match files like Position_1_2_Vol.zarr or Position_15_Vol.zarr
+ZARR_FILENAME_PATTERN = re.compile(r'^Position_\d+(?:_\d+)?_Vol\.zarr$')
 
 # Apply nest_asyncio to allow nested event loops
 nest_asyncio.apply()
@@ -36,9 +36,13 @@ def generate_uuid():
     return str(uuid.uuid4())
 
 def parse_zarr_filename(filename):
-    match = re.match(r'^Position_(\d+)_(\d+)_Vol\.zarr$', filename)
+    # Match both formats: Position_1_2_Vol.zarr or Position_15_Vol.zarr
+    match = re.match(r'^Position_(\d+)(?:_(\d+))?_Vol\.zarr$', filename)
     if match:
-        return f"Position_{match.group(1)}_{match.group(2)}"
+        if match.group(2):  # If second number exists
+            return f"Position_{match.group(1)}_{match.group(2)}"
+        else:  # Single number format
+            return f"Position_{match.group(1)}"
     return None
 
 def get_session_path(review):
@@ -82,9 +86,18 @@ def get_zarr_files_from_web(review):
             name_tag = row.find('span', class_='name')
             if name_tag:
                 filename = name_tag.text.strip()
+                # Remove trailing slash if present
+                if filename.endswith('/'):
+                    filename = filename[:-1]
+                
+                # Check if it matches the ZARR pattern
                 if ZARR_FILENAME_PATTERN.match(filename):
                     valid_zarr_files.append(filename)
+                    print(f"Found valid ZARR file: {filename}")
+                else:
+                    print(f"Skipping non-matching file: {filename}")
 
+        print(f"Total valid ZARR files found: {len(valid_zarr_files)}")
         return valid_zarr_files
 
     except requests.RequestException as e:
@@ -108,47 +121,38 @@ def get_review(review_id):
 @sync_to_async
 def get_available_sessions():
     """Get all available sessions with their runs"""
-    try:
-        sessions_data = []
+    sessions_data = []
+    
+    # Get all sessions
+    sessions = MsiSession.objects.all().order_by('-created_at')
+    
+    for session in sessions:
+        # Get all runs for this session
+        runs = ProcRun.objects.filter(msi_session=session).distinct()
         
-        # Get all sessions
-        sessions = MsiSession.objects.all().order_by('-created_at')
-        print(f"Found {sessions.count()} total sessions")
-        
-        for session in sessions:
-            print(f"Processing session: {session.name} (ID: {session.id})")
-            # Get all runs for this session
-            runs = ProcRun.objects.filter(msi_session=session).distinct()
-            print(f"Found {runs.count()} runs for session {session.name}")
+        session_runs = []
+        for run in runs:
+            # Check if this run has any tomograms
+            tomograms = ReviewTomogram.objects.filter(
+                review__session=session,
+                review__run_id=run.name
+            ).exists()
             
-            session_runs = []
-            for run in runs:
-                # Check if this run has any tomograms
-                tomograms = ReviewTomogram.objects.filter(
-                    review__session=session,
-                    review__run_id=run.name
-                ).exists()
-                
-                if tomograms:
-                    session_runs.append({
-                        "runId": run.name,
-                        "reconstructionTypes": ["DCTF", "SART", "Denoised"]  # All types are available
-                    })
-            
-            if session_runs:  # Only include sessions that have runs with tomograms
-                sessions_data.append({
-                    "sessionId": str(session.id),
-                    "sessionName": session.name,
-                    "createdAt": session.created_at.isoformat() if session.created_at else None,
-                    "runs": session_runs
+            if tomograms:
+                session_runs.append({
+                    "runId": run.name,
+                    "reconstructionTypes": ["DCTF", "SART", "Denoised"]  # All types are available
                 })
-                print(f"Added session {session.name} with {len(session_runs)} runs")
         
-        print(f"Returning {len(sessions_data)} sessions with tomograms")
-        return sessions_data
-    except Exception as e:
-        print(f"Error in get_available_sessions: {str(e)}")
-        raise
+        if session_runs:  # Only include sessions that have runs with tomograms
+            sessions_data.append({
+                "sessionId": str(session.id),
+                "sessionName": session.name,
+                "createdAt": session.created_at.isoformat() if session.created_at else None,
+                "runs": session_runs
+            })
+    
+    return sessions_data
 
 @sync_to_async
 def create_tomogram(review, tomogram_id, position_id):

@@ -161,11 +161,11 @@
             <div class="stats-grid">
                 <div class="stat-item">
                     <div class="stat-value" id="total-tomograms">0</div>
-                    <div class="stat-label">Total Tomograms</div>
+                    <div class="stat-label">Tomograms in Embrella DB</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-value" id="generated-count">0</div>
-                    <div class="stat-label">Tomograms Generated</div>
+                    <div class="stat-label">Tomograms in File Server</div>
                 </div>
             </div>
         </div>
@@ -221,8 +221,15 @@
             fetch(`/processes/get_tomogram_stats/?session=${sessionId}&run=${runId}&type=${reconType}`)
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('total-tomograms').textContent = data.total;
+                    if (data.error) {
+                        console.error('Error fetching stats:', data.error);
+                        return;
+                    }
+                    document.getElementById('total-tomograms').textContent = data.db_count;
                     document.getElementById('generated-count').textContent = data.generated;
+                })
+                .catch(error => {
+                    console.error('Error updating stats:', error);
                 });
         }
 
@@ -235,6 +242,9 @@
             if (sessionId) {
                 // Enable run selection
                 runSelect.disabled = false;
+                
+                // Update stats for the session (without run/recon type)
+                updateStats(sessionId, '', '');
                 
                 // Fetch runs for selected session
                 fetch(`/processes/get_runs/?session=${sessionId}`)
@@ -250,6 +260,9 @@
                 reconSelect.disabled = true;
                 runSelect.innerHTML = '<option value="">Select a run...</option>';
                 reconSelect.innerHTML = '<option value="">Select reconstruction type...</option>';
+                // Reset stats when no session is selected
+                document.getElementById('total-tomograms').textContent = '0';
+                document.getElementById('generated-count').textContent = '0';
             }
         });
 

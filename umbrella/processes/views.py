@@ -1199,26 +1199,30 @@ def get_tomogram_stats(request):
     recon_type = request.GET.get('type', '').lower()
 
     try:
-        session = MsiSession.objects.get(id=session_id)
         # Get zarr files for the selected configuration
+        session = MsiSession.objects.get(id=session_id)
         zarr_files = get_zarr_files(session.name, run_id, recon_type)
         
-        # Try to get the review, but don't fail if it doesn't exist
-        try:
-            review = Review.objects.get(
-                session=session,
-                run_id=run_id,
-                reconstruction_type=recon_type
-            )
-            total = ReviewTomogram.objects.filter(review=review).count()
-        except Review.DoesNotExist:
-            total = 0
+        # Build the base query joining all required tables
+        query = ReviewTomogram.objects.select_related(
+            'review',
+            'review__session'
+        ).filter(
+            review__session_id=session_id
+        )
+
+        # Add filters based on UI selections
+        if run_id:
+            query = query.filter(review__run_id=run_id)
+        if recon_type:
+            query = query.filter(review__reconstruction_type__iexact=recon_type)
+
+        # Get the count from the database
+        db_count = query.count()
         
-        # Count of generated tomograms (those that have corresponding zarr files)
-        generated = len(zarr_files)
         return JsonResponse({
-            'total': total,
-            'generated': generated,
+            'db_count': db_count,  # Count from Embrella database
+            'generated': len(zarr_files),  # Count from file server
             'zarr_files': zarr_files  # Include the list of zarr files in the response
         })
     except MsiSession.DoesNotExist:
