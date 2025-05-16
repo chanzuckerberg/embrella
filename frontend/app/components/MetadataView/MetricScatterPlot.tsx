@@ -21,19 +21,6 @@ interface ProcessedData {
   totalPositions: number;
 }
 
-// Hardcoded units for metrics
-const units = {
-  thickness_pix: '(Å)',
-  tilt_axis: '(°)',
-  global_shift_pix: '(Å)',
-  bad_patch_low: '(%)',
-  bad_patch_all: '(%)',
-  ctf_resolution_a: '(Å)',
-  ctf_score: '',
-  alpha0: '(°)',
-  beta0: '(°)',
-};
-
 // Helper to format metric key to label
 const formatMetricLabel = (key: string): string => {
   return key
@@ -275,12 +262,10 @@ const createSeriesConfig = useCallback(
     }
 
     // Generate metrics config from the data
-    const metricsConfig = Object.keys(data.metric_ranges)
-      .filter((key) => key in units) // Only include metrics with defined units
-      .map((key) => ({
-        key,
-        label: formatMetricLabel(key),
-      }));
+    const metricsConfig = processedData.metricsConfig.map((metric) => ({
+      key: metric.key,
+      label: metric.label,
+    }));
 
     const option: echarts.EChartsOption = {
       tooltip: {
