@@ -21,6 +21,7 @@ django.setup()
 # Import Django models
 from processes.models import ReviewTomogram, Review
 from tem.models import MsiSession
+from processes.models import ProcRun
 
 # Configuration
 FILE_SERVER_HOST = "https://czii-onsite.czbiohub.org"
@@ -103,6 +104,42 @@ def get_review(review_id):
     except Review.DoesNotExist:
         print(f"❌ Review not found with ID: {review_id}")
         raise
+
+@sync_to_async
+def get_available_sessions():
+    """Get all available sessions with their runs"""
+    sessions_data = []
+    
+    # Get all sessions
+    sessions = MsiSession.objects.all().order_by('-created_at')
+    
+    for session in sessions:
+        # Get all runs for this session
+        runs = ProcRun.objects.filter(msi_session=session).distinct()
+        
+        session_runs = []
+        for run in runs:
+            # Check if this run has any tomograms
+            tomograms = ReviewTomogram.objects.filter(
+                review__session=session,
+                review__run_id=run.name
+            ).exists()
+            
+            if tomograms:
+                session_runs.append({
+                    "runId": run.name,
+                    "reconstructionTypes": ["DCTF", "SART", "Denoised"]  # All types are available
+                })
+        
+        if session_runs:  # Only include sessions that have runs with tomograms
+            sessions_data.append({
+                "sessionId": str(session.id),
+                "sessionName": session.name,
+                "createdAt": session.created_at.isoformat() if session.created_at else None,
+                "runs": session_runs
+            })
+    
+    return sessions_data
 
 @sync_to_async
 def create_tomogram(review, tomogram_id, position_id):
