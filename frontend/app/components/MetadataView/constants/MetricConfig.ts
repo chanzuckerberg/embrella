@@ -13,27 +13,26 @@ export const METRICS_CONFIG = {
 
 //color mapping for scatter plot
 export const SCATTERPLOT_METRIC_COLORS = {
-    thickness_pix: '#1f77b4',
-    tilt_axis: '#ff7f0e',
-    global_shift_pix: '#9370DB',
-    bad_patch_low: '#e377c2',
-    bad_patch_all: '#58508d',
-    ctf_resolution_a: '#17becf',
-    ctf_score: '#da9100',
-    alpha0: '#8c564b',
-    beta0: '#7f7f7f',
-  };
+  thickness_pix: '#1f77b4',
+  tilt_axis: '#ff7f0e',
+  global_shift_pix: '#9370DB',
+  bad_patch_low: '#e377c2',
+  bad_patch_all: '#58508d',
+  ctf_resolution_a: '#17becf',
+  ctf_score: '#da9100',
+  alpha0: '#8c564b',
+  beta0: '#7f7f7f',
+};
 
-
-  // Color mapping for Histogram
-  export const HISTOGRAM_METRIC_COLORS = {
-    thickness_pix: '#1f77b4',
-    tilt_axis: '#ff7f0e',
-    global_shift_pix: '#9370DB',
-    bad_patch_low: '#e377c2',
-    bad_patch_all: '#DDA0DD',
-    ctf_resolution_a: '#17becf',
-    ctf_score: '#FFD700',
-    alpha0: '#8c564b',
-    beta0: '#4B0082',
-  };
+// Color mapping for Histogram
+export const HISTOGRAM_METRIC_COLORS = {
+  thickness_pix: '#1f77b4',
+  tilt_axis: '#ff7f0e',
+  global_shift_pix: '#9370DB',
+  bad_patch_low: '#e377c2',
+  bad_patch_all: '#DDA0DD',
+  ctf_resolution_a: '#17becf',
+  ctf_score: '#FFD700',
+  alpha0: '#8c564b',
+  beta0: '#4B0082',
+};

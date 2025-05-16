@@ -20,7 +20,6 @@ interface MetricHistogramProps {
   processedData: ProcessedData;
 }
 
-
 // Sturges' formula for calculating number of bins
 const calculateBins = (n: number): number => {
   return Math.ceil(1 + 3.322 * Math.log10(n));

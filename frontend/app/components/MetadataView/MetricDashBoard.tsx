@@ -14,121 +14,115 @@ interface MetricDashboardProps {
   scatterplotLoading?: boolean;
 }
 
-export const MetricDashboard: React.FC<MetricDashboardProps> = ({ 
-  data, 
+// Helper function to process metadata
+const processMetadata = (data: MetadataVizResponse | undefined) => {
+  if (!data?.accepted_results?.length) return null;
+
+  // Filter to only include the metrics we want to show
+  const metricsConfig = Object.keys(METRICS_CONFIG).map((key) => ({
+    key,
+    label: METRICS_CONFIG[key as keyof typeof METRICS_CONFIG].label,
+    unit: METRICS_CONFIG[key as keyof typeof METRICS_CONFIG].unit,
+  }));
+
+  const processedMetrics = metricsConfig.map((metric) => {
+    const values = data.accepted_results.map((item) => {
+      return item.metrics[metric.key as keyof typeof item.metrics];
+    });
+
+    return {
+      ...metric,
+      values,
+      range: data.metric_ranges[metric.key as keyof typeof data.metric_ranges],
+    };
+  });
+
+  return {
+    metricsConfig: processedMetrics,
+    totalPositions: data.accepted_results.length,
+  };
+};
+
+// Helper function to check if filters are applied
+const checkFiltersApplied = (scatterplotData: MetadataVizResponse | undefined) => {
+  return (
+    !!scatterplotData &&
+    scatterplotData.filters_applied?.filters !== null &&
+    scatterplotData.filters_applied?.filters !== undefined &&
+    Object.keys(scatterplotData.filters_applied?.filters || {}).length > 0
+  );
+};
+
+export const MetricDashboard: React.FC<MetricDashboardProps> = ({
+  data,
   scatterplotData,
-  scatterplotSuccess,
   scatterplotError,
-  scatterplotLoading
+  scatterplotLoading,
 }) => {
   console.log(data, 'Dashboarddata');
   console.log(scatterplotData, 'ScatterplotData');
   const [isScatterPlot, setIsScatterPlot] = useState(true);
 
   // Process data once for both visualizations
-  const processedData = React.useMemo(() => {
-    if (!data?.accepted_results?.length) return null;
-
-    // Filter to only include the metrics we want to show
-    const metricsConfig = Object.keys(METRICS_CONFIG).map((key) => ({
-      key,
-      label: METRICS_CONFIG[key as keyof typeof METRICS_CONFIG].label,
-      unit: METRICS_CONFIG[key as keyof typeof METRICS_CONFIG].unit,
-    }));
-
-    const processedMetrics = metricsConfig.map((metric) => {
-      const values = data.accepted_results.map((item) => {
-        return item.metrics[metric.key as keyof typeof item.metrics];
-      });
-
-      return {
-        ...metric,
-        values,
-        range: data.metric_ranges[metric.key as keyof typeof data.metric_ranges],
-      };
-    });
-
-    return {
-      metricsConfig: processedMetrics,
-      totalPositions: data.accepted_results.length,
-    };
-  }, [data]);
+  const processedData = React.useMemo(() => processMetadata(data), [data]);
 
   // Process scatterplot data separately
-  const processedScatterplotData = React.useMemo(() => {
-    if (!scatterplotData?.accepted_results?.length) return null;
+  const processedScatterplotData = React.useMemo(() => processMetadata(scatterplotData), [scatterplotData]);
 
-    // Filter to only include the metrics we want to show
-    const metricsConfig = Object.keys(METRICS_CONFIG).map((key) => ({
-      key,
-      label: METRICS_CONFIG[key as keyof typeof METRICS_CONFIG].label,
-      unit: METRICS_CONFIG[key as keyof typeof METRICS_CONFIG].unit,
-    }));
+  // Determine which data to use for the scatterplot
+  const scatterplotDisplayData = scatterplotData || data;
+  const scatterplotProcessedData = processedScatterplotData || processedData;
+  const isScatterplotLoading = scatterplotLoading || false;
+  const hasScatterplotError = scatterplotError || false;
 
-    const processedMetrics = metricsConfig.map((metric) => {
-      const values = scatterplotData.accepted_results.map((item) => {
-        return item.metrics[metric.key as keyof typeof item.metrics];
-      });
+  // Determine if filters are applied
+  const isFilterApplied = checkFiltersApplied(scatterplotData);
 
-      return {
-        ...metric,
-        values,
-        range: scatterplotData.metric_ranges[metric.key as keyof typeof scatterplotData.metric_ranges],
-      };
-    });
+  console.log('Filter status:', {
+    hasScatterplotData: !!scatterplotData,
+    filtersApplied: scatterplotData?.filters_applied,
+    isFilterApplied,
+  });
 
-    return {
-      metricsConfig: processedMetrics,
-      totalPositions: scatterplotData.accepted_results.length,
-    };
-  }, [scatterplotData]);
+  // Helper function to render the appropriate visualization
+  const renderVisualization = () => {
+    if (!processedData) {
+      return <></>;
+    }
 
- // Determine which data to use for the scatterplot
- const scatterplotDisplayData = scatterplotData || data;
- const scatterplotProcessedData = processedScatterplotData || processedData;
- const isScatterplotLoading = scatterplotLoading || false;
- const hasScatterplotError = scatterplotError || false;
- // Determine if filters are applied - true when scatterplotData exists (meaning filters were applied)
-const isFilterApplied = !!scatterplotData && 
-(scatterplotData.filters_applied?.filters !== null && 
- scatterplotData.filters_applied?.filters !== undefined &&
- Object.keys(scatterplotData.filters_applied?.filters || {}).length > 0);
+    if (!data) {
+      return <div className={styles.noDataMessage}>No data available</div>;
+    }
 
-console.log('Filter status:', { 
-hasScatterplotData: !!scatterplotData, 
-filtersApplied: scatterplotData?.filters_applied, 
-isFilterApplied 
-});
+    if (isScatterPlot) {
+      if (scatterplotDisplayData && scatterplotProcessedData) {
+        return (
+          <MetricScatterPlot
+            data={scatterplotDisplayData}
+            processedData={scatterplotProcessedData}
+            isLoading={isScatterplotLoading}
+            error={hasScatterplotError}
+            isFilterApplied={isFilterApplied}
+          />
+        );
+      }
+      return <div>No data available for scatter plot</div>;
+    }
 
- return (
-   <div className={styles.dashboardContainer}>
-     <Box display="flex" justifyContent="flex-end">
-       <FormControlLabel
-         control={
-           <Switch checked={isScatterPlot} onChange={(e) => setIsScatterPlot(e.target.checked)} color="primary" />
-         }
-         label={isScatterPlot ? 'Scatter Plot View' : 'Histogram View'}
-       />
-     </Box>
-     {processedData ? (
-       data ? (
-         isScatterPlot ? (
-           <MetricScatterPlot 
-             data={scatterplotDisplayData} 
-             processedData={scatterplotProcessedData} 
-             isLoading={isScatterplotLoading}
-             error={hasScatterplotError}
-             isFilterApplied={isFilterApplied}
-           />
-          ) : (
-            <MetricHistogram data={data} processedData={processedData} />
-          )
-        ) : (
-          <div className={styles.noDataMessage}>No data available</div>
-        )
-      ) : (
-        <></>
-      )}
+    return <MetricHistogram data={data} processedData={processedData} />;
+  };
+
+  return (
+    <div className={styles.dashboardContainer}>
+      <Box display="flex" justifyContent="flex-end">
+        <FormControlLabel
+          control={
+            <Switch checked={isScatterPlot} onChange={(e) => setIsScatterPlot(e.target.checked)} color="primary" />
+          }
+          label={isScatterPlot ? 'Scatter Plot View' : 'Histogram View'}
+        />
+      </Box>
+      {renderVisualization()}
     </div>
   );
 };
