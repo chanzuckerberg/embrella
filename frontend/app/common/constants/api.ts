@@ -393,6 +393,10 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     {
       sessionId: 'session_4321',
       sessionName: 'Grid4_TestRun',
+      runs: [
+        {
+          runId: 'run002',
+          numTomograms: 50,
           reconstructionTypes: ['Denoised'],
         },
       ],
