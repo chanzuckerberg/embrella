@@ -37,7 +37,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                 ...channel,
                 contrastLimits: newLimits,
             }));
-
+            setContrastLimits(newLimits);
             imageSeriesLayer.setChannelProps(updatedChannels);
         },
         [imageSeriesLayer, channels]
@@ -45,7 +45,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
     useEffect(() => {
         const fetchRegion = async () => {
-            const region = await getRegionFromZattrs(tomogramDetail?.zarrPath || '');
+            if (!tomogramDetail?.zarrPath) return;
+            const region = await getRegionFromZattrs(tomogramDetail.zarrPath);
+            console.log("region", region)
             setRegion(region);
         };
         fetchRegion();
@@ -128,54 +130,58 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     console.log("tomogramDetail?.zarrPath", tomogramDetail?.zarrPath)
 
     return (
-        <div className="flex flex-col items-stretch min-h-screen gap-8">
-            <TopBar onMarkComplete={() => console.log('Mark as complete')} />
-            <div className="flex-auto flex">
-                <SideBar
-                    reviewName={review.reviewName}
-                    tomograms={review.tomograms}
-                    selectedTomogram={selectedTomogram}
-                    tomogramDetail={tomogramDetail}
-                    currentIndex={currentIndex}
-                    onPrevious={handlePrevious}
-                    onNext={handleNext}
-                    onSelectTomogram={setSelectedTomogram}
-                    contrastLimits={contrastLimits}
-                    onContrastLimitsChange={handleContrastLimitsChange}
-                />
-                <div className="flex-auto flex flex-col p-6 rounded">
-                    {selectedTomogram && region ? (
-                        <>
-                            <div className="flex-1 flex items-center justify-center border-r border-l">
-                                <OmeZarrImageViewer
-                                    sourceUrl={tomogramDetail?.zarrPath || ''}
-                                    region={region}
-                                    seriesDimensionName={seriesDimensionName}
-                                    allSlicesSizeEstimate="250 MB"
-                                    fallbackContrastLimits={contrastLimits}
-                                    classNames={{
-                                        root: 'bg-dark-sds-color-primitive-gray-100',
-                                    }}
-                                    onLayerCreated={handleLayerCreated}
-                                    onFirstSliceLoaded={handleFirstSliceLoaded}
-                                    onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
-                                    onAllSlicesLoaded={handleAllSlicesLoaded}
-                                    onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
-                                />
-                            </div>
-                        </>
-                    ) : (
-                        <div className="p-6 bg-white rounded">Select a tomogram to view</div>
-                    )}
-                </div>
-                <div className="basis-[250px] shrink-0 !p-[20px]">
-                    <QualityControls
-                        onAccept={() => console.log('Accept')}
-                        onReject={() => console.log('Reject')}
-                        onUncertain={() => console.log('Uncertain')}
+        <div className="flex flex-col items-center">
+            <div className="flex flex-col justify-between h-[60vh] md:h-[90vh] lg:h-[90vh] items-center gap-8 w-[75vw]">
+                < TopBar onMarkComplete={() => console.log('Mark as complete')} />
+                < div className="flex-auto flex" >
+                    <SideBar
+                        reviewName={review.reviewName}
+                        tomograms={review.tomograms}
+                        selectedTomogram={selectedTomogram}
+                        tomogramDetail={tomogramDetail}
+                        currentIndex={currentIndex}
+                        onPrevious={handlePrevious}
+                        onNext={handleNext}
+                        onSelectTomogram={setSelectedTomogram}
+                        contrastLimits={contrastLimits}
+                        onContrastLimitsChange={handleContrastLimitsChange}
                     />
-                </div>
-            </div>
-        </div>
+                    <div className="flex-auto flex flex-col p-6 rounded items-center justify-center">
+                        {selectedTomogram && region ? (
+                            <>
+                                <div className="border-r border-l">
+                                    <div className="w-[60vh] md:w-[75vh] lg:w-[80vh] h-[60vh] md:h-[75vh] lg:h-[80vh]">
+                                        <OmeZarrImageViewer
+                                            sourceUrl={tomogramDetail?.zarrPath || ''}
+                                            region={region}
+                                            seriesDimensionName={seriesDimensionName}
+                                            allSlicesSizeEstimate="250 MB"
+                                            fallbackContrastLimits={contrastLimits}
+                                            classNames={{
+                                                root: 'bg-dark-sds-color-primitive-gray-100',
+                                            }}
+                                            onLayerCreated={handleLayerCreated}
+                                            onFirstSliceLoaded={handleFirstSliceLoaded}
+                                            onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
+                                            onAllSlicesLoaded={handleAllSlicesLoaded}
+                                            onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="p-6 bg-white rounded">Select a tomogram to view</div>
+                        )}
+                    </div>
+                    <div className="basis-[250px] shrink-0 !p-[20px]">
+                        <QualityControls
+                            onAccept={() => console.log('Accept')}
+                            onReject={() => console.log('Reject')}
+                            onUncertain={() => console.log('Uncertain')}
+                        />
+                    </div>
+                </div >
+            </div >
+        </div >
     );
 };
