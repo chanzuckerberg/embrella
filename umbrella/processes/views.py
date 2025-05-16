@@ -1107,13 +1107,22 @@ def get_session_id(request):
 @require_http_methods(["GET"])
 def sync_tomograms_view(request):
     """View for the tomogram sync page"""
-    # Run the async function in an event loop
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    sessions = loop.run_until_complete(get_available_sessions())
-    loop.close()
-    
-    return render(request, 'customs/sync_tomograms.html', {'sessions': sessions})
+    try:
+        # Run the async function in an event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        sessions = loop.run_until_complete(get_available_sessions())
+        loop.close()
+        
+        print(f"Found {len(sessions)} sessions: {sessions}")  # Debug print
+        
+        return render(request, 'customs/sync_tomograms.html', {'sessions': sessions})
+    except Exception as e:
+        logger.error(f"Error in sync_tomograms_view: {str(e)}")
+        return render(request, 'customs/sync_tomograms.html', {
+            'sessions': [],
+            'error': f"Error loading sessions: {str(e)}"
+        })
 
 @require_http_methods(["GET"])
 def get_runs(request):

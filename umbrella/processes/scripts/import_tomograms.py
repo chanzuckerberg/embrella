@@ -108,38 +108,47 @@ def get_review(review_id):
 @sync_to_async
 def get_available_sessions():
     """Get all available sessions with their runs"""
-    sessions_data = []
-    
-    # Get all sessions
-    sessions = MsiSession.objects.all().order_by('-created_at')
-    
-    for session in sessions:
-        # Get all runs for this session
-        runs = ProcRun.objects.filter(msi_session=session).distinct()
+    try:
+        sessions_data = []
         
-        session_runs = []
-        for run in runs:
-            # Check if this run has any tomograms
-            tomograms = ReviewTomogram.objects.filter(
-                review__session=session,
-                review__run_id=run.name
-            ).exists()
+        # Get all sessions
+        sessions = MsiSession.objects.all().order_by('-created_at')
+        print(f"Found {sessions.count()} total sessions")
+        
+        for session in sessions:
+            print(f"Processing session: {session.name} (ID: {session.id})")
+            # Get all runs for this session
+            runs = ProcRun.objects.filter(msi_session=session).distinct()
+            print(f"Found {runs.count()} runs for session {session.name}")
             
-            if tomograms:
-                session_runs.append({
-                    "runId": run.name,
-                    "reconstructionTypes": ["DCTF", "SART", "Denoised"]  # All types are available
+            session_runs = []
+            for run in runs:
+                # Check if this run has any tomograms
+                tomograms = ReviewTomogram.objects.filter(
+                    review__session=session,
+                    review__run_id=run.name
+                ).exists()
+                
+                if tomograms:
+                    session_runs.append({
+                        "runId": run.name,
+                        "reconstructionTypes": ["DCTF", "SART", "Denoised"]  # All types are available
+                    })
+            
+            if session_runs:  # Only include sessions that have runs with tomograms
+                sessions_data.append({
+                    "sessionId": str(session.id),
+                    "sessionName": session.name,
+                    "createdAt": session.created_at.isoformat() if session.created_at else None,
+                    "runs": session_runs
                 })
+                print(f"Added session {session.name} with {len(session_runs)} runs")
         
-        if session_runs:  # Only include sessions that have runs with tomograms
-            sessions_data.append({
-                "sessionId": str(session.id),
-                "sessionName": session.name,
-                "createdAt": session.created_at.isoformat() if session.created_at else None,
-                "runs": session_runs
-            })
-    
-    return sessions_data
+        print(f"Returning {len(sessions_data)} sessions with tomograms")
+        return sessions_data
+    except Exception as e:
+        print(f"Error in get_available_sessions: {str(e)}")
+        raise
 
 @sync_to_async
 def create_tomogram(review, tomogram_id, position_id):
