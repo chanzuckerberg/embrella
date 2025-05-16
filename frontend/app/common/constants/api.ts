@@ -37,6 +37,28 @@ export enum POST_API {
   UPDATE_TOMOGRAM_REVIEW = '/api/reviews/:reviewId/tomograms/:tomogramId',
 }
 
+type TomogramReviewResult = {
+  tomogramId: string;
+  quality: "accepted" | "rejected" | "uncertain";
+  rejectionReasons?: string[];
+  objectLabels?: string[];
+};
+
+type SaveReviewRequest = {
+  reviewId: string;
+  sessionId?: string;
+  savePath: string;
+  annotations: TomogramReviewResult[];
+};
+
+type SaveReviewResponse = {
+  ok: true;
+  savedAt: string;
+  savePath: string;
+  reviewedCount: number;
+  totalCount: number;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MOCKED_APIS: Partial<Record<API, any>> = {
   [API.REVIEWS]: (url: string) => {
@@ -507,19 +529,37 @@ export const MOCKED_POST_APIS: Partial<Record<POST_API, any>> = {
     status: 'not_started',
     createdAt: '2025-04-22T15:20:00Z',
   },
-  [POST_API.SAVE_REVIEW]: {
-    ok: true,
-    savedAt: '2025-04-22T16:42:10Z',
-    savePath: '/mnt/data/reviews/rev_abcdef123456/review.json',
-    reviewedCount: 75,
-    totalCount: 100,
+  [POST_API.SAVE_REVIEW]: (payload: SaveReviewRequest) => {
+    const reviewedCount = Array.isArray(payload.annotations)
+      ? payload.annotations.filter(a => !!a.quality).length
+      : 0;
+    const totalCount = Array.isArray(payload.annotations)
+      ? payload.annotations.length
+      : 0;
+    return {
+      ok: true,
+      savedAt: new Date().toISOString(),
+      savePath: payload.savePath.endsWith('review.json')
+        ? payload.savePath
+        : payload.savePath.replace(/\/$/, '') + '/review.json',
+      reviewedCount,
+      totalCount,
+    };
   },
   [POST_API.COMPLETE_REVIEW]: {
     ok: true,
     finishedAt: '2025-04-22T17:30:15Z',
     savePath: '/mnt/data/reviews/rev_abcdef123456/review.json',
   },
-  [POST_API.UPDATE_TOMOGRAM_REVIEW]: {
-    ok: true,
+  [POST_API.UPDATE_TOMOGRAM_REVIEW]: (
+    options: { userIsOwner?: boolean } = {}
+  ) => {
+    if (options.userIsOwner === false) {
+      return {
+        ok: false,
+        error: "You are not the owner of this review and cannot submit annotations.",
+      };
+    }
+    return { ok: true };
   },
 };

@@ -11,7 +11,7 @@ import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/re
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
 import { getRegionFromZattrs } from './utils';
 import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
-import { API, MOCKED_APIS } from '../../../app/common/constants/api';
+import { API, MOCKED_APIS, POST_API, MOCKED_POST_APIS } from '../../../app/common/constants/api';
 
 interface TomogramViewerProps {
     review: Review;
@@ -132,6 +132,25 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         fetchTomogramDetail();
     }, [selectedTomogram]);
 
+    const handleTomogramReview = (
+        quality: "accepted" | "rejected" | "uncertain",
+        rejectionReasons?: string[]
+    ) => {
+        if (!selectedTomogram) return;
+        const payload = {
+            tomogramId: selectedTomogram,
+            quality,
+            ...(rejectionReasons ? { rejectionReasons } : {}),
+        };
+        const response = MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload);
+        console.log('Review response:', response);
+
+        // Move to the next tomogram if there is one
+        if (currentIndex < review.tomograms.length - 1) {
+            setSelectedTomogram(review.tomograms[currentIndex + 1].tomogramId);
+        }
+    };
+
     return (
         <div className="flex flex-col items-center">
             <div className="flex flex-col justify-between h-[60vh] md:h-[90vh] lg:h-[90vh] items-center gap-8 w-[80vw]">
@@ -179,9 +198,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                     </div>
                     <div className="basis-[250px] shrink-0 !p-[20px]">
                         <QualityControls
-                            onAccept={() => console.log('Accept')}
-                            onReject={() => console.log('Reject')}
-                            onUncertain={() => console.log('Uncertain')}
+                            onAccept={() => handleTomogramReview("accepted")}
+                            onReject={() => handleTomogramReview("rejected", ["blurry"])}
+                            onUncertain={() => handleTomogramReview("uncertain")}
                         />
                     </div>
                 </div >
