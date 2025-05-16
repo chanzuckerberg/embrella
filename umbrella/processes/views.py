@@ -1105,18 +1105,27 @@ def get_session_id(request):
     
 
 @require_http_methods(["GET"])
-def sync_tomograms_view(request):
+async def sync_tomograms_view(request):
     """View for the tomogram sync page"""
     try:
-        # Run the async function in an event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        sessions = loop.run_until_complete(get_available_sessions())
-        loop.close()
+        # Get all sessions directly from MsiSession
+        sessions = await sync_to_async(list)(MsiSession.objects.all().order_by('-created_at'))
         
-        print(f"Found {len(sessions)} sessions: {sessions}")  # Debug print
+        # Format sessions for template
+        sessions_data = []
+        for session in sessions:
+            sessions_data.append({
+                "sessionId": str(session.id),
+                "sessionName": session.name,
+                "createdAt": session.created_at.isoformat() if session.created_at else None
+            })
         
-        return render(request, 'customs/sync_tomograms.html', {'sessions': sessions})
+        print(f"Found {len(sessions_data)} sessions")  # Debug print
+        
+        return render(request, 'customs/sync_tomograms.html', {
+            'sessions': sessions_data,
+            'error': None
+        })
     except Exception as e:
         logger.error(f"Error in sync_tomograms_view: {str(e)}")
         return render(request, 'customs/sync_tomograms.html', {

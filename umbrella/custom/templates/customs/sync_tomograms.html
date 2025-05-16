@@ -173,6 +173,11 @@
         <!-- Sync Form -->
         <div class="sync-form">
             <h2>Select Session</h2>
+            {% if error %}
+            <div class="error-message" style="color: red; margin-bottom: 20px;">
+                {{ error }}
+            </div>
+            {% endif %}
             <form id="syncForm" method="post" action="{% url 'processes:start_sync' %}">
                 {% csrf_token %}
                 <div class="form-group">
@@ -183,6 +188,9 @@
                         <option value="{{ session.sessionId }}">{{ session.sessionName }}</option>
                         {% endfor %}
                     </select>
+                    {% if not sessions %}
+                    <div style="color: #666; margin-top: 5px;">No sessions found</div>
+                    {% endif %}
                 </div>
 
                 <div class="form-group">
