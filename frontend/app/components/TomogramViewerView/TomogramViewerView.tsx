@@ -17,19 +17,14 @@ interface TomogramViewerProps {
     review: Review;
 }
 
-const sourceUrl =
-    'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-sample/aretomo3/vol002/Position_10_Vol.zarr';
-
 export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     const [region, setRegion] = useState<Region | null>(null);
-    const imageUrl = `${sourceUrl}`;
 
     const layerCreatedTime = useRef<number | undefined>(undefined);
     const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
 
     const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
     const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
-    const [zPosition, setZPosition] = useState(0);
     const [seriesDimensionName, setSeriesDimensionName] = useState('z');
     const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
 
@@ -50,11 +45,11 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
     useEffect(() => {
         const fetchRegion = async () => {
-            const region = await getRegionFromZattrs(imageUrl);
+            const region = await getRegionFromZattrs(tomogramDetail?.zarrPath || '');
             setRegion(region);
         };
         fetchRegion();
-    }, [imageUrl]);
+    }, [tomogramDetail?.zarrPath]);
 
     const handleLayerCreated = useCallback(() => {
         layerCreatedTime.current = performance.now();

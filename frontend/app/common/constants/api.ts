@@ -446,7 +446,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
   [API.TOMOGRAM_DETAIL]: (url: string) => {
     const tomogramId = url.split('/').pop(); // crude example, improve as needed
     const details = {
-      'tomo_001': {
+      tomo_001: {
         tomogramId: 'tomo_001',
         displayName: 'Grid6_Tomo001',
         zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_6_Vol.zarr',
@@ -456,7 +456,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           objectLabels: ['mitochondria', 'nucleus'],
         },
       },
-      'tomo_002': {
+      tomo_002: {
         tomogramId: 'tomo_002',
         displayName: 'Grid6_Tomo002',
         // zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_7_Vol.zarr',
@@ -467,7 +467,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           objectLabels: ['mitochondria'],
         },
       },
-      'tomo_003': {
+      tomo_003: {
         tomogramId: 'tomo_003',
         displayName: 'Grid6_Tomo003',
         zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
