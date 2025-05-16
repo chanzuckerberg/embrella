@@ -3,11 +3,8 @@ import os
 import re
 import uuid
 import requests
-import asyncio
-import nest_asyncio
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from asgiref.sync import sync_to_async
 import django
 import sys
 
@@ -28,9 +25,6 @@ FILE_SERVER_HOST = "https://czii-onsite.czbiohub.org"
 
 # Match files like Position_1_2_Vol.zarr or Position_15_Vol.zarr
 ZARR_FILENAME_PATTERN = re.compile(r'^Position_\d+(?:_\d+)?_Vol\.zarr$')
-
-# Apply nest_asyncio to allow nested event loops
-nest_asyncio.apply()
 
 def generate_uuid():
     return str(uuid.uuid4())
@@ -104,7 +98,6 @@ def get_zarr_files_from_web(review):
         print(f"❌ Failed to fetch ZARR files from web: {e}")
         return []
 
-@sync_to_async
 def get_review(review_id):
     """Get review instance by ID"""
     try:
@@ -118,7 +111,6 @@ def get_review(review_id):
         print(f"❌ Review not found with ID: {review_id}")
         raise
 
-@sync_to_async
 def get_available_sessions():
     """Get all available sessions with their runs"""
     sessions_data = []
@@ -154,7 +146,6 @@ def get_available_sessions():
     
     return sessions_data
 
-@sync_to_async
 def create_tomogram(review, tomogram_id, position_id):
     return ReviewTomogram.objects.create(
         review=review,
@@ -165,11 +156,9 @@ def create_tomogram(review, tomogram_id, position_id):
         object_labels=[]
     )
 
-@sync_to_async
 def get_all_tomograms():
     return list(ReviewTomogram.objects.all())
 
-@sync_to_async
 def check_tomogram_exists(review, position_id):
     """Check if a tomogram with the given position_id already exists for this review"""
     return ReviewTomogram.objects.filter(
@@ -177,52 +166,42 @@ def check_tomogram_exists(review, position_id):
         position_id=position_id
     ).exists()
 
-async def process_files_async(review, zarr_files):
+def process_files(review, zarr_files):
     for filename in zarr_files:
         position_id = parse_zarr_filename(filename)
         if position_id:
             # Check if tomogram already exists
-            exists = await check_tomogram_exists(review, position_id)
+            exists = check_tomogram_exists(review, position_id)
             if exists:
                 print(f"⚠️ Skipping duplicate tomogram for position {position_id}")
                 continue
                 
             tomogram_id = generate_uuid()
-            await create_tomogram(review, tomogram_id, position_id)
+            create_tomogram(review, tomogram_id, position_id)
             print(f"✅ Created tomogram: {tomogram_id} for position {position_id}")
         else:
             print(f"❌ Skipping invalid filename: {filename}")
 
-async def main_async(review_id):
-    # Get review instance
-    review = await get_review(review_id)
-    
-    # Get ZARR files for this review's session
-    zarr_files = get_zarr_files_from_web(review)
-    print(f"🔍 Found {len(zarr_files)} matching ZARR files")
-
-    await process_files_async(review, zarr_files)
-
-    imported = await get_all_tomograms()
-    print(f"\n📊 Total tomograms in DB: {len(imported)}")
-    for tomo in imported[:5]:
-        print(f"• ID: {tomo.tomogram_id}, Position: {tomo.position_id}")
-
 def main(review_id):
     """Main function to run the import process"""
     try:
-        # Create a new event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # Get review instance
+        review = get_review(review_id)
         
-        # Run the async main function
-        loop.run_until_complete(main_async(review_id))
+        # Get ZARR files for this review's session
+        zarr_files = get_zarr_files_from_web(review)
+        print(f"🔍 Found {len(zarr_files)} matching ZARR files")
+
+        process_files(review, zarr_files)
+
+        imported = get_all_tomograms()
+        print(f"\n📊 Total tomograms in DB: {len(imported)}")
+        for tomo in imported[:5]:
+            print(f"• ID: {tomo.tomogram_id}, Position: {tomo.position_id}")
+            
     except Exception as e:
         print(f"❌ Error in main: {str(e)}")
         raise
-    finally:
-        # Clean up the event loop
-        loop.close()
 
 if __name__ == "__main__":
     # Example usage: python import_tomograms.py "your-review-id"
