@@ -33,26 +33,36 @@ export const SideBar = ({
   return (
     <div className="basis-[280px] shrink-0 flex flex-col justify-start gap-8 !p-[20px]">
       <SideBarSection>
-        <div className="flex flex-col">
-          <h2 className="p-8">{reviewName}</h2>
-          <p className="text-sm text-gray-500">0 of {tomograms.length} Tomograms Reviewed</p>
+        <div className="border-b border-gray-400">
+          <div className="flex flex-col">
+            <h2 className="p-8">{reviewName}</h2>
+            <p className="text-sm text-gray-500">0 of {tomograms.length} Tomograms Reviewed</p>
+          </div>
         </div>
       </SideBarSection>
 
       <SideBarSection>
-        <TomogramTable tomograms={tomograms} selectedTomogram={selectedTomogram} onSelectTomogram={onSelectTomogram} />
-        <NavigationButtons
-          currentIndex={currentIndex}
-          totalItems={tomograms.length}
-          onPrevious={onPrevious}
-          onNext={onNext}
-        />
+        <div className="border-b border-gray-400">
+          <TomogramTable tomograms={tomograms} selectedTomogram={selectedTomogram} onSelectTomogram={onSelectTomogram} />
+          <NavigationButtons
+            currentIndex={currentIndex}
+            totalItems={tomograms.length}
+            onPrevious={onPrevious}
+            onNext={onNext}
+          />
+          <div className="h-6"></div>
+        </div>
       </SideBarSection>
 
       <SideBarSection>
-        <TomogramInfo tomogramDetail={tomogramDetail} />
+        <div className="border-b border-gray-400">
+          <TomogramInfo tomogramDetail={tomogramDetail} />
+          <div className="h-6"></div>
+        </div>
+      </SideBarSection>
+      <SideBarSection>
         <SliderControls contrast={contrast} onContrastChange={onContrastChange} />
       </SideBarSection>
-    </div>
+    </div >
   );
 };
