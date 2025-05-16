@@ -20,4 +20,8 @@ urlpatterns = [
     # path('detail_params',views.detail_params, name='abc')
     #path("run_list/", views.get_all_sessions, name="get"),
     #path("path_list/", views.get_all_image_paths, name="path")
+    path('sync_tomograms/', views.sync_tomograms_view, name='sync_tomograms'),
+    path('get_runs/', views.get_runs, name='get_runs'),
+    path('get_tomogram_stats/', views.get_tomogram_stats, name='get_tomogram_stats'),
+    path('start_sync/', views.start_sync, name='start_sync'),
 ]

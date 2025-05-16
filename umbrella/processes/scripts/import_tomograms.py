@@ -26,8 +26,8 @@ from processes.models import ProcRun
 # Configuration
 FILE_SERVER_HOST = "https://czii-onsite.czbiohub.org"
 
-# Match files like Position_1_2_Vol.mrc
-MRC_FILENAME_PATTERN = re.compile(r'^Position_\d+_\d+_Vol\.mrc$')
+# Match files like Position_1_2_Vol.zarr
+ZARR_FILENAME_PATTERN = re.compile(r'^Position_\d+_\d+_Vol\.zarr$')
 
 # Apply nest_asyncio to allow nested event loops
 nest_asyncio.apply()
@@ -35,8 +35,8 @@ nest_asyncio.apply()
 def generate_uuid():
     return str(uuid.uuid4())
 
-def parse_mrc_filename(filename):
-    match = re.match(r'^Position_(\d+)_(\d+)_Vol\.mrc$', filename)
+def parse_zarr_filename(filename):
+    match = re.match(r'^Position_(\d+)_(\d+)_Vol\.zarr$', filename)
     if match:
         return f"Position_{match.group(1)}_{match.group(2)}"
     return None
@@ -65,7 +65,7 @@ def get_session_path(review):
     
     return path
 
-def get_mrc_files_from_web(review):
+def get_zarr_files_from_web(review):
     try:
         session_path = get_session_path(review)
         web_dir_url = urljoin(FILE_SERVER_HOST + "/", session_path + "/")
@@ -76,19 +76,19 @@ def get_mrc_files_from_web(review):
 
         soup = BeautifulSoup(response.text, 'html.parser')
         file_rows = soup.find_all('tr', class_='file')
-        valid_mrc_files = []
+        valid_zarr_files = []
 
         for row in file_rows:
             name_tag = row.find('span', class_='name')
             if name_tag:
                 filename = name_tag.text.strip()
-                if MRC_FILENAME_PATTERN.match(filename):
-                    valid_mrc_files.append(filename)
+                if ZARR_FILENAME_PATTERN.match(filename):
+                    valid_zarr_files.append(filename)
 
-        return valid_mrc_files
+        return valid_zarr_files
 
     except requests.RequestException as e:
-        print(f"❌ Failed to fetch MRC files from web: {e}")
+        print(f"❌ Failed to fetch ZARR files from web: {e}")
         return []
 
 @sync_to_async
@@ -156,10 +156,24 @@ def create_tomogram(review, tomogram_id, position_id):
 def get_all_tomograms():
     return list(ReviewTomogram.objects.all())
 
-async def process_files_async(review, mrc_files):
-    for filename in mrc_files:
-        position_id = parse_mrc_filename(filename)
+@sync_to_async
+def check_tomogram_exists(review, position_id):
+    """Check if a tomogram with the given position_id already exists for this review"""
+    return ReviewTomogram.objects.filter(
+        review=review,
+        position_id=position_id
+    ).exists()
+
+async def process_files_async(review, zarr_files):
+    for filename in zarr_files:
+        position_id = parse_zarr_filename(filename)
         if position_id:
+            # Check if tomogram already exists
+            exists = await check_tomogram_exists(review, position_id)
+            if exists:
+                print(f"⚠️ Skipping duplicate tomogram for position {position_id}")
+                continue
+                
             tomogram_id = generate_uuid()
             await create_tomogram(review, tomogram_id, position_id)
             print(f"✅ Created tomogram: {tomogram_id} for position {position_id}")
@@ -170,11 +184,11 @@ async def main_async(review_id):
     # Get review instance
     review = await get_review(review_id)
     
-    # Get MRC files for this review's session
-    mrc_files = get_mrc_files_from_web(review)
-    print(f"🔍 Found {len(mrc_files)} matching MRC files")
+    # Get ZARR files for this review's session
+    zarr_files = get_zarr_files_from_web(review)
+    print(f"🔍 Found {len(zarr_files)} matching ZARR files")
 
-    await process_files_async(review, mrc_files)
+    await process_files_async(review, zarr_files)
 
     imported = await get_all_tomograms()
     print(f"\n📊 Total tomograms in DB: {len(imported)}")

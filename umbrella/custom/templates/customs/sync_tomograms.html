@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sync Tomograms - Embrella</title>
+    <style>
+        /* Reuse existing styles from custom_page.html */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            margin: 0;
+            font-weight: 400;
+        }
+        h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+        h2 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #028a87;
+        }
+
+        /* Header Banner */
+        .header-banner {
+            background: linear-gradient(135deg, #028a87, #028a87);
+            color: #fff;
+            padding: 30px 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Form Styles */
+        .sync-form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        /* Stats Card */
+        .stats-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 500;
+            color: #028a87;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Button Styles */
+        .button {
+            display: inline-block;
+            padding: 10px 18px;
+            font-size: 15px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            color: #fff;
+            background-color: #028a87;
+            border: none;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #028a87;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button-secondary {
+            background-color: #6c757d;
+        }
+
+        .button-secondary:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Banner -->
+    <div class="header-banner">
+        <a href="{% url 'custom:custom' %}" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Startup
+        </a>
+        <h1>Sync Tomograms</h1>
+    </div>
+
+    <div class="container">
+        <!-- Stats Overview -->
+        <div class="stats-card">
+            <h2>Session Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="total-tomograms">0</div>
+                    <div class="stat-label">Total Tomograms</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="generated-count">0</div>
+                    <div class="stat-label">Tomograms Generated</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sync Form -->
+        <div class="sync-form">
+            <h2>Select Session</h2>
+            <form id="syncForm" method="post" action="{% url 'processes:start_sync' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="session">Session Name</label>
+                    <select id="session" name="session" required>
+                        <option value="">Select a session...</option>
+                        {% for session in sessions %}
+                        <option value="{{ session.sessionId }}">{{ session.sessionName }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="run">Run ID</label>
+                    <select id="run" name="run" required disabled>
+                        <option value="">Select a run...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reconType">Reconstruction Type</label>
+                    <select id="reconType" name="reconType" required disabled>
+                        <option value="">Select reconstruction type...</option>
+                        <option value="dctf">DCTF</option>
+                        <option value="sart">SART</option>
+                        <option value="denoised">Denoised</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="button">Start Sync</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Function to update stats
+        function updateStats(sessionId, runId, reconType) {
+            fetch(`/processes/get_tomogram_stats/?session=${sessionId}&run=${runId}&type=${reconType}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-tomograms').textContent = data.total;
+                    document.getElementById('generated-count').textContent = data.generated;
+                });
+        }
+
+        // Handle session selection
+        document.getElementById('session').addEventListener('change', function() {
+            const sessionId = this.value;
+            const runSelect = document.getElementById('run');
+            const reconSelect = document.getElementById('reconType');
+            
+            if (sessionId) {
+                // Enable run selection
+                runSelect.disabled = false;
+                
+                // Fetch runs for selected session
+                fetch(`/processes/get_runs/?session=${sessionId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        runSelect.innerHTML = '<option value="">Select a run...</option>';
+                        data.runs.forEach(run => {
+                            runSelect.innerHTML += `<option value="${run.runId}">${run.runId}</option>`;
+                        });
+                    });
+            } else {
+                runSelect.disabled = true;
+                reconSelect.disabled = true;
+                runSelect.innerHTML = '<option value="">Select a run...</option>';
+                reconSelect.innerHTML = '<option value="">Select reconstruction type...</option>';
+            }
+        });
+
+        // Handle run selection
+        document.getElementById('run').addEventListener('change', function() {
+            const sessionId = document.getElementById('session').value;
+            const runId = this.value;
+            const reconSelect = document.getElementById('reconType');
+            
+            if (runId) {
+                reconSelect.disabled = false;
+                // Update stats when run is selected
+                updateStats(sessionId, runId, '');
+            } else {
+                reconSelect.disabled = true;
+                reconSelect.value = '';
+            }
+        });
+
+        // Handle reconstruction type selection
+        document.getElementById('reconType').addEventListener('change', function() {
+            const sessionId = document.getElementById('session').value;
+            const runId = document.getElementById('run').value;
+            const reconType = this.value;
+            
+            if (reconType) {
+                // Update stats when reconstruction type is selected
+                updateStats(sessionId, runId, reconType);
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('syncForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            fetch('/processes/start_sync/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Tomogram sync started successfully!');
+                    // Update stats after sync
+                    updateStats(
+                        formData.get('session'),
+                        formData.get('run'),
+                        formData.get('reconType')
+                    );
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+            });
+        });
+    </script>
+</body>
+</html> 
