@@ -1105,11 +1105,11 @@ def get_session_id(request):
     
 
 @require_http_methods(["GET"])
-async def sync_tomograms_view(request):
+def sync_tomograms_view(request):
     """View for the tomogram sync page"""
     try:
         # Get all sessions directly from MsiSession
-        sessions = await sync_to_async(list)(MsiSession.objects.all().order_by('-created_at'))
+        sessions = MsiSession.objects.all().order_by('-created_at')
         
         # Format sessions for template
         sessions_data = []
