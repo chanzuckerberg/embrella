@@ -62,6 +62,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Yue Yu',
           url: '/api/users/101',
         },
+        annotationObjects: ['ribosome', 'mitochondrion'],
       },
       {
         review: {
@@ -85,6 +86,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Bryan Chu',
           url: '/api/users/102',
         },
+        annotationObjects: ['nucleus', 'cytosolic ribosome'],
       },
       {
         review: {
@@ -108,6 +110,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'John Doe',
           url: '/api/users/103',
         },
+        annotationObjects: ['lysosome', 'golgi apparatus'],
       },
       {
         review: {
@@ -131,6 +134,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Yue Yu',
           url: '/api/users/101',
         },
+        annotationObjects: ['actin filament', 'microtubule'],
       },
       {
         review: {
@@ -154,6 +158,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Emma Wilson',
           url: '/api/users/104',
         },
+        annotationObjects: ['nuclear envelope', 'chromatin'],
       },
       {
         review: {
@@ -177,6 +182,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Michael Chen',
           url: '/api/users/105',
         },
+        annotationObjects: ['endoplasmic reticulum', 'peroxisome'],
       },
       {
         review: {
@@ -200,6 +206,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Sarah Johnson',
           url: '/api/users/106',
         },
+        annotationObjects: ['vesicle', 'plasma membrane'],
       },
       {
         review: {
@@ -223,6 +230,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Bryan Chu',
           url: '/api/users/102',
         },
+        annotationObjects: ['ribosome', 'mitochondrion'],
       },
       {
         review: {
@@ -246,6 +254,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Alex Roberts',
           url: '/api/users/107',
         },
+        annotationObjects: ['nucleus', 'cytosolic ribosome'],
       },
       {
         review: {
@@ -269,6 +278,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'John Doe',
           url: '/api/users/103',
         },
+        annotationObjects: ['lysosome', 'golgi apparatus'],
       },
       {
         review: {
@@ -292,6 +302,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Jessica Kim',
           url: '/api/users/108',
         },
+        annotationObjects: ['actin filament', 'microtubule'],
       },
       {
         review: {
@@ -315,22 +326,25 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Yue Yu',
           url: '/api/users/101',
         },
+        annotationObjects: ['nuclear envelope', 'chromatin'],
       },
     ];
 
     let params: SearchParamValue[] = [];
-    try {
-      params = JSON.parse(decodeURIComponent(url.split('q=')[1]));
-      const searchParam = params.find((param) => param.category === 'search');
-      const pageParam = params.find((param) => param.category);
-      if (searchParam !== undefined) {
-        reviews = reviews.filter((review) => review.review.name.includes(searchParam.value as string));
-      } else if (pageParam !== undefined) {
-        reviews = reviews.slice(0, 10);
+    if (url.includes('q=')) {
+      try {
+        params = JSON.parse(decodeURIComponent(url.split('q=')[1]));
+        const searchParam = params.find((param) => param.category === 'search');
+        const pageParam = params.find((param) => param.category);
+        if (searchParam !== undefined) {
+          reviews = reviews.filter((review) => review.review.name.includes(searchParam.value as string));
+        } else if (pageParam !== undefined) {
+          reviews = reviews.slice(0, 10);
+        }
+      } catch (e) {
+        console.log(e);
+        console.log(`Mock function failed to parse ${url}`);
       }
-    } catch (e) {
-      console.log(e);
-      console.log(`Mock function failed to parse ${url}`);
     }
 
     return {
@@ -379,18 +393,6 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     {
       sessionId: 'session_4321',
       sessionName: 'Grid4_TestRun',
-      createdAt: '2025-04-01T09:10:00Z',
-      projectName: 'Project C',
-      savePath: '/mnt/data/tomograms/2025-04-01/Grid4_TestRun',
-      runs: [
-        {
-          runId: 'run001',
-          numTomograms: 20,
-          reconstructionTypes: ['DCTF', 'SART'],
-        },
-        {
-          runId: 'run002',
-          numTomograms: 20,
           reconstructionTypes: ['Denoised'],
         },
       ],

@@ -9,26 +9,13 @@ interface UseFetchData<D> {
   isSuccess: boolean;
 }
 
-export const useFetchData = <D>(
-  relativeURL: API,
-  searchParam: Record<string, unknown> = {},
-  shouldFetch = true
-): UseFetchData<D> => {
+export const useFetchData = <D>(relativeURL: API, searchParam: Record<string, unknown> = {}): UseFetchData<D> => {
   const [dataState, setDataState] = useState<UseFetchData<D>>({
     isSuccess: false,
   });
   const requestURL = useMemo(() => getRequestURL(DJANGO_URL, relativeURL, searchParam), [relativeURL, searchParam]);
 
   useEffect(() => {
-    if (!shouldFetch) return;
-    const mockResponse = MOCKED_APIS[relativeURL];
-    if (mockResponse !== undefined) {
-      setDataState({
-        data: typeof mockResponse === 'function' ? mockResponse(requestURL) : mockResponse,
-        isSuccess: true,
-      });
-      return;
-    }
     (async (): Promise<D> => {
       setDataState((d) => ({
         ...d,
@@ -49,7 +36,7 @@ export const useFetchData = <D>(
       .catch((err) => {
         console.error(err);
       });
-  }, [requestURL, shouldFetch, relativeURL]);
+  }, [requestURL, relativeURL]);
 
   return dataState;
 };
