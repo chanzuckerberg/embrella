@@ -2,6 +2,7 @@ import { EntityLinkField } from '@app/common/types/entity';
 
 export interface Review extends EntityLinkField {
   type: string;
+  annotationObjects: string[];
 }
 
 export interface ReviewData {
