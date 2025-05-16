@@ -116,6 +116,10 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     
     setFilters(resetState);
     setSelectedOption('AND');
+     // Also apply the reset filters to update the scatter plot
+     if (onApplyFilters) {
+      onApplyFilters(null, 'AND');
+    }
   };
 
   const handleInputChange =

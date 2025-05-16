@@ -83,31 +83,43 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
     };
   }, [scatterplotData]);
 
-  // Determine which data to use for the scatterplot
-  const scatterplotDisplayData = scatterplotData || data;
-  const scatterplotProcessedData = processedScatterplotData || processedData;
-  const isScatterplotLoading = scatterplotLoading || false;
-  const hasScatterplotError = scatterplotError || false;
+ // Determine which data to use for the scatterplot
+ const scatterplotDisplayData = scatterplotData || data;
+ const scatterplotProcessedData = processedScatterplotData || processedData;
+ const isScatterplotLoading = scatterplotLoading || false;
+ const hasScatterplotError = scatterplotError || false;
+ // Determine if filters are applied - true when scatterplotData exists (meaning filters were applied)
+const isFilterApplied = !!scatterplotData && 
+(scatterplotData.filters_applied?.filters !== null && 
+ scatterplotData.filters_applied?.filters !== undefined &&
+ Object.keys(scatterplotData.filters_applied?.filters || {}).length > 0);
 
-  return (
-    <div className={styles.dashboardContainer}>
-      <Box display="flex" justifyContent="flex-end">
-        <FormControlLabel
-          control={
-            <Switch checked={isScatterPlot} onChange={(e) => setIsScatterPlot(e.target.checked)} color="primary" />
-          }
-          label={isScatterPlot ? 'Scatter Plot View' : 'Histogram View'}
-        />
-      </Box>
-      {processedData ? (
-        data ? (
-          isScatterPlot ? (
-            <MetricScatterPlot 
-              data={scatterplotDisplayData} 
-              processedData={scatterplotProcessedData} 
-              isLoading={isScatterplotLoading}
-              error={hasScatterplotError}
-            />
+console.log('Filter status:', { 
+hasScatterplotData: !!scatterplotData, 
+filtersApplied: scatterplotData?.filters_applied, 
+isFilterApplied 
+});
+
+ return (
+   <div className={styles.dashboardContainer}>
+     <Box display="flex" justifyContent="flex-end">
+       <FormControlLabel
+         control={
+           <Switch checked={isScatterPlot} onChange={(e) => setIsScatterPlot(e.target.checked)} color="primary" />
+         }
+         label={isScatterPlot ? 'Scatter Plot View' : 'Histogram View'}
+       />
+     </Box>
+     {processedData ? (
+       data ? (
+         isScatterPlot ? (
+           <MetricScatterPlot 
+             data={scatterplotDisplayData} 
+             processedData={scatterplotProcessedData} 
+             isLoading={isScatterplotLoading}
+             error={hasScatterplotError}
+             isFilterApplied={isFilterApplied}
+           />
           ) : (
             <MetricHistogram data={data} processedData={processedData} />
           )

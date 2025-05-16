@@ -8,6 +8,9 @@ import { SCATTERPLOT_METRIC_COLORS } from './constants/MetricConfig';
 interface MetricScatterPlotProps {
   data: MetadataVizResponse;
   processedData: ProcessedData;
+  isLoading?: boolean;
+  error?: boolean | { status: number; message: string };
+  isFilterApplied: boolean;
 }
 
 interface ProcessedData {
@@ -31,11 +34,47 @@ const formatMetricLabel = (key: string): string => {
 
 console.log('formatMetricLabel', formatMetricLabel);
 // Sturges' formula for calculating number of bins
-const calculateBins = (n: number): number => {
-  return Math.ceil(1 + 3.322 * Math.log10(n));
+const calculateBins = (values: number[] | any): number => {
+  // Ensure values is an array and filter out any non-numeric values
+  if (!Array.isArray(values)) {
+    return 5; // Default number of bins if values is not an array
+  }
+  
+  // Filter out any non-numeric values
+  const numericValues = values.filter(v => typeof v === 'number' && !isNaN(v));
+  const n = numericValues.length;
+  
+  if (n <= 1) return 1;
+  
+  // Get the actual min and max from the filtered data
+  const min = Math.min(...numericValues);
+  const max = Math.max(...numericValues);
+  const range = max - min;
+  
+  // Use Freedman-Diaconis rule which is more robust to outliers
+  // and considers the distribution of the data
+  const iqr = calculateIQR(numericValues);
+  if (iqr === 0) {
+    // Fall back to Sturges' formula if IQR is zero
+    return Math.ceil(1 + 3.322 * Math.log10(n));
+  }
+  
+  const binWidth = 2 * iqr / Math.pow(n, 1/3);
+  return Math.max(1, Math.ceil(range / binWidth));
 };
 
-export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, processedData }) => {
+// Helper function to calculate Interquartile Range
+const calculateIQR = (values: number[]): number => {
+  if (!values.length) return 0;
+  
+  const sorted = [...values].sort((a, b) => a - b);
+  const q1 = sorted[Math.floor(sorted.length * 0.25)];
+  const q3 = sorted[Math.floor(sorted.length * 0.75)];
+  return q3 - q1;
+};
+
+
+export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, processedData, isFilterApplied }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts>();
 
@@ -87,7 +126,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
 
       return tooltipContent;
     };
-  }, [data, processedData]);
+  }, [data, processedData, isFilterApplied]);
 // Create grid configuration
 const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label: string }>) => {
   const gridHeight = 140; 
@@ -169,7 +208,7 @@ const createYAxisConfig = useCallback(() => {
         fontWeight: 'bold' as const,
         align: 'center' as const,
       },
-      splitNumber: calculateBins(Number(values)),
+      splitNumber: calculateBins(values.length),
       min: min - padding,
       max: max + padding,
       splitLine: {
@@ -196,7 +235,16 @@ const createYAxisConfig = useCallback(() => {
 }, [data, processedData]);
 const createSeriesConfig = useCallback(
   (metricsConfig: Array<{ key: string; label: string }>) => {
+    // Check if we're in a filtered state or default state
+    // Only use filtered view if:
+    // 1. isFilterApplied is true (explicit filter was applied)
+    // 2. rejected_results exists and has items
     const hasRejectedResults = data.rejected_results && data.rejected_results.length > 0;
+    // Force all metrics to use the same visualization mode - either all filtered or all default
+    const shouldUseFilteredView = isFilterApplied && hasRejectedResults;
+    
+    console.log('Scatter plot visualization mode:', { isFilterApplied, hasRejectedResults, shouldUseFilteredView });
+    
     const maxLength = Math.max(data.accepted_results.length, data.rejected_results?.length || 0);
     
     // Pre-calculate normalized positions
@@ -207,9 +255,9 @@ const createSeriesConfig = useCallback(
       pos * (data.rejected_results!.length / maxLength)
     ) || [];
 
-
+    // Force consistent visualization mode for ALL metrics
     return metricsConfig.map((metric, index) => {
-      if (!hasRejectedResults) {
+      if (!shouldUseFilteredView) {
         // Default view with metric-specific colors
         return {
           type: 'scatter' as const,
@@ -266,7 +314,7 @@ const createSeriesConfig = useCallback(
       }
     }).flat();
   },
-  [data, processedData]
+  [data, processedData, isFilterApplied]
 );
 
   useEffect(() => {
@@ -277,7 +325,12 @@ const createSeriesConfig = useCallback(
     const spacing = 35;
     const totalHeight = processedData.metricsConfig.length * (gridHeight + spacing);
     chartRef.current.style.height = `${totalHeight}px`;
-
+    
+    // Force chart recreation when isFilterApplied changes
+    if (chartInstance.current) {
+      chartInstance.current.dispose();
+      chartInstance.current = undefined;
+    }
 
     if (!chartInstance.current) {
       chartInstance.current = echarts.init(chartRef.current);

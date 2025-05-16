@@ -22,10 +22,18 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
   const { data: scatterplotData, isSuccess: scatterplotSuccess, error: scatterplotError, isLoading: scatterplotLoading } = 
     useFetchMetadataViz(sessionName, runNumber, scatterplotFilters);
 
-  const handleApplyFilters = useCallback((newFilters: FilterConfig) => {
-    // Only update the scatterplot filters when Apply Filter is clicked
-    setScatterplotFilters(newFilters);
-  }, []);
+    const handleApplyFilters = useCallback((newFilters: FilterConfig | null) => {
+      // Force a state update by creating a new object reference
+      if (newFilters === null) {
+        // Reset case
+        setScatterplotFilters(undefined);
+      } else {
+        // Apply new filters - create a new object to ensure React detects the change
+        setScatterplotFilters({...newFilters});
+      }
+      
+      console.log("Applying filters:", newFilters);
+    }, []);
   
   console.log(filters, 'filters and filterdata', data);
   console.log(scatterplotFilters, 'scatterplot filters and data', scatterplotData);
