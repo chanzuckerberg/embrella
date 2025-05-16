@@ -30,7 +30,7 @@ type FilterState = {
 
 interface MetadataFiltersProps {
   metricRanges: MetricRanges;
-  onApplyFilters?: (filters: FilterState, selectedOption: string) => void;
+  onApplyFilters?: (filters: FilterConfig, selectedOption: string) => void;
 }
 
 export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, onApplyFilters }) => {
@@ -39,30 +39,39 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
   // Initialize state with explicit number conversion
   const [filters, setFilters] = useState<FilterState>(() => {
     const initialState: FilterState = {} as FilterState;
-    (Object.keys(metricRanges) as Array<keyof typeof metricRanges>).forEach((key) => {
-      if (Array.isArray(metricRanges[key])) {
-        initialState[key] = {
-          current: [Number(metricRanges[key][0]), Number(metricRanges[key][1])],
-          min: Number(metricRanges[key][0]),
-          max: Number(metricRanges[key][1]),
+    
+    // Use METRICS_CONFIG keys which match FilterConfig
+    Object.keys(METRICS_CONFIG).forEach((key) => {
+      const metricKey = key as keyof typeof METRICS_CONFIG;
+      if (metricRanges[metricKey] && Array.isArray(metricRanges[metricKey])) {
+        initialState[metricKey] = {
+          current: [Number(metricRanges[metricKey][0]), Number(metricRanges[metricKey][1])],
+          min: Number(metricRanges[metricKey][0]),
+          max: Number(metricRanges[metricKey][1]),
           enabled: true,
         };
       }
     });
+    
     return initialState;
   });
 
   // Update filters when metric ranges change
-
   useEffect(() => {
     setFilters((prev) => {
       const newState = { ...prev };
-      (Object.keys(metricRanges) as Array<keyof MetricRanges>).forEach((key) => {
-        newState[key] = {
-          ...prev[key],
-          enabled: prev[key]?.enabled ?? true,
-        };
+      
+      // Use METRICS_CONFIG keys which match FilterConfig
+      Object.keys(METRICS_CONFIG).forEach((key) => {
+        const metricKey = key as keyof typeof METRICS_CONFIG;
+        if (metricRanges[metricKey]) {
+          newState[metricKey] = {
+            ...prev[metricKey],
+            enabled: prev[metricKey]?.enabled ?? true,
+          };
+        }
       });
+      
       return newState;
     });
   }, [metricRanges]);
@@ -91,14 +100,20 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
 
   const handleReset = () => {
     const resetState: FilterState = {} as FilterState;
-    (Object.keys(metricRanges) as Array<keyof FilterConfig>).forEach((key) => {
-      resetState[key] = {
-        current: [Number(metricRanges[key][0]), Number(metricRanges[key][1])],
-        min: Number(metricRanges[key][0]),
-        max: Number(metricRanges[key][1]),
-        enabled: true,
-      };
+    
+    // Use METRICS_CONFIG keys which match FilterConfig
+    Object.keys(METRICS_CONFIG).forEach((key) => {
+      const metricKey = key as keyof typeof METRICS_CONFIG;
+      if (metricRanges[metricKey] && Array.isArray(metricRanges[metricKey])) {
+        resetState[metricKey] = {
+          current: [Number(metricRanges[metricKey][0]), Number(metricRanges[metricKey][1])],
+          min: Number(metricRanges[metricKey][0]),
+          max: Number(metricRanges[metricKey][1]),
+          enabled: true,
+        };
+      }
     });
+    
     setFilters(resetState);
     setSelectedOption('AND');
   };
@@ -141,6 +156,7 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
       onApplyFilters(filterConfig, option);
     }
   };
+  
   const renderFilter = (key: keyof FilterState) => {
     // Use the METRICS_CONFIG to get label and unit
     const config = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG];
