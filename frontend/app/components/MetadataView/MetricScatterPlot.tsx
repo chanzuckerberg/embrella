@@ -44,28 +44,50 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
     return function (params: echarts.TooltipComponentFormatterCallbackParams) {
       const param = Array.isArray(params) ? params[0] : params;
       const dataIndex = param.dataIndex as number;
+      
+      // Check if dataIndex is valid and accepted_results exists
+      if (dataIndex === undefined || !data?.accepted_results || dataIndex >= data.accepted_results.length) {
+        return 'No data available';
+      }
+      
       const tiltSeries = data.accepted_results[dataIndex];
+      
+      // Check if tiltSeries exists
+      if (!tiltSeries) {
+        return 'No data available';
+      }
+      
       const metrics = tiltSeries.metrics;
+      
+      // Check if metrics exists
+      if (!metrics) {
+        return 'No metrics data available';
+      }
 
-      let tooltipContent = `<div style="font-weight: bold; margin-bottom: 5px;">Position : ${tiltSeries.name}</div>`;
+      let tooltipContent = `<div style="font-weight: bold; margin-bottom: 5px;">Position : ${tiltSeries.name || 'Unknown'}</div>`;
 
-      // Helper function to format the metric line
+      // Helper function to format the metric line with safety checks
       const formatMetricLine = (key: keyof Metrics, label: string, unit: string, multiplier = 1) => {
+        if (metrics[key] === undefined || metrics[key] === null) {
+          return `<div>${label}: N/A ${unit}</div>`;
+        }
         const value = metrics[key] * multiplier;
         return `<div>${label}: ${value.toFixed(2)} ${unit}</div>`;
       };
 
-      // Add all metric values to tooltip
-      tooltipContent += processedData.metricsConfig
-        .map(({ key, label, unit }) => {
-          const multiplier = key.includes('bad_patch') ? 100 : 1;
-          return formatMetricLine(key as keyof Metrics, label, unit, multiplier);
-        })
-        .join('');
+      // Add all metric values to tooltip with safety checks
+      if (processedData?.metricsConfig) {
+        tooltipContent += processedData.metricsConfig
+          .map(({ key, label, unit }) => {
+            const multiplier = key.includes('bad_patch') ? 100 : 1;
+            return formatMetricLine(key as keyof Metrics, label, unit, multiplier);
+          })
+          .join('');
+      }
 
       return tooltipContent;
     };
-  }, [data]);
+  }, [data, processedData]);
 // Create grid configuration
 const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label: string }>) => {
   const gridHeight = 140; 

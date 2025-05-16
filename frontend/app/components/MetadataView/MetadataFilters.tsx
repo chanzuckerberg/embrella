@@ -169,7 +169,7 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     const stepValue = key === 'bad_patch_low' || key === 'bad_patch_all' ? 0.1 : (maxValue - minValue) / 100;
 
     return (
-      <div className={styles.filterRow}>
+      <div className={styles.filterRow} key={`filter-${key}`}>
         <FormControlLabel
           control={<Checkbox checked={filters[key]?.enabled} onChange={handleCheckboxChange(key)} />}
           label={

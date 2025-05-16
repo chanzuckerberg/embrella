@@ -10,6 +10,10 @@ interface MetadataVizProps {
   error?: { status: number; message: string };
   isLoading: boolean;
   onApplyFilters?: (filters: FilterConfig, selectedOption: 'AND' | 'OR') => void;
+  scatterplotData?: MetadataVizResponse;
+  scatterplotSuccess?: boolean;
+  scatterplotError?: { status: number; message: string };
+  scatterplotLoading?: boolean;
 }
 
 export const MetadataViz: React.FC<MetadataVizProps> = ({
@@ -18,6 +22,10 @@ export const MetadataViz: React.FC<MetadataVizProps> = ({
   error,
   isLoading,
   onApplyFilters,
+  scatterplotData,
+  scatterplotSuccess,
+  scatterplotError,
+  scatterplotLoading,
 }) => {
   if (isLoading) {
     return <div>Loading...</div>;
@@ -33,10 +41,19 @@ export const MetadataViz: React.FC<MetadataVizProps> = ({
   return (
     <div className={styles.container}>
       <div className={styles.leftColumn}>
-        <MetadataFilters metricRanges={vizResponse?.metric_ranges} onApplyFilters={onApplyFilters} />
+        <MetadataFilters 
+          metricRanges={vizResponse?.metric_ranges} 
+          onApplyFilters={onApplyFilters} 
+        />
       </div>
       <div className={styles.middleColumn}>
-        <MetricDashboard data={vizResponse} />
+        <MetricDashboard 
+          data={vizResponse} 
+          scatterplotData={scatterplotData}
+          scatterplotSuccess={scatterplotSuccess}
+          scatterplotError={scatterplotError}
+          scatterplotLoading={scatterplotLoading}
+        />
       </div>
     </div>
   );
