@@ -10,6 +10,7 @@ import { QualityControls } from './components/QualityControls';
 import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
 import { getRegionFromZattrs } from './utils';
+import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
 
 interface TomogramViewerProps {
   review: Review;
@@ -28,8 +29,23 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
   const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
   const [zPosition, setZPosition] = useState(0);
-  const [seriesDimensionName, setSeriesDimensionName] = useState('Z');
-  const [contrast, setContrast] = useState<[number, number]>([-0.00001, 0.00001]);
+  const [seriesDimensionName, setSeriesDimensionName] = useState('z');
+  const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
+
+  const { imageSeriesLayer, channels } = useIdetik();
+  const handleContrastLimitsChange = useCallback(
+    (newLimits: [number, number]) => {
+      if (!imageSeriesLayer) return;
+
+      const updatedChannels = channels.map((channel) => ({
+        ...channel,
+        contrastLimits: newLimits,
+      }));
+
+      imageSeriesLayer.setChannelProps(updatedChannels);
+    },
+    [imageSeriesLayer, channels]
+  );
 
   useEffect(() => {
     const fetchRegion = async () => {
@@ -121,8 +137,8 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           onPrevious={handlePrevious}
           onNext={handleNext}
           onSelectTomogram={setSelectedTomogram}
-          contrast={contrast}
-          onContrastChange={setContrast}
+          contrastLimits={contrastLimits}
+          onContrastLimitsChange={handleContrastLimitsChange}
         />
         <div className="flex-auto flex flex-col p-6 rounded">
           {selectedTomogram && region ? (
@@ -131,8 +147,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                 <OmeZarrImageViewer
                   sourceUrl={imageUrl}
                   region={region}
-                  seriesDimensionName="z"
+                  seriesDimensionName={seriesDimensionName}
                   allSlicesSizeEstimate="250 MB"
+                  fallbackContrastLimits={contrastLimits}
                   classNames={{
                     root: 'bg-dark-sds-color-primitive-gray-100',
                   }}
