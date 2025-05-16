@@ -209,12 +209,20 @@ async def main_async(review_id):
         print(f"• ID: {tomo.tomogram_id}, Position: {tomo.position_id}")
 
 def main(review_id):
+    """Main function to run the import process"""
     try:
-        asyncio.run(main_async(review_id))
-    except RuntimeError as e:
-        # If we're already in an event loop (like in Jupyter), use this approach
-        loop = asyncio.get_event_loop()
+        # Create a new event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Run the async main function
         loop.run_until_complete(main_async(review_id))
+    except Exception as e:
+        print(f"❌ Error in main: {str(e)}")
+        raise
+    finally:
+        # Clean up the event loop
+        loop.close()
 
 if __name__ == "__main__":
     # Example usage: python import_tomograms.py "your-review-id"
