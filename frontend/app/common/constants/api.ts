@@ -27,7 +27,7 @@ export enum API {
   REVIEW = '/api/reviews/:reviewId',
   REVIEW_EXPORT = '/api/reviews/:reviewId/export',
   REVIEW_TOMOGRAMS = '/api/reviews/:reviewId/tomograms',
-  REVIEW_TOMOGRAM = '/api/reviews/:reviewId/tomograms/:tomogramId',
+  TOMOGRAM_DETAIL = '/api/reviews/:reviewId/tomograms/:tomogramId',
 }
 
 export enum POST_API {
@@ -424,8 +424,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     },
     tomograms: [
       { tomogramId: 'tomo_001', status: 'accepted' },
-      { tomogramId: 'tomo_003', status: 'uncertain' },
-      { tomogramId: 'tomo_004', status: 'pending' },
+      { tomogramId: 'tomo_002', status: 'uncertain' },
+      { tomogramId: 'tomo_003', status: 'pending' },
       // Additional tomograms would be listed here...
     ],
   },
@@ -443,14 +443,41 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     { tomogramId: 'tomo_005', status: 'pending' },
     // Additional tomograms would be listed here...
   ],
-  [API.REVIEW_TOMOGRAM]: {
-    tomogramId: 'tomo_002',
-    displayName: 'Grid6_Tomo002',
-    zarrPath: 'https://review-static.czbiohub.org/zarrs/Grid6_2025-04-22/Tomo_002.zarr',
-    existingReview: {
-      quality: 'rejected',
-      rejectionReasons: ['ice contamination', 'low contrast'],
-    },
+  [API.TOMOGRAM_DETAIL]: (url: string) => {
+    const tomogramId = url.split('/').pop(); // crude example, improve as needed
+    const details = {
+      'tomo_001': {
+        tomogramId: 'tomo_001',
+        displayName: 'Grid6_Tomo001',
+        zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_6_Vol.zarr',
+        existingReview: {
+          quality: 'accepted',
+          rejectionReasons: ['ice contamination'],
+          objectLabels: ['mitochondria', 'nucleus'],
+        },
+      },
+      'tomo_002': {
+        tomogramId: 'tomo_002',
+        displayName: 'Grid6_Tomo002',
+        // zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_7_Vol.zarr',
+        zarrPath: 'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/',
+        existingReview: {
+          quality: 'rejected',
+          rejectionReasons: ['bad alignment'],
+          objectLabels: ['mitochondria'],
+        },
+      },
+      'tomo_003': {
+        tomogramId: 'tomo_003',
+        displayName: 'Grid6_Tomo003',
+        zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
+        existingReview: {
+          quality: 'uncertain',
+          objectLabels: [],
+        },
+      },
+    };
+    return details[tomogramId as keyof typeof details] || null;
   },
 };
 

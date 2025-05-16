@@ -11,168 +11,176 @@ import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/re
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
 import { getRegionFromZattrs } from './utils';
 import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
+import { API, MOCKED_APIS } from '../../../app/common/constants/api';
 
 interface TomogramViewerProps {
-  review: Review;
+    review: Review;
 }
 
 const sourceUrl =
-  'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-sample/aretomo3/vol002/Position_10_Vol.zarr';
+    'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-sample/aretomo3/vol002/Position_10_Vol.zarr';
 
 export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
-  const [region, setRegion] = useState<Region | null>(null);
-  const imageUrl = `${sourceUrl}`;
+    const [region, setRegion] = useState<Region | null>(null);
+    const imageUrl = `${sourceUrl}`;
 
-  const layerCreatedTime = useRef<number | undefined>(undefined);
-  const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
+    const layerCreatedTime = useRef<number | undefined>(undefined);
+    const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
 
-  const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
-  const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
-  const [zPosition, setZPosition] = useState(0);
-  const [seriesDimensionName, setSeriesDimensionName] = useState('z');
-  const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
+    const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
+    const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
+    const [zPosition, setZPosition] = useState(0);
+    const [seriesDimensionName, setSeriesDimensionName] = useState('z');
+    const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
 
-  const { imageSeriesLayer, channels } = useIdetik();
-  const handleContrastLimitsChange = useCallback(
-    (newLimits: [number, number]) => {
-      if (!imageSeriesLayer) return;
+    const { imageSeriesLayer, channels } = useIdetik();
+    const handleContrastLimitsChange = useCallback(
+        (newLimits: [number, number]) => {
+            if (!imageSeriesLayer) return;
 
-      const updatedChannels = channels.map((channel) => ({
-        ...channel,
-        contrastLimits: newLimits,
-      }));
+            const updatedChannels = channels.map((channel) => ({
+                ...channel,
+                contrastLimits: newLimits,
+            }));
 
-      imageSeriesLayer.setChannelProps(updatedChannels);
-    },
-    [imageSeriesLayer, channels]
-  );
-
-  useEffect(() => {
-    const fetchRegion = async () => {
-      const region = await getRegionFromZattrs(imageUrl);
-      setRegion(region);
-    };
-    fetchRegion();
-  }, [imageUrl]);
-
-  const handleLayerCreated = useCallback(() => {
-    layerCreatedTime.current = performance.now();
-    console.log(`Layer created at ${layerCreatedTime.current}`);
-  }, []);
-
-  const handleFirstSliceLoaded = useCallback(() => {
-    if (layerCreatedTime.current !== undefined) {
-      const time = performance.now() - layerCreatedTime.current;
-      console.log(`First slice loaded after ${time} ms`);
-    } else {
-      console.log('First slice loaded, but layer created time is undefined');
-    }
-  }, []);
-
-  const handleLoadAllSlicesClicked = useCallback(() => {
-    loadAllSlicesClickedTime.current = performance.now();
-    console.log(`Load all slices clicked at ${loadAllSlicesClickedTime.current}`);
-  }, []);
-
-  const handleAllSlicesLoaded = useCallback(() => {
-    if (loadAllSlicesClickedTime.current !== undefined) {
-      const time = performance.now() - loadAllSlicesClickedTime.current;
-      console.log(`All slices loaded after ${time} ms`);
-    } else {
-      console.log('All slices loaded, but load all slices clicked time is undefined');
-    }
-  }, []);
-
-  const handleLoadAllSlicesAborted = useCallback(() => {
-    if (loadAllSlicesClickedTime.current !== undefined) {
-      const time = performance.now() - loadAllSlicesClickedTime.current;
-      console.log(`Load all slices aborted after ${time} ms`);
-    } else {
-      console.log('Load all slices aborted, but load all slices clicked time is undefined');
-    }
-  }, []);
-
-  const currentIndex = selectedTomogram ? review.tomograms.findIndex((t) => t.tomogramId === selectedTomogram) : -1;
-
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setSelectedTomogram(review.tomograms[currentIndex - 1].tomogramId);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < review.tomograms.length - 1) {
-      setSelectedTomogram(review.tomograms[currentIndex + 1].tomogramId);
-    }
-  };
-
-  useEffect(() => {
-    const fetchTomogramDetail = async () => {
-      if (!selectedTomogram) return;
-
-      const mockResponse: TomogramDetail = {
-        tomogramId: selectedTomogram,
-        displayName: `Grid5_${selectedTomogram}`,
-        zarrPath: `https://review-static.czbiohub.org/zarrs/Grid5_2025-04-10/${selectedTomogram}.zarr`,
-        existingReview: {
-          quality: 'uncertain' as const,
+            imageSeriesLayer.setChannelProps(updatedChannels);
         },
-      };
+        [imageSeriesLayer, channels]
+    );
 
-      setTomogramDetail(mockResponse);
+    useEffect(() => {
+        const fetchRegion = async () => {
+            const region = await getRegionFromZattrs(imageUrl);
+            setRegion(region);
+        };
+        fetchRegion();
+    }, [imageUrl]);
+
+    const handleLayerCreated = useCallback(() => {
+        layerCreatedTime.current = performance.now();
+        console.log(`Layer created at ${layerCreatedTime.current}`);
+    }, []);
+
+    const handleFirstSliceLoaded = useCallback(() => {
+        if (layerCreatedTime.current !== undefined) {
+            const time = performance.now() - layerCreatedTime.current;
+            console.log(`First slice loaded after ${time} ms`);
+        } else {
+            console.log('First slice loaded, but layer created time is undefined');
+        }
+    }, []);
+
+    const handleLoadAllSlicesClicked = useCallback(() => {
+        loadAllSlicesClickedTime.current = performance.now();
+        console.log(`Load all slices clicked at ${loadAllSlicesClickedTime.current}`);
+    }, []);
+
+    const handleAllSlicesLoaded = useCallback(() => {
+        if (loadAllSlicesClickedTime.current !== undefined) {
+            const time = performance.now() - loadAllSlicesClickedTime.current;
+            console.log(`All slices loaded after ${time} ms`);
+        } else {
+            console.log('All slices loaded, but load all slices clicked time is undefined');
+        }
+    }, []);
+
+    const handleLoadAllSlicesAborted = useCallback(() => {
+        if (loadAllSlicesClickedTime.current !== undefined) {
+            const time = performance.now() - loadAllSlicesClickedTime.current;
+            console.log(`Load all slices aborted after ${time} ms`);
+        } else {
+            console.log('Load all slices aborted, but load all slices clicked time is undefined');
+        }
+    }, []);
+
+    const currentIndex = selectedTomogram ? review.tomograms.findIndex((t) => t.tomogramId === selectedTomogram) : -1;
+
+    const handlePrevious = () => {
+        if (currentIndex > 0) {
+            setSelectedTomogram(review.tomograms[currentIndex - 1].tomogramId);
+        }
     };
-    fetchTomogramDetail();
-  }, [selectedTomogram]);
 
-  return (
-    <div className="flex flex-col items-stretch min-h-screen gap-8">
-      <TopBar onMarkComplete={() => console.log('Mark as complete')} />
-      <div className="flex-auto flex">
-        <SideBar
-          reviewName={review.reviewName}
-          tomograms={review.tomograms}
-          selectedTomogram={selectedTomogram}
-          tomogramDetail={tomogramDetail}
-          currentIndex={currentIndex}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-          onSelectTomogram={setSelectedTomogram}
-          contrastLimits={contrastLimits}
-          onContrastLimitsChange={handleContrastLimitsChange}
-        />
-        <div className="flex-auto flex flex-col p-6 rounded">
-          {selectedTomogram && region ? (
-            <>
-              <div className="flex-1 flex items-center justify-center border-r border-l">
-                <OmeZarrImageViewer
-                  sourceUrl={imageUrl}
-                  region={region}
-                  seriesDimensionName={seriesDimensionName}
-                  allSlicesSizeEstimate="250 MB"
-                  fallbackContrastLimits={contrastLimits}
-                  classNames={{
-                    root: 'bg-dark-sds-color-primitive-gray-100',
-                  }}
-                  onLayerCreated={handleLayerCreated}
-                  onFirstSliceLoaded={handleFirstSliceLoaded}
-                  onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
-                  onAllSlicesLoaded={handleAllSlicesLoaded}
-                  onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
+    const handleNext = () => {
+        if (currentIndex < review.tomograms.length - 1) {
+            setSelectedTomogram(review.tomograms[currentIndex + 1].tomogramId);
+        }
+    };
+
+    useEffect(() => {
+        const fetchTomogramDetail = async () => {
+            if (!selectedTomogram) return;
+
+            // Build the mock URL as your API would (replace with actual reviewId if needed)
+            const reviewId = 'rev_abcdef123456'; // Replace with actual reviewId if available
+            const url = `/api/reviews/${reviewId}/tomograms/${selectedTomogram}`;
+
+            // Use the mock API function to get the detail
+            const tomogramDetail =
+                typeof MOCKED_APIS[API.TOMOGRAM_DETAIL] === 'function'
+                    ? MOCKED_APIS[API.TOMOGRAM_DETAIL](url)
+                    : null;
+
+            if (tomogramDetail) {
+                setTomogramDetail(tomogramDetail);
+            } else {
+                setTomogramDetail(null);
+            }
+        };
+        fetchTomogramDetail();
+    }, [selectedTomogram]);
+
+    console.log("tomogramDetail?.zarrPath", tomogramDetail?.zarrPath)
+
+    return (
+        <div className="flex flex-col items-stretch min-h-screen gap-8">
+            <TopBar onMarkComplete={() => console.log('Mark as complete')} />
+            <div className="flex-auto flex">
+                <SideBar
+                    reviewName={review.reviewName}
+                    tomograms={review.tomograms}
+                    selectedTomogram={selectedTomogram}
+                    tomogramDetail={tomogramDetail}
+                    currentIndex={currentIndex}
+                    onPrevious={handlePrevious}
+                    onNext={handleNext}
+                    onSelectTomogram={setSelectedTomogram}
+                    contrastLimits={contrastLimits}
+                    onContrastLimitsChange={handleContrastLimitsChange}
                 />
-              </div>
-            </>
-          ) : (
-            <div className="p-6 bg-white rounded">Select a tomogram to view</div>
-          )}
+                <div className="flex-auto flex flex-col p-6 rounded">
+                    {selectedTomogram && region ? (
+                        <>
+                            <div className="flex-1 flex items-center justify-center border-r border-l">
+                                <OmeZarrImageViewer
+                                    sourceUrl={tomogramDetail?.zarrPath || ''}
+                                    region={region}
+                                    seriesDimensionName={seriesDimensionName}
+                                    allSlicesSizeEstimate="250 MB"
+                                    fallbackContrastLimits={contrastLimits}
+                                    classNames={{
+                                        root: 'bg-dark-sds-color-primitive-gray-100',
+                                    }}
+                                    onLayerCreated={handleLayerCreated}
+                                    onFirstSliceLoaded={handleFirstSliceLoaded}
+                                    onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
+                                    onAllSlicesLoaded={handleAllSlicesLoaded}
+                                    onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="p-6 bg-white rounded">Select a tomogram to view</div>
+                    )}
+                </div>
+                <div className="basis-[250px] shrink-0 !p-[20px]">
+                    <QualityControls
+                        onAccept={() => console.log('Accept')}
+                        onReject={() => console.log('Reject')}
+                        onUncertain={() => console.log('Uncertain')}
+                    />
+                </div>
+            </div>
         </div>
-        <div className="basis-[250px] shrink-0 !p-[20px]">
-          <QualityControls
-            onAccept={() => console.log('Accept')}
-            onReject={() => console.log('Reject')}
-            onUncertain={() => console.log('Uncertain')}
-          />
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
