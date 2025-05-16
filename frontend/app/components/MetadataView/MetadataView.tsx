@@ -12,7 +12,7 @@ interface MetadataViewProps {
 }
 
 export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): React.JSX.Element => {
-  // const [filters, setFilters] = useState<FilterConfig | undefined>();
+  const [filters, setFilters] = useState<FilterConfig | undefined>();
   const [scatterplotFilters, setScatterplotFilters] = useState<FilterConfig | undefined>();
   
   // This API call is for the metadata filters and histogram
@@ -27,7 +27,7 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
     setScatterplotFilters(newFilters);
   }, []);
   
-  // console.log(filters, 'filters and filterdata', data);
+  console.log(filters, 'filters and filterdata', data);
   console.log(scatterplotFilters, 'scatterplot filters and data', scatterplotData);
   
   return (
