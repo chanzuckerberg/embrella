@@ -12,32 +12,36 @@ interface MetadataViewProps {
 }
 
 export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): React.JSX.Element => {
-  const [filters, setFilters] = useState<FilterConfig | undefined>();
+  const [filters] = useState<FilterConfig | undefined>();
   const [scatterplotFilters, setScatterplotFilters] = useState<FilterConfig | undefined>();
-  
+
   // This API call is for the metadata filters and histogram
   const { data, isSuccess, error, isLoading } = useFetchMetadataViz(sessionName, runNumber, filters);
-  
-  // This API call is only for the scatterplot
-  const { data: scatterplotData, isSuccess: scatterplotSuccess, error: scatterplotError, isLoading: scatterplotLoading } = 
-    useFetchMetadataViz(sessionName, runNumber, scatterplotFilters);
 
-    const handleApplyFilters = useCallback((newFilters: FilterConfig | null) => {
-      // Force a state update by creating a new object reference
-      if (newFilters === null) {
-        // Reset case
-        setScatterplotFilters(undefined);
-      } else {
-        // Apply new filters - create a new object to ensure React detects the change
-        setScatterplotFilters({...newFilters});
-      }
-      
-      console.log("Applying filters:", newFilters);
-    }, []);
-  
+  // This API call is only for the scatterplot
+  const {
+    data: scatterplotData,
+    isSuccess: scatterplotSuccess,
+    error: scatterplotError,
+    isLoading: scatterplotLoading,
+  } = useFetchMetadataViz(sessionName, runNumber, scatterplotFilters);
+
+  const handleApplyFilters = useCallback((newFilters: FilterConfig | null) => {
+    // Force a state update by creating a new object reference
+    if (newFilters === null) {
+      // Reset case
+      setScatterplotFilters(undefined);
+    } else {
+      // Apply new filters - create a new object to ensure React detects the change
+      setScatterplotFilters({ ...newFilters });
+    }
+
+    console.log('Applying filters:', newFilters);
+  }, []);
+
   console.log(filters, 'filters and filterdata', data);
   console.log(scatterplotFilters, 'scatterplot filters and data', scatterplotData);
-  
+
   return (
     <div>
       <MetadataSummary sessionName={sessionName} runNumber={runNumber} />

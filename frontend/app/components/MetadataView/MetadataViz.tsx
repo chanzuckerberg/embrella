@@ -47,8 +47,8 @@ export const MetadataViz: React.FC<MetadataVizProps> = ({
         />
       </div>
       <div className={styles.middleColumn}>
-        <MetricDashboard 
-          data={vizResponse} 
+        <MetricDashboard
+          data={vizResponse}
           scatterplotData={scatterplotData}
           scatterplotSuccess={scatterplotSuccess}
           scatterplotError={scatterplotError}
