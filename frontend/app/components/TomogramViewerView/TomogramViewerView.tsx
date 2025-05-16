@@ -108,10 +108,16 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         const fetchTomogramDetail = async () => {
             if (!selectedTomogram) return;
 
-            // Build the mock URL as your API would (replace with actual reviewId if needed)
-            const url = `/api/reviews/${review.reviewId}/tomograms/${selectedTomogram}`;
+            // List of allowed tomogram IDs for the mock
+            const allowedTomograms = ['tomo_001', 'tomo_002', 'tomo_003'];
 
-            // Use the mock API function to get the detail
+            // If selectedTomogram is not in the allowed list, pick a random one
+            const tomogramIdToUse = allowedTomograms.includes(selectedTomogram)
+                ? selectedTomogram
+                : allowedTomograms[Math.floor(Math.random() * allowedTomograms.length)];
+
+            const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
+
             const tomogramDetail =
                 typeof MOCKED_APIS[API.TOMOGRAM_DETAIL] === 'function'
                     ? MOCKED_APIS[API.TOMOGRAM_DETAIL](url)
