@@ -328,7 +328,6 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
     const spacing = 35;
     const totalHeight = processedData.metricsConfig.length * (gridHeight + spacing);
     chartRef.current.style.height = `${totalHeight}px`;
-
     // Force chart recreation when isFilterApplied changes
     if (chartInstance.current) {
       chartInstance.current.dispose();
