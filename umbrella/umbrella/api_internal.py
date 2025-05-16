@@ -619,7 +619,14 @@ def get_review_tomograms(request, review_id):
     try:
         # First check if the review exists
         try:
-            review = Review.objects.get(review_id=review_id)
+            # Try to convert to UUID if it's a valid UUID string
+            try:
+                review_uuid = uuid.UUID(review_id)
+                review = Review.objects.get(review_id=review_uuid)
+            except ValueError:
+                # If not a valid UUID, try to find by string ID
+                review = Review.objects.get(review_id=review_id)
+                
             print(f"Found review: {review.review_id}")
         except Review.DoesNotExist:
             print(f"Review not found with ID: {review_id}")
@@ -632,7 +639,7 @@ def get_review_tomograms(request, review_id):
         
         # Get tomograms for the review
         tomograms = ReviewTomogram.objects.filter(
-            review__review_id=review_id
+            review=review
         ).values('tomogram_id', 'quality')
         
         print(f"Found {tomograms.count()} tomograms")
@@ -701,10 +708,23 @@ class ReviewTomogramView(View):
             # Format the response
             response_data = {
                 "tomogramId": tomogram.tomogram_id,
-                "displayName": f"Tomo_{tomogram.tomogram_id}",
-                "zarrPath":  f"https://czii-onsite.czbiohub.org/krios1.processing/{review.session.name}/{tomogram.position_id}_Vol.zarr",
+                "displayName": f"{tomogram.position_id}",
+                "zarrPath": None,
                 "existingReview": None
             }
+            
+            # Construct zarr path based on reconstruction type
+            if review.reconstruction_type.lower() == "sart":
+                vol_suffix = "vol003"
+                job_name = "aretomo3"
+            elif review.reconstruction_type.lower() == "dctf":
+                vol_suffix = "vol001"
+                job_name = "aretomo3"
+            else:
+                vol_suffix = ""  # denoised
+                job_name = "denoise"
+                
+            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.session.name}/{review.run_id}/{vol_suffix}{tomogram.position_id}_Vol.zarr"
             
             # Add review details if they exist
             if tomogram.quality:
@@ -794,15 +814,15 @@ class ReviewTomogramView(View):
             # Update tomogram review data
             tomogram.quality = data['quality']
             
-            # Handle rejection reasons - store as list
+            # Handle rejection reasons - store as JSON string
             if data['quality'] == 'rejected':
-                tomogram.rejection_reasons = data['rejectionReasons']
+                tomogram.rejection_reasons = json.dumps(data['rejectionReasons'])
             else:
                 tomogram.rejection_reasons = None
             
-            # Handle object labels - store as list
+            # Handle object labels - store as JSON string
             if 'objectLabels' in data:
-                tomogram.object_labels = data['objectLabels']
+                tomogram.object_labels = json.dumps(data['objectLabels'])
             
             # Save the changes
             tomogram.save()
