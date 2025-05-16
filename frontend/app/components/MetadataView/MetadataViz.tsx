@@ -12,7 +12,13 @@ interface MetadataVizProps {
   onApplyFilters?: (filters: FilterConfig, selectedOption: 'AND' | 'OR') => void;
 }
 
-export const MetadataViz: React.FC<MetadataVizProps> = ({ vizResponse, isSuccess, error, isLoading,onApplyFilters }) => {
+export const MetadataViz: React.FC<MetadataVizProps> = ({
+  vizResponse,
+  isSuccess,
+  error,
+  isLoading,
+  onApplyFilters,
+}) => {
   if (isLoading) {
     return <div>Loading...</div>;
   }

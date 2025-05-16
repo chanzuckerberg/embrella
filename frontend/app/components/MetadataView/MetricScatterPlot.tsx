@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import * as echarts from 'echarts';
 import { MetadataVizResponse, Metrics } from '../../common/types/metadataViz/metadataVizData';
 import styles from './MetadataViz.module.css';
+import { SCATTERPLOT_METRIC_COLORS } from './constants/MetricConfig';
+
 
 interface MetricScatterPlotProps {
   data: MetadataVizResponse;
@@ -30,17 +32,6 @@ const units = {
   ctf_score: '',
   alpha0: '(°)',
   beta0: '(°)',
-};
-const METRIC_COLORS = {
-  thickness_pix: '#1f77b4',  
-  tilt_axis: '#ff7f0e',  
-  global_shift_pix: '#9370DB',       
-  bad_patch_low: '#e377c2',
-  bad_patch_all: '#58508d',  
-  ctf_resolution_a: '#17becf', 
-  ctf_score: '#da9100',      
-  alpha0: '#8c564b',         
-  beta0: '#7f7f7f',         
 };
 
 // Helper to format metric key to label
@@ -219,7 +210,7 @@ const createSeriesConfig = useCallback(
           symbolSize: 4,
           itemStyle: {
             opacity: 0.6,
-            color: METRIC_COLORS[metric.key as keyof typeof METRIC_COLORS],
+            color: SCATTERPLOT_METRIC_COLORS[metric.key as keyof typeof SCATTERPLOT_METRIC_COLORS],
           },
           data: data.accepted_results.map((item, pos) => {
             if (!item?.metrics) return [normalizedAcceptedPositions[pos], 0];

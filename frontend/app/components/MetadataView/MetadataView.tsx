@@ -13,17 +13,21 @@ interface MetadataViewProps {
 
 export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): React.JSX.Element => {
   const [filters, setFilters] = useState<FilterConfig | undefined>();
-  const { data, isSuccess, error, isLoading } = useFetchMetadataViz(sessionName, runNumber,filters);
+  const { data, isSuccess, error, isLoading } = useFetchMetadataViz(sessionName, runNumber, filters);
 
   const handleApplyFilters = useCallback((newFilters: FilterConfig) => {
     setFilters(newFilters);
-
   }, []);
-console.log(filters,'filters and filterdata', data);
+  console.log(filters, 'filters and filterdata', data);
   return (
     <div>
       <MetadataSummary sessionName={sessionName} runNumber={runNumber} />
-      <MetadataViz vizResponse={data} isSuccess={isSuccess} error={error} isLoading={isLoading}  onApplyFilters={handleApplyFilters}
+      <MetadataViz
+        vizResponse={data}
+        isSuccess={isSuccess}
+        error={error}
+        isLoading={isLoading}
+        onApplyFilters={handleApplyFilters}
       />
     </div>
   );

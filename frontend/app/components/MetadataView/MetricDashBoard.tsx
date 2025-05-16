@@ -4,19 +4,7 @@ import styles from './MetadataViz.module.css';
 import { Switch, FormControlLabel, Box } from '@mui/material';
 import { MetricScatterPlot } from './MetricScatterPlot';
 import { MetricHistogram } from './MetricHistogram';
-
-// Object defining various metrics with their labels and units
-const METRICS_CONFIG = {
-  thickness_pix: { label: 'Thickness', unit: '(Å)' },
-  tilt_axis: { label: 'Tilt axis', unit: '(°)' },
-  global_shift_pix: { label: 'Global shift', unit: '(Å)' },
-  bad_patch_low: { label: 'Bad patch low', unit: '(%)' },
-  bad_patch_all: { label: 'Bad patch all', unit: '(%)' },
-  ctf_resolution_a: { label: 'CTF Resolution', unit: '(Å)' },
-  ctf_score: { label: 'CTF CC Score', unit: '' },
-  alpha0: { label: 'Alpha Offset', unit: '(°)' },
-  beta0: { label: 'Beta Offset', unit: '(°)' },
-};
+import { METRICS_CONFIG } from './constants/MetricConfig';
 
 interface MetricDashboardProps {
   data?: MetadataVizResponse;
@@ -24,7 +12,7 @@ interface MetricDashboardProps {
 }
 
 export const MetricDashboard: React.FC<MetricDashboardProps> = ({ data }) => {
-  console.log(data,'Dashboarddata');
+  console.log(data, 'Dashboarddata');
   const [isScatterPlot, setIsScatterPlot] = useState(true);
 
   // Process data once for both visualizations
@@ -60,7 +48,9 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({ data }) => {
     <div className={styles.dashboardContainer}>
       <Box display="flex" justifyContent="flex-end">
         <FormControlLabel
-          control={<Switch checked={isScatterPlot} onChange={(e) => setIsScatterPlot(e.target.checked)} color="primary" />}
+          control={
+            <Switch checked={isScatterPlot} onChange={(e) => setIsScatterPlot(e.target.checked)} color="primary" />
+          }
           label={isScatterPlot ? 'Scatter Plot View' : 'Histogram View'}
         />
       </Box>

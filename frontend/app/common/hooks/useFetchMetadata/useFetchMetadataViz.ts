@@ -7,7 +7,6 @@ interface FetchError {
   message: string;
 }
 
-
 interface UseFetchMetadataVizResult {
   data?: MetadataVizResponse;
   isSuccess: boolean;
