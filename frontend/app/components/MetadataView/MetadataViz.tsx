@@ -41,7 +41,10 @@ export const MetadataViz: React.FC<MetadataVizProps> = ({
   return (
     <div className={styles.container}>
       <div className={styles.leftColumn}>
-        <MetadataFilters metricRanges={vizResponse?.metric_ranges} onApplyFilters={onApplyFilters} />
+        <MetadataFilters 
+          metricRanges={vizResponse?.metric_ranges} 
+          onApplyFilters={onApplyFilters} 
+        />
       </div>
       <div className={styles.middleColumn}>
         <MetricDashboard
