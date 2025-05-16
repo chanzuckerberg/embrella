@@ -39,7 +39,6 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
   // Initialize state with explicit number conversion
   const [filters, setFilters] = useState<FilterState>(() => {
     const initialState: FilterState = {} as FilterState;
-
     // Use METRICS_CONFIG keys which match FilterConfig
     Object.keys(METRICS_CONFIG).forEach((key) => {
       const metricKey = key as keyof typeof METRICS_CONFIG;
@@ -79,7 +78,6 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
   useEffect(() => {
     setFilters((prev) => {
       const newState = { ...prev };
-
       // Use METRICS_CONFIG keys which match FilterConfig
       Object.keys(METRICS_CONFIG).forEach((key) => {
         const metricKey = key as keyof typeof METRICS_CONFIG;
@@ -116,7 +114,6 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
 
   const handleReset = () => {
     const resetState: FilterState = {} as FilterState;
-
     // Use METRICS_CONFIG keys which match FilterConfig
     Object.keys(METRICS_CONFIG).forEach((key) => {
       const metricKey = key as keyof typeof METRICS_CONFIG;
@@ -129,7 +126,6 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
         };
       }
     });
-
     setFilters(resetState);
     setSelectedOption('AND');
     const emptyFilterConfig: FilterConfig = {
@@ -181,7 +177,6 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
       onApplyFilters(filterConfig, option);
     }
   };
-
   const renderFilter = (key: keyof FilterState) => {
     // Use the METRICS_CONFIG to get label and unit
     const config = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG];
