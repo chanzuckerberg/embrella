@@ -109,8 +109,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
             if (!selectedTomogram) return;
 
             // Build the mock URL as your API would (replace with actual reviewId if needed)
-            const reviewId = 'rev_abcdef123456'; // Replace with actual reviewId if available
-            const url = `/api/reviews/${reviewId}/tomograms/${selectedTomogram}`;
+            const url = `/api/reviews/${review.reviewId}/tomograms/${selectedTomogram}`;
 
             // Use the mock API function to get the detail
             const tomogramDetail =
@@ -127,13 +126,12 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         fetchTomogramDetail();
     }, [selectedTomogram]);
 
-    console.log("tomogramDetail?.zarrPath", tomogramDetail?.zarrPath)
-
     return (
         <div className="flex flex-col items-center">
-            <div className="flex flex-col justify-between h-[60vh] md:h-[90vh] lg:h-[90vh] items-center gap-8 w-[75vw]">
+            <div className="flex flex-col justify-between h-[60vh] md:h-[90vh] lg:h-[90vh] items-center gap-8 w-[80vw]">
+                <div className="h-6"></div>
                 < TopBar onMarkComplete={() => console.log('Mark as complete')} />
-                < div className="flex-auto flex" >
+                < div className="flex-auto flex border-t border-gray-400" >
                     <SideBar
                         reviewName={review.reviewName}
                         tomograms={review.tomograms}
