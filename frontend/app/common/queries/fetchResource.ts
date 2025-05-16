@@ -11,7 +11,7 @@ export async function fetchResource(requestURL: string): Promise<Response> {
     return Promise.resolve({
       status: 200,
       json: async () => {
-        return mockResponse;
+        return typeof mockResponse === 'function' ? mockResponse(requestURL) : mockResponse;
       },
     }) as Promise<Response>;
   }

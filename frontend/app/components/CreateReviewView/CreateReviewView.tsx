@@ -85,7 +85,7 @@ export const CreateReviewView = () => {
   const [runOptions, setRunOptions] = useState<Array<AutocompleteOptionBasic>>([]);
   const [selectedRun, setSelectedRun] = useState<AutocompleteOptionBasic | undefined>(undefined);
 
-  const reviewSettingsContainerRef = useRef<HTMLDivElement | null>(null);
+  const annotationObjectSettingsContainerRef = useRef<HTMLDivElement | null>(null);
 
   const annotationObjectSearchRef = useRef<HTMLDivElement | null>(null);
   const [annotationObjectValue, setAnnotationObjectValue] = useState('');
@@ -180,17 +180,17 @@ export const CreateReviewView = () => {
               Reviewer will provide inputs the overall quality of tomograms in the selected session. Additionally, they
               can provide optional labels depending on quality rating.
             </div>
-            <div
-              className="flex flex-col gap-[12px] !mt-[6px] !p-[16px] bg-[#f3f3f3] divide-y divide-[#c6c6c6]"
-              ref={reviewSettingsContainerRef}
-            >
+            <div className="flex flex-col gap-[12px] !mt-[6px] !p-[16px] bg-[#f3f3f3] divide-y divide-[#c6c6c6]">
               <div className="grid grid-rows-2 grid-cols-[115px_1fr] gap-[6px] !pb-[12px]">
                 <div className="font-semibold text-[14px]">Review input:</div>
                 <div className="text-[14px]">Assign Whole-tomogram quality</div>
                 <div className="font-semibold text-[12px]">Accepted values:</div>
                 <div className="text-[#6c6c6c] text-[12px]">Accept, Reject, Uncertain</div>
               </div>
-              <div className="grid grid-rows-2 grid-cols-[115px_1fr] gap-[6px] !pb-[12px]">
+              <div
+                className="grid grid-rows-2 grid-cols-[115px_1fr] gap-[6px] !pb-[12px]"
+                ref={annotationObjectSettingsContainerRef}
+              >
                 <div className="font-semibold text-[14px]">Review input:</div>
                 <div className="text-[14px]">Label Objects of Interest for Whole-tomogram (Optional)</div>
                 <div className="font-semibold text-[12px]">Dependency:</div>
@@ -259,12 +259,11 @@ export const CreateReviewView = () => {
                       startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
                       endIcon={<Icon sdsIcon="ChevronDown" sdsSize="xs" />}
                       onClick={async () => {
+                        setIsPreviousSessionDropdownOpen(true);
                         if (previousSessionsRequestMade.current === false) {
                           previousSessionsRequestMade.current = true;
-                          setIsPreviousSessionDropdownOpen(true);
                           const previousSessions =
-                            (await (await fetchResource(getRequestURL(DJANGO_URL, API.REVIEWS))).json()).data?.result ??
-                            [];
+                            (await (await fetchResource(getRequestURL(DJANGO_URL, API.REVIEWS))).json())?.result ?? [];
                           setPreviousSessions(previousSessions);
                         }
                       }}
@@ -276,7 +275,8 @@ export const CreateReviewView = () => {
                       search
                       loading={previousSessions === undefined}
                       options={
-                        previousSessions?.map((review) => ({ name: 'asdf', component: <div></div>, id: 123 })) ?? []
+                        previousSessions?.map((review) => ({ name: review.name, details: })) ??
+                        []
                       }
                       open={isPreviousSessionsDropdownOpen}
                       // @ts-expect-error -- SDS type is not specific enough.
@@ -284,10 +284,10 @@ export const CreateReviewView = () => {
                         setSelectedAnnotationObjects((prev) => [...new Set([...prev, ...selection.annotationObjects])]);
                       }}
                       onClickAway={() => {
-                        setIsAnnotationObjectsDropdownOpen(false);
+                        setIsPreviousSessionDropdownOpen(false);
                       }}
                       anchorEl={previousSessionsButtonRef.current}
-                      width={reviewSettingsContainerRef.current?.clientWidth}
+                      width={annotationObjectSettingsContainerRef.current?.clientWidth}
                     />
                   </div>
                   <div className="!mt-[8px] flex flex-wrap gap-[6px]">
