@@ -1,11 +1,14 @@
 'use client';
 
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
-import { TemSession } from '../ReviewsView/types';
-import { API } from '@app/common/constants/api';
+import { Review, TemSession } from '../ReviewsView/types';
+import { API, DJANGO_URL } from '@app/common/constants/api';
 import { useMemo, useRef, useState } from 'react';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
-import { AutocompleteOptionBasic, Button, DropdownMenu, InputSearch, TagFilter } from '@czi-sds/components';
+import { AutocompleteOptionBasic, Button, DropdownMenu, Icon, InputSearch, TagFilter } from '@czi-sds/components';
+import { ApiListResponse } from '@app/common/types/tableState';
+import { fetchResource } from '@app/common/queries/fetchResource';
+import { getRequestURL } from '@app/common/queries/utils';
 
 const AVAILABLE_ANNOTATION_OBJECTS = [
   'carbon edge',
@@ -67,6 +70,7 @@ interface TemSessionOption extends AutocompleteOptionBasic {
 
 export const CreateReviewView = () => {
   const temSessions = useFetchData<Array<TemSession>>(API.TEM_SESSIONS).data;
+
   const temSessionOptions = useMemo(
     () => temSessions?.map((session) => ({ name: session.sessionName, session })) ?? [],
     [temSessions]
@@ -81,10 +85,17 @@ export const CreateReviewView = () => {
   const [runOptions, setRunOptions] = useState<Array<AutocompleteOptionBasic>>([]);
   const [selectedRun, setSelectedRun] = useState<AutocompleteOptionBasic | undefined>(undefined);
 
+  const reviewSettingsContainerRef = useRef<HTMLDivElement | null>(null);
+
   const annotationObjectSearchRef = useRef<HTMLDivElement | null>(null);
   const [annotationObjectValue, setAnnotationObjectValue] = useState('');
   const [selectedAnnotationObjects, setSelectedAnnotationObjects] = useState<Array<string>>([]);
   const [isAnnotationObjectsDropdownOpen, setIsAnnotationObjectsDropdownOpen] = useState(false);
+
+  const previousSessionsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousSessionsRequestMade = useRef(false);
+  const [previousSessions, setPreviousSessions] = useState<Array<Review> | undefined>(undefined);
+  const [isPreviousSessionsDropdownOpen, setIsPreviousSessionDropdownOpen] = useState(false);
 
   return (
     <div className="flex flex-col !p-[25px] relative gap-[40px]">
@@ -169,7 +180,10 @@ export const CreateReviewView = () => {
               Reviewer will provide inputs the overall quality of tomograms in the selected session. Additionally, they
               can provide optional labels depending on quality rating.
             </div>
-            <div className="flex flex-col gap-[12px] !mt-[6px] !p-[16px] bg-[#f3f3f3] divide-y divide-[#c6c6c6]">
+            <div
+              className="flex flex-col gap-[12px] !mt-[6px] !p-[16px] bg-[#f3f3f3] divide-y divide-[#c6c6c6]"
+              ref={reviewSettingsContainerRef}
+            >
               <div className="grid grid-rows-2 grid-cols-[115px_1fr] gap-[6px] !pb-[12px]">
                 <div className="font-semibold text-[14px]">Review input:</div>
                 <div className="text-[14px]">Assign Whole-tomogram quality</div>
@@ -184,6 +198,9 @@ export const CreateReviewView = () => {
                 <div className="font-semibold text-[12px]">Accepted values:</div>
                 <div className="flex flex-col">
                   <div className="flex gap-[12px]">
+                    {
+                      // #region Annotation Objects
+                    }
                     <InputSearch
                       id="annotationObjectsSearch"
                       label="Add Objects of Interest"
@@ -231,11 +248,47 @@ export const CreateReviewView = () => {
                       }}
                       anchorEl={annotationObjectSearchRef.current}
                       width={annotationObjectSearchRef.current?.clientWidth}
-                      dir="bottom"
                     />
-                    <Button sdsStyle="square" className="grow">
+                    {
+                      // #region Previous Sessions
+                    }
+                    <Button
+                      sdsStyle="square"
+                      className="grow"
+                      sdsType="secondary"
+                      startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
+                      endIcon={<Icon sdsIcon="ChevronDown" sdsSize="xs" />}
+                      onClick={async () => {
+                        if (previousSessionsRequestMade.current === false) {
+                          previousSessionsRequestMade.current = true;
+                          setIsPreviousSessionDropdownOpen(true);
+                          const previousSessions =
+                            (await (await fetchResource(getRequestURL(DJANGO_URL, API.REVIEWS))).json()).data?.result ??
+                            [];
+                          setPreviousSessions(previousSessions);
+                        }
+                      }}
+                      ref={previousSessionsButtonRef}
+                    >
                       Add from Previous Session
                     </Button>
+                    <DropdownMenu
+                      search
+                      loading={previousSessions === undefined}
+                      options={
+                        previousSessions?.map((review) => ({ name: 'asdf', component: <div></div>, id: 123 })) ?? []
+                      }
+                      open={isPreviousSessionsDropdownOpen}
+                      // @ts-expect-error -- SDS type is not specific enough.
+                      onChange={(_event: SyntheticEvent, selection: { annotationObjects: string[] }) => {
+                        setSelectedAnnotationObjects((prev) => [...new Set([...prev, ...selection.annotationObjects])]);
+                      }}
+                      onClickAway={() => {
+                        setIsAnnotationObjectsDropdownOpen(false);
+                      }}
+                      anchorEl={previousSessionsButtonRef.current}
+                      width={reviewSettingsContainerRef.current?.clientWidth}
+                    />
                   </div>
                   <div className="!mt-[8px] flex flex-wrap gap-[6px]">
                     {selectedAnnotationObjects.map((object: string) => (

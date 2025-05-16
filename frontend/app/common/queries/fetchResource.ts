@@ -1,4 +1,4 @@
-import { DJANGO_URL } from '../constants/api';
+import { API, DJANGO_URL, MOCKED_APIS } from '../constants/api';
 
 /**
  * Fetch request.
@@ -6,6 +6,16 @@ import { DJANGO_URL } from '../constants/api';
  * @returns promise (response).
  */
 export async function fetchResource(requestURL: string): Promise<Response> {
+  const mockResponse = MOCKED_APIS[new URL(requestURL).pathname as API];
+  if (mockResponse !== undefined) {
+    return Promise.resolve({
+      status: 200,
+      json: async () => {
+        return mockResponse;
+      },
+    }) as Promise<Response>;
+  }
+
   const response = await fetch(requestURL, {
     credentials: 'include', // Include cookies in the request
   });
