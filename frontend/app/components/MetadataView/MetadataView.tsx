@@ -12,6 +12,7 @@ interface MetadataViewProps {
 }
 
 export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): React.JSX.Element => {
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [filters] = useState<FilterConfig | undefined>();
   const [scatterplotFilters, setScatterplotFilters] = useState<FilterConfig | undefined>();
 
@@ -31,9 +32,13 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
     if (newFilters === null) {
       // Reset case
       setScatterplotFilters(undefined);
+      setIsFilterApplied(false);
     } else {
       // Apply new filters - create a new object to ensure React detects the change
       setScatterplotFilters({ ...newFilters });
+      // Check if there are any active filters
+      const hasActiveFilters = newFilters.filters && Object.keys(newFilters.filters).length > 0;
+      setIsFilterApplied(hasActiveFilters);
     }
 
     console.log('Applying filters:', newFilters);
@@ -44,7 +49,12 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
 
   return (
     <div>
-      <MetadataSummary sessionName={sessionName} runNumber={runNumber} />
+      <MetadataSummary
+        sessionName={sessionName}
+        runNumber={runNumber}
+        isFilterApplied={isFilterApplied}
+        filteredData={scatterplotData}
+      />
       <MetadataViz
         vizResponse={data}
         isSuccess={isSuccess}
