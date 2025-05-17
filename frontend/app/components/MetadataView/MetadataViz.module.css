@@ -52,6 +52,9 @@
   transition: right 0.3s ease-in-out;
   z-index: 1000;
 }
+.open {
+  right: 0;
+}
 
 .sidebarContent {
   padding: 20px;
