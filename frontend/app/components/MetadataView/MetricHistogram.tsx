@@ -26,7 +26,6 @@ const calculateBins = (n: number): number => {
 };
 
 export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processedData }) => {
-  console.log(processedData, 'processedData');
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts>();
 
