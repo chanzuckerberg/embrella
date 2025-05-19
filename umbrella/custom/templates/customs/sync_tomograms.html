@@ -218,11 +218,24 @@
     <script>
         // Function to update stats
         function updateStats(sessionId, runId, reconType) {
+            // Only fetch stats if all parameters are selected
+            if (!sessionId || !runId || !reconType) {
+                document.getElementById('total-tomograms').textContent = '0';
+                document.getElementById('generated-count').textContent = '0';
+                return;
+            }
+
+            // Show loading state
+            document.getElementById('total-tomograms').textContent = '...';
+            document.getElementById('generated-count').textContent = '...';
+
             fetch(`/processes/get_tomogram_stats/?session=${sessionId}&run=${runId}&type=${reconType}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
                         console.error('Error fetching stats:', data.error);
+                        document.getElementById('total-tomograms').textContent = '0';
+                        document.getElementById('generated-count').textContent = '0';
                         return;
                     }
                     document.getElementById('total-tomograms').textContent = data.db_count;
@@ -230,6 +243,8 @@
                 })
                 .catch(error => {
                     console.error('Error updating stats:', error);
+                    document.getElementById('total-tomograms').textContent = '0';
+                    document.getElementById('generated-count').textContent = '0';
                 });
         }
 
@@ -243,8 +258,9 @@
                 // Enable run selection
                 runSelect.disabled = false;
                 
-                // Update stats for the session (without run/recon type)
-                updateStats(sessionId, '', '');
+                // Reset stats when only session is selected
+                document.getElementById('total-tomograms').textContent = '0';
+                document.getElementById('generated-count').textContent = '0';
                 
                 // Fetch runs for selected session
                 fetch(`/processes/get_runs/?session=${sessionId}`)
@@ -274,11 +290,15 @@
             
             if (runId) {
                 reconSelect.disabled = false;
-                // Update stats when run is selected
-                updateStats(sessionId, runId, '');
+                // Reset stats when only run is selected
+                document.getElementById('total-tomograms').textContent = '0';
+                document.getElementById('generated-count').textContent = '0';
             } else {
                 reconSelect.disabled = true;
                 reconSelect.value = '';
+                // Reset stats when no run is selected
+                document.getElementById('total-tomograms').textContent = '0';
+                document.getElementById('generated-count').textContent = '0';
             }
         });
 
@@ -288,10 +308,8 @@
             const runId = document.getElementById('run').value;
             const reconType = this.value;
             
-            if (reconType) {
-                // Update stats when reconstruction type is selected
-                updateStats(sessionId, runId, reconType);
-            }
+            // Update stats only when all parameters are selected
+            updateStats(sessionId, runId, reconType);
         });
 
         // Handle form submission
