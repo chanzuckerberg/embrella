@@ -27,7 +27,7 @@ export enum API {
   REVIEW = '/api/reviews/:reviewId',
   REVIEW_EXPORT = '/api/reviews/:reviewId/export',
   REVIEW_TOMOGRAMS = '/api/reviews/:reviewId/tomograms',
-  REVIEW_TOMOGRAM = '/api/reviews/:reviewId/tomograms/:tomogramId',
+  TOMOGRAM_DETAIL = '/api/reviews/:reviewId/tomograms/:tomogramId',
 }
 
 export enum POST_API {
@@ -438,8 +438,22 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     },
     tomograms: [
       { tomogramId: 'tomo_001', status: 'accepted' },
+      { tomogramId: 'tomo_002', status: 'rejected' },
       { tomogramId: 'tomo_003', status: 'uncertain' },
       { tomogramId: 'tomo_004', status: 'pending' },
+      { tomogramId: 'tomo_005', status: 'pending' },
+      { tomogramId: 'tomo_006', status: 'accepted' },
+      { tomogramId: 'tomo_007', status: 'uncertain' },
+      { tomogramId: 'tomo_008', status: 'rejected' },
+      { tomogramId: 'tomo_009', status: 'pending' },
+      { tomogramId: 'tomo_010', status: 'accepted' },
+      { tomogramId: 'tomo_011', status: 'pending' },
+      { tomogramId: 'tomo_012', status: 'accepted' },
+      { tomogramId: 'tomo_013', status: 'uncertain' },
+      { tomogramId: 'tomo_014', status: 'rejected' },
+      { tomogramId: 'tomo_015', status: 'pending' },
+      { tomogramId: 'tomo_016', status: 'accepted' },
+
       // Additional tomograms would be listed here...
     ],
   },
@@ -457,14 +471,71 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     { tomogramId: 'tomo_005', status: 'pending' },
     // Additional tomograms would be listed here...
   ],
-  [API.REVIEW_TOMOGRAM]: {
-    tomogramId: 'tomo_002',
-    displayName: 'Grid6_Tomo002',
-    zarrPath: 'https://review-static.czbiohub.org/zarrs/Grid6_2025-04-22/Tomo_002.zarr',
-    existingReview: {
-      quality: 'rejected',
-      rejectionReasons: ['ice contamination', 'low contrast'],
-    },
+  [API.TOMOGRAM_DETAIL]: (url: string) => {
+    const tomogramId = url.split('/').pop();
+    const details = {
+      tomo_001: {
+        tomogramId: 'tomo_001',
+        displayName: 'Grid6_Tomo001',
+        zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_6_Vol.zarr',
+        existingReview: {
+          quality: 'accepted',
+          rejectionReasons: [''],
+          objectLabels: ['mitochondria', 'nucleus', 'ribosome', 'vesicle'],
+        },
+      },
+      tomo_002: {
+        tomogramId: 'tomo_002',
+        displayName: 'Grid6_Tomo002',
+        zarrPath: 'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/',
+        existingReview: {
+          quality: 'rejected',
+          rejectionReasons: ['no features of interest', 'blurry'],
+          objectLabels: ['tight junction', 'desmosome', 'gap junction', 'synapse', 'axon', 'dendrite', 'myelin sheath'],
+        },
+      },
+      tomo_003: {
+        tomogramId: 'tomo_003',
+        displayName: 'Grid6_Tomo003',
+        zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
+        existingReview: {
+          quality: 'uncertain',
+          objectLabels: [
+            'lysosomal membrane',
+            'ribosomal subunit',
+            'proteasome',
+            'spliceosome',
+            'cytosolic protein complex',
+            'signalosome',
+            'transcription factor complex',
+            'kinetochore',
+            'telomere',
+            'centromere',
+          ],
+        },
+      },
+      tomo_004: {
+        tomogramId: 'tomo_004',
+        displayName: 'Grid6_Tomo004',
+        zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
+        existingReview: {
+          quality: 'pending',
+          objectLabels: [
+            'lysosomal membrane',
+            'ribosomal subunit',
+            'proteasome',
+            'spliceosome',
+            'cytosolic protein complex',
+            'signalosome',
+            'transcription factor complex',
+            'kinetochore',
+            'telomere',
+            'centromere',
+          ],
+        },
+      },
+    };
+    return details[tomogramId as keyof typeof details] || null;
   },
 };
 
@@ -492,7 +563,13 @@ export const MOCKED_POST_APIS: Partial<Record<POST_API, any>> = {
     finishedAt: '2025-04-22T17:30:15Z',
     savePath: '/mnt/data/reviews/rev_abcdef123456/review.json',
   },
-  [POST_API.UPDATE_TOMOGRAM_REVIEW]: {
-    ok: true,
+  [POST_API.UPDATE_TOMOGRAM_REVIEW]: (options: { userIsOwner?: boolean } = {}) => {
+    if (options.userIsOwner === false) {
+      return {
+        ok: false,
+        error: 'You are not the owner of this review and cannot submit annotations.',
+      };
+    }
+    return { ok: true };
   },
 };

@@ -17,7 +17,7 @@ import {
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
 
-const AVAILABLE_ANNOTATION_OBJECTS = [
+export const AVAILABLE_ANNOTATION_OBJECTS = [
   'carbon edge',
   'lysosome',
   'membrane protein complex',
