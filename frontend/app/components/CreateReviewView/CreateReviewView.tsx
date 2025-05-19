@@ -2,7 +2,7 @@
 
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
 import { ReviewData, TemSession } from '../ReviewsView/types';
-import { API, DJANGO_URL } from '@app/common/constants/api';
+import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { useMemo, useRef, useState } from 'react';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
 import {
@@ -14,8 +14,9 @@ import {
   InputText,
   TagFilter,
 } from '@czi-sds/components';
-import { fetchResource } from '@app/common/queries/fetchResource';
+import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
+import { useRouter } from 'next/navigation';
 
 const AVAILABLE_ANNOTATION_OBJECTS = [
   'carbon edge',
@@ -76,6 +77,8 @@ interface TemSessionOption extends AutocompleteOptionBasic {
 }
 
 export const CreateReviewView = () => {
+  const router = useRouter();
+
   const temSessions = useFetchData<Array<TemSession>>(API.TEM_SESSIONS).data;
 
   const temSessionOptions = useMemo(
@@ -335,6 +338,9 @@ export const CreateReviewView = () => {
                 <div className="text-[#6c6c6c] text-[12px]">Bad tomogram quality, No features of interest</div>
               </div>
             </div>
+            {
+              // #region Name
+            }
             <div className="!mt-[24px] font-semibold text-[18px]">Review Name</div>
             <div className="text-[13px] text-[#6c6c6c] !mt-[4px]">
               This name will be used to identify this review in a table or menu. You can update or modify the
@@ -351,7 +357,23 @@ export const CreateReviewView = () => {
               label="reviewName"
               hideLabel
             />
-            <Button sdsStyle="square" className="self-start">
+            <Button
+              onClick={async () => {
+                const submitResponse = await postResource(getRequestURL(DJANGO_URL, POST_API.CREATE_REVIEW), {
+                  reviewName,
+                  reviewType: 'tomogram_quality',
+                  sessionId: selectedTemSession!.session.id,
+                  runId: selectedRun!.name,
+                  reconstructionType: selectedReconstructionType!.name,
+                  annotationObjects: selectedAnnotationObjects,
+                });
+                if (submitResponse.status === 200) {
+                  router.push(`/reviews/${(await submitResponse.json()).reviewId}`);
+                }
+              }}
+              sdsStyle="square"
+              className="self-start"
+            >
               Create Review
             </Button>
           </>
