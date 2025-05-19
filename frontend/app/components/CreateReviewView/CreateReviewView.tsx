@@ -109,6 +109,8 @@ export const CreateReviewView = () => {
 
   const [reviewName, setReviewName] = useState('');
 
+  const [isCreatingReview, setIsCreatingReview] = useState(false);
+
   return (
     <div className="flex flex-col !p-[25px] relative gap-[40px]">
       <header className="text-[22px] font-semibold">Create New Review</header>
@@ -359,6 +361,7 @@ export const CreateReviewView = () => {
             />
             <Button
               onClick={async () => {
+                setIsCreatingReview(true);
                 const submitResponse = await postResource(getRequestURL(DJANGO_URL, POST_API.CREATE_REVIEW), {
                   reviewName,
                   reviewType: 'tomogram_quality',
@@ -369,8 +372,12 @@ export const CreateReviewView = () => {
                 });
                 if (submitResponse.status === 200) {
                   router.push(`/reviews/${(await submitResponse.json()).reviewId}`);
+                } else {
+                  setIsCreatingReview(false);
                 }
               }}
+              startIcon={isCreatingReview && <Icon sdsIcon={'Loading'} sdsSize={'s'} />}
+              disabled={isCreatingReview}
               sdsStyle="square"
               className="self-start"
             >
