@@ -13,6 +13,8 @@ import { getRegionFromZattrs } from './utils';
 import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
 import { API, MOCKED_APIS, POST_API, MOCKED_POST_APIS } from '../../../app/common/constants/api';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
+import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
+import { AVAILABLE_ANNOTATION_OBJECTS } from '../CreateReviewView/CreateReviewView';
 
 interface TomogramViewerProps {
     review: Review;
@@ -28,6 +30,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
     const [seriesDimensionName, setSeriesDimensionName] = useState('z');
     const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
+    const [selectedRejectionReasons, setSelectedRejectionReasons] = useState<string[]>([]);
+    const [selectedQuality, setSelectedQuality] = useState<"accepted" | "rejected" | "uncertain" | null>(null);
+    const [selectedObjectLabels, setSelectedObjectLabels] = useState<string[]>([]);
 
     const { imageSeriesLayer, channels } = useIdetik();
     const handleContrastLimitsChange = useCallback(
@@ -133,9 +138,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         fetchTomogramDetail();
     }, [selectedTomogram]);
 
-    const [selectedRejectionReasons, setSelectedRejectionReasons] = useState<string[]>([]);
-    const [selectedQuality, setSelectedQuality] = useState<"accepted" | "rejected" | "uncertain" | null>(null);
-
     const handleTomogramReview = (
         quality: "accepted" | "rejected" | "uncertain",
         rejectionReasons?: string[]
@@ -176,37 +178,37 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                         onContrastLimitsChange={handleContrastLimitsChange}
                     />
                     <div className="flex-auto flex flex-col p-6 rounded items-center justify-center">
-                        {selectedTomogram && region ? (
-                            <>
-                                <div className="border-r border-l">
-                                    <div className="w-[60vh] md:w-[75vh] lg:w-[80vh] h-[60vh] md:h-[75vh] lg:h-[80vh]">
-                                        <OmeZarrImageViewer
-                                            sourceUrl={tomogramDetail?.zarrPath || ''}
-                                            region={region}
-                                            seriesDimensionName={seriesDimensionName}
-                                            allSlicesSizeEstimate="250 MB"
-                                            fallbackContrastLimits={contrastLimits}
-                                            classNames={{
-                                                root: 'bg-dark-sds-color-primitive-gray-100',
-                                            }}
-                                            onLayerCreated={handleLayerCreated}
-                                            onFirstSliceLoaded={handleFirstSliceLoaded}
-                                            onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
-                                            onAllSlicesLoaded={handleAllSlicesLoaded}
-                                            onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
-                                        />
-                                    </div>
+                        {/* {selectedTomogram && region ? ( */}
+                        <>
+                            <div className="border-r border-l">
+                                <div className="w-[60vh] md:w-[75vh] lg:w-[80vh] h-[60vh] md:h-[75vh] lg:h-[80vh]">
+                                    <OmeZarrImageViewer
+                                        sourceUrl={tomogramDetail?.zarrPath || ''}
+                                        region={region || []}
+                                        seriesDimensionName={seriesDimensionName}
+                                        allSlicesSizeEstimate="250 MB"
+                                        fallbackContrastLimits={contrastLimits}
+                                        classNames={{
+                                            root: 'bg-dark-sds-color-primitive-gray-100',
+                                        }}
+                                        onLayerCreated={handleLayerCreated}
+                                        onFirstSliceLoaded={handleFirstSliceLoaded}
+                                        onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
+                                        onAllSlicesLoaded={handleAllSlicesLoaded}
+                                        onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
+                                    />
                                 </div>
-                            </>
-                        ) : (
+                            </div>
+                        </>
+                        {/* ) : (
                             <div className="p-6 bg-white rounded">Select a tomogram to view</div>
-                        )}
+                        )} */}
                     </div>
                     <div className="flex flex-col">
                         <div className="basis-[250px] shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-0">
                             <QualityControls
-                                selectedQuality={selectedQuality || "accepted"}
-                                onAccept={() => { handleTomogramReview("accepted"); }}
+                                selectedQuality={selectedQuality}
+                                onAccept={() => { setSelectedQuality("accepted"); }}
                                 onReject={() => { setSelectedQuality("rejected"); }}
                                 onUncertain={() => handleTomogramReview("uncertain")}
                             />
@@ -217,6 +219,16 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                                     selectedReasons={selectedRejectionReasons}
                                     setSelectedReasons={setSelectedRejectionReasons}
                                     onChange={(_, selected) => handleTomogramReview("rejected", selected)}
+                                />
+                            </div>
+                        )}
+                        {selectedQuality === "accepted" && (
+                            <div className="basis-[250px] shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
+                                <ObjectLabelsSelector
+                                    availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
+                                    selectedObjects={selectedObjectLabels}
+                                    setSelectedObjects={setSelectedObjectLabels}
+                                    onChange={(_,) => handleTomogramReview("accepted", selectedObjectLabels)}
                                 />
                             </div>
                         )}

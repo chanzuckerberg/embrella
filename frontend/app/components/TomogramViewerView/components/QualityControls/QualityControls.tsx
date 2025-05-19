@@ -1,7 +1,7 @@
 import { Button, Icon } from '@czi-sds/components';
 
 interface QualityControlsProps {
-  selectedQuality: string;
+  selectedQuality: string | null;
   onAccept: () => void;
   onReject: () => void;
   onUncertain: () => void;
@@ -14,7 +14,7 @@ export const QualityControls = ({ selectedQuality, onAccept, onReject, onUncerta
       <Button
         startIcon={<Icon sdsIcon="Check" sdsSize="s" />}
         sdsStyle="square"
-        sdsType="secondary"
+        sdsType={selectedQuality === "accepted" ? "primary" : "secondary"}
         fullWidth
         onClick={onAccept}
       >

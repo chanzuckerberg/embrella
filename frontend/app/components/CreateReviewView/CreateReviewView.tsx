@@ -17,7 +17,7 @@ import {
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
 
-const AVAILABLE_ANNOTATION_OBJECTS = [
+export const AVAILABLE_ANNOTATION_OBJECTS = [
   'carbon edge',
   'lysosome',
   'membrane protein complex',
@@ -140,8 +140,8 @@ export const CreateReviewView = () => {
               setRunOptions(
                 reconstructionTypeOption !== undefined
                   ? selectedTemSession.session.runs
-                      .filter((run) => run.reconstructionTypes.includes(reconstructionTypeOption.name))
-                      .map((run) => ({ name: run.runId }))
+                    .filter((run) => run.reconstructionTypes.includes(reconstructionTypeOption.name))
+                    .map((run) => ({ name: run.runId }))
                   : []
               );
             }}

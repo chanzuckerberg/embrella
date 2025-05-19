@@ -32,7 +32,7 @@ export const SideBar = ({
 }: SideBarProps) => {
   const reviewedCount = tomograms.filter(t => t.status !== 'pending').length;
   return (
-    <div className="basis-[280px] shrink-0 flex flex-col justify-start gap-8 !p-[20px]">
+    <div className="basis-[280px] shrink-0 flex flex-col justify-start gap-2 !p-[20px]">
       <SideBarSection>
         <div className="border-b border-gray-400">
           <div className="flex flex-col gap-2">
