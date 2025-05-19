@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
-import { Review, ReviewTomogramDetail, TomogramDetail } from './types';
+import { Review, ReviewTomogramDetail } from './types';
 import { QualityControls } from './components/QualityControls';
 import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
@@ -28,13 +26,14 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
   const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
   const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
-  const [seriesDimensionName, setSeriesDimensionName] = useState('z');
   const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
   const [selectedRejectionReasons, setSelectedRejectionReasons] = useState<string[]>([]);
   const [selectedQuality, setSelectedQuality] = useState<'accepted' | 'rejected' | 'uncertain' | null>(null);
   const [selectedObjectLabels, setSelectedObjectLabels] = useState<string[]>([]);
 
+  const seriesDimensionName = 'z'; // TODO: get from zarr metadata
   const { imageSeriesLayer, channels } = useIdetik();
+
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
       if (!imageSeriesLayer) return;
@@ -110,67 +109,52 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     }
   };
 
+  const getTomogramIdForStatus = (status: string | undefined) => {
+    switch (status) {
+      case 'accepted':
+        return 'tomo_001';
+      case 'rejected':
+        return 'tomo_002';
+      case 'uncertain':
+        return 'tomo_003';
+      case 'pending':
+        return 'tomo_004';
+      default:
+        return 'tomo_001';
+    }
+  };
+
+  const updateTomogramState = (tomogramDetail: ReviewTomogramDetail | null) => {
+    if (tomogramDetail) {
+      setTomogramDetail(tomogramDetail);
+      setSelectedObjectLabels(tomogramDetail.existingReview?.objectLabels || []);
+      setSelectedRejectionReasons(tomogramDetail.existingReview?.rejectionReasons || []);
+      setSelectedQuality(tomogramDetail.existingReview?.quality || null);
+    } else {
+      setTomogramDetail(null);
+    }
+  };
+
+  const fetchTomogramDetail = useCallback(async () => {
+    if (!selectedTomogram) return;
+
+    const selectedTomogramStatus = review.tomograms.find((t) => t.tomogramId === selectedTomogram)?.status;
+    const allowedTomograms = ['tomo_001', 'tomo_002', 'tomo_003', 'tomo_004'];
+
+    const tomogramIdToUse = allowedTomograms.includes(selectedTomogram)
+      ? selectedTomogram
+      : getTomogramIdForStatus(selectedTomogramStatus);
+
+    const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
+    const tomogramDetail =
+      typeof MOCKED_APIS[API.TOMOGRAM_DETAIL] === 'function' ? MOCKED_APIS[API.TOMOGRAM_DETAIL](url) : null;
+
+    updateTomogramState(tomogramDetail);
+  }, [selectedTomogram, review.reviewId, review.tomograms]);
+
   useEffect(() => {
-    const fetchTomogramDetail = async () => {
-      if (!selectedTomogram) return;
-
-      // Get the status of the selected tomogram
-      const selectedTomogramStatus = review.tomograms.find((t) => t.tomogramId === selectedTomogram)?.status;
-
-      // List of allowed tomogram IDs for the mock
-      const allowedTomograms = ['tomo_001', 'tomo_002', 'tomo_003', 'tomo_004'];
-
-      // If selectedTomogram is in allowed list, use it directly
-      if (allowedTomograms.includes(selectedTomogram)) {
-        const url = `/api/reviews/${review.reviewId}/tomograms/${selectedTomogram}`;
-        const tomogramDetail =
-          typeof MOCKED_APIS[API.TOMOGRAM_DETAIL] === 'function' ? MOCKED_APIS[API.TOMOGRAM_DETAIL](url) : null;
-
-        if (tomogramDetail) {
-          setTomogramDetail(tomogramDetail);
-          setSelectedObjectLabels(tomogramDetail.existingReview?.objectLabels || []);
-          setSelectedRejectionReasons(tomogramDetail.existingReview?.rejectionReasons || []);
-          setSelectedQuality(tomogramDetail.existingReview?.quality || null);
-        } else {
-          setTomogramDetail(null);
-        }
-        return;
-      }
-
-      // If not in allowed list, find a tomogram that matches the status
-      let tomogramIdToUse;
-      switch (selectedTomogramStatus) {
-        case 'accepted':
-          tomogramIdToUse = 'tomo_001';
-          break;
-        case 'rejected':
-          tomogramIdToUse = 'tomo_002';
-          break;
-        case 'uncertain':
-          tomogramIdToUse = 'tomo_003';
-          break;
-        case 'pending':
-          tomogramIdToUse = 'tomo_004';
-          break;
-        default:
-          tomogramIdToUse = 'tomo_001';
-      }
-
-      const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
-      const tomogramDetail =
-        typeof MOCKED_APIS[API.TOMOGRAM_DETAIL] === 'function' ? MOCKED_APIS[API.TOMOGRAM_DETAIL](url) : null;
-
-      if (tomogramDetail) {
-        setTomogramDetail(tomogramDetail);
-        setSelectedObjectLabels(tomogramDetail.existingReview?.objectLabels || []);
-        setSelectedRejectionReasons(tomogramDetail.existingReview?.rejectionReasons || []);
-        setSelectedQuality(tomogramDetail.existingReview?.quality || null);
-      } else {
-        setTomogramDetail(null);
-      }
-    };
     fetchTomogramDetail();
-  }, [selectedTomogram]);
+  }, [fetchTomogramDetail]);
 
   const handleTomogramReview = (
     quality: 'accepted' | 'rejected' | 'uncertain',
@@ -184,7 +168,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       rejectionReasons: rejectionReasons,
       objectLabels: objectLabels,
     };
-    const response = MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload);
+    MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload);
     setSelectedQuality(null);
     setSelectedRejectionReasons([]);
     setSelectedObjectLabels([]);
