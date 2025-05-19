@@ -40,12 +40,7 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
       const hasActiveFilters = newFilters.filters && Object.keys(newFilters.filters).length > 0;
       setIsFilterApplied(hasActiveFilters);
     }
-
-    console.log('Applying filters:', newFilters);
   }, []);
-
-  console.log(filters, 'filters and filterdata', data);
-  console.log(scatterplotFilters, 'scatterplot filters and data', scatterplotData);
 
   return (
     <div>
