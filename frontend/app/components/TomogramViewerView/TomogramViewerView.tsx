@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { Review, ReviewTomogramDetail } from './types';
@@ -18,18 +18,68 @@ interface TomogramViewerProps {
   review: Review;
 }
 
+interface TomogramState {
+  selectedTomogram: string | undefined;
+  tomogramDetail: ReviewTomogramDetail | null;
+  contrastLimits: [number, number];
+  selectedRejectionReasons: string[];
+  selectedQuality: 'accepted' | 'rejected' | 'uncertain' | null;
+  selectedObjectLabels: string[];
+}
+
+type TomogramAction =
+  | { type: 'SET_SELECTED_TOMOGRAM'; payload: string }
+  | { type: 'SET_TOMOGRAM_DETAIL'; payload: ReviewTomogramDetail | null }
+  | { type: 'SET_CONTRAST_LIMITS'; payload: [number, number] }
+  | { type: 'SET_REJECTION_REASONS'; payload: string[] }
+  | { type: 'SET_QUALITY'; payload: 'accepted' | 'rejected' | 'uncertain' | null }
+  | { type: 'SET_OBJECT_LABELS'; payload: string[] }
+  | { type: 'RESET_REVIEW_STATE' };
+
+const initialState: TomogramState = {
+  selectedTomogram: undefined,
+  tomogramDetail: null,
+  contrastLimits: [-0.00001, 0.00001],
+  selectedRejectionReasons: [],
+  selectedQuality: null,
+  selectedObjectLabels: [],
+};
+
+function tomogramReducer(state: TomogramState, action: TomogramAction): TomogramState {
+  switch (action.type) {
+    case 'SET_SELECTED_TOMOGRAM':
+      return { ...state, selectedTomogram: action.payload };
+    case 'SET_TOMOGRAM_DETAIL':
+      return { ...state, tomogramDetail: action.payload };
+    case 'SET_CONTRAST_LIMITS':
+      return { ...state, contrastLimits: action.payload };
+    case 'SET_REJECTION_REASONS':
+      return { ...state, selectedRejectionReasons: action.payload };
+    case 'SET_QUALITY':
+      return { ...state, selectedQuality: action.payload };
+    case 'SET_OBJECT_LABELS':
+      return { ...state, selectedObjectLabels: action.payload };
+    case 'RESET_REVIEW_STATE':
+      return {
+        ...state,
+        selectedQuality: null,
+        selectedRejectionReasons: [],
+        selectedObjectLabels: [],
+      };
+    default:
+      return state;
+  }
+}
+
 export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
+  const [state, dispatch] = useReducer(tomogramReducer, {
+    ...initialState,
+    selectedTomogram: review.tomograms[0]?.tomogramId,
+  });
   const [region, setRegion] = useState<Region | null>(null);
 
   const layerCreatedTime = useRef<number | undefined>(undefined);
   const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
-
-  const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
-  const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
-  const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
-  const [selectedRejectionReasons, setSelectedRejectionReasons] = useState<string[]>([]);
-  const [selectedQuality, setSelectedQuality] = useState<'accepted' | 'rejected' | 'uncertain' | null>(null);
-  const [selectedObjectLabels, setSelectedObjectLabels] = useState<string[]>([]);
 
   const seriesDimensionName = 'z'; // TODO: get from zarr metadata
   const { imageSeriesLayer, channels } = useIdetik();
@@ -42,7 +92,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         ...channel,
         contrastLimits: newLimits,
       }));
-      setContrastLimits(newLimits);
+      dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
       imageSeriesLayer.setChannelProps(updatedChannels);
     },
     [imageSeriesLayer, channels]
@@ -50,13 +100,13 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
   useEffect(() => {
     const fetchRegion = async () => {
-      if (!tomogramDetail?.zarrPath) return;
-      const region = await getRegionFromZattrs(tomogramDetail.zarrPath);
+      if (!state.tomogramDetail?.zarrPath) return;
+      const region = await getRegionFromZattrs(state.tomogramDetail.zarrPath);
       console.log('region', region);
       setRegion(region);
     };
     fetchRegion();
-  }, [tomogramDetail?.zarrPath]);
+  }, [state.tomogramDetail?.zarrPath]);
 
   const handleLayerCreated = useCallback(() => {
     layerCreatedTime.current = performance.now();
@@ -95,21 +145,29 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     }
   }, []);
 
-  const currentIndex = selectedTomogram ? review.tomograms.findIndex((t) => t.tomogramId === selectedTomogram) : -1;
+  const currentIndex = state.selectedTomogram
+    ? review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogram)
+    : -1;
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     if (currentIndex > 0) {
-      setSelectedTomogram(review.tomograms[currentIndex - 1].tomogramId);
+      dispatch({
+        type: 'SET_SELECTED_TOMOGRAM',
+        payload: review.tomograms[currentIndex - 1].tomogramId,
+      });
     }
-  };
+  }, [currentIndex, review.tomograms]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (currentIndex < review.tomograms.length - 1) {
-      setSelectedTomogram(review.tomograms[currentIndex + 1].tomogramId);
+      dispatch({
+        type: 'SET_SELECTED_TOMOGRAM',
+        payload: review.tomograms[currentIndex + 1].tomogramId,
+      });
     }
-  };
+  }, [currentIndex, review.tomograms]);
 
-  const getTomogramIdForStatus = (status: string | undefined) => {
+  const getTomogramIdForStatus = useCallback((status: string | undefined) => {
     switch (status) {
       case 'accepted':
         return 'tomo_001';
@@ -122,27 +180,36 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       default:
         return 'tomo_001';
     }
-  };
+  }, []);
 
-  const updateTomogramState = (tomogramDetail: ReviewTomogramDetail | null) => {
+  const updateTomogramState = useCallback((tomogramDetail: ReviewTomogramDetail | null) => {
     if (tomogramDetail) {
-      setTomogramDetail(tomogramDetail);
-      setSelectedObjectLabels(tomogramDetail.existingReview?.objectLabels || []);
-      setSelectedRejectionReasons(tomogramDetail.existingReview?.rejectionReasons || []);
-      setSelectedQuality(tomogramDetail.existingReview?.quality || null);
+      dispatch({ type: 'SET_TOMOGRAM_DETAIL', payload: tomogramDetail });
+      dispatch({
+        type: 'SET_OBJECT_LABELS',
+        payload: tomogramDetail.existingReview?.objectLabels || [],
+      });
+      dispatch({
+        type: 'SET_REJECTION_REASONS',
+        payload: tomogramDetail.existingReview?.rejectionReasons || [],
+      });
+      dispatch({
+        type: 'SET_QUALITY',
+        payload: tomogramDetail.existingReview?.quality || null,
+      });
     } else {
-      setTomogramDetail(null);
+      dispatch({ type: 'SET_TOMOGRAM_DETAIL', payload: null });
     }
-  };
+  }, []);
 
   const fetchTomogramDetail = useCallback(async () => {
-    if (!selectedTomogram) return;
+    if (!state.selectedTomogram) return;
 
-    const selectedTomogramStatus = review.tomograms.find((t) => t.tomogramId === selectedTomogram)?.status;
+    const selectedTomogramStatus = review.tomograms.find((t) => t.tomogramId === state.selectedTomogram)?.status;
     const allowedTomograms = ['tomo_001', 'tomo_002', 'tomo_003', 'tomo_004'];
 
-    const tomogramIdToUse = allowedTomograms.includes(selectedTomogram)
-      ? selectedTomogram
+    const tomogramIdToUse = allowedTomograms.includes(state.selectedTomogram)
+      ? state.selectedTomogram
       : getTomogramIdForStatus(selectedTomogramStatus);
 
     const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
@@ -150,33 +217,36 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       typeof MOCKED_APIS[API.TOMOGRAM_DETAIL] === 'function' ? MOCKED_APIS[API.TOMOGRAM_DETAIL](url) : null;
 
     updateTomogramState(tomogramDetail);
-  }, [selectedTomogram, review.reviewId, review.tomograms]);
+  }, [state.selectedTomogram, review.reviewId, review.tomograms, getTomogramIdForStatus, updateTomogramState]);
 
   useEffect(() => {
     fetchTomogramDetail();
   }, [fetchTomogramDetail]);
 
-  const handleTomogramReview = (
-    quality: 'accepted' | 'rejected' | 'uncertain',
-    rejectionReasons?: string[],
-    objectLabels?: string[]
-  ) => {
-    if (!selectedTomogram) return;
-    const payload = {
-      tomogramId: selectedTomogram,
-      quality: quality,
-      rejectionReasons: rejectionReasons,
-      objectLabels: objectLabels,
-    };
-    MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload);
-    setSelectedQuality(null);
-    setSelectedRejectionReasons([]);
-    setSelectedObjectLabels([]);
-    // Move to the next tomogram if there is one
-    if (currentIndex < review.tomograms.length - 1) {
-      setSelectedTomogram(review.tomograms[currentIndex + 1].tomogramId);
-    }
-  };
+  const handleTomogramReview = useCallback(
+    (quality: 'accepted' | 'rejected' | 'uncertain', rejectionReasons?: string[], objectLabels?: string[]) => {
+      if (!state.selectedTomogram) return;
+
+      const payload = {
+        tomogramId: state.selectedTomogram,
+        quality,
+        rejectionReasons,
+        objectLabels,
+      };
+
+      MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload);
+      dispatch({ type: 'RESET_REVIEW_STATE' });
+
+      // Move to the next tomogram if there is one
+      if (currentIndex < review.tomograms.length - 1) {
+        dispatch({
+          type: 'SET_SELECTED_TOMOGRAM',
+          payload: review.tomograms[currentIndex + 1].tomogramId,
+        });
+      }
+    },
+    [state.selectedTomogram, currentIndex, review.tomograms]
+  );
 
   return (
     <div className="flex flex-col items-center">
@@ -187,67 +257,61 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           <SideBar
             reviewName={review.reviewName}
             tomograms={review.tomograms}
-            selectedTomogram={selectedTomogram}
-            tomogramDetail={tomogramDetail}
+            selectedTomogram={state.selectedTomogram}
+            tomogramDetail={state.tomogramDetail}
             currentIndex={currentIndex}
             onPrevious={handlePrevious}
             onNext={handleNext}
-            onSelectTomogram={setSelectedTomogram}
-            contrastLimits={contrastLimits}
+            onSelectTomogram={(tomogramId) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: tomogramId })}
+            contrastLimits={state.contrastLimits}
             onContrastLimitsChange={handleContrastLimitsChange}
           />
           <div className="flex-auto flex flex-col p-6 rounded items-center justify-center">
-            <>
-              <div className="border-r border-l">
-                <div className="w-[60vh] md:w-[75vh] lg:w-[80vh] h-[60vh] md:h-[75vh] lg:h-[80vh]">
-                  <OmeZarrImageViewer
-                    sourceUrl={tomogramDetail?.zarrPath || ''}
-                    region={region || []}
-                    seriesDimensionName={seriesDimensionName}
-                    allSlicesSizeEstimate="250 MB"
-                    fallbackContrastLimits={contrastLimits}
-                    classNames={{
-                      root: 'bg-dark-sds-color-primitive-gray-100',
-                    }}
-                    onLayerCreated={handleLayerCreated}
-                    onFirstSliceLoaded={handleFirstSliceLoaded}
-                    onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
-                    onAllSlicesLoaded={handleAllSlicesLoaded}
-                    onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
-                  />
-                </div>
+            <div className="border-r border-l">
+              <div className="w-[60vh] md:w-[75vh] lg:w-[80vh] h-[60vh] md:h-[75vh] lg:h-[80vh]">
+                <OmeZarrImageViewer
+                  sourceUrl={state.tomogramDetail?.zarrPath || ''}
+                  region={region || []}
+                  seriesDimensionName={seriesDimensionName}
+                  allSlicesSizeEstimate="250 MB"
+                  fallbackContrastLimits={state.contrastLimits}
+                  classNames={{
+                    root: 'bg-dark-sds-color-primitive-gray-100',
+                  }}
+                  onLayerCreated={handleLayerCreated}
+                  onFirstSliceLoaded={handleFirstSliceLoaded}
+                  onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
+                  onAllSlicesLoaded={handleAllSlicesLoaded}
+                  onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
+                />
               </div>
-            </>
+            </div>
           </div>
           <div className="flex flex-col">
             <div className="basis-[250px] shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-0">
               <QualityControls
-                selectedQuality={selectedQuality}
-                onAccept={() => {
-                  setSelectedQuality('accepted');
-                }}
-                onReject={() => {
-                  setSelectedQuality('rejected');
-                }}
+                selectedQuality={state.selectedQuality}
+                onAccept={() => dispatch({ type: 'SET_QUALITY', payload: 'accepted' })}
+                onReject={() => dispatch({ type: 'SET_QUALITY', payload: 'rejected' })}
                 onUncertain={() => handleTomogramReview('uncertain')}
               />
             </div>
-            {selectedQuality === 'rejected' && (
+            {state.selectedQuality === 'rejected' && (
               <div className="basis-[250px] shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
                 <RejectionReasonsSelector
-                  selectedReasons={selectedRejectionReasons}
-                  setSelectedReasons={setSelectedRejectionReasons}
+                  selectedReasons={state.selectedRejectionReasons}
+                  setSelectedReasons={(reasons) => dispatch({ type: 'SET_REJECTION_REASONS', payload: reasons })}
                   onChange={(_, selected) => handleTomogramReview('rejected', selected)}
                 />
               </div>
             )}
-            {selectedQuality === 'accepted' && (
+            {state.selectedQuality === 'accepted' && (
               <div className="basis-[250px] shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
                 <ObjectLabelsSelector
                   availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
-                  selectedObjects={selectedObjectLabels}
-                  setSelectedObjects={setSelectedObjectLabels}
-                  onChange={(_) => handleTomogramReview('accepted', selectedObjectLabels)}
+                  selectedObjects={state.selectedObjectLabels}
+                  setSelectedObjects={(labels) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels })}
+                  onChange={(_) => handleTomogramReview('accepted', state.selectedObjectLabels)}
                 />
               </div>
             )}
