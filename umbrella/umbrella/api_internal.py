@@ -15,9 +15,22 @@ import json
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.db.models import Q
+from django.http import JsonResponse
 import uuid
 from django.conf import settings
 import os.path
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from django.db.models import Count
+from django.db.models import Count, Q
+from tem.models import MsiSession, Project
+from processes.models import ProcRun, Review, ReviewTomogram
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from datetime import datetime
 
 HOST = "10.50.120.90"
 PORT = 22
@@ -186,194 +199,6 @@ def get_tomo_by_msi_session(request):
         })
 
     return JsonResponse([tomo_data, pick_data], safe=False)
-
-from django.db.models import Q
-from django.http import JsonResponse
-
-def fetch_session_names(request):
-    limit = int(request.GET.get("limit", 20))
-    offset = int(request.GET.get("offset", 0))
-    search = request.GET.get("search", "").strip()
-
-    sessions_qs = MsiSession.objects.all().order_by('-created_at')
-    if search:
-        sessions_qs = sessions_qs.filter(Q(name__icontains=search))
-
-    # Get total count before pagination
-    total_count = sessions_qs.count()
-    sessions = sessions_qs[offset:offset + limit]
-
-    aretomo3_overlay_path = "/hpc/projects/krios1.processing/aretomo3"
-    denoise_overlay_path = "/hpc/projects/krios1.processing/denoise"
-
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    
-    try:
-        ssh.connect(
-            hostname=HOST,
-            port=PORT,
-            username=USERNAME,
-            password=PASSWORD,
-            timeout=10,
-            allow_agent=False,
-            look_for_keys=False,
-            compress=True,
-            banner_timeout=10
-        )
-        sessions_data = []
-
-        for session in sessions:
-            session_name = session.name
-            session_runs = {}
-
-            # Use find command to get all .mrc files in one go
-            find_cmd = f"""
-            find {aretomo3_overlay_path}/{session_name} {denoise_overlay_path}/{session_name} -type f -name "*.mrc" 2>/dev/null | 
-            grep -v "_CTF.mrc" | grep -v "_Vol.mrc" | 
-            sed -E 's|.*/(run[0-9]+)/.*|\\1|' | sort -u
-            """
-            
-            stdin, stdout, stderr = ssh.exec_command(find_cmd)
-            run_folders = [line.strip() for line in stdout if line.strip()]
-            
-            if not run_folders:
-                continue
-
-            # Get tomogram counts and types for each run
-            for run_folder in run_folders:
-                count_cmd = f"""
-                find {aretomo3_overlay_path}/{session_name}/{run_folder} -type f -name "*.mrc" 2>/dev/null | 
-                grep -v "_CTF.mrc" | grep -v "_Vol.mrc" | wc -l;
-                find {denoise_overlay_path}/{session_name}/{run_folder} -type f -name "*.mrc" 2>/dev/null | 
-                grep -v "_CTF.mrc" | wc -l
-                """
-                
-                stdin, stdout, stderr = ssh.exec_command(count_cmd)
-                lines = [line.strip() for line in stdout if line.strip()]
-                
-                reconstruction_types = []
-                num_tomograms = 0
-                
-                if len(lines) >= 2:
-                    aretomo_count = int(lines[0])
-                    denoise_count = int(lines[1])
-                    
-                    if aretomo_count > 0:
-                        reconstruction_types.extend(['DCTF', 'SART'])
-                        num_tomograms = max(num_tomograms, aretomo_count)
-                    
-                    if denoise_count > 0:
-                        reconstruction_types.append('Denoised')
-                        num_tomograms = max(num_tomograms, denoise_count)
-                
-                if reconstruction_types:
-                    session_runs[run_folder] = {
-                        "runId": run_folder,
-                        "numTomograms": num_tomograms,
-                        "reconstructionTypes": reconstruction_types
-                    }
-
-            sessions_data.append({
-                "sessionId": str(session.id),
-                "sessionName": session_name,
-                "createdAt": session.created_at.isoformat() if session.created_at else None,
-                "runs": list(session_runs.values())
-            })
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-    finally:
-        try:
-            ssh.close()
-        except Exception:
-            pass
-
-    return JsonResponse({
-        "data": sessions_data,
-        "pagination": {
-            "total": total_count,
-            "limit": limit,
-            "offset": offset
-        }
-    }, safe=False)
-
-def get_session_runs(request, session_id):
-    """
-    Get all runs and their reconstruction types for a specific session with minimal SSH overhead.
-    """
-    try:
-        session = MsiSession.objects.get(name=session_id)
-    except MsiSession.DoesNotExist:
-        return JsonResponse({"error": "Session not found"}, status=404)
-
-    runs = ProcRun.objects.filter(msi_session=session).distinct().values('name')
-    runs_data = []
-
-    try:
-        # ✅ Open ONE SSH + SFTP connection for all path checks
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(
-            hostname=HOST,
-            port=PORT,
-            username=USERNAME,
-            password=PASSWORD,
-            timeout=10,
-            allow_agent=False,
-            look_for_keys=False,
-            compress=True,
-            banner_timeout=10
-        )
-        sftp = ssh.open_sftp()
-        try:
-            # 🔧 Increase buffer sizes
-            try:
-                sftp.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 262144)
-                sftp.sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 262144)
-            except Exception:
-                pass  # If socket options fail, continue normally
-
-            # 🧠 Loop through runs with one SFTP session
-            for run in runs:
-                run_id = run['name']
-                reconstruction_types = []
-
-                # Check aretomo path
-                aretomo_path = f"/hpc/projects/krios1.processing/aretomo3/{session_id}/{run_id}"
-                try:
-                    aretomo_files = sftp.listdir(aretomo_path)
-                    if any(f.endswith('.mrc') and not f.endswith('_CTF.mrc') and not f.endswith('_Vol.mrc') for f in aretomo_files):
-                        reconstruction_types.extend(['DCTF', 'SART'])
-                except IOError:
-                    pass
-
-                # Check denoise path
-                denoise_path = f"/hpc/projects/krios1.processing/denoise/{session_id}/{run_id}"
-                try:
-                    denoise_files = sftp.listdir(denoise_path)
-                    if any(f.endswith('.mrc') and not f.endswith('_CTF.mrc') for f in denoise_files):
-                        reconstruction_types.append('Denoised')
-                except IOError:
-                    pass
-
-                if reconstruction_types:
-                    runs_data.append({
-                        "runId": run_id,
-                        "reconstructionTypes": reconstruction_types
-                    })
-
-        finally:
-            sftp.close()
-            ssh.close()
-
-    except Exception as e:
-        return JsonResponse({"error": f"SSH connection error: {str(e)}"}, status=500)
-
-    return JsonResponse({
-        "sessionId": session_id,
-        "runs": runs_data
-    }, safe=False)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ReviewView(View):
@@ -1102,5 +927,143 @@ class ReviewTomogramView(View):
             
         except Exception as e:
             print(f"Unexpected error in POST: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SessionView(View):
+    """View to handle both /api/sessions and /api/sessions/{session_id} endpoints"""
+    
+    # Base configuration
+    FILE_SERVER_HOST = "https://czii-onsite.czbiohub.org"
+    ARETOMO_PATH = "aretomo3"
+    DENOISE_PATH = "denoise"
+
+    def get_reconstruction_types(self, session_name, run_id):
+        """Determine reconstruction types by checking file server paths"""
+        recon_types = set()
+        
+        # Check aretomo3 paths
+        aretomo_paths = [
+            f"{self.ARETOMO_PATH}/{session_name}/{run_id}/vol001",  # DCTF
+            f"{self.ARETOMO_PATH}/{session_name}/{run_id}/vol003",  # SART
+        ]
+        
+        # Check denoise path
+        denoise_path = f"{self.DENOISE_PATH}/{session_name}/{run_id}/vol001"  # Denoised
+        
+        # Check all paths
+        for path in aretomo_paths + [denoise_path]:
+            try:
+                url = urljoin(self.FILE_SERVER_HOST + "/", path + "/")
+                response = requests.get(url)
+                
+                if response.status_code == 200:
+                    # Parse the path to determine reconstruction type
+                    if "aretomo3" in path:
+                        if "vol001" in path:
+                            recon_types.add("DCTF")
+                        elif "vol003" in path:
+                            recon_types.add("SART")
+                    elif "denoise" in path and "vol001" in path:
+                        recon_types.add("Denoised")
+                        
+            except requests.RequestException:
+                continue
+                
+        return list(recon_types)
+
+    def get_session_data(self, session):
+        """Get runs data for a session"""
+        runs_data = []
+        
+        # Get all ProcRuns for this session
+        proc_runs = session.procrun_set.all()
+        
+        for proc_run in proc_runs:
+            # Get tomogram count for this run
+            tomogram_count = ReviewTomogram.objects.filter(
+                review__run_id=proc_run.name,
+                review__session=session
+            ).count()
+            
+            if tomogram_count > 0:
+                # Get reconstruction types from file server
+                recon_types = self.get_reconstruction_types(session.name, proc_run.name)
+                
+                if recon_types:  # Only add runs that have reconstruction types
+                    runs_data.append({
+                        "runId": proc_run.name,
+                        "numTomograms": tomogram_count,
+                        "reconstructionTypes": recon_types
+                    })
+        
+        return {
+            "sessionId": str(session.id),
+            "sessionName": session.name,
+            "createdAt": session.created_at.isoformat() if session.created_at else None,
+            "projectName": session.project.name if session.project else None,
+            "runs": runs_data
+        }
+
+    def get(self, request, session_id=None):
+        """
+        Handle GET requests for both endpoints:
+        - /api/sessions/ (list all sessions)
+        - /api/sessions/{session_id} (get specific session)
+        """
+        try:
+            if session_id:
+                # Get specific session
+                try:
+                    session = MsiSession.objects.select_related('project').get(name=session_id)
+                except MsiSession.DoesNotExist:
+                    return JsonResponse({"error": "Session not found"}, status=404)
+                
+                session_data = self.get_session_data(session)
+                return JsonResponse(session_data, safe=False)
+            
+            else:
+                # List all sessions with pagination and search
+                limit = int(request.GET.get('limit', 20))
+                offset = int(request.GET.get('offset', 0))
+                search = request.GET.get('search', '').strip()
+
+                # Start with base queryset
+                sessions_qs = MsiSession.objects.select_related(
+                    'project'
+                ).prefetch_related(
+                    'procrun_set'
+                )
+
+                # Apply search filter if provided
+                if search:
+                    sessions_qs = sessions_qs.filter(
+                        Q(name__icontains=search) |
+                        Q(project__name__icontains=search)
+                    )
+
+                # Get total count before pagination
+                total_count = sessions_qs.count()
+
+                # Apply pagination
+                sessions = sessions_qs.order_by('-created_at')[offset:offset + limit]
+
+                # Get data for each session
+                sessions_data = []
+                for session in sessions:
+                    session_data = self.get_session_data(session)
+                    if session_data["runs"]:  # Only add sessions that have runs with tomograms
+                        sessions_data.append(session_data)
+
+                return JsonResponse({
+                    "data": sessions_data,
+                    "pagination": {
+                        "total": total_count,
+                        "limit": limit,
+                        "offset": offset
+                    }
+                }, safe=False)
+
+        except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
