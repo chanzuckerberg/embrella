@@ -52,6 +52,9 @@
   transition: right 0.3s ease-in-out;
   z-index: 1000;
 }
+.open {
+  right: 0;
+}
 
 .sidebarContent {
   padding: 20px;
@@ -138,6 +141,31 @@
   padding: 20px;
   color: #666;
   font-size: 16px;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  width: 100%;
+  color: #666;
+  font-size: 16px;
+}
+
+.errorContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  width: 100%;
+  color: #d32f2f;
+  font-size: 16px;
+  text-align: center;
+  padding: 20px;
+  border: 1px solid #ffcdd2;
+  background-color: #ffebee;
+  border-radius: 4px;
 }
 
 /*MetricHistogram*/
