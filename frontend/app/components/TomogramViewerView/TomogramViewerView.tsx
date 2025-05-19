@@ -12,6 +12,7 @@ import { Region } from '../../../imaging-active-learning/packages/core/src/data/
 import { getRegionFromZattrs } from './utils';
 import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
 import { API, MOCKED_APIS, POST_API, MOCKED_POST_APIS } from '../../../app/common/constants/api';
+import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
 
 interface TomogramViewerProps {
     review: Review;
@@ -132,6 +133,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         fetchTomogramDetail();
     }, [selectedTomogram]);
 
+    const [selectedRejectionReasons, setSelectedRejectionReasons] = useState<string[]>([]);
+    const [selectedQuality, setSelectedQuality] = useState<"accepted" | "rejected" | "uncertain" | null>(null);
+
     const handleTomogramReview = (
         quality: "accepted" | "rejected" | "uncertain",
         rejectionReasons?: string[]
@@ -144,6 +148,8 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         };
         const response = MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload);
         console.log('Review response:', response);
+        setSelectedQuality(null);
+        setSelectedRejectionReasons([]);
 
         // Move to the next tomogram if there is one
         if (currentIndex < review.tomograms.length - 1) {
@@ -196,12 +202,24 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                             <div className="p-6 bg-white rounded">Select a tomogram to view</div>
                         )}
                     </div>
-                    <div className="basis-[250px] shrink-0 !p-[20px]">
-                        <QualityControls
-                            onAccept={() => handleTomogramReview("accepted")}
-                            onReject={() => handleTomogramReview("rejected", ["blurry"])}
-                            onUncertain={() => handleTomogramReview("uncertain")}
-                        />
+                    <div className="flex flex-col">
+                        <div className="basis-[250px] shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-0">
+                            <QualityControls
+                                selectedQuality={selectedQuality || "accepted"}
+                                onAccept={() => { handleTomogramReview("accepted"); }}
+                                onReject={() => { setSelectedQuality("rejected"); }}
+                                onUncertain={() => handleTomogramReview("uncertain")}
+                            />
+                        </div>
+                        {selectedQuality === "rejected" && (
+                            <div className="basis-[250px] shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
+                                <RejectionReasonsSelector
+                                    selectedReasons={selectedRejectionReasons}
+                                    setSelectedReasons={setSelectedRejectionReasons}
+                                    onChange={(_, selected) => handleTomogramReview("rejected", selected)}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div >
             </div >
