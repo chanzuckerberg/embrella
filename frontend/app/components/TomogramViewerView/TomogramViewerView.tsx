@@ -102,7 +102,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     const fetchRegion = async () => {
       if (!state.tomogramDetail?.zarrPath) return;
       const region = await getRegionFromZattrs(state.tomogramDetail.zarrPath);
-      console.log('region', region);
       setRegion(region);
     };
     fetchRegion();
@@ -202,26 +201,24 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     }
   };
 
-  const fetchTomogramDetail = useCallback(async () => {
-    if (!state.selectedTomogram) return;
-
-    const selectedTomogramStatus = review.tomograms.find((t) => t.tomogramId === state.selectedTomogram)?.status;
-    const allowedTomograms = ['tomo_001', 'tomo_002', 'tomo_003', 'tomo_004'];
-
-    const tomogramIdToUse = allowedTomograms.includes(state.selectedTomogram)
-      ? state.selectedTomogram
-      : getTomogramIdForStatus(selectedTomogramStatus);
-
-    const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
-    const tomogramDetail =
-      typeof MOCKED_APIS[API.TOMOGRAM_DETAIL] === 'function' ? MOCKED_APIS[API.TOMOGRAM_DETAIL](url) : null;
-
-    updateTomogramState(tomogramDetail);
-  }, [state.selectedTomogram, review.reviewId, review.tomograms]);
-
   useEffect(() => {
+    async function fetchTomogramDetail() {
+      if (!state.selectedTomogram) return;
+
+      const selectedTomogramStatus = review.tomograms.find((t) => t.tomogramId === state.selectedTomogram)?.status;
+      const allowedTomograms = ['tomo_001', 'tomo_002', 'tomo_003', 'tomo_004'];
+
+      const tomogramIdToUse = allowedTomograms.includes(state.selectedTomogram)
+        ? state.selectedTomogram
+        : getTomogramIdForStatus(selectedTomogramStatus);
+
+      const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
+      const tomogramDetail = MOCKED_APIS[API.TOMOGRAM_DETAIL](url);
+
+      updateTomogramState(tomogramDetail);
+    }
     fetchTomogramDetail();
-  }, [fetchTomogramDetail]);
+  }, [state.selectedTomogram, review.reviewId, review.tomograms]);
 
   const handleTomogramReview = (
     quality: 'accepted' | 'rejected' | 'uncertain',
@@ -271,7 +268,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
             <div className="border-r border-l">
               <div className="w-[60vh] md:w-[75vh] lg:w-[80vh] h-[60vh] md:h-[75vh] lg:h-[80vh]">
                 <OmeZarrImageViewer
-                  sourceUrl={state.tomogramDetail?.zarrPath || ''}
+                  sourceUrl={state.tomogramDetail?.zarrPath ?? ''}
                   region={region || []}
                   seriesDimensionName={seriesDimensionName}
                   allSlicesSizeEstimate="250 MB"
