@@ -1,10 +1,5 @@
 import { API, DJANGO_URL, MOCKED_APIS, MOCKED_POST_APIS, POST_API } from '../constants/api';
 
-/**
- * Fetch request.
- * @param requestURL - Request URL.
- * @returns promise (response).
- */
 export async function fetchResource(requestURL: string): Promise<Response> {
   const mockResponse = MOCKED_APIS[new URL(requestURL).pathname as API];
   if (mockResponse !== undefined) {
@@ -29,12 +24,6 @@ export async function fetchResource(requestURL: string): Promise<Response> {
   return response;
 }
 
-/**
- * POST request.
- * @param requestURL - Request URL.
- * @param body - Request body.
- * @returns promise (response).
- */
 export async function postResource(requestURL: string, body: any): Promise<Response> {
   const mockResponse = MOCKED_POST_APIS[new URL(requestURL).pathname as POST_API];
   if (mockResponse !== undefined) {
