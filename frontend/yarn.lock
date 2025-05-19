@@ -818,7 +818,7 @@ __metadata:
 
 "@idetik/react@file:./imaging-active-learning/packages/react::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/react@file:./imaging-active-learning/packages/react#./imaging-active-learning/packages/react::hash=7d21e2&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/react@file:./imaging-active-learning/packages/react#./imaging-active-learning/packages/react::hash=35484b&locator=create-sds-app%40workspace%3A."
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
@@ -836,7 +836,7 @@ __metadata:
     "@czi-sds/components": ^22.3.0
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/599eef85d0581ee687dc0f266897563ec1369ce6a0552f2f0066e01d76f8d1c379bdc30e5699208bdfbfa74fef5738f2b31008d6cd06bf64f34b71ec8b2ee51c
+  checksum: 10c0/e3e19d4557603b53a6dda264f530a52fb9a69a0c6e0df9482bd6c508a5fe5f5ef05c321833d21abdb256addd0f76b47db8dfab6e9b5ad7e8c51c77a49af20444
   languageName: node
   linkType: hard
 
