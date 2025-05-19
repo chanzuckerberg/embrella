@@ -149,25 +149,25 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     ? review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogram)
     : -1;
 
-  const handlePrevious = useCallback(() => {
+  const handlePrevious = () => {
     if (currentIndex > 0) {
       dispatch({
         type: 'SET_SELECTED_TOMOGRAM',
         payload: review.tomograms[currentIndex - 1].tomogramId,
       });
     }
-  }, [currentIndex, review.tomograms]);
+  };
 
-  const handleNext = useCallback(() => {
+  const handleNext = () => {
     if (currentIndex < review.tomograms.length - 1) {
       dispatch({
         type: 'SET_SELECTED_TOMOGRAM',
         payload: review.tomograms[currentIndex + 1].tomogramId,
       });
     }
-  }, [currentIndex, review.tomograms]);
+  };
 
-  const getTomogramIdForStatus = useCallback((status: string | undefined) => {
+  const getTomogramIdForStatus = (status: string | undefined) => {
     switch (status) {
       case 'accepted':
         return 'tomo_001';
@@ -180,9 +180,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       default:
         return 'tomo_001';
     }
-  }, []);
+  };
 
-  const updateTomogramState = useCallback((tomogramDetail: ReviewTomogramDetail | null) => {
+  const updateTomogramState = (tomogramDetail: ReviewTomogramDetail | null) => {
     if (tomogramDetail) {
       dispatch({ type: 'SET_TOMOGRAM_DETAIL', payload: tomogramDetail });
       dispatch({
@@ -200,7 +200,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     } else {
       dispatch({ type: 'SET_TOMOGRAM_DETAIL', payload: null });
     }
-  }, []);
+  };
 
   const fetchTomogramDetail = useCallback(async () => {
     if (!state.selectedTomogram) return;
@@ -217,36 +217,37 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       typeof MOCKED_APIS[API.TOMOGRAM_DETAIL] === 'function' ? MOCKED_APIS[API.TOMOGRAM_DETAIL](url) : null;
 
     updateTomogramState(tomogramDetail);
-  }, [state.selectedTomogram, review.reviewId, review.tomograms, getTomogramIdForStatus, updateTomogramState]);
+  }, [state.selectedTomogram, review.reviewId, review.tomograms]);
 
   useEffect(() => {
     fetchTomogramDetail();
   }, [fetchTomogramDetail]);
 
-  const handleTomogramReview = useCallback(
-    (quality: 'accepted' | 'rejected' | 'uncertain', rejectionReasons?: string[], objectLabels?: string[]) => {
-      if (!state.selectedTomogram) return;
+  const handleTomogramReview = (
+    quality: 'accepted' | 'rejected' | 'uncertain',
+    rejectionReasons?: string[],
+    objectLabels?: string[]
+  ) => {
+    if (!state.selectedTomogram) return;
 
-      const payload = {
-        tomogramId: state.selectedTomogram,
-        quality,
-        rejectionReasons,
-        objectLabels,
-      };
+    const payload = {
+      tomogramId: state.selectedTomogram,
+      quality,
+      rejectionReasons,
+      objectLabels,
+    };
 
-      MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload);
-      dispatch({ type: 'RESET_REVIEW_STATE' });
+    MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload);
+    dispatch({ type: 'RESET_REVIEW_STATE' });
 
-      // Move to the next tomogram if there is one
-      if (currentIndex < review.tomograms.length - 1) {
-        dispatch({
-          type: 'SET_SELECTED_TOMOGRAM',
-          payload: review.tomograms[currentIndex + 1].tomogramId,
-        });
-      }
-    },
-    [state.selectedTomogram, currentIndex, review.tomograms]
-  );
+    // Move to the next tomogram if there is one
+    if (currentIndex < review.tomograms.length - 1) {
+      dispatch({
+        type: 'SET_SELECTED_TOMOGRAM',
+        payload: review.tomograms[currentIndex + 1].tomogramId,
+      });
+    }
+  };
 
   return (
     <div className="flex flex-col items-center">
