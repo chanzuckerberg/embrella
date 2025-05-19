@@ -5,41 +5,55 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
-import { Button } from '@czi-sds/components';
-import { Review, ReviewTomogramDetail } from './types';
+import { Review, ReviewTomogramDetail, TomogramDetail } from './types';
 import { QualityControls } from './components/QualityControls';
 import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
+import { getRegionFromZattrs } from './utils';
+import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
 
 interface TomogramViewerProps {
   review: Review;
 }
 
-const sourceUrl = 'https://public.czbiohub.org/organelle_box/datasets/A549/organelle_box_crop_v1.zarr';
-const wellPath = 'ATG101/MeOH';
-const region: Region = [
-  { dimension: 'T', index: { type: 'point', value: 0 } },
-  { dimension: 'C', index: { type: 'full' } },
-  { dimension: 'Z', index: { type: 'full' } },
-  { dimension: 'Y', index: { type: 'full' } },
-  { dimension: 'X', index: { type: 'full' } },
-];
-const imagePaths = ['000000', '000001', '000002', '001000', '001001', '001002'];
+const sourceUrl =
+  'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-sample/aretomo3/vol002/Position_10_Vol.zarr';
 
 export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
-  const [imageIndex, setImageIndex] = useState(0);
-  const imagePath = imagePaths[imageIndex];
-  const imageUrl = `${sourceUrl}/${wellPath}/${imagePath}`;
+  const [region, setRegion] = useState<Region | null>(null);
+  const imageUrl = `${sourceUrl}`;
 
   const layerCreatedTime = useRef<number | undefined>(undefined);
   const loadAllSlicesClickedTime = useRef<number | undefined>(undefined);
 
   const [selectedTomogram, setSelectedTomogram] = useState<string | undefined>(review.tomograms[0]?.tomogramId);
   const [tomogramDetail, setTomogramDetail] = useState<ReviewTomogramDetail | null>(null);
-  const [contrast, setContrast] = useState(50);
-  const [slabThickness, setSlabThickness] = useState(1000);
-  const [zPosition, setZPosition] = useState(50);
-  const [seriesDimensionName, setSeriesDimensionName] = useState('Z');
+  const [zPosition, setZPosition] = useState(0);
+  const [seriesDimensionName, setSeriesDimensionName] = useState('z');
+  const [contrastLimits, setContrastLimits] = useState<[number, number]>([-0.00001, 0.00001]);
+
+  const { imageSeriesLayer, channels } = useIdetik();
+  const handleContrastLimitsChange = useCallback(
+    (newLimits: [number, number]) => {
+      if (!imageSeriesLayer) return;
+
+      const updatedChannels = channels.map((channel) => ({
+        ...channel,
+        contrastLimits: newLimits,
+      }));
+
+      imageSeriesLayer.setChannelProps(updatedChannels);
+    },
+    [imageSeriesLayer, channels]
+  );
+
+  useEffect(() => {
+    const fetchRegion = async () => {
+      const region = await getRegionFromZattrs(imageUrl);
+      setRegion(region);
+    };
+    fetchRegion();
+  }, [imageUrl]);
 
   const handleLayerCreated = useCallback(() => {
     layerCreatedTime.current = performance.now();
@@ -96,7 +110,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     const fetchTomogramDetail = async () => {
       if (!selectedTomogram) return;
 
-      const mockResponse = {
+      const mockResponse: TomogramDetail = {
         tomogramId: selectedTomogram,
         displayName: `Grid5_${selectedTomogram}`,
         zarrPath: `https://review-static.czbiohub.org/zarrs/Grid5_2025-04-10/${selectedTomogram}.zarr`,
@@ -107,7 +121,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
       setTomogramDetail(mockResponse);
     };
-
     fetchTomogramDetail();
   }, [selectedTomogram]);
 
@@ -119,24 +132,24 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           reviewName={review.reviewName}
           tomograms={review.tomograms}
           selectedTomogram={selectedTomogram}
+          tomogramDetail={tomogramDetail}
           currentIndex={currentIndex}
           onPrevious={handlePrevious}
           onNext={handleNext}
           onSelectTomogram={setSelectedTomogram}
-          contrast={contrast}
-          onContrastChange={setContrast}
-          slabThickness={slabThickness}
-          onSlabThicknessChange={setSlabThickness}
+          contrastLimits={contrastLimits}
+          onContrastLimitsChange={handleContrastLimitsChange}
         />
         <div className="flex-auto flex flex-col p-6 rounded">
-          {selectedTomogram ? (
+          {selectedTomogram && region ? (
             <>
               <div className="flex-1 flex items-center justify-center border-r border-l">
                 <OmeZarrImageViewer
                   sourceUrl={imageUrl}
                   region={region}
-                  seriesDimensionName="Z"
+                  seriesDimensionName={seriesDimensionName}
                   allSlicesSizeEstimate="250 MB"
+                  fallbackContrastLimits={contrastLimits}
                   classNames={{
                     root: 'bg-dark-sds-color-primitive-gray-100',
                   }}
@@ -146,23 +159,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                   onAllSlicesLoaded={handleAllSlicesLoaded}
                   onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
                 />
-              </div>
-
-              <div className="flex items-center gap-4 p-4 rounded mt-6 border">
-                <Button sdsStyle="square" size="small">
-                  ←
-                </Button>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={zPosition}
-                  onChange={(e) => setZPosition(Number(e.target.value))}
-                  className="flex-1"
-                />
-                <Button sdsStyle="square" size="small">
-                  →
-                </Button>
               </div>
             </>
           ) : (

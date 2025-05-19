@@ -47,6 +47,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Tomogram Quality - 24nov10 - run001 - denoised',
           url: '/api/reviews/rev_abcdef123456',
           type: 'tomogram_quality',
+          annotationObjects: ['ribosome', 'mitochondrion'],
         },
         session: {
           id: 24110,
@@ -69,6 +70,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Tomogram Quality - 24oct30 - run001 - DCTF',
           url: '/api/reviews/rev_456789abcdef',
           type: 'tomogram_quality',
+          annotationObjects: ['nucleus', 'cytosolic ribosome'],
         },
         session: {
           id: 24030,
@@ -92,6 +94,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Tomogram Quality - Grid4_TestRun - run002 - Denoised',
           url: '/api/reviews/rev_fedcba654321',
           type: 'tomogram_quality',
+          annotationObjects: ['lysosome', 'golgi apparatus'],
         },
         session: {
           id: 4321,
@@ -115,6 +118,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Segmentation Labeling - 24nov10 - run001',
           url: '/api/reviews/rev_789012ghijkl',
           type: 'segmentation_labeling',
+          annotationObjects: ['actin filament', 'microtubule'],
         },
         session: {
           id: 24110,
@@ -138,6 +142,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Tomogram Quality - 24dec15 - run001 - SART',
           url: '/api/reviews/rev_89012345mnop',
           type: 'tomogram_quality',
+          annotationObjects: ['nuclear envelope', 'chromatin'],
         },
         session: {
           id: 24215,
@@ -161,6 +166,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Segmentation Labeling - Grid7_2025-04-10 - run002',
           url: '/api/reviews/rev_90123456qrst',
           type: 'segmentation_labeling',
+          annotationObjects: ['endoplasmic reticulum', 'peroxisome'],
         },
         session: {
           id: 24215,
@@ -184,6 +190,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Particle Picking - Grid5_2025-04-08 - run001',
           url: '/api/reviews/rev_112233uvwx',
           type: 'particle_picking',
+          annotationObjects: ['vesicle', 'plasma membrane'],
         },
         session: {
           id: 24030,
@@ -207,6 +214,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Tomogram Quality - 25jan05 - run001 - Denoised',
           url: '/api/reviews/rev_445566yzab',
           type: 'tomogram_quality',
+          annotationObjects: ['ribosome', 'mitochondrion'],
         },
         session: {
           id: 25005,
@@ -230,6 +238,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Tomogram Quality - 25feb20 - run003 - DCTF',
           url: '/api/reviews/rev_778899cdef',
           type: 'tomogram_quality',
+          annotationObjects: ['nucleus', 'cytosolic ribosome'],
         },
         session: {
           id: 25220,
@@ -253,6 +262,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Particle Picking - Grid9_2025-02-20 - run002',
           url: '/api/reviews/rev_224466ghij',
           type: 'particle_picking',
+          annotationObjects: ['lysosome', 'golgi apparatus'],
         },
         session: {
           id: 25220,
@@ -276,6 +286,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Segmentation Labeling - 25mar15 - run001',
           url: '/api/reviews/rev_335577klmn',
           type: 'segmentation_labeling',
+          annotationObjects: ['actin filament', 'microtubule'],
         },
         session: {
           id: 25315,
@@ -299,6 +310,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
           name: 'Tomogram Quality - 25apr01 - run001 - SART',
           url: '/api/reviews/rev_998877opqr',
           type: 'tomogram_quality',
+          annotationObjects: ['nuclear envelope', 'chromatin'],
         },
         session: {
           id: 25401,
@@ -319,18 +331,20 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     ];
 
     let params: SearchParamValue[] = [];
-    try {
-      params = JSON.parse(decodeURIComponent(url.split('q=')[1]));
-      const searchParam = params.find((param) => param.category === 'search');
-      const pageParam = params.find((param) => param.category);
-      if (searchParam !== undefined) {
-        reviews = reviews.filter((review) => review.review.name.includes(searchParam.value as string));
-      } else if (pageParam !== undefined) {
-        reviews = reviews.slice(0, 10);
+    if (url.includes('q=')) {
+      try {
+        params = JSON.parse(decodeURIComponent(url.split('q=')[1]));
+        const searchParam = params.find((param) => param.category === 'search');
+        const pageParam = params.find((param) => param.category);
+        if (searchParam !== undefined) {
+          reviews = reviews.filter((review) => review.review.name.includes(searchParam.value as string));
+        } else if (pageParam !== undefined) {
+          reviews = reviews.slice(0, 10);
+        }
+      } catch (e) {
+        console.log(e);
+        console.log(`Mock function failed to parse ${url}`);
       }
-    } catch (e) {
-      console.log(e);
-      console.log(`Mock function failed to parse ${url}`);
     }
 
     return {
@@ -352,6 +366,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       sessionId: '24oct30',
       sessionName: 'Grid5_2025-04-08',
       createdAt: '2025-04-08T13:22:00Z',
+      projectName: 'Project A',
+      savePath: '/mnt/data/tomograms/2025-04-08/Grid5',
       runs: [
         {
           runId: 'run001',
@@ -364,6 +380,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       sessionId: '24nov10',
       sessionName: 'Grid6_2025-04-22',
       createdAt: '2025-04-22T09:10:00Z',
+      projectName: 'Project B',
+      savePath: '/mnt/data/tomograms/2025-04-22/Grid6',
       runs: [
         {
           runId: 'run001',
@@ -376,6 +394,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       sessionId: 'session_4321',
       sessionName: 'Grid4_TestRun',
       createdAt: '2025-04-01T09:10:00Z',
+      projectName: 'Project C',
+      savePath: '/mnt/data/tomograms/2025-04-01/Grid4_TestRun',
       runs: [
         {
           runId: 'run001',

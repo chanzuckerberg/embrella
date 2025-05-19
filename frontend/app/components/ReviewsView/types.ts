@@ -2,6 +2,7 @@ import { EntityLinkField } from '@app/common/types/entity';
 
 export interface Review extends EntityLinkField {
   type: string;
+  annotationObjects: string[];
 }
 
 export interface ReviewData {
@@ -17,7 +18,9 @@ export interface ReviewData {
 export interface TemSession {
   id: number;
   sessionName: string;
+  projectName: string;
   createdAt: string;
+  savePath: string;
   runs: Run[];
 }
 

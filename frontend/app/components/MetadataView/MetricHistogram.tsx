@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
 import { MetadataVizResponse } from '../../common/types/metadataViz/metadataVizData';
 import styles from './MetadataViz.module.css';
+import { HISTOGRAM_METRIC_COLORS } from './constants/MetricConfig';
 
 interface ProcessedData {
   metricsConfig: Array<{
@@ -18,17 +19,6 @@ interface MetricHistogramProps {
   data: MetadataVizResponse;
   processedData: ProcessedData;
 }
-
-// Color mapping for different metrics (same as scatter plot)
-const METRIC_COLORS = {
-  thickness_pix: '#1f77b4',
-  tilt_axis: '#ff7f0e',
-  global_shift_pix: '#9467bd',
-  bad_patch_low: '#8c564b',
-  bad_patch_all: '#e377c2',
-  ctf_resolution_a: '#17becf',
-  ctf_score: '#ffd700',
-};
 
 // Sturges' formula for calculating number of bins
 const calculateBins = (n: number): number => {
@@ -70,13 +60,13 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
         return {
           id: index.toString(),
           containLabel: true,
-          top: `${4 + row * 33}%`,
+          top: `${3 + row * 33}%`,
           height: '26%',
-          left: `${4 + col * 32}%`,
+          left: `${3 + col * 33}%`,
           width: '26%',
           bottom: '20%',
           show: true,
-          padding: [15, 10, 15, 0],
+          padding: [15, 0, 15, 0],
           offset: 8,
         };
       }),
@@ -152,7 +142,7 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
           data: histogramData,
           barWidth: '90%',
           itemStyle: {
-            color: METRIC_COLORS[metric.key as keyof typeof METRIC_COLORS],
+            color: HISTOGRAM_METRIC_COLORS[metric.key as keyof typeof HISTOGRAM_METRIC_COLORS],
             opacity: 0.8,
           },
         };
