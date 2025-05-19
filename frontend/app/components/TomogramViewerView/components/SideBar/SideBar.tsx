@@ -30,7 +30,7 @@ export const SideBar = ({
   contrastLimits: contrast,
   onContrastLimitsChange: onContrastChange,
 }: SideBarProps) => {
-  const reviewedCount = tomograms.filter(t => t.status !== 'pending').length;
+  const reviewedCount = tomograms.filter((t) => t.status !== 'pending').length;
   return (
     <div className="basis-[280px] shrink-0 flex flex-col justify-start gap-2 !p-[20px]">
       <SideBarSection>
@@ -51,7 +51,11 @@ export const SideBar = ({
 
       <SideBarSection>
         <div className="border-b border-gray-400 flex flex-col gap-4">
-          <TomogramTable tomograms={tomograms} selectedTomogram={selectedTomogram} onSelectTomogram={onSelectTomogram} />
+          <TomogramTable
+            tomograms={tomograms}
+            selectedTomogram={selectedTomogram}
+            onSelectTomogram={onSelectTomogram}
+          />
           <NavigationButtons
             currentIndex={currentIndex}
             totalItems={tomograms.length}
@@ -71,6 +75,6 @@ export const SideBar = ({
       <SideBarSection>
         <SliderControls contrast={contrast} onContrastChange={onContrastChange} />
       </SideBarSection>
-    </div >
+    </div>
   );
 };

@@ -140,8 +140,8 @@ export const CreateReviewView = () => {
               setRunOptions(
                 reconstructionTypeOption !== undefined
                   ? selectedTemSession.session.runs
-                    .filter((run) => run.reconstructionTypes.includes(reconstructionTypeOption.name))
-                    .map((run) => ({ name: run.runId }))
+                      .filter((run) => run.reconstructionTypes.includes(reconstructionTypeOption.name))
+                      .map((run) => ({ name: run.runId }))
                   : []
               );
             }}

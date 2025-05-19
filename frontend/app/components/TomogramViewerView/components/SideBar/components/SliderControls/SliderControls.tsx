@@ -16,11 +16,7 @@ export const SliderControls = ({ contrast, onContrastChange }: SliderControlsPro
         <div className="flex items-center justify-between cursor-pointer w-full" onClick={() => setOpen((v) => !v)}>
           <h3 className="font-bold text-lg">View Controls</h3>
           <span className="ml-2">
-            {open ? (
-              <Icon sdsIcon="ChevronUp" sdsSize="s" />
-            ) : (
-              <Icon sdsIcon="ChevronDown" sdsSize="s" />
-            )}
+            {open ? <Icon sdsIcon="ChevronUp" sdsSize="s" /> : <Icon sdsIcon="ChevronDown" sdsSize="s" />}
           </span>
         </div>
         {open && (

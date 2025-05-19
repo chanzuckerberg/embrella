@@ -12,11 +12,7 @@ export const TomogramInfo = ({ tomogramDetail }: { tomogramDetail: TomogramDetai
         <div className="flex items-center justify-between cursor-pointer w-full" onClick={() => setOpen((v) => !v)}>
           <h3 className="font-bold text-lg">Current Tomogram Info</h3>
           <span className="ml-2">
-            {open ? (
-              <Icon sdsIcon="ChevronUp" sdsSize="s" />
-            ) : (
-              <Icon sdsIcon="ChevronDown" sdsSize="s" />
-            )}
+            {open ? <Icon sdsIcon="ChevronUp" sdsSize="s" /> : <Icon sdsIcon="ChevronDown" sdsSize="s" />}
           </span>
         </div>
         {open && (
@@ -24,18 +20,17 @@ export const TomogramInfo = ({ tomogramDetail }: { tomogramDetail: TomogramDetai
             {tomogramDetail && (
               <>
                 <div>
-                  <span className="font-bold">Organism:</span>{' '}
-                  <span className="italic">Mus musculus</span>
+                  <span className="font-bold">Organism:</span> <span className="italic">Mus musculus</span>
                 </div>
                 <div className="mt-2 space-y-1">
                   <div>
-                    <span className="font-bold">ID:</span> {' '}<span className="">{tomogramDetail.tomogramId}</span>
+                    <span className="font-bold">ID:</span> <span className="">{tomogramDetail.tomogramId}</span>
                   </div>
                   <div>
-                    <span className="font-bold">Display Name:</span> {' '}<span>{tomogramDetail.displayName}</span>
+                    <span className="font-bold">Display Name:</span> <span>{tomogramDetail.displayName}</span>
                   </div>
                   <div>
-                    <span className="font-bold">Zarr Path:</span> {' '}<span>{tomogramDetail.zarrPath}</span>
+                    <span className="font-bold">Zarr Path:</span> <span>{tomogramDetail.zarrPath}</span>
                   </div>
                 </div>
               </>
@@ -43,6 +38,6 @@ export const TomogramInfo = ({ tomogramDetail }: { tomogramDetail: TomogramDetai
           </div>
         )}
       </div>
-    </SideBarSection >
+    </SideBarSection>
   );
 };

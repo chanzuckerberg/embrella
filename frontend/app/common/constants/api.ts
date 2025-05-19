@@ -39,7 +39,7 @@ export enum POST_API {
 
 type TomogramReviewResult = {
   tomogramId: string;
-  quality: "accepted" | "rejected" | "uncertain";
+  quality: 'accepted' | 'rejected' | 'uncertain';
   rejectionReasons?: string[];
   objectLabels?: string[];
 };
@@ -460,9 +460,9 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     },
     tomograms: [
       { tomogramId: 'tomo_001', status: 'accepted' },
-      { tomogramId: 'tomo_002', status: 'uncertain' },
-      { tomogramId: 'tomo_003', status: 'pending' },
-      { tomogramId: 'tomo_004', status: 'rejected' },
+      { tomogramId: 'tomo_002', status: 'rejected' },
+      { tomogramId: 'tomo_003', status: 'uncertain' },
+      { tomogramId: 'tomo_004', status: 'pending' },
       { tomogramId: 'tomo_005', status: 'pending' },
       { tomogramId: 'tomo_006', status: 'accepted' },
       { tomogramId: 'tomo_007', status: 'uncertain' },
@@ -502,8 +502,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
         zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_6_Vol.zarr',
         existingReview: {
           quality: 'accepted',
-          rejectionReasons: ['ice contamination'],
-          objectLabels: ['mitochondria', 'nucleus'],
+          rejectionReasons: [''],
+          objectLabels: ['mitochondria', 'nucleus', 'ribosome', 'vesicle'],
         },
       },
       tomo_002: {
@@ -513,8 +513,8 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
         zarrPath: 'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/',
         existingReview: {
           quality: 'rejected',
-          rejectionReasons: ['bad alignment'],
-          objectLabels: ['mitochondria'],
+          rejectionReasons: ['no features of interest', 'blurry'],
+          objectLabels: ['tight junction', 'desmosome', 'gap junction', 'synapse', 'axon', 'dendrite', 'myelin sheath'],
         },
       },
       tomo_003: {
@@ -523,7 +523,38 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
         zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
         existingReview: {
           quality: 'uncertain',
-          objectLabels: [],
+          objectLabels: [
+            'lysosomal membrane',
+            'ribosomal subunit',
+            'proteasome',
+            'spliceosome',
+            'cytosolic protein complex',
+            'signalosome',
+            'transcription factor complex',
+            'kinetochore',
+            'telomere',
+            'centromere',
+          ],
+        },
+      },
+      tomo_004: {
+        tomogramId: 'tomo_004',
+        displayName: 'Grid6_Tomo004',
+        zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
+        existingReview: {
+          quality: 'pending',
+          objectLabels: [
+            'lysosomal membrane',
+            'ribosomal subunit',
+            'proteasome',
+            'spliceosome',
+            'cytosolic protein complex',
+            'signalosome',
+            'transcription factor complex',
+            'kinetochore',
+            'telomere',
+            'centromere',
+          ],
         },
       },
     };
@@ -545,11 +576,9 @@ export const MOCKED_POST_APIS: Partial<Record<POST_API, any>> = {
   },
   [POST_API.SAVE_REVIEW]: (payload: SaveReviewRequest) => {
     const reviewedCount = Array.isArray(payload.annotations)
-      ? payload.annotations.filter(a => !!a.quality).length
+      ? payload.annotations.filter((a) => !!a.quality).length
       : 0;
-    const totalCount = Array.isArray(payload.annotations)
-      ? payload.annotations.length
-      : 0;
+    const totalCount = Array.isArray(payload.annotations) ? payload.annotations.length : 0;
     return {
       ok: true,
       savedAt: new Date().toISOString(),
@@ -565,13 +594,11 @@ export const MOCKED_POST_APIS: Partial<Record<POST_API, any>> = {
     finishedAt: '2025-04-22T17:30:15Z',
     savePath: '/mnt/data/reviews/rev_abcdef123456/review.json',
   },
-  [POST_API.UPDATE_TOMOGRAM_REVIEW]: (
-    options: { userIsOwner?: boolean } = {}
-  ) => {
+  [POST_API.UPDATE_TOMOGRAM_REVIEW]: (options: { userIsOwner?: boolean } = {}) => {
     if (options.userIsOwner === false) {
       return {
         ok: false,
-        error: "You are not the owner of this review and cannot submit annotations.",
+        error: 'You are not the owner of this review and cannot submit annotations.',
       };
     }
     return { ok: true };

@@ -32,10 +32,10 @@ export const RawJson: React.FC<RawJsonProps> = ({ isOpen, onClose, data }) => {
           else if (key === 'ctf_resolution_a') unit = 'Å';
           else if (key === 'tilt_axis' || key === 'alpha0' || key === 'beta0') unit = '°';
 
-              // Fix decimal places to 2 for better readability
+          // Fix decimal places to 2 for better readability
           const minValue = Number(range[0]).toFixed(2);
           const maxValue = Number(range[1]).toFixed(2);
-          
+
           filterRanges[key] = `${minValue}-${maxValue}${unit}`;
         }
       });

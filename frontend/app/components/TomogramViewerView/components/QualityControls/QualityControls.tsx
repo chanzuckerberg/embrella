@@ -14,7 +14,7 @@ export const QualityControls = ({ selectedQuality, onAccept, onReject, onUncerta
       <Button
         startIcon={<Icon sdsIcon="Check" sdsSize="s" />}
         sdsStyle="square"
-        sdsType={selectedQuality === "accepted" ? "primary" : "secondary"}
+        sdsType={selectedQuality === 'accepted' ? 'primary' : 'secondary'}
         fullWidth
         onClick={onAccept}
       >
@@ -23,7 +23,7 @@ export const QualityControls = ({ selectedQuality, onAccept, onReject, onUncerta
       <Button
         startIcon={<Icon sdsIcon="XMark" sdsSize="l" />}
         sdsStyle="square"
-        sdsType={selectedQuality === "rejected" ? "primary" : "secondary"}
+        sdsType={selectedQuality === 'rejected' ? 'primary' : 'secondary'}
         fullWidth
         onClick={onReject}
       >
@@ -32,7 +32,7 @@ export const QualityControls = ({ selectedQuality, onAccept, onReject, onUncerta
       <Button
         startIcon={<Icon sdsIcon="QuestionMark" sdsSize="l" />}
         sdsStyle="square"
-        sdsType="secondary"
+        sdsType={selectedQuality === 'uncertain' ? 'primary' : 'secondary'}
         fullWidth
         onClick={onUncertain}
       >
