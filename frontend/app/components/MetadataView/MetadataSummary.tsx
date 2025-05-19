@@ -86,7 +86,7 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
               onClick={handleToggleJsonView}
               className={styles.generateButton}
             >
-              Generate Json
+            Generate Json
             </Button>
           )}
           <RawJson isOpen={isJsonViewOpen} onClose={() => setIsJsonViewOpen(false)} data={filteredData} />

@@ -153,7 +153,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           tomogramIdToUse = 'tomo_004';
           break;
         default:
-          tomogramIdToUse = 'tomo_001'; // Default to tomo_001 if status doesn't match
+          tomogramIdToUse = 'tomo_001';
       }
 
       const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;

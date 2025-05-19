@@ -31,13 +31,13 @@ export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
       <div className="font-bold">
         Add Global Object Labels <span className="font-normal">(Optional)</span>
       </div>
-      <div className="italic text-sm mb-2">Select all that appear in this tomogram.</div>
+      <div className="text-sm mb-2">Select all that appear in this tomogram.</div>
       <input
         type="text"
         placeholder="Search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="border rounded px-2 py-1 mb-2 w-full"
+        className="rounded px-2 py-1 mb-2 w-full"
       />
       <div className="max-h-64 overflow-y-auto rounded p-2">
         {filteredObjects.map((obj) => (

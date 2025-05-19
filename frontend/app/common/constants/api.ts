@@ -51,14 +51,6 @@ type SaveReviewRequest = {
   annotations: TomogramReviewResult[];
 };
 
-type SaveReviewResponse = {
-  ok: true;
-  savedAt: string;
-  savePath: string;
-  reviewedCount: number;
-  totalCount: number;
-};
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MOCKED_APIS: Partial<Record<API, any>> = {
   [API.REVIEWS]: (url: string) => {
@@ -494,7 +486,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     // Additional tomograms would be listed here...
   ],
   [API.TOMOGRAM_DETAIL]: (url: string) => {
-    const tomogramId = url.split('/').pop(); // crude example, improve as needed
+    const tomogramId = url.split('/').pop();
     const details = {
       tomo_001: {
         tomogramId: 'tomo_001',
@@ -509,7 +501,6 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       tomo_002: {
         tomogramId: 'tomo_002',
         displayName: 'Grid6_Tomo002',
-        // zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_7_Vol.zarr',
         zarrPath: 'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/',
         existingReview: {
           quality: 'rejected',
