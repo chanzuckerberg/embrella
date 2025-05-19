@@ -5,7 +5,15 @@ import { ReviewData, TemSession } from '../ReviewsView/types';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { useMemo, useRef, useState } from 'react';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
-import { AutocompleteOptionBasic, Button, DropdownMenu, Icon, InputSearch, TagFilter } from '@czi-sds/components';
+import {
+  AutocompleteOptionBasic,
+  Button,
+  DropdownMenu,
+  Icon,
+  InputSearch,
+  InputText,
+  TagFilter,
+} from '@czi-sds/components';
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
 
@@ -96,6 +104,8 @@ export const CreateReviewView = () => {
   const [previousSessions, setPreviousSessions] = useState<Array<ReviewData> | undefined>(undefined);
   const [isPreviousSessionsDropdownOpen, setIsPreviousSessionDropdownOpen] = useState(false);
 
+  const [reviewName, setReviewName] = useState('');
+
   return (
     <div className="flex flex-col !p-[25px] relative gap-[40px]">
       <header className="text-[22px] font-semibold">Create New Review</header>
@@ -145,6 +155,9 @@ export const CreateReviewView = () => {
             options={runOptions}
             onChange={(option) => {
               setSelectedRun(option);
+              setReviewName(
+                `Tomogram Quality - ${selectedTemSession?.name} - ${option?.name} - ${selectedReconstructionType.name}`
+              );
             }}
           />
         )}
@@ -273,6 +286,7 @@ export const CreateReviewView = () => {
                     <DropdownMenu
                       search
                       loading={previousSessions === undefined}
+                      loadingText="Loading..."
                       options={
                         previousSessions?.map((review) => ({
                           name: review.review.name,
@@ -321,6 +335,25 @@ export const CreateReviewView = () => {
                 <div className="text-[#6c6c6c] text-[12px]">Bad tomogram quality, No features of interest</div>
               </div>
             </div>
+            <div className="!mt-[24px] font-semibold text-[18px]">Review Name</div>
+            <div className="text-[13px] text-[#6c6c6c] !mt-[4px]">
+              This name will be used to identify this review in a table or menu. You can update or modify the
+              auto-generated name.
+            </div>
+            <InputText
+              id="reviewName"
+              value={reviewName}
+              onChange={(event) => {
+                setReviewName(event.target.value);
+              }}
+              variant="outlined"
+              className="!mt-[2px] !mb-[24px]"
+              label="reviewName"
+              hideLabel
+            />
+            <Button sdsStyle="square" className="self-start">
+              Create Review
+            </Button>
           </>
         )}
       </main>
