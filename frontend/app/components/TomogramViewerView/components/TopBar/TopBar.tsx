@@ -8,7 +8,7 @@ interface TopBarProps {
 export const TopBar = ({ onMarkComplete }: TopBarProps) => {
   const router = useRouter();
   return (
-    <div className="w-full flex justify-between items-center h-16 px-6 max-w-6xl mx-auto">
+    <div className="flex flex-row justify-between items-center h-16 w-full px-4">
       <Button
         sdsStyle="square"
         sdsType="secondary"

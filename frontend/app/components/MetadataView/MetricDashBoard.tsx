@@ -18,22 +18,18 @@ interface MetricDashboardProps {
 const processMetadata = (data: MetadataVizResponse | undefined) => {
   if (!data?.accepted_results?.length) return null;
 
-  // Filter to only include the metrics we want to show
-  const metricsConfig = Object.keys(METRICS_CONFIG).map((key) => ({
-    key,
-    label: METRICS_CONFIG[key as keyof typeof METRICS_CONFIG].label,
-    unit: METRICS_CONFIG[key as keyof typeof METRICS_CONFIG].unit,
-  }));
-
-  const processedMetrics = metricsConfig.map((metric) => {
+  const processedMetrics = Object.keys(METRICS_CONFIG).map((key) => {
+    const metricKey = key as keyof typeof METRICS_CONFIG;
     const values = data.accepted_results.map((item) => {
-      return item.metrics[metric.key as keyof typeof item.metrics];
+      return item.metrics[metricKey];
     });
 
     return {
-      ...metric,
+      key,
+      label: METRICS_CONFIG[metricKey].label,
+      unit: METRICS_CONFIG[metricKey].unit,
       values,
-      range: data.metric_ranges[metric.key as keyof typeof data.metric_ranges],
+      range: data.metric_ranges[metricKey],
     };
   });
 
@@ -59,8 +55,6 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
   scatterplotError,
   scatterplotLoading,
 }) => {
-  console.log(data, 'Dashboarddata');
-  console.log(scatterplotData, 'ScatterplotData');
   const [isScatterPlot, setIsScatterPlot] = useState(true);
 
   // Process data once for both visualizations
@@ -77,12 +71,6 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
 
   // Determine if filters are applied
   const isFilterApplied = checkFiltersApplied(scatterplotData);
-
-  console.log('Filter status:', {
-    hasScatterplotData: !!scatterplotData,
-    filtersApplied: scatterplotData?.filters_applied,
-    isFilterApplied,
-  });
 
   // Helper function to render the appropriate visualization
   const renderVisualization = () => {
