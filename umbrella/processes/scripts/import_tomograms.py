@@ -42,7 +42,7 @@ def parse_zarr_filename(filename):
 def get_session_path(review):
     """Construct session path based on review's reconstruction type and session info"""
     recon_type = review.reconstruction_type.lower()
-    session_name = review.session.name
+    session_name = review.msi_session.name
     run_id = review.run_id
     
     # Determine job name based on reconstruction type
@@ -101,9 +101,9 @@ def get_zarr_files_from_web(review):
 def get_review(review_id):
     """Get review instance by ID"""
     try:
-        review = Review.objects.select_related('session').get(review_id=review_id)
+        review = Review.objects.select_related('msi_session').get(review_id=review_id)
         print(f"Found review: {review.review_id}")
-        print(f"Session: {review.session.name}")
+        print(f"Session: {review.msi_session.name}")
         print(f"Run ID: {review.run_id}")
         print(f"Reconstruction Type: {review.reconstruction_type}")
         return review
@@ -126,7 +126,7 @@ def get_available_sessions():
         for run in runs:
             # Check if this run has any tomograms
             tomograms = ReviewTomogram.objects.filter(
-                review__session=session,
+                review__msi_session=session,
                 review__run_id=run.name
             ).exists()
             
@@ -147,10 +147,22 @@ def get_available_sessions():
     return sessions_data
 
 def create_tomogram(review, tomogram_id, position_id):
+    # Determine reconstruction type based on the path
+    session_path = get_session_path(review)
+    if "vol003" in session_path:
+        recon_type = "SART"
+    elif "vol001" in session_path:
+        recon_type = "DCTF"
+    else:
+        recon_type = "Denoised"
+
     return ReviewTomogram.objects.create(
         review=review,
         tomogram_id=tomogram_id,
         position_id=position_id,
+        run_id=review.run_id,
+        reconstruction_type=recon_type,
+        session_id=review.msi_session.id,
         quality='',
         rejection_reasons=[],
         object_labels=[]

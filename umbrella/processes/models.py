@@ -687,18 +687,25 @@ class Review(models.Model):
     save_path = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name='reviews')
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name='raw_tomograms')
     requestor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_reviews')
 
     def __str__(self):
-        return f'Review {self.review_name} for {self.session.name}'
+        return f'Review {self.review_name} for {self.msi_session.name}'
 
 class ReviewTomogram(models.Model):
     """
     A tomogram review record, linking specific tomograms to a review.
     """
-    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='review_tomograms')
+
     tomogram_id = models.CharField(max_length=100, primary_key=True)
+
+    session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name='review_tomograms', null=True, blank=True)
+    review = models.ForeignKey(Review, on_delete=models.SET_NULL, null=True, blank=True, related_name='review_tomograms')
+
+    run_id = models.CharField(max_length=100, null=True, blank=True)  # e.g., UUID or filename-based ID
+    reconstruction_type = models.CharField(max_length=100, null=True, blank=True)  # e.g., 'WBP', 'SIRT', 'SGD'
+
     position_id = models.CharField(max_length=100)
     quality = models.CharField(
         max_length=20,
@@ -709,11 +716,13 @@ class ReviewTomogram(models.Model):
             ('rejected', 'Rejected'),
             ('uncertain', 'Uncertain')
         ],
-        default=''
+        default='pending'
     )
-    rejection_reasons = models.JSONField(default=list, blank=True)  # Array of strings
-    object_labels = models.JSONField(default=list, blank=True)  # Array of objects
+    rejection_reasons = models.JSONField(default=list, blank=True)
+    object_labels = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         unique_together = ['review', 'tomogram_id']

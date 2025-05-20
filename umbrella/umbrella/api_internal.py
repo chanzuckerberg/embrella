@@ -10,7 +10,7 @@ import os
 import socket
 from django.db.models import Q
 from django.contrib.auth.models import User
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -222,13 +222,13 @@ class ReviewView(View):
         sort_field, sort_order = order_by.split(':') if ':' in order_by else ('requestedAt', 'desc')
         
         # Start with base queryset
-        queryset = Review.objects.select_related('session', 'requestor').all()
+        queryset = Review.objects.select_related('msi_session', 'requestor').all()
         
         # Apply search filter
         if search:
             queryset = queryset.filter(
                 Q(review_name__icontains=search) |
-                Q(session__name__icontains=search)
+                Q(msi_session__name__icontains=search)
             )
         
         # Apply sorting
@@ -263,7 +263,7 @@ class ReviewView(View):
                 "reviewId": str(review.review_id),
                 "reviewName": review.review_name,
                 "reviewType": review.review_type,
-                "sessionId": review.session.name,
+                "sessionId": review.msi_session.name,
                 "runId": review.run_id,
                 "reconstructionType": review.reconstruction_type,
                 "updatedAt": review.updated_at.isoformat(),
@@ -402,7 +402,7 @@ class ReviewView(View):
                 review_type=data['reviewType'],
                 run_id=data['runId'],
                 reconstruction_type=data['reconstructionType'],
-                session=session,
+                msi_session=session,
                 requestor=requestor,
                 status='not_started',
                 total_count=0,
@@ -412,7 +412,7 @@ class ReviewView(View):
             # Return the created review
             return JsonResponse({
                 "reviewId": str(review.review_id),
-                "sessionId": review.session.name,
+                "sessionId": review.msi_session.name,
                 "runId": review.run_id,
                 "reconstructionType": review.reconstruction_type,
                 "reviewName": review.review_name,
@@ -426,23 +426,23 @@ class ReviewView(View):
 
     def save_review(self, request, review_id):
         """
-        Save review results for a specific review.
+        Save review results for multiple tomograms.
         
         Args:
             request: HTTP request
-            review_id: UUID of the review
+            review_id: String ID of the review
             
         Request Body:
         {
             "reviewId": string,
-            "sessionId": string (optional),
+            "sessionId": string,
             "savePath": string,
             "annotations": [
                 {
                     "tomogramId": string,
                     "quality": "accepted" | "rejected" | "uncertain",
-                    "rejectionReasons": string[] (optional),
-                    "objectLabels": string[] (optional)
+                    "rejectionReasons": string[],    // only if rejected
+                    "objectLabels": string[]         // optional
                 }
             ]
         }
@@ -450,7 +450,7 @@ class ReviewView(View):
         Returns:
         {
             "ok": true,
-            "savedAt": string (ISO timestamp),
+            "savedAt": string,       // ISO timestamp
             "savePath": string,
             "reviewedCount": number,
             "totalCount": number
@@ -469,24 +469,16 @@ class ReviewView(View):
                 if field not in data:
                     return JsonResponse({"error": f"Missing required field: {field}"}, status=400)
             
-            # Validate review ID matches URL parameter
-            if data['reviewId'] != review_id:
-                return JsonResponse({"error": "Review ID in request body does not match URL parameter"}, status=400)
-            
-            # Convert string to UUID if needed
-            try:
-                review_id = uuid.UUID(review_id)
-            except ValueError:
-                return JsonResponse({"error": "Invalid review ID format"}, status=400)
-            
             # Get the review
             try:
                 review = Review.objects.get(review_id=review_id)
             except Review.DoesNotExist:
                 return JsonResponse({"error": "Review not found"}, status=404)
             
-            # Validate annotations
+            # Validate quality values
             valid_qualities = ['accepted', 'rejected', 'uncertain']
+            
+            # Validate annotations
             for annotation in data['annotations']:
                 if 'tomogramId' not in annotation or 'quality' not in annotation:
                     return JsonResponse({"error": "Each annotation must have tomogramId and quality"}, status=400)
@@ -523,28 +515,28 @@ class ReviewView(View):
                 except ReviewTomogram.DoesNotExist:
                     return JsonResponse({"error": f"Tomogram not found: {annotation['tomogramId']}"}, status=404)
             
-            # Update review counts
-            review.reviewed_count = ReviewTomogram.objects.filter(
+            # Calculate counts
+            total_count = ReviewTomogram.objects.filter(review=review).count()
+            reviewed_count = ReviewTomogram.objects.filter(
                 review=review,
-                quality__isnull=False
+                quality__in=['accepted', 'rejected', 'uncertain']
             ).count()
             
-            # Just store the path in the database without creating the file
-            save_path = f"/mnt/data/reviews/{review_id}/review.json"
-            review.save_path = save_path
-            review.status = 'completed'
+            # Update review's save path
+            review.save_path = data['savePath']
             review.save()
             
-            # Return success response
+            # Return success response with counts
             return JsonResponse({
                 "ok": True,
-                "savedAt": datetime.utcnow().isoformat() + 'Z',
-                "savePath": save_path,
-                "reviewedCount": review.reviewed_count,
-                "totalCount": review.total_count
+                "savedAt": datetime.now(timezone.utc).isoformat(),
+                "savePath": data['savePath'],
+                "reviewedCount": reviewed_count,
+                "totalCount": total_count
             })
             
         except Exception as e:
+            print(f"Unexpected error in save_review: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
 
     def complete_review(self, request, review_id):
@@ -637,7 +629,7 @@ def export_review_results(request, review_id):
         export_data = {
             "reviewId": str(review.review_id),
             "reviewName": review.review_name,
-            "sessionId": review.session.name,
+            "sessionId": review.msi_session.name,
             "runId": review.run_id,
             "reconstructionType": review.reconstruction_type,
             "completedAt": review.updated_at.isoformat(),
@@ -812,7 +804,7 @@ class ReviewTomogramView(View):
                 vol_suffix = ""  # denoised
                 job_name = "denoise"
                 
-            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.session.name}/{review.run_id}/{vol_suffix}{tomogram.position_id}_Vol.zarr"
+            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.msi_session.name}/{review.run_id}/{vol_suffix}{tomogram.position_id}_Vol.zarr"
             
             # Add review details if they exist
             if tomogram.quality:
@@ -983,7 +975,7 @@ class SessionView(View):
             # Get tomogram count for this run
             tomogram_count = ReviewTomogram.objects.filter(
                 review__run_id=proc_run.name,
-                review__session=session
+                review__msi_session=session
             ).count()
             
             if tomogram_count > 0:

@@ -1265,7 +1265,7 @@ async def start_sync(request):
             reconstruction_type__iexact=recon_type  # Case-insensitive comparison
         )
         print(f"Found review: {review}")
-        print(f"Associated session: {review.session}")
+        print(f"Associated session: {review.msi_session}")
         
         # Capture stdout to get progress information
         output = io.StringIO()
