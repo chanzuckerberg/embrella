@@ -114,7 +114,7 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
   const handleReset = () => {
     const resetState: FilterState = {} as FilterState;
     const resetInputValues: Record<string, { min: string; max: string }> = {};
-    
+
     // Use METRICS_CONFIG keys which match FilterConfig
     Object.keys(METRICS_CONFIG).forEach((key) => {
       const metricKey = key as keyof typeof METRICS_CONFIG;
@@ -126,7 +126,7 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
           max: Number(metricRanges[metricKey][1]),
           enabled: true,
         };
-        
+
         // Reset input values state
         resetInputValues[metricKey] = {
           min: Number(metricRanges[metricKey][0]).toFixed(3),
@@ -134,17 +134,17 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
         };
       }
     });
-    
+
     // Update both states
     setFilters(resetState);
     setInputValues(resetInputValues);
     setSelectedOption('AND');
-    
+
     const emptyFilterConfig: FilterConfig = {
       filters: {},
       filter_type: 'AND',
     };
-    
+
     // Also apply the reset filters to update the scatter plot
     if (onApplyFilters) {
       onApplyFilters(emptyFilterConfig, 'AND');
@@ -165,8 +165,6 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     }));
   };
 
-  
-
   // Helper function to calculate the new current value
   const calculateCurrentValue = (
     formattedValue: number,
@@ -175,16 +173,14 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     prevState: FilterState
   ): [number, number] => {
     if (isMin) {
-      const min = prevState[key]?.min ?? 0;
       const currentMax = prevState[key]?.current[1] ?? 0;
-       // Don't constrain the value when typing - only ensure it doesn't exceed max
-       const constrainedMin = Math.min(formattedValue, currentMax);
+      // Don't constrain the value when typing - only ensure it doesn't exceed max
+      const constrainedMin = Math.min(formattedValue, currentMax);
       return [constrainedMin, currentMax];
     } else {
       const currentMin = prevState[key]?.current[0] ?? 0;
-      const max = prevState[key]?.max ?? 0;
- // Don't constrain the value when typing - only ensure it doesn't go below min
- const constrainedMax = Math.max(formattedValue, max);
+      // Don't constrain the value when typing - only ensure it doesn't go below min
+      const constrainedMax = Math.max(formattedValue, currentMin);
       return [currentMin, constrainedMax];
     }
   };
