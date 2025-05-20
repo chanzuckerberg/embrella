@@ -944,12 +944,12 @@ class SessionView(View):
         
         # Check aretomo3 paths
         aretomo_paths = [
-            f"{self.ARETOMO_PATH}/{session_name}/{run_id}/vol001",  # DCTF
-            f"{self.ARETOMO_PATH}/{session_name}/{run_id}/vol003",  # SART
+            f"krios1.processing/{self.ARETOMO_PATH}/{session_name}/{run_id}/vol001",  # DCTF
+            f"krios1.processing/{self.ARETOMO_PATH}/{session_name}/{run_id}/vol003",  # SART
         ]
         
         # Check denoise path
-        denoise_path = f"{self.DENOISE_PATH}/{session_name}/{run_id}/vol001"  # Denoised
+        denoise_path = f"krios1.processing/{self.DENOISE_PATH}/{session_name}/{run_id}/vol001"  # Denoised
         
         # Check all paths
         for path in aretomo_paths + [denoise_path]:
@@ -989,7 +989,7 @@ class SessionView(View):
             if tomogram_count > 0:
                 # Get reconstruction types from file server
                 recon_types = self.get_reconstruction_types(session.name, proc_run.name)
-                
+                print(f"Reconstruction types: {recon_types}")
                 if recon_types:  # Only add runs that have reconstruction types
                     runs_data.append({
                         "runId": proc_run.name,
@@ -1034,7 +1034,7 @@ class SessionView(View):
                 ).prefetch_related(
                     'procrun_set'
                 )
-
+                print(sessions_qs)
                 # Apply search filter if provided
                 if search:
                     sessions_qs = sessions_qs.filter(
