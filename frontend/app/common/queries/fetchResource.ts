@@ -24,7 +24,7 @@ export async function fetchResource(requestURL: string): Promise<Response> {
   return response;
 }
 
-export async function postResource(requestURL: string, body: any): Promise<Response> {
+export async function postResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {
   const mockResponse = MOCKED_POST_APIS[new URL(requestURL).pathname as POST_API];
   if (mockResponse !== undefined) {
     return Promise.resolve({
