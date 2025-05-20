@@ -967,7 +967,7 @@
           currentAdvancedSession = advancedSelect.value;
         }
         
-        const response = await fetch("/workflow/get_msisession_list");
+        const response = await fetch("/workflow/get_msi_session_list");
         const result = await response.json();
 
         if (response.ok && result.session_names) {
