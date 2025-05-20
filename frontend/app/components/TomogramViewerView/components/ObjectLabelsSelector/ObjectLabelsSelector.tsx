@@ -37,9 +37,9 @@ export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
         placeholder="Search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="rounded border border-gray-300 px-2 py-1 mb-2 w-full"
+        className="border border-gray-300 px-2 py-1 mb-2 w-full"
       />
-      <div className="max-h-64 overflow-y-auto rounded p-2">
+      <div className="max-h-45 overflow-y-auto rounded p-2">
         {filteredObjects.map((obj) => (
           <label key={obj} className="flex items-center mb-1 cursor-pointer">
             <input
@@ -53,7 +53,13 @@ export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
         ))}
         {filteredObjects.length === 0 && <div className="text-gray-400 italic">No matches</div>}
       </div>
-      <Button sdsStyle="square" sdsType="secondary" fullWidth onClick={() => onChange(selectedObjects)}>
+      <Button
+        className="!mt-4"
+        sdsStyle="square"
+        sdsType="secondary"
+        fullWidth
+        onClick={() => onChange(selectedObjects)}
+      >
         Submit
       </Button>
     </div>

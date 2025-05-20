@@ -285,17 +285,17 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
               </div>
             </div>
           </div>
-          <div className="flex flex-col">
-            <div className="basis-[250px] shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-0">
+          <div className="flex flex-col gap-3">
+            <div className="shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-[20px]">
               <QualityControls
                 selectedQuality={state.selectedQuality}
                 onAccept={() => dispatch({ type: 'SET_QUALITY', payload: 'accepted' })}
                 onReject={() => dispatch({ type: 'SET_QUALITY', payload: 'rejected' })}
-                onUncertain={() => handleTomogramReview('uncertain')}
+                onUncertain={() => dispatch({ type: 'SET_QUALITY', payload: 'uncertain' })}
               />
             </div>
             {state.selectedQuality === 'rejected' && (
-              <div className="basis-[250px] shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
+              <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
                 <RejectionReasonsSelector
                   selectedReasons={state.selectedRejectionReasons}
                   setSelectedReasons={(reasons) => dispatch({ type: 'SET_REJECTION_REASONS', payload: reasons })}
@@ -304,12 +304,22 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
               </div>
             )}
             {state.selectedQuality === 'accepted' && (
-              <div className="basis-[250px] shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
+              <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
                 <ObjectLabelsSelector
                   availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
                   selectedObjects={state.selectedObjectLabels}
                   setSelectedObjects={(labels) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels })}
                   onChange={(_) => handleTomogramReview('accepted', state.selectedObjectLabels)}
+                />
+              </div>
+            )}
+            {state.selectedQuality === 'uncertain' && (
+              <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
+                <ObjectLabelsSelector
+                  availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
+                  selectedObjects={state.selectedObjectLabels}
+                  setSelectedObjects={(labels) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels })}
+                  onChange={(_) => handleTomogramReview('uncertain', state.selectedObjectLabels)}
                 />
               </div>
             )}
