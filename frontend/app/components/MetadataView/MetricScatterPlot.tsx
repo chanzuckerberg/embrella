@@ -115,6 +115,51 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
     };
   }, [extractTooltipData, formatTooltipContent]);
 
+  // Helper to create positions with consistent mapping
+  const getPositions = useCallback(() => {
+    // Create a mapping of position names to their original indices
+    const positionMap = new Map<string, number>();
+
+    // First collect all unique position names from both accepted and rejected results
+    const allPositions = new Set<string>();
+
+    // Add all position names from accepted results
+    data.accepted_results.forEach((item) => {
+      if (item.name) {
+        allPositions.add(item.name);
+      }
+    });
+
+    // Add all position names from rejected results
+    if (data.rejected_results) {
+      data.rejected_results.forEach((item) => {
+        if (item.name) {
+          allPositions.add(item.name);
+        }
+      });
+    }
+
+    // Create a consistent mapping for all positions
+    // Sort the names to ensure consistent ordering
+    Array.from(allPositions)
+      .sort()
+      .forEach((name, index) => {
+        positionMap.set(name, index);
+      });
+
+    // Get all unique position indices for complete visualization
+    const allPositionIndices = Array.from(allPositions).map((name) => positionMap.get(name) || 0);
+
+    // Now use the position map to get consistent indices
+    return {
+      positionMap,
+      acceptedPositions: data.accepted_results.map((item) => (item.name ? positionMap.get(item.name) || 0 : 0)),
+      rejectedPositions: data.rejected_results?.map((item) => (item.name ? positionMap.get(item.name) || 0 : 0)) || [],
+      allPositionIndices,
+      maxPositionIndex: allPositionIndices.length > 0 ? Math.max(...allPositionIndices) + 1 : 0,
+    };
+  }, [data]);
+
   // Create grid configuration
   const createGridConfig = useCallback((metricsConfig: Array<{ key: string; label: string }>) => {
     const gridHeight = 140;
@@ -133,10 +178,8 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
   // Create X-axis configuration
   const createXAxisConfig = useCallback(
     (metricsConfig: Array<{ key: string; label: string }>) => {
-      const hasRejectedResults = data.rejected_results && data.rejected_results.length > 0;
-      const totalPoints = hasRejectedResults
-        ? Math.max(data.accepted_results.length, data.rejected_results.length) - 1
-        : data.accepted_results.length - 1;
+      // Use the maximum position index from all unique positions
+      const { maxPositionIndex } = getPositions();
 
       return metricsConfig.map((_, index) => ({
         type: 'value' as const,
@@ -159,15 +202,14 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
           wrap: true,
         },
         min: 0,
-        max: totalPoints,
+        max: maxPositionIndex,
         splitLine: {
           show: false,
         },
       }));
     },
-    [data]
+    [getPositions]
   );
-
   // Create Y-axis configuration
   const createYAxisConfig = useCallback(() => {
     return processedData?.metricsConfig.map((metric, index) => {
@@ -228,32 +270,17 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
       const hasRejectedResults = data.rejected_results && data.rejected_results.length > 0;
       const shouldUseFilteredView = isFilterApplied && hasRejectedResults;
 
-      // Helper to create normalized positions
-      const getNormalizedPositions = () => {
-        const maxLength = Math.max(data.accepted_results.length, data.rejected_results?.length || 0);
-
-        return {
-          acceptedPositions: data.accepted_results.map((_, pos) => pos * (data.accepted_results.length / maxLength)),
-          rejectedPositions:
-            data.rejected_results?.map((_, pos) => pos * (data.rejected_results!.length / maxLength)) || [],
-        };
-      };
-
-      // Helper to create data points for a series
-      const createDataPoints = (items: TiltSeries[], normalizedPositions: number[], metricKey: string) => {
-        return items.map((item, pos) => {
-          if (!item?.metrics) return [normalizedPositions[pos], 0];
+      // Helper to create data points for a series - modified to handle position mapping correctly
+      const createDataPoints = (items: TiltSeries[], positions: number[], metricKey: string) => {
+        return items.map((item, idx) => {
+          if (!item?.metrics) return [positions[idx], 0];
           const value = item.metrics[metricKey as keyof Metrics];
-          return [normalizedPositions[pos], metricKey.includes('bad_patch') ? value * 100 : value];
+          return [positions[idx], metricKey.includes('bad_patch') ? value * 100 : value];
         });
       };
 
       // Helper to create default series
-      const createDefaultSeries = (
-        metric: { key: string; label: string },
-        index: number,
-        normalizedPositions: number[]
-      ) => {
+      const createDefaultSeries = (metric: { key: string; label: string }, index: number, positions: number[]) => {
         return {
           type: 'scatter' as const,
           name: metric.label,
@@ -264,7 +291,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
             opacity: 0.6,
             color: SCATTERPLOT_METRIC_COLORS[metric.key as keyof typeof SCATTERPLOT_METRIC_COLORS],
           },
-          data: createDataPoints(data.accepted_results, normalizedPositions, metric.key),
+          data: createDataPoints(data.accepted_results, positions, metric.key),
         };
       };
 
@@ -272,9 +299,48 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
       const createFilteredSeries = (
         metric: { key: string; label: string },
         index: number,
-        acceptedPositions: number[],
-        rejectedPositions: number[]
+        positionMap: Map<string, number>,
+        allPositionIndices: number[]
       ) => {
+        // Create mappings to track which positions have accepted/rejected values
+        const acceptedValuesByPosition = new Map<number, number>();
+        const rejectedValuesByPosition = new Map<number, number>();
+
+        // Map accepted values to their positions
+        data.accepted_results.forEach((item) => {
+          if (item.name && item.metrics) {
+            const posIndex = positionMap.get(item.name) || 0;
+            const value = item.metrics[metric.key as keyof Metrics];
+            acceptedValuesByPosition.set(posIndex, metric.key.includes('bad_patch') ? value * 100 : value);
+          }
+        });
+
+        // Map rejected values to their positions
+        if (data.rejected_results) {
+          data.rejected_results.forEach((item) => {
+            if (item.name && item.metrics) {
+              const posIndex = positionMap.get(item.name) || 0;
+              const value = item.metrics[metric.key as keyof Metrics];
+              rejectedValuesByPosition.set(posIndex, metric.key.includes('bad_patch') ? value * 100 : value);
+            }
+          });
+        }
+
+        // Create data arrays for accepted and rejected points
+        const acceptedData: [number, number][] = [];
+        const rejectedData: [number, number][] = [];
+
+        // For each position index, add it to the appropriate array if it has a value
+        allPositionIndices.forEach((posIndex) => {
+          if (acceptedValuesByPosition.has(posIndex)) {
+            acceptedData.push([posIndex, acceptedValuesByPosition.get(posIndex)!]);
+          }
+
+          if (rejectedValuesByPosition.has(posIndex)) {
+            rejectedData.push([posIndex, rejectedValuesByPosition.get(posIndex)!]);
+          }
+        });
+
         return [
           {
             type: 'scatter' as const,
@@ -286,7 +352,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
               opacity: 0.6,
               color: '#4CAF50',
             },
-            data: createDataPoints(data?.accepted_results, acceptedPositions, metric.key),
+            data: acceptedData,
           },
           {
             type: 'scatter' as const,
@@ -298,13 +364,12 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
               opacity: 0.6,
               color: '#F44336',
             },
-            data: createDataPoints(data?.rejected_results || [], rejectedPositions, metric.key),
+            data: rejectedData,
           },
         ];
       };
 
-      // Get normalized positions
-      const { acceptedPositions, rejectedPositions } = getNormalizedPositions();
+      const { positionMap, acceptedPositions, allPositionIndices } = getPositions();
 
       // Create series based on visualization mode
       return metricsConfig
@@ -312,12 +377,12 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
           if (!shouldUseFilteredView) {
             return createDefaultSeries(metric, index, acceptedPositions);
           } else {
-            return createFilteredSeries(metric, index, acceptedPositions, rejectedPositions);
+            return createFilteredSeries(metric, index, positionMap, allPositionIndices);
           }
         })
         .flat();
     },
-    [data, isFilterApplied]
+    [data, isFilterApplied, getPositions]
   );
 
   useEffect(() => {

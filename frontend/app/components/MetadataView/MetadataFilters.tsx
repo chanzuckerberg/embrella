@@ -165,10 +165,7 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     }));
   };
 
-  // Helper function to get constrained value
-  const getConstrainedValue = (value: number, min: number, max: number): number => {
-    return Number(Math.min(Math.max(value, min), max).toFixed(3));
-  };
+  
 
   // Helper function to calculate the new current value
   const calculateCurrentValue = (
