@@ -3,6 +3,7 @@ import ReactJson from 'react-json-view';
 import styles from './MetadataViz.module.css';
 import { Card, CardHeader } from '@mui/material';
 import { Icon } from '@czi-sds/components';
+import { METRICS_CONFIG } from './constants/MetricConfig';
 import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
 
 interface RawJsonProps {
@@ -26,11 +27,8 @@ export const RawJson: React.FC<RawJsonProps> = ({ isOpen, onClose, data }) => {
       // Convert filter ranges to readable format
       Object.entries(data.filters_applied.filters).forEach(([key, range]) => {
         if (Array.isArray(range) && range.length === 2) {
-          // Format the range with appropriate units based on the metric type
-          let unit = '';
-          if (key === 'thickness_pix') unit = 'px';
-          else if (key === 'ctf_resolution_a') unit = 'Å';
-          else if (key === 'tilt_axis' || key === 'alpha0' || key === 'beta0') unit = '°';
+          // Get unit from METRICS_CONFIG
+          const unit = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG]?.unit || '';
 
           // Fix decimal places to 2 for better readability
           const minValue = Number(range[0]).toFixed(2);
@@ -44,7 +42,7 @@ export const RawJson: React.FC<RawJsonProps> = ({ isOpen, onClose, data }) => {
     return {
       'Selected positions': positionNames,
       'Filtering ranges': filterRanges,
-      // 'Filter type': data.filters_applied?.filter_type || 'None',
+      'Filter type': data.filters_applied?.filter_type || 'None',
     };
   };
 
