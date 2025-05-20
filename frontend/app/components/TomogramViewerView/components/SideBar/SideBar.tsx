@@ -50,7 +50,7 @@ export const SideBar = ({
       </SideBarSection>
 
       <SideBarSection>
-        <div className="border-b border-gray-400 flex flex-col gap-4">
+        <div className="border-b border-gray-400 flex flex-col gap-4 !pb-4">
           <TomogramTable
             tomograms={tomograms}
             selectedTomogram={selectedTomogram}
@@ -62,14 +62,12 @@ export const SideBar = ({
             onPrevious={onPrevious}
             onNext={onNext}
           />
-          <div className="h-6"></div>
         </div>
       </SideBarSection>
 
       <SideBarSection>
-        <div className="border-b border-gray-400">
+        <div className="border-b border-gray-400 !pb-2">
           <TomogramInfo tomogramDetail={tomogramDetail} />
-          <div className="h-6"></div>
         </div>
       </SideBarSection>
       <SideBarSection>
