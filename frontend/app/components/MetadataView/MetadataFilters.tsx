@@ -303,6 +303,7 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
         step={stepValue}
         className={styles.slider}
         disabled={!filters[key]?.enabled}
+        valueLabelDisplay="auto"
         valueLabelFormat={(value) => value.toFixed(3)}
       />
     );
