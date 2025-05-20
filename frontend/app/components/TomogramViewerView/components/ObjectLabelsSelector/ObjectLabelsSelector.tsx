@@ -1,18 +1,15 @@
-import { Button } from '@czi-sds/components';
 import React, { useState } from 'react';
 
 interface ObjectLabelsSelectorProps {
   availableObjects: string[];
   selectedObjects: string[];
   setSelectedObjects: (selected: string[]) => void;
-  onChange: (selected: string[]) => void;
 }
 
 export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
   availableObjects,
   selectedObjects,
   setSelectedObjects,
-  onChange,
 }) => {
   const [search, setSearch] = useState('');
 
@@ -53,15 +50,6 @@ export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
         ))}
         {filteredObjects.length === 0 && <div className="text-gray-400 italic">No matches</div>}
       </div>
-      <Button
-        className="!mt-4"
-        sdsStyle="square"
-        sdsType="secondary"
-        fullWidth
-        onClick={() => onChange(selectedObjects)}
-      >
-        Submit
-      </Button>
     </div>
   );
 };

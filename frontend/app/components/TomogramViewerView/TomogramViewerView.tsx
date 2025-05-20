@@ -13,6 +13,7 @@ import { API, MOCKED_APIS, POST_API, MOCKED_POST_APIS } from '../../../app/commo
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { AVAILABLE_ANNOTATION_OBJECTS } from '../CreateReviewView/CreateReviewView';
+import { Button, Icon } from '@czi-sds/components';
 
 interface TomogramViewerProps {
   review: Review;
@@ -23,7 +24,7 @@ interface TomogramState {
   tomogramDetail: ReviewTomogramDetail | null;
   contrastLimits: [number, number];
   selectedRejectionReasons: string[];
-  selectedQuality: 'accepted' | 'rejected' | 'uncertain' | null;
+  selectedQuality: 'accepted' | 'rejected' | 'uncertain' | 'pending';
   selectedObjectLabels: string[];
 }
 
@@ -32,7 +33,7 @@ type TomogramAction =
   | { type: 'SET_TOMOGRAM_DETAIL'; payload: ReviewTomogramDetail | null }
   | { type: 'SET_CONTRAST_LIMITS'; payload: [number, number] }
   | { type: 'SET_REJECTION_REASONS'; payload: string[] }
-  | { type: 'SET_QUALITY'; payload: 'accepted' | 'rejected' | 'uncertain' | null }
+  | { type: 'SET_QUALITY'; payload: 'accepted' | 'rejected' | 'uncertain' | 'pending' }
   | { type: 'SET_OBJECT_LABELS'; payload: string[] }
   | { type: 'RESET_REVIEW_STATE' };
 
@@ -41,7 +42,7 @@ const initialState: TomogramState = {
   tomogramDetail: null,
   contrastLimits: [-0.00001, 0.00001],
   selectedRejectionReasons: [],
-  selectedQuality: null,
+  selectedQuality: 'pending',
   selectedObjectLabels: [],
 };
 
@@ -62,7 +63,7 @@ function tomogramReducer(state: TomogramState, action: TomogramAction): Tomogram
     case 'RESET_REVIEW_STATE':
       return {
         ...state,
-        selectedQuality: null,
+        selectedQuality: 'pending',
         selectedRejectionReasons: [],
         selectedObjectLabels: [],
       };
@@ -155,6 +156,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         payload: review.tomograms[currentIndex - 1].tomogramId,
       });
     }
+    handleTomogramReview(state.selectedQuality, state.selectedRejectionReasons, state.selectedObjectLabels);
   };
 
   const handleNext = () => {
@@ -164,6 +166,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         payload: review.tomograms[currentIndex + 1].tomogramId,
       });
     }
+    handleTomogramReview(state.selectedQuality, state.selectedRejectionReasons, state.selectedObjectLabels);
   };
 
   const getTomogramIdForStatus = (status: string | undefined) => {
@@ -194,7 +197,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       });
       dispatch({
         type: 'SET_QUALITY',
-        payload: tomogramDetail.existingReview?.quality || null,
+        payload: tomogramDetail.existingReview?.quality || 'pending',
       });
     } else {
       dispatch({ type: 'SET_TOMOGRAM_DETAIL', payload: null });
@@ -221,7 +224,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   }, [state.selectedTomogram, review.reviewId, review.tomograms]);
 
   const handleTomogramReview = (
-    quality: 'accepted' | 'rejected' | 'uncertain',
+    quality: 'accepted' | 'rejected' | 'uncertain' | 'pending',
     rejectionReasons?: string[],
     objectLabels?: string[]
   ) => {
@@ -299,7 +302,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                 <RejectionReasonsSelector
                   selectedReasons={state.selectedRejectionReasons}
                   setSelectedReasons={(reasons) => dispatch({ type: 'SET_REJECTION_REASONS', payload: reasons })}
-                  onChange={(_, selected) => handleTomogramReview('rejected', selected)}
                 />
               </div>
             )}
@@ -309,7 +311,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                   availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
                   selectedObjects={state.selectedObjectLabels}
                   setSelectedObjects={(labels) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels })}
-                  onChange={(_) => handleTomogramReview('accepted', state.selectedObjectLabels)}
                 />
               </div>
             )}
@@ -319,10 +320,26 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                   availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
                   selectedObjects={state.selectedObjectLabels}
                   setSelectedObjects={(labels) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels })}
-                  onChange={(_) => handleTomogramReview('uncertain', state.selectedObjectLabels)}
                 />
               </div>
             )}
+            <div className="flex justify-center !pt-[50px]">
+              <Button
+                className="!w-32"
+                sdsStyle="square"
+                sdsType="primary"
+                endIcon={<Icon sdsIcon="ChevronRight" sdsSize="xs" />}
+                onClick={() =>
+                  handleTomogramReview(
+                    state.selectedQuality,
+                    state.selectedRejectionReasons,
+                    state.selectedObjectLabels
+                  )
+                }
+              >
+                Next Tomo
+              </Button>
+            </div>
           </div>
         </div>
       </div>
