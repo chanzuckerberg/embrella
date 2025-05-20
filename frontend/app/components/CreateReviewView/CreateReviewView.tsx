@@ -376,7 +376,7 @@ export const CreateReviewView = () => {
                   setIsCreatingReview(false);
                 }
               }}
-              startIcon={isCreatingReview && <Icon sdsIcon={'Loading'} sdsSize={'s'} />}
+              endIcon={isCreatingReview && <Icon sdsIcon={'Loading'} sdsSize={'s'} />}
               disabled={isCreatingReview}
               sdsStyle="square"
               className="self-start"
