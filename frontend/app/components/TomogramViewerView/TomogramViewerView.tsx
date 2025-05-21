@@ -15,7 +15,7 @@ import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { AVAILABLE_ANNOTATION_OBJECTS } from '../CreateReviewView/CreateReviewView';
 import { Button, Icon } from '@czi-sds/components';
 import { UserContext } from '@app/common/context/UserProvider';
-import { PermissionBanner } from './components/PermissionBanner/PermissionBanner';
+import { PermissionBanner } from './components/PermissionBanner';
 
 interface TomogramViewerProps {
   review: Review;
