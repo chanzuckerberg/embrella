@@ -179,9 +179,8 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
       return [constrainedMin, currentMax];
     } else {
       const currentMin = prevState[key]?.current[0] ?? 0;
-      const max = prevState[key]?.max ?? 0;
       // Don't constrain the value when typing - only ensure it doesn't go below min
-      const constrainedMax = Math.max(formattedValue, max);
+      const constrainedMax = Math.max(formattedValue, currentMin);
       return [currentMin, constrainedMax];
     }
   };
