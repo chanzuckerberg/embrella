@@ -967,30 +967,40 @@ class SessionView(View):
     def get_session_data(self, session):
         """Get runs data for a session"""
         runs_data = []
+        seen_runs = set()  # Track unique combinations of runId and reconstructionType
         
         # Get all ProcRuns for this session
         proc_runs = session.procrun_set.all()
         
         for proc_run in proc_runs:
-            # Get tomogram count for this run
-            tomogram_count = ReviewTomogram.objects.filter(
-                review__run_id=proc_run.name,
-                review__msi_session=session
-            ).count()
+            # Get tomogram count and reconstruction types from the database
+            review_data = Review.objects.filter(
+                run_id=proc_run.name,
+                msi_session=session
+            ).values('reconstruction_type').annotate(
+                tomogram_count=Count('review_tomograms', distinct=True)
+            )
             
-            if tomogram_count > 0:
-                # Get reconstruction types from file server
-                recon_types = self.get_reconstruction_types(session.name, proc_run.name)
-                print(f"Reconstruction types: {recon_types}")
-                if recon_types:  # Only add runs that have reconstruction types
-                    runs_data.append({
-                        "runId": proc_run.name,
-                        "numTomograms": tomogram_count,
-                        "reconstructionTypes": recon_types
-                    })
+            if review_data:
+                for data in review_data:
+                    recon_type = data['reconstruction_type']
+                    tomogram_count = data['tomogram_count']
+                    
+                    if tomogram_count > 0:
+                        # Create a unique key for this run and reconstruction type combination
+                        run_key = f"{proc_run.name}_{recon_type}"
+                        
+                        # Only add if we haven't seen this combination before
+                        if run_key not in seen_runs:
+                            seen_runs.add(run_key)
+                            runs_data.append({
+                                "runId": proc_run.name,
+                                "runCounts": tomogram_count,
+                                "reconstructionType": recon_type
+                            })
         
         return {
-            "sessionId": str(session.id),
+            "sessionId": session.name,  # Use session name as ID
             "sessionName": session.name,
             "createdAt": session.created_at.isoformat() if session.created_at else None,
             "projectName": session.project.name if session.project else None,
@@ -1015,9 +1025,7 @@ class SessionView(View):
                 return JsonResponse(session_data, safe=False)
             
             else:
-                # List all sessions with pagination and search
-                limit = int(request.GET.get('limit', 20))
-                offset = int(request.GET.get('offset', 0))
+                # List all sessions
                 search = request.GET.get('search', '').strip()
 
                 # Start with base queryset
@@ -1026,7 +1034,7 @@ class SessionView(View):
                 ).prefetch_related(
                     'procrun_set'
                 )
-                print(sessions_qs)
+
                 # Apply search filter if provided
                 if search:
                     sessions_qs = sessions_qs.filter(
@@ -1034,11 +1042,8 @@ class SessionView(View):
                         Q(project__name__icontains=search)
                     )
 
-                # Get total count before pagination
-                total_count = sessions_qs.count()
-
-                # Apply pagination
-                sessions = sessions_qs.order_by('-created_at')[offset:offset + limit]
+                # Get all sessions
+                sessions = sessions_qs.order_by('-created_at')
 
                 # Get data for each session
                 sessions_data = []
@@ -1047,14 +1052,7 @@ class SessionView(View):
                     if session_data["runs"]:  # Only add sessions that have runs with tomograms
                         sessions_data.append(session_data)
 
-                return JsonResponse({
-                    "data": sessions_data,
-                    "pagination": {
-                        "total": total_count,
-                        "limit": limit,
-                        "offset": offset
-                    }
-                }, safe=False)
+                return JsonResponse(sessions_data, safe=False)
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
