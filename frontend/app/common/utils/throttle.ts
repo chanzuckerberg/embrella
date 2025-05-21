@@ -11,19 +11,15 @@ export function throttle<T extends (...args: any[]) => void>(
 
   return function (...args: Parameters<T>) {
     const now = Date.now();
-    const execute = () => {
+    clearTimeout(currentTimeoutId);
+    if (lastExecuteTimeMs === undefined || now - lastExecuteTimeMs >= intervalMs) {
       lastExecuteTimeMs = now;
       func(...args);
-    };
-
-    if (lastExecuteTimeMs === undefined || now - lastExecuteTimeMs >= intervalMs) {
-      execute();
     } else {
-      clearTimeout(currentTimeoutId);
       currentTimeoutId = setTimeout(
         () => {
-          currentTimeoutId = undefined;
-          execute();
+          lastExecuteTimeMs = now;
+          func(...args);
         },
         intervalMs - (now - lastExecuteTimeMs)
       );
