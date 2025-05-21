@@ -16,6 +16,7 @@ import { AVAILABLE_ANNOTATION_OBJECTS } from '../CreateReviewView/CreateReviewVi
 import { Button, Icon } from '@czi-sds/components';
 import { UserContext } from '@app/common/context/UserProvider';
 import { PermissionBanner } from './components/PermissionBanner';
+import { throttle } from '@app/common/utils/debounce';
 
 interface TomogramViewerProps {
   review: Review;
@@ -189,36 +190,43 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     fetchTomogramDetail();
   }, [state.selectedTomogram, review.reviewId, review.tomograms]);
 
-  // TODO: Debounce.
-  const save = async (
-    quality: 'accepted' | 'rejected' | 'uncertain' | 'pending',
-    rejectionReasons?: string[],
-    objectLabels?: string[]
-  ) => {
-    if (!state.selectedTomogram) return;
-    dispatch({ type: 'SET_SAVE_STATE', payload: 'saving' });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- No dependencies, only preserves scope.
+  const save = useCallback(
+    throttle(
+      async (
+        quality: 'accepted' | 'rejected' | 'uncertain' | 'pending',
+        rejectionReasons?: string[],
+        objectLabels?: string[]
+      ) => {
+        if (!state.selectedTomogram) return;
+        dispatch({ type: 'SET_SAVE_STATE', payload: 'saving' });
 
-    const payload = {
-      tomogramId: state.selectedTomogram,
-      quality,
-      rejectionReasons,
-      objectLabels,
-    };
+        const payload = {
+          tomogramId: state.selectedTomogram,
+          quality,
+          rejectionReasons,
+          objectLabels,
+        };
 
-    // TODO: Real API.
-    const saveResponse = await new Promise((resolve) =>
-      setTimeout(() => {
-        resolve(MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload));
-      }, 1000)
-    );
-    if (saveResponse !== undefined) {
-      dispatch({ type: 'SET_SAVE_STATE', payload: 'saved' });
-    }
-  };
+        // TODO: Real API.
+        const saveResponse = await new Promise((resolve) =>
+          setTimeout(() => {
+            resolve(MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload));
+          }, 1000)
+        );
+        if (saveResponse !== undefined) {
+          dispatch({ type: 'SET_SAVE_STATE', payload: 'saved' });
+        }
+      },
+      /* intervalMs */ 10_000
+    ),
+    []
+  );
 
   const dispatchAndSave = (value: TomogramAction): void => {
     if (!userCanReview) return;
     dispatch(value);
+    dispatch({ type: 'SET_SAVE_STATE', payload: undefined });
     save(state.selectedQuality, state.selectedRejectionReasons, state.selectedObjectLabels);
   };
 
