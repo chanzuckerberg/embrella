@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useReducer, useContext } from 'react';
+import { useState, useEffect, useCallback, useReducer, useContext, useRef } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { Review, ReviewTomogramDetail } from './types';
@@ -85,6 +85,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     selectedTomogram: review.tomograms[0]?.tomogramId,
   });
   const [region, setRegion] = useState<Region | null>(null);
+  const lastAnswerUpdateTime = useRef<number | undefined>(undefined);
 
   const seriesDimensionName = 'z'; // TODO: get from zarr metadata
   const { imageSeriesLayer, channels } = useIdetik();
@@ -187,40 +188,50 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
       updateTomogramState(tomogramDetail);
     }
+    if (lastAnswerUpdateTime.current !== undefined) {
+      // Save only after user has interacted with questions.
+      save();
+    }
     fetchTomogramDetail();
-  }, [state.selectedTomogram, review.reviewId, review.tomograms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Fetch whenever tomogram changes.
+  }, [state.selectedTomogram]);
+
+  const save = async () => {
+    if (!state.selectedTomogram) return;
+    dispatch({ type: 'SET_SAVE_STATE', payload: 'saving' });
+    const now = Date.now();
+    lastAnswerUpdateTime.current = now;
+
+    // TODO: Real API.
+    const saveResponse = await new Promise((resolve) =>
+      setTimeout(() => {
+        resolve(
+          MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW]({
+            tomogramId: state.selectedTomogram,
+            quality: state.selectedQuality,
+            objectLabels: state.selectedObjectLabels,
+            rejectionReasons: state.selectedRejectionReasons,
+          })
+        );
+      }, 1000)
+    );
+    if (lastAnswerUpdateTime.current > now) {
+      // A newer save request has been made.
+      return;
+    }
+    if (saveResponse !== undefined) {
+      dispatch({ type: 'SET_SAVE_STATE', payload: 'saved' });
+    }
+  };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- No dependencies, only preserves scope.
-  const save = useCallback(
-    debounce(async () => {
-      if (!state.selectedTomogram) return;
-      dispatch({ type: 'SET_SAVE_STATE', payload: 'saving' });
-
-      // TODO: Real API.
-      const saveResponse = await new Promise((resolve) =>
-        setTimeout(() => {
-          resolve(
-            MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW]({
-              tomogramId: state.selectedTomogram,
-              quality: state.selectedQuality,
-              objectLabels: state.selectedObjectLabels,
-              rejectionReasons: state.selectedRejectionReasons,
-            })
-          );
-        }, 1000)
-      );
-      if (saveResponse !== undefined) {
-        dispatch({ type: 'SET_SAVE_STATE', payload: 'saved' });
-      }
-    }, /* wait */ 2_000),
-    []
-  );
+  const debouncedSave = useCallback(debounce(save, /* wait */ 2_000), []);
 
   const dispatchAndSave = (value: TomogramAction): void => {
     if (!userCanReview) return;
     dispatch(value);
     dispatch({ type: 'SET_SAVE_STATE', payload: undefined });
-    save();
+    debouncedSave();
   };
 
   return (
