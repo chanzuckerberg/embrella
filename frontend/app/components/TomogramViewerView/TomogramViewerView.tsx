@@ -258,9 +258,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   };
 
   return (
-    <div className="w-full flex flex-col items-stretch w-[80vw]">
+    <div className="w-full h-screen flex flex-col items-stretch">
       <TopBar saveState={state.saveState} onMarkComplete={() => console.log('Mark as complete')} />
-      <div className="flex-auto flex border-t border-gray-400">
+      <div className="flex-auto flex border-t border-gray-300">
         <SideBar
           reviewName={review.reviewName}
           tomograms={review.tomograms}
@@ -273,28 +273,24 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           contrastLimits={state.contrastLimits}
           onContrastLimitsChange={handleContrastLimitsChange}
         />
-        <div className="flex-auto flex flex-col p-6 rounded items-center justify-center">
-          <div className="border-r border-l">
-            <div className="w-[60vh] md:w-[75vh] lg:w-[80vh] h-[60vh] md:h-[75vh] lg:h-[80vh]">
-              {state.tomogramDetail?.zarrPath !== undefined && (
-                <OmeZarrImageViewer
-                  sourceUrl={state.tomogramDetail.zarrPath}
-                  region={region ?? []}
-                  seriesDimensionName={seriesDimensionName}
-                  allSlicesSizeEstimate="250 MB"
-                  fallbackContrastLimits={state.contrastLimits}
-                  classNames={{
-                    root: 'bg-dark-sds-color-primitive-gray-100',
-                  }}
-                  onLayerCreated={handleLayerCreated}
-                  onFirstSliceLoaded={handleFirstSliceLoaded}
-                  onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
-                  onAllSlicesLoaded={handleAllSlicesLoaded}
-                  onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
-                />
-              )}
-            </div>
-          </div>
+        <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
+          {state.tomogramDetail?.zarrPath !== undefined && (
+            <OmeZarrImageViewer
+              sourceUrl={state.tomogramDetail.zarrPath}
+              region={region ?? []}
+              seriesDimensionName={seriesDimensionName}
+              allSlicesSizeEstimate="250 MB"
+              fallbackContrastLimits={state.contrastLimits}
+              classNames={{
+                root: 'bg-dark-sds-color-primitive-gray-100',
+              }}
+              onLayerCreated={handleLayerCreated}
+              onFirstSliceLoaded={handleFirstSliceLoaded}
+              onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
+              onAllSlicesLoaded={handleAllSlicesLoaded}
+              onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
+            />
+          )}
         </div>
         <div className="flex flex-col gap-3">
           <div className="shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-[20px]">
