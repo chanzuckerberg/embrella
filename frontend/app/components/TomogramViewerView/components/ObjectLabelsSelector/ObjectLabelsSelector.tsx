@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 
 interface ObjectLabelsSelectorProps {
+  isDisabled: boolean;
   availableObjects: string[];
   selectedObjects: string[];
   setSelectedObjects: (selected: string[]) => void;
 }
 
 export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
+  isDisabled,
   availableObjects,
   selectedObjects,
   setSelectedObjects,
@@ -44,6 +46,7 @@ export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
               checked={selectedObjects.map((o) => o.toLowerCase()).includes(obj.toLowerCase())}
               onChange={() => handleToggle(obj)}
               className="!mr-3"
+              disabled={isDisabled}
             />
             {obj}
           </label>

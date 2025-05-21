@@ -1,6 +1,7 @@
 import React from 'react';
 
 interface RejectionReasonsSelectorProps {
+  isDisabled: boolean;
   selectedReasons: string[];
   setSelectedReasons: (reasons: string[]) => void;
 }
@@ -8,6 +9,7 @@ interface RejectionReasonsSelectorProps {
 const REJECTION_REASONS = ['No features of interest', 'Bad tomogram quality', 'Blurry', 'Other'];
 
 export const RejectionReasonsSelector: React.FC<RejectionReasonsSelectorProps> = ({
+  isDisabled,
   selectedReasons,
   setSelectedReasons,
 }) => {
@@ -22,6 +24,7 @@ export const RejectionReasonsSelector: React.FC<RejectionReasonsSelectorProps> =
             checked={selectedReasons.map((r) => r.toLowerCase()).includes(reason.toLowerCase())}
             onChange={() => setSelectedReasons([...selectedReasons, reason])}
             className="!mr-3"
+            disabled={isDisabled}
           />
           {reason}
         </label>

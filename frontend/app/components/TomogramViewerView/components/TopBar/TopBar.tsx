@@ -3,10 +3,9 @@ import { useRouter } from 'next/navigation';
 
 interface TopBarProps {
   saveState?: 'saving' | 'saved' | 'failed';
-  onMarkComplete?: () => void;
 }
 
-export const TopBar = ({ onMarkComplete, saveState }: TopBarProps) => {
+export const TopBar = ({ saveState }: TopBarProps) => {
   const router = useRouter();
 
   return (

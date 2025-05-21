@@ -1,7 +1,6 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-// import { TomogramViewer } from "@app/components/TomogramViewerView/TomogramViewerView";
 import { useFetchReviewData } from '@hooks/useFetchData/useFetchData';
 import { TomogramViewerView } from '@app/components/TomogramViewerView/TomogramViewerView';
 

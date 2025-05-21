@@ -53,12 +53,11 @@ export const useFetchReviewData = (reviewId: string): UseFetchReviewData => {
     isSuccess: false,
     isLoading: true,
   });
-
   useEffect(() => {
     const fetchData = async () => {
       setDataState((prev) => ({ ...prev, isLoading: true }));
 
-      const mockResponse = MOCKED_APIS[API.REVIEW];
+      const mockResponse = MOCKED_APIS[API.REVIEW](`${DJANGO_URL}/api/reviews/${reviewId}`);
       if (mockResponse !== undefined) {
         setDataState({
           data: mockResponse,
