@@ -32,6 +32,12 @@ export const TopBar = ({ saveState }: TopBarProps) => {
             All changes saved
           </>
         )}
+        {saveState === 'failed' && (
+          <>
+            <Icon sdsIcon={'XMark'} sdsSize={'xs'} className="!mr-[5px]" />
+            All changes saved
+          </>
+        )}
       </div>
     </div>
   );
