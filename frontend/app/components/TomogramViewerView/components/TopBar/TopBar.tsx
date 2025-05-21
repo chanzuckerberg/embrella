@@ -5,7 +5,7 @@ interface TopBarProps {
   saveState?: 'saving' | 'saved' | 'failed';
   onMarkComplete?: () => void;
 }
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const TopBar = ({ onMarkComplete, saveState }: TopBarProps) => {
   const router = useRouter();
 
