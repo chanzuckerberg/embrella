@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
+import { useState, useEffect, useRef, useCallback, useReducer, useContext } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { Review, ReviewTomogramDetail } from './types';
@@ -14,6 +14,8 @@ import { RejectionReasonsSelector } from './components/RejectionReasonsSelector'
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { AVAILABLE_ANNOTATION_OBJECTS } from '../CreateReviewView/CreateReviewView';
 import { Button, Icon } from '@czi-sds/components';
+import { UserContext } from '@app/common/context/UserProvider';
+import { PermissionBanner } from './components/PermissionBanner';
 
 interface TomogramViewerProps {
   review: Review;
@@ -88,6 +90,8 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
   const seriesDimensionName = 'z'; // TODO: get from zarr metadata
   const { imageSeriesLayer, channels } = useIdetik();
+  const currentUser = useContext(UserContext);
+  const userCanReview = currentUser?.id === review.owner.id;
 
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
@@ -253,13 +257,15 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   };
 
   const dispatchAndSave = (value: TomogramAction): void => {
+    if (!userCanReview) return;
     dispatch(value);
     save(state.selectedQuality, state.selectedRejectionReasons, state.selectedObjectLabels);
   };
 
   return (
     <div className="w-full h-screen flex flex-col items-stretch">
-      <TopBar saveState={state.saveState} onMarkComplete={() => console.log('Mark as complete')} />
+      <TopBar saveState={state.saveState} />
+      {!userCanReview && <PermissionBanner ownerName={review.owner.name} />}
       <div className="flex-auto flex border-t border-gray-300">
         <SideBar
           reviewName={review.reviewName}
@@ -295,6 +301,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         <div className="flex flex-col gap-3">
           <div className="shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-[20px]">
             <QualityControls
+              isDisabled={!userCanReview}
               selectedQuality={state.selectedQuality}
               onAccept={() => {
                 dispatchAndSave({ type: 'SET_QUALITY', payload: 'accepted' });
@@ -310,6 +317,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           {(state.selectedQuality === 'accepted' || state.selectedQuality === 'uncertain') && (
             <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
               <ObjectLabelsSelector
+                isDisabled={!userCanReview}
                 availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
                 selectedObjects={state.selectedObjectLabels}
                 setSelectedObjects={(labels) => {
@@ -321,6 +329,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           {state.selectedQuality === 'rejected' && (
             <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
               <RejectionReasonsSelector
+                isDisabled={!userCanReview}
                 selectedReasons={state.selectedRejectionReasons}
                 setSelectedReasons={(reasons) => {
                   dispatchAndSave({ type: 'SET_REJECTION_REASONS', payload: reasons });

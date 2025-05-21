@@ -1,13 +1,20 @@
 import { Button, Icon } from '@czi-sds/components';
 
 interface QualityControlsProps {
+  isDisabled: boolean;
   selectedQuality: string | null;
   onAccept: () => void;
   onReject: () => void;
   onUncertain: () => void;
 }
 
-export const QualityControls = ({ selectedQuality, onAccept, onReject, onUncertain }: QualityControlsProps) => {
+export const QualityControls = ({
+  isDisabled,
+  selectedQuality,
+  onAccept,
+  onReject,
+  onUncertain,
+}: QualityControlsProps) => {
   return (
     <div className="w-[300px] p-4 flex flex-col gap-4">
       <h3 className="m-0 text-base font-semibold">Assign Tomogram Quality:</h3>
@@ -16,6 +23,7 @@ export const QualityControls = ({ selectedQuality, onAccept, onReject, onUncerta
         sdsStyle="square"
         sdsType={selectedQuality === 'accepted' ? 'primary' : 'secondary'}
         fullWidth
+        disabled={isDisabled}
         onClick={onAccept}
       >
         Accept [1]
@@ -25,6 +33,7 @@ export const QualityControls = ({ selectedQuality, onAccept, onReject, onUncerta
         sdsStyle="square"
         sdsType={selectedQuality === 'rejected' ? 'primary' : 'secondary'}
         fullWidth
+        disabled={isDisabled}
         onClick={onReject}
       >
         Reject [2]
@@ -34,6 +43,7 @@ export const QualityControls = ({ selectedQuality, onAccept, onReject, onUncerta
         sdsStyle="square"
         sdsType={selectedQuality === 'uncertain' ? 'primary' : 'secondary'}
         fullWidth
+        disabled={isDisabled}
         onClick={onUncertain}
       >
         Uncertain [3]
