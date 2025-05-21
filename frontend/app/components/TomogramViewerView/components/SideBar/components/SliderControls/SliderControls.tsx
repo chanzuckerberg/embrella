@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { SideBarSection } from '../SideBarSection';
 import { InputSlider } from '@czi-sds/components';
 import { Icon } from '@czi-sds/components';
 
