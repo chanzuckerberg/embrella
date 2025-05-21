@@ -35,7 +35,7 @@ interface MetadataFiltersProps {
 
 export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, onApplyFilters }) => {
   const [selectedOption, setSelectedOption] = useState<'AND' | 'OR'>('AND');
-  const [, setInputValues] = useState<Record<string, { min: string; max: string }>>({});
+  const [inputValues, setInputValues] = useState<Record<string, { min: string; max: string }>>({});
   const [filters, setFilters] = useState<FilterState>(() => {
     const initialState: FilterState = {} as FilterState;
     // Use METRICS_CONFIG keys which match FilterConfig
@@ -113,24 +113,38 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
 
   const handleReset = () => {
     const resetState: FilterState = {} as FilterState;
+    const resetInputValues: Record<string, { min: string; max: string }> = {};
+
     // Use METRICS_CONFIG keys which match FilterConfig
     Object.keys(METRICS_CONFIG).forEach((key) => {
       const metricKey = key as keyof typeof METRICS_CONFIG;
       if (metricRanges[metricKey] && Array.isArray(metricRanges[metricKey])) {
+        // Reset filter state
         resetState[metricKey] = {
           current: [Number(metricRanges[metricKey][0]), Number(metricRanges[metricKey][1])],
           min: Number(metricRanges[metricKey][0]),
           max: Number(metricRanges[metricKey][1]),
           enabled: true,
         };
+
+        // Reset input values state
+        resetInputValues[metricKey] = {
+          min: Number(metricRanges[metricKey][0]).toFixed(3),
+          max: Number(metricRanges[metricKey][1]).toFixed(3),
+        };
       }
     });
+
+    // Update both states
     setFilters(resetState);
+    setInputValues(resetInputValues);
     setSelectedOption('AND');
+
     const emptyFilterConfig: FilterConfig = {
       filters: {},
       filter_type: 'AND',
     };
+
     // Also apply the reset filters to update the scatter plot
     if (onApplyFilters) {
       onApplyFilters(emptyFilterConfig, 'AND');
@@ -151,11 +165,6 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     }));
   };
 
-  // Helper function to get constrained value
-  const getConstrainedValue = (value: number, min: number, max: number): number => {
-    return Number(Math.min(Math.max(value, min), max).toFixed(3));
-  };
-
   // Helper function to calculate the new current value
   const calculateCurrentValue = (
     formattedValue: number,
@@ -164,14 +173,14 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     prevState: FilterState
   ): [number, number] => {
     if (isMin) {
-      const min = prevState[key]?.min ?? 0;
       const currentMax = prevState[key]?.current[1] ?? 0;
-      const constrainedMin = getConstrainedValue(formattedValue, min, currentMax);
+      // Don't constrain the value when typing - only ensure it doesn't exceed max
+      const constrainedMin = Math.min(formattedValue, currentMax);
       return [constrainedMin, currentMax];
     } else {
       const currentMin = prevState[key]?.current[0] ?? 0;
-      const max = prevState[key]?.max ?? 0;
-      const constrainedMax = getConstrainedValue(formattedValue, currentMin, max);
+      // Don't constrain the value when typing - only ensure it doesn't go below min
+      const constrainedMax = Math.max(formattedValue, currentMin);
       return [currentMin, constrainedMax];
     }
   };
@@ -184,7 +193,7 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
       // Update the input value state
       updateInputValues(key, isMin, inputValue);
 
-      // If empty or invalid, don't update the filter state
+      // If empty, allow the field to be empty but don't update filter state
       if (inputValue === '') {
         return;
       }
@@ -208,14 +217,30 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     };
 
   const handleInputBlur = (key: keyof FilterState, isMin: boolean) => () => {
-    // Reset the input value to match the current filter value with 3 decimal precision
-    setInputValues((prev) => ({
-      ...prev,
-      [key]: {
-        ...(prev[key] || { min: '', max: '' }),
-        [isMin ? 'min' : 'max']: filters[key]?.current[isMin ? 0 : 1].toFixed(3),
-      },
-    }));
+    setInputValues((prev) => {
+      const currentKey = prev[key] || { min: '', max: '' };
+      const currentValue = currentKey[isMin ? 'min' : 'max'];
+
+      // If the input is empty or invalid on blur, reset to the current filter value
+      if (currentValue === '' || isNaN(Number(currentValue))) {
+        return {
+          ...prev,
+          [key]: {
+            ...currentKey,
+            [isMin ? 'min' : 'max']: filters[key]?.current[isMin ? 0 : 1].toFixed(3),
+          },
+        };
+      }
+
+      // Otherwise, format the valid number to 3 decimal places
+      return {
+        ...prev,
+        [key]: {
+          ...currentKey,
+          [isMin ? 'min' : 'max']: Number(currentValue).toFixed(3),
+        },
+      };
+    });
   };
 
   const handleApplyFilters = (state: FilterState, option: 'AND' | 'OR') => {
@@ -240,6 +265,21 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
       };
       onApplyFilters(filterConfig, option);
     }
+  };
+
+  // Add a new handler for unchecking all filters
+  const handleUncheckAll = () => {
+    setFilters((prev) => {
+      const newState = { ...prev };
+      Object.keys(newState).forEach((key) => {
+        const metricKey = key as keyof FilterState;
+        newState[metricKey] = {
+          ...newState[metricKey],
+          enabled: false,
+        } as MetadataFilterRange;
+      });
+      return newState;
+    });
   };
 
   // Helper function to determine step value based on metric key and range
@@ -268,16 +308,21 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     maxValue: number,
     stepValue: number
   ) => {
+    // Get the current input value from state or use the provided value
+    const inputValue =
+      inputValues[key as string]?.[isMin ? 'min' : 'max'] !== undefined
+        ? inputValues[key as string]?.[isMin ? 'min' : 'max']
+        : value.toFixed(3);
+
     return (
       <TextField
         size="small"
-        value={value}
+        value={inputValue}
         className={styles.minMaxInput}
         onChange={(e) => handleInputChange(key, isMin)(e as React.ChangeEvent<HTMLInputElement>)}
         onBlur={handleInputBlur(key, isMin)}
         inputProps={{
           className: styles.input,
-          type: 'number',
           min: minValue,
           max: maxValue,
           step: stepValue,
@@ -355,6 +400,9 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
         <Button sdsType="secondary" sdsStyle="rounded" onClick={handleReset}>
           Reset
+        </Button>
+        <Button sdsType="secondary" sdsStyle="rounded" onClick={handleUncheckAll}>
+          Uncheck All
         </Button>
         <Button sdsType="primary" sdsStyle="rounded" onClick={() => handleApplyFilters(filters, selectedOption)}>
           Apply Filter

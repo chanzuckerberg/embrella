@@ -26,6 +26,7 @@ interface TomogramState {
   selectedRejectionReasons: string[];
   selectedQuality: 'accepted' | 'rejected' | 'uncertain' | 'pending';
   selectedObjectLabels: string[];
+  saveState?: 'saving' | 'saved' | 'failed';
 }
 
 type TomogramAction =
@@ -35,7 +36,8 @@ type TomogramAction =
   | { type: 'SET_REJECTION_REASONS'; payload: string[] }
   | { type: 'SET_QUALITY'; payload: 'accepted' | 'rejected' | 'uncertain' | 'pending' }
   | { type: 'SET_OBJECT_LABELS'; payload: string[] }
-  | { type: 'RESET_REVIEW_STATE' };
+  | { type: 'RESET_REVIEW_STATE' }
+  | { type: 'SET_SAVE_STATE'; payload: 'saving' | 'saved' | 'failed' | undefined };
 
 const initialState: TomogramState = {
   selectedTomogram: undefined,
@@ -67,6 +69,8 @@ function tomogramReducer(state: TomogramState, action: TomogramAction): Tomogram
         selectedRejectionReasons: [],
         selectedObjectLabels: [],
       };
+    case 'SET_SAVE_STATE':
+      return { ...state, saveState: action.payload };
     default:
       return state;
   }
@@ -156,7 +160,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         payload: review.tomograms[currentIndex - 1].tomogramId,
       });
     }
-    handleTomogramReview(state.selectedQuality, state.selectedRejectionReasons, state.selectedObjectLabels);
   };
 
   const handleNext = () => {
@@ -166,7 +169,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
         payload: review.tomograms[currentIndex + 1].tomogramId,
       });
     }
-    handleTomogramReview(state.selectedQuality, state.selectedRejectionReasons, state.selectedObjectLabels);
   };
 
   const getTomogramIdForStatus = (status: string | undefined) => {
@@ -223,12 +225,14 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     fetchTomogramDetail();
   }, [state.selectedTomogram, review.reviewId, review.tomograms]);
 
-  const handleTomogramReview = (
+  // TODO: Debounce.
+  const save = async (
     quality: 'accepted' | 'rejected' | 'uncertain' | 'pending',
     rejectionReasons?: string[],
     objectLabels?: string[]
   ) => {
     if (!state.selectedTomogram) return;
+    dispatch({ type: 'SET_SAVE_STATE', payload: 'saving' });
 
     const payload = {
       tomogramId: state.selectedTomogram,
@@ -237,109 +241,103 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       objectLabels,
     };
 
-    MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload);
-    dispatch({ type: 'RESET_REVIEW_STATE' });
-
-    // Move to the next tomogram if there is one
-    if (currentIndex < review.tomograms.length - 1) {
-      dispatch({
-        type: 'SET_SELECTED_TOMOGRAM',
-        payload: review.tomograms[currentIndex + 1].tomogramId,
-      });
+    // TODO: Real API.
+    const saveResponse = await new Promise((resolve) =>
+      setTimeout(() => {
+        resolve(MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload));
+      }, 1000)
+    );
+    if (saveResponse !== undefined) {
+      dispatch({ type: 'SET_SAVE_STATE', payload: 'saved' });
     }
   };
 
+  const dispatchAndSave = (value: TomogramAction): void => {
+    dispatch(value);
+    save(state.selectedQuality, state.selectedRejectionReasons, state.selectedObjectLabels);
+  };
+
   return (
-    <div className="flex flex-col items-center">
-      <div className="flex flex-col justify-between h-[60vh] md:h-[90vh] lg:h-[90vh] items-center gap-8 w-[80vw]">
-        <div className="h-6"></div>
-        <TopBar onMarkComplete={() => console.log('Mark as complete')} />
-        <div className="flex-auto flex border-t border-gray-400">
-          <SideBar
-            reviewName={review.reviewName}
-            tomograms={review.tomograms}
-            selectedTomogram={state.selectedTomogram}
-            tomogramDetail={state.tomogramDetail}
-            currentIndex={currentIndex}
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            onSelectTomogram={(tomogramId) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: tomogramId })}
-            contrastLimits={state.contrastLimits}
-            onContrastLimitsChange={handleContrastLimitsChange}
-          />
-          <div className="flex-auto flex flex-col p-6 rounded items-center justify-center">
-            <div className="border-r border-l">
-              <div className="w-[60vh] md:w-[75vh] lg:w-[80vh] h-[60vh] md:h-[75vh] lg:h-[80vh]">
-                <OmeZarrImageViewer
-                  sourceUrl={state.tomogramDetail?.zarrPath ?? ''}
-                  region={region || []}
-                  seriesDimensionName={seriesDimensionName}
-                  allSlicesSizeEstimate="250 MB"
-                  fallbackContrastLimits={state.contrastLimits}
-                  classNames={{
-                    root: 'bg-dark-sds-color-primitive-gray-100',
-                  }}
-                  onLayerCreated={handleLayerCreated}
-                  onFirstSliceLoaded={handleFirstSliceLoaded}
-                  onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
-                  onAllSlicesLoaded={handleAllSlicesLoaded}
-                  onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
-                />
-              </div>
-            </div>
+    <div className="w-full h-screen flex flex-col items-stretch">
+      <TopBar saveState={state.saveState} onMarkComplete={() => console.log('Mark as complete')} />
+      <div className="flex-auto flex border-t border-gray-300">
+        <SideBar
+          reviewName={review.reviewName}
+          tomograms={review.tomograms}
+          selectedTomogram={state.selectedTomogram}
+          tomogramDetail={state.tomogramDetail}
+          currentIndex={currentIndex}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onSelectTomogram={(tomogramId) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: tomogramId })}
+          contrastLimits={state.contrastLimits}
+          onContrastLimitsChange={handleContrastLimitsChange}
+        />
+        <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
+          {state.tomogramDetail?.zarrPath !== undefined && (
+            <OmeZarrImageViewer
+              sourceUrl={state.tomogramDetail.zarrPath}
+              region={region ?? []}
+              seriesDimensionName={seriesDimensionName}
+              allSlicesSizeEstimate="250 MB"
+              fallbackContrastLimits={state.contrastLimits}
+              classNames={{
+                root: 'bg-dark-sds-color-primitive-gray-100',
+              }}
+              onLayerCreated={handleLayerCreated}
+              onFirstSliceLoaded={handleFirstSliceLoaded}
+              onLoadAllSlicesClicked={handleLoadAllSlicesClicked}
+              onAllSlicesLoaded={handleAllSlicesLoaded}
+              onLoadAllSlicesAborted={handleLoadAllSlicesAborted}
+            />
+          )}
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-[20px]">
+            <QualityControls
+              selectedQuality={state.selectedQuality}
+              onAccept={() => {
+                dispatchAndSave({ type: 'SET_QUALITY', payload: 'accepted' });
+              }}
+              onReject={() => {
+                dispatchAndSave({ type: 'SET_QUALITY', payload: 'rejected' });
+              }}
+              onUncertain={() => {
+                dispatchAndSave({ type: 'SET_QUALITY', payload: 'uncertain' });
+              }}
+            />
           </div>
-          <div className="flex flex-col gap-3">
-            <div className="shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-[20px]">
-              <QualityControls
-                selectedQuality={state.selectedQuality}
-                onAccept={() => dispatch({ type: 'SET_QUALITY', payload: 'accepted' })}
-                onReject={() => dispatch({ type: 'SET_QUALITY', payload: 'rejected' })}
-                onUncertain={() => dispatch({ type: 'SET_QUALITY', payload: 'uncertain' })}
+          {(state.selectedQuality === 'accepted' || state.selectedQuality === 'uncertain') && (
+            <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
+              <ObjectLabelsSelector
+                availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
+                selectedObjects={state.selectedObjectLabels}
+                setSelectedObjects={(labels) => {
+                  dispatchAndSave({ type: 'SET_OBJECT_LABELS', payload: labels });
+                }}
               />
             </div>
-            {state.selectedQuality === 'rejected' && (
-              <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
-                <RejectionReasonsSelector
-                  selectedReasons={state.selectedRejectionReasons}
-                  setSelectedReasons={(reasons) => dispatch({ type: 'SET_REJECTION_REASONS', payload: reasons })}
-                />
-              </div>
-            )}
-            {state.selectedQuality === 'accepted' && (
-              <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
-                <ObjectLabelsSelector
-                  availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
-                  selectedObjects={state.selectedObjectLabels}
-                  setSelectedObjects={(labels) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels })}
-                />
-              </div>
-            )}
-            {state.selectedQuality === 'uncertain' && (
-              <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
-                <ObjectLabelsSelector
-                  availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
-                  selectedObjects={state.selectedObjectLabels}
-                  setSelectedObjects={(labels) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels })}
-                />
-              </div>
-            )}
-            <div className="flex justify-center !pt-[50px]">
-              <Button
-                className="!w-32"
-                sdsStyle="square"
-                sdsType="primary"
-                endIcon={<Icon sdsIcon="ChevronRight" sdsSize="xs" />}
-                onClick={() =>
-                  handleTomogramReview(
-                    state.selectedQuality,
-                    state.selectedRejectionReasons,
-                    state.selectedObjectLabels
-                  )
-                }
-              >
-                Next Tomo
-              </Button>
+          )}
+          {state.selectedQuality === 'rejected' && (
+            <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
+              <RejectionReasonsSelector
+                selectedReasons={state.selectedRejectionReasons}
+                setSelectedReasons={(reasons) => {
+                  dispatchAndSave({ type: 'SET_REJECTION_REASONS', payload: reasons });
+                }}
+              />
             </div>
+          )}
+          <div className="flex justify-center !pt-[50px]">
+            <Button
+              className="!w-32"
+              sdsStyle="square"
+              sdsType="primary"
+              endIcon={<Icon sdsIcon="ChevronRight" sdsSize="xs" />}
+              onClick={handleNext}
+            >
+              Next Tomo
+            </Button>
           </div>
         </div>
       </div>

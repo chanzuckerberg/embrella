@@ -32,43 +32,30 @@ export const SideBar = ({
 }: SideBarProps) => {
   const reviewedCount = tomograms.filter((t) => t.status !== 'pending').length;
   return (
-    <div className="basis-[280px] shrink-0 flex flex-col justify-start gap-2 !p-[20px]">
+    <div className="basis-[280px] shrink-0 flex flex-col justify-start divide-y-[2px]">
       <SideBarSection>
-        <div className="border-b border-gray-400">
-          <div className="flex flex-col gap-2">
-            <h2 className="font-bold text-xl leading-tight">
-              Tomogram Quality Review <br />
-            </h2>
-            <span className="font-normal">{reviewName}</span>
-            <div className="mt-2">
-              <p className="text-sm font-medium">
-                {reviewedCount} of {tomograms.length} Tomograms Reviewed
-              </p>
-            </div>
+        <div className="flex flex-col gap-[10px]">
+          <h2 className="font-bold text-xl leading-tight">
+            {reviewName} <br />
+          </h2>
+          <div className="text-[#767676]">
+            {reviewedCount} of {tomograms.length} Tomograms Reviewed
           </div>
         </div>
       </SideBarSection>
 
       <SideBarSection>
-        <div className="border-b border-gray-400 flex flex-col gap-4 !pb-4">
-          <TomogramTable
-            tomograms={tomograms}
-            selectedTomogram={selectedTomogram}
-            onSelectTomogram={onSelectTomogram}
-          />
-          <NavigationButtons
-            currentIndex={currentIndex}
-            totalItems={tomograms.length}
-            onPrevious={onPrevious}
-            onNext={onNext}
-          />
-        </div>
+        <TomogramTable tomograms={tomograms} selectedTomogram={selectedTomogram} onSelectTomogram={onSelectTomogram} />
+        <NavigationButtons
+          currentIndex={currentIndex}
+          totalItems={tomograms.length}
+          onPrevious={onPrevious}
+          onNext={onNext}
+        />
       </SideBarSection>
 
       <SideBarSection>
-        <div className="border-b border-gray-400 !pb-2">
-          <TomogramInfo tomogramDetail={tomogramDetail} />
-        </div>
+        <TomogramInfo tomogramDetail={tomogramDetail} />
       </SideBarSection>
       <SideBarSection>
         <SliderControls contrast={contrast} onContrastChange={onContrastChange} />
