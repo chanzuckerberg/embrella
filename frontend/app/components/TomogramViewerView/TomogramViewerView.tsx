@@ -16,7 +16,7 @@ import { AVAILABLE_ANNOTATION_OBJECTS } from '../CreateReviewView/CreateReviewVi
 import { Button, Icon } from '@czi-sds/components';
 import { UserContext } from '@app/common/context/UserProvider';
 import { PermissionBanner } from './components/PermissionBanner';
-import { throttle } from '@app/common/utils/debounce';
+import { throttle } from '@app/common/utils/throttle';
 
 interface TomogramViewerProps {
   review: Review;
