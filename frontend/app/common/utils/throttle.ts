@@ -18,7 +18,7 @@ export function throttle<T extends (...args: any[]) => void>(
     } else {
       currentTimeoutId = setTimeout(
         () => {
-          lastExecuteTimeMs = now;
+          lastExecuteTimeMs = Date.now();
           func(...args);
         },
         intervalMs - (now - lastExecuteTimeMs)
