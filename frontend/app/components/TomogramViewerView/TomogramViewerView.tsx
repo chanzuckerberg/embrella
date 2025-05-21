@@ -260,7 +260,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   return (
     <div className="w-full h-screen flex flex-col items-stretch">
       <TopBar saveState={state.saveState} onMarkComplete={() => console.log('Mark as complete')} />
-      <div className="flex-auto flex border-t border-gray-400">
+      <div className="flex-auto flex border-t border-gray-300">
         <SideBar
           reviewName={review.reviewName}
           tomograms={review.tomograms}
@@ -273,7 +273,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           contrastLimits={state.contrastLimits}
           onContrastLimitsChange={handleContrastLimitsChange}
         />
-        <div className="flex-auto flex flex-col p-6 rounded items-center justify-center">
+        <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
           {state.tomogramDetail?.zarrPath !== undefined && (
             <OmeZarrImageViewer
               sourceUrl={state.tomogramDetail.zarrPath}
