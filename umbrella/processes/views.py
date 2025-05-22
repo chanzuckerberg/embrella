@@ -23,6 +23,7 @@ from cryo_grids.models import CryoGrid, PlungeFreezingSession, Specimen, Sample
 from processes.models import *
 from processes.utils import QueryParams, InputTomogramModel,AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
 from tem.models import MsiSession
+from processes.scripts.import_tomograms import get_available_sessions, main as import_tomograms_main
 from django.db.models import F,Q
 from django.http import JsonResponse
 from pydantic import ValidationError
@@ -32,6 +33,16 @@ import logging
 import os
 from django.forms.models import model_to_dict  # ensure this is imported
 # from umbrella.settings import ENVIRONMENT
+import asyncio
+import glob
+import requests
+from urllib.parse import urljoin
+import re
+from bs4 import BeautifulSoup
+from asgiref.sync import sync_to_async
+import io
+import sys
+from contextlib import redirect_stdout
 logger = logging.getLogger(__name__)
 
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
@@ -1091,4 +1102,202 @@ def get_session_id(request):
     except Exception as e:
         logger.error(f'Error getting session ID: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+    
+
+@require_http_methods(["GET"])
+def sync_tomograms_view(request):
+    """View for the tomogram sync page"""
+    try:
+        # Get all sessions directly from MsiSession
+        sessions = MsiSession.objects.all().order_by('-created_at')
+        
+        # Format sessions for template
+        sessions_data = []
+        for session in sessions:
+            sessions_data.append({
+                "sessionId": str(session.id),
+                "sessionName": session.name,
+                "createdAt": session.created_at.isoformat() if session.created_at else None
+            })
+        
+        print(f"Found {len(sessions_data)} sessions")  # Debug print
+        
+        return render(request, 'customs/sync_tomograms.html', {
+            'sessions': sessions_data,
+            'error': None
+        })
+    except Exception as e:
+        logger.error(f"Error in sync_tomograms_view: {str(e)}")
+        return render(request, 'customs/sync_tomograms.html', {
+            'sessions': [],
+            'error': f"Error loading sessions: {str(e)}"
+        })
+
+@require_http_methods(["GET"])
+def get_runs(request):
+    """API endpoint to get runs for a session"""
+    session_id = request.GET.get('session')
+    try:
+        session = MsiSession.objects.get(id=session_id)
+        # Get unique run IDs from Review table for this session
+        runs = Review.objects.filter(session=session).values('run_id').distinct()
+        runs_data = [{'runId': run['run_id']} for run in runs]
+        return JsonResponse({'runs': runs_data})
+    except MsiSession.DoesNotExist:
+        return JsonResponse({'error': 'Session not found'}, status=404)
+
+def get_zarr_files(session_name, run_id, recon_type):
+    """Get zarr files from the specified path"""
+    if recon_type.lower() == 'sart':
+        vol_dir = 'vol003'
+        job_name = 'aretomo3'
+    elif recon_type.lower() == 'dctf':
+        vol_dir = 'vol001'
+        job_name = 'aretomo3'
+    else:  # denoised
+        vol_dir = ''
+        job_name = 'denoise'
+    base_path = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_name}/{run_id}"
+    
+    # Construct the full path
+    if vol_dir:
+        full_path = f"{base_path}/{vol_dir}"
+    else:
+        full_path = base_path
+    
+    # Get all zarr files
+    try:
+        # Make a request to list the directory contents
+        response = requests.get(full_path)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        file_rows = soup.find_all('tr', class_='file')
+        valid_zarr_files = []
+
+        for row in file_rows:
+            name_tag = row.find('span', class_='name')
+            if name_tag:
+                filename = name_tag.text.strip()
+                print(filename)
+                # Check if it's a zarr directory (ends with .zarr/)
+                if filename.endswith('.zarr/'):
+                    # Remove the trailing slash to get the actual filename
+                    filename = filename[:-1]
+                    valid_zarr_files.append(filename)
+        return valid_zarr_files
+
+    except requests.RequestException as e:
+        print(f"❌ Failed to fetch ZARR files from web: {e}")
+        return []
+
+@require_http_methods(["GET"])
+def get_tomogram_stats(request):
+    """API endpoint to get tomogram statistics"""
+    session_id = request.GET.get('session')
+    run_id = request.GET.get('run')
+    recon_type = request.GET.get('type', '').lower()
+
+    try:
+        # Get zarr files for the selected configuration
+        session = MsiSession.objects.get(id=session_id)
+        zarr_files = get_zarr_files(session.name, run_id, recon_type)
+        
+        # Build the base query joining all required tables
+        query = ReviewTomogram.objects.select_related(
+            'review',
+            'review__session'
+        ).filter(
+            review__session_id=session_id
+        )
+
+        # Add filters based on UI selections
+        if run_id:
+            query = query.filter(review__run_id=run_id)
+        if recon_type:
+            query = query.filter(review__reconstruction_type__iexact=recon_type)
+
+        # Get the count from the database
+        db_count = query.count()
+        
+        return JsonResponse({
+            'db_count': db_count,  # Count from Embrella database
+            'generated': len(zarr_files),  # Count from file server
+            'zarr_files': zarr_files  # Include the list of zarr files in the response
+        })
+    except MsiSession.DoesNotExist:
+        return JsonResponse({
+            'error': 'Session not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e)
+        }, status=500)
+    
+@require_http_methods(["POST"])
+async def start_sync(request):
+    """API endpoint to start tomogram sync process"""
+    session_id = request.POST.get('session')
+    run_id = request.POST.get('run')
+    recon_type = request.POST.get('reconType')
+
+    print(f"Received parameters - session_id: {session_id}, run_id: {run_id}, recon_type: {recon_type}")
+
+    if not all([session_id, run_id, recon_type]):
+        return JsonResponse({
+            'success': False,
+            'message': 'Missing required parameters'
+        }, status=400)
+
+    try:
+        # First check if session exists - using sync_to_async
+        session = await sync_to_async(MsiSession.objects.get)(id=session_id)
+        print(f"Found session: {session.name}")
+
+        # Check all reviews for this session to see what's available
+        all_reviews = await sync_to_async(list)(Review.objects.filter(session=session))
+        print(f"All reviews for this session: {[{'run_id': r.run_id, 'reconstruction_type': r.reconstruction_type} for r in all_reviews]}")
+
+        # Get review with joined session data in a single query - using case-insensitive comparison
+        review = await sync_to_async(Review.objects.select_related('session').get)(
+            session_id=session_id,
+            run_id=run_id,
+            reconstruction_type__iexact=recon_type  # Case-insensitive comparison
+        )
+        print(f"Found review: {review}")
+        print(f"Associated session: {review.msi_session}")
+        
+        # Capture stdout to get progress information
+        output = io.StringIO()
+        with redirect_stdout(output):
+            # Start sync process using import_tomograms.py script - run in a thread pool
+            await sync_to_async(import_tomograms_main)(review.review_id)
+        
+        # Get the captured output
+        progress_output = output.getvalue()
+        print("Sync process completed with output:", progress_output)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Sync process completed successfully',
+            'progress': progress_output
+        })
+    except MsiSession.DoesNotExist:
+        print(f"Session {session_id} not found in database")
+        return JsonResponse({
+            'success': False,
+            'message': f'Session with ID {session_id} not found'
+        }, status=404)
+    except Review.DoesNotExist:
+        print(f"Review not found with parameters - session_id: {session_id}, run_id: {run_id}, recon_type: {recon_type}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Review not found for session {session_id}, run {run_id}, and type {recon_type}'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error in start_sync: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
     
