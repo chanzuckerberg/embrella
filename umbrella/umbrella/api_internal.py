@@ -213,7 +213,7 @@ class ReviewView(View):
         Query Parameters:
         - limit (number, default=20): Max number of reviews to return
         - offset (number, default=0): For pagination
-        - orderBy (string, default=requestedAt:desc): Sort order
+        - orderBy (string, default=updatedAt:desc): Sort order
         - search (string, default=""): Fuzzy matches on reviewName and sessionId
         """
         if review_id:
@@ -231,8 +231,8 @@ class ReviewView(View):
             search = request.GET.get('search', '').strip()
             
             # Get sort parameter
-            order_by = request.GET.get('orderBy', 'requestedAt:desc')
-            sort_field, sort_order = order_by.split(':') if ':' in order_by else ('requestedAt', 'desc')
+            order_by = request.GET.get('orderBy', 'updatedAt:desc')
+            sort_field, sort_order = order_by.split(':') if ':' in order_by else ('updatedAt', 'desc')
             
             # Map frontend sort fields to database fields
             sort_field_map = {
