@@ -359,9 +359,9 @@ class ReviewView(View):
         """
         if review_id:
             # Check the URL path to determine the action
-            if request.path.endswith('/save/'):
+            if 'save' in request.path:
                 return self.save_review(request, review_id)
-            elif request.path.endswith('/complete/'):
+            elif 'complete' in request.path:
                 return self.complete_review(request, review_id)
             else:
                 return JsonResponse({"error": "Invalid endpoint"}, status=400)
@@ -427,39 +427,12 @@ class ReviewView(View):
     def save_review(self, request, review_id):
         """
         Save review results for multiple tomograms.
-        
-        Args:
-            request: HTTP request
-            review_id: String ID of the review
-            
-        Request Body:
-        {
-            "reviewId": string,
-            "sessionId": string,
-            "savePath": string,
-            "annotations": [
-                {
-                    "tomogramId": string,
-                    "quality": "accepted" | "rejected" | "uncertain",
-                    "rejectionReasons": string[],    // only if rejected
-                    "objectLabels": string[]         // optional
-                }
-            ]
-        }
-        
-        Returns:
-        {
-            "ok": true,
-            "savedAt": string,       // ISO timestamp
-            "savePath": string,
-            "reviewedCount": number,
-            "totalCount": number
-        }
         """
         try:
             # Parse request body
             try:
                 data = json.loads(request.body)
+                print(f"Received data: {data}")  # Debug log
             except json.JSONDecodeError:
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
             
@@ -472,7 +445,9 @@ class ReviewView(View):
             # Get the review
             try:
                 review = Review.objects.get(review_id=review_id)
+                print(f"Found review: {review.review_id}")  # Debug log
             except Review.DoesNotExist:
+                print(f"Review not found with ID: {review_id}")  # Debug log
                 return JsonResponse({"error": "Review not found"}, status=404)
             
             # Validate quality values
@@ -494,6 +469,7 @@ class ReviewView(View):
                         review=review,
                         tomogram_id=annotation['tomogramId']
                     )
+                    print(f"Updating tomogram: {tomogram.tomogram_id}")  # Debug log
                     
                     # Update tomogram review data
                     tomogram.quality = annotation['quality']
@@ -513,6 +489,7 @@ class ReviewView(View):
                     tomogram.save()
                     
                 except ReviewTomogram.DoesNotExist:
+                    print(f"Tomogram not found: {annotation['tomogramId']}")  # Debug log
                     return JsonResponse({"error": f"Tomogram not found: {annotation['tomogramId']}"}, status=404)
             
             # Calculate counts
@@ -536,7 +513,9 @@ class ReviewView(View):
             })
             
         except Exception as e:
-            print(f"Unexpected error in save_review: {str(e)}")
+            print(f"Unexpected error in save_review: {str(e)}")  # Debug log
+            import traceback
+            print(traceback.format_exc())  # Print full traceback
             return JsonResponse({"error": str(e)}, status=500)
 
     def complete_review(self, request, review_id):
@@ -925,45 +904,6 @@ class ReviewTomogramView(View):
 @method_decorator(csrf_exempt, name='dispatch')
 class SessionView(View):
     """View to handle both /api/sessions and /api/sessions/{session_id} endpoints"""
-    
-    # Base configuration
-    FILE_SERVER_HOST = "https://czii-onsite.czbiohub.org"
-    ARETOMO_PATH = "aretomo3"
-    DENOISE_PATH = "denoise"
-
-    def get_reconstruction_types(self, session_name, run_id):
-        """Determine reconstruction types by checking file server paths"""
-        recon_types = set()
-        
-        # Check aretomo3 paths
-        aretomo_paths = [
-            f"krios1.processing/{self.ARETOMO_PATH}/{session_name}/{run_id}/vol001",  # DCTF
-            f"krios1.processing/{self.ARETOMO_PATH}/{session_name}/{run_id}/vol003",  # SART
-        ]
-        
-        # Check denoise path
-        denoise_path = f"krios1.processing/{self.DENOISE_PATH}/{session_name}/{run_id}/vol001"  # Denoised
-        
-        # Check all paths
-        for path in aretomo_paths + [denoise_path]:
-            try:
-                url = urljoin(self.FILE_SERVER_HOST + "/", path + "/")
-                response = requests.get(url)
-                
-                if response.status_code == 200:
-                    # Parse the path to determine reconstruction type
-                    if "aretomo3" in path:
-                        if "vol001" in path:
-                            recon_types.add("DCTF")
-                        elif "vol003" in path:
-                            recon_types.add("SART")
-                    elif "denoise" in path and "vol001" in path:
-                        recon_types.add("Denoised")
-                        
-            except requests.RequestException:
-                continue
-                
-        return list(recon_types)
 
     def get_session_data(self, session):
         """Get runs data for a session"""

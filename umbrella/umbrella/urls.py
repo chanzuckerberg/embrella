@@ -53,10 +53,10 @@ urlpatterns = [
     path('api/sessions/<str:session_id>/', SessionView.as_view(), name='session-detail'),
     path('api/reviews/', ReviewView.as_view(), name='reviews'),
     path('api/reviews/<str:review_id>/', ReviewView.as_view(), name='review_metadata'),
-    path('api/reviews/<str:review_id>/save/', ReviewView.as_view(), name='save_review'),
-    path('api/reviews/<str:review_id>/complete/', ReviewView.as_view(), name='complete_review'),
-    path('api/reviews/<str:review_id>/export/', export_review_results, name='export_review_results'),
-    path('api/reviews/<str:review_id>/tomograms/', get_review_tomograms, name='get_review_tomograms'),
+    path('api/reviews/<str:review_id>/save', ReviewView.as_view(), name='save_review'),
+    path('api/reviews/<str:review_id>/complete', ReviewView.as_view(), name='complete_review'),
+    path('api/reviews/<str:review_id>/export', export_review_results, name='export_review_results'),
+    path('api/reviews/<str:review_id>/tomograms', get_review_tomograms, name='get_review_tomograms'),
     path('api/reviews/<str:review_id>/tomograms/<str:tomogram_id>', ReviewTomogramView.as_view(), name='review_tomogram_detail_no_slash'),
 ]
 
