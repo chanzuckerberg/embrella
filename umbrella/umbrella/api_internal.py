@@ -439,6 +439,26 @@ class ReviewView(View):
         except User.DoesNotExist:
             return JsonResponse({"error": "Requestor user not found"}, status=404)
         
+        # Check for duplicate review name
+        if Review.objects.filter(review_name=data['reviewName']).exists():
+            return JsonResponse({
+                "error": "Duplicate review name",
+                "details": f"A review with name '{data['reviewName']}' already exists"
+            }, status=400)
+        
+        # Check if there are tomograms to review
+        tomogram_count = ReviewTomogram.objects.filter(
+            session=session,
+            run_id=data['runId'],
+            reconstruction_type=data['reconstructionType']
+        ).count()
+        
+        if tomogram_count == 0:
+            return JsonResponse({
+                "error": "No tomograms found for review",
+                "details": f"No tomograms found for session {session.name}, run {data['runId']}, and reconstruction type {data['reconstructionType']}"
+            }, status=400)
+        
         # Create the review
         try:
             review = Review.objects.create(
@@ -449,7 +469,7 @@ class ReviewView(View):
                 msi_session=session,
                 requestor=requestor,
                 status='not_started',
-                total_count=0,
+                total_count=tomogram_count,  # Set total count to actual tomogram count
                 reviewed_count=0
             )
             
@@ -543,8 +563,9 @@ class ReviewView(View):
                 quality__in=['accepted', 'rejected', 'uncertain']
             ).count()
             
-            # Update review's save path
+            # Update review's save path and reviewed count
             review.save_path = data['savePath']
+            review.reviewed_count = reviewed_count
             review.save()
             
             # Return success response with counts
@@ -833,6 +854,7 @@ class ReviewTomogramView(View):
                 job_name = "denoise"
                 
             response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.msi_session.name}/{review.run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+            response_data["contrastLimits"] = [-0.00001, 0.00001]  # Default contrast limits
             
             # Add review details if they exist
             if tomogram.quality:
@@ -978,12 +1000,12 @@ class SessionView(View):
                             seen_runs.add(run_key)
                             runs_data.append({
                                 "runId": proc_run.name,
-                                "runCounts": tomogram_count,
+                                "numTomograms": tomogram_count,
                                 "reconstructionType": recon_type
                             })
         
         return {
-            "sessionId": session.name,  # Use session name as ID
+            "sessionId": session.id,  # Use session name as ID
             "sessionName": session.name,
             "createdAt": session.created_at.isoformat() if session.created_at else None,
             "projectName": session.project.name if session.project else None,
