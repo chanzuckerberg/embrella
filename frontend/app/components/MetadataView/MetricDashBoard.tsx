@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { MetadataVizResponse } from '../../common/types/metadataViz/metadataVizData';
 import styles from './MetadataViz.module.css';
-import { Switch, FormControlLabel, Box } from '@mui/material';
+import { Switch, FormControlLabel, Box, Typography, Paper } from '@mui/material';
 import { MetricScatterPlot } from './MetricScatterPlot';
 import { MetricHistogram } from './MetricHistogram';
+import { Icon } from '@czi-sds/components';
 import { METRICS_CONFIG } from './constants/MetricConfig';
 
 interface MetricDashboardProps {
@@ -102,7 +103,31 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
 
   return (
     <div className={styles.dashboardContainer}>
-      <Box display="flex" justifyContent="flex-end">
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Paper
+          elevation={1}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            maxWidth: 'fit-content',
+          }}
+        >
+          <Box display="flex" alignItems="center" mb={2}>
+            <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />
+            <Typography variant="h3" component="div" sx={{ marginLeft: '8px' }}>
+              Total number of Accepted: {scatterplotDisplayData?.accepted_results?.length || 0}
+            </Typography>
+          </Box>
+          <Box display="flex" alignItems="center">
+            <Icon sdsIcon="XMarkCircle" sdsSize="s" color="red" />
+            <Typography variant="h3" component="div" sx={{ marginLeft: '8px' }}>
+              Total Number of Rejected: {scatterplotDisplayData?.rejected_results?.length || 0}
+            </Typography>
+          </Box>
+        </Paper>
+
         <FormControlLabel
           control={
             <Switch checked={isScatterPlot} onChange={(e) => setIsScatterPlot(e.target.checked)} color="primary" />

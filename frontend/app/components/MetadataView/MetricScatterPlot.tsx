@@ -381,7 +381,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
             symbolSize: 5,
             itemStyle: {
               opacity: 0.6,
-              color: '#8B0000',
+              color: '#B00020',
             },
             data: rejectedData,
           },
