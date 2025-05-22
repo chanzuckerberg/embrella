@@ -31,6 +31,8 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from datetime import datetime
+from rapidfuzz import fuzz
+from rapidfuzz import process
 
 HOST = "10.50.120.90"
 PORT = 22
@@ -204,86 +206,128 @@ def get_tomo_by_msi_session(request):
 class ReviewView(View):
     def get(self, request, review_id=None):
         """
-        If review_id is provided, get detailed metadata for a specific review.
-        Otherwise, list all review sessions with pagination, search, and sorting.
+        Handle GET requests for both endpoints:
+        - /api/reviews/ (list all reviews with pagination, sorting, and search)
+        - /api/reviews/{review_id}/ (get specific review metadata)
+        
+        Query Parameters:
+        - limit (number, default=20): Max number of reviews to return
+        - offset (number, default=0): For pagination
+        - orderBy (string, default=requestedAt:desc): Sort order
+        - search (string, default=""): Fuzzy matches on reviewName and sessionId
         """
         if review_id:
             return self.get_review_metadata(request, review_id)
             
-        # Get pagination parameters
-        limit = int(request.GET.get('limit', 20))
-        offset = int(request.GET.get('offset', 0))
-        
-        # Get search parameter
-        search = request.GET.get('search', '').strip()
-        
-        # Get sort parameter
-        order_by = request.GET.get('orderBy', 'requestedAt:desc')
-        sort_field, sort_order = order_by.split(':') if ':' in order_by else ('requestedAt', 'desc')
-        
-        # Start with base queryset
-        queryset = Review.objects.select_related('msi_session', 'requestor').all()
-        
-        # Apply search filter
-        if search:
-            queryset = queryset.filter(
-                Q(review_name__icontains=search) |
-                Q(msi_session__name__icontains=search)
-            )
-        
-        # Apply sorting
-        if sort_field == 'requestedAt':
-            sort_field = 'created_at'
-        elif sort_field == 'updatedAt':
-            sort_field = 'updated_at'
-        
-        if sort_order == 'desc':
-            queryset = queryset.order_by(f'-{sort_field}')
-        else:
-            queryset = queryset.order_by(sort_field)
-        
-        # Get total count before pagination
-        total_count = queryset.count()
-        
-        # Apply pagination
-        queryset = queryset[offset:offset + limit]
-        
-        # Format the response
-        reviews_data = []
-        for review in queryset:
-            # Determine status based on reviewed count
-            if review.reviewed_count == 0:
-                status = "Not Started"
-            elif review.reviewed_count < review.total_count:
-                status = "In Progress"
-            else:
-                status = "Complete"
-                
-            reviews_data.append({
-                "reviewId": str(review.review_id),
-                "reviewName": review.review_name,
-                "reviewType": review.review_type,
-                "sessionId": review.msi_session.name,
-                "runId": review.run_id,
-                "reconstructionType": review.reconstruction_type,
-                "updatedAt": review.updated_at.isoformat(),
-                "status": status,
-                "reviewedCount": review.reviewed_count,
-                "totalCount": review.total_count,
-                "reviewer": {
-                    "id": str(review.requestor.id) if review.requestor else None,
-                    "name": review.requestor.username if review.requestor else None
-                }
-            })
-        
-        return JsonResponse({
-            "reviews": reviews_data,
-            "pagination": {
-                "total": total_count,
-                "limit": limit,
-                "offset": offset
+        try:
+            # Get pagination parameters
+            try:
+                limit = int(request.GET.get('limit', 20))
+                offset = int(request.GET.get('offset', 0))
+            except ValueError:
+                return JsonResponse({"error": "Invalid pagination parameters"}, status=400)
+            
+            # Get search parameter
+            search = request.GET.get('search', '').strip()
+            
+            # Get sort parameter
+            order_by = request.GET.get('orderBy', 'requestedAt:desc')
+            sort_field, sort_order = order_by.split(':') if ':' in order_by else ('requestedAt', 'desc')
+            
+            # Map frontend sort fields to database fields
+            sort_field_map = {
+                'requestedAt': 'created_at',
+                'updatedAt': 'updated_at',
+                'reviewName': 'review_name',
+                'sessionId': 'msi_session__name',
+                'status': 'status'
             }
-        }, safe=False)
+            
+            # Start with base queryset
+            queryset = Review.objects.select_related('msi_session', 'requestor').all()
+            
+            # Apply search filter
+            if search:
+                # Get all reviews first
+                all_reviews = list(queryset)
+                
+                # Preprocess search term
+                search = search.lower().replace('-', '').replace(' ', '')
+                
+                # Filter reviews based on similarity threshold
+                SIMILARITY_THRESHOLD = 70
+                filtered_reviews = []
+                
+                for review in all_reviews:
+                    # Construct and preprocess full review name
+                    full_name = f"{review.review_name}{review.msi_session.name}{review.run_id}{review.reconstruction_type}"
+                    full_name = full_name.lower().replace('-', '').replace(' ', '')
+                    
+                    # Calculate similarity
+                    similarity = fuzz.ratio(search, full_name)
+                    
+                    if similarity >= SIMILARITY_THRESHOLD:
+                        filtered_reviews.append(review)
+                        print(f"Match found: {full_name} (similarity: {similarity})")  # Debug log
+                
+                # Update queryset with filtered reviews
+                queryset = Review.objects.filter(
+                    review_id__in=[r.review_id for r in filtered_reviews]
+                ).select_related('msi_session', 'requestor')
+            
+            # Apply sorting
+            db_sort_field = sort_field_map.get(sort_field, 'created_at')
+            if sort_order == 'desc':
+                queryset = queryset.order_by(f'-{db_sort_field}')
+            else:
+                queryset = queryset.order_by(db_sort_field)
+            
+            # Get total count before pagination
+            total_count = queryset.count()
+            
+            # Apply pagination
+            queryset = queryset[offset:offset + limit]
+            
+            # Format the response
+            reviews_data = []
+            for review in queryset:
+                # Determine status based on reviewed count
+                if review.reviewed_count == 0:
+                    status = "Not Started"
+                elif review.reviewed_count < review.total_count:
+                    status = "In Progress"
+                else:
+                    status = "Complete"
+                    
+                reviews_data.append({
+                    "reviewId": str(review.review_id),
+                    "reviewName": review.review_name,
+                    "reviewType": review.review_type,
+                    "sessionId": review.msi_session.name,
+                    "runId": review.run_id,
+                    "reconstructionType": review.reconstruction_type,
+                    "updatedAt": review.updated_at.isoformat(),
+                    "status": status,
+                    "reviewedCount": review.reviewed_count,
+                    "totalCount": review.total_count,
+                    "reviewer": {
+                        "id": str(review.requestor.id) if review.requestor else None,
+                        "name": review.requestor.username if review.requestor else None
+                    }
+                })
+            
+            return JsonResponse({
+                "reviews": reviews_data,
+                "pagination": {
+                    "total": total_count,
+                    "limit": limit,
+                    "offset": offset
+                }
+            }, safe=False)
+            
+        except Exception as e:
+            print(f"Error in get reviews: {str(e)}")  # Add logging
+            return JsonResponse({"error": str(e)}, status=500)
 
     def get_review_metadata(self, request, review_id):
         """
@@ -788,7 +832,7 @@ class ReviewTomogramView(View):
                 vol_suffix = ""  # denoised
                 job_name = "denoise"
                 
-            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.msi_session.name}/{review.run_id}/{vol_suffix}{tomogram.position_id}_Vol.zarr"
+            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.msi_session.name}/{review.run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
             
             # Add review details if they exist
             if tomogram.quality:
