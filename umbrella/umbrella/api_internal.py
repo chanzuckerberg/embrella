@@ -277,7 +277,7 @@ class ReviewView(View):
             })
         
         return JsonResponse({
-            "data": reviews_data,
+            "reviews": reviews_data,
             "pagination": {
                 "total": total_count,
                 "limit": limit,
@@ -670,6 +670,7 @@ def export_review_results(request, review_id):
         filename = f"review_{review_id}_export.json"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         response['Content-Type'] = 'application/json'
+        response['Content-Length'] = len(json.dumps(export_data))
         
         return response
         
