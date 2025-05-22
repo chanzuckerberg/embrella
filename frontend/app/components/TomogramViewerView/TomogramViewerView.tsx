@@ -7,6 +7,7 @@ import { Review, ReviewTomogramDetail } from './types';
 import { QualityControls } from './components/QualityControls';
 import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { getRegionFromZattrs } from './utils';
 import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
 import { API, MOCKED_APIS, POST_API, MOCKED_POST_APIS } from '../../../app/common/constants/api';
@@ -27,7 +28,7 @@ interface TomogramState {
   tomogramDetail: ReviewTomogramDetail | null;
   contrastLimits: [number, number];
   selectedRejectionReasons: string[];
-  selectedQuality: 'accepted' | 'rejected' | 'uncertain' | 'pending';
+  selectedQuality: 'accepted' | 'rejected' | 'uncertain' | 'exemplary' | 'pending';
   selectedObjectLabels: string[];
   saveState?: 'saving' | 'saved' | 'failed';
 }
@@ -37,7 +38,7 @@ type TomogramAction =
   | { type: 'SET_TOMOGRAM_DETAIL'; payload: ReviewTomogramDetail | null }
   | { type: 'SET_CONTRAST_LIMITS'; payload: [number, number] }
   | { type: 'SET_REJECTION_REASONS'; payload: string[] }
-  | { type: 'SET_QUALITY'; payload: 'accepted' | 'rejected' | 'uncertain' | 'pending' }
+  | { type: 'SET_QUALITY'; payload: 'accepted' | 'rejected' | 'uncertain' | 'exemplary' | 'pending' }
   | { type: 'SET_OBJECT_LABELS'; payload: string[] }
   | { type: 'RESET_REVIEW_STATE' }
   | { type: 'SET_SAVE_STATE'; payload: 'saving' | 'saved' | 'failed' | undefined };
@@ -91,6 +92,25 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   const { imageSeriesLayer, channels } = useIdetik();
   const currentUser = useContext(UserContext);
   const userCanReview = currentUser?.id === review.owner.id;
+
+  useHotkeys('a', () => {
+    dispatchAndSave({ type: 'SET_QUALITY', payload: 'accepted' });
+  });
+  useHotkeys('r', () => {
+    dispatchAndSave({ type: 'SET_QUALITY', payload: 'rejected' });
+  });
+  useHotkeys('c', () => {
+    dispatchAndSave({ type: 'SET_QUALITY', payload: 'uncertain' });
+  });
+  useHotkeys('e', () => {
+    dispatchAndSave({ type: 'SET_QUALITY', payload: 'exemplary' });
+  });
+  useHotkeys('left', () => {
+    handlePrevious();
+  });
+  useHotkeys('right', () => {
+    handleNext();
+  });
 
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
@@ -278,6 +298,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
               }}
               onUncertain={() => {
                 dispatchAndSave({ type: 'SET_QUALITY', payload: 'uncertain' });
+              }}
+              onExemplary={() => {
+                dispatchAndSave({ type: 'SET_QUALITY', payload: 'exemplary' });
               }}
             />
           </div>
