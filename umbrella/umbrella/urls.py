@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 from umbrella.ping import ping
 from umbrella.api_internal import get_tomo_by_msi_session
-from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, fetch_session_names
+from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, ReviewView, export_review_results, get_review_tomograms, ReviewTomogramView, SessionView
 
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
@@ -49,7 +49,15 @@ urlpatterns = [
     path('workflow/', include('workflow.urls'), name='workflow pipeline'),
     path('agent/', include('agent.urls'), name='AI Agent'),
     path('annotations/v1/filterlist/', available_annotation_filter, name='get filter list for annotations'),
-    path('api/sessions/', fetch_session_names, name='fetch_session_names'),
+    path('api/sessions/', SessionView.as_view(), name='session-list'),
+    path('api/sessions/<str:session_id>/', SessionView.as_view(), name='session-detail'),
+    path('api/reviews/', ReviewView.as_view(), name='reviews'),
+    path('api/reviews/<str:review_id>/', ReviewView.as_view(), name='review_metadata'),
+    path('api/reviews/<str:review_id>/save', ReviewView.as_view(), name='save_review'),
+    path('api/reviews/<str:review_id>/complete', ReviewView.as_view(), name='complete_review'),
+    path('api/reviews/<str:review_id>/export', export_review_results, name='export_review_results'),
+    path('api/reviews/<str:review_id>/tomograms', get_review_tomograms, name='get_review_tomograms'),
+    path('api/reviews/<str:review_id>/tomograms/<str:tomogram_id>', ReviewTomogramView.as_view(), name='review_tomogram_detail_no_slash'),
 ]
 
 
