@@ -107,7 +107,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   useEffect(() => {
     const fetchRegion = async () => {
       if (!state.tomogramDetail?.zarrPath) return;
-      const region = await getRegionFromZattrs(state.tomogramDetail.zarrPath);
+      const region = await getRegionFromZattrs(state.tomogramDetail.zarrPath, 2);
       setRegion(region);
     };
     fetchRegion();
