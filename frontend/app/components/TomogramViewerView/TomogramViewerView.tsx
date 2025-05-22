@@ -99,7 +99,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   useHotkeys('r', () => {
     dispatchAndSave({ type: 'SET_QUALITY', payload: 'rejected' });
   });
-  useHotkeys('c', () => {
+  useHotkeys('u', () => {
     dispatchAndSave({ type: 'SET_QUALITY', payload: 'uncertain' });
   });
   useHotkeys('e', () => {

@@ -48,7 +48,7 @@ export const QualityControls = ({
         disabled={isDisabled}
         onClick={onUncertain}
       >
-        Uncertain [c]
+        Uncertain [u]
       </Button>
       <Button
         startIcon={<Icon sdsIcon="Star" sdsSize="l" />}
