@@ -797,12 +797,12 @@ __metadata:
 
 "@idetik/core@file:./imaging-active-learning/packages/core::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/core@file:./imaging-active-learning/packages/core#./imaging-active-learning/packages/core::hash=b94765&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/core@file:./imaging-active-learning/packages/core#./imaging-active-learning/packages/core::hash=421675&locator=create-sds-app%40workspace%3A."
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/278cc61e3753c2c67ba11d1fcfae0fcc2860a993f74ac7638d86f852005ee893e3f864abe22ac989ebc9edf95741e9e28e3c794318cf4a10521c015447619392
+  checksum: 10c0/ed5b69761fbae7bc1efe575d283c08ae9449b93ba7f771d2bbdbe2f83dd34c9f95573e04849808e1b8da0e15dda0e4d896fd353c641d6a05462f21514b26feb5
   languageName: node
   linkType: hard
 
@@ -818,7 +818,7 @@ __metadata:
 
 "@idetik/react@file:./imaging-active-learning/packages/react::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/react@file:./imaging-active-learning/packages/react#./imaging-active-learning/packages/react::hash=35484b&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/react@file:./imaging-active-learning/packages/react#./imaging-active-learning/packages/react::hash=6932eb&locator=create-sds-app%40workspace%3A."
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
@@ -836,7 +836,7 @@ __metadata:
     "@czi-sds/components": ^22.3.0
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/e3e19d4557603b53a6dda264f530a52fb9a69a0c6e0df9482bd6c508a5fe5f5ef05c321833d21abdb256addd0f76b47db8dfab6e9b5ad7e8c51c77a49af20444
+  checksum: 10c0/071540aa5f3a10ff1a149134895d71e651057dee9cd4e4740d07ede96f846c96a68a56c4d754614f9ddcc0bc0ec63766f9845a93fb8424b95a0010f32c3a140d
   languageName: node
   linkType: hard
 
@@ -3757,6 +3757,7 @@ __metadata:
     prettier-plugin-organize-imports: "npm:^3.2.4"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
+    react-hotkeys-hook: "npm:^5.1.0"
     react-json-view: "npm:^1.21.3"
     stylelint: "npm:^15.11.0"
     stylelint-config-recommended: "npm:^13.0.0"
@@ -9128,6 +9129,16 @@ __metadata:
   peerDependencies:
     react: ^18.3.1
   checksum: 10c0/a752496c1941f958f2e8ac56239172296fcddce1365ce45222d04a1947e0cc5547df3e8447f855a81d6d39f008d7c32eab43db3712077f09e3f67c4874973e85
+  languageName: node
+  linkType: hard
+
+"react-hotkeys-hook@npm:^5.1.0":
+  version: 5.1.0
+  resolution: "react-hotkeys-hook@npm:5.1.0"
+  peerDependencies:
+    react: ">=16.8.0"
+    react-dom: ">=16.8.0"
+  checksum: 10c0/99df6d3c305b139ac7afd073b58575961bf30a819fb23e8f1251b1b3a9f1c7662737f8b6266e3fc42bd5bdfdaca81aa1e019613f95f9a6313267de265e45836d
   languageName: node
   linkType: hard
 
