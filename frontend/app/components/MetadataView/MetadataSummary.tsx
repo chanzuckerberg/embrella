@@ -1,37 +1,40 @@
 import React, { useEffect, useState } from 'react';
 import { ButtonDropdown, Button, Alert } from '@czi-sds/components';
-import { useFetchMetadataSummary } from '@app/common/hooks/useFetchMetadata/useFetchMetadataSummary';
 import { SummaryTable } from './summaryTable';
 import styles from './MetadataViz.module.css';
 import { RawJson } from './RawJson';
 import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
+import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
 
 interface MetadataSummaryProps {
-  sessionName: string;
-  runNumber: string;
   isFilterApplied?: boolean;
   filteredData?: MetadataVizResponse;
+  summaryAPIData?: MetadataSummaryResponse;
+  summaryError?: { status: number; message: string };
+  summaryLoading?: boolean;
+  summarySuccess?: boolean;
+  onToggleSummary?: () => void;
 }
 
 export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
-  sessionName,
-  runNumber,
-  isFilterApplied = false,
+  isFilterApplied,
   filteredData,
+  summaryAPIData,
+  summaryError,
+  summaryLoading,
+  summarySuccess,
+  onToggleSummary,
 }) => {
   const [showSummary, setShowSummary] = useState(false);
-  const [isLoading] = useState(false);
-  const [shouldFetchData, setShouldFetchData] = useState(false);
   const [showError, setShowError] = useState(true);
   const [isJsonViewOpen, setIsJsonViewOpen] = useState(false);
-  const { data, isSuccess, error } = useFetchMetadataSummary(sessionName, runNumber, shouldFetchData);
 
   // Determine if we should show the Generate JSON button - only based on filter status and data availability
   const shouldShowGenerateJson = isFilterApplied && filteredData;
 
   const handleToggleSummary = () => {
-    if (!showSummary) {
-      setShouldFetchData(true);
+    if (!showSummary && onToggleSummary) {
+      onToggleSummary();
     }
     setShowSummary(!showSummary);
   };
@@ -41,25 +44,25 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
   };
 
   useEffect(() => {
-    if (error) {
+    if (summaryError) {
       setShowError(true);
     }
-  }, [error]);
+  }, [summaryError]);
 
   const renderContent = () => {
     if (showSummary) {
-      if (isLoading) return <div className="p-4">Loading...</div>;
-      return data && <SummaryTable data={data} />;
+      if (summaryLoading) return <div className="p-4">Loading...</div>;
+      return summaryAPIData && <SummaryTable data={summaryAPIData} />;
     }
-    if (error && showError) {
+    if (summaryError && showError) {
       return (
         <div className={styles.alertContainer}>
           <Alert severity="error" onClose={() => setShowError(false)}>
-            {error.status === 404
+            {summaryError.status === 404
               ? 'Required files not found. Please check if the session and run number are correct.'
-              : error.status === 500
+              : summaryError.status === 500
                 ? 'Server error occurred. Please try again later'
-                : error.message || 'An error occurred while fetching metadata'}
+                : summaryError.message || 'An error occurred while fetching metadata'}
           </Alert>
         </div>
       );
@@ -75,7 +78,7 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
             sdsType="primary"
             sdsStyle="rounded"
             onClick={() => handleToggleSummary()}
-            disabled={isLoading && !isSuccess}
+            disabled={summaryLoading && !summarySuccess}
           >
             {showSummary ? 'Hide Session Summary' : 'Show Session Summary'}
           </ButtonDropdown>
