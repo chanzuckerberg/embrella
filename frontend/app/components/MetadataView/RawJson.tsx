@@ -28,13 +28,15 @@ export const RawJson: React.FC<RawJsonProps> = ({ isOpen, onClose, data }) => {
       Object.entries(data.filters_applied.filters).forEach(([key, range]) => {
         if (Array.isArray(range) && range.length === 2) {
           // Get unit from METRICS_CONFIG
-          const unit = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG]?.unit || '';
+          const metricConfig = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG];
+          const unit = metricConfig?.unit || '';
+          const label = metricConfig?.label || key;
 
           // Fix decimal places to 2 for better readability
           const minValue = Number(range[0]).toFixed(2);
           const maxValue = Number(range[1]).toFixed(2);
 
-          filterRanges[key] = `${minValue}-${maxValue}${unit}`;
+          filterRanges[label] = `${minValue}-${maxValue}${unit}`;
         }
       });
     }
