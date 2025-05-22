@@ -71,20 +71,39 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
     (params: echarts.TooltipComponentFormatterCallbackParams) => {
       const param = Array.isArray(params) ? params[0] : params;
       const dataIndex = param.dataIndex as number;
+      const seriesName = param.seriesName || '';
 
-      // Basic validation
-      if (dataIndex === undefined || !data?.accepted_results || dataIndex >= data.accepted_results.length) {
-        return null;
+      // Check if this is from a rejected series when filters are applied
+      const isRejectedSeries = isFilterApplied && seriesName.includes('Rejected');
+
+      // If it's a rejected series, look in rejected_results
+      if (isRejectedSeries && data?.rejected_results) {
+        // Basic validation for rejected data
+        if (dataIndex === undefined || dataIndex >= data.rejected_results.length) {
+          return null;
+        }
+
+        const tiltSeries = data.rejected_results[dataIndex];
+        if (!tiltSeries || !tiltSeries.metrics) {
+          return null;
+        }
+
+        return { tiltSeries, metricsData: tiltSeries.metrics };
+      } else {
+        // Original logic for accepted results
+        if (dataIndex === undefined || !data?.accepted_results || dataIndex >= data.accepted_results.length) {
+          return null;
+        }
+
+        const tiltSeries = data.accepted_results[dataIndex];
+        if (!tiltSeries || !tiltSeries.metrics) {
+          return null;
+        }
+
+        return { tiltSeries, metricsData: tiltSeries.metrics };
       }
-
-      const tiltSeries = data.accepted_results[dataIndex];
-      if (!tiltSeries || !tiltSeries.metrics) {
-        return null;
-      }
-
-      return { tiltSeries, metricsData: tiltSeries.metrics };
     },
-    [data]
+    [data, isFilterApplied]
   );
 
   // Format tooltip content
@@ -286,7 +305,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
           name: metric.label,
           xAxisIndex: index,
           yAxisIndex: index,
-          symbolSize: 4,
+          symbolSize: 5,
           itemStyle: {
             opacity: 0.6,
             color: SCATTERPLOT_METRIC_COLORS[metric.key as keyof typeof SCATTERPLOT_METRIC_COLORS],
@@ -347,10 +366,10 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
             name: `${metric.label} (Accepted)`,
             xAxisIndex: index,
             yAxisIndex: index,
-            symbolSize: 4,
+            symbolSize: 5,
             itemStyle: {
               opacity: 0.6,
-              color: '#4CAF50',
+              color: '#006400',
             },
             data: acceptedData,
           },
@@ -359,10 +378,10 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
             name: `${metric.label} (Rejected)`,
             xAxisIndex: index,
             yAxisIndex: index,
-            symbolSize: 4,
+            symbolSize: 5,
             itemStyle: {
               opacity: 0.6,
-              color: '#F44336',
+              color: '#8B0000',
             },
             data: rejectedData,
           },
