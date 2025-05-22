@@ -59,7 +59,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
         reviewedCount: 45,
         totalCount: 100,
         reviewer: {
-          id: 101,
+          id: 1,
           name: 'Yue Yu',
           url: '/api/users/101',
         },

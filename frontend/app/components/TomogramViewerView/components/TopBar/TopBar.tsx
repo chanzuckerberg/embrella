@@ -9,7 +9,7 @@ export const TopBar = ({ saveState }: TopBarProps) => {
   const router = useRouter();
 
   return (
-    <div className="flex flex-row justify-between items-center basis-[50px] shrink-0 w-full !px-[25px] !py-[10px]">
+    <div className="flex flex-row justify-between items-center basis-[50px] shrink-0 w-full !px-[20px] !py-[10px]">
       <Button
         sdsStyle="square"
         sdsType="secondary"
@@ -29,6 +29,12 @@ export const TopBar = ({ saveState }: TopBarProps) => {
         {saveState === 'saved' && (
           <>
             <Icon sdsIcon={'Check'} sdsSize={'xs'} className="!mr-[5px]" />
+            All changes saved
+          </>
+        )}
+        {saveState === 'failed' && (
+          <>
+            <Icon sdsIcon={'XMark'} sdsSize={'xs'} className="!mr-[5px]" />
             All changes saved
           </>
         )}

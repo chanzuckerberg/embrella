@@ -13,5 +13,5 @@ export const UserContext = createContext<User | undefined>(undefined);
 
 export const UserProvider = ({ children }: PropsWithChildren) => {
   const user = useFetchData<User>(API.USER).data;
-  return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
+  return <UserContext.Provider value={user}>{user !== undefined && children}</UserContext.Provider>;
 };
