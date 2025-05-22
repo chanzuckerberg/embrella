@@ -770,7 +770,11 @@ class ReviewTomogramView(View):
                 "tomogramId": tomogram.tomogram_id,
                 "displayName": f"{tomogram.position_id}",
                 "zarrPath": None,
-                "existingReview": None
+                "existingReview": {
+                    "quality": None,
+                    "rejectionReasons": [],
+                    "objectLabels": []
+                }
             }
             
             # Construct zarr path based on reconstruction type
@@ -788,29 +792,23 @@ class ReviewTomogramView(View):
             
             # Add review details if they exist
             if tomogram.quality:
-                review_data = {
-                    "quality": tomogram.quality,
-                    "rejectionReasons": [],
-                    "objectLabels": []
-                }
+                response_data["existingReview"]["quality"] = tomogram.quality
                 
                 # Add rejection reasons if quality is rejected
                 if tomogram.quality == "rejected" and tomogram.rejection_reasons:
                     try:
-                        review_data["rejectionReasons"] = json.loads(tomogram.rejection_reasons)
+                        response_data["existingReview"]["rejectionReasons"] = json.loads(tomogram.rejection_reasons)
                     except json.JSONDecodeError:
                         # Fallback for old format (comma-separated)
-                        review_data["rejectionReasons"] = tomogram.rejection_reasons.split(",")
+                        response_data["existingReview"]["rejectionReasons"] = tomogram.rejection_reasons.split(",")
                 
                 # Add object labels if they exist
                 if tomogram.object_labels:
                     try:
-                        review_data["objectLabels"] = json.loads(tomogram.object_labels)
+                        response_data["existingReview"]["objectLabels"] = json.loads(tomogram.object_labels)
                     except json.JSONDecodeError:
                         # Fallback for old format (comma-separated)
-                        review_data["objectLabels"] = tomogram.object_labels.split(",")
-                
-                response_data["existingReview"] = review_data
+                        response_data["existingReview"]["objectLabels"] = tomogram.object_labels.split(",")
             
             return JsonResponse(response_data)
             
