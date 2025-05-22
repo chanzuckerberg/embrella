@@ -15,6 +15,7 @@ import styles from './MetadataViz.module.css';
 import { FilterConfig, MetricRanges } from '@app/common/types/metadataViz/metadataVizData';
 import { Button } from '@czi-sds/components';
 import { METRICS_CONFIG } from './constants/MetricConfig';
+import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
 
 interface MetadataFilterRange {
   current: [number, number];
@@ -31,9 +32,10 @@ type FilterState = {
 interface MetadataFiltersProps {
   metricRanges: MetricRanges;
   onApplyFilters?: (filters: FilterConfig, selectedOption: 'AND' | 'OR') => void;
+  summaryAPIData?: MetadataSummaryResponse;
 }
 
-export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, onApplyFilters }) => {
+export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, onApplyFilters, summaryAPIData }) => {
   const [selectedOption, setSelectedOption] = useState<'AND' | 'OR'>('AND');
   const [inputValues, setInputValues] = useState<Record<string, { min: string; max: string }>>({});
   const [filters, setFilters] = useState<FilterState>(() => {
