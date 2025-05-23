@@ -7,7 +7,7 @@ import { Review, ReviewTomogramDetail } from './types';
 import { QualityControls } from './components/QualityControls';
 import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
-import { getRegionAndZarray, getRegionFromZattrs } from './utils';
+import { getRegionFromZattrs } from './utils';
 import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
 import { API, MOCKED_APIS, POST_API, MOCKED_POST_APIS } from '../../../app/common/constants/api';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
@@ -249,7 +249,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           {state.tomogramDetail?.zarrPath !== undefined &&
             region &&
             !region.some((d) => d.dimension === seriesDimensionName) && (
-              <div>Error: Region missing required dimension "{seriesDimensionName}"</div>
+              <div>Error: Region missing required dimension &quot;{seriesDimensionName}&quot;</div>
             )}
           {state.tomogramDetail?.zarrPath !== undefined &&
             region &&
