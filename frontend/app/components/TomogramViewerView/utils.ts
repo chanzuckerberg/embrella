@@ -24,20 +24,3 @@ export async function getRegionFromZattrs(zarrUrl: string): Promise<Region> {
   });
   return region;
 }
-
-export async function getZarrayMetadata(zarrUrl: string, levelIndex: number) {
-  const zarrayUrl = `${zarrUrl}/${levelIndex}/.zarray`;
-  const res = await fetch(zarrayUrl);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch zarray from ${zarrayUrl}: ${res.statusText}`);
-  }
-  return await res.json();
-}
-
-export async function getRegionAndZarray(zarrUrl: string, levelIndex: number) {
-  const [region, zarrayMeta] = await Promise.all([
-    getRegionFromZattrs(zarrUrl),
-    getZarrayMetadata(zarrUrl, levelIndex),
-  ]);
-  return { region, zarrayMeta };
-}
