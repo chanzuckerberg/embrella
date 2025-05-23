@@ -8,7 +8,7 @@ export async function getRegionFromZattrs(zarrUrl: string): Promise<Region> {
   }
 
   const zattrs = await res.json();
-  const axes = zattrs?.multiscales?.[0]?.axes;
+  const axes = zattrs?.axes ?? zattrs?.multiscales?.[0]?.axes;
 
   if (!Array.isArray(axes)) {
     throw new Error('No axes found in multiscales[0].axes');
