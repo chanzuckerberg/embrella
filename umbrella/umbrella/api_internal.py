@@ -1,6 +1,8 @@
 from django.http import JsonResponse
 from django.db.models import F
 from cryo_grids.models import CryoGrid
+from processes.utils import SortMetadataModel
+from processes.views import get_base_url
 from projects.models import Project
 from tem.models import MsiSession
 from processes.models import Tomograms, Annotation, Pipe, PipeInPlan, ProcPlan, PipeJoint, ProcRun, Review, ReviewTomogram
@@ -300,10 +302,18 @@ class ReviewView(View):
                     status = "Complete"
                     
                 reviews_data.append({
-                    "reviewId": str(review.review_id),
-                    "reviewName": review.review_name,
-                    "reviewType": review.review_type,
-                    "sessionId": review.msi_session.name,
+                    "review": {
+                        "id": str(review.review_id),
+                        "name": review.review_name,
+                        "type": review.review_type,
+                        "url": f"{get_base_url()}/admin/processes/review/{review.review_id}",
+                        "annotationObjects": ["lysosome", "golgi apparatus", "microtubule"] # TODO
+                    },
+                    "session": {
+                        "id": review.msi_session.pk,
+                        "name": review.msi_session.name,
+                        "url": f"{get_base_url()}/admin/tem/msisession/{review.msi_session.pk}",
+                    },
                     "runId": review.run_id,
                     "reconstructionType": review.reconstruction_type,
                     "updatedAt": review.updated_at.isoformat(),
@@ -317,12 +327,16 @@ class ReviewView(View):
                 })
             
             return JsonResponse({
-                "reviews": reviews_data,
+                "result": reviews_data,
                 "pagination": {
                     "total": total_count,
                     "limit": limit,
                     "offset": offset
-                }
+                },
+                "sortBy": SortMetadataModel(
+                    sort='updatedAt' if sort_field is not None else None,
+                    asc=sort_order is 'asc'
+                ).model_dump()
             }, safe=False)
             
         except Exception as e:

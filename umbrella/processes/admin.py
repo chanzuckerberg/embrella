@@ -27,4 +27,4 @@ admin.site.register(TomoPostProcessMethod)
 admin.site.register(AnnotationMethod)
 admin.site.register(Annotation)
 admin.site.register(ParticleGallery)
-
+admin.site.register(Review)
