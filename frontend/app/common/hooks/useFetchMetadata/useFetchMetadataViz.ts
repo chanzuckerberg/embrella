@@ -17,7 +17,9 @@ interface UseFetchMetadataVizResult {
 export const useFetchMetadataViz = (
   sessionName: string,
   runNumber: string,
-  filters?: FilterConfig
+  filters?: FilterConfig,
+  sortBy?: string,
+  sortDirection?: 'asc' | 'desc'
 ): UseFetchMetadataVizResult => {
   const [data, setData] = useState<MetadataVizResponse>();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -34,6 +36,15 @@ export const useFetchMetadataViz = (
 
         if (filters) {
           url += `&q=${encodeURIComponent(JSON.stringify(filters))}`;
+        }
+
+        // Add sorting parameters to the URL if provided
+        if (sortBy && sortBy !== 'Select Metric') {
+          url += `&sort_by=${encodeURIComponent(sortBy)}`;
+          
+          if (sortDirection) {
+            url += `&sort_direction=${encodeURIComponent(sortDirection)}`;
+          }
         }
 
         const response = await fetch(url);
@@ -62,7 +73,7 @@ export const useFetchMetadataViz = (
     };
 
     fetchData();
-  }, [sessionName, runNumber, filters]);
+  }, [sessionName, runNumber, filters, sortBy, sortDirection]);
 
   return { data, isSuccess, error, isLoading };
 };
