@@ -20,7 +20,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
   }
 
   const userCanReview =
-    reviewStatus === 'not_started' || (reviewStatus === 'in_progress' && currentUser.id === reviewer.id);
+    reviewStatus === 'Not Started' || (reviewStatus === 'In Progress' && currentUser.id === reviewer.id);
   console.log('review: ', reviewId);
   const reviewUrl = `/reviews/${reviewId}`;
 
@@ -28,7 +28,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
     return (
       <Link href={reviewUrl}>
         <Button sdsType="secondary" sdsStyle="square" size="small" className="w-[125px]">
-          {reviewStatus === 'not_started' ? 'Start Review' : 'Resume Review'}
+          {reviewStatus === 'Not Started' ? 'Start Review' : 'Resume Review'}
         </Button>
       </Link>
     );
@@ -56,7 +56,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
               component: (
                 <Link href={reviewUrl} className="flex flex-col">
                   <div>Open Results Viewer</div>
-                  {reviewStatus === 'in_progress' && (
+                  {reviewStatus === 'In Progress' && (
                     <div className="text-[#c6c6c6] text-[12px]">Results may be incomplete</div>
                   )}
                 </Link>
@@ -67,7 +67,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
               component: (
                 <div className="flex flex-col">
                   <div>Export Results (.json)</div>
-                  {reviewStatus === 'in_progress' && (
+                  {reviewStatus === 'In Progress' && (
                     <div className="text-[#c6c6c6] text-[12px]">Results may be incomplete</div>
                   )}
                 </div>
