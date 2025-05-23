@@ -3757,6 +3757,7 @@ __metadata:
     prettier-plugin-organize-imports: "npm:^3.2.4"
     react: "npm:^18.3.1"
     react-dom: "npm:^18.3.1"
+    react-hotkeys-hook: "npm:^5.1.0"
     react-json-view: "npm:^1.21.3"
     stylelint: "npm:^15.11.0"
     stylelint-config-recommended: "npm:^13.0.0"
@@ -9128,6 +9129,16 @@ __metadata:
   peerDependencies:
     react: ^18.3.1
   checksum: 10c0/a752496c1941f958f2e8ac56239172296fcddce1365ce45222d04a1947e0cc5547df3e8447f855a81d6d39f008d7c32eab43db3712077f09e3f67c4874973e85
+  languageName: node
+  linkType: hard
+
+"react-hotkeys-hook@npm:^5.1.0":
+  version: 5.1.0
+  resolution: "react-hotkeys-hook@npm:5.1.0"
+  peerDependencies:
+    react: ">=16.8.0"
+    react-dom: ">=16.8.0"
+  checksum: 10c0/99df6d3c305b139ac7afd073b58575961bf30a819fb23e8f1251b1b3a9f1c7662737f8b6266e3fc42bd5bdfdaca81aa1e019613f95f9a6313267de265e45836d
   languageName: node
   linkType: hard
 

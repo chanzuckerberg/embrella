@@ -1,7 +1,9 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+
 @login_required
 def custom_page(request):
+    """View for the custom dashboard page"""
     return render(request, 'customs/custom_page.html')
 
 

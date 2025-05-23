@@ -4,6 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { MetadataSummary } from './MetadataSummary';
 import { MetadataViz } from './MetadataViz';
 import { useFetchMetadataViz } from '@app/common/hooks/useFetchMetadata/useFetchMetadataViz';
+import { useFetchMetadataSummary } from '@app/common/hooks/useFetchMetadata/useFetchMetadataSummary';
 import { FilterConfig } from '@app/common/types/metadataViz/metadataVizData';
 
 interface MetadataViewProps {
@@ -15,6 +16,19 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [filters] = useState<FilterConfig | undefined>();
   const [scatterplotFilters, setScatterplotFilters] = useState<FilterConfig | undefined>();
+  const [shouldFetchSummary, setShouldFetchSummary] = useState(true);
+
+  // This API call is for the metadata summary
+  const {
+    data: summaryData,
+    isSuccess: summarySuccess,
+    error: summaryError,
+    isLoading: summaryLoading,
+  } = useFetchMetadataSummary(sessionName, runNumber, shouldFetchSummary);
+
+  const handleToggleSummary = useCallback(() => {
+    setShouldFetchSummary(true);
+  }, []);
 
   // This API call is for the metadata filters and histogram
   const { data, isSuccess, error, isLoading } = useFetchMetadataViz(sessionName, runNumber, filters);
@@ -45,10 +59,13 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
   return (
     <div>
       <MetadataSummary
-        sessionName={sessionName}
-        runNumber={runNumber}
         isFilterApplied={isFilterApplied}
         filteredData={scatterplotData}
+        summaryAPIData={summaryData}
+        summaryError={summaryError}
+        summaryLoading={summaryLoading}
+        summarySuccess={summarySuccess}
+        onToggleSummary={handleToggleSummary}
       />
       <MetadataViz
         vizResponse={data}
@@ -56,6 +73,7 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
         error={error}
         isLoading={isLoading}
         onApplyFilters={handleApplyFilters}
+        summaryAPIData={summaryData}
         scatterplotData={scatterplotData}
         scatterplotSuccess={scatterplotSuccess}
         scatterplotError={scatterplotError}

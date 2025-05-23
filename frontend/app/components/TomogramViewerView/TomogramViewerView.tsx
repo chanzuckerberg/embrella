@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useReducer, useContext } from 'react';
+import { useState, useEffect, useCallback, useReducer, useContext, useRef } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { Review, ReviewTomogramDetail } from './types';
 import { QualityControls } from './components/QualityControls';
 import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { getRegionFromZattrs } from './utils';
 import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
 import { API, MOCKED_APIS, POST_API, MOCKED_POST_APIS } from '../../../app/common/constants/api';
@@ -16,6 +17,7 @@ import { AVAILABLE_ANNOTATION_OBJECTS } from '../CreateReviewView/CreateReviewVi
 import { Button, Icon } from '@czi-sds/components';
 import { UserContext } from '@app/common/context/UserProvider';
 import { PermissionBanner } from './components/PermissionBanner';
+import { debounce } from '@mui/material';
 
 interface TomogramViewerProps {
   review: Review;
@@ -26,7 +28,7 @@ interface TomogramState {
   tomogramDetail: ReviewTomogramDetail | null;
   contrastLimits: [number, number];
   selectedRejectionReasons: string[];
-  selectedQuality: 'accepted' | 'rejected' | 'uncertain' | 'pending';
+  selectedQuality: 'accepted' | 'rejected' | 'uncertain' | 'exemplary' | 'pending';
   selectedObjectLabels: string[];
   saveState?: 'saving' | 'saved' | 'failed';
 }
@@ -36,7 +38,7 @@ type TomogramAction =
   | { type: 'SET_TOMOGRAM_DETAIL'; payload: ReviewTomogramDetail | null }
   | { type: 'SET_CONTRAST_LIMITS'; payload: [number, number] }
   | { type: 'SET_REJECTION_REASONS'; payload: string[] }
-  | { type: 'SET_QUALITY'; payload: 'accepted' | 'rejected' | 'uncertain' | 'pending' }
+  | { type: 'SET_QUALITY'; payload: 'accepted' | 'rejected' | 'uncertain' | 'exemplary' | 'pending' }
   | { type: 'SET_OBJECT_LABELS'; payload: string[] }
   | { type: 'RESET_REVIEW_STATE' }
   | { type: 'SET_SAVE_STATE'; payload: 'saving' | 'saved' | 'failed' | undefined };
@@ -84,6 +86,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     selectedTomogram: review.tomograms[0]?.tomogramId,
   });
   const [region, setRegion] = useState<Region | null>(null);
+  const lastAnswerUpdateTime = useRef<number | undefined>(undefined);
 
   const seriesDimensionName = 'z'; // TODO: get from zarr metadata
   const { imageSeriesLayer, channels } = useIdetik();
@@ -91,6 +94,25 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
   const shouldAutoLoadAllSlices = true;
   const currentUser = useContext(UserContext);
   const userCanReview = currentUser?.id === review.owner.id;
+
+  useHotkeys('a', () => {
+    dispatchAndSave({ type: 'SET_QUALITY', payload: 'accepted' });
+  });
+  useHotkeys('r', () => {
+    dispatchAndSave({ type: 'SET_QUALITY', payload: 'rejected' });
+  });
+  useHotkeys('u', () => {
+    dispatchAndSave({ type: 'SET_QUALITY', payload: 'uncertain' });
+  });
+  useHotkeys('e', () => {
+    dispatchAndSave({ type: 'SET_QUALITY', payload: 'exemplary' });
+  });
+  useHotkeys('left', () => {
+    handlePrevious();
+  });
+  useHotkeys('right', () => {
+    handleNext();
+  });
 
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
@@ -191,40 +213,50 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
       updateTomogramState(tomogramDetail);
     }
+    if (lastAnswerUpdateTime.current !== undefined) {
+      // Save only after user has interacted with questions.
+      save();
+    }
     fetchTomogramDetail();
-  }, [state.selectedTomogram, review.reviewId, review.tomograms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Fetch whenever tomogram changes.
+  }, [state.selectedTomogram]);
 
-  // TODO: Debounce.
-  const save = async (
-    quality: 'accepted' | 'rejected' | 'uncertain' | 'pending',
-    rejectionReasons?: string[],
-    objectLabels?: string[]
-  ) => {
+  const save = async () => {
     if (!state.selectedTomogram) return;
     dispatch({ type: 'SET_SAVE_STATE', payload: 'saving' });
-
-    const payload = {
-      tomogramId: state.selectedTomogram,
-      quality,
-      rejectionReasons,
-      objectLabels,
-    };
+    const now = Date.now();
+    lastAnswerUpdateTime.current = now;
 
     // TODO: Real API.
     const saveResponse = await new Promise((resolve) =>
       setTimeout(() => {
-        resolve(MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW](payload));
+        resolve(
+          MOCKED_POST_APIS[POST_API.UPDATE_TOMOGRAM_REVIEW]({
+            tomogramId: state.selectedTomogram,
+            quality: state.selectedQuality,
+            objectLabels: state.selectedObjectLabels,
+            rejectionReasons: state.selectedRejectionReasons,
+          })
+        );
       }, 1000)
     );
+    if (lastAnswerUpdateTime.current > now) {
+      // A newer save request has been made.
+      return;
+    }
     if (saveResponse !== undefined) {
       dispatch({ type: 'SET_SAVE_STATE', payload: 'saved' });
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- No dependencies, only preserves scope.
+  const debouncedSave = useCallback(debounce(save, /* wait */ 2_000), []);
+
   const dispatchAndSave = (value: TomogramAction): void => {
     if (!userCanReview) return;
     dispatch(value);
-    save(state.selectedQuality, state.selectedRejectionReasons, state.selectedObjectLabels);
+    dispatch({ type: 'SET_SAVE_STATE', payload: undefined });
+    debouncedSave();
   };
 
   return (
@@ -282,6 +314,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
               }}
               onUncertain={() => {
                 dispatchAndSave({ type: 'SET_QUALITY', payload: 'uncertain' });
+              }}
+              onExemplary={() => {
+                dispatchAndSave({ type: 'SET_QUALITY', payload: 'exemplary' });
               }}
             />
           </div>

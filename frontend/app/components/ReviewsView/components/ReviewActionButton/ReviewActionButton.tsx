@@ -34,7 +34,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
     );
   } else {
     return (
-      <>
+      <div className="flex justify-end">
         <Button
           sdsType="secondary"
           sdsStyle="square"
@@ -94,7 +94,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
             },
           }}
         />
-      </>
+      </div>
     );
   }
 };

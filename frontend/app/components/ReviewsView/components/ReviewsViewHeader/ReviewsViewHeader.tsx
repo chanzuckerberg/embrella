@@ -13,7 +13,7 @@ export const ReviewsViewHeader = () => {
   const [searchValue, setSearchValue] = useState((tableState.filterState.search ?? '') as string);
 
   return (
-    <div className="flex justify-between">
+    <div className="flex justify-between !pr-[12px]">
       <InputSearch
         value={searchValue}
         onChange={(event) => setSearchValue(event.target.value)}

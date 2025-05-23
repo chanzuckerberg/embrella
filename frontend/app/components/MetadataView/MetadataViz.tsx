@@ -3,6 +3,7 @@ import styles from './MetadataViz.module.css';
 import { MetadataFilters } from './MetadataFilters';
 import { MetadataVizResponse, FilterConfig } from '@app/common/types/metadataViz/metadataVizData';
 import { MetricDashboard } from './MetricDashBoard';
+import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
 
 interface MetadataVizProps {
   vizResponse?: MetadataVizResponse;
@@ -14,6 +15,7 @@ interface MetadataVizProps {
   scatterplotSuccess?: boolean;
   scatterplotError?: { status: number; message: string };
   scatterplotLoading?: boolean;
+  summaryAPIData?: MetadataSummaryResponse;
 }
 
 export const MetadataViz: React.FC<MetadataVizProps> = ({
@@ -26,6 +28,7 @@ export const MetadataViz: React.FC<MetadataVizProps> = ({
   scatterplotSuccess,
   scatterplotError,
   scatterplotLoading,
+  summaryAPIData,
 }) => {
   if (isLoading) {
     return <div>Loading...</div>;
@@ -41,7 +44,11 @@ export const MetadataViz: React.FC<MetadataVizProps> = ({
   return (
     <div className={styles.container}>
       <div className={styles.leftColumn}>
-        <MetadataFilters metricRanges={vizResponse?.metric_ranges} onApplyFilters={onApplyFilters} />
+        <MetadataFilters
+          metricRanges={vizResponse?.metric_ranges}
+          onApplyFilters={onApplyFilters}
+          summaryAPIData={summaryAPIData}
+        />
       </div>
       <div className={styles.middleColumn}>
         <MetricDashboard

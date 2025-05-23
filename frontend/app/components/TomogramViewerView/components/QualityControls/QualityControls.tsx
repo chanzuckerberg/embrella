@@ -6,6 +6,7 @@ interface QualityControlsProps {
   onAccept: () => void;
   onReject: () => void;
   onUncertain: () => void;
+  onExemplary: () => void;
 }
 
 export const QualityControls = ({
@@ -14,6 +15,7 @@ export const QualityControls = ({
   onAccept,
   onReject,
   onUncertain,
+  onExemplary,
 }: QualityControlsProps) => {
   return (
     <div className="w-[300px] p-4 flex flex-col gap-4">
@@ -26,7 +28,7 @@ export const QualityControls = ({
         disabled={isDisabled}
         onClick={onAccept}
       >
-        Accept [1]
+        Accept [a]
       </Button>
       <Button
         startIcon={<Icon sdsIcon="XMark" sdsSize="l" />}
@@ -36,7 +38,7 @@ export const QualityControls = ({
         disabled={isDisabled}
         onClick={onReject}
       >
-        Reject [2]
+        Reject [r]
       </Button>
       <Button
         startIcon={<Icon sdsIcon="QuestionMark" sdsSize="l" />}
@@ -46,7 +48,17 @@ export const QualityControls = ({
         disabled={isDisabled}
         onClick={onUncertain}
       >
-        Uncertain [3]
+        Uncertain [u]
+      </Button>
+      <Button
+        startIcon={<Icon sdsIcon="Star" sdsSize="l" />}
+        sdsStyle="square"
+        sdsType={selectedQuality === 'exemplary' ? 'primary' : 'secondary'}
+        fullWidth
+        disabled={isDisabled}
+        onClick={onExemplary}
+      >
+        Exemplary [e]
       </Button>
     </div>
   );
