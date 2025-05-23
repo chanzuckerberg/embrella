@@ -7,6 +7,6 @@ def get_user_info(request):
     Returns the current user's ID and username.
     """
     return JsonResponse({
-        'id': request.user.id,
+        'id': str(request.user.id),
         'username': request.user.username,
     })
