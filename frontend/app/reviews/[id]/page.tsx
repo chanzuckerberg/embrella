@@ -1,8 +1,10 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useFetchReviewData } from '@hooks/useFetchData/useFetchData';
+import { useFetchData } from '@hooks/useFetchData/useFetchData';
 import { TomogramViewerView } from '@app/components/TomogramViewerView/TomogramViewerView';
+import { API } from '@app/common/constants/api';
+import { Review } from '@app/components/TomogramViewerView/types';
 
 type ReviewParams = {
   id: string;
@@ -10,9 +12,9 @@ type ReviewParams = {
 
 export default function ReviewPage() {
   const params = useParams<ReviewParams>();
-  const { data: review, isSuccess, isLoading } = useFetchReviewData(params.id);
+  const { data: review, isSuccess } = useFetchData<Review>(`${API.REVIEWS}${params.id}`);
 
-  if (isLoading) {
+  if (review === undefined) {
     return <div>Loading review...</div>;
   }
 

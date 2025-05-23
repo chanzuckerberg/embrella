@@ -426,40 +426,40 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
       },
     ],
   },
-  [API.REVIEW]: (url: string) => {
-    const reviewId = url.split('/').pop();
-    const reviewsObj = MOCKED_APIS[API.REVIEWS]('');
-    const reviews = reviewsObj.result;
-    const review = reviews.find((r: { review: { id: number } }) => String(r.review.id) === String(reviewId));
+  // [API.REVIEW]: (url: string) => {
+  //   const reviewId = url.split('/').pop();
+  //   const reviewsObj = MOCKED_APIS[API.REVIEWS]('');
+  //   const reviews = reviewsObj.result;
+  //   const review = reviews.find((r: { review: { id: number } }) => String(r.review.id) === String(reviewId));
 
-    return {
-      reviewId: review?.review.id,
-      reviewName: review?.review.name,
-      owner: {
-        id: review?.reviewer.id,
-        name: review?.reviewer.name,
-        url: review?.reviewer.url,
-      },
-      tomograms: [
-        { tomogramId: 'tomo_001', status: 'accepted' },
-        { tomogramId: 'tomo_002', status: 'rejected' },
-        { tomogramId: 'tomo_003', status: 'uncertain' },
-        { tomogramId: 'tomo_004', status: 'pending' },
-        { tomogramId: 'tomo_005', status: 'pending' },
-        { tomogramId: 'tomo_006', status: 'accepted' },
-        { tomogramId: 'tomo_007', status: 'uncertain' },
-        { tomogramId: 'tomo_008', status: 'rejected' },
-        { tomogramId: 'tomo_009', status: 'pending' },
-        { tomogramId: 'tomo_010', status: 'accepted' },
-        { tomogramId: 'tomo_011', status: 'pending' },
-        { tomogramId: 'tomo_012', status: 'accepted' },
-        { tomogramId: 'tomo_013', status: 'uncertain' },
-        { tomogramId: 'tomo_014', status: 'rejected' },
-        { tomogramId: 'tomo_015', status: 'pending' },
-        { tomogramId: 'tomo_016', status: 'accepted' },
-      ],
-    };
-  },
+  //   return {
+  //     reviewId: review?.review.id,
+  //     reviewName: review?.review.name,
+  //     owner: {
+  //       id: review?.reviewer.id,
+  //       name: review?.reviewer.name,
+  //       url: review?.reviewer.url,
+  //     },
+  //     tomograms: [
+  //       { tomogramId: 'tomo_001', status: 'accepted' },
+  //       { tomogramId: 'tomo_002', status: 'rejected' },
+  //       { tomogramId: 'tomo_003', status: 'uncertain' },
+  //       { tomogramId: 'tomo_004', status: 'pending' },
+  //       { tomogramId: 'tomo_005', status: 'pending' },
+  //       { tomogramId: 'tomo_006', status: 'accepted' },
+  //       { tomogramId: 'tomo_007', status: 'uncertain' },
+  //       { tomogramId: 'tomo_008', status: 'rejected' },
+  //       { tomogramId: 'tomo_009', status: 'pending' },
+  //       { tomogramId: 'tomo_010', status: 'accepted' },
+  //       { tomogramId: 'tomo_011', status: 'pending' },
+  //       { tomogramId: 'tomo_012', status: 'accepted' },
+  //       { tomogramId: 'tomo_013', status: 'uncertain' },
+  //       { tomogramId: 'tomo_014', status: 'rejected' },
+  //       { tomogramId: 'tomo_015', status: 'pending' },
+  //       { tomogramId: 'tomo_016', status: 'accepted' },
+  //     ],
+  //   };
+  // },
   [API.REVIEW_EXPORT]: {
     // This would typically return a file download
     // Mock just indicates success

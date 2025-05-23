@@ -9,7 +9,7 @@ interface UseFetchData<D> {
   isSuccess: boolean;
 }
 
-export const useFetchData = <D>(relativeURL: API, searchParam: Record<string, unknown> = {}): UseFetchData<D> => {
+export const useFetchData = <D>(relativeURL: string, searchParam: Record<string, unknown> = {}): UseFetchData<D> => {
   const [dataState, setDataState] = useState<UseFetchData<D>>({
     isSuccess: false,
   });
@@ -37,41 +37,6 @@ export const useFetchData = <D>(relativeURL: API, searchParam: Record<string, un
         console.error(err);
       });
   }, [requestURL, relativeURL]);
-
-  return dataState;
-};
-
-interface UseFetchReviewData {
-  data: Review | undefined;
-  isSuccess: boolean;
-  isLoading: boolean;
-}
-
-export const useFetchReviewData = (reviewId: string): UseFetchReviewData => {
-  const [dataState, setDataState] = useState<UseFetchReviewData>({
-    data: undefined,
-    isSuccess: false,
-    isLoading: true,
-  });
-  useEffect(() => {
-    const fetchData = async () => {
-      setDataState((prev) => ({ ...prev, isLoading: true }));
-
-      const mockResponse = MOCKED_APIS[API.REVIEW](`${DJANGO_URL}/api/reviews/${reviewId}`);
-      if (mockResponse !== undefined) {
-        setDataState({
-          data: mockResponse,
-          isSuccess: true,
-          isLoading: false,
-        });
-        return;
-      }
-
-      setDataState((prev) => ({ ...prev, isLoading: false }));
-    };
-
-    fetchData();
-  }, [reviewId]);
 
   return dataState;
 };
