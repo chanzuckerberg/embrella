@@ -341,8 +341,8 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     maxValue: number,
     stepValue: number
   ) => {
-    // Only show median markers for tilt_axis and global_shift_pix
-    const showMedian = key === 'tilt_axis' || key === 'global_shift_pix';
+    // Only show median markers for tilt_axis and global_shift
+    const showMedian = key === 'tilt_axis' || key === 'global_shift';
 
     let medianValue;
     if (showMedian && summaryAPIData?.computed_metrics) {
