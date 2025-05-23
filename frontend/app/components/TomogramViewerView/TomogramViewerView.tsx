@@ -90,8 +90,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
   const seriesDimensionName = 'z'; // TODO: get from zarr metadata
   const { imageSeriesLayer, channels } = useIdetik();
-  const shouldLoadMiddleZ = true;
-  const shouldAutoLoadAllSlices = true;
   const currentUser = useContext(UserContext);
   const userCanReview = currentUser?.id === review.owner.id;
 
@@ -127,9 +125,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     },
     [imageSeriesLayer, channels]
   );
-
-  // Set the desired resolution level (0 = highest res, 1 = lower res, etc.)
-  const resolutionLevel = 2;
 
   useEffect(() => {
     const fetchRegion = async () => {
@@ -292,9 +287,9 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
                 seriesDimensionName={seriesDimensionName}
                 allSlicesSizeEstimate="250 MB"
                 fallbackContrastLimits={state.contrastLimits}
-                resolutionLevel={resolutionLevel}
-                shouldLoadMiddleZ={shouldLoadMiddleZ}
-                shouldAutoLoadAllSlices={shouldAutoLoadAllSlices}
+                resolutionLevel={2} // Set the desired resolution level (0 = highest res, 1 = lower res, etc.)
+                shouldLoadMiddleZ={true}
+                shouldAutoLoadAllSlices={true}
                 classNames={{
                   root: 'bg-dark-sds-color-primitive-gray-100',
                 }}
