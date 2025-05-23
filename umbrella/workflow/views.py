@@ -1077,14 +1077,14 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
     df['Thickness(A)'] = df['Thickness(Pix)'] * pixel_size
     df['Global_Shift(A)'] = df['Global_Shift(Pix)'] * pixel_size
     column_mapping = {
-        'Thickness(A)': 'thickness_pix',
+        'Thickness(A)': 'thickness',
         'Tilt_Axis': 'tilt_axis',
-        'Global_Shift(A)': 'global_shift_pix',
+        'Global_Shift(A)': 'global_shift',
         'Bad_Patch_Low': 'bad_patch_low',
         'Bad_Patch_All': 'bad_patch_all',
-        'CTF_Res(A)': 'ctf_resolution_a',
+        'CTF_Res(A)': 'ctf_resolution',
         'CTF_Score': 'ctf_score',
-        'Pix_Size(A)': 'pixel_size_a',
+        'Pix_Size(A)': 'pixel_size',
         'Alpha0': 'alpha0',
         'Beta0': 'beta0'
     }
@@ -1114,12 +1114,12 @@ def apply_filters(df, filter_config):
         
     # Map the filter field names to CSV column names
     column_mapping = {
-            'thickness_pix': 'Thickness(A)',
+            'thickness': 'Thickness(A)',
             'tilt_axis': 'Tilt_Axis',
-            'global_shift_pix': 'Global_Shift(A)',
+            'global_shift': 'Global_Shift(A)',
             'bad_patch_low': 'Bad_Patch_Low',
             'bad_patch_all': 'Bad_Patch_All',
-            'ctf_resolution_a': 'CTF_Res(A)',
+            'ctf_resolution': 'CTF_Res(A)',
             'ctf_score': 'CTF_Score',
             'alpha0': 'Alpha0',
             'beta0': 'Beta0'
@@ -1159,12 +1159,12 @@ def apply_filters(df, filter_config):
         
         # Map the filter field names to CSV column names
         column_mapping = {
-            'thickness_pix': 'Thickness(Pix)',
+            'thickness': 'Thickness(Pix)',
             'tilt_axis': 'Tilt_Axis',
-            'global_shift_pix': 'Global_Shift(Pix)',
+            'global_shift': 'Global_Shift(Pix)',
             'bad_patch_low': 'Bad_Patch_Low',
             'bad_patch_all': 'Bad_Patch_All',
-            'ctf_resolution_a': 'CTF_Res(A)',
+            'ctf_resolution': 'CTF_Res(A)',
             'ctf_score': 'CTF_Score'
         }
         
@@ -1206,6 +1206,10 @@ def get_metadata_viz_data(request):
         session_name = request.GET.get("session_name")
         run_number = request.GET.get("run_number")
         q = request.GET.get("q",{})
+
+        # Get sorting parameters
+        sort_by = request.GET.get("sort_by", None)
+        sort_direction = request.GET.get("sort_direction", "asc")
 
         if not session_name or not run_number:
             return JsonResponse({"error": "Missing session_name or run_number"}, status=400)
@@ -1293,25 +1297,25 @@ def get_metadata_viz_data(request):
             # Calculate metric ranges before applying filters
             metric_ranges = calculate_metric_ranges(df)
         
-    # Apply filters if provided
+            # Apply filters if provided
             accepted_df, rejected_df = apply_filters(df, filter_config)
         
         
             # Prepare the result lists for both accepted and rejected
-            def prepare_result_list(df):
+            def prepare_result_list(df, apply_sorting=False):
                 if df is None or df.empty:
                     return []
                 result = []
                 for _, row in df.iterrows():
                     metrics = {
-                        'thickness_pix': float(row['Thickness(A)']),
+                        'thickness': float(row['Thickness(A)']),
                         'tilt_axis': float(row['Tilt_Axis']),
-                        'global_shift_pix': float(row['Global_Shift(A)']),
+                        'global_shift': float(row['Global_Shift(A)']),
                         'bad_patch_low': float(row['Bad_Patch_Low']),
                         'bad_patch_all': float(row['Bad_Patch_All']),
-                        'ctf_resolution_a': float(row['CTF_Res(A)']),
+                        'ctf_resolution': float(row['CTF_Res(A)']),
                         'ctf_score': float(row['CTF_Score']),
-                        'pixel_size_a': float(row['Pix_Size(A)']),
+                        'pixel_size': float(row['Pix_Size(A)']),
                         'alpha0': float(row['Alpha0']),
                         'beta0': float(row['Beta0'])
                     }
@@ -1319,16 +1323,41 @@ def get_metadata_viz_data(request):
                         'name': str(row['Tilt_Series']),
                         'metrics': metrics
                     })
+                    # Apply sorting if requested
+                if apply_sorting and sort_by and sort_by != 'Select Metric':
+                    # Map frontend metric names to the actual keys in the metrics dictionary
+                    metric_key_mapping = {
+                        'thickness': 'thickness',
+                        'tilt_axis': 'tilt_axis',
+                        'global_shift': 'global_shift',
+                        'bad_patch_low': 'bad_patch_low',
+                        'bad_patch_all': 'bad_patch_all',
+                        'ctf_resolution': 'ctf_resolution',
+                        'ctf_score': 'ctf_score',
+                        'alpha0': 'alpha0',
+                        'beta0': 'beta0'
+                    }
+                    
+                    metric_key = metric_key_mapping.get(sort_by, None)
+                    if metric_key:
+                        # Sort by the selected metric
+                        result.sort(
+                            key=lambda x: x['metrics'].get(metric_key, 0),
+                            reverse=(sort_direction.lower() == 'desc')
+                        )
+                
+               
+
                 return result
 
-            accepted_results = prepare_result_list(accepted_df)
+            accepted_results = prepare_result_list(accepted_df, apply_sorting=True)
             rejected_results = prepare_result_list(rejected_df)
 
              # If no filters were applied, use the entire dataset as the result
             # Otherwise, the result will be empty and client should use accepted_results and rejected_results
             has_filters = filter_config and 'filters' in filter_config and filter_config['filters']
             if not has_filters:
-                result = prepare_result_list(df)
+                result = prepare_result_list(df, apply_sorting=True)
             else:
                 result = []
 
