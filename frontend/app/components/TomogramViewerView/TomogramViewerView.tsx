@@ -7,7 +7,7 @@ import { Review, ReviewTomogramDetail } from './types';
 import { QualityControls } from './components/QualityControls';
 import { OmeZarrImageViewer } from '../../../imaging-active-learning/packages/react/src/components/viewers/OmeZarrImageViewer';
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
-import { getRegionFromZattrs } from './utils';
+import { getRegionAndZarray, getRegionFromZattrs } from './utils';
 import { useIdetik } from '../../../imaging-active-learning/packages/react/src/components/hooks';
 import { API, MOCKED_APIS, POST_API, MOCKED_POST_APIS } from '../../../app/common/constants/api';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
@@ -87,6 +87,8 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
   const seriesDimensionName = 'z'; // TODO: get from zarr metadata
   const { imageSeriesLayer, channels } = useIdetik();
+  const shouldLoadMiddleZ = true;
+  const shouldAutoLoadAllSlices = true;
   const currentUser = useContext(UserContext);
   const userCanReview = currentUser?.id === review.owner.id;
 
@@ -104,10 +106,13 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     [imageSeriesLayer, channels]
   );
 
+  // Set the desired resolution level (0 = highest res, 1 = lower res, etc.)
+  const resolutionLevel = 2;
+
   useEffect(() => {
     const fetchRegion = async () => {
       if (!state.tomogramDetail?.zarrPath) return;
-      const region = await getRegionFromZattrs(state.tomogramDetail.zarrPath, 2);
+      const region = await getRegionFromZattrs(state.tomogramDetail.zarrPath);
       setRegion(region);
     };
     fetchRegion();
@@ -240,18 +245,29 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
           onContrastLimitsChange={handleContrastLimitsChange}
         />
         <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
-          {state.tomogramDetail?.zarrPath !== undefined && (
-            <OmeZarrImageViewer
-              sourceUrl={state.tomogramDetail.zarrPath}
-              region={region ?? []}
-              seriesDimensionName={seriesDimensionName}
-              allSlicesSizeEstimate="250 MB"
-              fallbackContrastLimits={state.contrastLimits}
-              classNames={{
-                root: 'bg-dark-sds-color-primitive-gray-100',
-              }}
-            />
-          )}
+          {state.tomogramDetail?.zarrPath !== undefined && !region && <div>Loading region...</div>}
+          {state.tomogramDetail?.zarrPath !== undefined &&
+            region &&
+            !region.some((d) => d.dimension === seriesDimensionName) && (
+              <div>Error: Region missing required dimension "{seriesDimensionName}"</div>
+            )}
+          {state.tomogramDetail?.zarrPath !== undefined &&
+            region &&
+            region.some((d) => d.dimension === seriesDimensionName) && (
+              <OmeZarrImageViewer
+                sourceUrl={state.tomogramDetail.zarrPath}
+                region={region}
+                seriesDimensionName={seriesDimensionName}
+                allSlicesSizeEstimate="250 MB"
+                fallbackContrastLimits={state.contrastLimits}
+                resolutionLevel={resolutionLevel}
+                shouldLoadMiddleZ={shouldLoadMiddleZ}
+                shouldAutoLoadAllSlices={shouldAutoLoadAllSlices}
+                classNames={{
+                  root: 'bg-dark-sds-color-primitive-gray-100',
+                }}
+              />
+            )}
         </div>
         <div className="flex flex-col gap-3">
           <div className="shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-[20px]">

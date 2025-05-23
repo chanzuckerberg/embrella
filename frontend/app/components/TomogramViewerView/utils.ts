@@ -1,7 +1,7 @@
 import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
 
-export async function getRegionFromZattrs(zarrUrl: string, levelIndex = 2): Promise<Region> {
-  const zattrsUrl = `${zarrUrl}/${levelIndex}/.zattrs`;
+export async function getRegionFromZattrs(zarrUrl: string): Promise<Region> {
+  const zattrsUrl = `${zarrUrl}/.zattrs`;
   const res = await fetch(zattrsUrl);
   if (!res.ok) {
     throw new Error(`Failed to fetch zattrs from ${zattrsUrl}: ${res.statusText}`);
@@ -23,4 +23,21 @@ export async function getRegionFromZattrs(zarrUrl: string, levelIndex = 2): Prom
     }
   });
   return region;
+}
+
+export async function getZarrayMetadata(zarrUrl: string, levelIndex: number) {
+  const zarrayUrl = `${zarrUrl}/${levelIndex}/.zarray`;
+  const res = await fetch(zarrayUrl);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch zarray from ${zarrayUrl}: ${res.statusText}`);
+  }
+  return await res.json();
+}
+
+export async function getRegionAndZarray(zarrUrl: string, levelIndex: number) {
+  const [region, zarrayMeta] = await Promise.all([
+    getRegionFromZattrs(zarrUrl),
+    getZarrayMetadata(zarrUrl, levelIndex),
+  ]);
+  return { region, zarrayMeta };
 }
