@@ -1012,10 +1012,26 @@ class SessionView(View):
                         # Only add if we haven't seen this combination before
                         if run_key not in seen_runs:
                             seen_runs.add(run_key)
+                            
+                            # Determine job name and volume number based on reconstruction type
+                            if recon_type.lower() == "sart":
+                                job_name = "aretomo3"
+                                vol_number = "vol003"
+                            elif recon_type.lower() == "dctf":
+                                job_name = "aretomo3"
+                                vol_number = "vol001"
+                            else:  # denoised
+                                job_name = "denoise"
+                                vol_number = "vol001"
+                            
+                            # Construct save path
+                            save_path = f"/hpc/group.czii/krios1.processing/project/{job_name}/{session.name}/{proc_run.name}/{vol_number}"
+                            
                             runs_data.append({
                                 "runId": proc_run.name,
                                 "numTomograms": tomogram_count,
-                                "reconstructionType": recon_type
+                                "reconstructionType": recon_type,
+                                "savePath": save_path
                             })
         
         return {
