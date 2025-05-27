@@ -24,10 +24,12 @@ export interface TemSession {
   runs: Run[];
 }
 
+/** BE object that represents tomograms count grouped by run and reconstruction type. */
 export interface Run {
   runId: string;
   numTomograms: number;
-  reconstructionTypes: string[];
+  reconstructionType: string;
+  savePath: string;
 }
 
 export type ReviewFilterCategory = 'search';

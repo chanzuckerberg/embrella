@@ -1,7 +1,7 @@
 'use client';
 
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
-import { ReviewData, TemSession } from '../ReviewsView/types';
+import { ReviewData, Run, TemSession } from '../ReviewsView/types';
 import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { useMemo, useRef, useState } from 'react';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
@@ -76,6 +76,10 @@ interface TemSessionOption extends AutocompleteOptionBasic {
   session: TemSession;
 }
 
+interface RunOption extends AutocompleteOptionBasic {
+  run: Run;
+}
+
 export const CreateReviewView = () => {
   const router = useRouter();
 
@@ -92,8 +96,8 @@ export const CreateReviewView = () => {
     undefined
   );
 
-  const [runOptions, setRunOptions] = useState<Array<AutocompleteOptionBasic>>([]);
-  const [selectedRun, setSelectedRun] = useState<AutocompleteOptionBasic | undefined>(undefined);
+  const [runOptions, setRunOptions] = useState<Array<RunOption>>([]);
+  const [selectedRun, setSelectedRun] = useState<RunOption | undefined>(undefined);
 
   const annotationObjectSettingsContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -111,6 +115,7 @@ export const CreateReviewView = () => {
 
   const [isCreatingReview, setIsCreatingReview] = useState(false);
 
+  // #region JSX
   return (
     <div className="flex flex-col !p-[25px] relative gap-[40px]">
       <header className="text-[22px] font-semibold">Create New Review</header>
@@ -125,11 +130,11 @@ export const CreateReviewView = () => {
           onChange={(temSessionOption) => {
             setSelectedTemSession(temSessionOption);
             setReconstructionTypeOptions(
-              temSessionOption?.session.runs
-                .flatMap((run) => run.reconstructionTypes)
-                .map((reconstructionType) => ({
+              [...new Set(temSessionOption?.session.runs.map((runCount) => runCount.reconstructionType))].map(
+                (reconstructionType) => ({
                   name: reconstructionType,
-                })) ?? []
+                })
+              ) ?? []
             );
           }}
           disabled={temSessions === undefined}
@@ -145,8 +150,8 @@ export const CreateReviewView = () => {
               setRunOptions(
                 reconstructionTypeOption !== undefined
                   ? selectedTemSession.session.runs
-                      .filter((run) => run.reconstructionTypes.includes(reconstructionTypeOption.name))
-                      .map((run) => ({ name: run.runId }))
+                      .filter((run) => run.reconstructionType === reconstructionTypeOption.name)
+                      .map((run) => ({ name: run.runId, run }))
                   : []
               );
             }}
@@ -166,6 +171,9 @@ export const CreateReviewView = () => {
             }}
           />
         )}
+        {
+          // #region Summary
+        }
         {selectedRun !== undefined && (
           <>
             <div className="!mt-[16px] font-semibold">Selection details:</div>
@@ -178,15 +186,13 @@ export const CreateReviewView = () => {
                 <div className="font-semibold">Tomograms selected for review:</div>
                 <div>
                   {selectedTemSession?.session.runs
-                    .filter((run) => run.reconstructionTypes.includes(selectedReconstructionType!.name))
+                    .filter((run) => run.reconstructionType.includes(selectedReconstructionType!.name))
                     .reduce((prevCount, runB) => prevCount + runB.numTomograms, 0)}
                 </div>
               </div>
               <div className="col-span-full">
                 <div className="font-semibold">Review results will be saved to:</div>
-                <div className="bg-[#dfdfdf] font-mono !px-[12px] !py-[4px]">
-                  {selectedTemSession?.session.savePath}
-                </div>
+                <div className="bg-[#dfdfdf] font-mono !px-[12px] !py-[4px]">{selectedRun.run.savePath}</div>
               </div>
             </div>
             <header className="text-[18px] font-semibold !mt-[24px]">Review Settings</header>
