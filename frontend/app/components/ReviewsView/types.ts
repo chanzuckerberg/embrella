@@ -29,6 +29,7 @@ export interface Run {
   runId: string;
   numTomograms: number;
   reconstructionType: string;
+  savePath: string;
 }
 
 export type ReviewFilterCategory = 'search';
