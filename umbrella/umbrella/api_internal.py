@@ -992,7 +992,7 @@ class SessionView(View):
         proc_runs = session.procrun_set.all()
         
         for proc_run in proc_runs:
-            # Get tomogram count and reconstruction types from the database
+            # Get tomogram count from the database
             review_data = Review.objects.filter(
                 run_id=proc_run.name,
                 msi_session=session
@@ -1000,16 +1000,32 @@ class SessionView(View):
                 tomogram_count=Count('review_tomograms', distinct=True)
             )
             
-            # If no review data exists, create a default entry with 0 tomograms
-            if not review_data:
-                review_data = [{
-                    'reconstruction_type': 'DCTF',  # Default reconstruction type
-                    'tomogram_count': 0
-                }]
+            # Create a dictionary to store tomogram counts by reconstruction type
+            tomogram_counts = {data['reconstruction_type']: data['tomogram_count'] for data in review_data}
             
-            for data in review_data:
-                recon_type = data['reconstruction_type']
-                tomogram_count = data['tomogram_count']
+            # Check all three possibilities for each run
+            reconstruction_types = [
+                {
+                    'type': 'DCTF',
+                    'job_name': 'aretomo3',
+                    'vol_number': 'vol001'
+                },
+                {
+                    'type': 'SART',
+                    'job_name': 'aretomo3',
+                    'vol_number': 'vol003'
+                },
+                {
+                    'type': 'denoised',
+                    'job_name': 'denoise',
+                    'vol_number': 'vol001'
+                }
+            ]
+            
+            for recon_info in reconstruction_types:
+                recon_type = recon_info['type']
+                job_name = recon_info['job_name']
+                vol_number = recon_info['vol_number']
                 
                 # Create a unique key for this run and reconstruction type combination
                 run_key = f"{proc_run.name}_{recon_type}"
@@ -1018,19 +1034,11 @@ class SessionView(View):
                 if run_key not in seen_runs:
                     seen_runs.add(run_key)
                     
-                    # Determine job name and volume number based on reconstruction type
-                    if recon_type.lower() == "sart":
-                        job_name = "aretomo3"
-                        vol_number = "vol003"
-                    elif recon_type.lower() == "dctf":
-                        job_name = "aretomo3"
-                        vol_number = "vol001"
-                    else:  # denoised
-                        job_name = "denoise"
-                        vol_number = "vol001"
-                    
                     # Construct save path
                     save_path = f"/hpc/group.czii/krios1.processing/project/{job_name}/{session.name}/{proc_run.name}/{vol_number}"
+                    
+                    # Get tomogram count for this reconstruction type, default to 0 if not found
+                    tomogram_count = tomogram_counts.get(recon_type, 0)
                     
                     runs_data.append({
                         "runId": proc_run.name,
