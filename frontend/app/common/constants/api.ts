@@ -545,7 +545,7 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MOCKED_POST_APIS: Partial<Record<POST_API, any>> = {
   [POST_API.CREATE_REVIEW]: {
-    reviewId: 'rev_abcdef123456',
+    reviewId: '5570b672-ab28-4998-aa0e-0846d5c35964',
     sessionId: '24nov10',
     runId: 'run001',
     reconstructionType: 'Denoised',
