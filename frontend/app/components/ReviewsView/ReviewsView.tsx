@@ -24,6 +24,7 @@ export const ReviewsView = () => {
       }),
       columnHelper.accessor('review.type', {
         header: 'Review Type',
+        cell: ({ getValue }) => (getValue() === 'tomogram_quality' ? 'Tomogram Quality' : 'Unknown'),
       }),
       columnHelper.accessor('session', {
         header: 'Processing Session',
@@ -31,6 +32,7 @@ export const ReviewsView = () => {
       }),
       columnHelper.accessor('updatedAt', {
         header: 'Updated At',
+        cell: ({ getValue }) => new Date(getValue()).toISOString().split('T')[0],
       }),
       columnHelper.display({
         header: 'Status',
