@@ -1016,7 +1016,7 @@ class SessionView(View):
                     'vol_number': 'vol003'
                 },
                 {
-                    'type': 'denoised',
+                    'type': 'Denoised',
                     'job_name': 'denoise',
                     'vol_number': 'vol001'
                 }
