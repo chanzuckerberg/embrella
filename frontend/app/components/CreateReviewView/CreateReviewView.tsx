@@ -111,6 +111,7 @@ export const CreateReviewView = () => {
 
   const [isCreatingReview, setIsCreatingReview] = useState(false);
 
+  // #region JSX
   return (
     <div className="flex flex-col !p-[25px] relative gap-[40px]">
       <header className="text-[22px] font-semibold">Create New Review</header>
@@ -125,11 +126,11 @@ export const CreateReviewView = () => {
           onChange={(temSessionOption) => {
             setSelectedTemSession(temSessionOption);
             setReconstructionTypeOptions(
-              temSessionOption?.session.runs
-                .flatMap((run) => run.reconstructionTypes)
-                .map((reconstructionType) => ({
+              [...new Set(temSessionOption?.session.runs.map((runCount) => runCount.reconstructionType))].map(
+                (reconstructionType) => ({
                   name: reconstructionType,
-                })) ?? []
+                })
+              ) ?? []
             );
           }}
           disabled={temSessions === undefined}
@@ -145,7 +146,7 @@ export const CreateReviewView = () => {
               setRunOptions(
                 reconstructionTypeOption !== undefined
                   ? selectedTemSession.session.runs
-                      .filter((run) => run.reconstructionTypes.includes(reconstructionTypeOption.name))
+                      .filter((run) => run.reconstructionType === reconstructionTypeOption.name)
                       .map((run) => ({ name: run.runId }))
                   : []
               );
@@ -178,7 +179,7 @@ export const CreateReviewView = () => {
                 <div className="font-semibold">Tomograms selected for review:</div>
                 <div>
                   {selectedTemSession?.session.runs
-                    .filter((run) => run.reconstructionTypes.includes(selectedReconstructionType!.name))
+                    .filter((run) => run.reconstructionType.includes(selectedReconstructionType!.name))
                     .reduce((prevCount, runB) => prevCount + runB.numTomograms, 0)}
                 </div>
               </div>
