@@ -992,12 +992,12 @@ class SessionView(View):
         proc_runs = session.procrun_set.all()
         
         for proc_run in proc_runs:
-            # Get tomogram count from the database
-            review_data = Review.objects.filter(
+            # Get tomogram count directly from ReviewTomogram table
+            review_data = ReviewTomogram.objects.filter(
                 run_id=proc_run.name,
-                msi_session=session
+                session=session
             ).values('reconstruction_type').annotate(
-                tomogram_count=Count('review_tomograms', distinct=True)
+                tomogram_count=Count('tomogram_id', distinct=True)
             )
             
             # Create a dictionary to store tomogram counts by reconstruction type
