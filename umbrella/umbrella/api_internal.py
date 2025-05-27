@@ -1000,39 +1000,44 @@ class SessionView(View):
                 tomogram_count=Count('review_tomograms', distinct=True)
             )
             
-            if review_data:
-                for data in review_data:
-                    recon_type = data['reconstruction_type']
-                    tomogram_count = data['tomogram_count']
+            # If no review data exists, create a default entry with 0 tomograms
+            if not review_data:
+                review_data = [{
+                    'reconstruction_type': 'DCTF',  # Default reconstruction type
+                    'tomogram_count': 0
+                }]
+            
+            for data in review_data:
+                recon_type = data['reconstruction_type']
+                tomogram_count = data['tomogram_count']
+                
+                # Create a unique key for this run and reconstruction type combination
+                run_key = f"{proc_run.name}_{recon_type}"
+                
+                # Only add if we haven't seen this combination before
+                if run_key not in seen_runs:
+                    seen_runs.add(run_key)
                     
-                    if tomogram_count > 0:
-                        # Create a unique key for this run and reconstruction type combination
-                        run_key = f"{proc_run.name}_{recon_type}"
-                        
-                        # Only add if we haven't seen this combination before
-                        if run_key not in seen_runs:
-                            seen_runs.add(run_key)
-                            
-                            # Determine job name and volume number based on reconstruction type
-                            if recon_type.lower() == "sart":
-                                job_name = "aretomo3"
-                                vol_number = "vol003"
-                            elif recon_type.lower() == "dctf":
-                                job_name = "aretomo3"
-                                vol_number = "vol001"
-                            else:  # denoised
-                                job_name = "denoise"
-                                vol_number = "vol001"
-                            
-                            # Construct save path
-                            save_path = f"/hpc/group.czii/krios1.processing/project/{job_name}/{session.name}/{proc_run.name}/{vol_number}"
-                            
-                            runs_data.append({
-                                "runId": proc_run.name,
-                                "numTomograms": tomogram_count,
-                                "reconstructionType": recon_type,
-                                "savePath": save_path
-                            })
+                    # Determine job name and volume number based on reconstruction type
+                    if recon_type.lower() == "sart":
+                        job_name = "aretomo3"
+                        vol_number = "vol003"
+                    elif recon_type.lower() == "dctf":
+                        job_name = "aretomo3"
+                        vol_number = "vol001"
+                    else:  # denoised
+                        job_name = "denoise"
+                        vol_number = "vol001"
+                    
+                    # Construct save path
+                    save_path = f"/hpc/group.czii/krios1.processing/project/{job_name}/{session.name}/{proc_run.name}/{vol_number}"
+                    
+                    runs_data.append({
+                        "runId": proc_run.name,
+                        "numTomograms": tomogram_count,
+                        "reconstructionType": recon_type,
+                        "savePath": save_path
+                    })
         
         return {
             "sessionId": session.id,  # Use session name as ID
@@ -1084,7 +1089,8 @@ class SessionView(View):
                 sessions_data = []
                 for session in sessions:
                     session_data = self.get_session_data(session)
-                    if session_data["runs"]:  # Only add sessions that have runs with tomograms
+                    # Include session if it has any runs (regardless of tomogram count)
+                    if session_data["runs"]:
                         sessions_data.append(session_data)
 
                 return JsonResponse(sessions_data, safe=False)
