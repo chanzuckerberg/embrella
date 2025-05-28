@@ -196,21 +196,28 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
     async function fetchTomogramDetail() {
       if (!state.selectedTomogram) return;
 
-      const selectedTomogramStatus = review.tomograms.find((t) => t.tomogramId === state.selectedTomogram)?.status;
-      const allowedTomograms = ['tomo_001', 'tomo_002', 'tomo_003', 'tomo_004'];
+      // Previous code (commented out just in case)
+      // const selectedTomogramStatus = review.tomograms.find((t) => t.tomogramId === state.selectedTomogram)?.status;
+      // const allowedTomograms = ['tomo_001', 'tomo_002', 'tomo_003', 'tomo_004'];
+      // const tomogramIdToUse = allowedTomograms.includes(state.selectedTomogram)
+      //   ? state.selectedTomogram
+      //   : getTomogramIdForStatus(selectedTomogramStatus);
+      // const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
+      // const tomogramDetail = MOCKED_APIS[API.TOMOGRAM_DETAIL](url);
 
-      const tomogramIdToUse = allowedTomograms.includes(state.selectedTomogram)
-        ? state.selectedTomogram
-        : getTomogramIdForStatus(selectedTomogramStatus);
+      try {
+        const response = await fetch(`/api/reviews/${review.reviewId}/tomograms/${state.selectedTomogram}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch tomogram detail');
+        }
+        const tomogramDetail = await response.json();
+        updateTomogramState(tomogramDetail);
+      } catch (error) {
+        console.error('Error fetching tomogram detail:', error);
+        updateTomogramState(null);
+      }
+    }
 
-      const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
-      const tomogramDetail = MOCKED_APIS[API.TOMOGRAM_DETAIL](url);
-      updateTomogramState(tomogramDetail);
-    }
-    if (lastAnswerUpdateTime.current !== undefined) {
-      // Save only after user has interacted with questions.
-      save();
-    }
     fetchTomogramDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Fetch whenever tomogram changes.
   }, [state.selectedTomogram]);
