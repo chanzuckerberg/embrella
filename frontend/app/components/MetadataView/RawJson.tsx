@@ -49,28 +49,28 @@ export const RawJson: React.FC<RawJsonProps> = ({ isOpen, onClose, data, onSortC
 
       try {
         setIsLoading(true);
-        
+
         // Build the API URL with sorting parameters
         let url = `${DJANGO_URL}${API.METADATA_VIZ}?session_name=${data.session_name}&run_number=${data.run_number}`;
-        
+
         // Add filters if present
         if (data.filters_applied && data.filters_applied.filters) {
           const filterConfig = {
             filter_type: data.filters_applied.filter_type,
-            filters: data.filters_applied.filters
+            filters: data.filters_applied.filters,
           };
           url += `&q=${encodeURIComponent(JSON.stringify(filterConfig))}`;
         }
-        
+
         // Add sorting parameters
         url += `&sort_by=${encodeURIComponent(sortBy)}&sort_direction=${encodeURIComponent(sortDirection)}`;
-        
+
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch sorted data');
         }
-        
+
         const jsonData = await response.json();
         setSortedData(jsonData);
 
