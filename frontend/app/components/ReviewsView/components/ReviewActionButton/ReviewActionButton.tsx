@@ -25,11 +25,13 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
 
   if (userCanReview) {
     return (
-      <Link href={reviewUrl}>
-        <Button sdsType="secondary" sdsStyle="square" size="small" className="w-[125px]">
-          {reviewStatus === 'Not Started' ? 'Start Review' : 'Resume Review'}
-        </Button>
-      </Link>
+      <div className="flex justify-end">
+        <Link href={reviewUrl}>
+          <Button sdsType="secondary" sdsStyle="square" size="small" className="w-[125px]">
+            {reviewStatus === 'Not Started' ? 'Start Review' : 'Resume Review'}
+          </Button>
+        </Link>
+      </div>
     );
   } else {
     return (
