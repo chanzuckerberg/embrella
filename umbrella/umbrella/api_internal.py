@@ -41,6 +41,61 @@ USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 
+
+########## DEMO FUNCTIONS ##########
+
+def create_demo_tomograms(
+    session_id: str,
+    run_id: str,
+    reconstruction_type: str,
+    num_tomograms: int = 10
+) -> bool:
+    """Create demo tomograms for a session.
+
+    Args:
+        session_id: The ID of the session to add tomograms to
+        run_id: The run ID to associate with the tomograms
+        reconstruction_type: The reconstruction type (e.g., 'SART', 'DCTF')
+        num_tomograms: Number of tomograms to create (default: 10)
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Get the session
+        session = MsiSession.objects.get(id=session_id)
+        print(f"Found session: {session.name}")
+
+        # Create tomograms
+        for i in range(num_tomograms):
+            tomogram_id = (
+                f"{session.name}_{run_id}_{reconstruction_type}_{i+1:03d}"
+            )
+            ReviewTomogram.objects.create(
+                tomogram_id=tomogram_id,
+                session=session,
+                run_id=run_id,
+                reconstruction_type=reconstruction_type,
+                position_id=f"pos_{i+1:03d}",
+                quality='pending'
+            )
+            print(f"Created tomogram: {tomogram_id}")
+
+        print(
+            f"Successfully created {num_tomograms} tomograms "
+            f"for session {session.name}"
+        )
+        return True
+
+    except MsiSession.DoesNotExist:
+        print(f"Session with ID {session_id} not found")
+        return False
+    except Exception as e:
+        print(f"Error creating tomograms: {str(e)}")
+        return False
+
+########## END DEMO FUNCTIONS ##########
+
 def get_grids_by_user(request):
     user_id = request.GET.get('user_id')
 
@@ -468,10 +523,17 @@ class ReviewView(View):
         ).count()
 
         if tomogram_count == 0:
-            return JsonResponse({
-                "error": "No tomograms found for review",
-                "details": f"No tomograms found for session {session.name}, run {data['runId']}, and reconstruction type {data['reconstructionType']}"
-            }, status=400)
+            # TODO: Remove this once demo is over
+            print(f"Creating demo tomograms for session {session.name}, run {data['runId']}, and reconstruction type {data['reconstructionType']}")
+            create_demo_tomograms(
+                session.id,
+                data['runId'],
+                data['reconstructionType']
+            )
+            # return JsonResponse({
+            #     "error": "No tomograms found for review",
+            #     "details": f"No tomograms found for session {session.name}, run {data['runId']}, and reconstruction type {data['reconstructionType']}"
+            # }, status=400)
 
         # Create the review
         try:

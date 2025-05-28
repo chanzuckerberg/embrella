@@ -117,13 +117,6 @@ export const CreateReviewView = () => {
 
   const [isCreatingReview, setIsCreatingReview] = useState(false);
 
-  console.log('selectedTemSession', selectedTemSession);
-
-  if (currentUser === undefined) {
-    return <div>Loading...</div>;
-  }
-
-  // #region JSX
   return (
     <div className="flex flex-col !p-[25px] relative gap-[40px]">
       <header className="text-[22px] font-semibold">Create New Review</header>
@@ -387,12 +380,16 @@ export const CreateReviewView = () => {
                   runId: selectedRun!.name,
                   reconstructionType: selectedReconstructionType!.name,
                   annotationObjects: selectedAnnotationObjects,
-                  requestor: currentUser.id,
+                  requestor: currentUser?.id,
                 });
-                if (submitResponse.status === 200) {
-                  router.push(`/reviews/${(await submitResponse.json()).reviewId}`);
+                if (submitResponse.status === 201) {
+                  router.push(`/reviews/`);
                 } else {
-                  setIsCreatingReview(false);
+                  const responseData = await submitResponse.json();
+                  if (responseData.error) {
+                    alert(`Failed to create review. Please try again. ${responseData.error}`);
+                    setIsCreatingReview(false);
+                  }
                 }
               }}
               endIcon={isCreatingReview && <Icon sdsIcon={'Loading'} sdsSize={'s'} />}
