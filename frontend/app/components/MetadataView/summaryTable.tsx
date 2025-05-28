@@ -42,20 +42,12 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ data }) => (
         <InfoItem label="Project" value={data.project_name} />
         <InfoItem label="Grid" value={data.grid_name} />
       </Box>
-      
+
       <Divider sx={{ my: 3 }} />
-      
+
       <Box>
-        <InfoItem 
-          label="Data Collection Path" 
-          value={data.data_collection_directory} 
-          breakWord={true} 
-        />
-        <InfoItem 
-          label="Aretomo3 Processing Path" 
-          value={data.aretomo3_processing_directory} 
-          breakWord={true} 
-        />
+        <InfoItem label="Data Collection Path" value={data.data_collection_directory} breakWord={true} />
+        <InfoItem label="Aretomo3 Processing Path" value={data.aretomo3_processing_directory} breakWord={true} />
       </Box>
     </CardContent>
   </Card>
@@ -68,7 +60,7 @@ interface MetricsTableProps {
 
 const MetricsTable: React.FC<MetricsTableProps> = ({ metrics }) => {
   const initialSortState: SortingState = [{ desc: false, id: 'name' }];
-  
+
   const table = useReactTable({
     data: metrics,
     columns: METADATA_COLUMN_DEFS,
@@ -125,10 +117,18 @@ export const SummaryTable: React.FC<SummaryTableProps> = ({ data }) => {
 
   return (
     <Box sx={{ marginTop: 4 }}>
-      <Paper sx={{ p: 3, bgcolor: 'background.paper', borderRadius: 1, mt: 1 , boxShadow: 'none', // Remove shadow to eliminate the line
-          border: 'none'}}>
+      <Paper
+        sx={{
+          p: 3,
+          bgcolor: 'background.paper',
+          borderRadius: 1,
+          mt: 1,
+          boxShadow: 'none', // Remove shadow to eliminate the line
+          border: 'none',
+        }}
+      >
         <SummaryCard data={data} />
-        
+
         {data.computed_metrics && data.computed_metrics.length > 0 ? (
           <MetricsTable metrics={data.computed_metrics} />
         ) : (
