@@ -5,14 +5,7 @@
 // - Debounce not required if saves are manual + explicit
 // - Split effectful logic from view state
 
-import {
-  useReducer,
-  useEffect,
-  useCallback,
-  useContext,
-  useState,
-  useRef,
-} from 'react';
+import { useReducer, useEffect, useCallback, useContext, useState, useRef } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
@@ -118,9 +111,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       });
 
       // fetch updated review object to update table state
-      const updatedReviewRes = await fetchResource(
-        getRequestURL(DJANGO_URL, `/api/reviews/${review.reviewId}`)
-      );
+      const updatedReviewRes = await fetchResource(getRequestURL(DJANGO_URL, `/api/reviews/${review.reviewId}`));
       const updatedReview = await updatedReviewRes.json();
       onReviewUpdate(updatedReview);
 
