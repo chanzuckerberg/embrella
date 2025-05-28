@@ -21,12 +21,12 @@ export const TomogramInfo = ({ tomogramDetail }: { tomogramDetail: TomogramDetai
                 <span className="font-bold">Organism:</span> <span className="italic">Mus musculus</span>
               </div>
               <div className="mt-2 space-y-1">
-                <div>
-                  <span className="font-bold">ID:</span> <span className="">{tomogramDetail.tomogramId}</span>
-                </div>
-                <div>
-                  <span className="font-bold">Display Name:</span> <span>{tomogramDetail.displayName}</span>
-                </div>
+                {tomogramDetail.existingReview && (
+                  <div>
+                    <span className="font-bold">Object Labels:</span>{' '}
+                    <span>{(tomogramDetail.existingReview.objectLabels || []).join(', ')}</span>
+                  </div>
+                )}
                 <div>
                   <span className="font-bold">Zarr Path:</span> <span>{tomogramDetail.zarrPath}</span>
                 </div>
