@@ -947,10 +947,6 @@ class ReviewTomogramView(View):
             if data['quality'] not in valid_qualities:
                 return JsonResponse({"error": f"Invalid quality value. Must be one of: {', '.join(valid_qualities)}"}, status=400)
 
-            # Validate rejection reasons for rejected quality
-            # if data['quality'] == 'rejected' and not data.get('rejectionReasons'):
-            #     return JsonResponse({"error": "Rejection reasons are required when quality is rejected"}, status=400)
-
             # Get the tomogram
             try:
                 tomogram = ReviewTomogram.objects.get(
