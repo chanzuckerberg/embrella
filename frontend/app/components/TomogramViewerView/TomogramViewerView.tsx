@@ -1,11 +1,4 @@
-// React component cleanup plan for TomogramViewerView
-// Goals:
-// - Ensure saving happens with correct tomogram state
-// - Avoid async state issues
-// - Debounce not required if saves are manual + explicit
-// - Split effectful logic from view state
-
-import { useReducer, useEffect, useCallback, useContext, useState, useRef } from 'react';
+import { useReducer, useEffect, useCallback, useContext, useState } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
@@ -31,10 +24,12 @@ interface TomogramViewerProps {
   onReviewUpdate: (review: Review) => void;
 }
 
+type QualityValue = 'pending' | 'accepted' | 'rejected' | 'uncertain' | 'exemplary';
+
 interface TomogramState {
   selectedTomogramId: string;
   detail: ReviewTomogramDetail | null;
-  quality: string;
+  quality: QualityValue;
   objectLabels: string[];
   rejectionReasons: string[];
   saveState: 'idle' | 'saving' | 'saved' | 'failed';
@@ -51,12 +46,21 @@ const initialState = (firstTomogramId: string): TomogramState => ({
   contrastLimits: [-0.00001, 0.00001],
 });
 
-function reducer(state: TomogramState, action: any): TomogramState {
+type TomogramAction =
+  | { type: 'SET_DETAIL'; payload: ReviewTomogramDetail | null }
+  | { type: 'SET_QUALITY'; payload: string }
+  | { type: 'SET_OBJECT_LABELS'; payload: string[] }
+  | { type: 'SET_REJECTION_REASONS'; payload: string[] }
+  | { type: 'SET_SAVE_STATE'; payload: 'idle' | 'saving' | 'saved' | 'failed' }
+  | { type: 'SET_CONTRAST_LIMITS'; payload: [number, number] }
+  | { type: 'SET_SELECTED_TOMOGRAM'; payload: string };
+
+function reducer(state: TomogramState, action: TomogramAction): TomogramState {
   switch (action.type) {
     case 'SET_DETAIL':
       return { ...state, detail: action.payload };
     case 'SET_QUALITY':
-      return { ...state, quality: action.payload };
+      return { ...state, quality: action.payload as QualityValue };
     case 'SET_OBJECT_LABELS':
       return { ...state, objectLabels: action.payload };
     case 'SET_REJECTION_REASONS':
@@ -117,7 +121,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
 
       dispatch({ type: 'SET_SAVE_STATE', payload: 'saved' });
     } catch {
-      dispatch({ type: 'SET_SAVE_STATE', payload: 'error' });
+      dispatch({ type: 'SET_SAVE_STATE', payload: 'failed' });
     }
   };
 
@@ -153,7 +157,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       }
     };
     loadDetail();
-  }, [state.selectedTomogramId]);
+  }, [state.selectedTomogramId, channels, imageSeriesLayer, review.reviewId, state.contrastLimits]);
 
   useHotkeys('a', () => dispatch({ type: 'SET_QUALITY', payload: 'accepted' }));
   useHotkeys('r', () => dispatch({ type: 'SET_QUALITY', payload: 'rejected' }));
@@ -180,7 +184,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           onContrastLimitsChange={handleContrastLimitsChange}
         />
         <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
-          {state.detail?.zarrPath && region && (
+          {state.detail?.zarrPath !== undefined && region !== null && (
             <OmeZarrImageViewer
               sourceUrl={state.detail.zarrPath}
               region={region}
@@ -197,7 +201,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           <div className="shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-[20px]">
             <QualityControls
               isDisabled={!userCanReview}
-              selectedQuality={state.quality as any}
+              selectedQuality={state.quality}
               onAccept={() => dispatch({ type: 'SET_QUALITY', payload: 'accepted' })}
               onReject={() => dispatch({ type: 'SET_QUALITY', payload: 'rejected' })}
               onUncertain={() => dispatch({ type: 'SET_QUALITY', payload: 'uncertain' })}

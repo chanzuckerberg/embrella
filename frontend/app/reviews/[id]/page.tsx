@@ -30,7 +30,6 @@ export default function ReviewPage() {
   }
 
   const handleReviewUpdate = (updatedReview: Review) => {
-    console.log('updatedReview', updatedReview);
     setReview(updatedReview);
   };
 
