@@ -213,7 +213,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               onExemplary={() => dispatch({ type: 'SET_QUALITY', payload: 'exemplary' })}
             />
           </div>
-          {(state.quality === 'accepted' || state.quality === 'uncertain') && (
+          {(state.quality === 'accepted' || state.quality === 'uncertain' || state.quality === 'exemplary') && (
             <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
               <ObjectLabelsSelector
                 isDisabled={!userCanReview}
