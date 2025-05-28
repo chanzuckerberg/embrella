@@ -158,7 +158,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
     };
     loadDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.selectedTomogramId, review.reviewId, state.contrastLimits]);
+  }, [state.selectedTomogramId, review.reviewId]);
 
   useHotkeys('a', () => dispatch({ type: 'SET_QUALITY', payload: 'accepted' }));
   useHotkeys('r', () => dispatch({ type: 'SET_QUALITY', payload: 'rejected' }));
