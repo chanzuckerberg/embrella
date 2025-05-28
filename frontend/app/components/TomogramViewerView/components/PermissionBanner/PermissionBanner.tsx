@@ -12,7 +12,16 @@ export const PermissionBanner = ({ ownerName }: PermissionBannerProps) => {
   );
   return (
     <div className="w-full px-6 py-3">
-      <Callout intent="notice" sdsStyle="persistent" variant="filled" body={body} />
+      <Callout
+        className="justify-center !items-center"
+        classes={{
+          message: '!w-auto [&>p]:!m-0',
+        }}
+        intent="notice"
+        sdsStyle="persistent"
+        variant="filled"
+        body={body}
+      />
     </div>
   );
 };
