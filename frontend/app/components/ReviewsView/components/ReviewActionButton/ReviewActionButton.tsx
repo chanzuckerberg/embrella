@@ -18,9 +18,8 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
   if (currentUser === undefined) {
     return <div>Loading...</div>;
   }
-
   const userCanReview =
-    reviewStatus === 'Not Started' || (reviewStatus === 'In Progress' && currentUser.id === reviewer.id);
+    reviewStatus === 'Not Started' || (reviewStatus === 'In Progress' && currentUser.id === String(reviewer.id));
   console.log('review: ', reviewId);
   const reviewUrl = `/reviews/${reviewId}`;
 
