@@ -23,15 +23,17 @@ export const TomogramTable = ({ tomograms, selectedTomogram, onSelectTomogram }:
             <div
               key={tomogram.tomogramId}
               onClick={() => onSelectTomogram(tomogram.tomogramId)}
-              className={`grid grid-cols-3 gap-2 p-2 cursor-pointer rounded ${isSelected ? 'bg-blue-100' : 'hover:bg-gray-100 transition-colors duration-100'
-                }`}
+              className={`grid grid-cols-3 gap-2 p-2 cursor-pointer rounded ${
+                isSelected ? 'bg-blue-100' : 'hover:bg-gray-100 transition-colors duration-100'
+              }`}
             >
               <div>{tomogram.position}</div>
               <div>{tomogram.status}</div>
               <div className="flex justify-center items-center">
                 <div
-                  className={`w-4 h-4 rounded-full border-1 ${isReviewed ? 'bg-gray-300 border-gray-400' : 'border-gray-300'
-                    }`}
+                  className={`w-4 h-4 rounded-full border-1 ${
+                    isReviewed ? 'bg-gray-300 border-gray-400' : 'border-gray-300'
+                  }`}
                 />
               </div>
             </div>
