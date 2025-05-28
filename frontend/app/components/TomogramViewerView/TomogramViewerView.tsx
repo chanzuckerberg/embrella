@@ -18,6 +18,9 @@ import { Button, Icon } from '@czi-sds/components';
 import { UserContext } from '@app/common/context/UserProvider';
 import { PermissionBanner } from './components/PermissionBanner';
 import { debounce } from '@mui/material';
+import { fetchResource } from '@app/common/queries/fetchResource';
+import { getRequestURLWithPathParams } from '@app/common/queries/utils';
+import { DJANGO_URL } from '@app/common/constants/api';
 
 interface TomogramViewerProps {
   review: Review;
@@ -202,10 +205,22 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       const tomogramIdToUse = allowedTomograms.includes(state.selectedTomogram)
         ? state.selectedTomogram
         : getTomogramIdForStatus(selectedTomogramStatus);
+      // OLD CODE commented out in case
+      // const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
+      // const tomogramDetail = MOCKED_APIS[API.TOMOGRAM_DETAIL](url);
+      // updateTomogramState(tomogramDetail);
+      const url = getRequestURLWithPathParams(DJANGO_URL, '/api/reviews/:reviewId/tomograms/:tomogramId', {
+        reviewId: review.reviewId,
+        tomogramId: state.selectedTomogram,
+      });
 
-      const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
-      const tomogramDetail = MOCKED_APIS[API.TOMOGRAM_DETAIL](url);
-      updateTomogramState(tomogramDetail);
+      try {
+        const response = await fetchResource(url);
+        const tomogramDetail = await response.json();
+        updateTomogramState(tomogramDetail);
+      } catch (error) {
+        console.error('Error fetching tomogram detail:', error);
+      }
     }
     if (lastAnswerUpdateTime.current !== undefined) {
       // Save only after user has interacted with questions.

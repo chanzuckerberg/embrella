@@ -1,6 +1,7 @@
 import json
 import os
 import os.path
+import random
 import socket
 import uuid
 from datetime import datetime, timezone
@@ -866,7 +867,20 @@ class ReviewTomogramView(View):
                 vol_suffix = ""  # denoised
                 job_name = "denoise"
 
-            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.msi_session.name}/{review.run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+            # TODO: Remove this demo section after testing
+            # Demo URLs for testing
+            demo_urls = [
+                "https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/",
+                "https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/",
+                "https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/"
+            ]
+
+            # Randomly select one of the demo URLs for now
+            response_data["zarrPath"] = random.choice(demo_urls)
+
+            # Original zarr path construction (commented out for now)
+            # response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.msi_session.name}/{review.run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+
             response_data["contrastLimits"] = [-0.00001, 0.00001]  # Default contrast limits
 
             # Add review details if they exist
