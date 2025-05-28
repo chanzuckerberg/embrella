@@ -5,6 +5,7 @@ export interface User {
 
 export interface ReviewTomogramSummary {
   tomogramId: string;
+  position: string;
   status: 'pending' | 'accepted' | 'rejected' | 'uncertain';
 }
 

@@ -205,7 +205,6 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
 
       const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
       const tomogramDetail = MOCKED_APIS[API.TOMOGRAM_DETAIL](url);
-
       updateTomogramState(tomogramDetail);
     }
     if (lastAnswerUpdateTime.current !== undefined) {
