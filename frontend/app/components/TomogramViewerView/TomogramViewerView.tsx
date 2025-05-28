@@ -205,7 +205,10 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       const tomogramIdToUse = allowedTomograms.includes(state.selectedTomogram)
         ? state.selectedTomogram
         : getTomogramIdForStatus(selectedTomogramStatus);
-
+      // OLD CODE commented out in case
+      // const url = `/api/reviews/${review.reviewId}/tomograms/${tomogramIdToUse}`;
+      // const tomogramDetail = MOCKED_APIS[API.TOMOGRAM_DETAIL](url);
+      // updateTomogramState(tomogramDetail);
       const url = getRequestURLWithPathParams(DJANGO_URL, '/api/reviews/:reviewId/tomograms/:tomogramId', {
         reviewId: review.reviewId,
         tomogramId: state.selectedTomogram,
