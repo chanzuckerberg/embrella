@@ -566,13 +566,13 @@ export const MOCKED_POST_APIS: Partial<Record<POST_API, any>> = {
     finishedAt: '2025-04-22T17:30:15Z',
     savePath: '/mnt/data/reviews/rev_abcdef123456/review.json',
   },
-  [POST_API.UPDATE_TOMOGRAM_REVIEW]: (options: { userIsOwner?: boolean } = {}) => {
-    if (options.userIsOwner === false) {
-      return {
-        ok: false,
-        error: 'You are not the owner of this review and cannot submit annotations.',
-      };
-    }
-    return { ok: true };
-  },
+  // [POST_API.UPDATE_TOMOGRAM_REVIEW]: (options: { userIsOwner?: boolean } = {}) => {
+  //   if (options.userIsOwner === false) {
+  //     return {
+  //       ok: false,
+  //       error: 'You are not the owner of this review and cannot submit annotations.',
+  //     };
+  //   }
+  //   return { ok: true };
+  // },
 };
