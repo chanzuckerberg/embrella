@@ -27,7 +27,7 @@ export const TomogramTable = ({ tomograms, selectedTomogram, onSelectTomogram }:
                 isSelected ? 'bg-blue-100' : 'hover:bg-gray-100 transition-colors duration-100'
               }`}
             >
-              <div>{tomogram.tomogramId}</div>
+              <div>{tomogram.position}</div>
               <div>{tomogram.status}</div>
               <div className="flex justify-center items-center">
                 <div

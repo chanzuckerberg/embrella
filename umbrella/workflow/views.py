@@ -1038,6 +1038,33 @@ def get_metadata_summary(request):
             data_collection_dir = f"{DATA_COLLECTION_PATH}{session_name}/{run_number}/"
             aretomo3_processing_dir = f"{ARETOMO3_PROCESSING_PATH}{session_name}/{run_number}/"
 
+            #Get User, Project, and grid information
+            user_name=None
+            project_name=None
+            grid_name=None
+            try:
+                try:
+                    session = MsiSession.objects.get(name=session_name)
+                    logger.info(f"Session: {session}")
+
+                    #Get User name
+                    if session.user:
+                        user_name = session.user.username
+                    # Get Project name
+                    if session.project:
+                        project_name = session.project.name
+                    
+                    # Get Grid name
+                    if session.grid:
+                        grid_name = session.grid.name
+                except MsiSession.DoesNotExist:
+                    # Session not found, leave the values as None
+                    logger.warning(f"No MsiSession found with name: {session_name}")
+            except Exception as e:
+                logger.warning(f"Error retrieving related information: {str(e)}")
+                
+                
+
             response = {
                 "session_name": session_name,
                 "run_number": run_number,
@@ -1046,6 +1073,9 @@ def get_metadata_summary(request):
                 "data_collection_directory": data_collection_dir,
                 "aretomo3_processing_directory": aretomo3_processing_dir,
                 "computed_metrics": computed_metrics,
+                "user_name": user_name,
+                "project_name": project_name,
+                "grid_name": grid_name, 
                 "timing": {
                     "infra_access_sec": round(infra_time, 3),
                     "file_fetch_sec": round(fetch_time, 3),

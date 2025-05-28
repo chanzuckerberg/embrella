@@ -2,7 +2,7 @@ import { Button, Icon } from '@czi-sds/components';
 import { useRouter } from 'next/navigation';
 
 interface TopBarProps {
-  saveState?: 'saving' | 'saved' | 'failed';
+  saveState?: 'saving' | 'saved' | 'failed' | 'idle';
 }
 
 export const TopBar = ({ saveState }: TopBarProps) => {

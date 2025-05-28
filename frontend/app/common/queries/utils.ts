@@ -21,3 +21,18 @@ export function getRequestURL(base: string, url: string, searchParam: Record<str
 function getRequestURLSearchParamValue(value: unknown): string {
   return value && typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
+
+/**
+ * Returns the request URL with path parameters.
+ * @param base - Base URL.
+ * @param url - URL template with path parameters (e.g. '/api/reviews/:reviewId/tomograms/:tomogramId').
+ * @param pathParams - Path parameters to replace in the URL template.
+ * @returns request URL with path parameters replaced.
+ */
+export function getRequestURLWithPathParams(base: string, url: string, pathParams: Record<string, string>): string {
+  let requestURL = url;
+  for (const [key, value] of Object.entries(pathParams)) {
+    requestURL = requestURL.replace(`:${key}`, value);
+  }
+  return new URL(requestURL, base).href;
+}
