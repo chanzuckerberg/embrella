@@ -474,72 +474,72 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
     { tomogramId: 'tomo_005', status: 'pending' },
     // Additional tomograms would be listed here...
   ],
-  [API.TOMOGRAM_DETAIL]: (url: string) => {
-    const tomogramId = url.split('/').pop();
-    const details = {
-      tomo_001: {
-        tomogramId: 'tomo_001',
-        displayName: 'Grid6_Tomo001',
-        zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_6_Vol.zarr',
-        existingReview: {
-          quality: 'accepted',
-          rejectionReasons: [''],
-          objectLabels: ['mitochondria', 'nucleus', 'ribosome', 'vesicle'],
-        },
-      },
-      tomo_002: {
-        tomogramId: 'tomo_002',
-        displayName: 'Grid6_Tomo002',
-        zarrPath: 'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/',
-        existingReview: {
-          quality: 'rejected',
-          rejectionReasons: ['no features of interest', 'blurry'],
-          objectLabels: ['tight junction', 'desmosome', 'gap junction', 'synapse', 'axon', 'dendrite', 'myelin sheath'],
-        },
-      },
-      tomo_003: {
-        tomogramId: 'tomo_003',
-        displayName: 'Grid6_Tomo003',
-        zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
-        existingReview: {
-          quality: 'uncertain',
-          objectLabels: [
-            'lysosomal membrane',
-            'ribosomal subunit',
-            'proteasome',
-            'spliceosome',
-            'cytosolic protein complex',
-            'signalosome',
-            'transcription factor complex',
-            'kinetochore',
-            'telomere',
-            'centromere',
-          ],
-        },
-      },
-      tomo_004: {
-        tomogramId: 'tomo_004',
-        displayName: 'Grid6_Tomo004',
-        zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
-        existingReview: {
-          quality: 'pending',
-          objectLabels: [
-            'lysosomal membrane',
-            'ribosomal subunit',
-            'proteasome',
-            'spliceosome',
-            'cytosolic protein complex',
-            'signalosome',
-            'transcription factor complex',
-            'kinetochore',
-            'telomere',
-            'centromere',
-          ],
-        },
-      },
-    };
-    return details[tomogramId as keyof typeof details] || null;
-  },
+  // [API.TOMOGRAM_DETAIL]: (url: string) => {
+  //   const tomogramId = url.split('/').pop();
+  //   const details = {
+  //     tomo_001: {
+  //       tomogramId: 'tomo_001',
+  //       displayName: 'Grid6_Tomo001',
+  //       zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_6_Vol.zarr',
+  //       existingReview: {
+  //         quality: 'accepted',
+  //         rejectionReasons: [''],
+  //         objectLabels: ['mitochondria', 'nucleus', 'ribosome', 'vesicle'],
+  //       },
+  //     },
+  //     tomo_002: {
+  //       tomogramId: 'tomo_002',
+  //       displayName: 'Grid6_Tomo002',
+  //       zarrPath: 'https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/',
+  //       existingReview: {
+  //         quality: 'rejected',
+  //         rejectionReasons: ['no features of interest', 'blurry'],
+  //         objectLabels: ['tight junction', 'desmosome', 'gap junction', 'synapse', 'axon', 'dendrite', 'myelin sheath'],
+  //       },
+  //     },
+  //     tomo_003: {
+  //       tomogramId: 'tomo_003',
+  //       displayName: 'Grid6_Tomo003',
+  //       zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
+  //       existingReview: {
+  //         quality: 'uncertain',
+  //         objectLabels: [
+  //           'lysosomal membrane',
+  //           'ribosomal subunit',
+  //           'proteasome',
+  //           'spliceosome',
+  //           'cytosolic protein complex',
+  //           'signalosome',
+  //           'transcription factor complex',
+  //           'kinetochore',
+  //           'telomere',
+  //           'centromere',
+  //         ],
+  //       },
+  //     },
+  //     tomo_004: {
+  //       tomogramId: 'tomo_004',
+  //       displayName: 'Grid6_Tomo004',
+  //       zarrPath: 'https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/',
+  //       existingReview: {
+  //         quality: 'pending',
+  //         objectLabels: [
+  //           'lysosomal membrane',
+  //           'ribosomal subunit',
+  //           'proteasome',
+  //           'spliceosome',
+  //           'cytosolic protein complex',
+  //           'signalosome',
+  //           'transcription factor complex',
+  //           'kinetochore',
+  //           'telomere',
+  //           'centromere',
+  //         ],
+  //       },
+  //     },
+  //   };
+  //   return details[tomogramId as keyof typeof details] || null;
+  // },
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

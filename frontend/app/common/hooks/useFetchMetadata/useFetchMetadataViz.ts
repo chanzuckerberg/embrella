@@ -41,7 +41,7 @@ export const useFetchMetadataViz = (
         // Add sorting parameters to the URL if provided
         if (sortBy && sortBy !== 'Select Metric') {
           url += `&sort_by=${encodeURIComponent(sortBy)}`;
-          
+
           if (sortDirection) {
             url += `&sort_direction=${encodeURIComponent(sortDirection)}`;
           }
