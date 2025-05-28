@@ -8,7 +8,7 @@ export interface MetadataSummaryResponse {
   computed_metrics: ComputedMetric[];
   user_name: string;
   project_name: string;
-  grid_name: string;  
+  grid_name: string;
 }
 
 export interface ComputedMetric {
