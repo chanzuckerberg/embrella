@@ -18,6 +18,7 @@ import { Button, Icon } from '@czi-sds/components';
 import { UserContext } from '@app/common/context/UserProvider';
 import { PermissionBanner } from './components/PermissionBanner';
 import { debounce } from '@mui/material';
+import { DJANGO_URL } from '../../../app/common/constants/api';
 
 interface TomogramViewerProps {
   review: Review;
@@ -206,7 +207,7 @@ export const TomogramViewerView = ({ review }: TomogramViewerProps) => {
       // const tomogramDetail = MOCKED_APIS[API.TOMOGRAM_DETAIL](url);
 
       try {
-        const response = await fetch(`/api/reviews/${review.reviewId}/tomograms/${state.selectedTomogram}`);
+        const response = await fetch(`${DJANGO_URL}/api/reviews/${review.reviewId}/tomograms/${state.selectedTomogram}`);
         if (!response.ok) {
           throw new Error('Failed to fetch tomogram detail');
         }
