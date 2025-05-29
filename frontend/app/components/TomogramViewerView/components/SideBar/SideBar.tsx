@@ -33,7 +33,6 @@ export const SideBar = ({
 }: SideBarProps) => {
   const reviewedCount = tomograms.filter((t) => t.status !== 'pending').length;
 
-  // State for collapsible sections
   const [infoOpen, setInfoOpen] = useState(true);
   const [sliderOpen, setSliderOpen] = useState(true);
 
