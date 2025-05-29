@@ -44,6 +44,7 @@ export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="border border-gray-300 px-2 py-1 mb-2 w-full"
+        style={{ paddingLeft: '0.25rem' }}
       />
       <div className="max-h-45 overflow-y-auto rounded p-2">
         {filteredObjects.map((obj) => (
