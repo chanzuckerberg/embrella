@@ -8,7 +8,6 @@ const DEFAULT_REGION: Region = [
 
 export async function getRegionFromZattrs(zarrUrl: string): Promise<Region> {
   const zattrsUrl = `${zarrUrl}/.zattrs`;
-  console.log('zattrsUrl', zattrsUrl);
 
   try {
     const res = await fetch(zattrsUrl);
@@ -31,7 +30,6 @@ export async function getRegionFromZattrs(zarrUrl: string): Promise<Region> {
         return { dimension: dim, index: { type: 'full' } };
       }
     });
-    console.log('region', region);
     return region;
   } catch (err) {
     console.warn('Falling back to default region due to error:', err);
