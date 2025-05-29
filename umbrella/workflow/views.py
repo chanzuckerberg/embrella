@@ -41,6 +41,8 @@ DENOISET_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'denoiset_template.
 DENOISET_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/denoise/scripts'
 STATUS_CHECKER_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'status_checker.sh')
 STATUS_CHECKER_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/software/scripts'
+ARETOMO3_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'templates', 'workflows', 'aretomo3_advanced_template.sh')
+ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts'
 KEYS = ('PixSize',
         'SplitSum',
         'Resume',
@@ -169,7 +171,7 @@ def run_aretomo3_advanced(request):
         tilt_offset = None
         thickness_mesaure = None
         dose_number = None
-        num_checks = None
+        frame_dose = None  # Changed from num_checks to frame_dose
 
         try:
             # Branch: old gain
@@ -177,11 +179,10 @@ def run_aretomo3_advanced(request):
                 gain_file_name = data.get('gain_file_name')
                 run_number = data.get('run_number')
                 denoiset_training = data.get('denoiset_training')
-                # evn_odd_split = data.get('evn_odd_split')
                 pixel_size = data.get('pixel_size')
                 use_advanced_params = data.get('use_advanced_params')
                 dose_number = data.get('dose_number')
-                num_checks = data.get('num_checks')
+                frame_dose = data.get('frame_dose')  # Changed from num_checks to frame_dose
                 # Only parse advanced params if user selected "yes"
                 if use_advanced_params == 'yes':
                     tilt_axis = data.get('tilt_axis', "")
@@ -197,12 +198,10 @@ def run_aretomo3_advanced(request):
             elif use_old_gain == 'no':
                 run_number = data.get('run_number')
                 denoiset_training = data.get('denoiset_training')
-                # evn_odd_split = data.get('evn_odd_split')
                 pixel_size = data.get('pixel_size')
                 use_advanced_params = data.get('use_advanced_params')
-
                 dose_number = data.get('dose_number')
-                num_checks = data.get('num_checks')
+                frame_dose = data.get('frame_dose')  # Changed from num_checks to frame_dose
 
                 if use_advanced_params == 'yes':
                     tilt_axis = data.get('tilt_axis', "")
@@ -226,13 +225,17 @@ def run_aretomo3_advanced(request):
 
             # Initialize the Aretomo3 object and connect
             aretomo = Aretomo3(
-                HOST, PORT, user_id, decoded_password, ARETOMO3_ADVANCED_PATH
+                HOST, 
+                PORT, 
+                user_id, 
+                decoded_password,
+                ARETOMO3_SCRIPT_PATH,  # remote_script_dir
+                ARETOMO3_TEMPLATE_PATH  # local_template_path
             )
             aretomo.connect()
 
             # Now you can safely call the script, because the variables
             # you pass in are guaranteed to have *some* default value.
-            # Option 1: Provide a format string with placeholders
             logger.info(
                 "Project: %s, Use Old Gain: %s, Advanced Params: %s, Pixel Size: %s, Denoise Training: %s",
                 project_name,
@@ -248,10 +251,9 @@ def run_aretomo3_advanced(request):
                 run_number=run_number,
                 pixel_size=pixel_size,
                 dose_number=dose_number,
-                num_checks=num_checks,
+                frame_dose=frame_dose,  # Changed from num_checks to frame_dose
                 gain_file_name=gain_file_name,
                 denoise_training=denoiset_training,
-                # even_odd_split=evn_odd_split,
                 use_advanced_params=use_advanced_params,
                 tilt_axis=tilt_axis,
                 tilt_axis_refine=tilt_axis_refine,
@@ -300,8 +302,8 @@ def run_aretomo3(request):
         session_name = data.get('session_name')
         run_number = data.get('run_number')
         pix_size = data.get('pixel_size')
-        total_dose = data.get('total_dose')
-        num_checks = data.get('num_checks')
+        total_dose = data.get('dose_number')
+        frame_dose = data.get('frame_dose')  # Changed from num_checks to frame_dose
         user_id = data.get('user_id')
         encoded_password = data.get('password')
         decoded_password = base64.b64decode(encoded_password).decode('utf-8')
@@ -317,15 +319,22 @@ def run_aretomo3(request):
 
         data_sanitized = dict(data)
         data_sanitized.pop('password', None)
-        job_id_str = None  # Initialize job_id_str to avoid referencing it before assignment
+        job_id_str = None
 
         try:
-            aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
+            aretomo = Aretomo3(
+                HOST, 
+                PORT, 
+                user_id, 
+                decoded_password,
+                ARETOMO3_SCRIPT_PATH,  # remote_script_dir
+                ARETOMO3_SCRIPT_PATH   # local_template_path
+            )
             # Connect to the remote server
             aretomo.connect()
 
             # Run the script and get the output
-            output, error = aretomo.run_script(session_name, run_number, pix_size, total_dose, num_checks, user_id)
+            output, error = aretomo.run_script(session_name, run_number, pix_size, total_dose, frame_dose, user_id)  # Changed from num_checks to frame_dose
 
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
             job_id_str = ",".join(found_ids) if found_ids else None
@@ -378,7 +387,6 @@ def cancel_jobs(request):
         data = json.loads(request.body)
         job_number = data.get('job_number')
         
-        
         # Retrieve user_id and decoded_password from session
         user_id = request.session.get('user_id')
         decoded_password = request.session.get('decoded_password')
@@ -388,10 +396,7 @@ def cancel_jobs(request):
             encoded_password = data.get('password')
             decoded_password = base64.b64decode(encoded_password).decode('utf-8')
 
-        # if not user_id or not decoded_password:
-        #     return JsonResponse({'error': 'User credentials not found in session'}, status=400)
-
-        aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
+        aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH, ARETOMO3_TEMPLATE_PATH)
 
         try:
             # Connect to the remote server
@@ -406,6 +411,7 @@ def cancel_jobs(request):
             aretomo.close()
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 @csrf_exempt
 def track_jobs(request):
     """
@@ -415,7 +421,7 @@ def track_jobs(request):
     if request.method == 'GET':
         job_name = request.GET.get('job_name')  # None if not provided
 
-        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
+        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH, ARETOMO3_TEMPLATE_PATH)
         try:
             # Connect to the remote server
             aretomo.connect()
@@ -729,7 +735,7 @@ def workflow_get_data(request):
     """
     try:
         # Initialize and connect to Aretomo
-        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH)
+        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH, ARETOMO3_TEMPLATE_PATH)
         aretomo.connect()
 
         # Since we want all jobs, set job_name=None and all=True
