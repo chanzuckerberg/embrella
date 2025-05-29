@@ -16,7 +16,7 @@ export interface ReviewData {
 }
 
 export interface TemSession {
-  id: number;
+  sessionId: number;
   sessionName: string;
   projectName: string;
   createdAt: string;

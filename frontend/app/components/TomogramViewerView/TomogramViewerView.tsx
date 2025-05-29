@@ -100,6 +100,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   );
 
   const saveTomogram = async () => {
+    if (!userCanReview) return;
     dispatch({ type: 'SET_SAVE_STATE', payload: 'saving' });
     const url = getRequestURLWithPathParams(DJANGO_URL, '/api/reviews/:reviewId/tomograms/:tomogramId', {
       reviewId: review.reviewId,
