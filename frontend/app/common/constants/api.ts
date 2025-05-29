@@ -29,7 +29,7 @@ export enum API {
 }
 
 export enum POST_API {
-  CREATE_REVIEW = '/api/reviews',
+  CREATE_REVIEW = '/api/reviews/',
   SAVE_REVIEW = '/api/reviews/:reviewId/save',
   COMPLETE_REVIEW = '/api/reviews/:reviewId/complete',
   UPDATE_TOMOGRAM_REVIEW = '/api/reviews/:reviewId/tomograms/:tomogramId',
@@ -544,16 +544,16 @@ export const MOCKED_APIS: Partial<Record<API, any>> = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MOCKED_POST_APIS: Partial<Record<POST_API, any>> = {
-  [POST_API.CREATE_REVIEW]: {
-    reviewId: '5570b672-ab28-4998-aa0e-0846d5c35964',
-    sessionId: '24nov10',
-    runId: 'run001',
-    reconstructionType: 'Denoised',
-    reviewName: 'Tomogram Quality - 24nov10 - run001 - denoised',
-    totalCount: 100,
-    status: 'not_started',
-    createdAt: '2025-04-22T15:20:00Z',
-  },
+  // [POST_API.CREATE_REVIEW]: {
+  //   reviewId: '5570b672-ab28-4998-aa0e-0846d5c35964',
+  //   sessionId: '24nov10',
+  //   runId: 'run001',
+  //   reconstructionType: 'Denoised',
+  //   reviewName: 'Tomogram Quality - 24nov10 - run001 - denoised',
+  //   totalCount: 100,
+  //   status: 'not_started',
+  //   createdAt: '2025-04-22T15:20:00Z',
+  // },
   [POST_API.SAVE_REVIEW]: {
     ok: true,
     savedAt: '2025-04-22T16:42:10Z',

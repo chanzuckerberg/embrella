@@ -3,7 +3,7 @@
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
 import { ReviewData, Run, TemSession } from '../ReviewsView/types';
 import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useContext } from 'react';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
 import {
   AutocompleteOptionBasic,
@@ -17,6 +17,7 @@ import {
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
 import { useRouter } from 'next/navigation';
+import { UserContext } from '@app/common/context/UserProvider';
 
 export const AVAILABLE_ANNOTATION_OBJECTS = [
   'carbon edge',
@@ -82,6 +83,7 @@ interface RunOption extends AutocompleteOptionBasic {
 
 export const CreateReviewView = () => {
   const router = useRouter();
+  const currentUser = useContext(UserContext);
 
   const temSessions = useFetchData<Array<TemSession>>(API.TEM_SESSIONS).data;
 
@@ -115,7 +117,6 @@ export const CreateReviewView = () => {
 
   const [isCreatingReview, setIsCreatingReview] = useState(false);
 
-  // #region JSX
   return (
     <div className="flex flex-col !p-[25px] relative gap-[40px]">
       <header className="text-[22px] font-semibold">Create New Review</header>
@@ -367,23 +368,34 @@ export const CreateReviewView = () => {
             />
             <Button
               onClick={async () => {
+                if (!selectedTemSession || !selectedRun || !selectedReconstructionType || !reviewName) {
+                  alert('Please fill in all required fields');
+                  return;
+                }
                 setIsCreatingReview(true);
                 const submitResponse = await postResource(getRequestURL(DJANGO_URL, POST_API.CREATE_REVIEW), {
                   reviewName,
                   reviewType: 'tomogram_quality',
-                  sessionId: selectedTemSession!.session.id,
+                  sessionId: selectedTemSession.session.sessionId,
                   runId: selectedRun!.name,
                   reconstructionType: selectedReconstructionType!.name,
                   annotationObjects: selectedAnnotationObjects,
+                  requestor: currentUser?.id,
                 });
-                if (submitResponse.status === 200) {
-                  router.push(`/reviews/${(await submitResponse.json()).reviewId}`);
+                if (submitResponse.status === 201) {
+                  router.push(`/reviews/`);
                 } else {
-                  setIsCreatingReview(false);
+                  const responseData = await submitResponse.json();
+                  if (responseData.error) {
+                    alert(`Failed to create review. Please try again. ${responseData.error}`);
+                    setIsCreatingReview(false);
+                  }
                 }
               }}
               endIcon={isCreatingReview && <Icon sdsIcon={'Loading'} sdsSize={'s'} />}
-              disabled={isCreatingReview}
+              disabled={
+                isCreatingReview || !selectedTemSession || !selectedRun || !selectedReconstructionType || !reviewName
+              }
               sdsStyle="square"
               className="self-start"
             >
