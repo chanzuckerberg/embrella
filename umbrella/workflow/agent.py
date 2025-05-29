@@ -155,44 +155,56 @@ class Aretomo3(object):
             self.ssh = None
             logger.info("SSH connection closed.")
 
-    def run_script(self, project_name, run_number, pix_size, total_dose, fm_dose, user_id):
-        if self.ssh is None:
-            raise Exception("SSH connection not established. Call connect() first.")
+    def run_script(self, project_name, run_number, pix_size, total_dose, frame_dose, user_id):
+        """Execute the AreTomo3 script using a Jinja2 template."""
+        try:
+            logger.info(f"Running AreTomo3 script for project {project_name}")
+            logger.info(f"Input parameters: run_number={run_number}, pix_size={pix_size}, total_dose={total_dose}, frame_dose={frame_dose}")
 
-        # Check if the script exists on the remote server
-        stdin, stdout, stderr = self.ssh.exec_command(f'ls -l {self.local_template_path}')
-        file_check_output = stdout.read().decode('utf-8')
-        file_check_error = stderr.read().decode('utf-8')
+            # Set up Jinja2 environment
+            env = Environment(loader=FileSystemLoader(os.path.dirname(self.local_template_path)))
+            template = env.get_template(os.path.basename(self.local_template_path))
 
-        logger.info(f"File Check Output: {file_check_output}")
-        logger.info(f"File Check Error: {file_check_error}")
+            # Calculate binning values
+            tomo_bin_5A = round(5 / float(pix_size), 2)
+            tomo_bin_10A = round(10 / float(pix_size), 2)
 
+            # Render the template with parameters
+            rendered_script = template.render(
+                project_name=project_name,
+                run_number=run_number,
+                pix_size=pix_size,
+                total_dose=total_dose,
+                frame_dose=frame_dose,
+                tomo_bin_5A=tomo_bin_5A,
+                tomo_bin_10A=tomo_bin_10A,
+                user_id=user_id
+            )
 
-        if "No such file or directory" in file_check_error:
-            raise Exception(f"The script path {self.local_template_path} does not exist on the remote server.")
+            # Upload the rendered script to the remote server
+            remote_script_path = f"{self.remote_script_dir}/run_aretomo3_basic_{project_name}_{run_number}.sh"
+            with self.ssh.open_sftp().file(remote_script_path, 'w') as f:
+                f.write(rendered_script)
 
-        # Execute the shell script remotely
-        stdin, stdout, stderr = self.ssh.exec_command(f'bash {self.local_template_path}')
+            # Make the script executable
+            self.ssh.exec_command(f'chmod 755 {remote_script_path}')
 
-        # Handle prompts sequentially
-        stdin.write(f'{project_name}\n')
-        stdin.flush()
-        stdin.write(f'{run_number}\n')
-        stdin.flush()
-        stdin.write(f'{pix_size}\n')
-        stdin.flush()
-        stdin.write(f'{total_dose}\n')
-        stdin.flush()
-        stdin.write(f'{fm_dose}\n')
-        stdin.flush()
-        stdin.write(f'{user_id}\n')
-        stdin.flush()
+            # Submit the job using sbatch
+            stdin, stdout, stderr = self.ssh.exec_command(f'sbatch {remote_script_path}')
+            output = stdout.read().decode()
+            error = stderr.read().decode()
 
-        # Read the output and error streams
-        output = stdout.read().decode('utf-8')
-        error = stderr.read().decode('utf-8')
+            if error:
+                logger.error(f"Error submitting AreTomo3 job: {error}")
+            else:
+                logger.info(f"AreTomo3 job submitted successfully: {output}")
 
-        return output, error
+            return output, error
+
+        except Exception as e:
+            error_msg = f"Error in run_script: {str(e)}"
+            logger.error(error_msg)
+            return "", error_msg
 
     def cancel(self, job_number):
         if self.ssh is None:

@@ -37,11 +37,12 @@ CELERY_BEAT_SCHEDULE = {
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DENOISET_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'denoiset_template.sh')
+DENOISET_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'denoiset_template.sh')
 DENOISET_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/denoise/scripts'
-STATUS_CHECKER_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow',  'status_checker.sh')
+STATUS_CHECKER_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'status_checker.sh')
 STATUS_CHECKER_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/software/scripts'
 ARETOMO3_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'templates', 'workflows', 'aretomo3_advanced_template.sh')
+ARETOMO3_BASIC_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'templates', 'workflows', 'aretomo3_basic_template.sh')
 ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts'
 KEYS = ('PixSize',
         'SplitSum',
@@ -328,13 +329,13 @@ def run_aretomo3(request):
                 user_id, 
                 decoded_password,
                 ARETOMO3_SCRIPT_PATH,  # remote_script_dir
-                ARETOMO3_SCRIPT_PATH   # local_template_path
+                ARETOMO3_BASIC_TEMPLATE_PATH  # local_template_path
             )
             # Connect to the remote server
             aretomo.connect()
 
             # Run the script and get the output
-            output, error = aretomo.run_script(session_name, run_number, pix_size, total_dose, frame_dose, user_id)  # Changed from num_checks to frame_dose
+            output, error = aretomo.run_script(session_name, run_number, pix_size, total_dose, frame_dose, user_id)
 
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
             job_id_str = ",".join(found_ids) if found_ids else None
