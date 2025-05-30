@@ -1,8 +1,10 @@
 import json
+from math import ceil
 import os
 import os.path
 import random
 import socket
+import traceback
 import uuid
 from datetime import datetime, timezone
 from urllib.parse import urljoin
@@ -220,21 +222,27 @@ class ReviewView(View):
         """
         if review_id:
             return self.get_review_metadata(request, review_id)
+        
+        search = ''
+        sort_field = 'updatedAt'
+        sort_order = 'desc'
+        limit = 20
+        offset = 0
+
+        requested_page = 1
 
         try:
-            # Get pagination parameters
-            try:
-                limit = int(request.GET.get('limit', 20))
-                offset = int(request.GET.get('offset', 0))
-            except ValueError:
-                return JsonResponse({"error": "Invalid pagination parameters"}, status=400)
-
-            # Get search parameter
-            search = request.GET.get('search', '').strip()
-
-            # Get sort parameter
-            order_by = request.GET.get('orderBy', 'updatedAt:desc')
-            sort_field, sort_order = order_by.split(':') if ':' in order_by else ('updatedAt', 'desc')
+            for item in json.loads(request.GET.get('q', default="")):
+                match item['category']:
+                    case 'search':
+                        search = item['value']
+                    case 'sort':
+                        sort_field = item['value'][0]
+                    case 'asc':
+                        sort_order = 'asc' if item['value'][0] else 'desc'
+                    case 'page':
+                        requested_page = item['value'][0]
+                        offset = (requested_page - 1) * limit
 
             # Map frontend sort fields to database fields
             sort_field_map = {
@@ -261,16 +269,15 @@ class ReviewView(View):
                 filtered_reviews = []
 
                 for review in all_reviews:
-                    # Construct and preprocess full review name
-                    full_name = f"{review.review_name}{review.msi_session.name}{review.run_id}{review.reconstruction_type}"
-                    full_name = full_name.lower().replace('-', '').replace(' ', '')
-
-                    # Calculate similarity
-                    similarity = fuzz.ratio(search, full_name)
-
-                    if similarity >= SIMILARITY_THRESHOLD:
+                    if (fuzz.ratio(search, review.review_name) >= SIMILARITY_THRESHOLD or 
+                        fuzz.ratio(search, review.requestor.username) >= SIMILARITY_THRESHOLD or
+                        fuzz.ratio(search, review.msi_session.name) >= SIMILARITY_THRESHOLD or
+                        fuzz.ratio(search, review.reconstruction_type) >= SIMILARITY_THRESHOLD or
+                        search in review.review_name.lower() or
+                        search in review.requestor.username.lower() or
+                        search in review.msi_session.name.lower() or
+                        search in review.reconstruction_type.lower()):
                         filtered_reviews.append(review)
-                        print(f"Match found: {full_name} (similarity: {similarity})")  # Debug log
 
                 # Update queryset with filtered reviews
                 queryset = Review.objects.filter(
@@ -329,9 +336,10 @@ class ReviewView(View):
             return JsonResponse({
                 "result": reviews_data,
                 "pagination": {
-                    "total": total_count,
-                    "limit": limit,
-                    "offset": offset
+                    "page": requested_page,
+                    "pageSize": limit,
+                    "totalPages": ceil(total_count / limit),
+                    "totalResults": total_count
                 },
                 "sortBy": SortMetadataModel(
                     sort='updatedAt' if sort_field is not None else None,
@@ -341,6 +349,7 @@ class ReviewView(View):
 
         except Exception as e:
             print(f"Error in get reviews: {str(e)}")  # Add logging
+            traceback.print_exc()
             return JsonResponse({"error": str(e)}, status=500)
 
     def get_review_metadata(self, request, review_id):

@@ -2,6 +2,7 @@ import { createContext, Dispatch, ReactNode, useReducer } from 'react';
 import { noop, PaginationState, SortingState, Updater } from '@tanstack/react-table';
 import { EntityFilterCategories } from '@app/common/types/filter';
 
+// TODO: Determine if this can be deleted.
 export const DEFAULT_PAGE_SIZE = 10;
 
 export const getInitialTableState = (sortState: SortingState = []): TableState => ({
