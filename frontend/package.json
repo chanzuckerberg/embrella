@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "imaging-active-learning/packages/*"
+    "idetik/packages/*"
   ],
   "scripts": {
     "dev": "next dev",
@@ -13,7 +13,7 @@
     "check": "next lint && yarn prettier --check . && yarn tsc",
     "fix": "next lint --fix && yarn prettier --write .",
     "test": "jest --runInBand",
-    "bootstrap:submodule": "cd imaging-active-learning && npm install && npm run build && cd ../ && yarn install && yarn build",
+    "bootstrap:submodule": "cd idetik && npm install && npm run build && cd ../ && yarn install && yarn build",
     "e2e": "playwright test --project chromium",
     "e2e:chrome": "playwright test --project chromium",
     "e2e:ff": "playwright test --project firefox",
@@ -29,8 +29,8 @@
     "@emotion/css": "^11.11.2",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
-    "@idetik/core": "file:./imaging-active-learning/packages/core",
-    "@idetik/react": "file:./imaging-active-learning/packages/react",
+    "@idetik/core": "file:./idetik/packages/core",
+    "@idetik/react": "file:./idetik/packages/react",
     "@mui/base": "5.0.0-beta.58",
     "@mui/icons-material": "5.16.7",
     "@mui/lab": "5.0.0-alpha.173",

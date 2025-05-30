@@ -16,7 +16,7 @@ A list of recommended node version managers is below:
 2. Run `yarn`.
 3. Run `npm run bootstrap:submodule`
 
-## Update `imaging-active-learning` Submodule
+## Update `idetik` Submodule
 
 To pull the latest commit from the `main` branch of the submodule:
 

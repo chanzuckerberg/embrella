@@ -1,4 +1,4 @@
-import { Region } from '../../../imaging-active-learning/packages/core/src/data/region';
+import { Region } from '../../../idetik/packages/core/src/data/region';
 
 const DEFAULT_REGION: Region = [
   { dimension: 'z', index: { type: 'full' } },

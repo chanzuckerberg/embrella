@@ -23,11 +23,11 @@
       "@configs/*": ["./configs/*"],
       "@hooks/*": ["./hooks/*"],
       "@testing/*": ["./testing/*"],
-      "core/*": ["./imaging-active-learning/packages/core/*"],
-      "lib/*": ["./imaging-active-learning/packages/react/src/lib/*"]
+      "core/*": ["./idetik/packages/core/*"],
+      "lib/*": ["./idetik/packages/react/src/lib/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "imaging-active-learning/packages/core/examples"],
+  "exclude": ["node_modules", "idetik/packages/core/examples"],
   "typeRoots": ["./types", "./node_modules/@types"]
 }
