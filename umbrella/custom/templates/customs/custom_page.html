@@ -528,8 +528,8 @@
               <p>Multiscaled SPA or tomography data collection</p>
             </td>
             <td>
-              <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
-              <p>View and manage tomograms</p>
+              <a href="javascript:void(0)" class="button" onclick="window.location.href=getReviewsUrl()">Reviews</a>
+              <p>View or manage Session Reviews</p>
             </td>
           </tr>
           <tr>
@@ -539,6 +539,13 @@
             <td>
               <a href="{% url 'tem:render_screening_form' %}" class="button">Multigrid Screens</a>
             </td>
+            <td>
+              <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
+              <p>View and manage tomograms</p>
+            </td>
+          </tr>
+          <tr>
+            <td></td><td></td>
             <td>
               <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
               <p>Manage annotations</p>
@@ -691,6 +698,9 @@
     }
     function getAnnotationsUrl() {
       return `${getNextUrl()}/annotations`;
+    }
+    function getReviewsUrl() {
+      return `${getNextUrl()}/reviews`;
     }
 
     // Tab functionality
