@@ -932,9 +932,12 @@ class ReviewTomogramView(View):
             # TODO: Remove this demo section after testing
             # Demo URLs for testing
             demo_urls = [
-                "https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/",
+                "https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_10_Vol_rechunked.zarr",
+                "https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_11_Vol_rechunked.zarr",
+                "https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_6_Vol_rechunked.zarr",
+                "https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_7_Vol_rechunked.zarr",
+                "https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol_rechunked.zarr",
                 "https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/",
-                "https://czii-onsite.czbiohub.org/krios1.processing/denoise/25apr21a/run001/Position_13_Vol.zarr/"
             ]
 
             # Randomly select one of the demo URLs for now
