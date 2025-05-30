@@ -209,7 +209,7 @@ export const CreateReviewView = () => {
                 <div className="font-semibold text-[14px]">Review input:</div>
                 <div className="text-[14px]">Assign Whole-tomogram quality</div>
                 <div className="font-semibold text-[12px]">Accepted values:</div>
-                <div className="text-[#6c6c6c] text-[12px]">Accept, Reject, Uncertain</div>
+                <div className="text-[#6c6c6c] text-[12px]">Accept, Reject, Uncertain, Exemplary</div>
               </div>
               <div
                 className="grid grid-rows-2 grid-cols-[115px_1fr] gap-[6px] !pb-[12px]"

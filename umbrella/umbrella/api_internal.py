@@ -226,13 +226,13 @@ class ReviewView(View):
         search = ''
         sort_field = 'updatedAt'
         sort_order = 'desc'
-        limit = 20
+        limit = None
         offset = 0
 
         requested_page = 1
 
         try:
-            for item in json.loads(request.GET.get('q', default="")):
+            for item in json.loads(request.GET.get('q', default="[]")):
                 match item['category']:
                     case 'search':
                         search = item['value']
@@ -241,6 +241,7 @@ class ReviewView(View):
                     case 'asc':
                         sort_order = 'asc' if item['value'][0] else 'desc'
                     case 'page':
+                        limit = 20
                         requested_page = item['value'][0]
                         offset = (requested_page - 1) * limit
 
@@ -293,6 +294,9 @@ class ReviewView(View):
 
             # Get total count before pagination
             total_count = queryset.count()
+
+            if limit is None:
+                limit = total_count
 
             # Apply pagination
             queryset = queryset[offset:offset + limit]
