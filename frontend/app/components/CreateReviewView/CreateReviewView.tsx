@@ -379,7 +379,7 @@ export const CreateReviewView = () => {
                   sessionId: selectedTemSession.session.sessionId,
                   runId: selectedRun!.name,
                   reconstructionType: selectedReconstructionType!.name,
-                  annotationObjects: selectedAnnotationObjects,
+                  annotationObjects: selectedAnnotationObjects.join(','),
                   requestor: currentUser?.id,
                 });
                 if (submitResponse.status === 201) {

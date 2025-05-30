@@ -318,7 +318,8 @@ class ReviewView(View):
                         "name": review.review_name,
                         "type": review.review_type,
                         "url": f"{get_base_url()}/admin/processes/review/{review.review_id}",
-                        "annotationObjects": ["lysosome", "golgi apparatus", "microtubule"] # TODO
+                        "annotationObjects": review.objects_of_interest.split(',') 
+                            if review.objects_of_interest is not None else []
                     },
                     "session": {
                         "id": review.msi_session.pk,
@@ -403,6 +404,8 @@ class ReviewView(View):
                     "id": str(review.requestor.id) if review.requestor else None,
                     "name": review.requestor.username if review.requestor else None
                 },
+                "availableAnnotationObjects": review.objects_of_interest.split(',') 
+                    if review.objects_of_interest is not None else [],
                 "tomograms": [
                     {
                         "tomogramId": tomo['tomogram_id'],
@@ -498,7 +501,8 @@ class ReviewView(View):
                 requestor=requestor,
                 status='not_started',
                 total_count=tomogram_count,  # Set total count to actual tomogram count
-                reviewed_count=0
+                reviewed_count=0,
+                objects_of_interest=data['annotationObjects']
             )
 
             # Return the created review
