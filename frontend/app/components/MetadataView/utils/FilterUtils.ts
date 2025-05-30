@@ -2,10 +2,9 @@ import { FilterConfig, MetricRanges } from '@app/common/types/metadataViz/metada
 import { FilterState, MetadataFilterRange } from '@app/common/types/metadataViz/FilterType';
 import { MetricConfigItem } from '../constants/MetricConfig';
 
-
-export const asMetricKey = <T extends string>(key: string): keyof MetricRanges & keyof FilterState => {
-    return key as keyof MetricRanges & keyof FilterState;
-  };
+export const asMetricKey = (key: string): keyof MetricRanges & keyof FilterState => {
+  return key as keyof MetricRanges & keyof FilterState;
+};
 
 /**
  * Creates the initial filter state from metric ranges and metrics config
@@ -18,15 +17,9 @@ export const createInitialFilterState = (
 
   Object.keys(metricsConfig).forEach((key) => {
     const metricKey = key as keyof typeof metricsConfig;
-    if (
-      metricRanges[asMetricKey(metricKey)] &&
-      Array.isArray(metricRanges[asMetricKey(metricKey)])
-    ) {
+    if (metricRanges[asMetricKey(metricKey)] && Array.isArray(metricRanges[asMetricKey(metricKey)])) {
       initialState[metricKey as keyof FilterState] = {
-        current: [
-          Number(metricRanges[asMetricKey(metricKey)][0]),
-          Number(metricRanges[asMetricKey(metricKey)][1]),
-        ],
+        current: [Number(metricRanges[asMetricKey(metricKey)][0]), Number(metricRanges[asMetricKey(metricKey)][1])],
         min: Number(metricRanges[asMetricKey(metricKey)][0]),
         max: Number(metricRanges[asMetricKey(metricKey)][1]),
         enabled: true,
@@ -71,6 +64,7 @@ export const createEmptyFilterConfig = (): FilterConfig => ({
  * Determines the step value for a slider based on the metric key and range
  */
 export const getStepValue = (key: string, minValue: number, maxValue: number): number => {
-  return key === asMetricKey('bad_patch_low') || key === asMetricKey('bad_patch_all') ? 0.1 : (maxValue - minValue) / 100;
+  return key === asMetricKey('bad_patch_low') || key === asMetricKey('bad_patch_all')
+    ? 0.1
+    : (maxValue - minValue) / 100;
 };
-    

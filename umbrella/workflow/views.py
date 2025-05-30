@@ -1408,7 +1408,6 @@ def get_metadata_viz_data(request):
                 'rejected_results': rejected_results
             }
             
-            print(f"Accepted results: {len(accepted_results)}, Rejected results: {len(rejected_results)}")
             return JsonResponse(response_data, json_dumps_params={"indent": 2})\
 
         finally:
