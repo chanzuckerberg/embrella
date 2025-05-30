@@ -28,6 +28,9 @@ import time
 import pandas as pd
 import paramiko
 from io import StringIO
+import subprocess
+import logging
+from processes.models import ProcRun
 CELERY_BEAT_SCHEDULE = {
     'update_job_data_cache_every_5_seconds': {
         'task': 'workflow.tasks.update_job_data_cache',
@@ -317,7 +320,7 @@ def run_aretomo3(request):
 
         data_sanitized = dict(data)
         data_sanitized.pop('password', None)
-        job_id_str = None  # Initialize job_id_str to avoid referencing it before assignment
+        job_id_str = None
 
         try:
             aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH)
@@ -337,6 +340,18 @@ def run_aretomo3(request):
                       error="",
                       advanced_status=False,
                       job_id=job_id_str)
+
+            # Trigger the AreTomo3 syncer script
+            try:
+                syncer_script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'processes', 'scripts', 'aretomo3_syncer.py')
+                subprocess.Popen(['python', syncer_script_path, 
+                                '--session', session_name,
+                                '--run', run_number], 
+                               env=dict(os.environ, 
+                                      PYTHONPATH=os.path.dirname(os.path.dirname(__file__))))
+                logging.info(f"Triggered AreTomo3 syncer for session {session_name}, run {run_number}")
+            except Exception as e:
+                logging.error(f"Failed to trigger AreTomo3 syncer: {str(e)}")
 
             return JsonResponse({
                 'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the output directory below',
