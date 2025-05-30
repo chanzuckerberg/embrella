@@ -1,5 +1,10 @@
 // Object defining various metrics with their labels and units
-export const METRICS_CONFIG = {
+export interface MetricConfigItem {
+  label: string;
+  unit: string;
+}
+
+export const METRICS_CONFIG: Record<string, MetricConfigItem> = {
   thickness: { label: 'Thickness', unit: '(Å)' },
   tilt_axis: { label: 'Tilt axis', unit: '(°)' },
   global_shift: { label: 'Global shift', unit: '(Å)' },
