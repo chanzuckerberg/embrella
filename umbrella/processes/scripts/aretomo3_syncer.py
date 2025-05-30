@@ -10,6 +10,8 @@ import sys
 import argparse
 import time
 import json
+import logging
+from datetime import datetime
 
 # Add the project root directory to Python path
 sys.path.append(os.path.abspath('../../'))
@@ -118,19 +120,75 @@ def create_tomogram(session, run_id, reconstruction_type, position_id):
         print(f"❌ Error creating tomogram: {e}")
         return None
 
+# Setup logging
+def setup_logging(session_name, run_id):
+    """Setup logging configuration"""
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Create log filename with timestamp
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_file = os.path.join(log_dir, f'aretomo3_sync_{session_name}_{run_id}_{timestamp}.log')
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()  # Also print to console
+        ]
+    )
+    
+    logging.info(f"Logging to file: {log_file}")
+    return log_file
+
+def check_job_status(job_id):
+    """Check if the job is still running"""
+    try:
+        # Create a mock request object
+        request = HttpRequest()
+        request.method = 'GET'
+        request.GET = {'job_name': job_id}
+        
+        # Get job status
+        response = track_jobs(request)
+        if response.status_code != 200:
+            logging.error(f"Failed to get job status: {response.status_code}")
+            return False
+            
+        jobs_data = json.loads(response.content)
+        if 'jobs' not in jobs_data:
+            logging.error("No jobs data in response")
+            return False
+            
+        # Check if job exists and its status
+        for job in jobs_data['jobs']:
+            if job['JOBID'] == job_id:
+                is_running = job['ST'] == 'R'
+                logging.info(f"Job {job_id} status: {'Running' if is_running else 'Not running'}")
+                return is_running
+                
+        logging.warning(f"Job {job_id} not found in job list")
+        return False
+    except Exception as e:
+        logging.error(f"Error checking job status: {e}")
+        return False
+
 def sync_aretomo3_results(session_name=None, run_id=None):
     """Main sync function to be called by cron job"""
     try:
         if not session_name or not run_id:
-            print("❌ Session name and run ID are required")
+            logging.error("Session name and run ID are required")
             return
             
         session = MsiSession.objects.filter(name=session_name).first()
         if not session:
-            print(f"❌ Session {session_name} not found")
+            logging.error(f"Session {session_name} not found")
             return
             
-        print(f"\nProcessing session: {session.name}, run: {run_id}")
+        logging.info(f"Processing session: {session.name}, run: {run_id}")
         
         # Track which tomograms we've processed in this run
         processed_tomograms = set()
@@ -149,7 +207,7 @@ def sync_aretomo3_results(session_name=None, run_id=None):
                     ).first()
                     
                     if existing_tomogram:
-                        print(f"Found existing tomogram with same position_id ({position_id}), reconstruction_type ({recon_type}), run_id ({run_id}), and session ({session.name})")
+                        logging.info(f"Found existing tomogram with same position_id ({position_id}), reconstruction_type ({recon_type}), run_id ({run_id}), and session ({session.name})")
                         processed_tomograms.add(existing_tomogram.tomogram_id)
                     else:
                         # Create new tomogram
@@ -164,39 +222,11 @@ def sync_aretomo3_results(session_name=None, run_id=None):
         )
         for tomogram in existing_tomograms:
             if tomogram.tomogram_id not in processed_tomograms:
-                print(f"Removing tomogram that no longer exists: {tomogram.tomogram_id}")
+                logging.info(f"Removing tomogram that no longer exists: {tomogram.tomogram_id}")
                 tomogram.delete()
 
     except Exception as e:
-        print(f"❌ Error in sync_aretomo3_results: {e}")
-
-def check_job_status(job_id):
-    """Check if the job is still running"""
-    try:
-        # Create a mock request object
-        request = HttpRequest()
-        request.method = 'GET'
-        request.GET = {'job_name': job_id}
-        
-        # Get job status
-        response = track_jobs(request)
-        if response.status_code != 200:
-            return False
-            
-        jobs_data = json.loads(response.content)
-        if 'jobs' not in jobs_data:
-            return False
-            
-        # Check if job exists and its status
-        for job in jobs_data['jobs']:
-            if job['JOBID'] == job_id:
-                # Return True if job is still running (ST is 'R' for running)
-                return job['ST'] == 'R'
-                
-        return False
-    except Exception as e:
-        print(f"❌ Error checking job status: {e}")
-        return False
+        logging.error(f"Error in sync_aretomo3_results: {e}")
 
 def main():
     """Main function to run the sync process"""
@@ -208,33 +238,37 @@ def main():
         parser.add_argument('--job-id', help='Job ID to track')
         args = parser.parse_args()
 
+        # Setup logging
+        log_file = setup_logging(args.session, args.run)
+        logging.info(f"Starting AreTomo3 sync script with args: {args}")
+
         if args.continuous:
-            print("Starting AreTomo3 sync service in continuous mode...")
+            logging.info("Starting AreTomo3 sync service in continuous mode...")
             while True:
                 try:
                     # If job_id is provided, check if job is still running
                     if args.job_id:
                         if not check_job_status(args.job_id):
-                            print(f"Job {args.job_id} is no longer running. Stopping sync service.")
+                            logging.info(f"Job {args.job_id} is no longer running. Stopping sync service.")
                             break
                     
-                    print("\nRunning AreTomo3 sync...")
+                    logging.info("Running AreTomo3 sync...")
                     sync_aretomo3_results(args.session, args.run)
-                    print("AreTomo3 sync completed successfully")
-                    print("Waiting 60 seconds before next sync...")
+                    logging.info("AreTomo3 sync completed successfully")
+                    logging.info("Waiting 60 seconds before next sync...")
                     time.sleep(60)  # Sleep for 60 seconds
                 except Exception as e:
-                    print(f"❌ Error in sync cycle: {str(e)}")
-                    print("Waiting 60 seconds before retrying...")
+                    logging.error(f"Error in sync cycle: {e}")
+                    logging.info("Waiting 60 seconds before retrying...")
                     time.sleep(60)
         else:
-            print("Running AreTomo3 sync once...")
+            logging.info("Running AreTomo3 sync once...")
             sync_aretomo3_results(args.session, args.run)
-            print("AreTomo3 sync completed successfully")
+            logging.info("AreTomo3 sync completed successfully")
         
         return True
     except Exception as e:
-        print(f"❌ Error in main: {str(e)}")
+        logging.error(f"Error in main: {e}")
         return False
 
 if __name__ == "__main__":

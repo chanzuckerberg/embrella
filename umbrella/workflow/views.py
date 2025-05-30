@@ -344,19 +344,22 @@ def run_aretomo3(request):
             # Trigger the AreTomo3 syncer script
             try:
                 syncer_script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'processes', 'scripts', 'aretomo3_syncer.py')
+                # Run the syncer once with job tracking
                 subprocess.Popen(['python', syncer_script_path, 
                                 '--session', session_name,
-                                '--run', run_number], 
+                                '--run', run_number,
+                                '--job-id', job_id_str], 
                                env=dict(os.environ, 
                                       PYTHONPATH=os.path.dirname(os.path.dirname(__file__))))
-                logging.info(f"Triggered AreTomo3 syncer for session {session_name}, run {run_number}")
+                logging.info(f"Started AreTomo3 syncer for session {session_name}, run {run_number}, tracking job {job_id_str}")
             except Exception as e:
-                logging.error(f"Failed to trigger AreTomo3 syncer: {str(e)}")
+                logging.error(f"Failed to start AreTomo3 syncer: {str(e)}")
 
             return JsonResponse({
                 'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the output directory below',
                 'output': output,
-                'error': error
+                'error': error,
+                'job_id': job_id_str
             })
         except Exception as e:
             # Log the error details
