@@ -10,7 +10,7 @@ export enum FEATURE_FLAG {
   REVIEW = 'review',
 }
 
-const LAUNCHED_FEATURE_FLAGS: FEATURE_FLAG[] = [FEATURE_FLAG.EXAMPLE];
+const LAUNCHED_FEATURE_FLAGS: FEATURE_FLAG[] = [FEATURE_FLAG.EXAMPLE, FEATURE_FLAG.REVIEW];
 
 export const FeatureFlagsContext = createContext<FEATURE_FLAG[]>([]);
 
