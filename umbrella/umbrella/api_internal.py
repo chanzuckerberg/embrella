@@ -327,10 +327,10 @@ class ReviewView(View):
                         fuzz.ratio(search, review.requestor.username) >= SIMILARITY_THRESHOLD or
                         fuzz.ratio(search, review.msi_session.name) >= SIMILARITY_THRESHOLD or
                         fuzz.ratio(search, review.reconstruction_type) >= SIMILARITY_THRESHOLD or
-                        search in review.review_name or
-                        search in review.requestor.username or
-                        search in review.msi_session.name or
-                        search in review.reconstruction_type):
+                        search in review.review_name.lower() or
+                        search in review.requestor.username.lower() or
+                        search in review.msi_session.name.lower() or
+                        search in review.reconstruction_type.lower()):
                         filtered_reviews.append(review)
 
                 # Update queryset with filtered reviews
