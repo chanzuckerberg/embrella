@@ -1,33 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Paper,
-  Slider,
-  Typography,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from '@mui/material';
+import { Paper } from '@mui/material';
 import styles from './MetadataViz.module.css';
 import { FilterConfig, MetricRanges } from '@app/common/types/metadataViz/metadataVizData';
-import { Button } from '@czi-sds/components';
 import { METRICS_CONFIG } from './constants/MetricConfig';
 import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
-
-interface MetadataFilterRange {
-  current: [number, number];
-  min: number;
-  max: number;
-  enabled: boolean; //checkbox state
-  histogramData?: number[];
-}
-
-type FilterState = {
-  [K in keyof FilterConfig['filters']]: MetadataFilterRange;
-};
+import { FilterHeader } from './filter/FilterHeader';
+import { FilterItem } from './filter/FilterItem';
+import { FilterControls } from './filter/FilterControls';
+import { createInitialFilterState, createFilterRange, createEmptyFilterConfig } from './utils/FilterUtils';
+import { FilterState, MetadataFilterRange } from '@app/common/types/metadataViz/FilterType';
+import { asMetricKey } from './utils/FilterUtils';
 
 interface MetadataFiltersProps {
   metricRanges: MetricRanges;
@@ -38,42 +20,7 @@ interface MetadataFiltersProps {
 export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, onApplyFilters, summaryAPIData }) => {
   const [selectedOption, setSelectedOption] = useState<'AND' | 'OR'>('AND');
   const [inputValues, setInputValues] = useState<Record<string, { min: string; max: string }>>({});
-  const [filters, setFilters] = useState<FilterState>(() => {
-    const initialState: FilterState = {} as FilterState;
-    // Use METRICS_CONFIG keys which match FilterConfig
-    Object.keys(METRICS_CONFIG).forEach((key) => {
-      const metricKey = key as keyof typeof METRICS_CONFIG;
-      if (metricRanges[metricKey] && Array.isArray(metricRanges[metricKey])) {
-        initialState[metricKey] = {
-          current: [Number(metricRanges[metricKey][0]), Number(metricRanges[metricKey][1])],
-          min: Number(metricRanges[metricKey][0]),
-          max: Number(metricRanges[metricKey][1]),
-          enabled: true,
-        };
-      }
-    });
-
-    return initialState;
-  });
-
-  // Helper function to create a filter range object
-  const createFilterRange = (
-    metricKey: keyof typeof METRICS_CONFIG,
-    range: [number, number] | undefined,
-    prevState: FilterState
-  ): MetadataFilterRange => {
-    const currentRange: [number, number] = Array.isArray(range)
-      ? [Number(range[0]), Number(range[1])]
-      : prevState[metricKey]?.current || [0, 100];
-
-    return {
-      ...prevState[metricKey],
-      current: currentRange,
-      min: Number(Array.isArray(range) ? range[0] : prevState[metricKey]?.min || 0),
-      max: Number(Array.isArray(range) ? range[1] : prevState[metricKey]?.max || 100),
-      enabled: prevState[metricKey]?.enabled ?? true,
-    };
-  };
+  const [filters, setFilters] = useState<FilterState>(() => createInitialFilterState(metricRanges, METRICS_CONFIG));
 
   // Update filters when metric ranges change
   useEffect(() => {
@@ -81,13 +28,19 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
       const newState = { ...prev };
       // Use METRICS_CONFIG keys which match FilterConfig
       Object.keys(METRICS_CONFIG).forEach((key) => {
-        const metricKey = key as keyof typeof METRICS_CONFIG;
-        if (metricRanges[metricKey]) {
-          newState[metricKey] = createFilterRange(metricKey, metricRanges[metricKey], prev);
+        // First check if the key exists in metricRanges using a type guard
+        if (key in metricRanges) {
+          // Now TypeScript knows this is a valid key for metricRanges
+          const typedKey = key as keyof MetricRanges;
+          // Create a new filter range with the properly typed key
+          const filterRange = createFilterRange(asMetricKey(key), metricRanges[typedKey], prev);
+          // Assign to newState with the same typed key
+          newState[asMetricKey(key)] = filterRange;
         }
       });
 
-      return newState;
+      // Return a new object to ensure React detects the change
+      return { ...newState };
     });
   }, [metricRanges]);
 
@@ -114,25 +67,16 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
   };
 
   const handleReset = () => {
-    const resetState: FilterState = {} as FilterState;
+    const resetState = createInitialFilterState(metricRanges, METRICS_CONFIG);
     const resetInputValues: Record<string, { min: string; max: string }> = {};
 
-    // Use METRICS_CONFIG keys which match FilterConfig
-    Object.keys(METRICS_CONFIG).forEach((key) => {
-      const metricKey = key as keyof typeof METRICS_CONFIG;
-      if (metricRanges[metricKey] && Array.isArray(metricRanges[metricKey])) {
-        // Reset filter state
-        resetState[metricKey] = {
-          current: [Number(metricRanges[metricKey][0]), Number(metricRanges[metricKey][1])],
-          min: Number(metricRanges[metricKey][0]),
-          max: Number(metricRanges[metricKey][1]),
-          enabled: true,
-        };
-
-        // Reset input values state
+    // Reset input values state
+    Object.keys(resetState).forEach((key) => {
+      const metricKey = asMetricKey(key);
+      if (resetState[metricKey]) {
         resetInputValues[metricKey] = {
-          min: Number(metricRanges[metricKey][0]).toFixed(3),
-          max: Number(metricRanges[metricKey][1]).toFixed(3),
+          min: Number(resetState[metricKey].current[0]).toFixed(3),
+          max: Number(resetState[metricKey].current[1]).toFixed(3),
         };
       }
     });
@@ -142,14 +86,9 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     setInputValues(resetInputValues);
     setSelectedOption('AND');
 
-    const emptyFilterConfig: FilterConfig = {
-      filters: {},
-      filter_type: 'AND',
-    };
-
     // Also apply the reset filters to update the scatter plot
     if (onApplyFilters) {
-      onApplyFilters(emptyFilterConfig, 'AND');
+      onApplyFilters(createEmptyFilterConfig(), 'AND');
     }
   };
 
@@ -167,27 +106,6 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
     }));
   };
 
-  // Helper function to calculate the new current value
-  const calculateCurrentValue = (
-    formattedValue: number,
-    key: keyof FilterState,
-    isMin: boolean,
-    prevState: FilterState
-  ): [number, number] => {
-    if (isMin) {
-      const currentMax = prevState[key]?.current[1] ?? 0;
-      // Don't constrain the value when typing - only ensure it doesn't exceed max
-      const constrainedMin = Math.min(formattedValue, currentMax);
-      return [constrainedMin, currentMax];
-    } else {
-      const currentMin = prevState[key]?.current[0] ?? 0;
-      // Don't constrain the value when typing - only ensure it doesn't go below min
-      const constrainedMax = Math.max(formattedValue, currentMin);
-      return [currentMin, constrainedMax];
-    }
-  };
-
-  // Handle input change with reduced complexity
   const handleInputChange =
     (key: keyof FilterState, isMin: boolean) => (event: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = event.target.value;
@@ -196,26 +114,26 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
       updateInputValues(key, isMin, inputValue);
 
       // If empty, allow the field to be empty but don't update filter state
-      if (inputValue === '') {
-        return;
-      }
-
-      const value = Number(inputValue);
-      if (isNaN(value)) {
+      if (inputValue === '' || isNaN(Number(inputValue))) {
         return;
       }
 
       // Apply 3 decimal precision
-      const formattedValue = Number(value.toFixed(3));
+      const formattedValue = Number(Number(inputValue).toFixed(3));
 
-      // Update filters state
-      setFilters((prev) => ({
-        ...prev,
-        [key]: {
-          ...prev[key],
-          current: calculateCurrentValue(formattedValue, key, isMin, prev),
-        },
-      }));
+      // Update filters state with a new object reference to ensure React detects the change
+      setFilters((prev) => {
+        const currentMax = isMin ? (prev[key]?.current[1] ?? 0) : Math.max(formattedValue, prev[key]?.current[0] ?? 0);
+        const currentMin = isMin ? Math.min(formattedValue, prev[key]?.current[1] ?? 0) : (prev[key]?.current[0] ?? 0);
+
+        return {
+          ...prev,
+          [key]: {
+            ...prev[key],
+            current: [currentMin, currentMax],
+          },
+        };
+      });
     };
 
   const handleInputBlur = (key: keyof FilterState, isMin: boolean) => () => {
@@ -255,8 +173,8 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
           ? Object.entries(state).reduce(
               (acc, [key, value]) => {
                 if (value.enabled) {
-                  const metricKey = key as keyof FilterConfig['filters'];
-                  acc[metricKey] = value.current;
+                  const metricKey = asMetricKey(key);
+                  acc[metricKey] = [...value.current];
                 }
                 return acc;
               },
@@ -265,193 +183,50 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = ({ metricRanges, 
           : {},
         filter_type: option,
       };
-      onApplyFilters(filterConfig, option);
+
+      // Create a new object reference to ensure React detects the change
+      onApplyFilters({ ...filterConfig }, option);
     }
   };
 
-  // Add a new handler for unchecking all filters
   const handleUncheckAll = () => {
     setFilters((prev) => {
       const newState = { ...prev };
       Object.keys(newState).forEach((key) => {
-        const metricKey = key as keyof FilterState;
+        const metricKey = asMetricKey(key);
         newState[metricKey] = {
           ...newState[metricKey],
           enabled: false,
         } as MetadataFilterRange;
       });
-      return newState;
+      return { ...newState };
     });
-  };
-
-  // Helper function to determine step value based on metric key and range
-  const getStepValue = (key: keyof FilterState, minValue: number, maxValue: number) => {
-    return key === 'bad_patch_low' || key === 'bad_patch_all' ? 0.1 : (maxValue - minValue) / 100;
-  };
-
-  const renderFilterLabel = (key: keyof FilterState, config: (typeof METRICS_CONFIG)[keyof typeof METRICS_CONFIG]) => {
-    return (
-      <FormControlLabel
-        control={<Checkbox checked={filters[key]?.enabled} onChange={handleCheckboxChange(key)} />}
-        label={
-          <Typography className={styles.filterLabel}>
-            {config?.label} {config?.unit}
-          </Typography>
-        }
-      />
-    );
-  };
-
-  const renderInputField = (
-    key: keyof FilterState,
-    value: number,
-    isMin: boolean,
-    minValue: number,
-    maxValue: number,
-    stepValue: number
-  ) => {
-    // Get the current input value from state or use the provided value
-    const inputValue =
-      inputValues[key as string]?.[isMin ? 'min' : 'max'] !== undefined
-        ? inputValues[key as string]?.[isMin ? 'min' : 'max']
-        : value.toFixed(3);
-
-    return (
-      <TextField
-        size="small"
-        value={inputValue}
-        className={styles.minMaxInput}
-        onChange={(e) => handleInputChange(key, isMin)(e as React.ChangeEvent<HTMLInputElement>)}
-        onBlur={handleInputBlur(key, isMin)}
-        inputProps={{
-          className: styles.input,
-          min: minValue,
-          max: maxValue,
-          step: stepValue,
-        }}
-      />
-    );
-  };
-
-  const renderSlider = (
-    key: keyof FilterState,
-    currentMin: number,
-    currentMax: number,
-    minValue: number,
-    maxValue: number,
-    stepValue: number
-  ) => {
-    // Only show median markers for tilt_axis and global_shift
-    const showMedian = key === 'tilt_axis' || key === 'global_shift';
-
-    let medianValue;
-    if (showMedian && summaryAPIData?.computed_metrics) {
-      // Direct mapping to API response names
-      const metricName = key === 'tilt_axis' ? 'Tilt Axis' : 'Global Shift';
-
-      // Find the metric in the array
-      const metric = summaryAPIData.computed_metrics.find((m) => m.name.includes(metricName));
-
-      medianValue = metric?.median;
-    }
-    //Create marks for slider if median exist
-    const marks = [];
-    if (medianValue !== undefined && medianValue >= minValue && medianValue <= maxValue) {
-      marks.push({ value: medianValue, label: `Median:${medianValue.toFixed(2)}`, className: styles.medianMarker });
-    }
-    // Custom styles for the Slider component to style the median marker
-    const sliderStyles = {
-      // Style for the mark label
-      '& .MuiSlider-markLabel': {
-        color: '#1976d2',
-        fontWeight: 'bold',
-        padding: '4px 8px',
-        borderRadius: '4px',
-        border: '1px solid #1976d2',
-        left: '43% !important',
-        transform: 'translateX(-50%) !important',
-        whiteSpace: 'nowrap',
-        marginTop: '-6px',
-      },
-      // Style for the mark dot
-      '& .MuiSlider-mark': {
-        backgroundColor: '#1976d2',
-        height: '25px',
-        width: '3px',
-        marginTop: '-9px',
-      },
-    };
-    return (
-      <Slider
-        value={[currentMin, currentMax]}
-        onChange={handleSliderChange(key)}
-        min={minValue}
-        max={maxValue}
-        step={stepValue}
-        className={styles.slider}
-        disabled={!filters[key]?.enabled}
-        valueLabelDisplay="auto"
-        valueLabelFormat={(value) => value.toFixed(3)}
-        marks={marks}
-        sx={sliderStyles}
-      />
-    );
-  };
-
-  const renderFilter = (key: keyof FilterState) => {
-    // Use the METRICS_CONFIG to get label and unit
-    const config = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG];
-    const minValue = Number(filters[key]?.min ?? 0);
-    const maxValue = Number(filters[key]?.max ?? 100);
-    const current = filters[key]?.current ?? [minValue, maxValue];
-    const currentMin = Number(current[0].toFixed(3));
-    const currentMax = Number(current[1].toFixed(3));
-
-    // Get step value using helper function
-    const stepValue = getStepValue(key, minValue, maxValue);
-
-    return (
-      <div className={styles.filterRow} key={`filter-${key}`}>
-        {renderFilterLabel(key, config)}
-        <div className={styles.filterContent}>
-          {renderInputField(key, currentMin, true, minValue, maxValue, stepValue)}
-          {renderSlider(key, currentMin, currentMax, minValue, maxValue, stepValue)}
-          {renderInputField(key, currentMax, false, minValue, maxValue, stepValue)}
-        </div>
-      </div>
-    );
   };
 
   return (
     <Paper className={styles.filterPaper} elevation={1}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <Typography variant="h1">Filters</Typography>
-        <FormControl style={{ minWidth: 100 }}>
-          <InputLabel sx={{ backgroundColor: 'white', padding: '0 4px' }}>Filter Type</InputLabel>
-          <Select
-            label="Filter Type"
-            value={selectedOption}
-            onChange={(e) => setSelectedOption(e.target.value as 'AND' | 'OR')}
-            size="small"
-          >
-            <MenuItem value="AND">AND</MenuItem>
-            <MenuItem value="OR">OR</MenuItem>
-          </Select>
-        </FormControl>
-      </div>
+      <FilterHeader selectedOption={selectedOption} onOptionChange={(option) => setSelectedOption(option)} />
 
-      {Object.keys(filters).map((key) => renderFilter(key as keyof FilterState))}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-        <Button sdsType="secondary" sdsStyle="rounded" onClick={handleReset}>
-          Reset
-        </Button>
-        <Button sdsType="secondary" sdsStyle="rounded" onClick={handleUncheckAll}>
-          Uncheck All
-        </Button>
-        <Button sdsType="primary" sdsStyle="rounded" onClick={() => handleApplyFilters(filters, selectedOption)}>
-          Apply Filter
-        </Button>
-      </div>
+      {Object.keys(filters).map((key) => (
+        <FilterItem
+          key={`filter-${key}`}
+          metricKey={asMetricKey(key)}
+          filter={filters[asMetricKey(key)]!}
+          config={METRICS_CONFIG[asMetricKey(key)]}
+          inputValues={inputValues[asMetricKey(key)]}
+          summaryAPIData={summaryAPIData}
+          onSliderChange={handleSliderChange(asMetricKey(key))}
+          onCheckboxChange={handleCheckboxChange(asMetricKey(key))}
+          onInputChange={handleInputChange}
+          onInputBlur={handleInputBlur}
+        />
+      ))}
+
+      <FilterControls
+        onReset={handleReset}
+        onUncheckAll={handleUncheckAll}
+        onApplyFilters={() => handleApplyFilters(filters, selectedOption)}
+      />
     </Paper>
   );
 };

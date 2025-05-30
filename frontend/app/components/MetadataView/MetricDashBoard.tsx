@@ -6,6 +6,7 @@ import { MetricScatterPlot } from './MetricScatterPlot';
 import { MetricHistogram } from './MetricHistogram';
 import { Icon } from '@czi-sds/components';
 import { METRICS_CONFIG } from './constants/MetricConfig';
+import { asMetricKey } from './utils/FilterUtils';
 
 interface MetricDashboardProps {
   data?: MetadataVizResponse;
@@ -20,13 +21,13 @@ const processMetadata = (data: MetadataVizResponse | undefined) => {
   if (!data?.accepted_results?.length) return null;
 
   const processedMetrics = Object.keys(METRICS_CONFIG).map((key) => {
-    const metricKey = key as keyof typeof METRICS_CONFIG;
+    const metricKey = asMetricKey(key);
     const values = data.accepted_results.map((item) => {
       return item.metrics[metricKey];
     });
 
     return {
-      key,
+      key: metricKey,
       label: METRICS_CONFIG[metricKey].label,
       unit: METRICS_CONFIG[metricKey].unit,
       values,
