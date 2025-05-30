@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import React from 'react';
 import { InputSlider } from '@czi-sds/components';
 import { Icon } from '@czi-sds/components';
 
 interface SliderControlsProps {
   contrast: [number, number];
   onContrastChange: (value: [number, number]) => void;
+  open: boolean;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const SliderControls = ({ contrast, onContrastChange }: SliderControlsProps) => {
-  const [open, setOpen] = useState(true);
+export const SliderControls = ({ contrast, onContrastChange, open, setOpen }: SliderControlsProps) => {
   return (
     <div className="flex flex-col gap-4 w-full min-w-[300px] max-w-[450px]">
       <div className="flex items-center justify-between cursor-pointer w-full" onClick={() => setOpen((v) => !v)}>

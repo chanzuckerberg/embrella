@@ -15,7 +15,14 @@ export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
 }) => {
   const [search, setSearch] = useState('');
 
-  const filteredObjects = availableObjects.filter((obj) => obj.toLowerCase().includes(search.toLowerCase()));
+  const filteredObjects = availableObjects
+    .filter((obj) => obj.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const aSelected = selectedObjects.map((o) => o.toLowerCase()).includes(a.toLowerCase());
+      const bSelected = selectedObjects.map((o) => o.toLowerCase()).includes(b.toLowerCase());
+      if (aSelected === bSelected) return 0;
+      return aSelected ? -1 : 1;
+    });
 
   const handleToggle = (obj: string) => {
     if (selectedObjects.includes(obj)) {
@@ -37,6 +44,7 @@ export const ObjectLabelsSelector: React.FC<ObjectLabelsSelectorProps> = ({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="border border-gray-300 px-2 py-1 mb-2 w-full"
+        style={{ paddingLeft: '0.25rem' }}
       />
       <div className="max-h-45 overflow-y-auto rounded p-2">
         {filteredObjects.map((obj) => (

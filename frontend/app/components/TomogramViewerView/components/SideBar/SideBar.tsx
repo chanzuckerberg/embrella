@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { SideBarSection } from './components/SideBarSection';
 import { NavigationButtons } from './components/NavigationButtons';
 import { TomogramTable } from './components/TomogramTable';
@@ -31,6 +32,18 @@ export const SideBar = ({
   onContrastLimitsChange: onContrastChange,
 }: SideBarProps) => {
   const reviewedCount = tomograms.filter((t) => t.status !== 'pending').length;
+
+  const [infoOpen, setInfoOpen] = useState(true);
+  const [sliderOpen, setSliderOpen] = useState(true);
+
+  // Determine TomogramTable max-height
+  let tomogramTableMaxHeight = '100px';
+  if (!infoOpen && !sliderOpen) {
+    tomogramTableMaxHeight = '300px';
+  } else if (!infoOpen || !sliderOpen) {
+    tomogramTableMaxHeight = '200px';
+  }
+
   return (
     <div className="basis-[280px] shrink-0 flex flex-col justify-start divide-y-[2px]">
       <SideBarSection>
@@ -45,7 +58,12 @@ export const SideBar = ({
       </SideBarSection>
 
       <SideBarSection>
-        <TomogramTable tomograms={tomograms} selectedTomogram={selectedTomogram} onSelectTomogram={onSelectTomogram} />
+        <TomogramTable
+          tomograms={tomograms}
+          selectedTomogram={selectedTomogram}
+          onSelectTomogram={onSelectTomogram}
+          maxHeight={tomogramTableMaxHeight}
+        />
         <NavigationButtons
           currentIndex={currentIndex}
           totalItems={tomograms.length}
@@ -55,10 +73,15 @@ export const SideBar = ({
       </SideBarSection>
 
       <SideBarSection>
-        <TomogramInfo tomogramDetail={tomogramDetail} />
+        <TomogramInfo tomogramDetail={tomogramDetail} open={infoOpen} setOpen={setInfoOpen} />
       </SideBarSection>
       <SideBarSection>
-        <SliderControls contrast={contrast} onContrastChange={onContrastChange} />
+        <SliderControls
+          contrast={contrast}
+          onContrastChange={onContrastChange}
+          open={sliderOpen}
+          setOpen={setSliderOpen}
+        />
       </SideBarSection>
     </div>
   );

@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import React from 'react';
 import { TomogramDetail } from '@app/components/TomogramViewerView/types';
 import { Icon } from '@czi-sds/components';
 
-export const TomogramInfo = ({ tomogramDetail }: { tomogramDetail: TomogramDetail | null }) => {
-  const [open, setOpen] = useState(true);
-
+export const TomogramInfo = ({
+  tomogramDetail,
+  open,
+  setOpen,
+}: {
+  tomogramDetail: TomogramDetail | null;
+  open: boolean;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) => {
   return (
     <div className="min-w-[300px] max-w-[450px] w-full">
       <div className="flex items-center justify-between cursor-pointer w-full" onClick={() => setOpen((v) => !v)}>
@@ -21,12 +27,6 @@ export const TomogramInfo = ({ tomogramDetail }: { tomogramDetail: TomogramDetai
                 <span className="font-bold">Organism:</span> <span className="italic">Mus musculus</span>
               </div>
               <div className="mt-2 space-y-1">
-                {tomogramDetail.existingReview && (
-                  <div>
-                    <span className="font-bold">Object Labels:</span>{' '}
-                    <span>{(tomogramDetail.existingReview.objectLabels || []).join(', ')}</span>
-                  </div>
-                )}
                 <div>
                   <span className="font-bold">Zarr Path:</span> <span>{tomogramDetail.zarrPath}</span>
                 </div>
