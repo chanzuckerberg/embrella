@@ -178,8 +178,13 @@ def check_job_status(job_id):
         # Check if job exists and its status
         for job in jobs_data['jobs']:
             if job['JOBID'] == job_id:
-                is_running = job['ST'] == 'R'
-                logging.info(f"Job {job_id} status: {'Running' if is_running else 'Not running'}")
+                status = job['ST']
+                is_running = status == 'R'
+                logging.info(f"Job {job_id} status: {status} ({'Running' if is_running else 'Not running'})")
+                
+                # Log additional job details
+                logging.info(f"Job details - Name: {job['NAME']}, User: {job['USER']}, Time: {job['TIME']}")
+                
                 return is_running
                 
         logging.warning(f"Job {job_id} not found in job list")
@@ -262,6 +267,9 @@ def main():
 
         if args.continuous:
             logging.info("Starting AreTomo3 sync service in continuous mode...")
+            consecutive_failures = 0
+            max_failures = 3  # Maximum number of consecutive failures before stopping
+            
             while True:
                 try:
                     # If job_id is provided, check if job is still running
@@ -273,10 +281,21 @@ def main():
                     logging.info("Running AreTomo3 sync...")
                     sync_aretomo3_results(args.session, args.run)
                     logging.info("AreTomo3 sync completed successfully")
+                    
+                    # Reset failure counter on success
+                    consecutive_failures = 0
+                    
                     logging.info("Waiting 60 seconds before next sync...")
                     time.sleep(60)  # Sleep for 60 seconds
                 except Exception as e:
+                    consecutive_failures += 1
                     logging.error(f"Error in sync cycle: {e}")
+                    
+                    if consecutive_failures >= max_failures:
+                        logging.error(f"Reached maximum consecutive failures ({max_failures}). Stopping sync service.")
+                        break
+                        
+                    logging.info(f"Consecutive failures: {consecutive_failures}/{max_failures}")
                     logging.info("Waiting 60 seconds before retrying...")
                     time.sleep(60)
         else:

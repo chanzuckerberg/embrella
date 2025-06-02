@@ -1470,3 +1470,50 @@ def get_msisession_id(request):
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+@login_required
+def trigger_syncer(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            session_name = data.get('session_name')
+            run_number = data.get('run_number')
+            job_id = data.get('job_id')
+            syncer_type = data.get('syncer_type', 'aretomo3')  # Default to aretomo3
+
+            if not session_name or not run_number:
+                return JsonResponse({'error': 'Missing session_name or run_number'}, status=400)
+
+            # Determine which syncer script to use
+            if syncer_type == 'denoise':
+                syncer_script = 'denoise_syncer.py'
+            else:
+                syncer_script = 'aretomo3_syncer.py'
+
+            syncer_script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'processes', 'scripts', syncer_script)
+            
+            # Run the syncer with job tracking and continuous mode
+            subprocess.Popen(['python', syncer_script_path, 
+                            '--session', session_name,
+                            '--run', run_number,
+                            '--job-id', job_id if job_id else '',
+                            '--continuous'],  # Add continuous mode
+                           env=dict(os.environ, 
+                                  PYTHONPATH=os.path.dirname(os.path.dirname(__file__))))
+            
+            logger.info(f"Started {syncer_type} syncer for session {session_name}, run {run_number}, tracking job {job_id}")
+            
+            return JsonResponse({
+                'message': f'{syncer_type.capitalize()} syncer started successfully',
+                'session': session_name,
+                'run': run_number,
+                'job_id': job_id,
+                'status': 'running'
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to start syncer: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
