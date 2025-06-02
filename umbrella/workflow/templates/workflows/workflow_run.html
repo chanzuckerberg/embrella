@@ -1244,12 +1244,8 @@
           use_old_gain: useOldGain,
           run_number: advancedRunNumber,
           user_id: userId,
-<<<<<<< HEAD
           password: encodedPassword,
           run_number: advancedRunNumber
-=======
-          password: encodedPassword
->>>>>>> main
         };
 
         // Handle parameters based on use_old_gain selection
@@ -1334,14 +1330,10 @@
             document.getElementById("outputContainer").style.display = "block";
             document.getElementById("advancedErrorMessage").style.display = "none";
             
-<<<<<<< HEAD
             // Start syncer job after successful submission
             await startSyncerJob(projectName, advancedRunNumber);
             
             // Automatically create processing run after successful job submission
-=======
-            // Create processing run
->>>>>>> main
             await createProcessingRun();
           } else {
             document.getElementById("advancedErrorMessage").textContent = 
