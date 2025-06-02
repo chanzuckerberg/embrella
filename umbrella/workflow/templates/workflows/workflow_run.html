@@ -509,14 +509,14 @@
 
       <!-- Calibrated Total Dose -->
       <div class="form-group">
-        <label for="dosenumber">Calibrated total dose (e-/Å²) for entire tilt series:</label>
+        <label for="dosenumber">Calibrated total dose (e<sup>-</sup>/Å<sup>2</sup>) for entire tilt series:</label>
         <input type="number" id="dosenumber" name="dosenumber" required/>
       </div>
 
       <!-- Estimated Number of Tilt Series -->
       <div class="form-group">
-        <label for="numChecks">Estimated number of tilt series (e.g., 300):</label>
-        <input type="number" id="numChecks" name="numChecks" required/>
+        <label for="frame_dose">Frame dose (e<sup>-</sup>/Å<sup>2</sup>/movie frame):</label>
+        <input type="number" step="any" id="frame_dose" name="frame_dose" value="none"/>
       </div>
 
       <!-- Run Button -->
@@ -704,12 +704,12 @@
 
         <!-- Dose & Number of Tilt Series (No Old Gain) -->
         <div class="form-group">
-          <label for="advancedDoseNumberNo">Enter the calibrated total dose in e-/Å²:</label>
+          <label for="advancedDoseNumberNo">Enter the calibrated total dose in (e<sup>-</sup>/Å<sup>2</sup>):</label>
           <input type="number" id="advancedDoseNumberNo" name="advancedDoseNumberNo" required/>
         </div>
         <div class="form-group">
-          <label for="advancedNumChecksNo">Enter the estimated number of tilt series (e.g., 300):</label>
-          <input type="number" id="advancedNumChecksNo" name="advancedNumChecksNo" required/>
+          <label for="frame_dose_no">Frame dose (e<sup>-</sup>/Å<sup>2</sup>/movie frame):</label>
+          <input type="number" step="any" id="frame_dose_no" name="frame_dose_no" value="none"/>
         </div>
       </div>
 
@@ -855,12 +855,12 @@
 
         <!-- Dose & Number of Tilt Series (Yes Old Gain) -->
         <div class="form-group">
-          <label for="advancedDoseNumberYes">Enter the calibrated total dose in e-/Å²:</label>
+          <label for="advancedDoseNumberYes">Enter the calibrated total dose in (e<sup>-</sup>/Å<sup>2</sup>):</label>
           <input type="number" id="advancedDoseNumberYes" name="advancedDoseNumberYes" required/>
         </div>
         <div class="form-group">
-          <label for="advancedNumChecksYes">Enter the estimated number of tilt series (e.g., 300):</label>
-          <input type="number" id="advancedNumChecksYes" name="advancedNumChecksYes" required/>
+          <label for="frame_dose_yes">Frame dose (e<sup>-</sup>/Å<sup>2</sup>/movie frame):</label>
+          <input type="number" step="any" id="frame_dose_yes" name="frame_dose_yes" value="none"/>
         </div>
       </div>
 
@@ -912,7 +912,22 @@
         alert(`Internal error: Element with id '${id}' not found.`);
         throw new Error(`Element with id '${id}' not found.`);
       }
-      return elem.value.trim();
+      const value = elem.value.trim();
+      // Special handling for frame_dose
+      if (id === 'frame_dose_no' || id === 'frame_dose_yes') {
+        if (!value || value === 'none') {
+          return 'none';
+        }
+      }
+      // Special handling for pixel size to ensure proper decimal format
+      if (id === 'advancedPixelSize' || id === 'advancedPixelSizeYes' || id === 'pixelSize') {
+        if (!value) return '';
+        // Convert to number and format to 3 decimal places
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) return '';
+        return numValue.toFixed(3);
+      }
+      return value;
     }
 
     // On Page Load
@@ -1139,7 +1154,7 @@
         const runNumber = getElementValue("runNumber");
         const pixelSize = getElementValue("pixelSize");
         const dosenumber = getElementValue("dosenumber");
-        const numChecks = getElementValue("numChecks");
+        const frame_dose = getElementValue("frame_dose");
         const userId = getElementValue("userId");
         const password = document.getElementById("password").value;
         if (!password) {
@@ -1155,7 +1170,7 @@
           run_number: runNumber,
           pixel_size: pixelSize,
           dose_number: dosenumber,
-          num_checks: numChecks,
+          frame_dose: frame_dose === 'none' ? null : frame_dose,
           user_id: userId,
           password: encodedPassword,
         };
@@ -1184,6 +1199,9 @@
           document.getElementById("outputContainer").style.display = "block";
           document.getElementById("errorMessage").style.display = "none";
           
+          // Start syncer job after successful submission
+          await startSyncerJob(sessionName, runNumber);
+          
           // Automatically create processing run after successful job submission
           await createProcessingRun();
         } else {
@@ -1206,159 +1224,87 @@
       console.log("runAdvancedFunction called");
 
       try {
-        // Always get advancedRunNumber
+        // Get basic parameters
         const advancedRunNumber = getElementValue("advancedRunNumber");
         const projectName = getElementValue("projectName");
         const useOldGain = getElementValue("useOldGain");
-
         const userId = getElementValue("userId");
-        const passwordElem = document.getElementById("password");
-        if (!passwordElem) {
-          console.error("Element with id 'password' not found.");
-          alert("Internal error: Element with id 'password' not found.");
-          return;
-        }
-        const password = passwordElem.value;
+        const password = document.getElementById("password").value;
+        
         if (!password) {
           alert("Password is required.");
           return;
         }
-        const encodedPassword = btoa(password); // Base64
+        const encodedPassword = btoa(password);
 
+        // Base request body
         let requestBody = {
           mode: "advanced",
           project_name: projectName,
           use_old_gain: useOldGain,
+          run_number: advancedRunNumber,
           user_id: userId,
           password: encodedPassword,
-          run_number: advancedRunNumber // <-- Always set run_number
+          run_number: advancedRunNumber
         };
 
-        console.log("Initial requestBody:", requestBody);
+        // Handle parameters based on use_old_gain selection
+        if (useOldGain === "no") {
+          // Get parameters for no old gain
+          const pixelSize = getElementValue("advancedPixelSize");
+          const doseNumber = getElementValue("advancedDoseNumberNo");
+          const frameDose = getElementValue("frame_dose_no");
+          const useAdvancedParams = getElementValue("useAdvancedParams");
 
-        if (!useOldGain) {
+          // Add basic parameters
+          requestBody.pixel_size = pixelSize;
+          requestBody.dose_number = doseNumber;
+          requestBody.frame_dose = frameDose === 'none' ? null : frameDose;
+          requestBody.use_advanced_params = useAdvancedParams;
+
+          // Add advanced parameters if selected
+          if (useAdvancedParams === "yes") {
+            requestBody.tilt_axis = getElementValue("tiltAxis") || "";
+            requestBody.tilt_axis_refine = getElementValue("tiltAxisRefine") || "no";
+            requestBody.align_z = getElementValue("alignZ") || "";
+            requestBody.vol_z = getElementValue("volZ") || "1600";
+            requestBody.imod_option = getElementValue("imodOption") || "no";
+            requestBody.local_shift = getElementValue("localAln") || "no";
+            requestBody.tilt_offset = getElementValue("tiltCorr") || "no";
+            requestBody.thickness_measure = getElementValue("tempOption") || "no";
+          }
+        } else if (useOldGain === "yes") {
+          // Get parameters for yes old gain
+          const gainFileName = getElementValue("gainFileName");
+          const pixelSize = getElementValue("advancedPixelSizeYes");
+          const doseNumber = getElementValue("advancedDoseNumberYes");
+          const frameDose = getElementValue("frame_dose_yes");
+          const useAdvancedParams = getElementValue("useAdvancedParamsYes");
+
+          // Add basic parameters
+          requestBody.gain_file_name = gainFileName;
+          requestBody.pixel_size = pixelSize;
+          requestBody.dose_number = doseNumber;
+          requestBody.frame_dose = frameDose === 'none' ? null : frameDose;
+          requestBody.use_advanced_params = useAdvancedParams;
+
+          // Add advanced parameters if selected
+          if (useAdvancedParams === "yes") {
+            requestBody.tilt_axis = getElementValue("tiltAxisYes") || "0";
+            requestBody.tilt_axis_refine = getElementValue("tiltAxisRefineYes") || "no";
+            requestBody.align_z = getElementValue("alignZYes") || "";
+            requestBody.vol_z = getElementValue("volZYes") || "1600";
+            requestBody.imod_option = getElementValue("imodOptionYes") || "no";
+            requestBody.local_shift = getElementValue("localAlnYes") || "no";
+            requestBody.tilt_offset = getElementValue("tiltCorrYes") || "no";
+            requestBody.thickness_measure = getElementValue("tempOptionYes") || "no";
+          }
+        } else {
           alert("Please select yes or no for 'Do you want to use an old gain reference?'");
           return;
         }
 
-        // If "no" for old gain
-        if (useOldGain === "no") {
-          const denoisetTraining = getElementValue("denoisetTraining");
-          const evnOddSplit = getElementValue("evnOddSplit");
-          const advancedPixelSize = getElementValue("advancedPixelSize");
-          const advancedDoseNumberNo = getElementValue("advancedDoseNumberNo");
-          const advancedNumChecksNo = getElementValue("advancedNumChecksNo");
-          const useAdvancedParams = getElementValue("useAdvancedParams");
-
-          // Check required fields
-          if (
-            !advancedRunNumber ||
-            !denoisetTraining ||
-            !evnOddSplit ||
-            !advancedPixelSize ||
-            !advancedDoseNumberNo ||
-            !advancedNumChecksNo ||
-            !useAdvancedParams
-          ) {
-            alert("Please fill in all required fields in the 'No Old Gain Reference' section.");
-            return;
-          }
-
-          requestBody.denoiset_training = denoisetTraining;
-          requestBody.evn_odd_split = evnOddSplit;
-          requestBody.pixel_size = advancedPixelSize;
-          requestBody.dose_number = advancedDoseNumberNo;
-          requestBody.num_checks = advancedNumChecksNo;
-          requestBody.use_advanced_params = useAdvancedParams;
-
-          console.log("Updated requestBody (no old gain):", requestBody);
-
-          if (useAdvancedParams === "yes") {
-            // Grab advanced parameters
-            const tiltAxis = getElementValue("tiltAxis") || "";
-            const tiltAxisRefine = getElementValue("tiltAxisRefine") || "no";
-            const alignZ = getElementValue("alignZ") || "";
-            const volZ = getElementValue("volZ") || "1600"; // default
-            const imodOption = getElementValue("imodOption") || "no";
-            const localAln = getElementValue("localAln") || "no";
-            const tiltCorr = getElementValue("tiltCorr") || "no";
-            const tempOption = getElementValue("tempOption") || "no";
-
-            requestBody.tilt_axis = tiltAxis;
-            requestBody.tilt_axis_refine = tiltAxisRefine;
-            requestBody.align_z = alignZ;
-            requestBody.vol_z = volZ;
-            requestBody.imod_option = imodOption;
-            requestBody.local_shift = localAln;
-            requestBody.tilt_offset = tiltCorr;
-            requestBody.thickness_measure = tempOption;
-
-            console.log("Added advanced parameters (no old gain):", requestBody);
-          }
-        }
-
-        // If "yes" for old gain
-        if (useOldGain === "yes") {
-          const gainFileName = getElementValue("gainFileName");
-          const denoisetTrainingYes = getElementValue("denoisetTrainingYes");
-          const evnOddSplitYes = getElementValue("evnOddSplitYes");
-          const advancedPixelSizeYes = getElementValue("advancedPixelSizeYes");
-          const useAdvancedParamsYes = getElementValue("useAdvancedParamsYes");
-          const advancedDoseNumberYes = getElementValue("advancedDoseNumberYes");
-          const advancedNumChecksYes = getElementValue("advancedNumChecksYes");
-
-          // Check required fields
-          if (
-            !gainFileName ||
-            !denoisetTrainingYes ||
-            !evnOddSplitYes ||
-            !advancedPixelSizeYes ||
-            !advancedDoseNumberYes ||
-            !advancedNumChecksYes ||
-            !useAdvancedParamsYes
-          ) {
-            alert("Please fill in all required fields in the 'Yes Old Gain Reference' section.");
-            return;
-          }
-
-          requestBody.gain_file_name = gainFileName;
-          requestBody.denoiset_training = denoisetTrainingYes;
-          requestBody.evn_odd_split = evnOddSplitYes;
-          requestBody.pixel_size = advancedPixelSizeYes;
-          requestBody.dose_number = advancedDoseNumberYes;
-          requestBody.num_checks = advancedNumChecksYes;
-          requestBody.use_advanced_params = useAdvancedParamsYes;
-
-          console.log("Updated requestBody (yes old gain):", requestBody);
-
-          if (useAdvancedParamsYes === "yes") {
-            // Grab advanced parameters
-            const tiltAxisYes = getElementValue("tiltAxisYes") || "0";
-            const tiltAxisRefineYes = getElementValue("tiltAxisRefineYes") || "no";
-            const alignZYes = getElementValue("alignZYes") || "";
-            const volZYes = getElementValue("volZYes") || "1600"; // default
-            const imodOptionYes = getElementValue("imodOptionYes") || "no";
-            const localAlnYes = getElementValue("localAlnYes") || "no";
-            const tiltCorrYes = getElementValue("tiltCorrYes") || "no";
-            const tempOptionYes = getElementValue("tempOptionYes") || "no";
-
-            requestBody.tilt_axis = tiltAxisYes;
-            requestBody.tilt_axis_refine = tiltAxisRefineYes;
-            requestBody.align_z = alignZYes;
-            requestBody.vol_z = volZYes;
-            requestBody.imod_option = imodOptionYes;
-            requestBody.local_shift = localAlnYes;
-            requestBody.tilt_offset = tiltCorrYes;
-            requestBody.thickness_measure = tempOptionYes;
-
-            console.log("Added advanced parameters (yes old gain):", requestBody);
-          }
-        }
-
-        const csrftoken = getCookie("csrftoken");
-        console.log("CSRF Token:", csrftoken);
-
-        // Display loading indicator
+        // Show loading indicator
         showLoadingIndicator();
 
         try {
@@ -1366,41 +1312,43 @@
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-CSRFToken": csrftoken,
+              "X-CSRFToken": getCookie("csrftoken"),
             },
             body: JSON.stringify(requestBody),
           });
 
-          // Hide loading
+          // Hide loading indicator
           hideLoadingIndicator();
 
-          console.log("Fetch response status:", response.status);
           const result = await response.json();
-          console.log("Fetch response result:", result);
+          console.log("Response:", result);
 
           if (response.ok) {
             alert(`Message: ${result.message}`);
-            document.getElementById("outputDirectory").textContent = `/hpc/projects/group.czii/krios1.processing/aretomo3/${projectName}/run${advancedRunNumber}`;
+            document.getElementById("outputDirectory").textContent = 
+              `/hpc/projects/group.czii/krios1.processing/aretomo3/${projectName}/run${advancedRunNumber}`;
             document.getElementById("outputContainer").style.display = "block";
             document.getElementById("advancedErrorMessage").style.display = "none";
+            
+            // Start syncer job after successful submission
+            await startSyncerJob(projectName, advancedRunNumber);
             
             // Automatically create processing run after successful job submission
             await createProcessingRun();
           } else {
-            document.getElementById("advancedErrorMessage").textContent = `Error: ${
-              result.error || "Failed to run the job."
-            }`;
+            document.getElementById("advancedErrorMessage").textContent = 
+              `Error: ${result.error || "Failed to run the job."}`;
             document.getElementById("advancedErrorMessage").style.display = "block";
           }
         } catch (error) {
           console.error("Error during advanced job submission:", error);
-          document.getElementById("advancedErrorMessage").textContent = `Error: ${
-            error.message || "Failed to run the job."
-          }`;
+          document.getElementById("advancedErrorMessage").textContent = 
+            `Error: ${error.message || "Failed to run the job."}`;
           document.getElementById("advancedErrorMessage").style.display = "block";
         }
       } catch (error) {
         console.error("Error in runAdvancedFunction:", error);
+        hideLoadingIndicator();
       }
     }
 
@@ -1751,7 +1699,33 @@
       }
     }
 
-    
+    // Add new function to start syncer job
+    async function startSyncerJob(sessionName, runId) {
+      try {
+        const csrftoken = getCookie("csrftoken");
+        const response = await fetch("/workflow/start_syncer", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken,
+          },
+          body: JSON.stringify({
+            session_name: sessionName,
+            run_id: runId,
+            job_type: "aretomo3"  // or "denoise" depending on the job type
+          }),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          console.log("Syncer job started successfully:", result);
+        } else {
+          console.error("Failed to start syncer job:", result.error);
+        }
+      } catch (error) {
+        console.error("Error starting syncer job:", error);
+      }
+    }
 
     // Update link clicks to also refresh session list when popup closes
     function openSessionCreationPopup() {

@@ -169,7 +169,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   useHotkeys('right', () => changeTomogram(1));
 
   return (
-    <div className="w-full h-screen flex flex-col items-stretch">
+    <div className="w-full h-screen flex flex-col items-stretch bg-white">
       <TopBar saveState={state.saveState} />
       {!userCanReview && <PermissionBanner ownerName={review.owner.name} />}
       <div className="flex-auto flex min-h-0 border-t border-gray-300">

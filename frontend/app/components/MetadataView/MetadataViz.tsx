@@ -1,16 +1,17 @@
-import React from 'react';
+import React, { memo } from 'react';
 import styles from './MetadataViz.module.css';
 import { MetadataFilters } from './MetadataFilters';
-import { MetadataVizResponse, FilterConfig } from '@app/common/types/metadataViz/metadataVizData';
+import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
 import { MetricDashboard } from './MetricDashBoard';
 import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
+import { UseFilterStateReturn } from '@app/common/hooks/useFetchMetadata/useFilterState';
 
 interface MetadataVizProps {
   vizResponse?: MetadataVizResponse;
   isSuccess: boolean;
   error?: { status: number; message: string };
   isLoading: boolean;
-  onApplyFilters?: (filters: FilterConfig, selectedOption: 'AND' | 'OR') => void;
+  filterState: UseFilterStateReturn;
   scatterplotData?: MetadataVizResponse;
   scatterplotSuccess?: boolean;
   scatterplotError?: { status: number; message: string };
@@ -18,47 +19,54 @@ interface MetadataVizProps {
   summaryAPIData?: MetadataSummaryResponse;
 }
 
-export const MetadataViz: React.FC<MetadataVizProps> = ({
-  vizResponse,
-  isSuccess,
-  error,
-  isLoading,
-  onApplyFilters,
-  scatterplotData,
-  scatterplotSuccess,
-  scatterplotError,
-  scatterplotLoading,
-  summaryAPIData,
-}) => {
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
+/**
+ * Component that renders the metadata visualization section
+ * Includes filters and metric dashboard (scatter plot, histograms)
+ */
+export const MetadataViz: React.FC<MetadataVizProps> = memo(
+  ({
+    vizResponse,
+    isSuccess,
+    error,
+    isLoading,
+    filterState,
+    summaryAPIData,
+    scatterplotData,
+    scatterplotSuccess,
+    scatterplotError,
+    scatterplotLoading,
+  }) => {
+    if (isLoading) {
+      return <div>Loading...</div>;
+    }
 
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  }
+    if (error) {
+      return <div>Error: {error instanceof Error ? error.message : 'An unknown error occurred'}</div>;
+    }
 
-  if (!isSuccess || !vizResponse) {
-    return <div>No data available</div>;
+    if (!isSuccess || !vizResponse) {
+      return <div>No data available</div>;
+    }
+
+    return (
+      <div className={styles.container}>
+        <div className={styles.leftColumn}>
+          <MetadataFilters
+            metricRanges={vizResponse?.metric_ranges}
+            filterState={filterState}
+            summaryAPIData={summaryAPIData}
+          />
+        </div>
+        <div className={styles.middleColumn}>
+          <MetricDashboard
+            data={vizResponse}
+            scatterplotData={scatterplotData}
+            scatterplotSuccess={scatterplotSuccess}
+            scatterplotError={scatterplotError}
+            scatterplotLoading={scatterplotLoading}
+          />
+        </div>
+      </div>
+    );
   }
-  return (
-    <div className={styles.container}>
-      <div className={styles.leftColumn}>
-        <MetadataFilters
-          metricRanges={vizResponse?.metric_ranges}
-          onApplyFilters={onApplyFilters}
-          summaryAPIData={summaryAPIData}
-        />
-      </div>
-      <div className={styles.middleColumn}>
-        <MetricDashboard
-          data={vizResponse}
-          scatterplotData={scatterplotData}
-          scatterplotSuccess={scatterplotSuccess}
-          scatterplotError={scatterplotError}
-          scatterplotLoading={scatterplotLoading}
-        />
-      </div>
-    </div>
-  );
-};
+);
