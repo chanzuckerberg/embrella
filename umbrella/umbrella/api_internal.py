@@ -226,13 +226,13 @@ class ReviewView(View):
         search = ''
         sort_field = 'updatedAt'
         sort_order = 'desc'
-        limit = 20
+        limit = None
         offset = 0
 
         requested_page = 1
 
         try:
-            for item in json.loads(request.GET.get('q', default="")):
+            for item in json.loads(request.GET.get('q', default="[]")):
                 match item['category']:
                     case 'search':
                         search = item['value']
@@ -241,6 +241,7 @@ class ReviewView(View):
                     case 'asc':
                         sort_order = 'asc' if item['value'][0] else 'desc'
                     case 'page':
+                        limit = 20
                         requested_page = item['value'][0]
                         offset = (requested_page - 1) * limit
 
@@ -294,6 +295,9 @@ class ReviewView(View):
             # Get total count before pagination
             total_count = queryset.count()
 
+            if limit is None:
+                limit = total_count
+
             # Apply pagination
             queryset = queryset[offset:offset + limit]
 
@@ -314,7 +318,8 @@ class ReviewView(View):
                         "name": review.review_name,
                         "type": review.review_type,
                         "url": f"{get_base_url()}/admin/processes/review/{review.review_id}",
-                        "annotationObjects": ["lysosome", "golgi apparatus", "microtubule"] # TODO
+                        "annotationObjects": review.objects_of_interest.split(',') 
+                            if review.objects_of_interest is not None else []
                     },
                     "session": {
                         "id": review.msi_session.pk,
@@ -399,6 +404,8 @@ class ReviewView(View):
                     "id": str(review.requestor.id) if review.requestor else None,
                     "name": review.requestor.username if review.requestor else None
                 },
+                "availableAnnotationObjects": review.objects_of_interest.split(',') 
+                    if review.objects_of_interest is not None else [],
                 "tomograms": [
                     {
                         "tomogramId": tomo['tomogram_id'],
@@ -494,7 +501,8 @@ class ReviewView(View):
                 requestor=requestor,
                 status='not_started',
                 total_count=tomogram_count,  # Set total count to actual tomogram count
-                reviewed_count=0
+                reviewed_count=0,
+                objects_of_interest=data['annotationObjects']
             )
 
             # Return the created review
