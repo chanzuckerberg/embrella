@@ -172,7 +172,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
     <div className="w-full h-screen flex flex-col items-stretch">
       <TopBar saveState={state.saveState} />
       {!userCanReview && <PermissionBanner ownerName={review.owner.name} />}
-      <div className="flex-auto flex border-t border-gray-300">
+      <div className="flex-auto flex min-h-0 border-t border-gray-300">
         <SideBar
           tomogramDetail={state.detail}
           reviewName={review.reviewName}
