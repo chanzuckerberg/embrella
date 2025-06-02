@@ -129,9 +129,7 @@ export const getPositionsMapping = (
 ): PositionsMapping => {
   // Collect all unique position names from both result sets
   const allPositions = new Set<string>(
-    [...acceptedResults, ...(rejectedResults || [])]
-      .filter(item => item.name)
-      .map(item => item.name as string)
+    [...acceptedResults, ...(rejectedResults || [])].filter((item) => item.name).map((item) => item.name as string)
   );
 
   // Create a consistent mapping for all positions (sorted to ensure consistent ordering)
@@ -143,11 +141,10 @@ export const getPositionsMapping = (
     });
 
   // Get position indices for accepted and rejected results
-  const acceptedPositions = acceptedResults
-    .map(item => (item.name ? positionMap.get(item.name) || 0 : 0));
-  
+  const acceptedPositions = acceptedResults.map((item) => (item.name ? positionMap.get(item.name) || 0 : 0));
+
   const rejectedPositions = rejectedResults
-    ? rejectedResults.map(item => (item.name ? positionMap.get(item.name) || 0 : 0))
+    ? rejectedResults.map((item) => (item.name ? positionMap.get(item.name) || 0 : 0))
     : [];
 
   // Get all unique position indices for complete visualization
