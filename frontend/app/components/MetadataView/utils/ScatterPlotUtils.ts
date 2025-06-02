@@ -127,46 +127,36 @@ export const getPositionsMapping = (
   acceptedResults: TiltSeries[],
   rejectedResults?: TiltSeries[]
 ): PositionsMapping => {
-  // Create a mapping of position names to their original indices
+  // Collect all unique position names from both result sets
+  const allPositions = new Set<string>(
+    [...acceptedResults, ...(rejectedResults || [])].filter((item) => item.name).map((item) => item.name as string)
+  );
+
+  // Create a consistent mapping for all positions (sorted to ensure consistent ordering)
   const positionMap = new Map<string, number>();
-
-  // First collect all unique position names from both accepted and rejected results
-  const allPositions = new Set<string>();
-
-  // Add all position names from accepted results
-  acceptedResults.forEach((item) => {
-    if (item.name) {
-      allPositions.add(item.name);
-    }
-  });
-
-  // Add all position names from rejected results
-  if (rejectedResults) {
-    rejectedResults.forEach((item) => {
-      if (item.name) {
-        allPositions.add(item.name);
-      }
-    });
-  }
-
-  // Create a consistent mapping for all positions
-  // Sort the names to ensure consistent ordering
   Array.from(allPositions)
     .sort()
     .forEach((name, index) => {
       positionMap.set(name, index);
     });
 
-  // Get all unique position indices for complete visualization
-  const allPositionIndices = Array.from(allPositions).map((name) => positionMap.get(name) || 0);
+  // Get position indices for accepted and rejected results
+  const acceptedPositions = acceptedResults.map((item) => (item.name ? positionMap.get(item.name) || 0 : 0));
 
-  // Now use the position map to get consistent indices
+  const rejectedPositions = rejectedResults
+    ? rejectedResults.map((item) => (item.name ? positionMap.get(item.name) || 0 : 0))
+    : [];
+
+  // Get all unique position indices for complete visualization
+  const allPositionIndices = Array.from(positionMap.values());
+  const maxPositionIndex = allPositionIndices.length > 0 ? Math.max(...allPositionIndices) + 1 : 0;
+
   return {
     positionMap,
-    acceptedPositions: acceptedResults.map((item) => (item.name ? positionMap.get(item.name) || 0 : 0)),
-    rejectedPositions: rejectedResults?.map((item) => (item.name ? positionMap.get(item.name) || 0 : 0)) || [],
+    acceptedPositions,
+    rejectedPositions,
     allPositionIndices,
-    maxPositionIndex: allPositionIndices.length > 0 ? Math.max(...allPositionIndices) + 1 : 0,
+    maxPositionIndex,
   };
 };
 

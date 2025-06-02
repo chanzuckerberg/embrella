@@ -25,6 +25,7 @@ export interface Review {
   reviewName: string;
   owner: User;
   tomograms: ReviewTomogramSummary[];
+  availableAnnotationObjects: string[];
 }
 
 export interface TomogramDetail {

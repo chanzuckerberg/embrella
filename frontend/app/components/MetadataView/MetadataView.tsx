@@ -6,6 +6,9 @@ import { MetadataViz } from './MetadataViz';
 import { useFetchMetadataViz } from '@app/common/hooks/useFetchMetadata/useFetchMetadataViz';
 import { useFetchMetadataSummary } from '@app/common/hooks/useFetchMetadata/useFetchMetadataSummary';
 import { FilterConfig } from '@app/common/types/metadataViz/metadataVizData';
+import { useFilterState } from '@app/common/hooks/useFetchMetadata/useFilterState';
+import { METRICS_CONFIG } from './constants/MetricConfig';
+import { MetricRanges } from '@app/common/types/metadataViz/metadataVizData';
 
 interface MetadataViewProps {
   sessionName: string;
@@ -14,7 +17,6 @@ interface MetadataViewProps {
 
 export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): React.JSX.Element => {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
-  const [filters] = useState<FilterConfig | undefined>();
   const [scatterplotFilters, setScatterplotFilters] = useState<FilterConfig | undefined>();
   const [shouldFetchSummary, setShouldFetchSummary] = useState(true);
 
@@ -31,7 +33,7 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
   }, []);
 
   // This API call is for the metadata filters and histogram
-  const { data, isSuccess, error, isLoading } = useFetchMetadataViz(sessionName, runNumber, filters);
+  const { data, isSuccess, error, isLoading } = useFetchMetadataViz(sessionName, runNumber);
 
   // This API call is only for the scatterplot
   const {
@@ -41,20 +43,41 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
     isLoading: scatterplotLoading,
   } = useFetchMetadataViz(sessionName, runNumber, scatterplotFilters);
 
-  const handleApplyFilters = useCallback((newFilters: FilterConfig | null) => {
+  // Handle filter state changes from the filter hook
+  const handleFilterStateChange = useCallback((filterApplied: boolean, filterConfig?: FilterConfig) => {
+    setIsFilterApplied(filterApplied);
+
     // Force a state update by creating a new object reference
-    if (newFilters === null) {
-      // Reset case
-      setScatterplotFilters(undefined);
-      setIsFilterApplied(false);
+    if (filterApplied && filterConfig) {
+      setScatterplotFilters({ ...filterConfig });
     } else {
-      // Apply new filters - create a new object to ensure React detects the change
-      setScatterplotFilters({ ...newFilters });
-      // Check if there are any active filters
-      const hasActiveFilters = newFilters.filters && Object.keys(newFilters.filters).length > 0;
-      setIsFilterApplied(hasActiveFilters);
+      setScatterplotFilters(undefined);
     }
   }, []);
+  // Create a default MetricRanges object with all required properties
+  const defaultMetricRanges = React.useMemo((): MetricRanges => {
+    return {
+      thickness: [0, 0],
+      tilt_axis: [0, 0],
+      global_shift: [0, 0],
+      bad_patch_low: [0, 0],
+      bad_patch_all: [0, 0],
+      ctf_resolution: [0, 0],
+      ctf_score: [0, 0],
+      pixel_size: [0, 0],
+      alpha0: [0, 0],
+      beta0: [0, 0],
+    };
+  }, []);
+
+  // Initialize the filter state hook
+  const filterState = useFilterState({
+    metricRanges: data?.metric_ranges || (defaultMetricRanges as MetricRanges),
+    metricsConfig: METRICS_CONFIG,
+    initialFilterType: 'AND',
+    onFilterStateChange: handleFilterStateChange,
+    summaryAPIData: summaryData,
+  });
 
   return (
     <div>
@@ -72,7 +95,7 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
         isSuccess={isSuccess}
         error={error}
         isLoading={isLoading}
-        onApplyFilters={handleApplyFilters}
+        filterState={filterState}
         summaryAPIData={summaryData}
         scatterplotData={scatterplotData}
         scatterplotSuccess={scatterplotSuccess}

@@ -158,6 +158,7 @@ class ProcRun(models.Model):
     json_path = models.ForeignKey(Path, on_delete=models.CASCADE, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return '%s-%s' % (self.proc_plan, self.name)
 
@@ -689,6 +690,7 @@ class Review(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name='raw_tomograms')
     requestor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_reviews')
+    objects_of_interest = models.TextField(null=True)
 
     def __str__(self):
         return f'Review {self.review_name} for {self.msi_session.name}'

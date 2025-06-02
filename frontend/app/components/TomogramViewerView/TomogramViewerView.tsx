@@ -214,7 +214,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
             <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
               <ObjectLabelsSelector
                 isDisabled={!userCanReview}
-                availableObjects={AVAILABLE_ANNOTATION_OBJECTS}
+                availableObjects={review.availableAnnotationObjects}
                 selectedObjects={state.objectLabels}
                 setSelectedObjects={(labels) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels })}
               />
