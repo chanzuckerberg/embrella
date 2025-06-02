@@ -28,6 +28,9 @@ import time
 import pandas as pd
 import paramiko
 from io import StringIO
+import subprocess
+import logging
+from processes.models import ProcRun
 CELERY_BEAT_SCHEDULE = {
     'update_job_data_cache_every_5_seconds': {
         'task': 'workflow.tasks.update_job_data_cache',
@@ -348,10 +351,25 @@ def run_aretomo3(request):
                       advanced_status=False,
                       job_id=job_id_str)
 
+            # Trigger the AreTomo3 syncer script
+            try:
+                syncer_script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'processes', 'scripts', 'aretomo3_syncer.py')
+                # Run the syncer once with job tracking
+                subprocess.Popen(['python', syncer_script_path, 
+                                '--session', session_name,
+                                '--run', run_number,
+                                '--job-id', job_id_str], 
+                               env=dict(os.environ, 
+                                      PYTHONPATH=os.path.dirname(os.path.dirname(__file__))))
+                logging.info(f"Started AreTomo3 syncer for session {session_name}, run {run_number}, tracking job {job_id_str}")
+            except Exception as e:
+                logging.error(f"Failed to start AreTomo3 syncer: {str(e)}")
+
             return JsonResponse({
                 'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the output directory below',
                 'output': output,
-                'error': error
+                'error': error,
+                'job_id': job_id_str
             })
         except Exception as e:
             # Log the error details
@@ -1458,4 +1476,51 @@ def get_msisession_id(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+@login_required
+def trigger_syncer(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            session_name = data.get('session_name')
+            run_number = data.get('run_number')
+            job_id = data.get('job_id')
+            syncer_type = data.get('syncer_type', 'aretomo3')  # Default to aretomo3
+
+            if not session_name or not run_number:
+                return JsonResponse({'error': 'Missing session_name or run_number'}, status=400)
+
+            # Determine which syncer script to use
+            if syncer_type == 'denoise':
+                syncer_script = 'denoise_syncer.py'
+            else:
+                syncer_script = 'aretomo3_syncer.py'
+
+            syncer_script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'processes', 'scripts', syncer_script)
+            
+            # Run the syncer with job tracking and continuous mode
+            subprocess.Popen(['python', syncer_script_path, 
+                            '--session', session_name,
+                            '--run', run_number,
+                            '--job-id', job_id if job_id else '',
+                            '--continuous'],  # Add continuous mode
+                           env=dict(os.environ, 
+                                  PYTHONPATH=os.path.dirname(os.path.dirname(__file__))))
+            
+            logger.info(f"Started {syncer_type} syncer for session {session_name}, run {run_number}, tracking job {job_id}")
+            
+            return JsonResponse({
+                'message': f'{syncer_type.capitalize()} syncer started successfully',
+                'session': session_name,
+                'run': run_number,
+                'job_id': job_id,
+                'status': 'running'
+            })
+
+        except Exception as e:
+            logger.error(f"Failed to start syncer: {str(e)}")
+            return JsonResponse({'error': str(e)}, status=500)
+
     return JsonResponse({'error': 'Invalid request method'}, status=400)

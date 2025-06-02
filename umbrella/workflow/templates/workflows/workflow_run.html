@@ -1199,6 +1199,9 @@
           document.getElementById("outputContainer").style.display = "block";
           document.getElementById("errorMessage").style.display = "none";
           
+          // Start syncer job after successful submission
+          await startSyncerJob(sessionName, runNumber);
+          
           // Automatically create processing run after successful job submission
           await createProcessingRun();
         } else {
@@ -1241,7 +1244,8 @@
           use_old_gain: useOldGain,
           run_number: advancedRunNumber,
           user_id: userId,
-          password: encodedPassword
+          password: encodedPassword,
+          run_number: advancedRunNumber
         };
 
         // Handle parameters based on use_old_gain selection
@@ -1326,7 +1330,10 @@
             document.getElementById("outputContainer").style.display = "block";
             document.getElementById("advancedErrorMessage").style.display = "none";
             
-            // Create processing run
+            // Start syncer job after successful submission
+            await startSyncerJob(projectName, advancedRunNumber);
+            
+            // Automatically create processing run after successful job submission
             await createProcessingRun();
           } else {
             document.getElementById("advancedErrorMessage").textContent = 
@@ -1692,7 +1699,33 @@
       }
     }
 
-    
+    // Add new function to start syncer job
+    async function startSyncerJob(sessionName, runId) {
+      try {
+        const csrftoken = getCookie("csrftoken");
+        const response = await fetch("/workflow/start_syncer", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken,
+          },
+          body: JSON.stringify({
+            session_name: sessionName,
+            run_id: runId,
+            job_type: "aretomo3"  // or "denoise" depending on the job type
+          }),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          console.log("Syncer job started successfully:", result);
+        } else {
+          console.error("Failed to start syncer job:", result.error);
+        }
+      } catch (error) {
+        console.error("Error starting syncer job:", error);
+      }
+    }
 
     // Update link clicks to also refresh session list when popup closes
     function openSessionCreationPopup() {

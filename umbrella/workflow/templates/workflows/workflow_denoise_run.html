@@ -434,9 +434,41 @@
           alert('DenoisET job submitted and processing run created successfully!');
           console.log('Output:', data.output);
           console.log('Error:', data.error);
+          
+          // Start syncer job after successful submission
+          await startSyncerJob(sessionName, denoiseRunNumber, data.job_id);
         }
       } catch (error) {
         alert('Request failed: ' + error.message);
+      }
+    }
+
+    // Add new function to start syncer job
+    async function startSyncerJob(sessionName, runId, jobId) {
+      try {
+        const csrftoken = getCookie("csrftoken");
+        const response = await fetch("/workflow/trigger_syncer", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken,
+          },
+          body: JSON.stringify({
+            session_name: sessionName,
+            run_number: runId,
+            job_id: jobId,
+            syncer_type: "denoise"
+          }),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          console.log("Syncer job started successfully:", result);
+        } else {
+          console.error("Failed to start syncer job:", result.error);
+        }
+      } catch (error) {
+        console.error("Error starting syncer job:", error);
       }
     }
 

@@ -1140,7 +1140,7 @@ def get_runs(request):
     try:
         session = MsiSession.objects.get(id=session_id)
         # Get unique run IDs from Review table for this session
-        runs = Review.objects.filter(session=session).values('run_id').distinct()
+        runs = Review.objects.filter(msi_session=session).values('run_id').distinct()
         runs_data = [{'runId': run['run_id']} for run in runs]
         return JsonResponse({'runs': runs_data})
     except MsiSession.DoesNotExist:
@@ -1198,38 +1198,47 @@ def get_tomogram_stats(request):
     run_id = request.GET.get('run')
     recon_type = request.GET.get('type', '').lower()
 
+    print(f"Getting tomogram stats for - session_id: {session_id}, run_id: {run_id}, recon_type: {recon_type}")
+
     try:
         # Get zarr files for the selected configuration
         session = MsiSession.objects.get(id=session_id)
-        zarr_files = get_zarr_files(session.name, run_id, recon_type)
+        print(f"Found session: {session.name}")
         
-        # Build the base query joining all required tables
-        query = ReviewTomogram.objects.select_related(
-            'review',
-            'review__session'
-        ).filter(
-            review__session_id=session_id
+        zarr_files = get_zarr_files(session.name, run_id, recon_type)
+        print(f"Found {len(zarr_files)} zarr files")
+        
+        # Simplified query directly on ReviewTomogram
+        query = ReviewTomogram.objects.filter(
+            session_id=session_id,
+            run_id=run_id,
+            reconstruction_type__iexact=recon_type
         )
 
-        # Add filters based on UI selections
-        if run_id:
-            query = query.filter(review__run_id=run_id)
-        if recon_type:
-            query = query.filter(review__reconstruction_type__iexact=recon_type)
-
+        print(f"Query: {query}")
         # Get the count from the database
         db_count = query.count()
+        print(f"Found {db_count} tomograms in database")
+        
+        # Get some sample tomograms for debugging
+        sample_tomograms = list(query.values('position_id', 'reconstruction_type', 'run_id')[:5])
+        print(f"Sample tomograms: {sample_tomograms}")
         
         return JsonResponse({
             'db_count': db_count,  # Count from Embrella database
             'generated': len(zarr_files),  # Count from file server
-            'zarr_files': zarr_files  # Include the list of zarr files in the response
+            'zarr_files': zarr_files,  # Include the list of zarr files in the response
+            'session_name': session.name,
+            'run_id': run_id,
+            'recon_type': recon_type
         })
     except MsiSession.DoesNotExist:
+        print(f"Session {session_id} not found")
         return JsonResponse({
             'error': 'Session not found'
         }, status=404)
     except Exception as e:
+        print(f"Error in get_tomogram_stats: {str(e)}")
         return JsonResponse({
             'error': str(e)
         }, status=500)
@@ -1255,23 +1264,37 @@ async def start_sync(request):
         print(f"Found session: {session.name}")
 
         # Check all reviews for this session to see what's available
-        all_reviews = await sync_to_async(list)(Review.objects.filter(session=session))
+        all_reviews = await sync_to_async(list)(Review.objects.filter(msi_session=session))
         print(f"All reviews for this session: {[{'run_id': r.run_id, 'reconstruction_type': r.reconstruction_type} for r in all_reviews]}")
 
         # Get review with joined session data in a single query - using case-insensitive comparison
-        review = await sync_to_async(Review.objects.select_related('session').get)(
-            session_id=session_id,
+        review = await sync_to_async(Review.objects.select_related('msi_session').get)(
+            msi_session_id=session_id,
             run_id=run_id,
             reconstruction_type__iexact=recon_type  # Case-insensitive comparison
         )
         print(f"Found review: {review}")
         print(f"Associated session: {review.msi_session}")
+
+        # Check for existing tomograms with the same parameters
+        existing_tomograms = await sync_to_async(list)(ReviewTomogram.objects.filter(
+            session=session,
+            run_id=run_id,
+            reconstruction_type__iexact=recon_type
+        ))
+        
+        if existing_tomograms:
+            print(f"Found {len(existing_tomograms)} existing tomograms for this session/run/type combination")
+            # Get list of existing position IDs
+            existing_positions = {t.position_id for t in existing_tomograms}
+            print(f"Existing positions: {existing_positions}")
         
         # Capture stdout to get progress information
         output = io.StringIO()
         with redirect_stdout(output):
             # Start sync process using import_tomograms.py script - run in a thread pool
-            await sync_to_async(import_tomograms_main)(review.review_id)
+            # Pass the existing positions to prevent duplicates
+            await sync_to_async(import_tomograms_main)(review.review_id, existing_positions=existing_positions if existing_tomograms else None)
         
         # Get the captured output
         progress_output = output.getvalue()
@@ -1280,7 +1303,8 @@ async def start_sync(request):
         return JsonResponse({
             'success': True,
             'message': 'Sync process completed successfully',
-            'progress': progress_output
+            'progress': progress_output,
+            'existing_tomograms': len(existing_tomograms) if existing_tomograms else 0
         })
     except MsiSession.DoesNotExist:
         print(f"Session {session_id} not found in database")
