@@ -505,6 +505,13 @@ class ReviewView(View):
                 objects_of_interest=data['annotationObjects']
             )
 
+            # Update ReviewTomogram records to associate them with this review
+            ReviewTomogram.objects.filter(
+                session=session,
+                run_id=data['runId'],
+                reconstruction_type=data['reconstructionType']
+            ).update(review=review)
+
             # Return the created review
             return JsonResponse({
                 "reviewId": str(review.review_id),
@@ -660,6 +667,14 @@ class ReviewView(View):
 
             # Update review status
             review.status = 'completed'
+            review.save()
+
+            # Update review counts
+            review = tomogram.review
+            review.reviewed_count = ReviewTomogram.objects.filter(
+                review=review,
+                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary']
+            ).count()
             review.save()
 
             # Return success response
@@ -985,7 +1000,7 @@ class ReviewTomogramView(View):
             review = tomogram.review
             review.reviewed_count = ReviewTomogram.objects.filter(
                 review=review,
-                quality__isnull=False
+                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary']
             ).count()
             review.save()
 
