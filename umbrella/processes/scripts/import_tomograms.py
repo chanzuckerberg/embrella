@@ -76,6 +76,8 @@ def get_zarr_files_from_web(review):
         file_rows = soup.find_all('tr', class_='file')
         valid_zarr_files = []
 
+        print(f"Found {len(file_rows)} total files in directory")
+        
         for row in file_rows:
             name_tag = row.find('span', class_='name')
             if name_tag:
@@ -84,12 +86,13 @@ def get_zarr_files_from_web(review):
                 if filename.endswith('/'):
                     filename = filename[:-1]
                 
+                print(f"Processing file: {filename}")
                 # Check if it matches the ZARR pattern
                 if ZARR_FILENAME_PATTERN.match(filename):
                     valid_zarr_files.append(filename)
-                    print(f"Found valid ZARR file: {filename}")
+                    print(f"✅ Found valid ZARR file: {filename}")
                 else:
-                    print(f"Skipping non-matching file: {filename}")
+                    print(f"❌ Skipping non-matching file: {filename}")
 
         print(f"Total valid ZARR files found: {len(valid_zarr_files)}")
         return valid_zarr_files
@@ -178,25 +181,49 @@ def check_tomogram_exists(review, position_id):
         position_id=position_id
     ).exists()
 
-def process_files(review, zarr_files):
+def process_files(review, zarr_files, existing_positions=None):
+    """Process ZARR files and create tomograms, skipping existing ones"""
+    print(f"\nProcessing {len(zarr_files)} ZARR files...")
+    print(f"Existing positions to skip: {existing_positions}")
+    
+    created_count = 0
+    skipped_count = 0
+    
     for filename in zarr_files:
         position_id = parse_zarr_filename(filename)
         if position_id:
-            # Check if tomogram already exists
+            # Skip if position already exists
+            if existing_positions and position_id in existing_positions:
+                print(f"⚠️ Skipping existing tomogram for position {position_id}")
+                skipped_count += 1
+                continue
+                
+            # Check if tomogram already exists in database
             exists = check_tomogram_exists(review, position_id)
             if exists:
                 print(f"⚠️ Skipping duplicate tomogram for position {position_id}")
+                skipped_count += 1
                 continue
                 
             tomogram_id = generate_uuid()
             create_tomogram(review, tomogram_id, position_id)
             print(f"✅ Created tomogram: {tomogram_id} for position {position_id}")
+            created_count += 1
         else:
             print(f"❌ Skipping invalid filename: {filename}")
+            skipped_count += 1
+    
+    print(f"\nProcessing complete:")
+    print(f"• Created: {created_count} tomograms")
+    print(f"• Skipped: {skipped_count} files")
+    print(f"• Total processed: {len(zarr_files)} files")
 
-def main(review_id):
+def main(review_id, existing_positions=None):
     """Main function to run the import process"""
     try:
+        print(f"\nStarting import process for review_id: {review_id}")
+        print(f"Existing positions to skip: {existing_positions}")
+        
         # Get review instance
         review = get_review(review_id)
         
@@ -204,7 +231,8 @@ def main(review_id):
         zarr_files = get_zarr_files_from_web(review)
         print(f"🔍 Found {len(zarr_files)} matching ZARR files")
 
-        process_files(review, zarr_files)
+        # Process files, passing existing positions to skip
+        process_files(review, zarr_files, existing_positions)
 
         imported = get_all_tomograms()
         print(f"\n📊 Total tomograms in DB: {len(imported)}")
