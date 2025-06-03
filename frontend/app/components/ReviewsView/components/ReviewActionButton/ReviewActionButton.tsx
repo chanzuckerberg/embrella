@@ -3,9 +3,10 @@ import { EntityLinkField } from '@app/common/types/entity';
 import { Button, DropdownMenu, Icon } from '@czi-sds/components';
 import Link from 'next/link';
 import { useContext, useRef, useState } from 'react';
+import { API, DJANGO_URL } from '@app/common/constants/api';
 
 export interface ReviewActionButtonProps {
-  reviewId: number;
+  reviewId: string;
   reviewStatus: string;
   reviewer: EntityLinkField;
 }
@@ -22,6 +23,35 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
     reviewStatus === 'Not Started' || (reviewStatus === 'In Progress' && currentUser.id === String(reviewer.id));
   console.log('review: ', reviewId);
   const reviewUrl = `/reviews/${reviewId}`;
+
+  // Download handler for export
+  const handleExportResults = async () => {
+    try {
+      // Remove dashes from review ID
+      const reviewIdNoDashes = reviewId.replace(/-/g, '');
+      const url = `${DJANGO_URL}${API.REVIEW_EXPORT.replace(':reviewId', reviewIdNoDashes)}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Failed to export review results');
+      }
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `review_${reviewIdNoDashes}_export.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert('Failed to download review results.');
+      }
+    }
+  };
 
   if (userCanReview) {
     return (
@@ -66,7 +96,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
             {
               name: 'download',
               component: (
-                <div className="flex flex-col">
+                <div className="flex flex-col" onClick={handleExportResults} style={{ cursor: 'pointer' }}>
                   <div>Export Results (.json)</div>
                   {reviewStatus === 'In Progress' && (
                     <div className="text-[#c6c6c6] text-[12px]">Results may be incomplete</div>

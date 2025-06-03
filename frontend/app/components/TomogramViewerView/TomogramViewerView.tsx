@@ -77,6 +77,17 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
 }
 
 export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerProps) => {
+  if (!review.tomograms || review.tomograms.length === 0) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold mb-2">No Tomograms Available</h2>
+          <p className="text-gray-600">There are no tomograms to review in this review set.</p>
+        </div>
+      </div>
+    );
+  }
+
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
   const [region, setRegion] = useState<Region | null>(null);
   const currentUser = useContext(UserContext);
