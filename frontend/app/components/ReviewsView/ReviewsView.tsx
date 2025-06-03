@@ -52,7 +52,7 @@ export const ReviewsView = () => {
         id: REVIEW_COLUMN_IDS.GO_TO_REVIEW,
         cell: ({ row }) => (
           <ReviewActionButton
-            reviewId={row.original.review.id}
+            reviewId={String(row.original.review.id)}
             reviewStatus={row.original.status}
             reviewer={row.original.reviewer}
           />
