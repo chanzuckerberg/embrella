@@ -20,7 +20,7 @@ interface MetadataFiltersProps {
  * Component that renders filter controls for metadata visualization
  * Uses a centralized filter state from the useFilterState hook
  */
-export const MetadataFilters: React.FC<MetadataFiltersProps> = memo(({ metricRanges, filterState, summaryAPIData }) => {
+export const MetadataFilters: React.FC<MetadataFiltersProps> = memo(({ filterState }) => {
   // Destructure the filter state and actions from the provided hook instance
   const {
     filters,
@@ -63,3 +63,5 @@ export const MetadataFilters: React.FC<MetadataFiltersProps> = memo(({ metricRan
     </Paper>
   );
 });
+
+MetadataFilters.displayName = 'MetadataFilters';

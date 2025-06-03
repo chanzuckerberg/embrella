@@ -77,3 +77,4 @@ export const SortControls: React.FC<SortControlsProps> = React.memo(
     </div>
   )
 );
+SortControls.displayName = 'SortControls';

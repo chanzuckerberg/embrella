@@ -8,10 +8,11 @@ import {
   asMetricKey,
 } from '@app/components/MetadataView/utils/FilterUtils';
 import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
+import { MetricConfigItem } from '@app/components/MetadataView/constants/MetricConfig';
 
 interface UseFilterStateProps {
   metricRanges: MetricRanges;
-  metricsConfig: Record<string, any>;
+  metricsConfig: Record<string, MetricConfigItem>;
   initialFilterType?: 'AND' | 'OR';
   onApplyFilters?: (filters: FilterConfig, selectedOption: 'AND' | 'OR') => void;
   onFilterStateChange?: (isFilterApplied: boolean, filterConfig?: FilterConfig) => void;
@@ -155,7 +156,7 @@ export const useFilterState = ({
       // Also update input values to reflect slider changes
       const minValue = Number(Math.max(newValue[0], filters[key]?.min ?? 0).toFixed(3));
       const maxValue = Number(Math.min(newValue[1], filters[key]?.max ?? 100).toFixed(3));
-      
+
       setInputValues((prev) => ({
         ...prev,
         [key]: {
@@ -166,7 +167,6 @@ export const useFilterState = ({
     },
     [filters]
   );
-
 
   // Handle checkbox change
   const handleCheckboxChange = useCallback(

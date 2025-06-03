@@ -16,7 +16,6 @@ import { DJANGO_URL } from '@app/common/constants/api';
 import { UserContext } from '@app/common/context/UserProvider';
 import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
-import { AVAILABLE_ANNOTATION_OBJECTS } from '../CreateReviewView/CreateReviewView';
 
 // Types
 interface TomogramViewerProps {

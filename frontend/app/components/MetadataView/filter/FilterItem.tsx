@@ -150,3 +150,5 @@ export const FilterItem: React.FC<FilterItemProps> = memo(
     );
   }
 );
+
+FilterItem.displayName = 'FilterItem';
