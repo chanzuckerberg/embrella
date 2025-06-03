@@ -559,6 +559,21 @@ def get_msi_params_list(request):
     try:
         # Get the msi_session name from request parameters
         session_name_filter = request.GET.get('session_name', None)
+        plan_type = request.GET.get('plan_type', 'aretomo3')  # Default to aretomo3 for backward compatibility
+
+        # Get the plan ID based on plan type
+        if plan_type == 'denoise':
+            plan_name = 'czii-denoise'
+        elif plan_type == 'aretomo3':
+            plan_name = 'czii-live'
+
+
+        # Get the plan ID
+        try:
+            plan = ProcPlan.objects.get(name=plan_name)
+            plan_id = plan.id
+        except ProcPlan.DoesNotExist:
+            return JsonResponse({'error': f'Processing plan {plan_name} not found'}, status=404)
 
         # Perform the join between tem_msisession and processes_procrun
         query = (
@@ -567,7 +582,9 @@ def get_msi_params_list(request):
                 run_number=F('procrun__name'),  # Map the 'name' field from the procrun table
                 run_created_at=F('procrun__created_at')  # Include the created_at field for sorting
             )
+            .filter(procrun__proc_plan_id=plan_id)  # Filter by processing plan
             .values('name', 'run_number', 'run_created_at')
+            .distinct()  # Remove duplicates
         )
 
         # Apply filtering if a session name is provided
