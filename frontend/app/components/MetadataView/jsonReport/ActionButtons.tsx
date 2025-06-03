@@ -33,3 +33,5 @@ export const ActionButtons: React.FC<ActionButtonsProps> = React.memo(
     </div>
   )
 );
+
+ActionButtons.displayName = 'ActionButtons';

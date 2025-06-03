@@ -70,3 +70,4 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
     );
   }
 );
+MetadataViz.displayName = 'MetadataViz';

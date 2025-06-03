@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
+import { MetadataVizResponse, FilterConfig } from '@app/common/types/metadataViz/metadataVizData';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 
 // Define cache key type
@@ -51,7 +51,7 @@ export const useSortedData = (
     (
       sessionName: string,
       runNumber: string,
-      filters: any,
+      filters: FilterConfig | undefined,
       sortByValue: string,
       sortDirectionValue: 'asc' | 'desc'
     ): CacheKey => {
