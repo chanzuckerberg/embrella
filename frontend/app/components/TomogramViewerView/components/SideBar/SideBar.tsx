@@ -36,14 +36,6 @@ export const SideBar = ({
   const [infoOpen, setInfoOpen] = useState(true);
   const [sliderOpen, setSliderOpen] = useState(true);
 
-  // Determine TomogramTable max-height
-  let tomogramTableMaxHeight = '100px';
-  if (!infoOpen && !sliderOpen) {
-    tomogramTableMaxHeight = '300px';
-  } else if (!infoOpen || !sliderOpen) {
-    tomogramTableMaxHeight = '200px';
-  }
-
   return (
     <div className="basis-[280px] shrink-0 flex flex-col justify-start divide-y-[2px]">
       <SideBarSection>
@@ -57,13 +49,8 @@ export const SideBar = ({
         </div>
       </SideBarSection>
 
-      <SideBarSection>
-        <TomogramTable
-          tomograms={tomograms}
-          selectedTomogram={selectedTomogram}
-          onSelectTomogram={onSelectTomogram}
-          maxHeight={tomogramTableMaxHeight}
-        />
+      <SideBarSection className="min-h-0">
+        <TomogramTable tomograms={tomograms} selectedTomogram={selectedTomogram} onSelectTomogram={onSelectTomogram} />
         <NavigationButtons
           currentIndex={currentIndex}
           totalItems={tomograms.length}
