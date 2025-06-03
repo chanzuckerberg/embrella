@@ -344,14 +344,15 @@
 
       // Check if run number already exists
       try {
-        const checkResponse = await fetch(`/workflow/aretomo3_params?session_name=${encodeURIComponent(sessionName)}`);
+        const checkResponse = await fetch(`/workflow/aretomo3_params?session_name=${encodeURIComponent(sessionName)}&plan_type=denoise`);
         if (!checkResponse.ok) {
           throw new Error(`API call failed with status ${checkResponse.status}`);
         }
         const checkResult = await checkResponse.json();
-        if (checkResult.sessions && checkResult.sessions.length > 0 && 
-            checkResult.sessions[0].run_numbers && 
-            checkResult.sessions[0].run_numbers.includes(denoiseRunNumber.replace('run', ''))) {
+        const existingRunNumbers = checkResult.sessions?.[0]?.run_numbers || [];
+        const denoiseRunNumberWithoutPrefix = denoiseRunNumber.replace('run', '');
+        
+        if (existingRunNumbers.includes(denoiseRunNumberWithoutPrefix)) {
           alert(`Run number ${denoiseRunNumber} already exists for this session. Please choose a different run number.`);
           return;
         }

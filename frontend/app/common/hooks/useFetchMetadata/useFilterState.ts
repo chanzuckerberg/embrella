@@ -151,9 +151,22 @@ export const useFilterState = ({
           current: [Math.max(newValue[0], prev[key]?.min ?? 0), Math.min(newValue[1], prev[key]?.max ?? 100)],
         },
       }));
+
+      // Also update input values to reflect slider changes
+      const minValue = Number(Math.max(newValue[0], filters[key]?.min ?? 0).toFixed(3));
+      const maxValue = Number(Math.min(newValue[1], filters[key]?.max ?? 100).toFixed(3));
+      
+      setInputValues((prev) => ({
+        ...prev,
+        [key]: {
+          min: minValue.toFixed(3),
+          max: maxValue.toFixed(3),
+        },
+      }));
     },
-    []
+    [filters]
   );
+
 
   // Handle checkbox change
   const handleCheckboxChange = useCallback(

@@ -5,24 +5,18 @@ interface TomogramTableProps {
   tomograms: ReviewTomogramSummary[];
   selectedTomogram?: string | undefined;
   onSelectTomogram: (tomogramId: string) => void;
-  maxHeight?: string;
 }
 
-export const TomogramTable = ({
-  tomograms,
-  selectedTomogram,
-  onSelectTomogram,
-  maxHeight = '100px',
-}: TomogramTableProps) => {
+export const TomogramTable = ({ tomograms, selectedTomogram, onSelectTomogram }: TomogramTableProps) => {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col min-h-0 gap-2">
       <div className="grid grid-cols-3 gap-2 font-bold p-2 bg-gray-100 rounded">
         <div>Tomogram</div>
         <div>Status</div>
         <div className="text-center">Reviewed</div>
       </div>
 
-      <div className="overflow-y-auto" style={{ maxHeight }}>
+      <div className="overflow-y-auto">
         {tomograms.map((tomogram) => {
           const isSelected = selectedTomogram === tomogram.tomogramId;
           const isReviewed = tomogram.status !== 'pending';
