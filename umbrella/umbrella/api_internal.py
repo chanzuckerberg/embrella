@@ -707,7 +707,7 @@ def export_review_results(request, review_id):
                 return JsonResponse({"error": "Invalid review ID format"}, status=400)
 
         # Get the review with related tomograms
-        review = Review.objects.get(review_id=review_id)
+        review = Review.objects.select_related('msi_session', 'requestor').get(review_id=review_id)
 
         # Check if review is completed
         if review.status != 'completed':
@@ -718,45 +718,35 @@ def export_review_results(request, review_id):
 
         # Format the export data
         export_data = {
-            "reviewId": str(review.review_id),
-            "reviewName": review.review_name,
-            "sessionId": review.msi_session.name,
-            "runId": review.run_id,
-            "reconstructionType": review.reconstruction_type,
-            "completedAt": review.updated_at.isoformat(),
-            "annotations": []
+            "review_id": str(review.review_id),
+            "run_id": review.run_id,
+            "review_name": review.review_name,
+            "review_type": review.review_type,
+            "total_count": review.total_count,
+            "status": review.status,
+            "created_at": review.created_at.isoformat(),
+            "requestor_name": review.requestor.username if review.requestor else None,
+            "objects_of_interest": review.objects_of_interest,
+            "msi_session_name": review.msi_session.name,
+            "reconstruction_type": review.reconstruction_type,
+            "tomograms": []
         }
 
         # Add tomogram annotations
         for tomogram in tomograms:
             annotation = {
-                "tomogramId": tomogram.tomogram_id,
+                "tomogram_id": tomogram.tomogram_id,
                 "quality": tomogram.quality if tomogram.quality else "pending",
-                "rejectionReasons": [],
-                "objectLabels": []
+                "rejection_reasons": tomogram.rejection_reasons if tomogram.rejection_reasons else [],
+                "object_labels": tomogram.object_labels if tomogram.object_labels else [],
+                "position_id": tomogram.position_id,
+                "created_at": tomogram.created_at.isoformat()
             }
-
-            # Add rejection reasons if quality is rejected
-            if tomogram.quality == "rejected" and tomogram.rejection_reasons:
-                try:
-                    annotation["rejectionReasons"] = json.loads(tomogram.rejection_reasons)
-                except json.JSONDecodeError:
-                    # Fallback for old format (comma-separated)
-                    annotation["rejectionReasons"] = tomogram.rejection_reasons.split(",")
-
-            # Add object labels if they exist
-            if tomogram.object_labels:
-                try:
-                    annotation["objectLabels"] = json.loads(tomogram.object_labels)
-                except json.JSONDecodeError:
-                    # Fallback for old format (comma-separated)
-                    annotation["objectLabels"] = tomogram.object_labels.split(",")
-
-            export_data["annotations"].append(annotation)
+            export_data["tomograms"].append(annotation)
 
         # Create the response with the JSON data
         response = JsonResponse(export_data)
-
+        print(response)
         # Set headers for file download
         filename = f"review_{review_id}_export.json"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
