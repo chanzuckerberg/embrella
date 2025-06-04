@@ -930,7 +930,7 @@ def natural_key(s):
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 
-def preprocess_csv(metrics_path, timestamp_path, merge=False):
+def preprocess_csv(metrics_path, timestamp_path,thumbnail_path, merge=False):
     try:
         # Load data from remote server using ssh_connect
         print(f"Attempting to read metrics file: {metrics_path}")
@@ -953,9 +953,18 @@ def preprocess_csv(metrics_path, timestamp_path, merge=False):
             
             # Convert string content to pandas DataFrame
             timestamp_df = pd.read_csv(StringIO(timestamp_content))
+
+            thumbnail_content = ssh_connect(thumbnail_path)
+            print(f"Successfully read thumbnail_path file")
+             # Convert string content to pandas DataFrame
+            thumbnail_df = pd.read_csv(StringIO(thumbnail_content))
             
-            # Merge
-            merged_df = pd.merge(timestamp_df, metrics_df, on="Tilt_Series", how="left")
+            
+            # Merge metrics with timestamp
+            merged_df1 = pd.merge(metrics_df, timestamp_df, on="Tilt_Series", how="left")
+            
+            # Merge with thumbnail
+            merged_df = pd.merge(merged_df1, thumbnail_df, on="Tilt_Series", how="left")
             
             # Sort Tilt_Series using natural sort
             merged_df = merged_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(drop=True)
@@ -1145,9 +1154,12 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
      # Get pixel size for conversion to Ångströms
     pixel_size = df['Pix_Size(A)'].iloc[0]
 
+    # Create a copy of the dataframe to avoid modifying the original
+    df_copy = df.copy()
+
     # Create temporary columns with Ångström values
-    df['Thickness(A)'] = df['Thickness(Pix)'] * pixel_size
-    df['Global_Shift(A)'] = df['Global_Shift(Pix)'] * pixel_size
+    df_copy['Thickness(A)'] = df_copy['Thickness(Pix)'] * pixel_size
+    df_copy['Global_Shift(A)'] = df_copy['Global_Shift(Pix)'] * pixel_size
     column_mapping = {
         'Thickness(A)': 'thickness',
         'Tilt_Axis': 'tilt_axis',
@@ -1163,8 +1175,8 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
     
     ranges = {}
     for csv_column, metric_name in column_mapping.items():
-        if csv_column in df.columns:
-            ranges[metric_name] = [float(df[csv_column].min()), float(df[csv_column].max())]
+        if csv_column in df_copy.columns:
+            ranges[metric_name] = [float(df_copy[csv_column].min()), float(df_copy[csv_column].max())]
     
     return ranges
 
@@ -1183,12 +1195,15 @@ def apply_filters(df, filter_config):
 
     if not filters:
         return df, pd.DataFrame(columns=df.columns)
+
+    # Create a copy of the dataframe to avoid modifying the original
+    df_copy = df.copy()
         
     # Map the filter field names to CSV column names
     column_mapping = {
-            'thickness': 'Thickness(A)',
+            'thickness': 'Thickness(Pix)',
             'tilt_axis': 'Tilt_Axis',
-            'global_shift': 'Global_Shift(A)',
+            'global_shift': 'Global_Shift(Pix)',
             'bad_patch_low': 'Bad_Patch_Low',
             'bad_patch_all': 'Bad_Patch_All',
             'ctf_resolution': 'CTF_Res(A)',
@@ -1204,7 +1219,7 @@ def apply_filters(df, filter_config):
             
         column_name = column_mapping[field]
         min_val, max_val = range_values
-        current_mask = (df[column_name] >= min_val) & (df[column_name] <= max_val)
+        current_mask = (df_copy[column_name] >= min_val) & (df_copy[column_name] <= max_val)
         
         if mask is None:
             mask = current_mask
@@ -1293,6 +1308,10 @@ def get_metadata_viz_data(request):
         # Read the CSV file 
         base_proc_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
         metrics_path = os.path.join(base_proc_dir, "TiltSeries_Metrics.csv")
+        timestamp_path = os.path.join(base_proc_dir, "TiltSeries_TimeStamp.csv")
+        thumbnail_path = os.path.join(base_proc_dir, "TiltSeries_thumb.csv")
+       
+        merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_path, merge=True)
         
         # Create a persistent SSH connection with optimized parameters
         ssh = paramiko.SSHClient()
@@ -1357,32 +1376,43 @@ def get_metadata_viz_data(request):
             if missing_columns:
                 raise ValueError(f"Missing required columns in CSV: {', '.join(missing_columns)}")
 
-            df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
+            merged_df["Tilt_Series"] = merged_df["Tilt_Series"].str.replace(".mrc", "", regex=False)
 
             # Use the new custom sorting function
-            df = df.sort_values(
+            merged_df = merged_df.sort_values(
                 by="Tilt_Series",
                 key=lambda col: col.map(natural_position_sort_key)
             ).reset_index(drop=True)
             fetch_time = time.time() - fetch_start
         
             # Calculate metric ranges before applying filters
-            metric_ranges = calculate_metric_ranges(df)
+            metric_ranges = calculate_metric_ranges(merged_df)
         
             # Apply filters if provided
-            accepted_df, rejected_df = apply_filters(df, filter_config)
+            accepted_df, rejected_df = apply_filters(merged_df, filter_config)
         
         
             # Prepare the result lists for both accepted and rejected
-            def prepare_result_list(df, apply_sorting=False):
-                if df is None or df.empty:
+            def prepare_result_list(merged_df, apply_sorting=False):
+                if merged_df is None or    merged_df.empty:
                     return []
                 result = []
-                for _, row in df.iterrows():
+                for _, row in merged_df.iterrows():
+                    item_name = str(row['Tilt_Series'])
+                    # Check if 'Start_path' exists in the dataframe
+                    image_path_from_csv = row.get('Start_path', None)
+                    print("image_path_from_csv", image_path_from_csv)
+                    item_image_path_to_return = image_path_from_csv
+                    
+                    if image_path_from_csv is not None:
+                        print(f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'Start_path' from row.get(): '{image_path_from_csv}' (type: {type(image_path_from_csv)})")
+                    else:
+                        print("[METADATA_VIZ_DEBUG] 'Start_path' column MISSING in df passed to prepare_result_list.")
+                  
                     metrics = {
-                        'thickness': float(row['Thickness(A)']),
+                        'thickness': float(row['Thickness(Pix)']),
                         'tilt_axis': float(row['Tilt_Axis']),
-                        'global_shift': float(row['Global_Shift(A)']),
+                        'global_shift': float(row['Global_Shift(Pix)']),
                         'bad_patch_low': float(row['Bad_Patch_Low']),
                         'bad_patch_all': float(row['Bad_Patch_All']),
                         'ctf_resolution': float(row['CTF_Res(A)']),
@@ -1393,7 +1423,8 @@ def get_metadata_viz_data(request):
                     }
                     result.append({
                         'name': str(row['Tilt_Series']),
-                        'metrics': metrics
+                        'metrics': metrics,
+                        'thumbnail_path': item_image_path_to_return
                     })
                     # Apply sorting if requested
                 if apply_sorting and sort_by and sort_by != 'Select Metric':
@@ -1429,7 +1460,7 @@ def get_metadata_viz_data(request):
             # Otherwise, the result will be empty and client should use accepted_results and rejected_results
             has_filters = filter_config and 'filters' in filter_config and filter_config['filters']
             if not has_filters:
-                result = prepare_result_list(df, apply_sorting=True)
+                result = prepare_result_list(merged_df, apply_sorting=True)
             else:
                 result = []
 
