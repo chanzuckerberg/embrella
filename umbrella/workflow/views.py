@@ -933,9 +933,9 @@ def natural_key(s):
 def preprocess_csv(metrics_path, timestamp_path,thumbnail_path, merge=False):
     try:
         # Load data from remote server using ssh_connect
-        print(f"Attempting to read metrics file: {metrics_path}")
+        logger.info(f"Attempting to read metrics file: {metrics_path}")
         metrics_content = ssh_connect(metrics_path)
-        print(f"Successfully read metrics file")
+        logger.info(f"Successfully read metrics file")
         
         # Convert string content to pandas DataFrame
         metrics_df = pd.read_csv(StringIO(metrics_content))
@@ -947,15 +947,15 @@ def preprocess_csv(metrics_path, timestamp_path,thumbnail_path, merge=False):
         metrics_df = metrics_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(drop=True)
         
         if merge:
-            print(f"Attempting to read timestamp file: {timestamp_path}")
+            logger.info(f"Attempting to read timestamp file: {timestamp_path}")
             timestamp_content = ssh_connect(timestamp_path)
-            print(f"Successfully read timestamp file")
+            logger.info(f"Successfully read timestamp file")
             
             # Convert string content to pandas DataFrame
             timestamp_df = pd.read_csv(StringIO(timestamp_content))
 
             thumbnail_content = ssh_connect(thumbnail_path)
-            print(f"Successfully read thumbnail_path file")
+            logger.info(f"Successfully read thumbnail_path file")
              # Convert string content to pandas DataFrame
             thumbnail_df = pd.read_csv(StringIO(thumbnail_content))
             
@@ -974,7 +974,7 @@ def preprocess_csv(metrics_path, timestamp_path,thumbnail_path, merge=False):
             return metrics_df
             
     except Exception as e:
-        print(f"Error in preprocess_csv: {str(e)}")
+        logger.error(f"Error in preprocess_csv: {str(e)}")
         raise
 
 
@@ -1362,7 +1362,7 @@ def get_metadata_viz_data(request):
             
             # Process metrics immediately while timestamp is being read
             df = pd.read_csv(StringIO(metrics_content))
-            print(f"Total positions in CSV before filtering: {len(df)}")
+            logger.info(f"Total positions in CSV before filtering: {len(df)}")
 
             # Required column
             required_columns = [
@@ -1401,13 +1401,13 @@ def get_metadata_viz_data(request):
                     item_name = str(row['Tilt_Series'])
                     # Check if 'Start_path' exists in the dataframe
                     image_path_from_csv = row.get('Start_path', None)
-                    print("image_path_from_csv", image_path_from_csv)
+                    logger.info("image_path_from_csv", image_path_from_csv)
                     item_image_path_to_return = image_path_from_csv
                     
                     if image_path_from_csv is not None:
-                        print(f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'Start_path' from row.get(): '{image_path_from_csv}' (type: {type(image_path_from_csv)})")
+                        logger.info(f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'Start_path' from row.get(): '{image_path_from_csv}' (type: {type(image_path_from_csv)})")
                     else:
-                        print("[METADATA_VIZ_DEBUG] 'Start_path' column MISSING in df passed to prepare_result_list.")
+                        logger.info("[METADATA_VIZ_DEBUG] 'Start_path' column MISSING in df passed to prepare_result_list.")
                   
                     metrics = {
                         'thickness': float(row['Thickness(Pix)']),
