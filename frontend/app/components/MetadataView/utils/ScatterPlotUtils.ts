@@ -171,8 +171,7 @@ export const createGridConfig = (metricCount: number) => {
       containLabel: true,
       top: index * (gridHeight + spacing),
       height: gridHeight,
-      left: '5%',
-      right: '9%',
+      left: '9%',
       show: true,
     }));
 };
@@ -193,7 +192,6 @@ export const createXAxisConfig = (metricsConfig: MetricConfig[], maxPositionInde
     axisTick: {
       show: false,
     },
-    nameGap: 40,
     nameTextStyle: {
       fontSize: 14,
       fontWeight: 'bold' as const,
@@ -352,7 +350,7 @@ export const createSeriesConfig = (
         symbolSize: 5,
         itemStyle: {
           opacity: 0.6,
-          color: '#006400',
+          color: '#00A300',
         },
         data: acceptedData,
       },
@@ -364,7 +362,7 @@ export const createSeriesConfig = (
         symbolSize: 5,
         itemStyle: {
           opacity: 0.6,
-          color: '#B00020',
+          color: '#FF3333',
         },
         data: rejectedData,
       },
