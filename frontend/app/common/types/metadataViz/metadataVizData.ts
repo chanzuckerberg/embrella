@@ -11,6 +11,7 @@ export interface MetadataVizResponse {
 export interface TiltSeries {
   name: string;
   metrics: Metrics;
+  thumbnail_path: string;
 }
 
 export interface Metrics {

@@ -66,6 +66,12 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
             scatterplotLoading={scatterplotLoading}
           />
         </div>
+        <div className={styles.rightColumn}>
+          <div>
+            <h3>Position Details</h3>
+            <p>Select a position on the scatter plot to view details</p>
+          </div>
+        </div>
       </div>
     );
   }
