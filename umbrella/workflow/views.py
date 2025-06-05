@@ -80,6 +80,7 @@ PASSWORD = os.getenv('REMOTE_PASSWORD')
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 METADATA_SUMMARY_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/'
 DATA_COLLECTION_PATH = '/hpc/instruments/czii.krios1/OffloadData/'
+HOSTNAME = 'https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/'
 ARETOMO3_PROCESSING_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/'
 
 def get_base_url():
@@ -930,7 +931,7 @@ def natural_key(s):
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 
-def preprocess_csv(metrics_path, timestamp_path,thumbnail_path, merge=False):
+def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, merge=False):
     try:
         # Load data from remote server using ssh_connect
         logger.info(f"Attempting to read metrics file: {metrics_path}")
@@ -953,18 +954,14 @@ def preprocess_csv(metrics_path, timestamp_path,thumbnail_path, merge=False):
             
             # Convert string content to pandas DataFrame
             timestamp_df = pd.read_csv(StringIO(timestamp_content))
-
-            thumbnail_content = ssh_connect(thumbnail_path)
-            logger.info(f"Successfully read thumbnail_path file")
-             # Convert string content to pandas DataFrame
-            thumbnail_df = pd.read_csv(StringIO(thumbnail_content))
-            
             
             # Merge metrics with timestamp
-            merged_df1 = pd.merge(metrics_df, timestamp_df, on="Tilt_Series", how="left")
+            merged_df = pd.merge(metrics_df, timestamp_df, on="Tilt_Series", how="left")
             
-            # Merge with thumbnail
-            merged_df = pd.merge(merged_df1, thumbnail_df, on="Tilt_Series", how="left")
+            # Add thumbnail paths directly to the merged dataframe
+            merged_df["thumbnail_path"] = merged_df["Tilt_Series"].apply(
+                lambda ts: f"{thumbnail_base_url}{ts}.jpeg"
+            )
             
             # Sort Tilt_Series using natural sort
             merged_df = merged_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(drop=True)
@@ -1309,9 +1306,11 @@ def get_metadata_viz_data(request):
         base_proc_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
         metrics_path = os.path.join(base_proc_dir, "TiltSeries_Metrics.csv")
         timestamp_path = os.path.join(base_proc_dir, "TiltSeries_TimeStamp.csv")
-        thumbnail_path = os.path.join(base_proc_dir, "TiltSeries_thumb.csv")
-       
-        merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_path, merge=True)
+
+        thumbnail_base_url = os.path.join(HOSTNAME, session_name, run_number, "thumbnails/")
+        logger.info(f"Thumbnail base URL: {thumbnail_base_url}")
+        
+        merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, merge=True)
         
         # Create a persistent SSH connection with optimized parameters
         ssh = paramiko.SSHClient()
@@ -1399,15 +1398,14 @@ def get_metadata_viz_data(request):
                 result = []
                 for _, row in merged_df.iterrows():
                     item_name = str(row['Tilt_Series'])
-                    # Check if 'Start_path' exists in the dataframe
-                    image_path_from_csv = row.get('Start_path', None)
-                    logger.info("image_path_from_csv", image_path_from_csv)
-                    item_image_path_to_return = image_path_from_csv
+                    image_path = row.get('thumbnail_path', None)
+            
+                    item_image_path_to_return = image_path
                     
-                    if image_path_from_csv is not None:
-                        logger.info(f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'Start_path' from row.get(): '{image_path_from_csv}' (type: {type(image_path_from_csv)})")
+                    if image_path is not None:
+                        logger.info(f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'thumbnail_path' from row.get(): '{image_path}' (type: {type(image_path)})")
                     else:
-                        logger.info("[METADATA_VIZ_DEBUG] 'Start_path' column MISSING in df passed to prepare_result_list.")
+                        logger.info("[METADATA_VIZ_DEBUG] 'thumbnail_path' column MISSING in df passed to prepare_result_list.")
                   
                     metrics = {
                         'thickness': float(row['Thickness(Pix)']),
