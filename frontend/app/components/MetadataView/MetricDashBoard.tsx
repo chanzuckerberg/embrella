@@ -116,7 +116,7 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
           }}
         >
           <Box display="flex" alignItems="center" mb={2}>
-            <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />
+            <Icon sdsIcon="CheckCircle" sdsSize="s" color="blue" />
             <Typography variant="h3" component="div" sx={{ marginLeft: '8px' }}>
               Total number of Accepted: {scatterplotDisplayData?.accepted_results?.length || 0}
             </Typography>
