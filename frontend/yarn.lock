@@ -348,6 +348,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@babel/runtime@npm:^7.0.0":
+  version: 7.27.6
+  resolution: "@babel/runtime@npm:7.27.6"
+  checksum: 10c0/89726be83f356f511dcdb74d3ea4d873a5f0cf0017d4530cb53aa27380c01ca102d573eff8b8b77815e624b1f8c24e7f0311834ad4fb632c90a770fda00bd4c8
+  languageName: node
+  linkType: hard
+
 "@babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.18.3, @babel/runtime@npm:^7.20.13, @babel/runtime@npm:^7.23.9, @babel/runtime@npm:^7.25.0, @babel/runtime@npm:^7.27.1, @babel/runtime@npm:^7.5.5, @babel/runtime@npm:^7.8.7":
   version: 7.27.1
   resolution: "@babel/runtime@npm:7.27.1"
@@ -797,12 +804,12 @@ __metadata:
 
 "@idetik/core@file:./idetik/packages/core::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=c89101&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=675e2d&locator=create-sds-app%40workspace%3A."
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/7e19d24293a87aa53a2359878a06170a99c62290c32441920aca5335494d2fdde3fdd0f94d4563117f0765f4227abd6580d9c4698aabfb04cee02aeccc6925ef
+  checksum: 10c0/a1af409294aa58bd2056bc1477ec49de784966cf918979e2526b94aee3d66434976c1da6eb856f3341561921940b28300ccf99097fe173fc5662573ca1039acf
   languageName: node
   linkType: hard
 
@@ -818,7 +825,7 @@ __metadata:
 
 "@idetik/react@file:./idetik/packages/react::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=d614ad&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=e8838f&locator=create-sds-app%40workspace%3A."
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
@@ -836,7 +843,7 @@ __metadata:
     "@czi-sds/components": ^22.3.0
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/4f49f072702ecd4f35cb9314a46da6da80af7e95df55913a60cbd4cb9be23e30e158405a629135100692b9008b68e611c227db8e922e3681c36bc2710bbd7c68
+  checksum: 10c0/ee2236b4a855efb5b529eca54cfae896b11e97025640df3f3a4a8ad6896d89f2e639332299278966ce54794ab9a9956a3e3ec9cee76b883489aa65e104c2dedc
   languageName: node
   linkType: hard
 
@@ -2250,6 +2257,24 @@ __metadata:
   peerDependencies:
     "@types/react": "*"
   checksum: 10c0/0441b8b47c69312c89ec0760ba477ba1a0808a10ceef8dc1c64b1013ed78517332c30f18681b0ec0b53542731f1ed015169fed1d127cc91222638ed955478ec7
+  languageName: node
+  linkType: hard
+
+"@types/react-window@npm:^1":
+  version: 1.8.8
+  resolution: "@types/react-window@npm:1.8.8"
+  dependencies:
+    "@types/react": "npm:*"
+  checksum: 10c0/2170a3957752603e8b994840c5d31b72ddf94c427c0f42b0175b343cc54f50fe66161d8871e11786ec7a59906bd33861945579a3a8f745455a3744268ec1069f
+  languageName: node
+  linkType: hard
+
+"@types/react@npm:*":
+  version: 19.1.6
+  resolution: "@types/react@npm:19.1.6"
+  dependencies:
+    csstype: "npm:^3.0.2"
+  checksum: 10c0/8b10b198e28997b3c57559750f8bcf5ae7b33c554b16b6f4fe2ece1d4de6a2fc8cb53e7effe08ec9cb939d2f479eb97c5e08aac2cf83b10a90164fe451cc8ea2
   languageName: node
   linkType: hard
 
@@ -3734,6 +3759,7 @@ __metadata:
     "@types/node": "npm:^20"
     "@types/react": "npm:^18"
     "@types/react-dom": "npm:^18"
+    "@types/react-window": "npm:^1"
     "@typescript-eslint/eslint-plugin": "npm:^6.13.1"
     "@typescript-eslint/parser": "npm:^6.13.1"
     date-fns: "npm:^3.6.0"
@@ -3759,6 +3785,7 @@ __metadata:
     react-dom: "npm:^18.3.1"
     react-hotkeys-hook: "npm:^5.1.0"
     react-json-view: "npm:^1.21.3"
+    react-window: "npm:^1.8.11"
     stylelint: "npm:^15.11.0"
     stylelint-config-recommended: "npm:^13.0.0"
     stylelint-config-standard: "npm:^34.0.0"
@@ -7575,6 +7602,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"memoize-one@npm:>=3.1.1 <6":
+  version: 5.2.1
+  resolution: "memoize-one@npm:5.2.1"
+  checksum: 10c0/fd22dbe9a978a2b4f30d6a491fc02fb90792432ad0dab840dc96c1734d2bd7c9cdeb6a26130ec60507eb43230559523615873168bcbe8fafab221c30b11d54c1
+  languageName: node
+  linkType: hard
+
 "meow@npm:^10.1.5":
   version: 10.1.5
   resolution: "meow@npm:10.1.5"
@@ -9217,6 +9251,19 @@ __metadata:
     react: ">=16.6.0"
     react-dom: ">=16.6.0"
   checksum: 10c0/2ba754ba748faefa15f87c96dfa700d5525054a0141de8c75763aae6734af0740e77e11261a1e8f4ffc08fd9ab78510122e05c21c2d79066c38bb6861a886c82
+  languageName: node
+  linkType: hard
+
+"react-window@npm:^1.8.11":
+  version: 1.8.11
+  resolution: "react-window@npm:1.8.11"
+  dependencies:
+    "@babel/runtime": "npm:^7.0.0"
+    memoize-one: "npm:>=3.1.1 <6"
+  peerDependencies:
+    react: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10c0/5ae8da1bc5c47d8f0a428b28a600256e2db511975573e52cb65a9b27ed1a0e5b9f7b3bee5a54fb0da93956d782c24010be434be451072f46ba5a89159d2b3944
   languageName: node
   linkType: hard
 
