@@ -350,7 +350,7 @@ export const createSeriesConfig = (
         symbolSize: 5,
         itemStyle: {
           opacity: 0.6,
-          color: '#00A300',
+          color: 'blue',
         },
         data: acceptedData,
       },
