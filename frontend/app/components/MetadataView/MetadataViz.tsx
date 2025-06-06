@@ -3,6 +3,7 @@ import styles from './MetadataViz.module.css';
 import { MetadataFilters } from './MetadataFilters';
 import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
 import { MetricDashboard } from './MetricDashBoard';
+import { ThumbnailGrid } from './ThumbnailGrid';
 import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
 import { UseFilterStateReturn } from '@app/common/hooks/useFetchMetadata/useFilterState';
 
@@ -67,10 +68,11 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
           />
         </div>
         <div className={styles.rightColumn}>
-          <div>
-            <h3>Position Details</h3>
-            <p>Select a position on the scatter plot to view details</p>
-          </div>
+          <ThumbnailGrid
+            acceptedResults={vizResponse.accepted_results}
+            rejectedResults={vizResponse.rejected_results}
+            data={vizResponse}
+          />
         </div>
       </div>
     );
