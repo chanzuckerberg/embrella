@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import * as echarts from 'echarts';
-import { MetadataVizResponse } from '../../common/types/metadataViz/metadataVizData';
-import styles from './MetadataViz.module.css';
-import { HISTOGRAM_METRIC_COLORS } from './constants/MetricConfig';
+import { MetadataVizResponse } from '../../../common/types/metadataViz/metadataVizData';
+import styles from '../MetadataViz.module.css';
+import { HISTOGRAM_METRIC_COLORS } from '../constants/MetricConfig';
 
 interface ProcessedData {
   metricsConfig: Array<{
