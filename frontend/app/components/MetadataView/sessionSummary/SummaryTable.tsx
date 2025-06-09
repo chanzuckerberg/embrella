@@ -1,7 +1,7 @@
 import React from 'react';
-import {  Card, CardContent, Divider, Typography, Paper, Box } from '@mui/material';
+import { Card, CardContent, Divider, Typography, Paper, Box } from '@mui/material';
 import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
-import {MetricsTable} from './MetricsTable';
+import { MetricsTable } from './MetricsTable';
 
 interface SummaryTableProps {
   data: MetadataSummaryResponse;
@@ -47,7 +47,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ data }) => (
     </CardContent>
   </Card>
 );
-
 
 // Main SummaryTable component
 export const SummaryTable: React.FC<SummaryTableProps> = ({ data }) => {

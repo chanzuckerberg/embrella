@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import * as echarts from 'echarts';
-import { MetadataVizResponse } from '../../common/types/metadataViz/metadataVizData';
-import styles from './MetadataViz.module.css';
+import { MetadataVizResponse } from '../../../common/types/metadataViz/metadataVizData';
+import styles from '../MetadataViz.module.css';
 import {
   createTooltipFormatter,
   getPositionsMapping,
@@ -9,7 +9,7 @@ import {
   createXAxisConfig,
   createYAxisConfig,
   createSeriesConfig,
-} from './utils/ScatterPlotUtils';
+} from '../utils/ScatterPlotUtils';
 
 interface MetricScatterPlotProps {
   data: MetadataVizResponse;
