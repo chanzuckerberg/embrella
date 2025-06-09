@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ButtonDropdown, Button, Alert } from '@czi-sds/components';
-import { SummaryTable } from './summaryTable';
+import { SummaryTable } from './sessionSummary/SummaryTable';
 import styles from './MetadataViz.module.css';
 import { RawJson } from './RawJson';
 import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
