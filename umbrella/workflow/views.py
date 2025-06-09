@@ -1099,6 +1099,19 @@ def get_metadata_summary(request):
             # Calculate metric ranges before applying filters
             metric_ranges = calculate_metric_ranges(merged_df)
         
+            # Debug logging for filter configuration
+            logger.info(f"Raw filter config: {filter_config}")
+            logger.info(f"Filter config type: {type(filter_config)}")
+            if isinstance(filter_config, str):
+                try:
+                    filter_config = json.loads(filter_config)
+                    logger.info(f"Parsed filter config: {filter_config}")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse filter config: {e}")
+                    filter_config = {}
+            elif filter_config is None:
+                filter_config = {}
+            
             # Apply filters if provided
             accepted_df, rejected_df = apply_filters(merged_df, filter_config)
             logger.info(f"After filtering - Accepted: {len(accepted_df)}, Rejected: {len(rejected_df)}")
@@ -1108,9 +1121,25 @@ def get_metadata_summary(request):
                 if merged_df is None or merged_df.empty:
                     logger.info("Empty dataframe passed to prepare_result_list")
                     return []
+                
+                # Debug the input dataframe
+                logger.info(f"Input dataframe shape: {merged_df.shape}")
+                logger.info(f"Input dataframe columns: {merged_df.columns.tolist()}")
+                logger.info(f"Input dataframe Tilt_Series unique count: {merged_df['Tilt_Series'].nunique()}")
+                
+                # Create a set to track unique items
+                seen_items = set()
                 result = []
+                
                 for _, row in merged_df.iterrows():
                     item_name = str(row['Tilt_Series'])
+                    
+                    # Skip if we've already processed this item
+                    if item_name in seen_items:
+                        logger.warning(f"Duplicate item found: {item_name}")
+                        continue
+                    
+                    seen_items.add(item_name)
                     image_path = row.get('thumbnail_path', None)
             
                     item_image_path_to_return = image_path
@@ -1133,11 +1162,12 @@ def get_metadata_summary(request):
                         'beta0': float(row['Beta0'])
                     }
                     result.append({
-                        'name': str(row['Tilt_Series']),
+                        'name': item_name,
                         'metrics': metrics,
                         'thumbnail_path': item_image_path_to_return
                     })
-                    # Apply sorting if requested
+                
+                # Apply sorting if requested
                 if apply_sorting and sort_by and sort_by != 'Select Metric':
                     # Map frontend metric names to the actual keys in the metrics dictionary
                     metric_key_mapping = {
@@ -1160,7 +1190,7 @@ def get_metadata_summary(request):
                             reverse=(sort_direction.lower() == 'desc')
                         )
                 
-                logger.info(f"prepare_result_list returned {len(result)} items")
+                logger.info(f"prepare_result_list returned {len(result)} unique items")
                 return result
 
             accepted_results = prepare_result_list(accepted_df, apply_sorting=True)
@@ -1168,6 +1198,7 @@ def get_metadata_summary(request):
 
             # If no filters were applied, use the entire dataset as the result
             has_filters = filter_config and 'filters' in filter_config and filter_config['filters']
+            logger.info(f"Has filters: {has_filters}")
             if not has_filters:
                 result = prepare_result_list(merged_df, apply_sorting=True)
             else:
@@ -1244,12 +1275,13 @@ def apply_filters(df, filter_config):
     """
     logger.info(f"Applying filters with config: {filter_config}")
 
-    if not filter_config or 'filters' not in filter_config:
-        logger.info("No filters provided, returning entire dataset")
+    # If no filter config or empty filters, return entire dataset
+    if not filter_config or not isinstance(filter_config, dict) or 'filters' not in filter_config or not filter_config['filters']:
+        logger.info("No valid filters provided, returning entire dataset")
         return df, pd.DataFrame(columns=df.columns)
 
     filters = filter_config['filters']
-    filter_type = filter_config.get('filter_type', 'AND')
+    filter_type = filter_config.get('filter_type', 'AND').upper()
 
     if not filters:
         logger.info("Empty filters list, returning entire dataset")
@@ -1428,6 +1460,19 @@ def get_metadata_viz_data(request):
             # Calculate metric ranges before applying filters
             metric_ranges = calculate_metric_ranges(merged_df)
         
+            # Debug logging for filter configuration
+            logger.info(f"Raw filter config: {filter_config}")
+            logger.info(f"Filter config type: {type(filter_config)}")
+            if isinstance(filter_config, str):
+                try:
+                    filter_config = json.loads(filter_config)
+                    logger.info(f"Parsed filter config: {filter_config}")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse filter config: {e}")
+                    filter_config = {}
+            elif filter_config is None:
+                filter_config = {}
+            
             # Apply filters if provided
             accepted_df, rejected_df = apply_filters(merged_df, filter_config)
             logger.info(f"After filtering - Accepted: {len(accepted_df)}, Rejected: {len(rejected_df)}")
@@ -1437,9 +1482,25 @@ def get_metadata_viz_data(request):
                 if merged_df is None or merged_df.empty:
                     logger.info("Empty dataframe passed to prepare_result_list")
                     return []
+                
+                # Debug the input dataframe
+                logger.info(f"Input dataframe shape: {merged_df.shape}")
+                logger.info(f"Input dataframe columns: {merged_df.columns.tolist()}")
+                logger.info(f"Input dataframe Tilt_Series unique count: {merged_df['Tilt_Series'].nunique()}")
+                
+                # Create a set to track unique items
+                seen_items = set()
                 result = []
+                
                 for _, row in merged_df.iterrows():
                     item_name = str(row['Tilt_Series'])
+                    
+                    # Skip if we've already processed this item
+                    if item_name in seen_items:
+                        logger.warning(f"Duplicate item found: {item_name}")
+                        continue
+                    
+                    seen_items.add(item_name)
                     image_path = row.get('thumbnail_path', None)
             
                     item_image_path_to_return = image_path
@@ -1462,11 +1523,12 @@ def get_metadata_viz_data(request):
                         'beta0': float(row['Beta0'])
                     }
                     result.append({
-                        'name': str(row['Tilt_Series']),
+                        'name': item_name,
                         'metrics': metrics,
                         'thumbnail_path': item_image_path_to_return
                     })
-                    # Apply sorting if requested
+                
+                # Apply sorting if requested
                 if apply_sorting and sort_by and sort_by != 'Select Metric':
                     # Map frontend metric names to the actual keys in the metrics dictionary
                     metric_key_mapping = {
@@ -1489,7 +1551,7 @@ def get_metadata_viz_data(request):
                             reverse=(sort_direction.lower() == 'desc')
                         )
                 
-                logger.info(f"prepare_result_list returned {len(result)} items")
+                logger.info(f"prepare_result_list returned {len(result)} unique items")
                 return result
 
             accepted_results = prepare_result_list(accepted_df, apply_sorting=True)
@@ -1497,6 +1559,7 @@ def get_metadata_viz_data(request):
 
             # If no filters were applied, use the entire dataset as the result
             has_filters = filter_config and 'filters' in filter_config and filter_config['filters']
+            logger.info(f"Has filters: {has_filters}")
             if not has_filters:
                 result = prepare_result_list(merged_df, apply_sorting=True)
             else:
