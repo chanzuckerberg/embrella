@@ -27,5 +27,5 @@ urlpatterns = [
     path('metadata/api/v1/data/', views.get_metadata_viz_data, name='get_metadata_viz_data'),
     path('get_plan_id', views.get_plan_id, name='get_plan_id'),
     path('get_msisession_id', views.get_msisession_id, name='get_msisession_id'),
-    path('workflow/trigger_syncer/', views.trigger_syncer, name='trigger_syncer'),
+    path('trigger_syncer/', views.trigger_syncer, name='trigger_syncer'),
 ]

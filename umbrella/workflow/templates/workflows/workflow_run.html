@@ -1199,8 +1199,13 @@
           document.getElementById("outputContainer").style.display = "block";
           document.getElementById("errorMessage").style.display = "none";
           
-          // Start syncer job after successful submission
-          await startSyncerJob(sessionName, runNumber);
+          // Start syncer job after successful submission with the job_id
+          if (result.job_id) {
+            await startSyncerJob(sessionName, runNumber, result.job_id);
+          } else {
+            console.error("No job_id received from run_aretomo3");
+            alert("Warning: Could not start syncer job - no job ID received");
+          }
           
           // Automatically create processing run after successful job submission
           await createProcessingRun();
@@ -1330,8 +1335,13 @@
             document.getElementById("outputContainer").style.display = "block";
             document.getElementById("advancedErrorMessage").style.display = "none";
             
-            // Start syncer job after successful submission
-            await startSyncerJob(projectName, advancedRunNumber);
+            // Start syncer job after successful submission with the job_id
+            if (result.job_id) {
+              await startSyncerJob(projectName, advancedRunNumber, result.job_id);
+            } else {
+              console.error("No job_id received from run_advanced_aretomo3");
+              alert("Warning: Could not start syncer job - no job ID received");
+            }
             
             // Automatically create processing run after successful job submission
             await createProcessingRun();
@@ -1700,10 +1710,12 @@
     }
 
     // Add new function to start syncer job
-    async function startSyncerJob(sessionName, runId) {
+    async function startSyncerJob(sessionName, runId, jobId) {
       try {
         const csrftoken = getCookie("csrftoken");
-        const response = await fetch("/workflow/start_syncer", {
+        console.log("Starting syncer job for:", { sessionName, runId, jobId });
+        
+        const response = await fetch("/workflow/trigger_syncer/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1711,19 +1723,23 @@
           },
           body: JSON.stringify({
             session_name: sessionName,
-            run_id: runId,
-            job_type: "aretomo3"  // or "denoise" depending on the job type
+            run_number: runId,
+            job_id: jobId,
+            syncer_type: "aretomo3"
           }),
         });
 
         const result = await response.json();
         if (response.ok) {
           console.log("Syncer job started successfully:", result);
+          alert("Syncer job started successfully!");
         } else {
           console.error("Failed to start syncer job:", result.error);
+          alert(`Failed to start syncer job: ${result.error || 'Unknown error'}`);
         }
       } catch (error) {
         console.error("Error starting syncer job:", error);
+        alert(`Error starting syncer job: ${error.message || 'Unknown error'}`);
       }
     }
 
