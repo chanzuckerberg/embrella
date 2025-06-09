@@ -1072,66 +1072,125 @@ def get_metadata_summary(request):
             
             # Process metrics immediately while timestamp is being read
             df = pd.read_csv(StringIO(metrics_content))
-            df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
-            
-            # Use natural sort with optimized key function
-            df = df.sort_values(by="Tilt_Series", key=lambda col: pd.Index([int(''.join(c for c in str(x) if c.isdigit()) or 0) for x in col])).reset_index(drop=True)
+            logger.info(f"Total positions in CSV before filtering: {len(df)}")
+
+            # Required column
+            required_columns = [
+                'Tilt_Series', 'Thickness(Pix)', 'Tilt_Axis', 'Global_Shift(Pix)',
+                'Bad_Patch_Low', 'Bad_Patch_All', 'CTF_Res(A)', 'CTF_Score',
+                 'Pix_Size(A)', 'Alpha0', 'Beta0'
+            ]
+
+            # for missing columns
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                raise ValueError(f"Missing required columns in CSV: {', '.join(missing_columns)}")
+
+            merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, merge=True)
+            logger.info(f"Total positions after merging: {len(merged_df)}")
+
+            # Use the new custom sorting function
+            merged_df = merged_df.sort_values(
+                by="Tilt_Series",
+                key=lambda col: col.map(natural_position_sort_key)
+            ).reset_index(drop=True)
             fetch_time = time.time() - fetch_start
-
-            # Compute statistics with optimized operations
-            compute_start = time.time()
-            computed_metrics = compute_stats(df)
-            compute_time = time.time() - compute_start
-
-            data_collection_dir = f"{DATA_COLLECTION_PATH}{session_name}/{run_number}/"
-            aretomo3_processing_dir = f"{ARETOMO3_PROCESSING_PATH}{session_name}/{run_number}/"
-
-            #Get User, Project, and grid information
-            user_name=None
-            project_name=None
-            grid_name=None
-            try:
-                try:
-                    session = MsiSession.objects.get(name=session_name)
-                    logger.info(f"Session: {session}")
-
-                    #Get User name
-                    if session.user:
-                        user_name = session.user.username
-                    # Get Project name
-                    if session.project:
-                        project_name = session.project.name
+        
+            # Calculate metric ranges before applying filters
+            metric_ranges = calculate_metric_ranges(merged_df)
+        
+            # Apply filters if provided
+            accepted_df, rejected_df = apply_filters(merged_df, filter_config)
+            logger.info(f"After filtering - Accepted: {len(accepted_df)}, Rejected: {len(rejected_df)}")
+        
+            # Prepare the result lists for both accepted and rejected
+            def prepare_result_list(merged_df, apply_sorting=False):
+                if merged_df is None or merged_df.empty:
+                    logger.info("Empty dataframe passed to prepare_result_list")
+                    return []
+                result = []
+                for _, row in merged_df.iterrows():
+                    item_name = str(row['Tilt_Series'])
+                    image_path = row.get('thumbnail_path', None)
+            
+                    item_image_path_to_return = image_path
                     
-                    # Get Grid name
-                    if session.grid:
-                        grid_name = session.grid.name
-                except MsiSession.DoesNotExist:
-                    # Session not found, leave the values as None
-                    logger.warning(f"No MsiSession found with name: {session_name}")
-            except Exception as e:
-                logger.warning(f"Error retrieving related information: {str(e)}")
+                    if image_path is not None:
+                        logger.info(f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'thumbnail_path' from row.get(): '{image_path}' (type: {type(image_path)})")
+                    else:
+                        logger.info("[METADATA_VIZ_DEBUG] 'thumbnail_path' column MISSING in df passed to prepare_result_list.")
+                  
+                    metrics = {
+                        'thickness': float(row['Thickness(Pix)']),
+                        'tilt_axis': float(row['Tilt_Axis']),
+                        'global_shift': float(row['Global_Shift(Pix)']),
+                        'bad_patch_low': float(row['Bad_Patch_Low']),
+                        'bad_patch_all': float(row['Bad_Patch_All']),
+                        'ctf_resolution': float(row['CTF_Res(A)']),
+                        'ctf_score': float(row['CTF_Score']),
+                        'pixel_size': float(row['Pix_Size(A)']),
+                        'alpha0': float(row['Alpha0']),
+                        'beta0': float(row['Beta0'])
+                    }
+                    result.append({
+                        'name': str(row['Tilt_Series']),
+                        'metrics': metrics,
+                        'thumbnail_path': item_image_path_to_return
+                    })
+                    # Apply sorting if requested
+                if apply_sorting and sort_by and sort_by != 'Select Metric':
+                    # Map frontend metric names to the actual keys in the metrics dictionary
+                    metric_key_mapping = {
+                        'thickness': 'thickness',
+                        'tilt_axis': 'tilt_axis',
+                        'global_shift': 'global_shift',
+                        'bad_patch_low': 'bad_patch_low',
+                        'bad_patch_all': 'bad_patch_all',
+                        'ctf_resolution': 'ctf_resolution',
+                        'ctf_score': 'ctf_score',
+                        'alpha0': 'alpha0',
+                        'beta0': 'beta0'
+                    }
+                    
+                    metric_key = metric_key_mapping.get(sort_by, None)
+                    if metric_key:
+                        # Sort by the selected metric
+                        result.sort(
+                            key=lambda x: x['metrics'].get(metric_key, 0),
+                            reverse=(sort_direction.lower() == 'desc')
+                        )
                 
-                
+                logger.info(f"prepare_result_list returned {len(result)} items")
+                return result
 
-            response = {
-                "session_name": session_name,
-                "run_number": run_number,
-                "num_tomograms": len(df),
-                "pixel_size": df["Pix_Size(A)"][0],
-                "data_collection_directory": data_collection_dir,
-                "aretomo3_processing_directory": aretomo3_processing_dir,
-                "computed_metrics": computed_metrics,
-                "user_name": user_name,
-                "project_name": project_name,
-                "grid_name": grid_name, 
-                "timing": {
-                    "infra_access_sec": round(infra_time, 3),
-                    "file_fetch_sec": round(fetch_time, 3),
-                    "data_compute_sec": round(compute_time, 3),
-                }
+            accepted_results = prepare_result_list(accepted_df, apply_sorting=True)
+            rejected_results = prepare_result_list(rejected_df)
+
+            # If no filters were applied, use the entire dataset as the result
+            has_filters = filter_config and 'filters' in filter_config and filter_config['filters']
+            if not has_filters:
+                result = prepare_result_list(merged_df, apply_sorting=True)
+            else:
+                result = []
+
+            logger.info(f"Final counts - Accepted: {len(accepted_results)}, Rejected: {len(rejected_results)}, Result: {len(result)}")
+
+            # The final response
+            response_data = {
+                'session_name': session_name,
+                'run_number': run_number,
+                'total_accepted': len(accepted_results),
+                'total_rejected': len(rejected_results),
+                'filters_applied': {
+                    'filters': filter_config.get('filters'),
+                    'filter_type': filter_config.get('filter_type', 'AND').upper()
+                },
+                'metric_ranges': metric_ranges,
+                'accepted_results': accepted_results,
+                'rejected_results': rejected_results
             }
-
-            return JsonResponse(response, json_dumps_params={"indent": 2})
+            
+            return JsonResponse(response_data, json_dumps_params={"indent": 2})
 
         finally:
             sftp.close()
@@ -1183,40 +1242,46 @@ def apply_filters(df, filter_config):
     Apply filters to the dataframe based on filter type (AND/OR) and filter criteria
     Returns both accepted and rejected dataframes
     """
+    logger.info(f"Applying filters with config: {filter_config}")
 
     if not filter_config or 'filters' not in filter_config:
+        logger.info("No filters provided, returning entire dataset")
         return df, pd.DataFrame(columns=df.columns)
 
-    filters=filter_config['filters']
-    filter_type=filter_config.get('filter_type', 'AND')
+    filters = filter_config['filters']
+    filter_type = filter_config.get('filter_type', 'AND')
 
     if not filters:
+        logger.info("Empty filters list, returning entire dataset")
         return df, pd.DataFrame(columns=df.columns)
 
     # Create a copy of the dataframe to avoid modifying the original
     df_copy = df.copy()
+    logger.info(f"Original dataframe size: {len(df_copy)}")
         
     # Map the filter field names to CSV column names
     column_mapping = {
-            'thickness': 'Thickness(Pix)',
-            'tilt_axis': 'Tilt_Axis',
-            'global_shift': 'Global_Shift(Pix)',
-            'bad_patch_low': 'Bad_Patch_Low',
-            'bad_patch_all': 'Bad_Patch_All',
-            'ctf_resolution': 'CTF_Res(A)',
-            'ctf_score': 'CTF_Score',
-            'alpha0': 'Alpha0',
-            'beta0': 'Beta0'
+        'thickness': 'Thickness(Pix)',
+        'tilt_axis': 'Tilt_Axis',
+        'global_shift': 'Global_Shift(Pix)',
+        'bad_patch_low': 'Bad_Patch_Low',
+        'bad_patch_all': 'Bad_Patch_All',
+        'ctf_resolution': 'CTF_Res(A)',
+        'ctf_score': 'CTF_Score',
+        'alpha0': 'Alpha0',
+        'beta0': 'Beta0'
     }
         
     mask = None
     for field, range_values in filters.items():
         if field not in column_mapping or len(range_values) != 2:
+            logger.warning(f"Invalid filter field or range values: {field}, {range_values}")
             continue
             
         column_name = column_mapping[field]
         min_val, max_val = range_values
         current_mask = (df_copy[column_name] >= min_val) & (df_copy[column_name] <= max_val)
+        logger.info(f"Filter {field}: {min_val} <= {column_name} <= {max_val}, matching rows: {current_mask.sum()}")
         
         if mask is None:
             mask = current_mask
@@ -1227,39 +1292,14 @@ def apply_filters(df, filter_config):
                 mask = mask | current_mask
     
     if mask is None:
+        logger.info("No valid filters applied, returning entire dataset")
         return df, pd.DataFrame(columns=df.columns)
         
     accepted_df = df[mask]
     rejected_df = df[~mask]
     
+    logger.info(f"After filtering - Accepted: {len(accepted_df)}, Rejected: {len(rejected_df)}")
     return accepted_df, rejected_df
-    filtered_df = df.copy()
-    
-    for field, range_values in filters.items():
-        if len(range_values) != 2:
-            continue
-            
-        min_val, max_val = range_values
-        
-        # Map the filter field names to CSV column names
-        column_mapping = {
-            'thickness': 'Thickness(Pix)',
-            'tilt_axis': 'Tilt_Axis',
-            'global_shift': 'Global_Shift(Pix)',
-            'bad_patch_low': 'Bad_Patch_Low',
-            'bad_patch_all': 'Bad_Patch_All',
-            'ctf_resolution': 'CTF_Res(A)',
-            'ctf_score': 'CTF_Score'
-        }
-        
-        if field in column_mapping:
-            column_name = column_mapping[field]
-            filtered_df = filtered_df[
-                (filtered_df[column_name] >= min_val) & 
-                (filtered_df[column_name] <= max_val)
-            ]
-    
-    return filtered_df
 
 def natural_position_sort_key(name):
     """
@@ -1376,6 +1416,7 @@ def get_metadata_viz_data(request):
                 raise ValueError(f"Missing required columns in CSV: {', '.join(missing_columns)}")
 
             merged_df["Tilt_Series"] = merged_df["Tilt_Series"].str.replace(".mrc", "", regex=False)
+            logger.info(f"Total positions after merging: {len(merged_df)}")
 
             # Use the new custom sorting function
             merged_df = merged_df.sort_values(
@@ -1389,11 +1430,12 @@ def get_metadata_viz_data(request):
         
             # Apply filters if provided
             accepted_df, rejected_df = apply_filters(merged_df, filter_config)
-        
+            logger.info(f"After filtering - Accepted: {len(accepted_df)}, Rejected: {len(rejected_df)}")
         
             # Prepare the result lists for both accepted and rejected
             def prepare_result_list(merged_df, apply_sorting=False):
-                if merged_df is None or    merged_df.empty:
+                if merged_df is None or merged_df.empty:
+                    logger.info("Empty dataframe passed to prepare_result_list")
                     return []
                 result = []
                 for _, row in merged_df.iterrows():
@@ -1447,22 +1489,20 @@ def get_metadata_viz_data(request):
                             reverse=(sort_direction.lower() == 'desc')
                         )
                 
-               
-
+                logger.info(f"prepare_result_list returned {len(result)} items")
                 return result
 
             accepted_results = prepare_result_list(accepted_df, apply_sorting=True)
             rejected_results = prepare_result_list(rejected_df)
 
-             # If no filters were applied, use the entire dataset as the result
-            # Otherwise, the result will be empty and client should use accepted_results and rejected_results
+            # If no filters were applied, use the entire dataset as the result
             has_filters = filter_config and 'filters' in filter_config and filter_config['filters']
             if not has_filters:
                 result = prepare_result_list(merged_df, apply_sorting=True)
             else:
                 result = []
 
-
+            logger.info(f"Final counts - Accepted: {len(accepted_results)}, Rejected: {len(rejected_results)}, Result: {len(result)}")
 
             # The final response
             response_data = {
@@ -1470,7 +1510,7 @@ def get_metadata_viz_data(request):
                 'run_number': run_number,
                 'total_accepted': len(accepted_results),
                 'total_rejected': len(rejected_results),
-                 'filters_applied': {
+                'filters_applied': {
                     'filters': filter_config.get('filters'),
                     'filter_type': filter_config.get('filter_type', 'AND').upper()
                 },
@@ -1479,7 +1519,7 @@ def get_metadata_viz_data(request):
                 'rejected_results': rejected_results
             }
             
-            return JsonResponse(response_data, json_dumps_params={"indent": 2})\
+            return JsonResponse(response_data, json_dumps_params={"indent": 2})
 
         finally:
             sftp.close()
