@@ -166,7 +166,7 @@ def create_tomogram(review, tomogram_id, position_id):
         run_id=review.run_id,
         reconstruction_type=recon_type,
         session_id=review.msi_session.id,
-        quality='',
+        quality='pending',
         rejection_reasons=[],
         object_labels=[]
     )
@@ -233,6 +233,22 @@ def main(review_id, existing_positions=None):
 
         # Process files, passing existing positions to skip
         process_files(review, zarr_files, existing_positions)
+
+        # Update review counts
+        total_count = ReviewTomogram.objects.filter(review=review).count()
+        reviewed_count = ReviewTomogram.objects.filter(
+            review=review,
+            quality__in=['accepted', 'rejected', 'uncertain', 'exemplary']
+        ).count()
+        
+        # Update the review record
+        review.total_count = total_count
+        review.reviewed_count = reviewed_count
+        review.save()
+        
+        print(f"\n📊 Updated review counts:")
+        print(f"• Total tomograms: {total_count}")
+        print(f"• Reviewed tomograms: {reviewed_count}")
 
         imported = get_all_tomograms()
         print(f"\n📊 Total tomograms in DB: {len(imported)}")
