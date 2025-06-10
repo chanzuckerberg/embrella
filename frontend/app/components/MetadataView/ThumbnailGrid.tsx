@@ -34,7 +34,7 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(({ acceptedResul
   console.log('Data for thumbnail from API', data, acceptedResults, rejectedResults, items);
 
   const COLUMN_COUNT = 1;
-  const CELL_WIDTH = 180;
+  const CELL_WIDTH = 338; 
   const CELL_HEIGHT = 200;
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(({ acceptedResul
     return () => window.removeEventListener('resize', updateWindowSize);
   }, []);
 
-  const gridWidth = Math.min(CELL_WIDTH * COLUMN_COUNT + 32, windowSize.width * 0.1);
+  const gridWidth = Math.min(CELL_WIDTH * COLUMN_COUNT + 32, windowSize.width * 0.25); // Increased from 0.1 to 0.2
   const gridHeight = Math.min(Math.ceil(items.length) * CELL_HEIGHT, windowSize.height * 0.95);
 
   if (items.length === 0) {
