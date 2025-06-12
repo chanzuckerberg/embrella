@@ -75,6 +75,16 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
           color: '#333',
           fontSize: 13,
         },
+        // axisPointer: {
+        //   type: 'cross',
+        //   label: {
+        //     backgroundColor: '#6a7985'
+        //   }
+        // },
+        // position: function (point, params, dom, rect, size) {
+        //   // Position the tooltip near the data point
+        //   return [point[0] + 10, point[1] - 10];
+        // }
       },
       grid: createGridConfig(metricsConfig.length),
       xAxis: createXAxisConfig(metricsConfig, positionsMapping.maxPositionIndex),
@@ -163,6 +173,40 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
     };
   }, [chartOptions, processedData.metricsConfig.length, onHoverPosition, findPositionName]);
 
+
+  // Update chart when hoveredPosition changes
+  useEffect(() => {
+    if (chartInstance.current && hoveredPosition !== undefined) {
+      if (hoveredPosition) {
+        const posIndex = positionsMapping.positionMap.get(hoveredPosition) || -1;
+        if (posIndex >= 0) {
+          // First highlight the point
+          chartInstance.current.dispatchAction({
+            type: 'highlight',
+            seriesIndex: 0, // Just highlight the first series for simplicity
+            dataIndex: posIndex
+          });
+          
+          // Then show the tooltip
+          chartInstance.current.dispatchAction({
+            type: 'showTip',
+            seriesIndex: 0, // Just show tooltip for the first series
+            dataIndex: posIndex
+          });
+        }
+      } else {
+        // Hide tooltip and remove highlights when not hovering
+        chartInstance.current.dispatchAction({
+          type: 'downplay',
+          seriesIndex: 'all'
+        });
+        
+        chartInstance.current.dispatchAction({
+          type: 'hideTip'
+        });
+      }
+    }
+  }, [hoveredPosition, positionsMapping.positionMap]);
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -176,6 +220,44 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
       window.removeEventListener('resize', handleResize);
     };
   }, []);
+
+  // Update chart when hoveredPosition changes
+  useEffect(() => {
+    if (chartInstance.current && hoveredPosition !== undefined) {
+      // Highlight the specific position or reset highlights
+      chartInstance.current.dispatchAction({
+        type: hoveredPosition ? 'highlight' : 'downplay',
+        seriesIndex: 'all',
+        dataIndex: hoveredPosition 
+          ? Array.from({ length: metricsConfig.length }).map((_, i) => {
+              // Find the position index that matches the hovered position name
+              const posIndex = positionsMapping.positionMap.get(hoveredPosition) || -1;
+              return posIndex;
+            })
+          : undefined
+      });
+      
+      // Show tooltip for the hovered position
+      if (hoveredPosition) {
+        const posIndex = positionsMapping.positionMap.get(hoveredPosition) || -1;
+        if (posIndex >= 0) {
+          // Find the correct series and data point for the tooltip
+          // We need to show tooltip for all metrics that have this position
+          metricsConfig.forEach((_, metricIndex) => {
+            chartInstance.current.dispatchAction({
+              type: 'showTip',
+              seriesIndex: isFilterApplied ? metricIndex * 2 : metricIndex, // For filtered view, each metric has 2 series
+              dataIndex: posIndex
+            });
+          });
+        }
+      } else {
+        chartInstance.current.dispatchAction({
+          type: 'hideTip'
+        });
+      }
+    }
+  }, [hoveredPosition, metricsConfig.length, positionsMapping.positionMap]);
 
   return (
     <div className={styles.scatterPlotContainer}>
