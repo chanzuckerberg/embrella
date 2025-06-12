@@ -13,6 +13,7 @@ interface ThumbnailCellProps {
     rejectedResults?: TiltSeries[];
     items: TiltSeries[];
     onThumbnailHover?: (positionName: string | null) => void;
+    onThumbnailHover?: (positionName: string | null) => void;
   };
 }
 
