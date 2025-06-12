@@ -11,11 +11,12 @@ interface ThumbnailCellProps {
     acceptedResults?: TiltSeries[];
     rejectedResults?: TiltSeries[];
     items: TiltSeries[];
+    onThumbnailHover?: (positionName: string | null) => void;
   };
 }
 
 export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, rowIndex, data }) => {
-  const { items } = data;
+  const { items, onThumbnailHover } = data;
   const index = rowIndex * 1 + columnIndex;
 
   if (!items || index >= items.length) {
@@ -33,8 +34,24 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
   
   const ctfUrl = item.ctf_path;
   
+  const handleMouseEnter = () => {
+    if (onThumbnailHover && item.name) {
+      onThumbnailHover(item.name);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (onThumbnailHover) {
+      onThumbnailHover(null);
+    }
+  };
+  
   return (
-    <div className={styles.thumbnailWrapper}>
+    <div 
+      className={styles.thumbnailWrapper}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <div className={styles.thumbnailPair}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

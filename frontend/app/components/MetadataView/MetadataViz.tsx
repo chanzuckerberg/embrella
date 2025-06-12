@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import styles from './MetadataViz.module.css';
 import { MetadataFilters } from './MetadataFilters';
 import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
@@ -37,6 +37,13 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
     scatterplotError,
     scatterplotLoading,
   }) => {
+    // State to track which position is being hovered in thumbnails
+    const [hoveredPosition, setHoveredPosition] = useState<string | null>(null);
+    
+    const handleThumbnailHover = (positionName: string | null) => {
+      setHoveredPosition(positionName);
+    };
+    
     if (isLoading) {
       return <div>Loading...</div>;
     }
@@ -65,6 +72,7 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
             scatterplotSuccess={scatterplotSuccess}
             scatterplotError={scatterplotError}
             scatterplotLoading={scatterplotLoading}
+            hoveredPosition={hoveredPosition}
           />
         </div>
         <div className={styles.rightColumn}>
@@ -72,6 +80,7 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
             acceptedResults={vizResponse.accepted_results}
             rejectedResults={vizResponse.rejected_results}
             data={vizResponse}
+            onThumbnailHover={handleThumbnailHover}
           />
         </div>
       </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, memo } from 'react';
 import { FixedSizeGrid } from 'react-window';
 import type { FixedSizeGridProps, GridChildComponentProps } from 'react-window';
@@ -12,6 +11,7 @@ interface GridData {
   acceptedResults: TiltSeries[];
   rejectedResults: TiltSeries[];
   items: TiltSeries[];
+  onThumbnailHover?: (positionName: string | null) => void;
 }
 const Grid = FixedSizeGrid as unknown as React.ComponentType<FixedSizeGridProps<GridData>>;
 
@@ -19,15 +19,16 @@ interface ThumbnailGridProps {
   acceptedResults: TiltSeries[];
   rejectedResults: TiltSeries[];
   data: MetadataVizResponse;
+  onThumbnailHover?: (positionName: string | null) => void;
 }
 
-const Cell: React.FC<GridChildComponentProps> = ({ columnIndex, rowIndex, style, data }) => (
+const Cell = ({ columnIndex, rowIndex, style, data }: GridChildComponentProps<GridData>) => (
   <div style={style}>
     <ThumbnailCell columnIndex={columnIndex} rowIndex={rowIndex} style={style} data={data} />
   </div>
 );
 
-export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(({ acceptedResults, rejectedResults, data }) => {
+export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(({ acceptedResults, rejectedResults, data, onThumbnailHover }) => {
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const items = data ? acceptedResults : rejectedResults;
 
@@ -71,7 +72,7 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(({ acceptedResul
         rowCount={Math.ceil(items.length / COLUMN_COUNT)}
         rowHeight={CELL_HEIGHT}
         width={gridWidth}
-        itemData={{ acceptedResults, rejectedResults, items }}
+        itemData={{ acceptedResults, rejectedResults, items, onThumbnailHover }}
       >
         {Cell}
       </Grid>
