@@ -205,3 +205,14 @@
   border-radius: 4px;
   overflow: auto !important;
 }
+
+/* Tooltip styles */
+.thumbnailTooltip {
+  position: static;
+  width: 180px;
+  padding: 18px;
+  z-index: 1000;
+  background-color: rgba(255, 255, 255, 0.98);
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
