@@ -17,6 +17,7 @@ interface MetricScatterPlotProps {
   isLoading?: boolean;
   error?: boolean | { status: number; message: string };
   isFilterApplied: boolean;
+  hoveredPosition?: string | null;
 }
 
 interface ProcessedData {
@@ -30,7 +31,12 @@ interface ProcessedData {
   totalPositions: number;
 }
 
-export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, processedData, isFilterApplied }) => {
+export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ 
+  data, 
+  processedData, 
+  isFilterApplied,
+  hoveredPosition 
+}) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts>();
 
@@ -71,9 +77,9 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ data, proc
       grid: createGridConfig(metricsConfig.length),
       xAxis: createXAxisConfig(metricsConfig, positionsMapping.maxPositionIndex),
       yAxis: createYAxisConfig(metricsConfig, data),
-      series: createSeriesConfig(metricsConfig, data, isFilterApplied, positionsMapping),
+      series: createSeriesConfig(metricsConfig, data, isFilterApplied, positionsMapping, hoveredPosition),
     };
-  }, [data, processedData, metricsConfig, isFilterApplied, positionsMapping]);
+  }, [data, processedData, metricsConfig, isFilterApplied, positionsMapping, hoveredPosition]);
 
   // Initialize and update chart
   useEffect(() => {

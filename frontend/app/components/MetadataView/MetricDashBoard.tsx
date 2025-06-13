@@ -14,6 +14,7 @@ interface MetricDashboardProps {
   scatterplotSuccess?: boolean;
   scatterplotError?: { status: number; message: string };
   scatterplotLoading?: boolean;
+  hoveredPosition?: string | null;
 }
 
 // Helper function to process metadata
@@ -56,6 +57,7 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
   scatterplotData,
   scatterplotError,
   scatterplotLoading,
+  hoveredPosition,
 }) => {
   const [isScatterPlot, setIsScatterPlot] = useState(true);
 
@@ -93,6 +95,7 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
             isLoading={isScatterplotLoading}
             error={hasScatterplotError}
             isFilterApplied={isFilterApplied}
+            hoveredPosition={hoveredPosition}
           />
         );
       }
