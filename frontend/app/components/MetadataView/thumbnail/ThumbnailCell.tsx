@@ -24,7 +24,7 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
   
   return (
     <Paper elevation={3} className={styles.thumbnailTooltip}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 3 }}>
         Position: {item.name || 'Unknown'}
       </Typography>
       

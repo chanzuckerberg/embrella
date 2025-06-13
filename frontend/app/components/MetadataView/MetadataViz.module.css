@@ -151,6 +151,18 @@
   height: calc(100vh - 200px);
   min-height: 600px;
 }
+/* Thumbnail Tooltip styles */
+.thumbnailTooltip {
+  position: absolute;
+  width: 180px;
+  padding: 12px;
+  z-index: 1;
+  left:175px;
+  bottom:180px; 
+  background-color: rgba(255, 255, 255, 0.98);
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+} 
 
 /*ThumbnailGrid*/
 
@@ -204,15 +216,4 @@
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   overflow: auto !important;
-}
-
-/* Tooltip styles */
-.thumbnailTooltip {
-  position: static;
-  width: 180px;
-  padding: 18px;
-  z-index: 1000;
-  background-color: rgba(255, 255, 255, 0.98);
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
