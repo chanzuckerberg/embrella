@@ -224,6 +224,7 @@
   border-radius: 4px;
   overflow: auto !important;
 }
+<<<<<<< HEAD
 
 /* Scale Bar Styles */
 .scaleBarContainer {
@@ -243,3 +244,5 @@
   height: 2px;
   background-color: #000;
 }
+=======
+>>>>>>> d85bf51 (Thumbnail style changes)
