@@ -6,6 +6,7 @@ import { MetricDashboard } from './MetricDashBoard';
 import { ThumbnailGrid } from './ThumbnailGrid';
 import { MetadataSummaryResponse } from '@app/common/types/metadataViz/metadataSummary';
 import { UseFilterStateReturn } from '@app/common/hooks/useFetchMetadata/useFilterState';
+import NanoScaleBar from './utils/NanoScaleBar';
 
 interface MetadataVizProps {
   vizResponse?: MetadataVizResponse;
@@ -73,14 +74,17 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
             scatterplotError={scatterplotError}
             scatterplotLoading={scatterplotLoading}
             hoveredPosition={hoveredPosition}
+            onHoverPosition={handleThumbnailHover}
           />
         </div>
         <div className={styles.rightColumn}>
+          <NanoScaleBar angstrom={summaryAPIData?.pixel_size||0} />
           <ThumbnailGrid
             acceptedResults={vizResponse.accepted_results}
             rejectedResults={vizResponse.rejected_results}
             data={vizResponse}
             onThumbnailHover={handleThumbnailHover}
+            hoveredPosition={hoveredPosition}
           />
         </div>
       </div>
