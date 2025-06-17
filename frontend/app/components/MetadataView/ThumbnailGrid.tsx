@@ -12,6 +12,7 @@ interface GridData {
   rejectedResults: TiltSeries[];
   items: TiltSeries[];
   onThumbnailHover?: (positionName: string | null) => void;
+  hoveredPosition?: string | null;
 }
 const Grid = FixedSizeGrid as unknown as React.ComponentType<FixedSizeGridProps<GridData>>;
 
@@ -20,6 +21,7 @@ interface ThumbnailGridProps {
   rejectedResults: TiltSeries[];
   data: MetadataVizResponse;
   onThumbnailHover?: (positionName: string | null) => void;
+  hoveredPosition?: string | null;
 }
 
 const Cell = ({ columnIndex, rowIndex, style, data }: GridChildComponentProps<GridData>) => (
@@ -28,14 +30,14 @@ const Cell = ({ columnIndex, rowIndex, style, data }: GridChildComponentProps<Gr
   </div>
 );
 
-export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(({ acceptedResults, rejectedResults, data, onThumbnailHover }) => {
+export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(({ acceptedResults, rejectedResults, data, onThumbnailHover, hoveredPosition }) => {
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const items = data ? acceptedResults : rejectedResults;
 
   console.log('Data for thumbnail from API', data, acceptedResults, rejectedResults, items);
 
   const COLUMN_COUNT = 1;
-  const CELL_WIDTH = 338; 
+  const CELL_WIDTH = 320; 
   const CELL_HEIGHT = 200;
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(({ acceptedResul
         rowCount={Math.ceil(items.length / COLUMN_COUNT)}
         rowHeight={CELL_HEIGHT}
         width={gridWidth}
-        itemData={{ acceptedResults, rejectedResults, items, onThumbnailHover }}
+        itemData={{ acceptedResults, rejectedResults, items, onThumbnailHover, hoveredPosition }}
       >
         {Cell}
       </Grid>
