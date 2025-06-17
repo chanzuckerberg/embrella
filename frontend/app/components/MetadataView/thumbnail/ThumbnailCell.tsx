@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useMemo } from 'react';
 import styles from '../MetadataViz.module.css';
 import { Typography, Paper } from '@mui/material';
 import { TiltSeries } from '@app/common/types/metadataViz/metadataVizData';
@@ -13,6 +13,7 @@ interface ThumbnailCellProps {
     rejectedResults?: TiltSeries[];
     items: TiltSeries[];
     onThumbnailHover?: (positionName: string | null) => void;
+    hoveredPosition?: string | null;
   };
 }
 
@@ -47,7 +48,7 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
 };
 
 export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, rowIndex, data }) => {
-  const { items, onThumbnailHover } = data;
+  const { items, onThumbnailHover, hoveredPosition } = data;
   const index = rowIndex * 1 + columnIndex;
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -65,6 +66,9 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
   const thumbnailUrl = item.thumbnail_path;
   
   const ctfUrl = item.ctf_path;
+  
+  // Check if this thumbnail should be enlarged (when its position name matches the hovered position)
+  const isEnlarged = hoveredPosition === item.name;
   
   const handleMouseEnter = () => {
     if (onThumbnailHover && item.name) {
@@ -91,7 +95,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
         <img
           src={thumbnailUrl}
           alt={`Thumbnail for ${item.name || 'item'}`}
-          className={styles.thumbnail}
+          className={`${styles.thumbnail} ${isEnlarged ? styles.thumbnailEnlarged : ''}`}
           onError={(e) => {
             console.error(`Failed to load thumbnail: ${thumbnailUrl}`);
             (e.target as HTMLImageElement).alt = 'Thumbnail not available';
@@ -104,6 +108,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
           src={ctfUrl}
           alt={`CTF thumbnail for ${item.name || 'item'}`}
           className={styles.thumbnail}
+          // className={`${styles.thumbnail} ${isEnlarged ? styles.thumbnailEnlarged : ''}`}
           onError={(e) => {
             console.error(`Failed to load thumbnail: ${ctfUrl}`);
             (e.target as HTMLImageElement).alt = 'Thumbnail not available';
