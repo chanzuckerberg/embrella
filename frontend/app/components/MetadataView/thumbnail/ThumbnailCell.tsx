@@ -50,7 +50,7 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
 export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, rowIndex, data }) => {
   const { items, onThumbnailHover, hoveredPosition } = data;
   const index = rowIndex * 1 + columnIndex;
-  const [showTooltip, setShowTooltip] = useState(false);
+  const [showThumbnailTooltip, setShowThumbnailTooltip] = useState(false);
   // Add state to track if the image loaded successfully
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -76,22 +76,21 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
   const handleMouseEnter = () => {
     if (onThumbnailHover && item.name) {
       onThumbnailHover(item.name);
-      setShowTooltip(true);
+      setShowThumbnailTooltip(true);
     }
   };
 
   const handleMouseLeave = () => {
     if (onThumbnailHover) {
       onThumbnailHover(null);
-      setShowTooltip(false);
+      setShowThumbnailTooltip(false);
     }
   };
   
   return (
     <div 
       className={styles.thumbnailWrapper}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+    
     >
       <div className={styles.thumbnailPair}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -105,6 +104,8 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
             (e.target as HTMLImageElement).alt = 'Thumbnail not available';
             setImageLoaded(false);
           }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         />
       
         {/* CTF thumbnail */}
@@ -123,7 +124,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
       <Typography variant="caption">{item.name || 'Thumbnail caption'}</Typography>
       
       {/* Custom tooltip that appears next to the thumbnail */}
-      {showTooltip && item && <ThumbnailTooltip item={item} />}
+      {showThumbnailTooltip && item && <ThumbnailTooltip item={item} />}
     </div>
   );
 });
