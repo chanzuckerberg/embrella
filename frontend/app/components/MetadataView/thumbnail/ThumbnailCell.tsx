@@ -51,6 +51,8 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
   const { items, onThumbnailHover, hoveredPosition } = data;
   const index = rowIndex * 1 + columnIndex;
   const [showTooltip, setShowTooltip] = useState(false);
+  // Add state to track if the image loaded successfully
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   if (!items || index >= items.length) {
     return null;
@@ -68,7 +70,8 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
   const ctfUrl = item.ctf_path;
   
   // Check if this thumbnail should be enlarged (when its position name matches the hovered position)
-  const isEnlarged = hoveredPosition === item.name;
+  // AND the image has loaded successfully
+  const isEnlarged = hoveredPosition === item.name && imageLoaded;
   
   const handleMouseEnter = () => {
     if (onThumbnailHover && item.name) {
@@ -96,9 +99,11 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
           src={thumbnailUrl}
           alt={`Thumbnail for ${item.name || 'item'}`}
           className={`${styles.thumbnail} ${isEnlarged ? styles.thumbnailEnlarged : ''}`}
+          onLoad={() => setImageLoaded(true)}
           onError={(e) => {
             console.error(`Failed to load thumbnail: ${thumbnailUrl}`);
             (e.target as HTMLImageElement).alt = 'Thumbnail not available';
+            setImageLoaded(false);
           }}
         />
       
