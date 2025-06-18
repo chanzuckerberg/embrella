@@ -59,7 +59,7 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
   scatterplotError,
   scatterplotLoading,
   hoveredPosition,
-  onHoverPosition
+  onHoverPosition,
 }) => {
   const [isScatterPlot, setIsScatterPlot] = useState(true);
 

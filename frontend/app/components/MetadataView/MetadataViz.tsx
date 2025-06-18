@@ -40,11 +40,11 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
   }) => {
     // State to track which position is being hovered in thumbnails
     const [hoveredPosition, setHoveredPosition] = useState<string | null>(null);
-    
+
     const handleThumbnailHover = (positionName: string | null) => {
       setHoveredPosition(positionName);
     };
-    
+
     if (isLoading) {
       return <div>Loading...</div>;
     }
@@ -78,7 +78,7 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
           />
         </div>
         <div className={styles.rightColumn}>
-          <NanoScaleBar angstrom={summaryAPIData?.pixel_size||0} />
+          <NanoScaleBar angstrom={summaryAPIData?.pixel_size || 0} />
           <ThumbnailGrid
             acceptedResults={vizResponse.accepted_results}
             rejectedResults={vizResponse.rejected_results}

@@ -32,12 +32,12 @@ interface ProcessedData {
   totalPositions: number;
 }
 
-export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({ 
-  data, 
-  processedData, 
+export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
+  data,
+  processedData,
   isFilterApplied,
   hoveredPosition,
-  onHoverPosition
+  onHoverPosition,
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts>();
@@ -84,24 +84,26 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
   }, [data, processedData, metricsConfig, isFilterApplied, positionsMapping, hoveredPosition]);
 
   // Function to find position name from data point
-  const findPositionName = useCallback((params: any) => {
-    if (!params || params.dataIndex === undefined) return null;
-    
-    const seriesIndex = params.seriesIndex;
-    const dataIndex = params.dataIndex;
-    
-    // Determine if this is from accepted or rejected results
-    const isRejectedSeries = isFilterApplied && 
-      (params.seriesName?.includes('Rejected') || seriesIndex % 2 === 1);
-    
-    // Get the appropriate dataset
-    const dataset = isRejectedSeries ? data.rejected_results : data.accepted_results;
-    
-    if (!dataset || dataIndex >= dataset.length) return null;
-    
-    // Return the position name
-    return dataset[dataIndex]?.name || null;
-  }, [data, isFilterApplied]);
+  const findPositionName = useCallback(
+    (params: any) => {
+      if (!params || params.dataIndex === undefined) return null;
+
+      const seriesIndex = params.seriesIndex;
+      const dataIndex = params.dataIndex;
+
+      // Determine if this is from accepted or rejected results
+      const isRejectedSeries = isFilterApplied && (params.seriesName?.includes('Rejected') || seriesIndex % 2 === 1);
+
+      // Get the appropriate dataset
+      const dataset = isRejectedSeries ? data.rejected_results : data.accepted_results;
+
+      if (!dataset || dataIndex >= dataset.length) return null;
+
+      // Return the position name
+      return dataset[dataIndex]?.name || null;
+    },
+    [data, isFilterApplied]
+  );
 
   // Initialize and update chart
   useEffect(() => {
@@ -122,7 +124,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
     chartInstance.current = echarts.init(chartRef.current);
     chartInstance.current.setOption(chartOptions);
     chartInstance.current.resize();
-    
+
     // Add event listeners for hover
     chartInstance.current.on('mouseover', (params) => {
       if (onHoverPosition) {
@@ -130,13 +132,13 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
         onHoverPosition(positionName);
       }
     });
-    
+
     chartInstance.current.on('mouseout', () => {
       if (onHoverPosition) {
         onHoverPosition(null);
       }
     });
-    
+
     // Also add a global mouseout event to ensure we reset the hover state
     // when the mouse leaves the chart area completely
     const handleGlobalMouseOut = (e: MouseEvent) => {
@@ -145,7 +147,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
         onHoverPosition(null);
       }
     };
-    
+
     chartRef.current.addEventListener('mouseleave', handleGlobalMouseOut);
 
     return () => {
@@ -155,7 +157,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
         chartInstance.current.off('mouseout');
         chartInstance.current.dispose();
       }
-      
+
       // Remove the global mouseout event listener
       if (chartRef.current) {
         chartRef.current.removeEventListener('mouseleave', handleGlobalMouseOut);
