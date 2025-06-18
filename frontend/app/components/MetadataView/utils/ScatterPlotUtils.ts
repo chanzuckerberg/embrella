@@ -282,13 +282,12 @@ export const createSeriesConfig = (
 
   // Helper to create default series
   const createDefaultSeries = (metric: MetricConfig, index: number, positions: number[]) => {
-    
     // Create data points with special handling for the hovered position
     const dataPoints = data.accepted_results.map((item, idx) => {
       if (!item?.metrics) return [positions[idx], 0];
       const value = item.metrics[metric.key as keyof Metrics];
       const isHovered = hoveredPosition && item.name === hoveredPosition;
-      
+
       return {
         value: [positions[idx], metric.key.includes('bad_patch') ? value * 100 : value],
         // Add symbol size and itemStyle only for the hovered point
@@ -300,12 +299,12 @@ export const createSeriesConfig = (
             borderWidth: 2,
             shadowBlur: 10,
             shadowColor: 'rgba(0, 0, 0, 0.5)',
-            opacity: 1
-          }
-        })
+            opacity: 1,
+          },
+        }),
       };
     });
-    
+
     return {
       type: 'scatter' as const,
       name: metric.label,
@@ -320,116 +319,116 @@ export const createSeriesConfig = (
     };
   };
 
- // Helper to create filtered series
- const createFilteredSeries = (
-  metric: MetricConfig,
-  index: number,
-  positionMap: Map<string, number>,
-  allPositionIndices: number[]
-) => {
-  // Create mappings to track which positions have accepted/rejected values
-  const acceptedValuesByPosition = new Map<number, number>();
-  const rejectedValuesByPosition = new Map<number, number>();
-  const positionNameByIndex = new Map<number, string>();
+  // Helper to create filtered series
+  const createFilteredSeries = (
+    metric: MetricConfig,
+    index: number,
+    positionMap: Map<string, number>,
+    allPositionIndices: number[]
+  ) => {
+    // Create mappings to track which positions have accepted/rejected values
+    const acceptedValuesByPosition = new Map<number, number>();
+    const rejectedValuesByPosition = new Map<number, number>();
+    const positionNameByIndex = new Map<number, string>();
 
-  // Map accepted values to their positions
-  data.accepted_results.forEach((item) => {
-    if (item.name && item.metrics) {
-      const posIndex = positionMap.get(item.name) || 0;
-      const value = item.metrics[metric.key as keyof Metrics];
-      acceptedValuesByPosition.set(posIndex, metric.key.includes('bad_patch') ? value * 100 : value);
-      positionNameByIndex.set(posIndex, item.name);
-    }
-  });
-
-  // Map rejected values to their positions
-  if (data.rejected_results) {
-    data.rejected_results.forEach((item) => {
+    // Map accepted values to their positions
+    data.accepted_results.forEach((item) => {
       if (item.name && item.metrics) {
         const posIndex = positionMap.get(item.name) || 0;
         const value = item.metrics[metric.key as keyof Metrics];
-        rejectedValuesByPosition.set(posIndex, metric.key.includes('bad_patch') ? value * 100 : value);
+        acceptedValuesByPosition.set(posIndex, metric.key.includes('bad_patch') ? value * 100 : value);
         positionNameByIndex.set(posIndex, item.name);
       }
     });
-  }
 
-  // Create data arrays for accepted and rejected points
-  const acceptedData: Array<number[] | { value: number[], symbolSize?: number, itemStyle?: any }> = [];
-  const rejectedData: Array<number[] | { value: number[], symbolSize?: number, itemStyle?: any }> = [];
-
-  // For each position index, add it to the appropriate array if it has a value
-  allPositionIndices.forEach((posIndex) => {
-    if (acceptedValuesByPosition.has(posIndex)) {
-      const posName = positionNameByIndex.get(posIndex);
-      const isHovered = hoveredPosition && posName === hoveredPosition;
-      
-      if (isHovered) {
-        acceptedData.push({
-          value: [posIndex, acceptedValuesByPosition.get(posIndex)!],
-          symbolSize: 10,
-          itemStyle: {
-            borderColor: '#000',
-            borderWidth: 2,
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
-            opacity: 1
-          }
-        });
-      } else {
-        acceptedData.push([posIndex, acceptedValuesByPosition.get(posIndex)!]);
-      }
+    // Map rejected values to their positions
+    if (data.rejected_results) {
+      data.rejected_results.forEach((item) => {
+        if (item.name && item.metrics) {
+          const posIndex = positionMap.get(item.name) || 0;
+          const value = item.metrics[metric.key as keyof Metrics];
+          rejectedValuesByPosition.set(posIndex, metric.key.includes('bad_patch') ? value * 100 : value);
+          positionNameByIndex.set(posIndex, item.name);
+        }
+      });
     }
 
-    if (rejectedValuesByPosition.has(posIndex)) {
-      const posName = positionNameByIndex.get(posIndex);
-      const isHovered = hoveredPosition && posName === hoveredPosition;
-      
-      if (isHovered) {
-        rejectedData.push({
-          value: [posIndex, rejectedValuesByPosition.get(posIndex)!],
-          symbolSize: 10,
-          itemStyle: {
-            borderColor: '#000',
-            borderWidth: 2,
-            shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
-            opacity: 1
-          }
-        });
-      } else {
-        rejectedData.push([posIndex, rejectedValuesByPosition.get(posIndex)!]);
-      }
-    }
-  });
+    // Create data arrays for accepted and rejected points
+    const acceptedData: Array<number[] | { value: number[]; symbolSize?: number; itemStyle?: any }> = [];
+    const rejectedData: Array<number[] | { value: number[]; symbolSize?: number; itemStyle?: any }> = [];
 
-  return [
-    {
-      type: 'scatter' as const,
-      name: `${metric.label} (Accepted)`,
-      xAxisIndex: index,
-      yAxisIndex: index,
-      symbolSize: 5,
-      itemStyle: {
-        opacity: 0.6,
-        color: 'blue',
+    // For each position index, add it to the appropriate array if it has a value
+    allPositionIndices.forEach((posIndex) => {
+      if (acceptedValuesByPosition.has(posIndex)) {
+        const posName = positionNameByIndex.get(posIndex);
+        const isHovered = hoveredPosition && posName === hoveredPosition;
+
+        if (isHovered) {
+          acceptedData.push({
+            value: [posIndex, acceptedValuesByPosition.get(posIndex)!],
+            symbolSize: 10,
+            itemStyle: {
+              borderColor: '#000',
+              borderWidth: 2,
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.5)',
+              opacity: 1,
+            },
+          });
+        } else {
+          acceptedData.push([posIndex, acceptedValuesByPosition.get(posIndex)!]);
+        }
+      }
+
+      if (rejectedValuesByPosition.has(posIndex)) {
+        const posName = positionNameByIndex.get(posIndex);
+        const isHovered = hoveredPosition && posName === hoveredPosition;
+
+        if (isHovered) {
+          rejectedData.push({
+            value: [posIndex, rejectedValuesByPosition.get(posIndex)!],
+            symbolSize: 10,
+            itemStyle: {
+              borderColor: '#000',
+              borderWidth: 2,
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.5)',
+              opacity: 1,
+            },
+          });
+        } else {
+          rejectedData.push([posIndex, rejectedValuesByPosition.get(posIndex)!]);
+        }
+      }
+    });
+
+    return [
+      {
+        type: 'scatter' as const,
+        name: `${metric.label} (Accepted)`,
+        xAxisIndex: index,
+        yAxisIndex: index,
+        symbolSize: 5,
+        itemStyle: {
+          opacity: 0.6,
+          color: 'blue',
+        },
+        data: acceptedData,
       },
-      data: acceptedData,
-    },
-    {
-      type: 'scatter' as const,
-      name: `${metric.label} (Rejected)`,
-      xAxisIndex: index,
-      yAxisIndex: index,
-      symbolSize: 5,
-      itemStyle: {
-        opacity: 0.6,
-        color: '#FF3333',
+      {
+        type: 'scatter' as const,
+        name: `${metric.label} (Rejected)`,
+        xAxisIndex: index,
+        yAxisIndex: index,
+        symbolSize: 5,
+        itemStyle: {
+          opacity: 0.6,
+          color: '#FF3333',
+        },
+        data: rejectedData,
       },
-      data: rejectedData,
-    },
-  ];
-};
+    ];
+  };
   // Create series based on visualization mode
   return metricsConfig
     .map((metric, index) => {

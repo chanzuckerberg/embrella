@@ -2,7 +2,7 @@ import React, { memo, useState, useMemo } from 'react';
 import styles from '../MetadataViz.module.css';
 import { Typography, Paper } from '@mui/material';
 import { TiltSeries } from '@app/common/types/metadataViz/metadataVizData';
-import {METRICS_CONFIG} from '../constants/MetricConfig';
+import { METRICS_CONFIG } from '../constants/MetricConfig';
 
 interface ThumbnailCellProps {
   columnIndex: number;
@@ -20,23 +20,22 @@ interface ThumbnailCellProps {
 // Custom tooltip component to display metrics information
 const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
   if (!item || !item.metrics) return null;
-  
+
   const metrics = item.metrics;
-  
+
   return (
     <Paper elevation={3} className={styles.thumbnailTooltip}>
       <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 3 }}>
         Position: {item.name || 'Unknown'}
       </Typography>
-      
+
       {Object.entries(metrics).map(([key, value]) => {
-      
-         // Get unit from METRICS_CONFIG
-               const metricConfig = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG];
-               const unit = metricConfig?.unit || '';
-               const label = metricConfig?.label || key;
-               const formattedValue = value.toFixed(2);
-        
+        // Get unit from METRICS_CONFIG
+        const metricConfig = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG];
+        const unit = metricConfig?.unit || '';
+        const label = metricConfig?.label || key;
+        const formattedValue = value.toFixed(2);
+
         return (
           <Typography key={key} variant="body2" sx={{ mb: 0.5 }}>
             {label}: {formattedValue} {unit}
@@ -66,15 +65,15 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
 
   // Assuming the primary image is the regular thumbnail_path
   const thumbnailUrl = item.thumbnail_path;
-  
+
   const ctfUrl = item.ctf_path;
-  
+
   // Check if this thumbnail should be enlarged (when its position name matches the hovered position)
   // AND the image has loaded successfully
   const isEnlarged = hoveredPosition === item.name && imageLoaded;
-  
+
   const handleMouseEnter = () => {
-    if (onThumbnailHover && item.name) {
+    if (onThumbnailHover && item.name && imageLoaded) {
       onThumbnailHover(item.name);
       setShowThumbnailTooltip(true);
     }
@@ -86,12 +85,9 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
       setShowThumbnailTooltip(false);
     }
   };
-  
+
   return (
-    <div 
-      className={styles.thumbnailWrapper}
-    
-    >
+    <div className={styles.thumbnailWrapper}>
       <div className={styles.thumbnailPair}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -107,7 +103,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         />
-      
+
         {/* CTF thumbnail */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -122,7 +118,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
         />
       </div>
       <Typography variant="caption">{item.name || 'Thumbnail caption'}</Typography>
-      
+
       {/* Custom tooltip that appears next to the thumbnail */}
       {showThumbnailTooltip && item && <ThumbnailTooltip item={item} />}
     </div>

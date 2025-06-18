@@ -30,56 +30,57 @@ const Cell = ({ columnIndex, rowIndex, style, data }: GridChildComponentProps<Gr
   </div>
 );
 
-export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(({ acceptedResults, rejectedResults, data, onThumbnailHover, hoveredPosition }) => {
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-  const items = data ? acceptedResults : rejectedResults;
+export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(
+  ({ acceptedResults, rejectedResults, data, onThumbnailHover, hoveredPosition }) => {
+    const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+    const items = data ? acceptedResults : rejectedResults;
 
-  console.log('Data for thumbnail from API', data, acceptedResults, rejectedResults, items);
 
-  const COLUMN_COUNT = 1;
-  const CELL_WIDTH = 320; 
-  const CELL_HEIGHT = 200;
+    const COLUMN_COUNT = 1;
+    const CELL_WIDTH = 320;
+    const CELL_HEIGHT = 200;
 
-  useEffect(() => {
-    const updateWindowSize = () => {
-      setWindowSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
+    useEffect(() => {
+      const updateWindowSize = () => {
+        setWindowSize({
+          width: window.innerWidth,
+          height: window.innerHeight,
+        });
+      };
 
-    updateWindowSize();
-    window.addEventListener('resize', updateWindowSize);
-    return () => window.removeEventListener('resize', updateWindowSize);
-  }, []);
+      updateWindowSize();
+      window.addEventListener('resize', updateWindowSize);
+      return () => window.removeEventListener('resize', updateWindowSize);
+    }, []);
 
-  const gridWidth = Math.min(CELL_WIDTH * COLUMN_COUNT + 32, windowSize.width * 0.25); // Increased from 0.1 to 0.2
-  const gridHeight = Math.min(Math.ceil(items.length) * CELL_HEIGHT, windowSize.height * 0.95);
+    const gridWidth = Math.min(CELL_WIDTH * COLUMN_COUNT + 32, windowSize.width * 0.25); // Increased from 0.1 to 0.2
+    const gridHeight = Math.min(Math.ceil(items.length) * CELL_HEIGHT, windowSize.height * 0.95);
 
-  if (items.length === 0) {
+    if (items.length === 0) {
+      return (
+        <Box className={styles.noThumbnails}>
+          <Typography variant="body2">No thumbnails available</Typography>
+        </Box>
+      );
+    }
+
     return (
-      <Box className={styles.noThumbnails}>
-        <Typography variant="body2">No thumbnails available</Typography>
-      </Box>
+      <div className={styles.gridContainer}>
+        <Grid
+          className={styles.grid}
+          columnCount={COLUMN_COUNT}
+          columnWidth={CELL_WIDTH}
+          height={gridHeight}
+          rowCount={Math.ceil(items.length / COLUMN_COUNT)}
+          rowHeight={CELL_HEIGHT}
+          width={gridWidth}
+          itemData={{ acceptedResults, rejectedResults, items, onThumbnailHover, hoveredPosition }}
+        >
+          {Cell}
+        </Grid>
+      </div>
     );
   }
-
-  return (
-    <div className={styles.gridContainer}>
-      <Grid
-        className={styles.grid}
-        columnCount={COLUMN_COUNT}
-        columnWidth={CELL_WIDTH}
-        height={gridHeight}
-        rowCount={Math.ceil(items.length / COLUMN_COUNT)}
-        rowHeight={CELL_HEIGHT}
-        width={gridWidth}
-        itemData={{ acceptedResults, rejectedResults, items, onThumbnailHover, hoveredPosition }}
-      >
-        {Cell}
-      </Grid>
-    </div>
-  );
-});
+);
 
 ThumbnailGrid.displayName = 'ThumbnailGrid';
