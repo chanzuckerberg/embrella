@@ -8,7 +8,6 @@ import { OmeZarrImageViewer } from '../../../idetik/packages/react/src/component
 import { getRegionFromZattrs } from './utils';
 import { Region } from '../../../idetik/packages/core/src/data/region';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { useIdetik } from '../../../idetik/packages/react/src/components/hooks';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURLWithPathParams, getRequestURL } from '@app/common/queries/utils';
@@ -42,7 +41,7 @@ const initialState = (firstTomogramId: string): TomogramState => ({
   objectLabels: [],
   rejectionReasons: [],
   saveState: 'idle',
-  contrastLimits: [-0.00001, 0.00001],
+  contrastLimits: [-0.05, 0.05],
 });
 
 type TomogramAction =
@@ -82,20 +81,11 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const userCanReview = currentUser?.id === review.owner.id;
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
 
-  const { imageSeriesLayer, channels } = useIdetik();
-
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
-      if (!imageSeriesLayer) return;
-
-      const updatedChannels = channels.map((channel) => ({
-        ...channel,
-        contrastLimits: newLimits,
-      }));
       dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
-      imageSeriesLayer.setChannelProps(updatedChannels);
     },
-    [imageSeriesLayer, channels]
+    []
   );
 
   const saveTomogram = async () => {
@@ -144,16 +134,15 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       dispatch({ type: 'SET_QUALITY', payload: detail.existingReview?.quality || 'pending' });
       dispatch({ type: 'SET_OBJECT_LABELS', payload: detail.existingReview?.objectLabels || [] });
       dispatch({ type: 'SET_REJECTION_REASONS', payload: detail.existingReview?.rejectionReasons || [] });
+      
+      // Use contrast limits from API response if available, otherwise use default
+      if (detail.contrastLimits) {
+        dispatch({ type: 'SET_CONTRAST_LIMITS', payload: detail.contrastLimits });
+      }
+      
       if (detail.zarrPath) {
         const region = await getRegionFromZattrs(detail.zarrPath);
         setRegion(region);
-        if (imageSeriesLayer) {
-          const updatedChannels = channels.map((channel) => ({
-            ...channel,
-            contrastLimits: state.contrastLimits,
-          }));
-          imageSeriesLayer.setChannelProps(updatedChannels);
-        }
       }
     };
     loadDetail();

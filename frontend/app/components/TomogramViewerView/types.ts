@@ -13,6 +13,7 @@ export interface ReviewTomogramDetail {
   tomogramId: string;
   displayName: string;
   zarrPath: string;
+  contrastLimits?: [number, number];
   existingReview?: {
     quality: 'accepted' | 'rejected' | 'uncertain';
     rejectionReasons?: string[];
@@ -32,6 +33,7 @@ export interface TomogramDetail {
   tomogramId: string;
   displayName: string;
   zarrPath: string;
+  contrastLimits?: [number, number];
   existingReview?: {
     quality: 'accepted' | 'rejected' | 'uncertain';
     rejectionReasons?: string[];
