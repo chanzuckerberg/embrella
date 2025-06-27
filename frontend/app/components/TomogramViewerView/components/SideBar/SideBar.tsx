@@ -17,6 +17,7 @@ interface SideBarProps {
   onSelectTomogram: (tomogramId: string) => void;
   contrastLimits: [number, number];
   onContrastLimitsChange: (value: [number, number]) => void;
+  contrastRange?: [number, number]; // Dynamic range for the slider
 }
 
 export const SideBar = ({
@@ -30,6 +31,7 @@ export const SideBar = ({
   onSelectTomogram,
   contrastLimits: contrast,
   onContrastLimitsChange: onContrastChange,
+  contrastRange,
 }: SideBarProps) => {
   const reviewedCount = tomograms.filter((t) => t.status !== 'pending').length;
 
@@ -68,6 +70,7 @@ export const SideBar = ({
           onContrastChange={onContrastChange}
           open={sliderOpen}
           setOpen={setSliderOpen}
+          contrastRange={contrastRange}
         />
       </SideBarSection>
     </div>

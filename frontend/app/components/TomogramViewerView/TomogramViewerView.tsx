@@ -33,6 +33,7 @@ interface TomogramState {
   rejectionReasons: string[];
   saveState: 'idle' | 'saving' | 'saved' | 'failed';
   contrastLimits: [number, number];
+  contrastRange: [number, number]; // Dynamic range for the slider
 }
 
 const initialState = (firstTomogramId: string): TomogramState => ({
@@ -43,6 +44,7 @@ const initialState = (firstTomogramId: string): TomogramState => ({
   rejectionReasons: [],
   saveState: 'idle',
   contrastLimits: [-0.05, 0.05],
+  contrastRange: [-0.05, 0.05],
 });
 
 type TomogramAction =
@@ -52,6 +54,7 @@ type TomogramAction =
   | { type: 'SET_REJECTION_REASONS'; payload: string[] }
   | { type: 'SET_SAVE_STATE'; payload: 'idle' | 'saving' | 'saved' | 'failed' }
   | { type: 'SET_CONTRAST_LIMITS'; payload: [number, number] }
+  | { type: 'SET_CONTRAST_RANGE'; payload: [number, number] }
   | { type: 'SET_SELECTED_TOMOGRAM'; payload: string };
 
 function reducer(state: TomogramState, action: TomogramAction): TomogramState {
@@ -73,6 +76,13 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
         return state;
       }
       return { ...state, contrastLimits: action.payload };
+    case 'SET_CONTRAST_RANGE':
+      // Validate that contrast range is strictly increasing
+      if (action.payload[0] >= action.payload[1]) {
+        console.warn('Invalid contrast range received, keeping current values:', action.payload);
+        return state;
+      }
+      return { ...state, contrastRange: action.payload };
     case 'SET_SELECTED_TOMOGRAM':
       return { ...state, selectedTomogramId: action.payload };
     default:
@@ -160,9 +170,18 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         // Validate that the API contrast limits are strictly increasing
         if (detail.contrastLimits[0] < detail.contrastLimits[1]) {
           dispatch({ type: 'SET_CONTRAST_LIMITS', payload: detail.contrastLimits });
+          // Set the contrast range to be wider than the limits for better slider control
+          const range = detail.contrastLimits;
+          const padding = (range[1] - range[0]) * 0.5; // 50% padding
+          const contrastRange: [number, number] = [range[0] - padding, range[1] + padding];
+          dispatch({ type: 'SET_CONTRAST_RANGE', payload: contrastRange });
         } else {
           console.warn('Invalid contrast limits from API, using default:', detail.contrastLimits);
         }
+      } else {
+        // Fallback: set a reasonable contrast range based on reconstruction type
+        const defaultRange: [number, number] = [-0.1, 0.1];
+        dispatch({ type: 'SET_CONTRAST_RANGE', payload: defaultRange });
       }
 
       if (detail.zarrPath) {
@@ -208,6 +227,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           onSelectTomogram={(id) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: id })}
           contrastLimits={state.contrastLimits}
           onContrastLimitsChange={handleContrastLimitsChange}
+          contrastRange={state.contrastRange}
         />
         <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
           {state.detail?.zarrPath !== undefined && region !== null && (

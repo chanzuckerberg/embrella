@@ -7,9 +7,17 @@ interface SliderControlsProps {
   onContrastChange: (value: [number, number]) => void;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  contrastRange?: [number, number]; // Dynamic range for the slider
 }
 
-export const SliderControls = ({ contrast, onContrastChange, open, setOpen }: SliderControlsProps) => {
+export const SliderControls = ({ contrast, onContrastChange, open, setOpen, contrastRange }: SliderControlsProps) => {
+  // Calculate dynamic min/max based on contrast limits with some padding
+  const [min, max] = contrastRange || [-0.1, 0.1];
+  const padding = (max - min) * 0.2; // 20% padding
+  const sliderMin = min - padding;
+  const sliderMax = max + padding;
+  const step = Math.max(0.0001, (sliderMax - sliderMin) / 1000); // Dynamic step size
+
   return (
     <div className="flex flex-col gap-4 w-full min-w-[300px] max-w-[450px]">
       <div className="flex items-center justify-between cursor-pointer w-full" onClick={() => setOpen((v) => !v)}>
@@ -23,21 +31,23 @@ export const SliderControls = ({ contrast, onContrastChange, open, setOpen }: Sl
           <div>
             <label className="block mb-2 font-semibold">Tomogram Contrast</label>
             <InputSlider
-              min={-0.1}
-              max={0.1}
-              step={0.0001}
+              min={sliderMin}
+              max={sliderMax}
+              step={step}
               value={contrast}
               onChange={(_, value) => {
                 const limits = value as [number, number];
                 // Prevent updating if the limits are invalid (equal or decreasing)
-                // Also add a small buffer to prevent values that are too close
-                if (limits[0] >= limits[1] || Math.abs(limits[1] - limits[0]) < 0.0001) {
+                if (limits[0] >= limits[1]) {
                   return;
                 }
                 onContrastChange(limits);
               }}
               className="my-2 w-full"
             />
+            <div className="text-xs text-gray-500 mt-1">
+              Range: {sliderMin.toFixed(4)} to {sliderMax.toFixed(4)}
+            </div>
           </div>
         </div>
       )}

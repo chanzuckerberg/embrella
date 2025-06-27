@@ -35,7 +35,6 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
     const items = data ? acceptedResults : rejectedResults;
 
-
     const COLUMN_COUNT = 1;
     const CELL_WIDTH = 320;
     const CELL_HEIGHT = 200;
