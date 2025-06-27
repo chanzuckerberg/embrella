@@ -235,7 +235,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               sourceUrl={state.detail.zarrPath}
               region={region}
               fallbackContrastLimits={state.contrastLimits}
-              // resolutionLevel={2}
+              resolutionLevel={2}
               seriesDimensionName="z"
               shouldLoadMiddleZ
               shouldAutoLoadAllSlices
