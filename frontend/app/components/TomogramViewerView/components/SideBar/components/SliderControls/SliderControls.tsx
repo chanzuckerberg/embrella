@@ -23,12 +23,18 @@ export const SliderControls = ({ contrast, onContrastChange, open, setOpen }: Sl
           <div>
             <label className="block mb-2 font-semibold">Tomogram Contrast</label>
             <InputSlider
-              min={-0.0001}
-              max={0.0001}
-              step={0.000001}
+              min={-0.1}
+              max={0.1}
+              step={0.0001}
               value={contrast}
               onChange={(_, value) => {
-                onContrastChange(value as [number, number]);
+                const limits = value as [number, number];
+                // Prevent updating if the limits are invalid (equal or decreasing)
+                // Also add a small buffer to prevent values that are too close
+                if (limits[0] >= limits[1] || Math.abs(limits[1] - limits[0]) < 0.0001) {
+                  return;
+                }
+                onContrastChange(limits);
               }}
               className="my-2 w-full"
             />
