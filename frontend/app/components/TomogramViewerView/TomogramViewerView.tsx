@@ -81,12 +81,9 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const userCanReview = currentUser?.id === review.owner.id;
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
 
-  const handleContrastLimitsChange = useCallback(
-    (newLimits: [number, number]) => {
-      dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
-    },
-    []
-  );
+  const handleContrastLimitsChange = useCallback((newLimits: [number, number]) => {
+    dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
+  }, []);
 
   const saveTomogram = async () => {
     if (!userCanReview) return;
@@ -134,12 +131,12 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       dispatch({ type: 'SET_QUALITY', payload: detail.existingReview?.quality || 'pending' });
       dispatch({ type: 'SET_OBJECT_LABELS', payload: detail.existingReview?.objectLabels || [] });
       dispatch({ type: 'SET_REJECTION_REASONS', payload: detail.existingReview?.rejectionReasons || [] });
-      
+
       // Use contrast limits from API response if available, otherwise use default
       if (detail.contrastLimits) {
         dispatch({ type: 'SET_CONTRAST_LIMITS', payload: detail.contrastLimits });
       }
-      
+
       if (detail.zarrPath) {
         const region = await getRegionFromZattrs(detail.zarrPath);
         setRegion(region);
@@ -190,9 +187,10 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               sourceUrl={state.detail.zarrPath}
               region={region}
               fallbackContrastLimits={state.contrastLimits}
-              resolutionLevel={2}
+              // resolutionLevel={2}
               seriesDimensionName="z"
-              shouldLoadMiddleZ
+              initialIndex="middle"
+              // shouldLoadMiddleZ
               shouldAutoLoadAllSlices
               classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
             />
