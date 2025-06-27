@@ -15,6 +15,7 @@ import { DJANGO_URL } from '@app/common/constants/api';
 import { UserContext } from '@app/common/context/UserProvider';
 import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
+import { useIdetik } from '../../../idetik/packages/react/src/components/hooks/useIdetik';
 
 // Types
 interface TomogramViewerProps {
@@ -66,6 +67,11 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
     case 'SET_SAVE_STATE':
       return { ...state, saveState: action.payload };
     case 'SET_CONTRAST_LIMITS':
+      // Validate that contrast limits are strictly increasing
+      if (action.payload[0] >= action.payload[1]) {
+        console.warn('Invalid contrast limits received, keeping current values:', action.payload);
+        return state;
+      }
       return { ...state, contrastLimits: action.payload };
     case 'SET_SELECTED_TOMOGRAM':
       return { ...state, selectedTomogramId: action.payload };
@@ -78,12 +84,29 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
   const [region, setRegion] = useState<Region | null>(null);
   const currentUser = useContext(UserContext);
+  const { isInitialized, imageSeriesLayer, channels } = useIdetik();
   const userCanReview = currentUser?.id === review.owner.id;
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
 
   const handleContrastLimitsChange = useCallback((newLimits: [number, number]) => {
+    // Validate that contrast limits are strictly increasing
+    if (newLimits[0] >= newLimits[1]) {
+      console.warn('Contrast limits must be strictly increasing, ignoring update:', newLimits);
+      return;
+    }
+    
     dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
-  }, []);
+    
+    // Update the image layer's contrast limits if available
+    if (isInitialized && imageSeriesLayer && channels.length > 0) {
+      const updatedChannels = [...channels];
+      updatedChannels[0] = {
+        ...updatedChannels[0],
+        contrastLimits: newLimits,
+      };
+      imageSeriesLayer.setChannelProps(updatedChannels);
+    }
+  }, [isInitialized, imageSeriesLayer, channels]);
 
   const saveTomogram = async () => {
     if (!userCanReview) return;
@@ -134,7 +157,12 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
 
       // Use contrast limits from API response if available, otherwise use default
       if (detail.contrastLimits) {
-        dispatch({ type: 'SET_CONTRAST_LIMITS', payload: detail.contrastLimits });
+        // Validate that the API contrast limits are strictly increasing
+        if (detail.contrastLimits[0] < detail.contrastLimits[1]) {
+          dispatch({ type: 'SET_CONTRAST_LIMITS', payload: detail.contrastLimits });
+        } else {
+          console.warn('Invalid contrast limits from API, using default:', detail.contrastLimits);
+        }
       }
 
       if (detail.zarrPath) {
@@ -189,8 +217,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               fallbackContrastLimits={state.contrastLimits}
               // resolutionLevel={2}
               seriesDimensionName="z"
-              initialIndex="middle"
-              // shouldLoadMiddleZ
+              shouldLoadMiddleZ
               shouldAutoLoadAllSlices
               classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
             />
