@@ -26,7 +26,7 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
   return (
     <Paper elevation={3} className={styles.thumbnailTooltip}>
       <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 3 }}>
-       {item.name || 'Unknown'}
+        {item.name || 'Unknown'}
       </Typography>
 
       {Object.entries(metrics).map(([key, value]) => {
