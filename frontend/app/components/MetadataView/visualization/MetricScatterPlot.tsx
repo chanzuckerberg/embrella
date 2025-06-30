@@ -85,10 +85,10 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
 
   // Function to find position name from data point
   const findPositionName = useCallback(
-    (params: any) => {
+    (params: echarts.ECElementEvent) => {
       if (!params || params.dataIndex === undefined) return null;
 
-      const seriesIndex = params.seriesIndex;
+      const seriesIndex = params.seriesIndex ?? 0;
       const dataIndex = params.dataIndex;
 
       // Determine if this is from accepted or rejected results
@@ -148,7 +148,10 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
       }
     };
 
-    chartRef.current.addEventListener('mouseleave', handleGlobalMouseOut);
+    // Store a reference to the current DOM node for cleanup
+    const currentChartRef = chartRef.current;
+
+    currentChartRef.addEventListener('mouseleave', handleGlobalMouseOut);
 
     return () => {
       // Cleanup function to dispose chart when component unmounts or options change
@@ -159,8 +162,8 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
       }
 
       // Remove the global mouseout event listener
-      if (chartRef.current) {
-        chartRef.current.removeEventListener('mouseleave', handleGlobalMouseOut);
+      if (currentChartRef) {
+        currentChartRef.removeEventListener('mouseleave', handleGlobalMouseOut);
       }
     };
   }, [chartOptions, processedData.metricsConfig.length, onHoverPosition, findPositionName]);
