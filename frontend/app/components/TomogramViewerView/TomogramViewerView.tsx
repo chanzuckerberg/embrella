@@ -172,7 +172,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           dispatch({ type: 'SET_CONTRAST_LIMITS', payload: detail.contrastLimits });
           // Set the contrast range to be wider than the limits for better slider control
           const range = detail.contrastLimits;
-          const padding = (range[1] - range[0]) * 0.5; // 50% padding
+          const padding = (range[1] - range[0]) * 1.0; // 100% padding for wider range
           const contrastRange: [number, number] = [range[0] - padding, range[1] + padding];
           dispatch({ type: 'SET_CONTRAST_RANGE', payload: contrastRange });
         } else {
@@ -235,7 +235,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               sourceUrl={state.detail.zarrPath}
               region={region}
               fallbackContrastLimits={state.contrastLimits}
-              resolutionLevel={2}
+              resolutionLevel={1}
               seriesDimensionName="z"
               shouldLoadMiddleZ
               shouldAutoLoadAllSlices

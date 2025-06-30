@@ -13,10 +13,10 @@ interface SliderControlsProps {
 export const SliderControls = ({ contrast, onContrastChange, open, setOpen, contrastRange }: SliderControlsProps) => {
   // Calculate dynamic min/max based on contrast limits with some padding
   const [min, max] = contrastRange || [-0.1, 0.1];
-  const padding = (max - min) * 0.2; // 20% padding
-  const sliderMin = min - padding;
-  const sliderMax = max + padding;
-  const step = Math.max(0.0001, (sliderMax - sliderMin) / 1000); // Dynamic step size
+  const sliderPadding = (max - min) * 2.0; // 200% padding for much wider range
+  const sliderMin = min - sliderPadding;
+  const sliderMax = max + sliderPadding;
+  const step = Math.max(0.00001, (sliderMax - sliderMin) / 2000); // Smaller step for smoother movement
 
   return (
     <div className="flex flex-col gap-4 w-full min-w-[300px] max-w-[450px]">
