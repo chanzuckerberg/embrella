@@ -93,7 +93,7 @@ export const formatTooltipContent = (
   metricsData: Metrics,
   processedData: ProcessedData
 ) => {
-  let content = `<div style="font-weight: bold; margin-bottom: 5px;">Position : ${tiltSeries.name || 'Unknown'}</div>`;
+  let content = `<div style="font-weight: bold; margin-bottom: 5px;">${tiltSeries.name || 'Unknown'}</div>`;
 
   if (processedData?.metricsConfig) {
     content += processedData.metricsConfig
@@ -134,11 +134,9 @@ export const getPositionsMapping = (
 
   // Create a consistent mapping for all positions (sorted to ensure consistent ordering)
   const positionMap = new Map<string, number>();
-  Array.from(allPositions)
-    .sort()
-    .forEach((name, index) => {
-      positionMap.set(name, index);
-    });
+  Array.from(allPositions).forEach((name, index) => {
+    positionMap.set(name, index);
+  });
 
   // Get position indices for accepted and rejected results
   const acceptedPositions = acceptedResults.map((item) => (item.name ? positionMap.get(item.name) || 0 : 0));
@@ -171,7 +169,8 @@ export const createGridConfig = (metricCount: number) => {
       containLabel: true,
       top: index * (gridHeight + spacing),
       height: gridHeight,
-      left: '9%',
+      left: '6%',
+      right: '0.5%',
       show: true,
     }));
 };
@@ -183,8 +182,11 @@ export const createXAxisConfig = (metricsConfig: MetricConfig[], maxPositionInde
     gridIndex: index,
     name: 'Position',
     position: 'bottom' as const,
+    nameLocation: 'end' as const,
+    nameGap: 0,
     axisLabel: {
-      show: false,
+      show: index === metricsConfig.length - 1,
+      fontSize: 10,
     },
     axisLine: {
       show: false,
@@ -196,6 +198,9 @@ export const createXAxisConfig = (metricsConfig: MetricConfig[], maxPositionInde
       fontSize: 14,
       fontWeight: 'bold' as const,
       wrap: true,
+      align: 'right' as const,
+      verticalAlign: 'top' as const,
+      padding: [10, 0, 0, 0],
     },
     min: 0,
     max: maxPositionIndex,
@@ -271,15 +276,6 @@ export const createSeriesConfig = (
   const hasRejectedResults = data.rejected_results && data.rejected_results.length > 0;
   const shouldUseFilteredView = isFilterApplied && hasRejectedResults;
 
-  // Helper to create data points for a series - modified to handle position mapping correctly
-  const createDataPoints = (items: TiltSeries[], positions: number[], metricKey: string) => {
-    return items.map((item, idx) => {
-      if (!item?.metrics) return [positions[idx], 0];
-      const value = item.metrics[metricKey as keyof Metrics];
-      return [positions[idx], metricKey.includes('bad_patch') ? value * 100 : value];
-    });
-  };
-
   // Helper to create default series
   const createDefaultSeries = (metric: MetricConfig, index: number, positions: number[]) => {
     // Create data points with special handling for the hovered position
@@ -354,7 +350,9 @@ export const createSeriesConfig = (
     }
 
     // Create data arrays for accepted and rejected points
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const acceptedData: Array<number[] | { value: number[]; symbolSize?: number; itemStyle?: any }> = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rejectedData: Array<number[] | { value: number[]; symbolSize?: number; itemStyle?: any }> = [];
 
     // For each position index, add it to the appropriate array if it has a value

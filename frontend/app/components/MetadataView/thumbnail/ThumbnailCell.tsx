@@ -1,4 +1,4 @@
-import React, { memo, useState, useMemo } from 'react';
+import React, { memo, useState } from 'react';
 import styles from '../MetadataViz.module.css';
 import { Typography, Paper } from '@mui/material';
 import { TiltSeries } from '@app/common/types/metadataViz/metadataVizData';
@@ -25,8 +25,8 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
 
   return (
     <Paper elevation={3} className={styles.thumbnailTooltip}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 3 }}>
-        Position: {item.name || 'Unknown'}
+      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 3 }}>
+       {item.name || 'Unknown'}
       </Typography>
 
       {Object.entries(metrics).map(([key, value]) => {
@@ -37,7 +37,7 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
         const formattedValue = value.toFixed(2);
 
         return (
-          <Typography key={key} variant="body2" sx={{ mb: 0.5 }}>
+          <Typography key={key} sx={{ mb: 0.5 }}>
             {label}: {formattedValue} {unit}
           </Typography>
         );
@@ -65,8 +65,9 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
 
   // Assuming the primary image is the regular thumbnail_path
   const thumbnailUrl = item.thumbnail_path;
+  // const ctfUrl = item.ctf_path;
 
-  const ctfUrl = item.ctf_path;
+  const ctfUrl = item;
 
   // Check if this thumbnail should be enlarged (when its position name matches the hovered position)
   // AND the image has loaded successfully
@@ -107,7 +108,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
         {/* CTF thumbnail */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={ctfUrl}
+          // src={ctfUrl}
           alt={`CTF thumbnail for ${item.name || 'item'}`}
           className={styles.thumbnail}
           // className={`${styles.thumbnail} ${isEnlarged ? styles.thumbnailEnlarged : ''}`}
@@ -117,7 +118,9 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
           }}
         />
       </div>
-      <Typography variant="caption">{item.name || 'Thumbnail caption'}</Typography>
+      <Typography sx={{ mt: 2 }} variant="caption">
+        {item.name || 'Thumbnail caption'}
+      </Typography>
 
       {/* Custom tooltip that appears next to the thumbnail */}
       {showThumbnailTooltip && item && <ThumbnailTooltip item={item} />}
