@@ -16,7 +16,7 @@ export default function NanoScaleBar({ angstrom, style }: NanoScaleBarProps) {
   // Inline styles for the scale bar line
   const scaleBarLineStyle = {
     width: `${scaleBarWidthInPixels}px`,
-    height: '2px',
+    height: '5px',
     backgroundColor: '#000',
   };
 
