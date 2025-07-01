@@ -123,13 +123,13 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
         >
           <Box display="flex" alignItems="center" mb={2}>
             <Icon sdsIcon="CheckCircle" sdsSize="s" color="blue" />
-            <Typography variant="h3" component="div" sx={{ marginLeft: '8px' }}>
+            <Typography variant="h4" component="div" sx={{ marginLeft: '8px' }}>
               Total number of Accepted: {scatterplotDisplayData?.accepted_results?.length || 0}
             </Typography>
           </Box>
           <Box display="flex" alignItems="center">
             <Icon sdsIcon="XMarkCircle" sdsSize="s" color="red" />
-            <Typography variant="h3" component="div" sx={{ marginLeft: '8px' }}>
+            <Typography variant="h4" component="div" sx={{ marginLeft: '8px' }}>
               Total Number of Rejected: {scatterplotDisplayData?.rejected_results?.length || 0}
             </Typography>
           </Box>

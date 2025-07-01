@@ -22,27 +22,30 @@
   flex-wrap: wrap;
   width: 100%;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .leftColumn {
-  min-width: 375px;
+  width: 23%;
+  flex: 1 1 200px;
   padding: 1rem;
-  margin-right: -19px;
+  box-sizing: border-box;
 }
 
 .middleColumn {
-  flex: 8;
-  min-width: 400px;
+  width: 54%;
+  flex: 2 1 500px;
   position: relative;
   padding: 0;
+  box-sizing: border-box;
 }
-.rightColumn {
-  flex: 4;
-  min-width: 375px;
-}
-/*RawJson*/
 
+.rightColumn {
+  width: 23%;
+  flex: 1 1 300px;
+  box-sizing: border-box;
+}
+
+/*RawJson*/
 .sidebar {
   position: fixed;
   top: 0;
@@ -54,6 +57,7 @@
   transition: right 0.3s ease-in-out;
   z-index: 1000;
 }
+
 .open {
   right: 0;
 }
@@ -67,13 +71,14 @@
 .jsonContainer {
   margin: 15px;
 }
-/*MetadataFilters*/
 
+/*MetadataFilters*/
 .filterPaper {
   padding: 1rem;
   border-radius: 0.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  min-width: 375px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .filterRow {
@@ -87,7 +92,7 @@
 
 .input {
   padding: 4px 8px !important;
-  font-size: 0.875rem !important;
+  font-size: 0.775rem !important;
 }
 
 .filterContent {
@@ -107,12 +112,12 @@
 
 .slider {
   flex: 1;
-  min-width: 100px;
-  padding: 10px 0;
+  min-width: 60px;
+  padding: 8px 0;
   cursor: pointer;
 }
-/*MetricDashboard*/
 
+/*MetricDashboard*/
 .dashboardContainer {
   width: 100%;
   height: auto;
@@ -121,22 +126,26 @@
   position: relative;
   border-radius: 4px;
   padding: 1rem;
+  box-sizing: border-box;
 }
 
 /*MetricScatterPlot*/
 .scatterPlotContainer {
   width: 100%;
   position: relative;
-  /* overflow-y: auto; */
-  padding: 0.5rem;
+  padding: 0.5rem 0.5rem 0.5rem 0rem; /* Increased left padding for Y-axis labels */
   margin-bottom: 0.5rem;
+  box-sizing: border-box;
 }
 
 .plotContainer {
   width: 100%;
   position: relative;
+  min-height: 140px;
   /* Height will be set dynamically in the component */
+  box-sizing: border-box;
 }
+
 .noDataMessage {
   text-align: center;
   padding: 20px;
@@ -149,41 +158,40 @@
   height: calc(100vh - 200px);
   min-height: 600px;
 }
+
 /* Thumbnail Tooltip styles */
 .thumbnailTooltip {
   position: absolute;
   width: 220px;
-  padding: 14px;
-  z-index: 1;
-  top: 270px;
+  padding: 12px;
+  z-index: 1000;
+  top: 230px;
   margin-top: 8px;
-  left: 240px;
+  left: 200px;
   background-color: rgba(255, 255, 255, 0.98);
   border-radius: 5px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
 /*ThumbnailGrid*/
-
 .thumbnailWrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   height: 100%;
   width: 100%;
-  padding: 0;
-  position: relative;
+  max-width: 100%;
   margin-top: 7px;
+  box-sizing: border-box;
 }
 
 .thumbnail {
-  width: 230px;
-  height: 230px;
+  width: 190px;
+  height: 190px;
   object-fit: cover;
   border-radius: 4px;
   border: 1px solid #e0e0e0;
   margin-bottom: 2px;
-  margin-top: 8px;
   transition:
     transform 0.2s ease-in-out,
     box-shadow 0.2s ease-in-out;
@@ -198,12 +206,14 @@
   margin-top: 20px;
   margin-left: 22px;
 }
+
 .thumbnailPair {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: 1px;
   width: 100%;
   padding: 0 10px;
+  box-sizing: border-box; 
 }
 
 .noThumbnails {
@@ -214,8 +224,8 @@
   width: 100%;
   border: 1px dashed #e0e0e0;
   border-radius: 4px;
-  /* color: #757575; */
 }
+
 .gridContainer {
   display: flex;
   flex-direction: column;
@@ -238,6 +248,7 @@
   padding: 5px 0;
   margin-left: 16px;
   margin-bottom: 12px;
+  box-sizing: border-box;
 }
 
 .scaleBarValue {

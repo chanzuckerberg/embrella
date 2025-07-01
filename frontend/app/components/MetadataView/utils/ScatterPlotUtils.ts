@@ -169,8 +169,8 @@ export const createGridConfig = (metricCount: number) => {
       containLabel: true,
       top: index * (gridHeight + spacing),
       height: gridHeight,
-      left: '6%',
-      right: '0.5%',
+      left: '9%',
+      right: '0%',
       show: true,
     }));
 };
