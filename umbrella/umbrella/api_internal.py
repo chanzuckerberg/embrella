@@ -1042,18 +1042,7 @@ class SessionView(View):
         proc_runs = session.procrun_set.all()
 
         for proc_run in proc_runs:
-            # Get tomogram count directly from ReviewTomogram table
-            review_data = ReviewTomogram.objects.filter(
-                run_id=proc_run.name,
-                session=session
-            ).values('reconstruction_type').annotate(
-                tomogram_count=Count('tomogram_id', distinct=True)
-            )
-
-            # Create a dictionary to store tomogram counts by reconstruction type
-            tomogram_counts = {data['reconstruction_type']: data['tomogram_count'] for data in review_data}
-
-            # Check all three possibilities for each run
+            # Check all three possibilities for each run based on file system structure
             reconstruction_types = [
                 {
                     'type': 'DCTF',
@@ -1087,18 +1076,25 @@ class SessionView(View):
                     # Construct save path
                     save_path = f"/hpc/group.czii/krios1.processing/project/{job_name}/{session.name}/{proc_run.name}/{vol_number}"
 
-                    # Get tomogram count for this reconstruction type, default to 0 if not found
-                    tomogram_count = tomogram_counts.get(recon_type, 0)
+                    # Get tomogram count for this reconstruction type from ReviewTomogram table
+                    # But don't rely on this to determine if the reconstruction type exists
+                    tomogram_count = ReviewTomogram.objects.filter(
+                        run_id=proc_run.name,
+                        session=session,
+                        reconstruction_type=recon_type
+                    ).count()
 
-                    runs_data.append({
-                        "runId": proc_run.name,
-                        "numTomograms": tomogram_count,
-                        "reconstructionType": recon_type,
-                        "savePath": save_path
-                    })
+                    # Only include if there are tomograms for this reconstruction type
+                    if tomogram_count > 0:
+                        runs_data.append({
+                            "runId": proc_run.name,
+                            "numTomograms": tomogram_count,
+                            "reconstructionType": recon_type,
+                            "savePath": save_path
+                        })
 
         return {
-            "sessionId": session.id,  # Use session name as ID
+            "sessionId": session.id,
             "sessionName": session.name,
             "createdAt": session.created_at.isoformat() if session.created_at else None,
             "projectName": session.project.name if session.project else None,
