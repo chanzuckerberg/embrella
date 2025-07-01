@@ -9,7 +9,7 @@ interface FilterHeaderProps {
 export const FilterHeader: React.FC<FilterHeaderProps> = ({ selectedOption, onOptionChange }) => {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-      <Typography variant="h1">Filters</Typography>
+      <Typography variant="h2">Filters</Typography>
       <FormControl style={{ minWidth: 100 }}>
         <InputLabel sx={{ backgroundColor: 'white', padding: '0 4px' }}>Filter Type</InputLabel>
         <Select
