@@ -12,6 +12,7 @@ export interface TiltSeries {
   name: string;
   metrics: Metrics;
   thumbnail_path: string;
+  ctf_path: string;
 }
 
 export interface Metrics {

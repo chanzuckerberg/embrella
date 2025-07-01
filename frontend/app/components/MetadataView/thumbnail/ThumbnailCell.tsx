@@ -59,15 +59,14 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
 
   const item = items[index];
 
-  if (!item || !item.thumbnail_path) {
+  if (!item || !item.thumbnail_path || !item.ctf_path) {
     return null;
   }
 
   // Assuming the primary image is the regular thumbnail_path
   const thumbnailUrl = item.thumbnail_path;
-  // const ctfUrl = item.ctf_path;
+  const ctfUrl = item.ctf_path;
 
-  const ctfUrl = item;
 
   // Check if this thumbnail should be enlarged (when its position name matches the hovered position)
   // AND the image has loaded successfully
@@ -108,7 +107,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
         {/* CTF thumbnail */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          // src={ctfUrl}
+          src={ctfUrl}
           alt={`CTF thumbnail for ${item.name || 'item'}`}
           className={styles.thumbnail}
           // className={`${styles.thumbnail} ${isEnlarged ? styles.thumbnailEnlarged : ''}`}
