@@ -36,6 +36,7 @@ from processes.views import get_base_url
 from projects.models import Project
 from rapidfuzz import fuzz, process
 from tem.models import MsiSession, Project
+from .contrast_limits import compute_optimal_contrast_limits
 
 HOST = "10.50.120.90"
 PORT = 22
@@ -892,8 +893,36 @@ class ReviewTomogramView(View):
 
             # Original zarr path construction (commented out for now)
             response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.msi_session.name}/{review.run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+# response_data["zarrPath"] = "https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/"
+            # response_data["zarrPath"] = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25jun02a/run001/vol003/Position_114_8_Vol.zarr/"
+            print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
+            contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
+            response_data["contrastLimits"] = contrast_limits
+            response_data["contrastMethod"] = "gmm"
+            response_data["contrastComputed"] = True
+            # print(f"SART reconstruction - computed contrast limits: {response_data['contrastLimits']}")
+            
+            # Adjust contrast limits based on reconstruction type
+            # if review.reconstruction_type.lower() == "sart":
+            #     # Compute contrast limits for SART using contrast_limits.py
 
-            response_data["contrastLimits"] = [-0.00001, 0.00001]  # Default contrast limits
+            #     print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
+            #     contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
+            #     response_data["contrastLimits"] = contrast_limits
+            #     response_data["contrastMethod"] = "gmm"
+            #     response_data["contrastComputed"] = True
+            #     print(f"SART reconstruction - computed contrast limits: {response_data['contrastLimits']}")
+
+            # elif review.reconstruction_type.lower() == "dctf":
+            #     print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
+            #     contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
+            #     response_data["contrastLimits"] = contrast_limits
+            #     response_data["contrastMethod"] = "gmm"
+            #     response_data["contrastComputed"] = True
+            #     print(f"SART reconstruction - computed contrast limits: {response_data['contrastLimits']}")
+
+            # else:
+            #     response_data["contrastLimits"] = [-0.05, 0.05]  # Standard for denoised
 
             # Add review details if they exist
             if tomogram.quality:
@@ -1126,4 +1155,5 @@ class SessionView(View):
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+
 
