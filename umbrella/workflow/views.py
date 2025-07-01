@@ -931,7 +931,7 @@ def natural_key(s):
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 
-def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, merge=False):
+def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge=False):
     try:
         # Load data from remote server using ssh_connect
         logger.info(f"Attempting to read metrics file: {metrics_path}")
@@ -961,6 +961,9 @@ def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, merge=False
             # Add thumbnail paths directly to the merged dataframe
             merged_df["thumbnail_path"] = merged_df["Tilt_Series"].apply(
                 lambda ts: f"{thumbnail_base_url}{ts}.jpeg"
+            )
+            merged_df["ctf_path"] = merged_df["Tilt_Series"].apply(
+                lambda ts: f"{ctf_base_url}{ts}.jpeg"
             )
             
             # Sort Tilt_Series using natural sort
@@ -1275,9 +1278,10 @@ def get_metadata_viz_data(request):
         timestamp_path = os.path.join(base_proc_dir, "TiltSeries_TimeStamp.csv")
 
         thumbnail_base_url = os.path.join(HOSTNAME, session_name, run_number, "thumbnails/")
-        logger.info(f"Thumbnail base URL: {thumbnail_base_url}")
+        ctf_base_url = os.path.join(HOSTNAME, session_name, run_number, "ctf_thumbnails/")
+        logger.info(f"Thumbnail base URL: {thumbnail_base_url}", f"CTF base URL: {ctf_base_url}")
         
-        merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, merge=True)
+        merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge=True)
         
         # Create a persistent SSH connection with optimized parameters
         ssh = paramiko.SSHClient()
@@ -1348,6 +1352,9 @@ def get_metadata_viz_data(request):
             df["thumbnail_path"] = df["Tilt_Series"].apply(
                 lambda ts: f"{thumbnail_base_url}{ts}.jpeg"
             )
+            df["ctf_thumbnails_path"] = df["Tilt_Series"].apply(
+                lambda ts: f"{ctf_base_url}{ts}.jpeg"
+            )
 
             # Use the new custom sorting function
             df = df.sort_values(
@@ -1371,12 +1378,19 @@ def get_metadata_viz_data(request):
                 for _, row in df.iterrows():
                     item_name = str(row['Tilt_Series'])
                     image_path = row.get('thumbnail_path', None)
+                    ctf_path = row.get('ctf_thumbnails_path', None)
             
                     item_image_path_to_return = image_path
+                    ctf_thumbnails_path = ctf_path
                     if image_path is not None:
                         logger.info(f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'thumbnail_path' from row.get(): '{image_path}' (type: {type(image_path)})")
                     else:
                         logger.info("[METADATA_VIZ_DEBUG] 'thumbnail_path' column MISSING in df passed to prepare_result_list.")
+
+                    if ctf_path is not None:
+                        logger.info(f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'ctf_thumbnails_path' from row.get(): '{ctf_path}' (type: {type(ctf_path)})")
+                    else:
+                        logger.info("[METADATA_VIZ_DEBUG] 'ctf_thumbnails_path' column MISSING in df passed to prepare_result_list.")
                     metrics = {
                         'thickness': float(row['Thickness(A)']),
                         'tilt_axis': float(row['Tilt_Axis']),
@@ -1392,7 +1406,8 @@ def get_metadata_viz_data(request):
                     result.append({
                         'name': item_name,
                         'metrics': metrics,
-                        'thumbnail_path': item_image_path_to_return
+                        'thumbnail_path': item_image_path_to_return,
+                        'ctf_path': ctf_thumbnails_path
                     })
                 
                 # Apply sorting if requested
