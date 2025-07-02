@@ -12,6 +12,7 @@ export interface ReviewTomogramSummary {
 export interface ReviewTomogramDetail {
   tomogramId: string;
   displayName: string;
+  reconstructionType: string;
   zarrPath: string;
   contrastLimits?: [number, number];
   existingReview?: {
@@ -32,6 +33,7 @@ export interface Review {
 export interface TomogramDetail {
   tomogramId: string;
   displayName: string;
+  reconstructionType: string;
   zarrPath: string;
   contrastLimits?: [number, number];
   existingReview?: {

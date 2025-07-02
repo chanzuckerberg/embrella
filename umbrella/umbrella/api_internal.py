@@ -872,6 +872,7 @@ class ReviewTomogramView(View):
             response_data = {
                 "tomogramId": tomogram.tomogram_id,
                 "displayName": f"{tomogram.position_id}",
+                "reconstructionType": review.reconstruction_type,
                 "zarrPath": None,
                 "existingReview": {
                     "quality": None,
