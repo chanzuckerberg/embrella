@@ -137,7 +137,7 @@ def get_aretomo3_json(request):
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=500)
     
-# @login_required
+@login_required
 @csrf_exempt
 def run_aretomo3_advanced(request):
     data_sanitized = {}  # Initialize this variable at the start
@@ -197,7 +197,7 @@ def run_aretomo3_advanced(request):
                     imod_option = data.get('imod_option')
                     local_shift = data.get('local_shift')
                     tilt_offset = data.get('tilt_offset')
-                    thickness_mesaure = data.get('thickness_mesaure')
+                    thickness_mesaure = data.get('thickness_measure')
 
             # Branch: no old gain
             elif use_old_gain == 'no':
@@ -216,7 +216,7 @@ def run_aretomo3_advanced(request):
                     imod_option = data.get('imod_option')
                     local_shift = data.get('local_shift')
                     tilt_offset = data.get('tilt_offset')
-                    thickness_mesaure = data.get('thickness_mesaure')
+                    thickness_mesaure = data.get('thickness_measure')
             
             else:
                 return JsonResponse(
@@ -282,7 +282,8 @@ def run_aretomo3_advanced(request):
             return JsonResponse({
                 'message': f'Advanced job for project {project_name} submitted successfully.',
                 'output': output,
-                'error': error
+                'error': error,
+                'job_id': job_id_str
             })
 
         except Exception as e:
