@@ -98,25 +98,28 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const userCanReview = currentUser?.id === review.owner.id;
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
 
-  const handleContrastLimitsChange = useCallback((newLimits: [number, number]) => {
-    // Validate that contrast limits are strictly increasing
-    if (newLimits[0] >= newLimits[1]) {
-      console.warn('Contrast limits must be strictly increasing, ignoring update:', newLimits);
-      return;
-    }
-    
-    dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
-    
-    // Update the image layer's contrast limits if available
-    if (isInitialized && imageSeriesLayer && channels.length > 0) {
-      const updatedChannels = [...channels];
-      updatedChannels[0] = {
-        ...updatedChannels[0],
-        contrastLimits: newLimits,
-      };
-      imageSeriesLayer.setChannelProps(updatedChannels);
-    }
-  }, [isInitialized, imageSeriesLayer, channels]);
+  const handleContrastLimitsChange = useCallback(
+    (newLimits: [number, number]) => {
+      // Validate that contrast limits are strictly increasing
+      if (newLimits[0] >= newLimits[1]) {
+        console.warn('Contrast limits must be strictly increasing, ignoring update:', newLimits);
+        return;
+      }
+
+      dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
+
+      // Update the image layer's contrast limits if available
+      if (isInitialized && imageSeriesLayer && channels.length > 0) {
+        const updatedChannels = [...channels];
+        updatedChannels[0] = {
+          ...updatedChannels[0],
+          contrastLimits: newLimits,
+        };
+        imageSeriesLayer.setChannelProps(updatedChannels);
+      }
+    },
+    [isInitialized, imageSeriesLayer, channels]
+  );
 
   const saveTomogram = async () => {
     if (!userCanReview) return;
