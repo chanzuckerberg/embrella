@@ -1,4 +1,4 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import styles from '../MetadataViz.module.css';
 import { Typography, Paper } from '@mui/material';
 import { TiltSeries } from '@app/common/types/metadataViz/metadataVizData';
@@ -49,42 +49,105 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
 export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, rowIndex, data }) => {
   const { items, onThumbnailHover, hoveredPosition } = data;
   const index = rowIndex * 1 + columnIndex;
+
+  // Separate states for each image type
   const [showThumbnailTooltip, setShowThumbnailTooltip] = useState(false);
-  // Add state to track if the image loaded successfully
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [showCTFTooltip, setShowCTFTooltip] = useState(false);
 
-  if (!items || index >= items.length) {
-    return null;
-  }
+  // Separate states for tracking if each image is loaded
+  const [thumbnailImageLoaded, setThumbnailImageLoaded] = useState(false);
+  const [ctfImageLoaded, setCtfImageLoaded] = useState(false);
 
-  const item = items[index];
+  // Separate states for tracking if each image is enlarged
+  const [isThumbnailEnlarged, setIsThumbnailEnlarged] = useState(false);
+  const [isCTFEnlarged, setIsCTFEnlarged] = useState(false);
 
-  if (!item || !item.thumbnail_path || !item.ctf_path) {
+  // Track if we're currently directly hovering over an image (as opposed to scatter plot hover)
+  const [isDirectMouseHover, setIsDirectMouseHover] = useState(false);
+
+  // Get the current item
+  const item = items && index < items.length ? items[index] : null;
+  const validItem = item && item.thumbnail_path && item.ctf_path;
+
+  // This effect handles hovering from the scatter plot ONLY
+  // It won't interfere with direct mouse hovering on images
+  useEffect(() => {
+    if (!validItem) return;
+
+    // Only handle hover from scatter plot if not directly hovering with mouse
+    if (!isDirectMouseHover) {
+      if (hoveredPosition === item.name && thumbnailImageLoaded) {
+        // When hover comes from scatter plot, only enlarge thumbnail
+        setIsThumbnailEnlarged(true);
+        setIsCTFEnlarged(false);
+        setShowThumbnailTooltip(false);
+        setShowCTFTooltip(false);
+      } else {
+        // Reset all states when hover is removed
+        setIsThumbnailEnlarged(false);
+        setIsCTFEnlarged(false);
+        setShowThumbnailTooltip(false);
+        setShowCTFTooltip(false);
+      }
+    }
+  }, [hoveredPosition, item?.name, thumbnailImageLoaded, isDirectMouseHover, validItem]);
+
+  const handleMouseEnter = () => {
+    if (validItem && onThumbnailHover && item.name && thumbnailImageLoaded) {
+      setIsDirectMouseHover(true);
+      onThumbnailHover(item.name);
+      // When hovering on thumbnail, only enlarge thumbnail
+      setShowThumbnailTooltip(true);
+      setShowCTFTooltip(false);
+      setIsCTFEnlarged(false);
+      setIsThumbnailEnlarged(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (onThumbnailHover) {
+      setIsDirectMouseHover(false);
+      onThumbnailHover(null);
+      // Reset all states
+      setShowThumbnailTooltip(false);
+      setIsThumbnailEnlarged(false);
+      setShowCTFTooltip(false);
+      setIsCTFEnlarged(false);
+    }
+  };
+
+  const handleCTFMouseEnter = () => {
+    if (validItem && onThumbnailHover && item.name && ctfImageLoaded) {
+      setIsDirectMouseHover(true);
+      onThumbnailHover(item.name);
+      // When hovering on CTF, only enlarge CTF
+      setShowCTFTooltip(true);
+      setIsThumbnailEnlarged(false);
+      setShowThumbnailTooltip(false);
+      setIsCTFEnlarged(true);
+    }
+  };
+
+  const handleCTFMouseLeave = () => {
+    if (onThumbnailHover) {
+      setIsDirectMouseHover(false);
+      onThumbnailHover(null);
+      // Reset all states
+      setShowCTFTooltip(false);
+      setShowThumbnailTooltip(false);
+      setIsCTFEnlarged(false);
+      setIsThumbnailEnlarged(false);
+    }
+  };
+
+  // Render null for invalid items
+  if (!validItem) {
     return null;
   }
 
   // Assuming the primary image is the regular thumbnail_path
   const thumbnailUrl = item.thumbnail_path;
   const ctfUrl = item.ctf_path;
-
-
-  // Check if this thumbnail should be enlarged (when its position name matches the hovered position)
-  // AND the image has loaded successfully
-  const isEnlarged = hoveredPosition === item.name && imageLoaded;
-
-  const handleMouseEnter = () => {
-    if (onThumbnailHover && item.name && imageLoaded) {
-      onThumbnailHover(item.name);
-      setShowThumbnailTooltip(true);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (onThumbnailHover) {
-      onThumbnailHover(null);
-      setShowThumbnailTooltip(false);
-    }
-  };
 
   return (
     <div className={styles.thumbnailWrapper}>
@@ -93,12 +156,12 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
         <img
           src={thumbnailUrl}
           alt={`Thumbnail for ${item.name || 'item'}`}
-          className={`${styles.thumbnail} ${isEnlarged ? styles.thumbnailEnlarged : ''}`}
-          onLoad={() => setImageLoaded(true)}
+          className={`${styles.thumbnail} ${isThumbnailEnlarged ? styles.thumbnailEnlarged : ''}`}
+          onLoad={() => setThumbnailImageLoaded(true)}
           onError={(e) => {
             console.error(`Failed to load thumbnail: ${thumbnailUrl}`);
             (e.target as HTMLImageElement).alt = 'Thumbnail not available';
-            setImageLoaded(false);
+            setThumbnailImageLoaded(false);
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -109,22 +172,34 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
         <img
           src={ctfUrl}
           alt={`CTF thumbnail for ${item.name || 'item'}`}
-          className={styles.thumbnail}
-          // className={`${styles.thumbnail} ${isEnlarged ? styles.thumbnailEnlarged : ''}`}
+          className={`${styles.thumbnail} ${isCTFEnlarged ? styles.thumbnailEnlarged : ''}`}
+          onLoad={() => setCtfImageLoaded(true)}
           onError={(e) => {
             console.error(`Failed to load thumbnail: ${ctfUrl}`);
             (e.target as HTMLImageElement).alt = 'Thumbnail not available';
+            setCtfImageLoaded(false);
           }}
+          onMouseEnter={handleCTFMouseEnter}
+          onMouseLeave={handleCTFMouseLeave}
         />
       </div>
       <Typography sx={{ mt: 2 }} variant="caption">
         {item.name || 'Thumbnail caption'}
       </Typography>
 
-      {/* Custom tooltip that appears next to the thumbnail */}
-      {showThumbnailTooltip && item && <ThumbnailTooltip item={item} />}
+      {/* Custom tooltips that appear next to each thumbnail */}
+      {showThumbnailTooltip && item && (
+        <div className={styles.thumbnailTooltipWrapper} style={{ left: '0px' }}>
+          <ThumbnailTooltip item={item} />
+        </div>
+      )}
+
+      {showCTFTooltip && item && (
+        <div className={styles.thumbnailTooltipWrapper} style={{ right: '0px' }}>
+          <ThumbnailTooltip item={item} />
+        </div>
+      )}
     </div>
   );
 });
-
 ThumbnailCell.displayName = 'ThumbnailCell';
