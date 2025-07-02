@@ -163,12 +163,12 @@
 /* Thumbnail Tooltip styles */
 .thumbnailTooltip {
   position: absolute;
-  width: 220px;
-  padding: 12px;
+  width: 190px;
+  padding: 11px;
   z-index: 1000;
   top: 230px;
   margin-top: 8px;
-  left: 200px;
+  left: 110px;
   background-color: rgba(255, 255, 255, 0.98);
   border-radius: 5px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);

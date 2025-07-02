@@ -61,6 +61,9 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
   // Separate states for tracking if each image is enlarged
   const [isThumbnailEnlarged, setIsThumbnailEnlarged] = useState(false);
   const [isCTFEnlarged, setIsCTFEnlarged] = useState(false);
+  
+  // Track if we're currently directly hovering over an image (as opposed to scatter plot hover)
+  const [isDirectMouseHover, setIsDirectMouseHover] = useState(false);
 
   if (!items || index >= items.length) {
     return null;
@@ -76,20 +79,34 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
   const thumbnailUrl = item.thumbnail_path;
   const ctfUrl = item.ctf_path;
 
-  // Check if this thumbnail should be enlarged (when its position name matches the hovered position)
-  // AND the image has loaded successfully
-
+  // This effect handles hovering from the scatter plot ONLY
+  // It won't interfere with direct mouse hovering on images
   useEffect(() => {
-    const shouldBeEnlarged = hoveredPosition === item.name && thumbnailImageLoaded;
-    setIsThumbnailEnlarged(shouldBeEnlarged);
-    setIsCTFEnlarged(false);
-  }, [hoveredPosition, item.name, thumbnailImageLoaded]);
-
+    // Only handle hover from scatter plot if not directly hovering with mouse
+    if (!isDirectMouseHover) {
+      if (hoveredPosition === item.name && thumbnailImageLoaded) {
+        // When hover comes from scatter plot, only enlarge thumbnail
+        setIsThumbnailEnlarged(true);
+        setIsCTFEnlarged(false);
+        setShowThumbnailTooltip(false);
+        setShowCTFTooltip(false);
+      } else {
+        // Reset all states when hover is removed
+        setIsThumbnailEnlarged(false);
+        setIsCTFEnlarged(false);
+        setShowThumbnailTooltip(false);
+        setShowCTFTooltip(false);
+      }
+    }
+  }, [hoveredPosition, item.name, thumbnailImageLoaded, isDirectMouseHover]);
 
   const handleMouseEnter = () => {
     if (onThumbnailHover && item.name && thumbnailImageLoaded) {
+      setIsDirectMouseHover(true);
       onThumbnailHover(item.name);
+      // When hovering on thumbnail, only enlarge thumbnail
       setShowThumbnailTooltip(true);
+      setShowCTFTooltip(false);
       setIsCTFEnlarged(false);
       setIsThumbnailEnlarged(true);
     }
@@ -97,26 +114,35 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
 
   const handleMouseLeave = () => {
     if (onThumbnailHover) {
+      setIsDirectMouseHover(false);
       onThumbnailHover(null);
+      // Reset all states
       setShowThumbnailTooltip(false);
       setIsThumbnailEnlarged(false);
+      setShowCTFTooltip(false);
       setIsCTFEnlarged(false);
     }
   };
 
   const handleCTFMouseEnter = () => {
     if (onThumbnailHover && item.name && ctfImageLoaded) {
+      setIsDirectMouseHover(true);
       onThumbnailHover(item.name);
+      // When hovering on CTF, only enlarge CTF
       setShowCTFTooltip(true);
       setIsThumbnailEnlarged(false);
+      setShowThumbnailTooltip(false);
       setIsCTFEnlarged(true);
     }
   };
 
   const handleCTFMouseLeave = () => {
     if (onThumbnailHover) {
+      setIsDirectMouseHover(false);
       onThumbnailHover(null);
+      // Reset all states
       setShowCTFTooltip(false);
+      setShowThumbnailTooltip(false);
       setIsCTFEnlarged(false);
       setIsThumbnailEnlarged(false);
     }
