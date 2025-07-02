@@ -78,7 +78,18 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
           />
         </div>
         <div className={styles.rightColumn}>
-          <NanoScaleBar angstrom={summaryAPIData?.pixel_size || 0} />
+          <div className={styles.scaleBarRow}>
+            <NanoScaleBar 
+              angstrom={summaryAPIData?.pixel_size || 0} 
+              type="realSpace"
+              style={{ flex: 1 }}
+            />
+            <NanoScaleBar 
+              angstrom={summaryAPIData?.pixel_size || 0} 
+              type="ft"
+              style={{ flex: 1 }}
+            />
+          </div>
           <ThumbnailGrid
             acceptedResults={vizResponse.accepted_results}
             rejectedResults={vizResponse.rejected_results}
