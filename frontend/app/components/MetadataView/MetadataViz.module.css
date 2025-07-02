@@ -247,7 +247,6 @@
 .scaleBarContainer {
   width: 100%;
   padding: 5px 0;
-  margin-left: 16px;
   margin-bottom: 12px;
   box-sizing: border-box;
 }
@@ -257,4 +256,10 @@
   margin-bottom: 5px;
   color: #333;
   font-weight: 500;
+}
+.scaleBarRow {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
 }
