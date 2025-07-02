@@ -1139,9 +1139,9 @@ def get_runs(request):
     session_id = request.GET.get('session')
     try:
         session = MsiSession.objects.get(id=session_id)
-        # Get unique run IDs from Review table for this session
-        runs = Review.objects.filter(msi_session=session).values('run_id').distinct()
-        runs_data = [{'runId': run['run_id']} for run in runs]
+        # Get unique run IDs from ProcRun table for this session
+        runs = ProcRun.objects.filter(msi_session=session).values('name').distinct()
+        runs_data = [{'runId': run['name']} for run in runs]
         return JsonResponse({'runs': runs_data})
     except MsiSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
