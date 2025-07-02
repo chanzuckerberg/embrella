@@ -1263,19 +1263,6 @@ async def start_sync(request):
         session = await sync_to_async(MsiSession.objects.get)(id=session_id)
         print(f"Found session: {session.name}")
 
-        # Check all reviews for this session to see what's available
-        all_reviews = await sync_to_async(list)(Review.objects.filter(msi_session=session))
-        print(f"All reviews for this session: {[{'run_id': r.run_id, 'reconstruction_type': r.reconstruction_type} for r in all_reviews]}")
-
-        # Get review with joined session data in a single query - using case-insensitive comparison
-        review = await sync_to_async(Review.objects.select_related('msi_session').get)(
-            msi_session_id=session_id,
-            run_id=run_id,
-            reconstruction_type__iexact=recon_type  # Case-insensitive comparison
-        )
-        print(f"Found review: {review}")
-        print(f"Associated session: {review.msi_session}")
-
         # Check for existing tomograms with the same parameters
         existing_tomograms = await sync_to_async(list)(ReviewTomogram.objects.filter(
             session=session,
@@ -1288,13 +1275,39 @@ async def start_sync(request):
             # Get list of existing position IDs
             existing_positions = {t.position_id for t in existing_tomograms}
             print(f"Existing positions: {existing_positions}")
+        else:
+            existing_positions = None
+
+        # Try to find an existing review, but don't require it
+        try:
+            review = await sync_to_async(Review.objects.select_related('msi_session').get)(
+                msi_session_id=session_id,
+                run_id=run_id,
+                reconstruction_type__iexact=recon_type
+            )
+            print(f"Found existing review: {review}")
+            review_id = review.review_id
+        except Review.DoesNotExist:
+            print(f"No existing review found for session {session_id}, run {run_id}, type {recon_type}")
+            print("Will sync tomograms without associating them with a review")
+            review_id = None
+        
+        # Import the sync functions
+        from processes.scripts.aretomo3_syncer import sync_aretomo3_results
+        from processes.scripts.denoise_syncer import sync_denoise_results
         
         # Capture stdout to get progress information
         output = io.StringIO()
         with redirect_stdout(output):
-            # Start sync process using import_tomograms.py script - run in a thread pool
-            # Pass the existing positions to prevent duplicates
-            await sync_to_async(import_tomograms_main)(review.review_id, existing_positions=existing_positions if existing_tomograms else None)
+            # Use the appropriate sync function based on reconstruction type
+            if recon_type.lower() in ['dctf', 'sart']:
+                print(f"Starting AreTomo3 sync for session {session.name}, run {run_id}, type {recon_type}")
+                await sync_to_async(sync_aretomo3_results)(session.name, run_id)
+            elif recon_type.lower() == 'denoised':
+                print(f"Starting Denoise sync for session {session.name}, run {run_id}")
+                await sync_to_async(sync_denoise_results)(session.name, run_id)
+            else:
+                raise ValueError(f"Unsupported reconstruction type: {recon_type}")
         
         # Get the captured output
         progress_output = output.getvalue()
@@ -1304,19 +1317,14 @@ async def start_sync(request):
             'success': True,
             'message': 'Sync process completed successfully',
             'progress': progress_output,
-            'existing_tomograms': len(existing_tomograms) if existing_tomograms else 0
+            'existing_tomograms': len(existing_tomograms) if existing_tomograms else 0,
+            'review_associated': review_id is not None
         })
     except MsiSession.DoesNotExist:
         print(f"Session {session_id} not found in database")
         return JsonResponse({
             'success': False,
             'message': f'Session with ID {session_id} not found'
-        }, status=404)
-    except Review.DoesNotExist:
-        print(f"Review not found with parameters - session_id: {session_id}, run_id: {run_id}, recon_type: {recon_type}")
-        return JsonResponse({
-            'success': False,
-            'message': f'Review not found for session {session_id}, run {run_id}, and type {recon_type}'
         }, status=404)
     except Exception as e:
         logger.error(f"Error in start_sync: {str(e)}")
