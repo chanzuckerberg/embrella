@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useRef } from 'react';
 import { FixedSizeGrid } from 'react-window';
 import type { FixedSizeGridProps, GridChildComponentProps } from 'react-window';
 import { TiltSeries } from '@app/common/types/metadataViz/metadataVizData';
@@ -14,7 +14,9 @@ interface GridData {
   onThumbnailHover?: (positionName: string | null) => void;
   hoveredPosition?: string | null;
 }
-const Grid = FixedSizeGrid as unknown as React.ComponentType<FixedSizeGridProps<GridData>>;
+const Grid = FixedSizeGrid as unknown as React.ForwardRefExoticComponent<
+  FixedSizeGridProps<GridData> & React.RefAttributes<FixedSizeGrid>
+>;
 
 interface ThumbnailGridProps {
   acceptedResults: TiltSeries[];
@@ -34,6 +36,7 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(
   ({ acceptedResults, rejectedResults, data, onThumbnailHover, hoveredPosition }) => {
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
     const items = data ? acceptedResults : rejectedResults;
+    const gridRef = useRef<FixedSizeGrid>(null);
 
     const COLUMN_COUNT = 1;
     const CELL_WIDTH = 425;
@@ -52,6 +55,30 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(
       return () => window.removeEventListener('resize', updateWindowSize);
     }, []);
 
+    // Effect to scroll to the hovered position when it changes
+    useEffect(() => {
+      if (hoveredPosition && gridRef.current) {
+        // Find the index of the hovered position in the items array
+        const index = items.findIndex((item) => item.name === hoveredPosition);
+
+        if (index !== -1) {
+          // Calculate the row index (since we have a single column)
+          const rowIndex = Math.floor(index / COLUMN_COUNT);
+
+          // Use scrollToItem method of the Grid component
+          try {
+            gridRef.current.scrollToItem({
+              align: 'smart',
+              columnIndex: 0,
+              rowIndex,
+            });
+          } catch (err) {
+            console.error('Error scrolling to item:', err);
+          }
+        }
+      }
+    }, [hoveredPosition, items, COLUMN_COUNT]);
+
     const gridWidth = Math.min(CELL_WIDTH * COLUMN_COUNT + 32, windowSize.width * 0.28);
     const gridHeight = Math.min(Math.ceil(items.length) * CELL_HEIGHT, windowSize.height * 0.95);
 
@@ -66,6 +93,7 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(
     return (
       <div className={styles.gridContainer}>
         <Grid
+          ref={gridRef}
           className={styles.grid}
           columnCount={COLUMN_COUNT}
           columnWidth={CELL_WIDTH}
