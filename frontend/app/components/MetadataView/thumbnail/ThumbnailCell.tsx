@@ -49,39 +49,31 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
 export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, rowIndex, data }) => {
   const { items, onThumbnailHover, hoveredPosition } = data;
   const index = rowIndex * 1 + columnIndex;
-  
+
   // Separate states for each image type
   const [showThumbnailTooltip, setShowThumbnailTooltip] = useState(false);
   const [showCTFTooltip, setShowCTFTooltip] = useState(false);
-  
+
   // Separate states for tracking if each image is loaded
   const [thumbnailImageLoaded, setThumbnailImageLoaded] = useState(false);
   const [ctfImageLoaded, setCtfImageLoaded] = useState(false);
-  
+
   // Separate states for tracking if each image is enlarged
   const [isThumbnailEnlarged, setIsThumbnailEnlarged] = useState(false);
   const [isCTFEnlarged, setIsCTFEnlarged] = useState(false);
-  
+
   // Track if we're currently directly hovering over an image (as opposed to scatter plot hover)
   const [isDirectMouseHover, setIsDirectMouseHover] = useState(false);
 
-  if (!items || index >= items.length) {
-    return null;
-  }
-
-  const item = items[index];
-
-  if (!item || !item.thumbnail_path || !item.ctf_path) {
-    return null;
-  }
-
-  // Assuming the primary image is the regular thumbnail_path
-  const thumbnailUrl = item.thumbnail_path;
-  const ctfUrl = item.ctf_path;
+  // Get the current item
+  const item = items && index < items.length ? items[index] : null;
+  const validItem = item && item.thumbnail_path && item.ctf_path;
 
   // This effect handles hovering from the scatter plot ONLY
   // It won't interfere with direct mouse hovering on images
   useEffect(() => {
+    if (!validItem) return;
+
     // Only handle hover from scatter plot if not directly hovering with mouse
     if (!isDirectMouseHover) {
       if (hoveredPosition === item.name && thumbnailImageLoaded) {
@@ -98,10 +90,10 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
         setShowCTFTooltip(false);
       }
     }
-  }, [hoveredPosition, item.name, thumbnailImageLoaded, isDirectMouseHover]);
+  }, [hoveredPosition, item?.name, thumbnailImageLoaded, isDirectMouseHover, validItem]);
 
   const handleMouseEnter = () => {
-    if (onThumbnailHover && item.name && thumbnailImageLoaded) {
+    if (validItem && onThumbnailHover && item.name && thumbnailImageLoaded) {
       setIsDirectMouseHover(true);
       onThumbnailHover(item.name);
       // When hovering on thumbnail, only enlarge thumbnail
@@ -125,7 +117,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
   };
 
   const handleCTFMouseEnter = () => {
-    if (onThumbnailHover && item.name && ctfImageLoaded) {
+    if (validItem && onThumbnailHover && item.name && ctfImageLoaded) {
       setIsDirectMouseHover(true);
       onThumbnailHover(item.name);
       // When hovering on CTF, only enlarge CTF
@@ -147,6 +139,15 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
       setIsThumbnailEnlarged(false);
     }
   };
+
+  // Render null for invalid items
+  if (!validItem) {
+    return null;
+  }
+
+  // Assuming the primary image is the regular thumbnail_path
+  const thumbnailUrl = item.thumbnail_path;
+  const ctfUrl = item.ctf_path;
 
   return (
     <div className={styles.thumbnailWrapper}>
@@ -192,7 +193,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
           <ThumbnailTooltip item={item} />
         </div>
       )}
-      
+
       {showCTFTooltip && item && (
         <div className={styles.thumbnailTooltipWrapper} style={{ right: '0px' }}>
           <ThumbnailTooltip item={item} />
@@ -201,5 +202,4 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
     </div>
   );
 });
-
 ThumbnailCell.displayName = 'ThumbnailCell';
