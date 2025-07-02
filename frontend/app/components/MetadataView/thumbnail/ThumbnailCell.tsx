@@ -90,6 +90,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
     if (onThumbnailHover && item.name && thumbnailImageLoaded) {
       onThumbnailHover(item.name);
       setShowThumbnailTooltip(true);
+      setIsCTFEnlarged(false);
       setIsThumbnailEnlarged(true);
     }
   };
@@ -99,6 +100,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
       onThumbnailHover(null);
       setShowThumbnailTooltip(false);
       setIsThumbnailEnlarged(false);
+      setIsCTFEnlarged(false);
     }
   };
 
@@ -106,6 +108,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
     if (onThumbnailHover && item.name && ctfImageLoaded) {
       onThumbnailHover(item.name);
       setShowCTFTooltip(true);
+      setIsThumbnailEnlarged(false);
       setIsCTFEnlarged(true);
     }
   };
@@ -115,6 +118,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
       onThumbnailHover(null);
       setShowCTFTooltip(false);
       setIsCTFEnlarged(false);
+      setIsThumbnailEnlarged(false);
     }
   };
 
