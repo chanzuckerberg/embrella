@@ -51,6 +51,16 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
     id: TOMOGRAM_COLUMN_IDS.METADATA,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps => {
       const tomogramData = rowData as TomogramData;
+
+      // Only show metadata link for czii-live processing plans
+      const procPlanName = tomogramData.procPlan?.name || '';
+      if (!procPlanName.includes('czii-live')) {
+        return {
+          children: '', 
+          href: '',
+        };
+      }
+
       const sessionName = tomogramData.msiSession?.name || '';
       let runNumber = tomogramData.tomograms?.name || '';
       // Clean the run number by removing (id=XX) and trimming whitespace
