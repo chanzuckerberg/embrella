@@ -54,7 +54,7 @@ export const ReviewsView = () => {
           <ReviewActionButton
             reviewId={String(row.original.review.id)}
             reviewStatus={row.original.status}
-            reviewer={row.original.reviewer}
+            _reviewer={row.original.reviewer}
           />
         ),
       }),
