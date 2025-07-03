@@ -226,8 +226,40 @@ def sync_denoise_results(session_name=None, run_id=None):
                 logging.info(f"Removing tomogram that no longer exists: {tomogram.tomogram_id}")
                 tomogram.delete()
 
+        # Update review total counts for this session/run combination
+        update_review_total_counts(session, run_id_formatted)
+
     except Exception as e:
         logging.error(f"Error in sync_denoise_results: {e}")
+
+def update_review_total_counts(session, run_id):
+    """Update total_count for all reviews associated with this session and run"""
+    try:
+        from processes.models import Review
+        
+        # Get all reviews for this session and run
+        reviews = Review.objects.filter(
+            msi_session=session,
+            run_id=run_id
+        )
+        
+        for review in reviews:
+            # Count tomograms for this specific review's reconstruction type
+            tomogram_count = ReviewTomogram.objects.filter(
+                session=session,
+                run_id=run_id,
+                reconstruction_type__iexact=review.reconstruction_type
+            ).count()
+            
+            # Update the review's total count
+            old_count = review.total_count
+            review.total_count = tomogram_count
+            review.save()
+            
+            logging.info(f"Updated review {review.review_id} total_count: {old_count} -> {tomogram_count} (reconstruction_type: {review.reconstruction_type})")
+            
+    except Exception as e:
+        logging.error(f"Error updating review total counts: {e}")
 
 def main():
     """Main function to run the sync process"""

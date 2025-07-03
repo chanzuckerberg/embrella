@@ -1313,12 +1313,33 @@ async def start_sync(request):
         progress_output = output.getvalue()
         print("Sync process completed with output:", progress_output)
         
+        # Update review total count if a review was found
+        updated_total_count = None
+        if review_id:
+            try:
+                review = await sync_to_async(Review.objects.get)(review_id=review_id)
+                tomogram_count = await sync_to_async(ReviewTomogram.objects.filter)(
+                    session=session,
+                    run_id=run_id,
+                    reconstruction_type__iexact=recon_type
+                ).count()
+                
+                old_count = review.total_count
+                review.total_count = tomogram_count
+                await sync_to_async(review.save)()
+                updated_total_count = tomogram_count
+                
+                print(f"Updated review {review_id} total_count: {old_count} -> {tomogram_count}")
+            except Exception as e:
+                print(f"Error updating review total count: {e}")
+        
         return JsonResponse({
             'success': True,
             'message': 'Sync process completed successfully',
             'progress': progress_output,
             'existing_tomograms': len(existing_tomograms) if existing_tomograms else 0,
-            'review_associated': review_id is not None
+            'review_associated': review_id is not None,
+            'updated_total_count': updated_total_count
         })
     except MsiSession.DoesNotExist:
         print(f"Session {session_id} not found in database")
