@@ -13,7 +13,7 @@ import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURLWithPathParams, getRequestURL } from '@app/common/queries/utils';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { UserContext } from '@app/common/context/UserProvider';
-import { PermissionBanner } from './components/PermissionBanner';
+// import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
 import { useIdetik } from '../../../idetik/packages/react/src/components/hooks/useIdetik';
 
@@ -93,7 +93,7 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
 export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerProps) => {
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
   const [region, setRegion] = useState<Region | null>(null);
-  const currentUser = useContext(UserContext);
+  // const currentUser = useContext(UserContext);
   const { isInitialized, imageSeriesLayer, channels } = useIdetik();
   // Commented out to allow everyone write access
   // const userCanReview = currentUser?.id === review.owner.id;

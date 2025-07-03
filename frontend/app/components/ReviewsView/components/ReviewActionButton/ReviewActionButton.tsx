@@ -8,10 +8,10 @@ import { API, DJANGO_URL } from '@app/common/constants/api';
 export interface ReviewActionButtonProps {
   reviewId: string;
   reviewStatus: string;
-  reviewer: EntityLinkField;
+  _reviewer: EntityLinkField;
 }
 
-export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewActionButtonProps) => {
+export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer }: ReviewActionButtonProps) => {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const currentUser = useContext(UserContext);
