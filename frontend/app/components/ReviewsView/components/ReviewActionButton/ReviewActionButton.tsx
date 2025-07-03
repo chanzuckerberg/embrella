@@ -19,8 +19,10 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, reviewer }: ReviewA
   if (currentUser === undefined) {
     return <div>Loading...</div>;
   }
-  const userCanReview =
-    reviewStatus === 'Not Started' || (reviewStatus === 'In Progress' && currentUser.id === String(reviewer.id));
+  // Commented out to allow everyone write access
+  // const userCanReview =
+  //   reviewStatus === 'Not Started' || (reviewStatus === 'In Progress' && currentUser.id === String(reviewer.id));
+  const userCanReview = true; // Everyone can review now
   console.log('review: ', reviewId);
   const reviewUrl = `/reviews/${reviewId}`;
 

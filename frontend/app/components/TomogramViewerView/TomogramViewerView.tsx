@@ -95,7 +95,9 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const [region, setRegion] = useState<Region | null>(null);
   const currentUser = useContext(UserContext);
   const { isInitialized, imageSeriesLayer, channels } = useIdetik();
-  const userCanReview = currentUser?.id === review.owner.id;
+  // Commented out to allow everyone write access
+  // const userCanReview = currentUser?.id === review.owner.id;
+  const userCanReview = true; // Everyone can review now
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
 
   const handleContrastLimitsChange = useCallback(
@@ -217,7 +219,8 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   return (
     <div className="w-full h-screen flex flex-col items-stretch bg-white">
       <TopBar saveState={state.saveState} />
-      {!userCanReview && <PermissionBanner ownerName={review.owner.name} />}
+      {/* Commented out to allow everyone write access */}
+      {/* {!userCanReview && <PermissionBanner ownerName={review.owner.name} />} */}
       <div className="flex-auto flex min-h-0 border-t border-gray-300">
         <SideBar
           tomogramDetail={state.detail}
