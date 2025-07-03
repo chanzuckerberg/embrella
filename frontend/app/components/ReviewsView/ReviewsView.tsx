@@ -55,6 +55,8 @@ export const ReviewsView = () => {
             reviewId={String(row.original.review.id)}
             reviewStatus={row.original.status}
             _reviewer={row.original.reviewer}
+            reviewedCount={row.original.reviewedCount}
+            totalCount={row.original.totalCount}
           />
         ),
       }),

@@ -9,9 +9,11 @@ export interface ReviewActionButtonProps {
   reviewId: string;
   reviewStatus: string;
   _reviewer: EntityLinkField;
+  reviewedCount?: number;
+  totalCount?: number;
 }
 
-export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer }: ReviewActionButtonProps) => {
+export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer, reviewedCount = 0, totalCount = 0 }: ReviewActionButtonProps) => {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const currentUser = useContext(UserContext);
@@ -19,10 +21,10 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer }: Review
   if (currentUser === undefined) {
     return <div>Loading...</div>;
   }
-  // Commented out to allow everyone write access
-  // const userCanReview =
-  //   reviewStatus === 'Not Started' || (reviewStatus === 'In Progress' && currentUser.id === String(reviewer.id));
-  const userCanReview = true; // Everyone can review now
+
+  // Check if all tomograms have been reviewed
+  const allTomogramsReviewed = reviewedCount > 0 && reviewedCount === totalCount;
+  
   console.log('review: ', reviewId);
   const reviewUrl = `/reviews/${reviewId}`;
 
@@ -55,17 +57,8 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer }: Review
     }
   };
 
-  if (userCanReview) {
-    return (
-      <div className="flex justify-end">
-        <Link href={reviewUrl}>
-          <Button sdsType="secondary" sdsStyle="square" size="small" className="w-[125px]">
-            {reviewStatus === 'Not Started' ? 'Start Review' : 'Resume Review'}
-          </Button>
-        </Link>
-      </div>
-    );
-  } else {
+  // Show "View Results" with download option when all tomograms are reviewed
+  if (allTomogramsReviewed) {
     return (
       <div className="flex justify-end">
         <Button
@@ -89,9 +82,6 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer }: Review
               component: (
                 <Link href={reviewUrl} className="flex flex-col">
                   <div>Open Results Viewer</div>
-                  {reviewStatus === 'In Progress' && (
-                    <div className="text-[#c6c6c6] text-[12px]">Results may be incomplete</div>
-                  )}
                 </Link>
               ),
             },
@@ -100,9 +90,6 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer }: Review
               component: (
                 <div className="flex flex-col" onClick={handleExportResults} style={{ cursor: 'pointer' }}>
                   <div>Export Results (.json)</div>
-                  {reviewStatus === 'In Progress' && (
-                    <div className="text-[#c6c6c6] text-[12px]">Results may be incomplete</div>
-                  )}
                 </div>
               ),
             },
@@ -127,6 +114,17 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer }: Review
             },
           }}
         />
+      </div>
+    );
+  } else {
+    // Show "Start Review" or "Resume Review" when not all tomograms are reviewed
+    return (
+      <div className="flex justify-end">
+        <Link href={reviewUrl}>
+          <Button sdsType="secondary" sdsStyle="square" size="small" className="w-[125px]">
+            {reviewStatus === 'Not Started' ? 'Start Review' : 'Resume Review'}
+          </Button>
+        </Link>
       </div>
     );
   }
