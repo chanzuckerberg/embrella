@@ -56,7 +56,7 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
       const procPlanName = tomogramData.procPlan?.name || '';
       if (!procPlanName.includes('czii-live')) {
         return {
-          children: '', 
+          children: '',
           href: '',
         };
       }

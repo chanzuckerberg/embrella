@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback, useContext, useState } from 'react';
+import { useReducer, useEffect, useCallback, useState } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
@@ -12,7 +12,7 @@ import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURLWithPathParams, getRequestURL } from '@app/common/queries/utils';
 import { DJANGO_URL } from '@app/common/constants/api';
-import { UserContext } from '@app/common/context/UserProvider';
+// import { UserContext } from '@app/common/context/UserProvider';
 // import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
 import { useIdetik } from '../../../idetik/packages/react/src/components/hooks/useIdetik';
