@@ -161,6 +161,10 @@ cat > "$out_path/slurm_script_reformat.sh" << EOF
 bash /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/reformat_vols.sh 960 180
 
 ml anaconda
+conda activate /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/pyConvert
+bash /hpc/projects/krios1.processing/aretomo3/scripts/reformat_thumbnail_rechunk.sh ${out_path} 960 180
+
+ml anaconda
 conda activate /hpc/projects/group.czii/krios1.processing/software/slabpick/pySlabPick
 python /hpc/projects/group.czii/krios1.processing/software/diagnostics/scripts/plot_aretomo3_metrics.py --session $project_name --run $run_number
 python /hpc/projects/group.czii/krios1.processing/software/diagnostics/scripts/summary_aretomo3_metrics.py
