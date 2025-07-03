@@ -24,7 +24,7 @@ export const TomogramInfo = ({
           {tomogramDetail && (
             <>
               <div>
-                <span className="font-bold">Organism:</span> <span className="italic">Mus musculus</span>
+                <span className="font-bold">Organism:</span> <span className="italic"></span>
               </div>
               <div className="mt-2 space-y-1">
                 <div>
