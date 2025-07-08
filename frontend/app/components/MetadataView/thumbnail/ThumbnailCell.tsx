@@ -30,6 +30,8 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
       </Typography>
 
       {Object.entries(metrics).map(([key, value]) => {
+        // Skip pixel size
+        if (key === 'pixel_size') return null;
         // Get unit from METRICS_CONFIG
         const metricConfig = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG];
         const unit = metricConfig?.unit || '';
