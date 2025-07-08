@@ -2,14 +2,14 @@
 
 import { SDSLightAppTheme, SDSDarkAppTheme, makeThemeOptions } from '@czi-sds/components';
 import { createTheme, CssBaseline, useMediaQuery } from '@mui/material';
-import { ThemeProvider } from '@mui/material/styles';
+import { Theme, ThemeProvider } from '@mui/material/styles';
 import { ReactNode } from 'react';
 import { customThemeLight, customThemeDark } from './theme';
 import { deepmerge } from '@mui/utils';
 
 export type ThemeMode = 'light' | 'dark';
 
-const updateTheme = (themeMode: ThemeMode) => {
+const updateTheme = (themeMode: ThemeMode): Theme => {
   const baseTheme = themeMode === 'light' ? SDSLightAppTheme : SDSDarkAppTheme;
   const customTheme = themeMode === 'light' ? customThemeLight : customThemeDark;
 
@@ -23,12 +23,7 @@ const updateTheme = (themeMode: ThemeMode) => {
 
 // CustomThemeProvider component to wrap your app
 export const CustomThemeProvider = ({ children }: { children: ReactNode }) => {
-  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
-  const theme = updateTheme(prefersDarkMode ? 'dark' : 'light');
-
-  if (!theme) {
-    return <>{children}</>;
-  }
+  const theme = updateTheme('light');
 
   return (
     <ThemeProvider theme={theme}>
