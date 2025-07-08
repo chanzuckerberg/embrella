@@ -407,18 +407,27 @@ class ReviewView(View):
                 for tomo in tomograms
             ]
             
-            # Sort tomograms by position (extract number from position string for proper sorting)
+            # Sort tomograms by position (handle compound position numbers like position_1_2, position_100_1)
             def extract_position_number(position_str):
                 if position_str == "None":
                     return float('inf')  # Put "None" positions at the end
                 try:
-                    # Extract number from "Position_X" format
-                    return int(position_str.split('_')[-1])
+                    # Extract all numbers from "Position_X_Y" format
+                    parts = position_str.split('_')
+                    if len(parts) >= 2:
+                        # Convert all numeric parts to integers for proper sorting
+                        numbers = []
+                        for part in parts[1:]:  # Skip "Position" part
+                            try:
+                                numbers.append(int(part))
+                            except ValueError:
+                                # If any part is not numeric, treat as invalid
+                                return float('inf')
+                        return numbers
+                    else:
+                        return float('inf')  # Invalid format
                 except (ValueError, IndexError):
                     return float('inf')  # Put invalid positions at the end
-            
-            # Debug: Print positions before sorting
-            print(f"Positions before sorting: {[tomo['position'] for tomo in tomograms_list]}")
             
             tomograms_list.sort(key=lambda x: extract_position_number(x['position']))
             
