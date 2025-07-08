@@ -1,7 +1,7 @@
 'use client';
 
 import { SDSLightAppTheme, SDSDarkAppTheme, makeThemeOptions } from '@czi-sds/components';
-import { createTheme, CssBaseline, useMediaQuery } from '@mui/material';
+import { createTheme, CssBaseline } from '@mui/material';
 import { Theme, ThemeProvider } from '@mui/material/styles';
 import { ReactNode } from 'react';
 import { customThemeLight, customThemeDark } from './theme';
