@@ -397,7 +397,28 @@ class ReviewView(View):
             # Get all tomograms for this review
             tomograms = ReviewTomogram.objects.filter(review=review).values('tomogram_id', 'quality', 'position_id')
 
-            # Format the response
+            # Format the response and sort by position
+            tomograms_list = [
+                {
+                    "tomogramId": tomo['tomogram_id'],
+                    "status": tomo['quality'] if tomo['quality'] else 'pending',
+                    "position": tomo['position_id'] if tomo['position_id'] else "None"
+                }
+                for tomo in tomograms
+            ]
+            
+            # Sort tomograms by position (extract number from position string for proper sorting)
+            def extract_position_number(position_str):
+                if position_str == "None":
+                    return float('inf')  # Put "None" positions at the end
+                try:
+                    # Extract number from "Position_X" format
+                    return int(position_str.split('_')[-1])
+                except (ValueError, IndexError):
+                    return float('inf')  # Put invalid positions at the end
+            
+            tomograms_list.sort(key=lambda x: extract_position_number(x['position']))
+
             response_data = {
                 "reviewId": str(review.review_id),
                 "reviewName": review.review_name,
@@ -407,14 +428,7 @@ class ReviewView(View):
                 },
                 "availableAnnotationObjects": review.objects_of_interest.split(',') 
                     if review.objects_of_interest is not None else [],
-                "tomograms": [
-                    {
-                        "tomogramId": tomo['tomogram_id'],
-                        "status": tomo['quality'] if tomo['quality'] else 'pending',
-                        "position": tomo['position_id'] if tomo['position_id'] else "None"
-                    }
-                    for tomo in tomograms
-                ]
+                "tomograms": tomograms_list
             }
 
             return JsonResponse(response_data)
