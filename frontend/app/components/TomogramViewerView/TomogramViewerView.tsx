@@ -279,7 +279,17 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               />
             </div>
           )}
-          <div className="flex justify-center !pt-[50px]">
+          <div className="flex justify-center gap-4 !pt-[50px]">
+            <Button
+              disabled={state.saveState === 'saving' }
+              className="!w-32"
+              sdsStyle="square"
+              sdsType="secondary"
+              startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="xs" />}
+              onClick={() => changeTomogram(-1)}
+            >
+              Previous Tomo
+            </Button>
             <Button
               disabled={state.saveState === 'saving'}
               className="!w-32"
