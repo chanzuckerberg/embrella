@@ -417,7 +417,13 @@ class ReviewView(View):
                 except (ValueError, IndexError):
                     return float('inf')  # Put invalid positions at the end
             
+            # Debug: Print positions before sorting
+            print(f"Positions before sorting: {[tomo['position'] for tomo in tomograms_list]}")
+            
             tomograms_list.sort(key=lambda x: extract_position_number(x['position']))
+            
+            # Debug: Print positions after sorting
+            print(f"Positions after sorting: {[tomo['position'] for tomo in tomograms_list]}")
 
             response_data = {
                 "reviewId": str(review.review_id),
