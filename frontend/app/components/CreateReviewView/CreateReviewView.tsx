@@ -186,9 +186,7 @@ export const CreateReviewView = () => {
               <div>
                 <div className="font-semibold">Tomograms selected for review:</div>
                 <div>
-                  {selectedTemSession?.session.runs
-                    .filter((run) => run.reconstructionType.includes(selectedReconstructionType!.name))
-                    .reduce((prevCount, runB) => prevCount + runB.numTomograms, 0)}
+                  {selectedRun?.run.numTomograms}
                 </div>
               </div>
               <div className="col-span-full">
