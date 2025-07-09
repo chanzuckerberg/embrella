@@ -99,6 +99,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   // const userCanReview = currentUser?.id === review.owner.id;
   const userCanReview = true; // Everyone can review now
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
+  const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
 
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
@@ -155,6 +156,44 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
     const nextIndex = currentIndex + indexDelta;
     if (nextIndex < 0 || nextIndex >= review.tomograms.length) return;
     dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: review.tomograms[nextIndex].tomogramId });
+  };
+
+  // Function to download review results
+  const downloadReviewResults = async () => {
+    // First save the current tomogram to ensure all changes are saved
+    await saveTomogram();
+
+    const reviewIdNoDashes = review.reviewId.replace(/-/g, '');
+    const url = `${DJANGO_URL}/api/reviews/${reviewIdNoDashes}/export?reviewedOnly=true`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // For a downloadable file:
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `${review.reviewName}-results.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+      alert('Review results downloaded. Only reviewed tomograms are included in the report.');
+    } catch (error) {
+      console.error('Failed to download review results:', error);
+      alert('Failed to download review results. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -281,7 +320,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           )}
           <div className="flex justify-center gap-4 !pt-[50px]">
             <Button
-              disabled={state.saveState === 'saving' }
+              disabled={state.saveState === 'saving'}
               className="!w-32"
               sdsStyle="square"
               sdsType="secondary"
@@ -301,8 +340,20 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               Next Tomo
             </Button>
           </div>
+          <div className="flex justify-center !pt-[20px]">
+            <Button
+              disabled={state.saveState === 'saving' || reviewedTomograms < 1}
+              className="!w-60"
+              sdsStyle="square"
+              sdsType="secondary"
+              onClick={downloadReviewResults}
+            >
+              Download Review
+            </Button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
