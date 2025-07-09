@@ -185,9 +185,7 @@ export const CreateReviewView = () => {
               </div>
               <div>
                 <div className="font-semibold">Tomograms selected for review:</div>
-                <div>
-                  {selectedRun?.run.numTomograms}
-                </div>
+                <div>{selectedRun?.run.numTomograms}</div>
               </div>
               <div className="col-span-full">
                 <div className="font-semibold">Review results will be saved to:</div>
