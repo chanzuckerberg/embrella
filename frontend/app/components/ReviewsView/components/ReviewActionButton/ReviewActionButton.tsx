@@ -13,7 +13,13 @@ export interface ReviewActionButtonProps {
   totalCount?: number;
 }
 
-export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer, reviewedCount = 0, totalCount = 0 }: ReviewActionButtonProps) => {
+export const ReviewActionButton = ({
+  reviewId,
+  reviewStatus,
+  _reviewer,
+  reviewedCount = 0,
+  totalCount = 0,
+}: ReviewActionButtonProps) => {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const currentUser = useContext(UserContext);
@@ -24,7 +30,7 @@ export const ReviewActionButton = ({ reviewId, reviewStatus, _reviewer, reviewed
 
   // Check if all tomograms have been reviewed
   const allTomogramsReviewed = reviewedCount > 0 && reviewedCount === totalCount;
-  
+
   console.log('review: ', reviewId);
   const reviewUrl = `/reviews/${reviewId}`;
 
