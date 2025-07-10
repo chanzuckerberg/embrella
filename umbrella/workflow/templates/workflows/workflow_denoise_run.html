@@ -415,6 +415,7 @@
             proc_plan: planData.plan_id,
             msi_session: sessionData.session_id,
             input_tomo: tomoData[0][0].id, // Use the first tomogram
+            run_number: denoiseRunNumber, // Include the actual denoise run number specified by user
             csrfmiddlewaretoken: getCookie('csrftoken')
           };
 

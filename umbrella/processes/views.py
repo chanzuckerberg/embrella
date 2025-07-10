@@ -6,7 +6,7 @@ from .forms import ProcRunForm, ReserveFrameProcRunForm, UpdateNotesForm
 from django.contrib.auth.decorators import login_required
 from . import models
 from django.views.decorators.csrf import csrf_exempt
-from processes.models import ProcRun, ProcPlan, ProcSoftware, RunPipeData
+from processes.models import ProcRun, ProcPlan, ProcSoftware, RunPipeData, suggest_name
 from tem.models import MsiSession
 from django.core.serializers import serialize
 from django.views.decorators.http import require_http_methods
@@ -106,10 +106,32 @@ def create_run(request):
             data = json.loads(request.body.decode('utf-8'))  # Parse JSON data
             plan_id = int(data.get('proc_plan'))  # Extract `proc_plan`
             session_id = int(data.get('msi_session'))  # Extract `msi_session`
+            run_number = data.get('run_number')  # Extract the actual run number specified by user
 
             msi_session = MsiSession.objects.get(pk=session_id)
             proc_plan = ProcPlan.objects.get(pk=plan_id)
-            name = suggest_name('run', msi_session, proc_plan)
+            
+            # Use the specified run number if provided, otherwise generate one
+            if run_number:
+                # Ensure the run number has the correct format (e.g., "run001")
+                if not run_number.startswith('run'):
+                    run_number = f"run{run_number.zfill(3)}"
+                name = run_number
+                
+                # Check if this run number already exists for this session and plan
+                existing_run = ProcRun.objects.filter(
+                    name=name,
+                    msi_session=msi_session,
+                    proc_plan=proc_plan
+                ).first()
+                
+                if existing_run:
+                    return JsonResponse({
+                        'error': f'Run number {name} already exists for this session and plan. Please choose a different run number.'
+                    }, status=400)
+            else:
+                # Fallback to the old behavior if no run number is specified
+                name = suggest_name('run', msi_session, proc_plan)
 
             run_instance = ProcRun.objects.create(
                 name=name,

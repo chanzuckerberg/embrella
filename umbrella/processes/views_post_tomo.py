@@ -81,20 +81,28 @@ def create_run(request):
         msi_session=MsiSession.objects.get(pk=session_id)
         proc_plan=ProcPlan.objects.get(pk=plan_id)
         
-        # Check if run number already exists
-        run_number = request.POST.get('run_number', 'run001')
-        existing_run = ProcRun.objects.filter(
-            name=run_number,
-            msi_session=msi_session,
-            proc_plan=proc_plan
-        ).first()
-        
-        if existing_run:
-            return JsonResponse({
-                'error': f'Run number {run_number} already exists for this session and plan. Please choose a different run number.'
-            }, status=400)
+        # Use the specified run number if provided, otherwise generate one
+        run_number = request.POST.get('run_number')
+        if run_number:
+            # Ensure the run number has the correct format (e.g., "run001")
+            if not run_number.startswith('run'):
+                run_number = f"run{run_number.zfill(3)}"
+            name = run_number
             
-        name = models.suggest_name('run',msi_session,proc_plan)
+            # Check if this run number already exists for this session and plan
+            existing_run = ProcRun.objects.filter(
+                name=name,
+                msi_session=msi_session,
+                proc_plan=proc_plan
+            ).first()
+            
+            if existing_run:
+                return JsonResponse({
+                    'error': f'Run number {name} already exists for this session and plan. Please choose a different run number.'
+                }, status=400)
+        else:
+            # Fallback to the old behavior if no run number is specified
+            name = models.suggest_name('run',msi_session,proc_plan)
         run_instance = ProcRun.objects.create(
                     name=name,
                     msi_session=msi_session,

@@ -1633,12 +1633,16 @@
     
     // Update the createProcessingRun function to handle the new setup
     async function createProcessingRun() {
-      // Get the current session based on which form is active
+      // Get the current session and run number based on which form is active
       let sessionName = "";
+      let runNumber = "";
+      
       if (document.getElementById("basicForm").style.display !== "none") {
         sessionName = document.getElementById("sessionName").value;
+        runNumber = document.getElementById("runNumber").value;
       } else {
         sessionName = document.getElementById("projectName").value;
+        runNumber = document.getElementById("advancedRunNumber").value;
       }
       
       // Ensure we have the session ID
@@ -1662,7 +1666,8 @@
         
         const formData = {
           proc_plan: procPlan,
-          msi_session: msiSession
+          msi_session: msiSession,
+          run_number: runNumber  // Include the actual run number specified by user
         };
         
         const response = await fetch("/processes/create", {
