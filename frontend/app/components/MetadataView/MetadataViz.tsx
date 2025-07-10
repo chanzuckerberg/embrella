@@ -40,9 +40,16 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
   }) => {
     // State to track which position is being hovered in thumbnails
     const [hoveredPosition, setHoveredPosition] = useState<string | null>(null);
+    // State to track visualization type (scatter plot or histogram)
+    const [isScatterPlot, setIsScatterPlot] = useState<boolean>(true);
 
     const handleThumbnailHover = (positionName: string | null) => {
       setHoveredPosition(positionName);
+    };
+
+    // Handler to track visualization type changes
+    const handleVisualizationTypeChange = (isScatterPlot: boolean) => {
+      setIsScatterPlot(isScatterPlot);
     };
 
     if (isLoading) {
@@ -75,6 +82,8 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
             scatterplotLoading={scatterplotLoading}
             hoveredPosition={hoveredPosition}
             onHoverPosition={handleThumbnailHover}
+            onVisualizationTypeChange={handleVisualizationTypeChange}
+            isScatterPlot={isScatterPlot}
           />
         </div>
         <div className={styles.rightColumn}>
@@ -88,6 +97,7 @@ export const MetadataViz: React.FC<MetadataVizProps> = memo(
             data={vizResponse}
             onThumbnailHover={handleThumbnailHover}
             hoveredPosition={hoveredPosition}
+            isScatterPlot={isScatterPlot}
           />
         </div>
       </div>
