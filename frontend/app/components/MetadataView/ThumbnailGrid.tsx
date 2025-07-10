@@ -24,6 +24,7 @@ interface ThumbnailGridProps {
   data: MetadataVizResponse;
   onThumbnailHover?: (positionName: string | null) => void;
   hoveredPosition?: string | null;
+  isScatterPlot?: boolean;
 }
 
 const Cell = ({ columnIndex, rowIndex, style, data }: GridChildComponentProps<GridData>) => (
@@ -33,7 +34,7 @@ const Cell = ({ columnIndex, rowIndex, style, data }: GridChildComponentProps<Gr
 );
 
 export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(
-  ({ acceptedResults, rejectedResults, data, onThumbnailHover, hoveredPosition }) => {
+  ({ acceptedResults, rejectedResults, data, onThumbnailHover, hoveredPosition, isScatterPlot = true }) => {
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
     const items = data ? acceptedResults : rejectedResults;
     const gridRef = useRef<FixedSizeGrid>(null);
@@ -41,6 +42,9 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(
     const COLUMN_COUNT = 1;
     const CELL_WIDTH = 425;
     const CELL_HEIGHT = 230;
+
+    // Get the number of metrics for scatter plot height calculation
+    const metricCount = data?.metric_ranges ? Object.keys(data.metric_ranges).length : 0;
 
     useEffect(() => {
       const updateWindowSize = () => {
@@ -80,7 +84,24 @@ export const ThumbnailGrid: React.FC<ThumbnailGridProps> = memo(
     }, [hoveredPosition, items, COLUMN_COUNT]);
 
     const gridWidth = Math.min(CELL_WIDTH * COLUMN_COUNT + 32, windowSize.width * 0.28);
-    const gridHeight = Math.min(Math.ceil(items.length) * CELL_HEIGHT, windowSize.height * 0.95);
+
+    // Calculate height based on visualization type
+    let gridHeight: number;
+
+    if (isScatterPlot) {
+      // For scatter plot view, match the scatter plot height calculation
+      // This is similar to the calculation in MetricScatterPlot.tsx
+      const gridHeightPerMetric = 140; // Height per metric in scatter plot
+      const spacing = 35; // Spacing between metrics in scatter plot
+      const totalScatterPlotHeight = metricCount * (gridHeightPerMetric + spacing);
+
+      // Add some padding to account for the header elements
+      const headerOffset = 40;
+      gridHeight = totalScatterPlotHeight + headerOffset;
+    } else {
+      // For histogram view, use the original height calculation
+      gridHeight = Math.min(Math.ceil(items.length) * CELL_HEIGHT, windowSize.height * 0.95);
+    }
 
     if (items.length === 0) {
       return (

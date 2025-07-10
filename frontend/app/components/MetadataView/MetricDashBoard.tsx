@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { MetadataVizResponse } from '../../common/types/metadataViz/metadataVizData';
 import styles from './MetadataViz.module.css';
 import { Switch, FormControlLabel, Box, Typography, Paper } from '@mui/material';
@@ -16,6 +16,8 @@ interface MetricDashboardProps {
   scatterplotLoading?: boolean;
   hoveredPosition?: string | null;
   onHoverPosition?: (positionName: string | null) => void;
+  onVisualizationTypeChange?: (isScatterPlot: boolean) => void;
+  isScatterPlot: boolean; // Required prop from parent
 }
 
 // Helper function to process metadata
@@ -60,9 +62,9 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
   scatterplotLoading,
   hoveredPosition,
   onHoverPosition,
+  onVisualizationTypeChange,
+  isScatterPlot,
 }) => {
-  const [isScatterPlot, setIsScatterPlot] = useState(true);
-
   // Process data once for both visualizations
   const processedData = React.useMemo(() => processMetadata(data), [data]);
 
@@ -77,6 +79,13 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
 
   // Determine if filters are applied
   const isFilterApplied = checkFiltersApplied(scatterplotData);
+
+  // Handle visualization type change
+  const handleVisualizationTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (onVisualizationTypeChange) {
+      onVisualizationTypeChange(e.target.checked);
+    }
+  };
 
   // Helper function to render the appropriate visualization
   const renderVisualization = () => {
@@ -136,9 +145,7 @@ export const MetricDashboard: React.FC<MetricDashboardProps> = ({
         </Paper>
 
         <FormControlLabel
-          control={
-            <Switch checked={isScatterPlot} onChange={(e) => setIsScatterPlot(e.target.checked)} color="primary" />
-          }
+          control={<Switch checked={isScatterPlot} onChange={handleVisualizationTypeChange} color="primary" />}
           label={isScatterPlot ? 'Scatter Plot View' : 'Histogram View'}
         />
       </Box>
