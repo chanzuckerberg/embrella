@@ -719,11 +719,12 @@ class ReviewView(View):
 
 def export_review_results(request, review_id):
     """
-    Export final review annotations after completion.
+    Export review annotations.
 
     Args:
         request: HTTP request
         review_id: UUID of the review to export
+        reviewedOnly: Query parameter to export only reviewed tomograms (default: false)
 
     Returns:
         JSON file containing the review annotations
@@ -739,12 +740,24 @@ def export_review_results(request, review_id):
         # Get the review with related tomograms
         review = Review.objects.select_related('msi_session', 'requestor').get(review_id=review_id)
 
-        # Check if review is completed
-        if review.status != 'completed':
-            return JsonResponse({"error": "Review must be completed before exporting"}, status=400)
+        # Get the reviewedOnly parameter
+        reviewed_only = request.GET.get('reviewedOnly', 'false').lower() == 'true'
 
-        # Get all tomograms for this review
-        tomograms = ReviewTomogram.objects.filter(review=review)
+        # If reviewedOnly is true, allow export during review
+        # If reviewedOnly is false, only allow export when review is completed
+        if not reviewed_only and review.status != 'completed':
+            return JsonResponse({"error": "Review must be completed before exporting all tomograms"}, status=400)
+
+        # Get tomograms for this review
+        if reviewed_only:
+            # Only get reviewed tomograms (not pending)
+            tomograms = ReviewTomogram.objects.filter(
+                review=review,
+                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary']
+            )
+        else:
+            # Get all tomograms (including pending)
+            tomograms = ReviewTomogram.objects.filter(review=review)
 
         # Format the export data
         export_data = {
@@ -778,7 +791,8 @@ def export_review_results(request, review_id):
         response = JsonResponse(export_data)
         print(response)
         # Set headers for file download
-        filename = f"review_{review_id}_export.json"
+        export_type = "reviewed_only" if reviewed_only else "complete"
+        filename = f"review_{review_id}_{export_type}_export.json"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         response['Content-Type'] = 'application/json'
         response['Content-Length'] = len(json.dumps(export_data))
