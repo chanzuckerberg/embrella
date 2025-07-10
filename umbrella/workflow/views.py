@@ -569,22 +569,26 @@ def get_msi_params_list(request):
         elif plan_type == 'aretomo3':
             plan_name = 'czii-live'
 
+        logger.info(f"Plan type: {plan_type}, Plan name: {plan_name}")
 
         # Get the plan ID
         try:
             plan = ProcPlan.objects.get(name=plan_name)
             plan_id = plan.id
+            logger.info(f"Found plan {plan_name} with ID: {plan_id}")
         except ProcPlan.DoesNotExist:
+            logger.error(f"Processing plan {plan_name} not found")
             return JsonResponse({'error': f'Processing plan {plan_name} not found'}, status=404)
 
         # Perform the join between tem_msisession and processes_procrun
+        # Let's try a more explicit query to debug the issue
         query = (
             MsiSession.objects
+            .filter(procrun__proc_plan_id=plan_id)  # Filter by processing plan first
             .annotate(
                 run_number=F('procrun__name'),  # Map the 'name' field from the procrun table
                 run_created_at=F('procrun__created_at')  # Include the created_at field for sorting
             )
-            .filter(procrun__proc_plan_id=plan_id)  # Filter by processing plan
             .values('name', 'run_number', 'run_created_at')
             .distinct()  # Remove duplicates
         )
@@ -593,9 +597,26 @@ def get_msi_params_list(request):
         if session_name_filter:
             query = query.filter(name=session_name_filter)
 
+        # Let's also check what's in the ProcRun table directly for debugging
+        from processes.models import ProcRun
+        direct_procrun_query = ProcRun.objects.filter(proc_plan_id=plan_id)
+        if session_name_filter:
+            direct_procrun_query = direct_procrun_query.filter(msi_session__name=session_name_filter)
+        
+        direct_results = list(direct_procrun_query.values('msi_session__name', 'name', 'created_at'))
+        logger.info(f"Direct ProcRun query returned {len(direct_results)} results for plan_id={plan_id}")
+        for entry in direct_results:
+            logger.info(f"Direct ProcRun result: {entry}")
+
+        # Execute the query and log the results for debugging
+        query_results = list(query)
+        logger.info(f"Query returned {len(query_results)} results for plan_id={plan_id}, session_name_filter={session_name_filter}")
+        for entry in query_results:
+            logger.info(f"Query result: {entry}")
+
         # Group results by name and collect unique run numbers with sorting by created_at
         grouped_sessions = {}
-        for entry in query:
+        for entry in query_results:
             name = entry['name']
             run_number = entry['run_number']
             created_at = entry['run_created_at']
