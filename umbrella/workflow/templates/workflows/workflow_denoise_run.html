@@ -296,7 +296,7 @@
         if (!sessionNameValue) return;
         try {
           const response = await fetch(
-            `/workflow/aretomo3_params?session_name=${encodeURIComponent(sessionNameValue)}`
+            `/workflow/denoise_params?session_name=${encodeURIComponent(sessionNameValue)}&plan_type=denoise`
           );
           if (!response.ok) {
             throw new Error(`API call failed with status ${response.status}`);
@@ -344,7 +344,7 @@
 
       // Check if run number already exists
       try {
-        const checkResponse = await fetch(`/workflow/aretomo3_params?session_name=${encodeURIComponent(sessionName)}&plan_type=denoise`);
+        const checkResponse = await fetch(`/workflow/denoise_params?session_name=${encodeURIComponent(sessionName)}&plan_type=denoise`);
         if (!checkResponse.ok) {
           throw new Error(`API call failed with status ${checkResponse.status}`);
         }

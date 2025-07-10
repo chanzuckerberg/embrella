@@ -19,6 +19,7 @@ urlpatterns = [
     path("run_advanced_aretomo3", views.run_aretomo3_advanced, name='run_advanced_aretomo3'),
     path("run_denoiset", views.run_denoiset, name='run denoiset'),
     path("aretomo3_params", views.get_msi_params_list, name='get parameters'),
+    path("denoise_params", views.get_msi_params_list, name='get denoise parameters'),
     path("job_logs", views.get_job_logs, name='fetching logs'),
     path("dashboard/", views.dashboard, name='dashboard'),
     path('data/', views.workflow_get_data, name='dashboard_data'),
