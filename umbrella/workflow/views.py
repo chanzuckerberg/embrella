@@ -224,6 +224,33 @@ def run_aretomo3_advanced(request):
                     status=422
                 )
 
+            # Check if run number already exists in the database
+            try:
+                # Get the session and plan (project_name is the same as session_name in this context)
+                msi_session = MsiSession.objects.get(name=project_name)
+                proc_plan = ProcPlan.objects.get(name='czii-live')  # AreTomo3 uses czii-live plan
+                
+                # Ensure the run number has the correct format (e.g., "run001")
+                if not run_number.startswith('run'):
+                    run_number = f"run{run_number.zfill(3)}"
+                
+                # Check if this run number already exists for this session and plan
+                existing_run = ProcRun.objects.filter(
+                    name=run_number,
+                    msi_session=msi_session,
+                    proc_plan=proc_plan
+                ).first()
+                
+                if existing_run:
+                    return JsonResponse({
+                        'error': f'Run number {run_number} already exists for session {project_name}. Please choose a different run number.'
+                    }, status=400)
+                    
+            except MsiSession.DoesNotExist:
+                return JsonResponse({'error': f'Session {project_name} not found in database'}, status=404)
+            except ProcPlan.DoesNotExist:
+                return JsonResponse({'error': 'AreTomo3 processing plan (czii-live) not found'}, status=404)
+
             # Store user credentials in session
             request.session['user_id'] = user_id
             request.session['decoded_password'] = decoded_password
@@ -318,6 +345,33 @@ def run_aretomo3(request):
         session_name_pattern = re.compile(r'^\d{2}[a-z]{3}\d{2}[a-z]$')
         if not session_name_pattern.match(session_name):
             return JsonResponse({'error': 'Invalid session_name format. Please check the session name: 422'}, status=422)
+
+        # Check if run number already exists in the database
+        try:
+            # Get the session and plan
+            msi_session = MsiSession.objects.get(name=session_name)
+            proc_plan = ProcPlan.objects.get(name='czii-live')  # AreTomo3 uses czii-live plan
+            
+            # Ensure the run number has the correct format (e.g., "run001")
+            if not run_number.startswith('run'):
+                run_number = f"run{run_number.zfill(3)}"
+            
+            # Check if this run number already exists for this session and plan
+            existing_run = ProcRun.objects.filter(
+                name=run_number,
+                msi_session=msi_session,
+                proc_plan=proc_plan
+            ).first()
+            
+            if existing_run:
+                return JsonResponse({
+                    'error': f'Run number {run_number} already exists for session {session_name}. Please choose a different run number.'
+                }, status=400)
+                
+        except MsiSession.DoesNotExist:
+            return JsonResponse({'error': f'Session {session_name} not found in database'}, status=404)
+        except ProcPlan.DoesNotExist:
+            return JsonResponse({'error': 'AreTomo3 processing plan (czii-live) not found'}, status=404)
 
         # Store user_id and decoded_password in session
         request.session['user_id'] = user_id
