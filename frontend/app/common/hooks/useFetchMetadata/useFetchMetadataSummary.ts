@@ -35,6 +35,8 @@ export const useFetchMetadataSummary = (
         const response = await fetch(
           `${DJANGO_URL}${API.METADATA_SUMMARY}?session_name=${sessionName}&run_number=${runNumber}`
         );
+        
+        const responseText = await response.text();
 
         if (!response.ok) {
           throw {
@@ -42,8 +44,22 @@ export const useFetchMetadataSummary = (
             message: response.statusText,
           };
         }
-
-        const jsonData = await response.json();
+        
+        let jsonData = null;
+        if (responseText) {
+          try {
+            // Replace NaN with null before parsing
+            const cleanedText = responseText.replace(/NaN/g, 'null');
+            jsonData = JSON.parse(cleanedText);
+          } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            throw {
+              status: 500,
+              message: 'Failed to parse server response',
+            };
+          }
+        }
+        
         setData(jsonData);
         setIsSuccess(true);
         setError(undefined);
