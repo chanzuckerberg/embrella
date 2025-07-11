@@ -56,7 +56,7 @@ export const useFetchMetadataViz = (
             message: response.statusText,
           };
         }
-        
+
         let jsonData = null;
         if (responseText) {
           try {
@@ -68,7 +68,7 @@ export const useFetchMetadataViz = (
             console.error('JSON parse error:', parseError);
           }
         }
-        
+
         setData(jsonData);
         setIsSuccess(true);
         setError(undefined);
