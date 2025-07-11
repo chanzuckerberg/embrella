@@ -1323,6 +1323,11 @@ def apply_filters(df, filter_config):
             continue
             
         column_name = column_mapping[field]
+        
+        # Skip defocus filter if the column doesn't exist (since all values are 0)
+        if field == 'defocus' and column_name not in df.columns:
+            continue
+            
         min_val, max_val = range_values
         current_mask = (df[column_name] >= min_val) & (df[column_name] <= max_val)
         
