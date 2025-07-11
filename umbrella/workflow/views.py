@@ -1264,6 +1264,9 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
     
     ranges = {}
     for csv_column, metric_name in column_mapping.items():
+        # Only include defocus if the column exists
+        if csv_column == 'Defocus(A)' and csv_column not in df.columns:
+            continue
         if csv_column in df.columns:
             if csv_column == 'Defocus(A)':
                 # Handle Defocus(A) column - it might be 0 if not present in original CSV
@@ -1512,10 +1515,10 @@ def get_metadata_viz_data(request):
                         'bad_patch_all': float(row['Bad_Patch_All']),
                         'ctf_resolution': float(row['CTF_Res(A)']),
                         'ctf_score': float(row['CTF_Score']),
-                        'defocus': float(row['Defocus(A)'].strip().split()[0]) if str(row['Defocus(A)']).strip() != '0' else 0.0,
+                        'defocus': 0.0,
                         'pixel_size': float(row['Pix_Size(A)']),
                         'alpha0': float(row['Alpha0']),
-                        'beta0': float(row['Beta0'])
+                        'beta0': float(row['Beta0']) if not pd.isna(row['Beta0']) else float('nan')
                     }
                     result.append({
                         'name': item_name,
