@@ -23,6 +23,7 @@ export interface Metrics {
   bad_patch_all: number;
   ctf_resolution: number;
   ctf_score: number;
+  defocus: number;
   pixel_size: number;
   alpha0: number;
   beta0: number;
@@ -36,6 +37,7 @@ export interface FilterConfig {
     bad_patch_all?: [number, number];
     ctf_resolution?: [number, number];
     ctf_score?: [number, number];
+    defocus?: [number, number];
     alpha0?: [number, number];
     beta0?: [number, number];
   };
@@ -50,6 +52,7 @@ export interface MetricRanges {
   bad_patch_all: [number, number];
   ctf_resolution: [number, number];
   ctf_score: [number, number];
+  defocus: [number, number];
   pixel_size: [number, number];
   alpha0: [number, number];
   beta0: [number, number];
