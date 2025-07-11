@@ -1061,7 +1061,8 @@ def compute_stats(df: pd.DataFrame) -> list:
     # Create columns with Ångström values
     df['Thickness(A)'] = df['Thickness(Pix)'] * pixel_size
     df['Global_Shift(A)'] = df['Global_Shift(Pix)'] * pixel_size
-    # Pre-process the Defocus(A) column if it exists
+    # Handle Defocus(A) column - if it doesn't exist, we'll skip it in statistics
+    # If it exists, process it normally
     if 'Defocus(A)' in df.columns:
         try:
             # Create a temporary column with cleaned defocus values
@@ -1086,8 +1087,8 @@ def compute_stats(df: pd.DataFrame) -> list:
         'Beta0': 'Beta Offset (°)'
     }
 
-    # Select only columns to report
-    columns_of_interest = list(column_mapping.keys())
+    # Select only columns to report (only include columns that exist in the dataframe)
+    columns_of_interest = [col for col in column_mapping.keys() if col in df.columns]
     stats_df = df[columns_of_interest].agg(['mean', 'median', 'std'])
 
     result = []
@@ -1165,6 +1166,8 @@ def get_metadata_summary(request):
             df = pd.read_csv(StringIO(metrics_content))
             df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
             
+            # Note: Defocus(A) column is optional - if not present, it will be skipped in statistics
+
             # Use natural sort with optimized key function
             df = df.sort_values(by="Tilt_Series", key=lambda col: pd.Index([int(''.join(c for c in str(x) if c.isdigit()) or 0) for x in col])).reset_index(drop=True)
             fetch_time = time.time() - fetch_start
@@ -1261,13 +1264,20 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
     
     ranges = {}
     for csv_column, metric_name in column_mapping.items():
+        # Only include defocus if the column exists
+        if csv_column == 'Defocus(A)' and csv_column not in df.columns:
+            continue
         if csv_column in df.columns:
             if csv_column == 'Defocus(A)':
-                # Extract the first number from each space-separated value
+                # Handle Defocus(A) column - it might be 0 if not present in original CSV
                 try:
-                    # Apply the transformation to each value in the column
-                    clean_values = df[csv_column].apply(lambda x: float(str(x).strip().split()[0]))
-                    ranges[metric_name] = [float(clean_values.min()), float(clean_values.max())]
+                    # Check if all values are 0 (indicating it was added as default)
+                    if df[csv_column].eq(0).all():
+                        ranges[metric_name] = [0, 0]
+                    else:
+                        # Extract the first number from each space-separated value
+                        clean_values = df[csv_column].apply(lambda x: float(str(x).strip().split()[0]))
+                        ranges[metric_name] = [float(clean_values.min()), float(clean_values.max())]
                 except Exception as e:
                     logger.error(f"Error processing {csv_column}: {str(e)}")
                     # Fallback to default range if processing fails
@@ -1313,6 +1323,11 @@ def apply_filters(df, filter_config):
             continue
             
         column_name = column_mapping[field]
+        
+        # Skip defocus filter if the column doesn't exist (since all values are 0)
+        if field == 'defocus' and column_name not in df.columns:
+            continue
+            
         min_val, max_val = range_values
         current_mask = (df[column_name] >= min_val) & (df[column_name] <= max_val)
         
@@ -1435,17 +1450,22 @@ def get_metadata_viz_data(request):
             df = pd.read_csv(StringIO(metrics_content))
             logger.info(f"Total positions in CSV before filtering: {len(df)}")
 
-            # Required column
+            # Required columns (excluding Defocus(A) which is optional)
             required_columns = [
                 'Tilt_Series', 'Thickness(Pix)', 'Tilt_Axis', 'Global_Shift(Pix)',
-                'Bad_Patch_Low', 'Bad_Patch_All', 'CTF_Res(A)', 'CTF_Score','Defocus(A)',
+                'Bad_Patch_Low', 'Bad_Patch_All', 'CTF_Res(A)', 'CTF_Score',
                  'Pix_Size(A)', 'Alpha0', 'Beta0'
             ]
 
-            # for missing columns
+            # Check for missing required columns
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
                 raise ValueError(f"Missing required columns in CSV: {', '.join(missing_columns)}")
+
+            # Add Defocus(A) column if it doesn't exist (set to 0)
+            if 'Defocus(A)' not in df.columns:
+                df['Defocus(A)'] = 0
+                logger.info("Defocus(A) column not found in CSV, setting to 0")
 
             df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
 
@@ -1500,10 +1520,10 @@ def get_metadata_viz_data(request):
                         'bad_patch_all': float(row['Bad_Patch_All']),
                         'ctf_resolution': float(row['CTF_Res(A)']),
                         'ctf_score': float(row['CTF_Score']),
-                        'defocus': float(row['Defocus(A)'].strip().split()[0]),
+                        'defocus': 0.0,
                         'pixel_size': float(row['Pix_Size(A)']),
                         'alpha0': float(row['Alpha0']),
-                        'beta0': float(row['Beta0'])
+                        'beta0': float(row['Beta0']) if not pd.isna(row['Beta0']) else float('nan')
                     }
                     result.append({
                         'name': item_name,
