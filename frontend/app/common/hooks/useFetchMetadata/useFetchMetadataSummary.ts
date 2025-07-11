@@ -35,7 +35,7 @@ export const useFetchMetadataSummary = (
         const response = await fetch(
           `${DJANGO_URL}${API.METADATA_SUMMARY}?session_name=${sessionName}&run_number=${runNumber}`
         );
-        
+
         const responseText = await response.text();
 
         if (!response.ok) {
@@ -44,7 +44,7 @@ export const useFetchMetadataSummary = (
             message: response.statusText,
           };
         }
-        
+
         let jsonData = null;
         if (responseText) {
           try {
@@ -59,7 +59,7 @@ export const useFetchMetadataSummary = (
             };
           }
         }
-        
+
         setData(jsonData);
         setIsSuccess(true);
         setError(undefined);

@@ -36,8 +36,8 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
         const metricConfig = METRICS_CONFIG[key as keyof typeof METRICS_CONFIG];
         const unit = metricConfig?.unit || '';
         const label = metricConfig?.label || key;
-       // Handle null or undefined values
-       const formattedValue = value !== null && value !== undefined ? value.toFixed(2) : 'N/A';
+        // Handle null or undefined values
+        const formattedValue = value !== null && value !== undefined ? value.toFixed(2) : 'N/A';
 
         return (
           <Typography key={key} sx={{ mb: 0.5 }}>

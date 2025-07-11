@@ -356,4 +356,3 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
     </div>
   );
 };
-
