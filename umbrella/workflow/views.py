@@ -1061,7 +1061,8 @@ def compute_stats(df: pd.DataFrame) -> list:
     # Create columns with Ångström values
     df['Thickness(A)'] = df['Thickness(Pix)'] * pixel_size
     df['Global_Shift(A)'] = df['Global_Shift(Pix)'] * pixel_size
-    # Pre-process the Defocus(A) column if it exists
+    # Handle Defocus(A) column - if it doesn't exist, we'll skip it in statistics
+    # If it exists, process it normally
     if 'Defocus(A)' in df.columns:
         try:
             # Create a temporary column with cleaned defocus values
@@ -1165,11 +1166,8 @@ def get_metadata_summary(request):
             df = pd.read_csv(StringIO(metrics_content))
             df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
             
-            # Add Defocus(A) column if it doesn't exist (set to 0)
-            if 'Defocus(A)' not in df.columns:
-                df['Defocus(A)'] = 0
-                logger.info("Defocus(A) column not found in CSV, setting to 0")
-            
+            # Note: Defocus(A) column is optional - if not present, it will be skipped in statistics
+
             # Use natural sort with optimized key function
             df = df.sort_values(by="Tilt_Series", key=lambda col: pd.Index([int(''.join(c for c in str(x) if c.isdigit()) or 0) for x in col])).reset_index(drop=True)
             fetch_time = time.time() - fetch_start
