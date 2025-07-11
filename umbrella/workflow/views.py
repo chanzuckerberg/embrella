@@ -1061,9 +1061,21 @@ def compute_stats(df: pd.DataFrame) -> list:
     # Create columns with Ångström values
     df['Thickness(A)'] = df['Thickness(Pix)'] * pixel_size
     df['Global_Shift(A)'] = df['Global_Shift(Pix)'] * pixel_size
+    # Pre-process the Defocus(A) column if it exists
+    if 'Defocus(A)' in df.columns:
+        try:
+            # Create a temporary column with cleaned defocus values
+            df['_clean_defocus'] = df['Defocus(A)'].apply(lambda x: float(str(x).strip().split()[0]))
+            # Replace the original column for statistics calculation
+            df['Defocus(A)'] = df['_clean_defocus']
+        except Exception as e:
+            logger.error(f"Error preprocessing Defocus(A) in compute_stats: {str(e)}")
+            # If processing fails, set to a default value to avoid breaking calculations
+            df['Defocus(A)'] = 0
 
     column_mapping = {
         'CTF_Score': 'CTF Score',
+        'Defocus(A)': 'Defocus (Å)',
         'CTF_Res(A)': 'CTF Resolution (Å)',
         'Thickness(A)': 'Thickness (Å)',
         'Tilt_Axis': 'Tilt Axis (°)',
@@ -1241,6 +1253,7 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
         'Bad_Patch_All': 'bad_patch_all',
         'CTF_Res(A)': 'ctf_resolution',
         'CTF_Score': 'ctf_score',
+        'Defocus(A)': 'defocus',
         'Pix_Size(A)': 'pixel_size',
         'Alpha0': 'alpha0',
         'Beta0': 'beta0'
@@ -1249,7 +1262,18 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
     ranges = {}
     for csv_column, metric_name in column_mapping.items():
         if csv_column in df.columns:
-            ranges[metric_name] = [float(df[csv_column].min()), float(df[csv_column].max())]
+            if csv_column == 'Defocus(A)':
+                # Extract the first number from each space-separated value
+                try:
+                    # Apply the transformation to each value in the column
+                    clean_values = df[csv_column].apply(lambda x: float(str(x).strip().split()[0]))
+                    ranges[metric_name] = [float(clean_values.min()), float(clean_values.max())]
+                except Exception as e:
+                    logger.error(f"Error processing {csv_column}: {str(e)}")
+                    # Fallback to default range if processing fails
+                    ranges[metric_name] = [0, 0]
+            else:
+                ranges[metric_name] = [float(df[csv_column].min()), float(df[csv_column].max())]
     
     return ranges
 
@@ -1278,6 +1302,7 @@ def apply_filters(df, filter_config):
             'bad_patch_all': 'Bad_Patch_All',
             'ctf_resolution': 'CTF_Res(A)',
             'ctf_score': 'CTF_Score',
+            'defocus': 'Defocus(A)',
             'alpha0': 'Alpha0',
             'beta0': 'Beta0'
     }
@@ -1413,7 +1438,7 @@ def get_metadata_viz_data(request):
             # Required column
             required_columns = [
                 'Tilt_Series', 'Thickness(Pix)', 'Tilt_Axis', 'Global_Shift(Pix)',
-                'Bad_Patch_Low', 'Bad_Patch_All', 'CTF_Res(A)', 'CTF_Score',
+                'Bad_Patch_Low', 'Bad_Patch_All', 'CTF_Res(A)', 'CTF_Score','Defocus(A)',
                  'Pix_Size(A)', 'Alpha0', 'Beta0'
             ]
 
@@ -1475,6 +1500,7 @@ def get_metadata_viz_data(request):
                         'bad_patch_all': float(row['Bad_Patch_All']),
                         'ctf_resolution': float(row['CTF_Res(A)']),
                         'ctf_score': float(row['CTF_Score']),
+                        'defocus': float(row['Defocus(A)'].strip().split()[0]),
                         'pixel_size': float(row['Pix_Size(A)']),
                         'alpha0': float(row['Alpha0']),
                         'beta0': float(row['Beta0'])
@@ -1497,6 +1523,7 @@ def get_metadata_viz_data(request):
                         'bad_patch_all': 'bad_patch_all',
                         'ctf_resolution': 'ctf_resolution',
                         'ctf_score': 'ctf_score',
+                        'defocus': 'defocus',
                         'alpha0': 'alpha0',
                         'beta0': 'beta0'
                     }
