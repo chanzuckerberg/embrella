@@ -1065,14 +1065,12 @@ def compute_stats(df: pd.DataFrame) -> list:
     # If it exists, process it normally
     if 'Defocus(A)' in df.columns:
         try:
-            # Create a temporary column with cleaned defocus values
-            df['_clean_defocus'] = df['Defocus(A)'].apply(lambda x: float(str(x).strip().split()[0]))
-            # Replace the original column for statistics calculation
-            df['Defocus(A)'] = df['_clean_defocus']
+            df['Defocus(A)'] = df['Defocus(A)']
         except Exception as e:
             logger.error(f"Error preprocessing Defocus(A) in compute_stats: {str(e)}")
-            # If processing fails, set to a default value to avoid breaking calculations
             df['Defocus(A)'] = 0
+    else:
+        df['Defocus(A)'] = 0
 
     column_mapping = {
         'CTF_Score': 'CTF Score',
@@ -1520,7 +1518,7 @@ def get_metadata_viz_data(request):
                         'bad_patch_all': float(row['Bad_Patch_All']),
                         'ctf_resolution': float(row['CTF_Res(A)']),
                         'ctf_score': float(row['CTF_Score']),
-                        'defocus': 0.0,
+                        'defocus': float(row['Defocus(A)']),
                         'pixel_size': float(row['Pix_Size(A)']),
                         'alpha0': float(row['Alpha0']),
                         'beta0': float(row['Beta0']) if not pd.isna(row['Beta0']) else float('nan')
