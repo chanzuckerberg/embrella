@@ -1072,9 +1072,20 @@ def compute_stats(df: pd.DataFrame) -> list:
     else:
         df['Defocus(A)'] = 0
 
+
+    if 'ExtPhase(Deg)' in df.columns:
+        try:
+            df['ExtPhase(Deg)'] = df['ExtPhase(Deg)']
+        except Exception as e:
+            logger.error(f"Error preprocessing ExtPhase in compute_stats: {str(e)}")
+            df['ExtPhase(Deg)'] = 0
+    else:
+        df['ExtPhase(Deg)'] = 0
+
     column_mapping = {
         'CTF_Score': 'CTF Score',
         'Defocus(A)': 'Defocus (Å)',
+        'ExtPhase(Deg)': 'ExtPhase',
         'CTF_Res(A)': 'CTF Resolution (Å)',
         'Thickness(A)': 'Thickness (Å)',
         'Tilt_Axis': 'Tilt Axis (°)',
@@ -1255,6 +1266,7 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
         'CTF_Res(A)': 'ctf_resolution',
         'CTF_Score': 'ctf_score',
         'Defocus(A)': 'defocus',
+        'ExtPhase(Deg)': 'extphase',
         'Pix_Size(A)': 'pixel_size',
         'Alpha0': 'alpha0',
         'Beta0': 'beta0'
@@ -1264,6 +1276,8 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
     for csv_column, metric_name in column_mapping.items():
         # Only include defocus if the column exists
         if csv_column == 'Defocus(A)' and csv_column not in df.columns:
+            continue
+        if csv_column == 'ExtPhase(Deg)' and csv_column not in df.columns:
             continue
         if csv_column in df.columns:
             if csv_column == 'Defocus(A)':
@@ -1280,9 +1294,19 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
                     logger.error(f"Error processing {csv_column}: {str(e)}")
                     # Fallback to default range if processing fails
                     ranges[metric_name] = [0, 0]
+            elif csv_column == 'ExtPhase(Deg)':
+                try:
+                    # Check if all values are 0 (indicating it was added as default)
+                    if df[csv_column].eq(0).all():
+                        ranges[metric_name] = [0, 0]
+                    else:
+                        ranges[metric_name] = [float(df[csv_column].min()), float(df[csv_column].max())]
+                except Exception as e:
+                    logger.error(f"Error processing {csv_column}: {str(e)}")
+                    # Fallback to default range if processing fails
+                    ranges[metric_name] = [0, 0]
             else:
                 ranges[metric_name] = [float(df[csv_column].min()), float(df[csv_column].max())]
-    
     return ranges
 
 # Helper function to apply filters
@@ -1311,6 +1335,7 @@ def apply_filters(df, filter_config):
             'ctf_resolution': 'CTF_Res(A)',
             'ctf_score': 'CTF_Score',
             'defocus': 'Defocus(A)',
+            'extphase': 'ExtPhase(Deg)',
             'alpha0': 'Alpha0',
             'beta0': 'Beta0'
     }
@@ -1324,6 +1349,10 @@ def apply_filters(df, filter_config):
         
         # Skip defocus filter if the column doesn't exist (since all values are 0)
         if field == 'defocus' and column_name not in df.columns:
+            continue
+        
+        # Skip defocus filter if the column doesn't exist (since all values are 0)
+        if field == 'extphase' and column_name not in df.columns:
             continue
             
         min_val, max_val = range_values
@@ -1448,7 +1477,7 @@ def get_metadata_viz_data(request):
             df = pd.read_csv(StringIO(metrics_content))
             logger.info(f"Total positions in CSV before filtering: {len(df)}")
 
-            # Required columns (excluding Defocus(A) which is optional)
+            # Required columns (excluding Defocus(A) and ExtPhase(Deg) which are optional)
             required_columns = [
                 'Tilt_Series', 'Thickness(Pix)', 'Tilt_Axis', 'Global_Shift(Pix)',
                 'Bad_Patch_Low', 'Bad_Patch_All', 'CTF_Res(A)', 'CTF_Score',
@@ -1464,6 +1493,11 @@ def get_metadata_viz_data(request):
             if 'Defocus(A)' not in df.columns:
                 df['Defocus(A)'] = 0
                 logger.info("Defocus(A) column not found in CSV, setting to 0")
+
+            #  Add ExtPhase column if it doesn't exist (set to 0)
+            if 'ExtPhase(Deg)' not in df.columns:
+                 df['ExtPhase(Deg)'] = 0
+                 logger.info("ExtPhase(Deg) column not found in CSV, setting to 0")
 
             df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
 
@@ -1519,6 +1553,7 @@ def get_metadata_viz_data(request):
                         'ctf_resolution': float(row['CTF_Res(A)']),
                         'ctf_score': float(row['CTF_Score']),
                         'defocus': float(row['Defocus(A)']),
+                        'extphase': float(row['ExtPhase(Deg)']),
                         'pixel_size': float(row['Pix_Size(A)']),
                         'alpha0': float(row['Alpha0']),
                         'beta0': float(row['Beta0']) if not pd.isna(row['Beta0']) else float('nan')
@@ -1542,6 +1577,7 @@ def get_metadata_viz_data(request):
                         'ctf_resolution': 'ctf_resolution',
                         'ctf_score': 'ctf_score',
                         'defocus': 'defocus',
+                        'extphase': 'extphase',
                         'alpha0': 'alpha0',
                         'beta0': 'beta0'
                     }
