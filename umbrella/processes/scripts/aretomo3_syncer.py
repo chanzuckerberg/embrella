@@ -40,11 +40,16 @@ def generate_uuid():
 
 def format_run_id(run_id):
     """Format run_id to ensure it has 'run' prefix and 3 digits"""
-    # Remove 'run' prefix if it exists
-    run_num = run_id.replace('run', '')
-    # Pad with zeros to ensure 3 digits
-    run_num = run_num.zfill(3)
-    return f"run{run_num}"
+    # Check if run_id already has 'run' prefix
+    if run_id.startswith('run'):
+        # If it already has 'run' prefix, just ensure it has 3 digits
+        run_num = run_id[3:]  # Remove 'run' prefix
+        run_num = run_num.zfill(3)
+        return f"run{run_num}"
+    else:
+        # If no 'run' prefix, add it and ensure 3 digits
+        run_num = run_id.zfill(3)
+        return f"run{run_num}"
 
 def get_session_path(session_name, run_id, vol_type):
     """Construct session path based on session info and volume type"""
