@@ -13,6 +13,7 @@ export const METRICS_CONFIG: Record<string, MetricConfigItem> = {
   ctf_resolution: { label: 'CTF Resolution', unit: '(Å)' },
   ctf_score: { label: 'CTF CC Score', unit: '' },
   defocus: { label: 'Defocus', unit: '(Å)' },
+  extphase:{label:'ExtPhase', unit:'(Deg)'},
   alpha0: { label: 'Alpha Offset', unit: '(°)' },
   beta0: { label: 'Beta Offset', unit: '(°)' },
 };
@@ -27,6 +28,7 @@ export const SCATTERPLOT_METRIC_COLORS = {
   ctf_resolution: '#17becf',
   ctf_score: '#da9100',
   defocus: '#FFD700',
+  extphase: '#0B2238',
   alpha0: '#8c564b',
   beta0: '#7f7f7f',
 };
@@ -41,6 +43,7 @@ export const HISTOGRAM_METRIC_COLORS = {
   ctf_resolution: '#17becf',
   ctf_score: '#FFD700',
   defocus: '#FF0000',
+  extphase: '#0B2238',
   alpha0: '#8c564b',
   beta0: '#4B0082',
 };

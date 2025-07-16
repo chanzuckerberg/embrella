@@ -183,7 +183,7 @@ export const createXAxisConfig = (metricsConfig: MetricConfig[], maxPositionInde
     name: 'Position',
     position: 'bottom' as const,
     nameLocation: 'middle' as const,
-    nameGap: 5,
+    nameGap: 1,
     axisLabel: {
       show: index === metricsConfig.length - 1,
       fontSize: 10,

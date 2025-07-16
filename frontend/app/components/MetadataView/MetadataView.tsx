@@ -65,6 +65,7 @@ export const MetadataView = ({ sessionName, runNumber }: MetadataViewProps): Rea
       ctf_resolution: [0, 0],
       ctf_score: [0, 0],
       defocus: [0, 0],
+      extphase: [0, 0],
       pixel_size: [0, 0],
       alpha0: [0, 0],
       beta0: [0, 0],
