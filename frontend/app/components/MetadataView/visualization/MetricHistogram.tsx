@@ -42,37 +42,37 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
         formatter: function (params: echarts.TooltipComponentFormatterCallbackParams) {
           // Ensure params is treated as a single item, not an array
           const param = Array.isArray(params) ? params[0] : params;
-          
+
           // Determine which metric index we're dealing with
           const seriesIndex = param.seriesIndex !== undefined ? param.seriesIndex : 0;
           const metric = processedData.metricsConfig[seriesIndex];
-          
+
           const binValue = parseFloat(param.name);
           const isBadPatch = metric.key.includes('bad_patch');
-          
+
           // Calculate bin width and end value
           const binCount = calculateBins(metric.values.length);
           const binWidth = (metric.range[1] - metric.range[0]) / binCount;
-          
+
           // Get the bin index for this bar
           const min = metric.range[0];
           const binIndex = Math.floor((binValue - min) / binWidth);
-          
+
           // Find actual values that fall into this bin
-          const valuesInBin = metric.values.filter(value => {
+          const valuesInBin = metric.values.filter((value) => {
             const valueBinIndex = Math.floor((value - min) / binWidth);
             return valueBinIndex === binIndex;
           });
-          
+
           // Calculate actual min and max values in this bin (if any values exist)
           let actualMin = null;
           let actualMax = null;
           let rangeText = 'No data';
-          
+
           if (valuesInBin.length > 0) {
             actualMin = Math.min(...valuesInBin);
             actualMax = Math.max(...valuesInBin);
-            
+
             if (isBadPatch) {
               // For bad patch metrics, display as percentages
               rangeText = `${(actualMin * 100).toFixed(1)}%-${(actualMax * 100).toFixed(1)}%`;
@@ -84,12 +84,12 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
             // Fallback to theoretical bin range if no actual values
             const binEndDisplay = binValue + binWidth;
             if (isBadPatch) {
-              rangeText = `${binValue.toFixed(1)}%-${(binValue + (binWidth * 100)).toFixed(1)}%`;
+              rangeText = `${binValue.toFixed(1)}%-${(binValue + binWidth * 100).toFixed(1)}%`;
             } else {
               rangeText = `${binValue.toFixed(1)}-${binEndDisplay.toFixed(1)}${metric.unit}`;
             }
           }
-          
+
           return `Range: ${rangeText}<br/>Count: ${param.value}`;
         },
       },
