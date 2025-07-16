@@ -37,22 +37,62 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
     }
 
     const option: echarts.EChartsOption = {
-      tooltip: processedData.metricsConfig.map((metric) => ({
+      tooltip: {
         trigger: 'item',
         formatter: function (params: echarts.TooltipComponentFormatterCallbackParams) {
           // Ensure params is treated as a single item, not an array
           const param = Array.isArray(params) ? params[0] : params;
+
+          // Determine which metric index we're dealing with
+          const seriesIndex = param.seriesIndex !== undefined ? param.seriesIndex : 0;
+          const metric = processedData.metricsConfig[seriesIndex];
+
           const binValue = parseFloat(param.name);
-          const isBadPatch = param.seriesName?.toLowerCase().includes('bad patch');
-          const binWidth = (metric.range[1] - metric.range[0]) / calculateBins(metric.values.length);
-          const binEnd = binValue + binWidth;
-          const value = param.value;
-          const rangeText = isBadPatch
-            ? `${binValue.toFixed(1)}%-${(binEnd * 100).toFixed(1)}%`
-            : `${binValue.toFixed(1)}-${binEnd.toFixed(1)}`;
-          return `Range: ${rangeText}<br/>Count: ${value}`;
+          const isBadPatch = metric.key.includes('bad_patch');
+
+          // Calculate bin width and end value
+          const binCount = calculateBins(metric.values.length);
+          const binWidth = (metric.range[1] - metric.range[0]) / binCount;
+
+          // Get the bin index for this bar
+          const min = metric.range[0];
+          const binIndex = Math.floor((binValue - min) / binWidth);
+
+          // Find actual values that fall into this bin
+          const valuesInBin = metric.values.filter((value) => {
+            const valueBinIndex = Math.floor((value - min) / binWidth);
+            return valueBinIndex === binIndex;
+          });
+
+          // Calculate actual min and max values in this bin (if any values exist)
+          let actualMin = null;
+          let actualMax = null;
+          let rangeText = 'No data';
+
+          if (valuesInBin.length > 0) {
+            actualMin = Math.min(...valuesInBin);
+            actualMax = Math.max(...valuesInBin);
+
+            if (isBadPatch) {
+              // For bad patch metrics, display as percentages
+              rangeText = `${(actualMin * 100).toFixed(1)}%-${(actualMax * 100).toFixed(1)}%`;
+            } else {
+              // For regular metrics
+              rangeText = `${actualMin.toFixed(1)}-${actualMax.toFixed(1)}${metric.unit}`;
+            }
+          } else {
+            // Fallback to theoretical bin range if no actual values
+            const binEndDisplay = binValue + binWidth;
+            if (isBadPatch) {
+              rangeText = `${binValue.toFixed(1)}%-${(binValue + binWidth * 100).toFixed(1)}%`;
+            } else {
+              rangeText = `${binValue.toFixed(1)}-${binEndDisplay.toFixed(1)}${metric.unit}`;
+            }
+          }
+
+          return `Range: ${rangeText}<br/>Count: ${param.value}`;
         },
-      })),
+      },
       grid: processedData.metricsConfig.map((_, index) => {
         const row = Math.floor(index / 3);
         const col = index % 3;

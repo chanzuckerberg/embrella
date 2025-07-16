@@ -13,7 +13,7 @@ export const METRICS_CONFIG: Record<string, MetricConfigItem> = {
   ctf_resolution: { label: 'CTF Resolution', unit: '(Å)' },
   ctf_score: { label: 'CTF CC Score', unit: '' },
   defocus: { label: 'Defocus', unit: '(Å)' },
-  extphase:{label:'ExtPhase', unit:'(Deg)'},
+  extphase: { label: 'ExtPhase', unit: '(Deg)' },
   alpha0: { label: 'Alpha Offset', unit: '(°)' },
   beta0: { label: 'Beta Offset', unit: '(°)' },
 };
