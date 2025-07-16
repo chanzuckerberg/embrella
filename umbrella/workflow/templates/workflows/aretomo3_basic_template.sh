@@ -21,7 +21,7 @@ if [[ -z "$gain_fn" ]]; then
 fi
 
 # Output path
-out_path="/hpc/projects/group.czii/krios1.processing/aretomo3/$project_name/run$run_number"
+out_path="/hpc/projects/group.czii/krios1.processing/aretomo3/$project_name/$run_number"
 mkdir -p "$out_path/vol001" "$out_path/vol002" "$out_path/vol003"
 chmod 775 "$out_path"
 

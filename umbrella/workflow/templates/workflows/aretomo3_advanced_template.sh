@@ -98,7 +98,7 @@ fi
 
 # Set up output path
 in_mdoc_dir="/hpc/instruments/czii.krios1/OffloadData/$project_name"
-out_path="/hpc/projects/group.czii/krios1.processing/aretomo3/$project_name/run$run_number"
+out_path="/hpc/projects/group.czii/krios1.processing/aretomo3/$project_name/$run_number"
 mkdir -p "$out_path/vol001" "$out_path/vol002" "$out_path/vol003"
 chmod 775 "$out_path"
 
