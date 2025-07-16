@@ -24,6 +24,7 @@ export interface Metrics {
   ctf_resolution: number;
   ctf_score: number;
   defocus: number;
+  extphase: number;
   pixel_size: number;
   alpha0: number;
   beta0: number;
@@ -38,6 +39,7 @@ export interface FilterConfig {
     ctf_resolution?: [number, number];
     ctf_score?: [number, number];
     defocus?: [number, number];
+    extphase?: [number, number];
     alpha0?: [number, number];
     beta0?: [number, number];
   };
@@ -53,6 +55,7 @@ export interface MetricRanges {
   ctf_resolution: [number, number];
   ctf_score: [number, number];
   defocus: [number, number];
+  extphase: [number, number];
   pixel_size: [number, number];
   alpha0: [number, number];
   beta0: [number, number];
