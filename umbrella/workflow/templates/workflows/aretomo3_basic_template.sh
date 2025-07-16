@@ -52,7 +52,7 @@ cat > "$out_path/slurm_script_run_AT.sh" << EOF
 #SBATCH -e ${out_path}/JOB%j.err
 
 ml cuda
-/hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.2_07-11-2025 -InPrefix $in_mdoc_dir/Position_ -InSuffix .mdoc -Gain  $gain_dir $gain_fn -OutDir $out_path -EerSampling 2 -McBin 2 -McPatch 4 4 -Group 2 4 -kV 300 -SplitSum 1 -PixSize $pix_size -AtBin $tomo_bin_5A $tomo_bin_10A $tomo_bin_10A -AtPatch 4 4 -Wbp 1 -FlipVol 1 -VolZ 1600 -OutImod 1 -TotalDose $total_dose -FmDose $frame_dose -Resume 1 -FlipGain 1 -Serial 43000 -Gpu 0,1,2,3,4,5,6,7 2>/dev/null
+/hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.2_07-11-2025 -InPrefix $in_mdoc_dir/Position_ -InSuffix .mdoc -Gain  $gain_dir$gain_fn -OutDir $out_path -EerSampling 2 -McBin 2 -McPatch 4 4 -Group 2 4 -kV 300 -SplitSum 1 -PixSize $pix_size -AtBin $tomo_bin_5A $tomo_bin_10A $tomo_bin_10A -AtPatch 4 4 -Wbp 1 -FlipVol 1 -VolZ 1600 -OutImod 1 -TotalDose $total_dose -FmDose $frame_dose -Resume 1 -FlipGain 1 -Serial 43000 -Gpu 0,1,2,3,4,5,6,7 2>/dev/null
 
 # echo CUDA_VISIBLE_DEVICES: $CUDA_VISIBLE_DEVICES
 # env | grep -i slurm | sort
