@@ -1423,7 +1423,7 @@ def get_metadata_viz_data(request):
         thumbnail_base_url = os.path.join(HOSTNAME, session_name, run_number, "thumbnails/")
         ctf_base_url = os.path.join(HOSTNAME, session_name, run_number, "ctf_thumbnails/")
         
-        merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge=False)
+        merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge="continue")
         
         # Create a persistent SSH connection with optimized parameters
         ssh = paramiko.SSHClient()
