@@ -1007,7 +1007,7 @@ def natural_key(s):
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 
-def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge=False):
+def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge="continue"):
     try:
         # Load data from remote server using ssh_connect
         logger.info(f"Attempting to read metrics file: {metrics_path}")
