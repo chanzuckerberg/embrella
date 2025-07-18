@@ -1023,7 +1023,7 @@ def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_ur
         # Sort Tilt_Series using natural sort
         metrics_df = metrics_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(drop=True)
         
-        if merge:
+        if merge == "True":
             logger.info(f"Attempting to read timestamp file: {timestamp_path}")
             timestamp_content = ssh_connect(timestamp_path)
             logger.info(f"Successfully read timestamp file")
@@ -1422,8 +1422,12 @@ def get_metadata_viz_data(request):
 
         thumbnail_base_url = os.path.join(HOSTNAME, session_name, run_number, "thumbnails/")
         ctf_base_url = os.path.join(HOSTNAME, session_name, run_number, "ctf_thumbnails/")
+        print(metrics_path)
+        print(timestamp_path)
+        
         
         merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge="continue")
+        print(merged_df)
         
         # Create a persistent SSH connection with optimized parameters
         ssh = paramiko.SSHClient()
