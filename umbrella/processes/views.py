@@ -43,7 +43,64 @@ from asgiref.sync import sync_to_async
 import io
 import sys
 from contextlib import redirect_stdout
+import json
+import logging
+from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional, Union
+
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.db.models import Q, Count, F, CharField, Case, When, Value
+from django.db.models.functions import Substr, StrIndex, Trim
+from django.http import JsonResponse
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.views.generic import View
+from django.utils.timezone import now
+from pydantic import BaseModel, ValidationError as PydanticValidationError
+
+from processes.models import ProcRun, ProcPlan
+from processes.utils import tomoQueryParams, QueryParams, UnprocessableEntity
+from tem.models import MsiSession
+from cryo_grids.models import Sample
+
 logger = logging.getLogger(__name__)
+
+def msi_session_sort_key(name):
+    """
+    Custom sorting function for MSI session names in format 'yymmmdda'.
+    Returns a tuple for sorting with newer sessions first.
+    """
+    try:
+        # Extract components from the name
+        year = int(name[:2])
+        month = name[2:5].lower()  # Convert to lowercase for consistent comparison
+        day = int(name[5:7])
+        seq = name[7] if len(name) > 7 else 'a'  # Default to 'a' if no sequence letter
+        
+        # Convert month to number for proper sorting
+        month_map = {
+            'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+        }
+        
+        # Check if month is valid
+        if month not in month_map:
+            return (0, 0, 0, 'z')  # Move invalid months to the end
+        
+        month_num = month_map[month]
+        
+        # Validate year and day
+        if not (0 <= year <= 99) or not (1 <= day <= 31):
+            return (0, 0, 0, 'z')  # Move invalid dates to the end
+        
+        # Return tuple for sorting (negative year for descending order - newer first)
+        return (-year, -month_num, -day, seq)
+    except (ValueError, IndexError):
+        # If name doesn't match expected format, put it at the end
+        return (0, 0, 0, 'z')
+
 
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 
@@ -311,12 +368,14 @@ def available_filters(request):
                 .order_by('user_temp_name')
                 .values(name=F('user_temp_name'), count=F('count'))
             ),
-            'msiSession': list(
-                queryset.exclude(msi_session__name__isnull=True)
-                .values(session_name=F('msi_session__name'))
-                .annotate(count=Count('id'))
-                .order_by('session_name')
-                .values(name=F('session_name'), count=F('count'))
+            'msiSession': sorted(
+                list(
+                    queryset.exclude(msi_session__name__isnull=True)
+                    .values(session_name=F('msi_session__name'))
+                    .annotate(count=Count('id'))
+                    .values(name=F('session_name'), count=F('count'))
+                ),
+                key=lambda x: msi_session_sort_key(x['name'])
             ),
             'screeningSession': list(
                 queryset.exclude(msi_session__atlas_session__group__name__isnull=True)
@@ -762,12 +821,14 @@ def available_annotation_filter(request):
                 .order_by('user_temp_name')
                 .values(name=F('user_temp_name'), count=F('count'))
             ),
-            'msiSession': list(
-                queryset.exclude(msi_session__name__isnull=True)
-                .values(msi_session_name=F('msi_session__name'))
-                .annotate(count=Count('id'))
-                .order_by('msi_session_name')
-                .values(name=F('msi_session_name'), count=F('count'))
+            'msiSession': sorted(
+                list(
+                    queryset.exclude(msi_session__name__isnull=True)
+                    .values(msi_session_name=F('msi_session__name'))
+                    .annotate(count=Count('id'))
+                    .values(name=F('msi_session_name'), count=F('count'))
+                ),
+                key=lambda x: msi_session_sort_key(x['name'])
             ),
             'screeningSession': list(
                 queryset.exclude(screen_session_display_name__isnull=True)
