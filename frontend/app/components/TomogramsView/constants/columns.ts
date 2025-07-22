@@ -9,6 +9,7 @@ import {
 } from '@app/common/components/EntityTable/utils/linkUtils';
 import { LinkCellProps } from '@app/common/components/EntityTable/types';
 import { TomogramData } from '../types';
+import { ParametersCell } from '../ParametersCell';
 
 export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: 'tomograms',
@@ -76,20 +77,8 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
   },
   {
     id: 'metadataParameters',
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps => {
-      const tomogramData = rowData as TomogramData;
-      if (!tomogramData.metadata_url) {
-        return {
-          children: '',
-          href: '',
-        };
-      }
-      return {
-        children: 'Parameters',
-        href: tomogramData.metadata_url,
-      };
-    },
-    cell: getLinkCellFromCellContext,
+    accessorFn: (rowData: EntityDataTypes) => rowData,
+    cell: ParametersCell,
     enableSorting: false,
     header: 'Parameters',
   },
