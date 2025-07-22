@@ -72,6 +72,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
         <DialogContent style={{ minHeight: 300, fontFamily: 'monospace', background: '#f7f7f7' }}>
           {loading && <CircularProgress />}
           {error && <Typography color="error">{error}</Typography>}
+          {/* eslint-disable-next-line jsx-expressions/strict-logical-expressions */}
           {Boolean(shouldShowData) &&
             (Boolean(isObject) ? (
               <table
