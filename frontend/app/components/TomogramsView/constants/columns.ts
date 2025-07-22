@@ -75,6 +75,25 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
     header: humanize(TOMOGRAM_COLUMN_IDS.METADATA),
   },
   {
+    id: 'metadataParameters',
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps => {
+      const tomogramData = rowData as TomogramData;
+      if (!tomogramData.metadata_url) {
+        return {
+          children: '',
+          href: '',
+        };
+      }
+      return {
+        children: 'Parameters',
+        href: tomogramData.metadata_url,
+      };
+    },
+    cell: getLinkCellFromCellContext,
+    enableSorting: false,
+    header: 'Parameters',
+  },
+  {
     id: TOMOGRAM_COLUMN_IDS.PROJECT,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
       getLinkPropsFromLinkField((rowData as TomogramData).project),
