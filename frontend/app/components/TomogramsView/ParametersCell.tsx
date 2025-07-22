@@ -17,6 +17,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => 
 
   const sessionName = rowData.msiSession?.name || '';
   const runNumber = rowData.tomograms?.name || '';
+  // If procPlan.name is 'czii-denoise', render nothing
+  if (rowData.procPlan?.name === 'czii-denoise') return <span />;
   // Extract only digits for run_id
   const runIdMatch = runNumber.match(/\d+/);
   const runId = runIdMatch ? runIdMatch[0] : '';
