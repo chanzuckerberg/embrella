@@ -6,8 +6,10 @@ import CloseIcon from '@mui/icons-material/Close';
 import { TomogramData } from './types';
 import { DJANGO_URL } from '@app/common/constants/api';
 
-export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTypes>) => {
-  const rowData = props.getValue() as TomogramData;
+export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => {
+  const rowData = props.row.original as TomogramData | undefined;
+  if (!rowData || typeof rowData !== 'object') return <span />;
+
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<Record<string, unknown> | string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,7 +51,6 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
     }
   };
 
-  // Refined shouldShowData to explicitly check for null and empty string for 'data'
   const shouldShowData = !loading && !error && data !== null && data !== '';
   const isObject = typeof data === 'object' && data !== null;
 
