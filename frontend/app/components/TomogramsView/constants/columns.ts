@@ -77,7 +77,6 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
   },
   {
     id: 'metadataParameters',
-    accessorFn: (rowData: EntityDataTypes) => rowData,
     cell: ParametersCell,
     enableSorting: false,
     header: 'Parameters',
