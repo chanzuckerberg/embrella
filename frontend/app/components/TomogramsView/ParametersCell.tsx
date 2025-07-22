@@ -69,28 +69,62 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
         <DialogContent style={{ minHeight: 300, fontFamily: 'monospace', background: '#f7f7f7' }}>
           {loading && <CircularProgress />}
           {error && <Typography color="error">{error}</Typography>}
-          {!loading && !error && Boolean(data) && (
-            typeof data === 'object' && data !== null ? (
-              <table style={{ width: '100%', fontFamily: 'monospace', fontSize: 14, background: '#fff', borderCollapse: 'collapse' }}>
+          {!loading &&
+            !error &&
+            Boolean(data) &&
+            (typeof data === 'object' && data !== null ? (
+              <table
+                style={{
+                  width: '100%',
+                  fontFamily: 'monospace',
+                  fontSize: 14,
+                  background: '#fff',
+                  borderCollapse: 'collapse',
+                }}
+              >
                 <tbody>
                   {Object.entries(data).map(([key, value]) => (
                     <tr key={key}>
-                      <td style={{ fontWeight: 'bold', border: '1px solid #eee', padding: '4px 8px', verticalAlign: 'top', background: '#f7f7f7' }}>{key}</td>
-                      <td style={{ border: '1px solid #eee', padding: '4px 8px', background: '#fafafa', verticalAlign: 'top' }}>{
-                        typeof value === 'object' && value !== null
-                          ? Array.isArray(value)
-                            ? `[${value.join(', ')}]`
-                            : <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: 14, paddingLeft: 8 }}>{JSON.stringify(value, null, 2)}</pre>
-                          : String(value)
-                      }</td>
+                      <td
+                        style={{
+                          fontWeight: 'bold',
+                          border: '1px solid #eee',
+                          padding: '4px 8px',
+                          verticalAlign: 'top',
+                          background: '#f7f7f7',
+                        }}
+                      >
+                        {key}
+                      </td>
+                      <td
+                        style={{
+                          border: '1px solid #eee',
+                          padding: '4px 8px',
+                          background: '#fafafa',
+                          verticalAlign: 'top',
+                        }}
+                      >
+                        {typeof value === 'object' && value !== null ? (
+                          Array.isArray(value) ? (
+                            `[${value.join(', ')}]`
+                          ) : (
+                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: 14, paddingLeft: 8 }}>
+                              {JSON.stringify(value, null, 2)}
+                            </pre>
+                          )
+                        ) : (
+                          String(value)
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace', fontSize: 14 }}>{data}</pre>
-            )
-          )}
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace', fontSize: 14 }}>
+                {data}
+              </pre>
+            ))}
         </DialogContent>
       </Dialog>
     </>

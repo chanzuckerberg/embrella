@@ -23,4 +23,4 @@ export const MetadataCell = (props: CellContext<EntityDataTypes, MetadataCellVal
 
   // Display the result (customize as needed)
   return <span>{typeof data === 'string' ? data : JSON.stringify(data)}</span>;
-}; 
+};

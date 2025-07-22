@@ -35,8 +35,8 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
     if (!chartInstance.current) {
       chartInstance.current = echarts.init(chartRef.current);
     }
-    
-//ECharts expects a single tooltip configuration object
+
+    //ECharts expects a single tooltip configuration object
     const option: echarts.EChartsOption = {
       tooltip: {
         trigger: 'item',
