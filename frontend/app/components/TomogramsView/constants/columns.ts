@@ -9,6 +9,7 @@ import {
 } from '@app/common/components/EntityTable/utils/linkUtils';
 import { LinkCellProps } from '@app/common/components/EntityTable/types';
 import { TomogramData } from '../types';
+import { ParametersCell } from '../ParametersCell';
 
 export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: 'tomograms',
@@ -73,6 +74,12 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
     cell: getLinkCellFromCellContext,
     enableSorting: false,
     header: humanize(TOMOGRAM_COLUMN_IDS.METADATA),
+  },
+  {
+    id: 'metadataParameters',
+    cell: ParametersCell,
+    enableSorting: false,
+    header: 'Parameters',
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROJECT,
