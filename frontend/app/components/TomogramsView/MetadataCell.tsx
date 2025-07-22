@@ -15,7 +15,7 @@ export const MetadataCell = (props: CellContext<EntityDataTypes, MetadataCellVal
     ? `http://umbrella.czbiohub.org/workflow/get_aretomo3?session=${encodeURIComponent(sessionName)}&run_id=${encodeURIComponent(runNumber)}`
     : '';
 
-  const { data, isSuccess } = useFetchData<any>(apiUrl, {});
+  const { data, isSuccess } = useFetchData<Record<string, unknown>>(apiUrl, {});
 
   if (!shouldFetch) return <span />;
   if (!isSuccess) return <span>Loading...</span>;
