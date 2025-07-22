@@ -49,8 +49,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
     }
   };
 
-  const shouldShowData = Boolean(!loading) && Boolean(!error) && Boolean(data);
-  const isObject = Boolean(typeof data === 'object' && data !== null);
+  const shouldShowData = !loading && !error && Boolean(data); // Removed redundant Boolean()
+  const isObject = typeof data === 'object' && data !== null; // Removed redundant Boolean()
 
   return (
     <>
@@ -72,9 +72,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
         <DialogContent style={{ minHeight: 300, fontFamily: 'monospace', background: '#f7f7f7' }}>
           {loading && <CircularProgress />}
           {error && <Typography color="error">{error}</Typography>}
-          {/* eslint-disable-next-line jsx-expressions/strict-logical-expressions, no-extra-boolean-cast */}
-          {Boolean(shouldShowData) &&
-            (Boolean(isObject) ? (
+          {shouldShowData && // Now directly use shouldShowData
+            (isObject ? ( // Now directly use isObject
               <table
                 style={{
                   width: '100%',
