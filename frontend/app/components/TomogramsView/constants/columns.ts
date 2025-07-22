@@ -89,12 +89,12 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
     enableSorting: false,
     header: humanize(TOMOGRAM_COLUMN_IDS.GRID),
   },
-  {
-    id: TOMOGRAM_COLUMN_IDS.NOTES,
-    accessorFn: (rowData: EntityDataTypes): string => (rowData as TomogramData).procRun.notes,
-    enableSorting: false,
-    header: humanize(TOMOGRAM_COLUMN_IDS.NOTES),
-  },
+  // {
+  //   id: TOMOGRAM_COLUMN_IDS.NOTES,
+  //   accessorFn: (rowData: EntityDataTypes): string => (rowData as TomogramData).procRun.notes,
+  //   enableSorting: false,
+  //   header: humanize(TOMOGRAM_COLUMN_IDS.NOTES),
+  // },
   {
     id: TOMOGRAM_COLUMN_IDS.UPDATED_AT,
     accessorFn: (rowData: EntityDataTypes): string => (rowData as TomogramData).procRun.updatedAt,
