@@ -49,8 +49,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
     }
   };
 
-  const shouldShowData = !loading && !error && Boolean(data);
-  const isObject = typeof data === 'object' && data !== null;
+  const shouldShowData = Boolean(!loading) && Boolean(!error) && Boolean(data);
+  const isObject = Boolean(typeof data === 'object' && data !== null);
 
   return (
     <>
@@ -72,8 +72,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
         <DialogContent style={{ minHeight: 300, fontFamily: 'monospace', background: '#f7f7f7' }}>
           {loading && <CircularProgress />}
           {error && <Typography color="error">{error}</Typography>}
-          {shouldShowData &&
-            (isObject ? (
+          {Boolean(shouldShowData) &&
+            (Boolean(isObject) ? (
               <table
                 style={{
                   width: '100%',
@@ -84,7 +84,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
                 }}
               >
                 <tbody>
-                  {Object.entries(data).map(([key, value]) => (
+                  {Object.entries(data as Record<string, unknown>).map(([key, value]) => (
                     <tr key={key}>
                       <td
                         style={{
