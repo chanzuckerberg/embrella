@@ -73,8 +73,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
           {loading && <CircularProgress />}
           {error && <Typography color="error">{error}</Typography>}
           {/* eslint-disable-next-line jsx-expressions/strict-logical-expressions */}
-          {Boolean(shouldShowData) &&
-            (Boolean(isObject) ? (
+          {shouldShowData &&
+            (isObject ? (
               <table
                 style={{
                   width: '100%',
