@@ -9,12 +9,12 @@ import { DJANGO_URL } from '@app/common/constants/api';
 export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTypes>) => {
   const rowData = props.getValue() as TomogramData;
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<Record<string, unknown> | string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sessionName = rowData.msiSession?.name || '';
-  let runNumber = rowData.tomograms?.name || '';
+  const runNumber = rowData.tomograms?.name || '';
   // Extract only digits for run_id
   const runIdMatch = runNumber.match(/\d+/);
   const runId = runIdMatch ? runIdMatch[0] : '';
@@ -42,7 +42,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
       } catch {
         setData(text);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
         <DialogContent style={{ minHeight: 300, fontFamily: 'monospace', background: '#f7f7f7' }}>
           {loading && <CircularProgress />}
           {error && <Typography color="error">{error}</Typography>}
-          {!loading && !error && data && (
+          {!loading && !error && Boolean(data) && (
             typeof data === 'object' && data !== null ? (
               <table style={{ width: '100%', fontFamily: 'monospace', fontSize: 14, background: '#fff', borderCollapse: 'collapse' }}>
                 <tbody>
