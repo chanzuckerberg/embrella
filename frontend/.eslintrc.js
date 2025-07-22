@@ -20,6 +20,7 @@ module.exports = {
   rules: {
     // Disable prop-types as we use TypeScript for type checking
     '@typescript-eslint/explicit-function-return-type': 'off',
+    'jsx-expressions/strict-logical-expressions': 'off',
     'sonarjs/cognitive-complexity': 'off',
     'sonarjs/no-duplicate-string': 'off',
     // (thuang): Allow args prefixed with `_`
