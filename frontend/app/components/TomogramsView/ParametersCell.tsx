@@ -49,8 +49,9 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
     }
   };
 
-  const shouldShowData = !loading && !error && Boolean(data); // Removed redundant Boolean()
-  const isObject = typeof data === 'object' && data !== null; // Removed redundant Boolean()
+  // Refined shouldShowData to explicitly check for null and empty string for 'data'
+  const shouldShowData = !loading && !error && data !== null && data !== '';
+  const isObject = typeof data === 'object' && data !== null;
 
   return (
     <>
@@ -72,8 +73,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
         <DialogContent style={{ minHeight: 300, fontFamily: 'monospace', background: '#f7f7f7' }}>
           {loading && <CircularProgress />}
           {error && <Typography color="error">{error}</Typography>}
-          {shouldShowData && // Now directly use shouldShowData
-            (isObject ? ( // Now directly use isObject
+          {shouldShowData &&
+            (isObject ? (
               <table
                 style={{
                   width: '100%',
