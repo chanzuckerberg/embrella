@@ -7,13 +7,13 @@ import { TomogramData } from './types';
 import { DJANGO_URL } from '@app/common/constants/api';
 
 export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => {
-  const rowData = props.row.original as TomogramData | undefined;
-  if (!rowData || typeof rowData !== 'object') return <span />;
-
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<Record<string, unknown> | string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const rowData = props.row.original as TomogramData | undefined;
+  if (!rowData || typeof rowData !== 'object') return <span />;
 
   const sessionName = rowData.msiSession?.name || '';
   const runNumber = rowData.tomograms?.name || '';
