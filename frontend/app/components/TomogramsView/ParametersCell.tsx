@@ -69,9 +69,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
         <DialogContent style={{ minHeight: 300, fontFamily: 'monospace', background: '#f7f7f7' }}>
           {loading && <CircularProgress />}
           {error && <Typography color="error">{error}</Typography>}
-          {!loading &&
-            !error &&
-            Boolean(data) &&
+          {!loading && !error && Boolean(data) &&
             (typeof data === 'object' && data !== null ? (
               <table
                 style={{
