@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { CellContext } from '@tanstack/react-table';
 import { EntityDataTypes } from '@app/common/types/tableState';
-import { Dialog, DialogTitle, DialogContent, IconButton, Button, CircularProgress, Typography } from '@mui/material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  Button,
+  CircularProgress,
+  Typography,
+} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { TomogramData } from './types';
 import { DJANGO_URL } from '@app/common/constants/api';
@@ -15,13 +23,14 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
 
   const sessionName = rowData.msiSession?.name || '';
   const runNumber = rowData.tomograms?.name || '';
-  // Extract only digits for run_id
   const runIdMatch = runNumber.match(/\d+/);
   const runId = runIdMatch ? runIdMatch[0] : '';
 
   if (!sessionName || !runId) return <span />;
 
-  const workflowUrl = `${DJANGO_URL}/workflow/get_aretomo3?session=${encodeURIComponent(sessionName)}&run_id=${encodeURIComponent(runId)}`;
+  const workflowUrl = `${DJANGO_URL}/workflow/get_aretomo3?session=${encodeURIComponent(
+    sessionName
+  )}&run_id=${encodeURIComponent(runId)}`;
 
   const handleOpen = async () => {
     setOpen(true);
@@ -29,14 +38,11 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
     setError(null);
     setData(null);
     try {
-      const response = await fetch(workflowUrl, {
-        credentials: 'include',
-      });
+      const response = await fetch(workflowUrl, { credentials: 'include' });
       if (!response.ok) {
         throw new Error(`Error: ${response.status} ${response.statusText}`);
       }
       const text = await response.text();
-      // Try to parse as JSON, fallback to text
       try {
         setData(JSON.parse(text));
       } catch {
@@ -49,8 +55,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
     }
   };
 
-  const shouldShowData = Boolean(!loading) && Boolean(!error) && Boolean(data);
-  const isObject = Boolean(typeof data === 'object' && data !== null);
+  const shouldShowData = !loading && !error && data !== null;
+  const isObject = typeof data === 'object' && data !== null;
 
   return (
     <>
@@ -72,7 +78,6 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
         <DialogContent style={{ minHeight: 300, fontFamily: 'monospace', background: '#f7f7f7' }}>
           {loading && <CircularProgress />}
           {error && <Typography color="error">{error}</Typography>}
-          {/* eslint-disable-next-line jsx-expressions/strict-logical-expressions */}
           {shouldShowData &&
             (isObject ? (
               <table
@@ -110,7 +115,14 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
                           Array.isArray(value) ? (
                             `[${value.join(', ')}]`
                           ) : (
-                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: 14, paddingLeft: 8 }}>
+                            <pre
+                              style={{
+                                margin: 0,
+                                fontFamily: 'monospace',
+                                fontSize: 14,
+                                paddingLeft: 8,
+                              }}
+                            >
                               {JSON.stringify(value, null, 2)}
                             </pre>
                           )
@@ -123,7 +135,14 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, EntityDataTyp
                 </tbody>
               </table>
             ) : (
-              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontFamily: 'monospace', fontSize: 14 }}>
+              <pre
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                  fontFamily: 'monospace',
+                  fontSize: 14,
+                }}
+              >
                 {data}
               </pre>
             ))}
