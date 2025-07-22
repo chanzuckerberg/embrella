@@ -44,11 +44,10 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
             </Typography>
           );
         }
-          // Apply the same logic as scatter plot tooltip - multiply bad_patch metrics by 100
-          const multiplier = key.includes('bad_patch') ? 100 : 1;
-          const formattedValue = (value * multiplier).toFixed(2);
-          const displayUnit = key.includes('bad_patch') ? '%' : unit;
-  
+        // Apply the same logic as scatter plot tooltip - multiply bad_patch metrics by 100
+        const multiplier = key.includes('bad_patch') ? 100 : 1;
+        const formattedValue = (value * multiplier).toFixed(2);
+        const displayUnit = key.includes('bad_patch') ? '%' : unit;
 
         return (
           <Typography key={key} sx={{ mb: 0.5 }}>
