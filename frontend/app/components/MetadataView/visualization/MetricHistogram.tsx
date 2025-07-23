@@ -54,43 +54,29 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
           // Calculate bin width and end value
           const binCount = calculateBins(metric.values.length);
           const binWidth = (metric.range[1] - metric.range[0]) / binCount;
-
-          // Get the bin index for this bar
-          const min = metric.range[0];
-          const binIndex = Math.floor((binValue - min) / binWidth);
-
-          // Find actual values that fall into this bin
-          const valuesInBin = metric.values.filter((value) => {
-            const valueBinIndex = Math.floor((value - min) / binWidth);
-            return valueBinIndex === binIndex;
-          });
-
-          // Calculate actual min and max values in this bin (if any values exist)
-          let actualMin = null;
-          let actualMax = null;
-          let rangeText = 'No data';
-
-          if (valuesInBin.length > 0) {
-            actualMin = Math.min(...valuesInBin);
-            actualMax = Math.max(...valuesInBin);
-
-            if (isBadPatch) {
-              // For bad patch metrics, display as percentages
-              rangeText = `${(actualMin * 100).toFixed(1)}%-${(actualMax * 100).toFixed(1)}%`;
-            } else {
-              // For regular metrics
-              rangeText = `${actualMin.toFixed(1)}-${actualMax.toFixed(1)}${metric.unit}`;
-            }
+          
+          // Use theoretical bin range (start and end of the bin) for consistency
+          const binStart = binValue; 
+          let binEnd: number;
+          
+          if (isBadPatch) {
+            // For bad patch metrics, binValue is in percentage format, so convert binWidth too
+            binEnd = binValue + (binWidth * 100);
           } else {
-            // Fallback to theoretical bin range if no actual values
-            const binEndDisplay = binValue + binWidth;
-            if (isBadPatch) {
-              rangeText = `${binValue.toFixed(1)}%-${(binValue + binWidth * 100).toFixed(1)}%`;
-            } else {
-              rangeText = `${binValue.toFixed(1)}-${binEndDisplay.toFixed(1)}${metric.unit}`;
-            }
+            // For regular metrics, use raw binWidth
+            binEnd = binValue + binWidth; 
           }
-
+          
+          let rangeText: string;
+          
+          if (isBadPatch) {
+            // For bad patch metrics, binValue is already in percentage format from x-axis
+            rangeText = `${binStart.toFixed(1)}%-${binEnd.toFixed(1)}%`;
+          } else {
+            // For regular metrics, use theoretical bin boundaries
+            rangeText = `${binStart.toFixed(1)}-${binEnd.toFixed(1)}${metric.unit}`;
+          }
+          // Use the actual count from the histogram bar (param.value)
           return `Range: ${rangeText}<br/>Count: ${param.value}`;
         },
       },
