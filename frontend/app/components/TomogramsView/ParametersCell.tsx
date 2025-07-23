@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { CellContext } from '@tanstack/react-table';
 import { EntityDataTypes } from '@app/common/types/tableState';
-import { Dialog, DialogTitle, DialogContent, IconButton, Button, CircularProgress, Typography } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import { Typography } from '@mui/material';
+import { Button, LoadingIndicator ,DialogTitle,DialogContent, Dialog} from '@czi-sds/components';
 import { TomogramData } from './types';
 import { DJANGO_URL } from '@app/common/constants/api';
 
@@ -33,12 +33,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => 
     setError(null);
     setData(null);
     try {
-      const response = await fetch(workflowUrl, {
-        credentials: 'include',
-      });
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
+      const response = await fetch(workflowUrl, {credentials: 'include'});
+      if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
       const text = await response.text();
       // Try to parse as JSON, fallback to text
       try {
@@ -58,23 +54,17 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => 
 
   return (
     <>
-      <Button variant="outlined" size="small" onClick={handleOpen}>
+      <Button sdsType="secondary" sdsStyle="rounded" onClick={handleOpen}>
         Parameters
       </Button>
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>
-          Workflow Parameters
-          <IconButton
-            aria-label="close"
-            onClick={() => setOpen(false)}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-            size="large"
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent style={{ minHeight: 300, fontFamily: 'monospace', background: '#f7f7f7' }}>
-          {loading && <CircularProgress />}
+      <Dialog onClose={() => setOpen(false)} open={open} sdsSize="l" aria-labelledby="parameters-dialog-title">
+        <DialogTitle
+          title="Workflow Parameters"
+          onClose={() => setOpen(false)}
+          data-testid="dialog-title"
+        />
+        <DialogContent data-testid="dialog-content" sx={{minHeight: '400px'}}>
+          {loading && <LoadingIndicator sdsStyle="tag" />}
           {error && <Typography color="error">{error}</Typography>}
           {shouldShowData &&
             (isObject ? (
