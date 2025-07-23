@@ -54,21 +54,21 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
           // Calculate bin width and end value
           const binCount = calculateBins(metric.values.length);
           const binWidth = (metric.range[1] - metric.range[0]) / binCount;
-          
+
           // Use theoretical bin range (start and end of the bin) for consistency
-          const binStart = binValue; 
+          const binStart = binValue;
           let binEnd: number;
-          
+
           if (isBadPatch) {
             // For bad patch metrics, binValue is in percentage format, so convert binWidth too
-            binEnd = binValue + (binWidth * 100);
+            binEnd = binValue + binWidth * 100;
           } else {
             // For regular metrics, use raw binWidth
-            binEnd = binValue + binWidth; 
+            binEnd = binValue + binWidth;
           }
-          
+
           let rangeText: string;
-          
+
           if (isBadPatch) {
             // For bad patch metrics, binValue is already in percentage format from x-axis
             rangeText = `${binStart.toFixed(1)}%-${binEnd.toFixed(1)}%`;

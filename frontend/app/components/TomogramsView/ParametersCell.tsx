@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { CellContext } from '@tanstack/react-table';
 import { EntityDataTypes } from '@app/common/types/tableState';
 import { Typography } from '@mui/material';
-import { Button, LoadingIndicator ,DialogTitle,DialogContent, Dialog} from '@czi-sds/components';
+import { Button, LoadingIndicator, DialogTitle, DialogContent, Dialog } from '@czi-sds/components';
 import { TomogramData } from './types';
 import { DJANGO_URL } from '@app/common/constants/api';
 
@@ -33,7 +33,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => 
     setError(null);
     setData(null);
     try {
-      const response = await fetch(workflowUrl, {credentials: 'include'});
+      const response = await fetch(workflowUrl, { credentials: 'include' });
       if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
       const text = await response.text();
       // Try to parse as JSON, fallback to text
@@ -58,12 +58,8 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => 
         Parameters
       </Button>
       <Dialog onClose={() => setOpen(false)} open={open} sdsSize="l" aria-labelledby="parameters-dialog-title">
-        <DialogTitle
-          title="Workflow Parameters"
-          onClose={() => setOpen(false)}
-          data-testid="dialog-title"
-        />
-        <DialogContent data-testid="dialog-content" sx={{minHeight: '400px'}}>
+        <DialogTitle title="Workflow Parameters" onClose={() => setOpen(false)} data-testid="dialog-title" />
+        <DialogContent data-testid="dialog-content" sx={{ minHeight: '400px' }}>
           {loading && <LoadingIndicator sdsStyle="tag" />}
           {error && <Typography color="error">{error}</Typography>}
           {shouldShowData &&
