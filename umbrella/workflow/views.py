@@ -1668,6 +1668,7 @@ def get_msisession_id(request):
 
 @csrf_exempt
 @login_required
+@require_http_methods(["POST"])
 def trigger_syncer(request):
     if request.method == 'POST':
         try:
