@@ -145,7 +145,8 @@ def check_job_status(job_id):
         # Create a mock request object
         request = HttpRequest()
         request.method = 'GET'
-        request.GET = {'job_name': job_id}
+        # Don't specify job_name to get all jobs, then filter by job_id
+        request.GET = {}
         
         # Get job status
         response = track_jobs(request)
@@ -165,7 +166,9 @@ def check_job_status(job_id):
                 logging.info(f"Job {job_id} status: {'Running' if is_running else 'Not running'}")
                 return is_running
                 
-        logging.warning(f"Job {job_id} not found in job list")
+        logging.warning(f"Job {job_id} not found in job list - it may have completed or failed")
+        # If job is not found, it might have completed successfully
+        # Return False to stop the continuous syncing
         return False
     except Exception as e:
         logging.error(f"Error checking job status: {e}")

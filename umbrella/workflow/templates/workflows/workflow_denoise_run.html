@@ -376,7 +376,8 @@
         const response = await fetch('/workflow/run_denoiset', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
           },
           body: JSON.stringify(payload)
         });
@@ -438,7 +439,12 @@
           console.log('Error:', data.error);
           
           // Start syncer job after successful submission
-          await startSyncerJob(sessionName, denoiseRunNumber, data.job_id);
+          if (data.job_id) {
+            await startSyncerJob(sessionName, denoiseRunNumber, data.job_id);
+          } else {
+            console.error("No job_id received from run_denoiset");
+            alert("Warning: Could not start syncer job - no job ID received");
+          }
         }
       } catch (error) {
         alert('Request failed: ' + error.message);

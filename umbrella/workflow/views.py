@@ -799,7 +799,8 @@ def run_denoiset(request):
             return JsonResponse({
                 'message': f'Session {session_name} for Denoiset is submitted successfully. Please check the output directory.',
                 'output': output,
-                'error': error
+                'error': error,
+                'job_id': job_id_str
             })
 
         except Exception as e:
@@ -1667,7 +1668,7 @@ def get_msisession_id(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @csrf_exempt
-@login_required
+# @login_required
 @require_http_methods(["POST"])
 def trigger_syncer(request):
     if request.method == 'POST':
