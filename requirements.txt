@@ -39,3 +39,7 @@ chromadb
 markdown
 jinja2
 celery
+dask
+zarr
+scipy
+scikit-learn
