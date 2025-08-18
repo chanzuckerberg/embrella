@@ -11,6 +11,7 @@ conda activate umbrella-django
 2. Clone git repository and initialize submodules
 ```
 git clone https://github.com/czimaginginstitute/czii-umbrella-django.git _your_clone_dir_
+cd _your_clone_dir_
 git submodule update --init --recursive
 
 ```
