@@ -46,3 +46,4 @@ scikit-learn
 RapidFuzz
 drf-spectacular
 drf-yasg
+pandas
