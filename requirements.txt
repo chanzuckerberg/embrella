@@ -43,3 +43,4 @@ dask
 zarr
 scipy
 scikit-learn
+RapidFuzz
