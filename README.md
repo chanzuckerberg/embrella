@@ -17,7 +17,7 @@ git submodule update --init --recursive
 ```
 3. install requirements (I use pip even in conda env)
 ```
-cd _your_clone_dir_
+(cd _your_clone_dir_ if you didn't in the last step)
 pip install -r ./requirements.txt
 ```
 4. create settings.py for yourself in the project directory
