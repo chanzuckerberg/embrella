@@ -44,3 +44,5 @@ zarr
 scipy
 scikit-learn
 RapidFuzz
+drf-spectacular
+drf-yasg
