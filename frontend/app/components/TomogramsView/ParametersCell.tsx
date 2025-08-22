@@ -61,7 +61,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => 
         <DialogTitle title="Workflow Parameters" onClose={() => setOpen(false)} data-testid="dialog-title" />
         <DialogContent data-testid="dialog-content" sx={{ minHeight: '400px' }}>
           {loading && <LoadingIndicator sdsStyle="tag" />}
-          {error && <Typography color="error">{error}</Typography>}
+          {Boolean(error) && <Typography color="error">{error}</Typography>}
           {shouldShowData &&
             (isObject ? (
               <table
