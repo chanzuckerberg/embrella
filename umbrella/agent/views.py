@@ -1,9 +1,9 @@
 import os
-from langchain.document_loaders import ConfluenceLoader
+from langchain_community.document_loaders import ConfluenceLoader
 from langchain.text_splitter import CharacterTextSplitter, TokenTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_community.embeddings.openai import OpenAIEmbeddings
 from langchain.prompts import PromptTemplate
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain_openai.chat_models.base import BaseChatOpenAI
 import markdown
 from django.http import HttpResponse
@@ -13,7 +13,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 # from langchain.chains.qa_with_sources import load_qa_chain
-from langchain.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 import threading
 
