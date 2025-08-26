@@ -804,12 +804,12 @@ __metadata:
 
 "@idetik/core@file:./idetik/packages/core::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=8e7d41&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=0fb015&locator=create-sds-app%40workspace%3A."
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/fb0b535af77b57b1da9d41b80c32b60a84db7ee72d251419e3ffeeda2f1db83909d8e664a8a8cd87934241640ab262d730f1b2ed737535b888cf6fef1d1b8fee
+  checksum: 10c0/005fa5298ad19825a3c4020cd8ea6f3a45cdf36ef957ad14c8ab5ad0e10014140b769b0c58d5f65d48b042049ce1746520e967319e4b90590ca7d1d00535fc85
   languageName: node
   linkType: hard
 
@@ -825,7 +825,7 @@ __metadata:
 
 "@idetik/react@file:./idetik/packages/react::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=b27482&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=997b49&locator=create-sds-app%40workspace%3A."
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
@@ -841,9 +841,10 @@ __metadata:
     react-dom: "npm:^18.3.1"
   peerDependencies:
     "@czi-sds/components": ^22.3.0
+    "@idetik/core": ^0.0.1
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/532f0c498c6caf883034445ea891e114eba90cb511ff1552f5c7baaba72307c3f038246ec64dc2ef61e6e6e30c5682ea042f60b32e137065e771d862394158ba
+  checksum: 10c0/5e1c29d24994b9ad611556aa1506be8322cc4f9dac0d59184fc247283f70aa6816bd4eb99d5ad97103e627b85772cc4cb58676581f3e147ba2ecab80773151b0
   languageName: node
   linkType: hard
 
@@ -869,6 +870,7 @@ __metadata:
     tailwindcss: "npm:^3.4.17"
   peerDependencies:
     "@czi-sds/components": ^22.3.0
+    "@idetik/core": ^0.0.1
     react: ^18.3.1
     react-dom: ^18.3.1
   languageName: unknown
