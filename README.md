@@ -50,3 +50,36 @@ python manage.py runscript 005_init_pytom_pick
 python manage.py runserver
 ```
 9. view the main page at http://127.0.0.1/umbrella/
+
+## Basic Code Structure
+
+1. Base: This folder
+
+1.1. umbrella: Django project 
+
+Django documentation is [here](https://docs.djangoproject.com/en/5.2/)
+
+1.1.1. umbrella: project-wide app  (url:BASE/)
+
+   1.1.x the rest of folders are Django apps that map in url as a sub-directory in the same name (i.e. url:BASE/app_name)
+   
+   1.1.x.1 models.py: Where the database schema and behavior is defined. [Django model layer]([https://docs.djangoproject.com/en/5.2/topics/db/models/](https://docs.djangoproject.com/en/5.2/#the-model-layer)
+```
+            * Each models.Model sub-class maps to a database table in a name like app_name_modelname
+            * Each attribute maps to a field
+```
+   1.1.x.2 urls.py: Where url pattern requests and the function links the backend view function to is under url:BASE/app_name
+   
+   1.1.x.3 views.py: Where the backend operation to present a view to the request is defined. returned context can be passed to django templates for display at the url that sent the request. [view layer](https://docs.djangoproject.com/en/5.2/#the-view-layer)
+   
+   1.1.x.4 apps.py: app configuration
+   
+   1.1.x.5 admin.py: Where visibility in [autometed-generated admin UI](https://docs.djangoproject.com/en/5.2/#the-admin) (url: BASE/admin) is defined 
+
+   1.1.x.6 templates/app_name: directory containing template html files that urls.py is pointed to. [templates](https://docs.djangoproject.com/en/5.2/#the-template-layer)
+   
+   [django template language](https://docs.djangoproject.com/en/5.2/ref/templates/language/) is used to define variable from the query results and perform logic.
+   
+   1.1.x.7 migrations/: directory contains instruction of database migrations for each version of model change.
+   
+1.2. frontend: Next.js project
