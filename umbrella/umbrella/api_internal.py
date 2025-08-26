@@ -349,7 +349,7 @@ class ReviewView(View):
                 },
                 "sortBy": SortMetadataModel(
                     sort='updatedAt' if sort_field is not None else None,
-                    asc=sort_order is 'asc'
+                    asc=sort_order == 'asc'
                 ).model_dump()
             }, safe=False)
 
