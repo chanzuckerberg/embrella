@@ -44,6 +44,14 @@ class Puck(models.Model):
     # position on cane with 1 at the top.
     position_in_cane = models.PositiveSmallIntegerField(default=1, null=True, blank=True, help_text="position 1 is at the top of the cane")
     max_boxes = models.PositiveSmallIntegerField(default=12, help_text="Maximum number of boxes fit on the puck")
+    # NEW: Add user foreign key
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        help_text='User who created or is responsible for this puck'
+    )
 
     class Meta:
         unique_together = [["name","color"],["cane","position_in_cane"]]
