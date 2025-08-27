@@ -40,7 +40,7 @@ class Path(models.Model):
         return fill_place_holders(input_str, key_values)
 
     def __str__(self):
-        return self.static_path
+        return self.overlay_path
 
 class StaticPath(models.Model):
     data_type = models.CharField(max_length=8, choices=DATA_TYPES,unique=True)
