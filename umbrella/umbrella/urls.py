@@ -19,12 +19,19 @@ from django.urls import include, path
 from umbrella.ping import ping
 from umbrella.api_internal import get_tomo_by_msi_session
 from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, ReviewView, export_review_results, get_review_tomograms, ReviewTomogramView, SessionView
+from rest_framework.routers import DefaultRouter
+from umbrella.viewsets import UserViewSet
 
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 import google
 from processes.views import available_annotation_filter
 from umbrella.user import get_user_info
+
+# Create a router and register our viewsets with it
+router = DefaultRouter()
+router.register(r'api/list/all/users', UserViewSet, basename='user')
+
 
 
 urlpatterns = [
@@ -60,6 +67,9 @@ urlpatterns = [
     path('api/reviews/<str:review_id>/tomograms/<str:tomogram_id>', ReviewTomogramView.as_view(), name='review_tomogram_detail_no_slash'),
 ]
 
+
+# Include router URLs
+urlpatterns += router.urls
 
 # change header name
 admin.site.site_header = 'Embrella'
