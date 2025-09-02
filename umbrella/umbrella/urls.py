@@ -21,6 +21,7 @@ from umbrella.api_internal import get_tomo_by_msi_session
 from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, ReviewView, export_review_results, get_review_tomograms, ReviewTomogramView, SessionView
 from rest_framework.routers import DefaultRouter
 from umbrella.viewsets import UserViewSet
+from umbrella.viewsets import PuckViewSet
 
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
@@ -31,6 +32,7 @@ from umbrella.user import get_user_info
 # Create a router and register our viewsets with it
 router = DefaultRouter()
 router.register(r'api/list/all/users', UserViewSet, basename='user')
+router.register(r'api/list/pucks', PuckViewSet, basename='puck')
 
 
 
