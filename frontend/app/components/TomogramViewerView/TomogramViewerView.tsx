@@ -102,22 +102,8 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
   const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
 
-  // Get current contrast limits from the layer (like channel controls do)
-  const layerContrastLimits = useSyncExternalStore(
-    (callback) => {
-      if (!isReady || !runtime || runtime.layerManager.layers.length === 0) return () => {};
-      const layer = runtime.layerManager.layers[0];
-      layer.addChannelChangeCallback(callback);
-      return () => layer.removeChannelChangeCallback(callback);
-    },
-    () => {
-      if (!isReady || !runtime || runtime.layerManager.layers.length === 0) return state.contrastLimits;
-      const layer = runtime.layerManager.layers[0];
-      const channels = layer.channelProps; // Use property getter, not method
-      return channels && channels[0]?.contrastLimits || state.contrastLimits;
-    },
-    () => state.contrastLimits // SSR fallback
-  );
+  // For now, use React state for UI updates (hybrid approach)
+  // The layer will still be updated directly, but UI uses React state
 
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
@@ -127,7 +113,10 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         return;
       }
 
-      // Update the layer directly (copy of what channel controls do)
+      // Update React state for UI synchronization
+      dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
+
+      // Also update the layer directly for actual contrast changes
       if (isReady && runtime && runtime.layerManager.layers.length > 0) {
         const layer = runtime.layerManager.layers[0]; // Get the first (should be only) layer
         const channels = layer.channelProps; // Use property getter, not method
@@ -290,7 +279,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           onPrevious={() => changeTomogram(-1)}
           onNext={() => changeTomogram(1)}
           onSelectTomogram={(id) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: id })}
-          contrastLimits={layerContrastLimits}
+          contrastLimits={state.contrastLimits}
           onContrastLimitsChange={handleContrastLimitsChange}
           contrastRange={state.contrastRange}
         />
