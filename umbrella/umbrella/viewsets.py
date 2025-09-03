@@ -99,9 +99,9 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
             # Create a mapping of position to grid box
             filled_positions = {box['position_in_puck']: box['id'] for box in grid_boxes}
             
-            # Generate slots array for positions 1-12
+            # Generate slots array for puck positions 
             slots = []
-            for position in range(1, 13):  # 1 to 12
+            for position in range(1, puck.max_boxes + 1):  # 1 to 12
                 if position in filled_positions:
                     slots.append({
                         "position": position,
@@ -116,14 +116,14 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
             
             # Calculate summary
             filled_count = len(filled_positions)
-            empty_count = 12 - filled_count
+            empty_count = puck.max_boxes - filled_count
             
             response_data = {
                 "id": str(puck.id),
                 "puck_name": puck.name,
                 "slots": slots,
                 "slotSummary": {
-                    "total": 12,
+                    "total": puck.max_boxes,
                     "filledCount": filled_count,
                     "emptyCount": empty_count
                 }
