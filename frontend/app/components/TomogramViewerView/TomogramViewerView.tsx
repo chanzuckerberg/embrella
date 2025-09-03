@@ -93,6 +93,7 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
 export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerProps) => {
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
   const [region, setRegion] = useState<Region | null>(null);
+  const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
   // const currentUser = useContext(UserContext);
   // const { isInitialized, imageSeriesLayer, channels } = useIdetik();
   const { isReady, runtime } = useIdetik();
@@ -101,6 +102,15 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const userCanReview = true; // Everyone can review now
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
   const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
+
+  // Handle z-slice navigation for dynamic loading
+  const handleZIndexChange = useCallback(async (newZIndex: number) => {
+    if (state.detail?.zarrPath && newZIndex !== currentZIndex) {
+      setCurrentZIndex(newZIndex);
+      const newRegion = await getRegionFromZattrs(state.detail.zarrPath, newZIndex);
+      setRegion(newRegion);
+    }
+  }, [state.detail?.zarrPath, currentZIndex]);
 
   // For now, use React state for UI updates (hybrid approach)
   // The layer will still be updated directly, but UI uses React state
@@ -238,7 +248,8 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       }
 
       if (detail.zarrPath) {
-        const region = await getRegionFromZattrs(detail.zarrPath);
+        // Start with middle z-slice for dynamic loading
+        const region = await getRegionFromZattrs(detail.zarrPath, currentZIndex);
         setRegion(region);
       }
     };
@@ -290,9 +301,6 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               region={region}
               fallbackContrastLimits={state.detail?.contrastLimits || [-0.05, 0.05]}
               resolutionLevel={state.detail.reconstructionType?.toLowerCase() === 'sart' ? 0 : 1}
-              seriesDimensionName="z"
-              shouldLoadMiddleZ
-              shouldAutoLoadAllSlices
               classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
             />
           )}

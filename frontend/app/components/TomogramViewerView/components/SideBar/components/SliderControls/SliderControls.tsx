@@ -17,7 +17,6 @@ export const SliderControls = ({ contrast, onContrastChange, open, setOpen, cont
   const sliderMin = min - sliderPadding;
   const sliderMax = max + sliderPadding;
   const step = Math.max(0.00001, (sliderMax - sliderMin) / 2000); // Smaller step for smoother movement
-
   return (
     <div className="flex flex-col gap-4 w-full min-w-[300px] max-w-[450px]">
       <div className="flex items-center justify-between cursor-pointer w-full" onClick={() => setOpen((v) => !v)}>
