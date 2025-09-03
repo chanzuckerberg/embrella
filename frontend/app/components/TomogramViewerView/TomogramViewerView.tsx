@@ -15,7 +15,7 @@ import { DJANGO_URL } from '@app/common/constants/api';
 // import { UserContext } from '@app/common/context/UserProvider';
 // import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
-import { useIdetik } from '../../../idetik/packages/react/src/components/hooks/useIdetik';
+import { useIdetik } from '../../../idetik/packages/react/src/hooks/useIdetik';
 
 // Types
 interface TomogramViewerProps {
@@ -94,7 +94,8 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
   const [region, setRegion] = useState<Region | null>(null);
   // const currentUser = useContext(UserContext);
-  const { isInitialized, imageSeriesLayer, channels } = useIdetik();
+  // const { isInitialized, imageSeriesLayer, channels } = useIdetik();
+  const { isReady, runtime } = useIdetik();
   // Commented out to allow everyone write access
   // const userCanReview = currentUser?.id === review.owner.id;
   const userCanReview = true; // Everyone can review now
@@ -112,16 +113,17 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
 
       // Update the image layer's contrast limits if available
-      if (isInitialized && imageSeriesLayer && channels.length > 0) {
-        const updatedChannels = [...channels];
-        updatedChannels[0] = {
-          ...updatedChannels[0],
-          contrastLimits: newLimits,
-        };
-        imageSeriesLayer.setChannelProps(updatedChannels);
+      if (isReady && runtime) {
+        console.log('Contrast limits updated:', newLimits);
+        // const updatedChannels = [...channels];
+        // updatedChannels[0] = {
+        //   ...updatedChannels[0],
+        //   contrastLimits: newLimits,
+        // };
+        // imageSeriesLayer.setChannelProps(updatedChannels);
       }
     },
-    [isInitialized, imageSeriesLayer, channels]
+    [isReady, runtime]
   );
 
   const saveTomogram = async () => {
