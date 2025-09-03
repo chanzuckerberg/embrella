@@ -5,7 +5,7 @@ import { QualityControls } from './components/QualityControls';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
 import { OmeZarrImageViewer } from '../../../idetik/packages/react/src/components/viewers/OmeZarrImageViewer';
-import { getRegionFromZattrs } from './utils';
+import { getRegionFromZattrs, getZAxisMetadata } from './utils';
 import { Region } from '../../../idetik/packages/core/src/data/region';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
@@ -94,6 +94,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
   const [region, setRegion] = useState<Region | null>(null);
   const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
+  const [zAxisMetadata, setZAxisMetadata] = useState<{ min: number; max: number; count: number } | null>(null);
   // const currentUser = useContext(UserContext);
   // const { isInitialized, imageSeriesLayer, channels } = useIdetik();
   const { isReady, runtime } = useIdetik();
@@ -248,8 +249,14 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       }
 
       if (detail.zarrPath) {
-        // Start with middle z-slice for dynamic loading
-        const region = await getRegionFromZattrs(detail.zarrPath, currentZIndex);
+        // Get z-axis metadata and start with middle z-slice
+        const zMeta = await getZAxisMetadata(detail.zarrPath);
+        setZAxisMetadata(zMeta);
+        
+        const initialZIndex = Math.floor(zMeta.count / 2); // Start at middle slice
+        setCurrentZIndex(initialZIndex);
+        
+        const region = await getRegionFromZattrs(detail.zarrPath, initialZIndex);
         setRegion(region);
       }
     };
@@ -293,6 +300,9 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           contrastLimits={state.contrastLimits}
           onContrastLimitsChange={handleContrastLimitsChange}
           contrastRange={state.contrastRange}
+          currentZIndex={currentZIndex}
+          zAxisMetadata={zAxisMetadata}
+          onZIndexChange={handleZIndexChange}
         />
         <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
           {state.detail?.zarrPath !== undefined && region !== null && (
