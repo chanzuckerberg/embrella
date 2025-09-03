@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback, useState } from 'react';
+import { useReducer, useEffect, useCallback, useState, useSyncExternalStore } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
@@ -102,6 +102,23 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
   const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
 
+  // Get current contrast limits from the layer (like channel controls do)
+  const layerContrastLimits = useSyncExternalStore(
+    (callback) => {
+      if (!isReady || !runtime || runtime.layerManager.layers.length === 0) return () => {};
+      const layer = runtime.layerManager.layers[0];
+      layer.addChannelChangeCallback(callback);
+      return () => layer.removeChannelChangeCallback(callback);
+    },
+    () => {
+      if (!isReady || !runtime || runtime.layerManager.layers.length === 0) return state.contrastLimits;
+      const layer = runtime.layerManager.layers[0];
+      const channels = layer.channelProps; // Use property getter, not method
+      return channels && channels[0]?.contrastLimits || state.contrastLimits;
+    },
+    () => state.contrastLimits // SSR fallback
+  );
+
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
       // Validate that contrast limits are strictly increasing
@@ -110,17 +127,18 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         return;
       }
 
-      dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
-
-      // Update the image layer's contrast limits if available
-      if (isReady && runtime) {
-        console.log('Contrast limits updated:', newLimits);
-        // const updatedChannels = [...channels];
-        // updatedChannels[0] = {
-        //   ...updatedChannels[0],
-        //   contrastLimits: newLimits,
-        // };
-        // imageSeriesLayer.setChannelProps(updatedChannels);
+      // Update the layer directly (copy of what channel controls do)
+      if (isReady && runtime && runtime.layerManager.layers.length > 0) {
+        const layer = runtime.layerManager.layers[0]; // Get the first (should be only) layer
+        const channels = layer.channelProps; // Use property getter, not method
+        if (channels && channels.length > 0) {
+          const updatedChannels = [...channels];
+          updatedChannels[0] = {
+            ...channels[0],
+            contrastLimits: newLimits,
+          };
+          layer.setChannelProps(updatedChannels);
+        }
       }
     },
     [isReady, runtime]
@@ -272,7 +290,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           onPrevious={() => changeTomogram(-1)}
           onNext={() => changeTomogram(1)}
           onSelectTomogram={(id) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: id })}
-          contrastLimits={state.contrastLimits}
+          contrastLimits={layerContrastLimits}
           onContrastLimitsChange={handleContrastLimitsChange}
           contrastRange={state.contrastRange}
         />
@@ -281,7 +299,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
             <OmeZarrImageViewer
               sourceUrl={state.detail.zarrPath}
               region={region}
-              fallbackContrastLimits={state.contrastLimits}
+              fallbackContrastLimits={state.detail?.contrastLimits || [-0.05, 0.05]}
               resolutionLevel={state.detail.reconstructionType?.toLowerCase() === 'sart' ? 0 : 1}
               seriesDimensionName="z"
               shouldLoadMiddleZ
