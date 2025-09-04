@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback, useState, useSyncExternalStore } from 'react';
+import { useReducer, useEffect, useCallback, useState } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
@@ -105,13 +105,16 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
 
   // Handle z-slice navigation for dynamic loading
-  const handleZIndexChange = useCallback(async (newZIndex: number) => {
-    if (state.detail?.zarrPath && newZIndex !== currentZIndex) {
-      setCurrentZIndex(newZIndex);
-      const newRegion = await getRegionFromZattrs(state.detail.zarrPath, newZIndex);
-      setRegion(newRegion);
-    }
-  }, [state.detail?.zarrPath, currentZIndex]);
+  const handleZIndexChange = useCallback(
+    async (newZIndex: number) => {
+      if (state.detail?.zarrPath && newZIndex !== currentZIndex) {
+        setCurrentZIndex(newZIndex);
+        const newRegion = await getRegionFromZattrs(state.detail.zarrPath, newZIndex);
+        setRegion(newRegion);
+      }
+    },
+    [state.detail?.zarrPath, currentZIndex]
+  );
 
   // For now, use React state for UI updates (hybrid approach)
   // The layer will still be updated directly, but UI uses React state
@@ -130,14 +133,17 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       // Also update the layer directly for actual contrast changes
       if (isReady && runtime && runtime.layerManager.layers.length > 0) {
         const layer = runtime.layerManager.layers[0]; // Get the first (should be only) layer
-        const channels = layer.channelProps; // Use property getter, not method
-        if (channels && channels.length > 0) {
-          const updatedChannels = [...channels];
-          updatedChannels[0] = {
-            ...channels[0],
-            contrastLimits: newLimits,
-          };
-          layer.setChannelProps(updatedChannels);
+        // Type guard to ensure layer has channel properties
+        if ('channelProps' in layer && 'setChannelProps' in layer) {
+          const channels = (layer as any).channelProps; // Cast to access channelProps
+          if (channels && channels.length > 0) {
+            const updatedChannels = [...channels];
+            updatedChannels[0] = {
+              ...channels[0],
+              contrastLimits: newLimits,
+            };
+            (layer as any).setChannelProps(updatedChannels);
+          }
         }
       }
     },
@@ -252,10 +258,10 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         // Get z-axis metadata and start with middle z-slice
         const zMeta = await getZAxisMetadata(detail.zarrPath);
         setZAxisMetadata(zMeta);
-        
+
         const initialZIndex = Math.floor(zMeta.count / 2); // Start at middle slice
         setCurrentZIndex(initialZIndex);
-        
+
         const region = await getRegionFromZattrs(detail.zarrPath, initialZIndex);
         setRegion(region);
       }
@@ -301,7 +307,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           onContrastLimitsChange={handleContrastLimitsChange}
           contrastRange={state.contrastRange}
           currentZIndex={currentZIndex}
-          zAxisMetadata={zAxisMetadata}
+          zAxisMetadata={zAxisMetadata || undefined}
           onZIndexChange={handleZIndexChange}
         />
         <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">

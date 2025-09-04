@@ -1,10 +1,10 @@
 import { Region } from '../../../idetik/packages/core/src/data/region';
 
-const DEFAULT_REGION: Region = [
-  { dimension: 'z', index: { type: 'full' } },
-  { dimension: 'y', index: { type: 'full' } },
-  { dimension: 'x', index: { type: 'full' } },
-];
+// const DEFAULT_REGION: Region = [
+//   { dimension: 'z', index: { type: 'full' } },
+//   { dimension: 'y', index: { type: 'full' } },
+//   { dimension: 'x', index: { type: 'full' } },
+// ];
 
 // Region that avoids chunk manager (for problematic zarr data)
 const SAFE_REGION: Region = [
@@ -29,7 +29,7 @@ export async function getZAxisMetadata(zarrUrl: string): Promise<{ min: number; 
 
     const arrayInfo = await arrayResponse.json();
     const shape = arrayInfo.shape;
-    
+
     if (!Array.isArray(shape) || shape.length < 3) {
       throw new Error('Invalid array shape found');
     }

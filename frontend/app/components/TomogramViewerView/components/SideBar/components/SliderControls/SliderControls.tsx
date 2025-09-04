@@ -14,7 +14,16 @@ interface SliderControlsProps {
   onZIndexChange?: (zIndex: number) => void;
 }
 
-export const SliderControls = ({ contrast, onContrastChange, open, setOpen, contrastRange, currentZIndex, zAxisMetadata, onZIndexChange }: SliderControlsProps) => {
+export const SliderControls = ({
+  contrast,
+  onContrastChange,
+  open,
+  setOpen,
+  contrastRange,
+  currentZIndex,
+  zAxisMetadata,
+  onZIndexChange,
+}: SliderControlsProps) => {
   // Calculate dynamic min/max based on contrast limits with some padding
   const [min, max] = contrastRange || [-0.1, 0.1];
   const sliderPadding = (max - min) * 2.0; // 200% padding for much wider range
@@ -52,7 +61,7 @@ export const SliderControls = ({ contrast, onContrastChange, open, setOpen, cont
               Range: {sliderMin.toFixed(4)} to {sliderMax.toFixed(4)}
             </div>
           </div>
-          
+
           {/* Z-Slice Navigation */}
           {zAxisMetadata && onZIndexChange && currentZIndex !== undefined && (
             <div>
