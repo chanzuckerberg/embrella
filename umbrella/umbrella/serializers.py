@@ -39,7 +39,7 @@ class PuckSerializer(serializers.ModelSerializer):
     """
     Serializer for Puck model with essential fields
     """
-    color_code = serializers.CharField(source='get_color_display', read_only=True)
+    color_display = serializers.CharField(source='get_color_display', read_only=True)
     user_name = serializers.CharField(source='user.username', read_only=True)
     
     class Meta:
@@ -48,7 +48,7 @@ class PuckSerializer(serializers.ModelSerializer):
             'id',
             'name', 
             'color',
-            'color_code',
+            'color_display',
             'position_in_cane',
             'max_boxes',
             'user_id',
@@ -59,7 +59,7 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
     """
     Serializer for CryoGridBox model
     """
-    color_code = serializers.CharField(source='get_color_display', read_only=True)
+    color_display = serializers.CharField(source='get_color_display', read_only=True)
     numbering_display = serializers.CharField(source='get_numbering_display', read_only=True)
     
     class Meta:
@@ -68,7 +68,7 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'color',
-            'color_code',
+            'color_display',
             'numbering',
             'numbering_display',
             'position_in_puck',
@@ -102,7 +102,7 @@ class CaneSerializer(serializers.ModelSerializer):
             return obj.puck_set.count()
         
 class PuckDetailSerializer(serializers.ModelSerializer):
-    color_code = serializers.CharField(source='get_color_display', read_only=True)
+    color_display = serializers.CharField(source='get_color_display', read_only=True)
     user_name = serializers.CharField(source='user.username', read_only=True)
     cane = CaneSerializer(source='cane', read_only=True)
     grid_boxes = CryoGridBoxSerializer(many=True, read_only=True)
@@ -114,7 +114,7 @@ class PuckDetailSerializer(serializers.ModelSerializer):
             'id',
             'name', 
             'color',
-            'color_code',
+            'color_display',
             'position_in_cane',
             'max_boxes',
             'user_id',

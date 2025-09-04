@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth.models import User
 from rest_framework.decorators import action
-from cryo_grids.models import Puck, CryoGridBox
+from cryo_grids.models import Puck, CryoGridBox, CryoGrid
 from .serializers import UserSerializer, PuckSerializer
 
 
@@ -122,10 +122,10 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
                 "id": str(puck.id),
                 "puck_name": puck.name,
                 "slots": slots,
-                "slotSummary": {
+                "slot_summary": {
                     "total": puck.max_boxes,
-                    "filledCount": filled_count,
-                    "emptyCount": empty_count
+                    "filled_count": filled_count,
+                    "empty_count": empty_count
                 }
             }
             
@@ -150,3 +150,81 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
         
     #     serializer = self.get_serializer(instance)
     #     return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='grid-box/(?P<position_in_puck>[0-9]+)')
+    def grid_box_detail(self, request, pk=None, position_in_puck=None):
+        """
+        Get detailed grid box information for a specific position in a puck
+        URL: /api/list/pucks/{puck_id}/grid-box/{position_in_puck}/
+        """
+        try:
+            puck = self.get_object()
+        
+            # Get the grid box at the specified position
+            try:
+                grid_box = CryoGridBox.objects.get(
+                    puck=puck, 
+                    position_in_puck=position_in_puck
+                )
+            except CryoGridBox.DoesNotExist:
+                # Return empty slot response
+                return Response({
+                    "puck_id": puck.name,
+                    "position": int(position_in_puck),
+                    "status": "empty"
+                })
+        
+            # Get all grids in this grid box
+            grids = CryoGrid.objects.filter(
+                grid_box=grid_box,
+                trashed=False
+            ).select_related('specimen').values(
+                'id', 'name', 'position_in_box'
+            )
+        
+            # Create positions array (1-4 quadrants)
+            positions = []
+            for q in range(1, grid_box.max_grids + 1):
+                grid_at_position = next(
+                    (g for g in grids if g['position_in_box'] == q), 
+                    None
+                )
+            
+                if grid_at_position:
+                    positions.append({
+                        "q": q,
+                        "occupied": True,
+                        "grid_id": f"{grid_at_position['id']}",
+                        "grid_name": grid_at_position['name'],
+                    })
+                else:
+                    positions.append({
+                        "q": q,
+                        "occupied": False
+                    })
+        
+            response_data = {
+                "puck_id": puck.id,
+                "puck_name": puck.name,
+                "position_in_puck": int(position_in_puck),
+                "status": "filled",
+                "max_grids": grid_box.max_grids,
+                "grid_box": {
+                    "id": grid_box.id,
+                    "name": grid_box.name,
+                    "color": grid_box.color,
+                    "color_display": grid_box.get_color_display(),
+                    "numbering": grid_box.numbering,
+                    "numbering_display": grid_box.get_numbering_display(),
+                    "max_grids": grid_box.max_grids,
+                    "positions": positions
+                }
+            }
+        
+            return Response(response_data)
+        
+        except Exception as e:
+            return Response({
+            "error": str(e)
+            }, status=500)
+   
