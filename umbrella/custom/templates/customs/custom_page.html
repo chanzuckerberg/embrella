@@ -471,8 +471,8 @@
           </tr>
           <tr>
             <td>
-              <a href="{% url 'admin:cryo_grids_specimen_add' %}" class="button">Create New Specimen</a>
-              <p>Record a new specimen</p>
+              <a href="javascript:void(0)" onclick="window.open(getGridLoggingUrl())" class="button" >Grid Logging</a>
+              <p>Start a Grid Logging</p>
             </td>
             <td>
               <a href="{% url 'tem:reserve' %}" class="button">New Single-Grid TEM Session</a>
@@ -484,10 +484,7 @@
             </td>
           </tr>
           <tr>
-            <td>
-              <a href="{% url 'admin:cryo_grids_plungefreezingsession_add' %}" class="button">Create Freezing Session</a>
-              <p>Record a new freezing day session</p>
-            </td>
+            <td></td>
             <td>
               <a href="{% url 'tem:scrnreserve' %}" class="button">Screen Multiple Grids</a>
               <p>New directory name for screening</p>
@@ -495,10 +492,7 @@
             <td></td>
           </tr>
           <tr>
-            <td>
-              <a href="{% url 'admin:cryo_grids_cryogrid_add' %}" class="button">Add New Grid</a>
-              <p>Create a new grid</p>
-            </td>
+            <td></td>
             <td>
               <a href="{% url 'cryo_grids:clear_cassette' %}" class="button">Clear a Cassette</a>
               <p>Remove grids from a cassette</p>
@@ -704,6 +698,9 @@
     }
     function getReviewsUrl() {
       return `${getNextUrl()}/reviews`;
+    }
+    function getGridLoggingUrl() {
+      return `${getNextUrl()}/grid_logging`;
     }
 
     // Tab functionality
