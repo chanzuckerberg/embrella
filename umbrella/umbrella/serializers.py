@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from cryo_grids.models import Puck
+from cryo_grids.models import Puck, CryoGridBox, Cane
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -55,3 +55,75 @@ class PuckSerializer(serializers.ModelSerializer):
             'user_name',
             'cane'
         ]
+class CryoGridBoxSerializer(serializers.ModelSerializer):
+    """
+    Serializer for CryoGridBox model
+    """
+    color_code = serializers.CharField(source='get_color_display', read_only=True)
+    numbering_display = serializers.CharField(source='get_numbering_display', read_only=True)
+    
+    class Meta:
+        model = CryoGridBox
+        fields = [
+            'id',
+            'name',
+            'color',
+            'color_code',
+            'numbering',
+            'numbering_display',
+            'position_in_puck',
+            'max_grids',
+            'puck'
+        ]
+    
+
+class CaneSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Cane model
+    """
+    color_code = serializers.CharField(source='get_color_display', read_only=True)
+    pucks_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Cane
+        fields = [
+            'id',
+            'name',
+            'color',
+            'color_code',
+            'position_in_dewar',
+            'max_pucks',
+            'dewar',
+            'pucks_count'
+        ]
+    
+        def get_pucks_count(self, obj):
+            """Get count of pucks in this cane"""
+            return obj.puck_set.count()
+        
+class PuckDetailSerializer(serializers.ModelSerializer):
+    color_code = serializers.CharField(source='get_color_display', read_only=True)
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    cane = CaneSerializer(source='cane', read_only=True)
+    grid_boxes = CryoGridBoxSerializer(many=True, read_only=True)
+    grid_boxes_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Puck
+        fields = [
+            'id',
+            'name', 
+            'color',
+            'color_code',
+            'position_in_cane',
+            'max_boxes',
+            'user_id',
+            'user_name',
+            'cane',
+            'grid_boxes',
+            'grid_boxes_count',
+        ]
+
+        def get_grid_boxes_count(self, obj):
+            """Get count of grid boxes in this puck"""
+            return obj.cryogridbox_set.count()
