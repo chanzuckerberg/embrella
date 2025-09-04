@@ -884,12 +884,12 @@ __metadata:
 
 "@idetik/core@file:./idetik/packages/core::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=1dc510&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=632837&locator=create-sds-app%40workspace%3A."
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/e62eb8b099ea6d1c79e535e05edfcc060b18705d405cf646ad023a6648e2ad60f67b2cf2cc45ff28c2bdcfa460aea313ed129ad994f739a21cfc4a4cea3410bc
+  checksum: 10c0/a22f34174b901c23b8bb1512a17fb583809f0d3468b9f6edbf167586afdc9b64e7be194b604c4db078619bac001c616034531ae529625c329269c46b46080f25
   languageName: node
   linkType: hard
 
