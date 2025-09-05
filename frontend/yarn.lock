@@ -882,20 +882,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@idetik/core@file:./idetik/packages/core::locator=create-sds-app%40workspace%3A.":
-  version: 0.0.1
-  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=632837&locator=create-sds-app%40workspace%3A."
-  dependencies:
-    gl-matrix: "npm:^3.4.3"
-    zarrita: "npm:^0.4.0-next.16"
-    zod: "npm:^3.24.1"
-  checksum: 10c0/a22f34174b901c23b8bb1512a17fb583809f0d3468b9f6edbf167586afdc9b64e7be194b604c4db078619bac001c616034531ae529625c329269c46b46080f25
-  languageName: node
-  linkType: hard
-
-"@idetik/core@npm:^0.0.1, @idetik/core@workspace:idetik/packages/core":
+"@idetik/core-prerelease@npm:^2.0.0, @idetik/core-prerelease@workspace:idetik/packages/core":
   version: 0.0.0-use.local
-  resolution: "@idetik/core@workspace:idetik/packages/core"
+  resolution: "@idetik/core-prerelease@workspace:idetik/packages/core"
   dependencies:
     "@apidevtools/json-schema-ref-parser": "npm:^14.1.1"
     gl-matrix: "npm:^3.4.3"
@@ -905,40 +894,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@idetik/react@file:./idetik/packages/react::locator=create-sds-app%40workspace%3A.":
-  version: 0.0.1
-  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=052081&locator=create-sds-app%40workspace%3A."
+"@idetik/core@file:./idetik/packages/core::locator=create-sds-app%40workspace%3A.":
+  version: 2.0.0
+  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=14ef55&locator=create-sds-app%40workspace%3A."
   dependencies:
-    "@base-ui-components/react": "npm:^1.0.0-beta.2"
-    "@emotion/css": "npm:^11.13.0"
-    "@emotion/react": "npm:^11.13.3"
-    "@emotion/styled": "npm:^11.13.0"
-    "@eslint/js": "npm:^9.9.0"
-    "@mui/icons-material": "npm:5.16.7"
-    "@mui/lab": "npm:5.0.0-alpha.173"
-    "@mui/material": "npm:5.16.7"
-    "@types/react-dom": "npm:^18.3.0"
-    react: "npm:^18.3.1"
-    react-dom: "npm:^18.3.1"
-  peerDependencies:
-    "@czi-sds/components": ^22.3.0
-    "@idetik/core": ^0.0.1
-    react: ^18.3.1
-    react-dom: ^18.3.1
-  checksum: 10c0/40829a18b1dee87735d5677b7f55a198c6cd20d7e072d48118b3011ab51e07f8d21b9a31daaaf56be6b6e4fa16de9562d30259a33c3de25d32263f2cee63e272
+    gl-matrix: "npm:^3.4.3"
+    zarrita: "npm:^0.4.0-next.16"
+    zod: "npm:^3.24.1"
+  checksum: 10c0/196739bf68344c0cd573d9de7a09c71700c30e01ba11dc4fe26cff06f0f0bd09654e6c42b71df922ce8365985bcaaeb0f623892a72ec6ac0fb17fb7d6afc4454
   languageName: node
   linkType: hard
 
-"@idetik/react@workspace:idetik/packages/react":
+"@idetik/react-prerelease@workspace:idetik/packages/react":
   version: 0.0.0-use.local
-  resolution: "@idetik/react@workspace:idetik/packages/react"
+  resolution: "@idetik/react-prerelease@workspace:idetik/packages/react"
   dependencies:
     "@base-ui-components/react": "npm:^1.0.0-beta.2"
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
     "@emotion/styled": "npm:^11.13.0"
     "@eslint/js": "npm:^9.9.0"
-    "@idetik/core": "npm:^0.0.1"
+    "@idetik/core-prerelease": "npm:^2.0.0"
     "@mui/icons-material": "npm:5.16.7"
     "@mui/lab": "npm:5.0.0-alpha.173"
     "@mui/material": "npm:5.16.7"
@@ -951,11 +927,35 @@ __metadata:
     tailwindcss: "npm:^3.4.17"
   peerDependencies:
     "@czi-sds/components": ^22.3.0
-    "@idetik/core": ^0.0.1
+    "@idetik/core-prerelease": ^2.0.0
     react: ^18.3.1
     react-dom: ^18.3.1
   languageName: unknown
   linkType: soft
+
+"@idetik/react@file:./idetik/packages/react::locator=create-sds-app%40workspace%3A.":
+  version: 1.1.0
+  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=0d3e80&locator=create-sds-app%40workspace%3A."
+  dependencies:
+    "@base-ui-components/react": "npm:^1.0.0-beta.2"
+    "@emotion/css": "npm:^11.13.0"
+    "@emotion/react": "npm:^11.13.3"
+    "@emotion/styled": "npm:^11.13.0"
+    "@eslint/js": "npm:^9.9.0"
+    "@mui/icons-material": "npm:5.16.7"
+    "@mui/lab": "npm:5.0.0-alpha.173"
+    "@mui/material": "npm:5.16.7"
+    "@types/react-dom": "npm:^18.3.0"
+    react: "npm:^18.3.1"
+    react-dom: "npm:^18.3.1"
+  peerDependencies:
+    "@czi-sds/components": ^22.3.0
+    "@idetik/core-prerelease": ^2.0.0
+    react: ^18.3.1
+    react-dom: ^18.3.1
+  checksum: 10c0/51dea9fe3d23fd81037b439c0734d2049bb501655b73868c691b27eda5a26cc3984425956e6fb1762b8458da05a153824e56a982bf2a6aba3710f5903864045b
+  languageName: node
+  linkType: hard
 
 "@isaacs/cliui@npm:^8.0.2":
   version: 8.0.2

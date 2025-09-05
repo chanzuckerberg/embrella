@@ -18,6 +18,15 @@ import { Review, ReviewTomogramDetail } from './types';
 import { useIdetik } from '../../../idetik/packages/react/src/hooks/useIdetik';
 
 // Types
+interface ChannelProps {
+  contrastLimits: [number, number];
+}
+
+interface LayerWithChannelMethods {
+  channelProps: ChannelProps[];
+  setChannelProps: (channels: ChannelProps[]) => void;
+}
+
 interface TomogramViewerProps {
   review: Review;
   onReviewUpdate: (review: Review) => void;
@@ -135,14 +144,14 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         const layer = runtime.layerManager.layers[0]; // Get the first (should be only) layer
         // Type guard to ensure layer has channel properties
         if ('channelProps' in layer && 'setChannelProps' in layer) {
-          const channels = (layer as any).channelProps; // Cast to access channelProps
+          const channels = (layer as LayerWithChannelMethods).channelProps; // Cast to access channelProps
           if (channels && channels.length > 0) {
             const updatedChannels = [...channels];
             updatedChannels[0] = {
               ...channels[0],
               contrastLimits: newLimits,
             };
-            (layer as any).setChannelProps(updatedChannels);
+            (layer as LayerWithChannelMethods).setChannelProps(updatedChannels);
           }
         }
       }
