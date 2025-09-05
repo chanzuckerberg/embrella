@@ -1,11 +1,70 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
+import {  UserContext } from '@app/common/context/UserProvider';
+import {  UsersList } from '@app/common/types/gridLogging/userList';
+import styles from './GridLogging.module.css';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  Box, 
+  Select,
+  MenuItem,
+  FormControl,
+} from '@mui/material';
+import { Button } from '@czi-sds/components';
 
 export const GridsLogging = (): React.JSX.Element => {
+  const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
+  const { users, isSuccess } = useGridLoggingUserList();
+  const currentUser = useContext(UserContext);
+  
+  // Extract users array from the response object
+  const usersList: UsersList[] = users?.users || [];
+  
+  // Set the current user as default when users are loaded
+  useEffect(() => {
+    if (usersList.length > 0 && currentUser && !selectedUser) {
+      // Find the current user in the users list
+      const foundUser = usersList.find(u => String(u.id) === String(currentUser.id));
+      if (foundUser) {
+        setSelectedUser(foundUser);
+      } 
+    }
+  }, [usersList, currentUser, selectedUser]);
+
+  // Handle user selection
+  const handleUserChange = (userId: string) => {
+    const user = usersList.find(u => String(u.id) === String(userId));
+    setSelectedUser(user || null);
+  };
 
   return (
-    <> NEW Grid logging component....</>
-    
+    <Box className={styles.cardContainer}>
+      <Card elevation={2} sx={{ maxWidth: 600, width: '100%' }}>
+        <CardHeader title="Pucks" />
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3, flexGrow: 1 }}>
+              <FormControl variant="outlined" size="small" sx={{ minWidth: 300 }}>
+              <Select
+                value={selectedUser?.id || ''}
+                onChange={(e) => handleUserChange(String(e.target.value))}
+                displayEmpty
+            >
+                  <MenuItem value="" disabled><em>Select User</em></MenuItem>
+                  {usersList.map((user) => (
+                    <MenuItem key={user.id} value={String(user.id)}>
+                      {user.full_name || user.clean_username}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+          </Box>
+          <Button sx={{ marginTop: '10px' }} sdsType="primary" sdsStyle="rounded">Add Puck</Button>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
