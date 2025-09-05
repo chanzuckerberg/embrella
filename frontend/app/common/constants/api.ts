@@ -26,6 +26,14 @@ export enum API {
   REVIEW_EXPORT = '/api/reviews/:reviewId/export',
   REVIEW_TOMOGRAMS = '/api/reviews/:reviewId/tomograms',
   TOMOGRAM_DETAIL = '/api/reviews/:reviewId/tomograms/:tomogramId',
+
+  // Grid Logging
+  GRID_LOGGING_USERS = '/api/list/all/users',
+  GRID_LOGGING_PUCKS = '/api/list/pucks',
+  GRID_LOGGING_PUCK_BYUSER = '/api/list/pucks/?user_id',
+  GRID_LOGGING_PUCK_SLOTINFO = '/api/list/pucks/puck_id/slots/',
+  GRID_LOGGING_PUCK_GRIDBOXINFO = '/api/list/pucks/puck_id/grid-box/position_in_puck',
+
 }
 
 export enum POST_API {
