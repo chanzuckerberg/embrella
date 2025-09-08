@@ -137,7 +137,7 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
             empty_count = puck.max_boxes - filled_count
             
             response_data = {
-                "id": str(puck.id),
+                "puck_id": str(puck.id),
                 "puck_name": puck.name,
                 "slots": slots,
                 "slot_summary": {
@@ -228,7 +228,7 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
                 "status": "filled",
                 "max_grids": grid_box.max_grids,
                 "grid_box": {
-                    "id": grid_box.id,
+                    "grid_box_id": grid_box.id,
                     "name": grid_box.name,
                     "color": grid_box.color,
                     "color_display": grid_box.get_color_display(),
