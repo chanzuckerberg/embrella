@@ -2,6 +2,8 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import ValidationError
+from django.conf import settings
 from django.contrib.auth.models import User
 from rest_framework.decorators import action
 from cryo_grids.models import Puck, CryoGridBox, CryoGrid
@@ -16,23 +18,28 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserSerializer
     
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        total_count = queryset.count()  # Get count from filtered queryset
-        
-        page = self.paginate_queryset(queryset)
-        
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response_data = self.get_paginated_response(serializer.data)
-            response_data.data['total_users_count'] = total_count
-            return response_data
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            'total_users_count': total_count,
-            'users': serializer.data
-        })
-
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            total_count = queryset.count()  # Get count from filtered queryset
+            
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                response_data = self.get_paginated_response(serializer.data)
+                response_data.data['total_users_count'] = total_count
+                return response_data
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'total_users_count': total_count,
+                'users': serializer.data
+            })
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching users",
+                "detail": str(e) if settings.DEBUG else "Please try again later"
+            }, status=500)
 
 class PuckViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -50,10 +57,15 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
         user_id = self.request.query_params.get('user_id', None)
         
         if user_id is not None:
-            # Filter by specific user
-            queryset = queryset.filter(user_id=user_id)
+            try:
+                user_id = int(user_id)
+                # Check if user exists
+                if not User.objects.filter(id=user_id).exists():
+                    raise ValidationError(f"User with ID {user_id} does not exist")
+                queryset = queryset.filter(user_id=user_id)
+            except ValueError:
+                raise ValidationError("Invalid user_id format. Must be a number.")
         
-        # Always return ordered queryset (all pucks or filtered by user)
         return queryset
     
     def list(self, request, *args, **kwargs):
@@ -61,24 +73,30 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
         Handle pagination and return appropriate response
         Handles collections of objects, so it doesn't need a specific ID
         """
-        queryset = self.filter_queryset(self.get_queryset())
-        total_count = queryset.count()
-        
-        page = self.paginate_queryset(queryset)
-        
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response_data = self.get_paginated_response(serializer.data)
-            # Add total count to paginated response
-            response_data.data['total_pucks_count'] = total_count
-            return response_data
-        
-        # Fallback (though pagination should always work)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            'total_pucks_count': total_count,
-            'pucks': serializer.data
-        })
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            total_count = queryset.count()
+            
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                response_data = self.get_paginated_response(serializer.data)
+                # Add total count to paginated response
+                response_data.data['total_pucks_count'] = total_count
+                return response_data
+            
+            # Fallback (though pagination should always work)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'total_pucks_count': total_count,
+                'pucks': serializer.data
+            })
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching pucks",
+                "detail": str(e) if settings.DEBUG else "Please try again later"
+            }, status=500)
 
         """
         pk stands for primary key - puck_id, None means it's optional
