@@ -4,7 +4,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
 import {  UserContext } from '@app/common/context/UserProvider';
 import {  UsersList } from '@app/common/types/gridLogging/userList';
+import { PucksList } from '@app/common/types/gridLogging/puckList';
 import styles from './GridLogging.module.css';
+import { PuckListed } from './PuckListed';
 import { 
   Card, 
   CardContent, 
@@ -18,6 +20,7 @@ import { Button } from '@czi-sds/components';
 
 export const GridsLogging = (): React.JSX.Element => {
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
+  const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
   const { users, isSuccess } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
   
@@ -39,8 +42,13 @@ export const GridsLogging = (): React.JSX.Element => {
   const handleUserChange = (userId: string) => {
     const user = usersList.find(u => String(u.id) === String(userId));
     setSelectedUser(user || null);
+      // Reset selected puck when user changes
+      setSelectedPuck(null);
   };
 
+  const handlePuckSelect = (puck: PucksList | null) => {
+    setSelectedPuck(puck);
+  };
   return (
     <Box className={styles.cardContainer}>
       <Card elevation={2} sx={{ maxWidth: 600, width: '100%' }}>
@@ -62,6 +70,12 @@ export const GridsLogging = (): React.JSX.Element => {
                 </Select>
               </FormControl>
           </Box>
+           {/* Puck Selector Component */}
+           <PuckListed
+            selectedUser={selectedUser}
+            onPuckSelect={handlePuckSelect}
+            selectedPuck={selectedPuck}
+          />
           <Button sx={{ marginTop: '10px' }} sdsType="primary" sdsStyle="rounded">Add Puck</Button>
         </CardContent>
       </Card>
