@@ -7,6 +7,7 @@ import {  UsersList } from '@app/common/types/gridLogging/userList';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import styles from './GridLogging.module.css';
 import { PuckListed } from './PuckListed';
+import { PuckDetails } from './PuckDetails';
 import { 
   Card, 
   CardContent, 
@@ -50,8 +51,8 @@ export const GridsLogging = (): React.JSX.Element => {
     setSelectedPuck(puck);
   };
   return (
-    <Box className={styles.cardContainer}>
-      <Card elevation={2} sx={{ maxWidth: 600, width: '100%' }}>
+    <Box className={`${styles.cardContainer} ${selectedPuck ? styles.withPuckSelected : ''}`}>
+      <Card elevation={2} className={styles.leftCard}>
         <CardHeader title="Pucks" />
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3, flexGrow: 1 }}>
@@ -79,6 +80,11 @@ export const GridsLogging = (): React.JSX.Element => {
           <Button sx={{ marginTop: '10px' }} sdsType="primary" sdsStyle="rounded">Add Puck</Button>
         </CardContent>
       </Card>
+      
+      {/* Puck Details Component - appears on the right when a puck is selected */}
+      <PuckDetails 
+        selectedPuck={selectedPuck}
+      />
     </Box>
   );
 };
