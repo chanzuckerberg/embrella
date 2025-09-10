@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "es6",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,15 +23,38 @@
       }
     ],
     "paths": {
-      "@app/*": ["./app/*"],
-      "@configs/*": ["./configs/*"],
-      "@hooks/*": ["./hooks/*"],
-      "@testing/*": ["./testing/*"],
-      "core/*": ["./idetik/packages/core/*"],
-      "lib/*": ["./idetik/packages/react/src/lib/*"]
+      "@app/*": [
+        "./app/*"
+      ],
+      "@configs/*": [
+        "./configs/*"
+      ],
+      "@hooks/*": [
+        "./hooks/*"
+      ],
+      "@testing/*": [
+        "./testing/*"
+      ],
+      "core/*": [
+        "./idetik/packages/core/*"
+      ],
+      "lib/*": [
+        "./idetik/packages/react/src/lib/*"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "idetik/packages/core/examples"],
-  "typeRoots": ["./types", "./node_modules/@types"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "idetik/packages/core/examples"
+  ],
+  "typeRoots": [
+    "./types",
+    "./node_modules/@types"
+  ]
 }
