@@ -105,6 +105,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
   const [zAxisMetadata, setZAxisMetadata] = useState<{ min: number; max: number; count: number } | null>(null);
   const updateZSliceRef = useRef<((zValue: number) => void) | null>(null);
+  const getClosestValidZPositionRef = useRef<((targetZ: number) => number) | null>(null);
   // const currentUser = useContext(UserContext);
   // const { isInitialized, imageSeriesLayer, channels } = useIdetik();
   const { isReady, runtime } = useIdetik();
@@ -123,8 +124,28 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         // Use direct slice coordinate update if available (fluid navigation)
         if (updateZSliceRef.current) {
           // Convert z-index to world coordinates
-          const zWorldValue =
+          let zWorldValue =
             zAxisMetadata.min + (newZIndex * (zAxisMetadata.max - zAxisMetadata.min)) / (zAxisMetadata.count - 1);
+          
+          console.log('[TomogramViewerView] Navigating to Z-slice:', newZIndex, 'zWorldValue:', zWorldValue);
+
+          // Use direct slice coordinate update like chunk_streaming example
+          // For now, let's disable dynamic alignment and use raw zWorldValue
+          console.log('[TomogramViewer] Using raw zWorldValue (no alignment):', zWorldValue);
+
+          // Debug logging for z-coordinate conversion
+          console.log('[TomogramViewer] Z Navigation:', {
+            zIndex: newZIndex,
+            zWorldValueRaw:
+              zAxisMetadata.min + (newZIndex * (zAxisMetadata.max - zAxisMetadata.min)) / (zAxisMetadata.count - 1),
+            zWorldValueAligned: zWorldValue,
+            zAxisMetadata: zAxisMetadata,
+            stepSize: (zAxisMetadata.max - zAxisMetadata.min) / (zAxisMetadata.count - 1),
+            alignmentAdjustment:
+              zWorldValue -
+              (zAxisMetadata.min + (newZIndex * (zAxisMetadata.max - zAxisMetadata.min)) / (zAxisMetadata.count - 1)),
+            usedDynamicAlignment: !!getClosestValidZPositionRef.current,
+          });
           updateZSliceRef.current(zWorldValue);
         } else {
           // Fallback to region recreation (slower)
@@ -337,8 +358,9 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               region={region}
               fallbackContrastLimits={state.detail?.contrastLimits || [-0.05, 0.05]}
               classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
-              onLayerCreated={(layer, updateZSlice) => {
+              onLayerCreated={(layer, updateZSlice, getClosestValidZPosition) => {
                 updateZSliceRef.current = updateZSlice || null;
+                getClosestValidZPositionRef.current = getClosestValidZPosition || null;
               }}
             />
           )}
