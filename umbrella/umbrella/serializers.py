@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from cryo_grids.models import Puck, CryoGridBox, Cane
+from cryo_grids.models import Puck, CryoGridBox, Cane, CryoGrid
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -127,3 +127,100 @@ class PuckDetailSerializer(serializers.ModelSerializer):
         def get_grid_boxes_count(self, obj):
             """Get count of grid boxes in this puck"""
             return obj.cryogridbox_set.count()
+
+
+
+class GridDetailsSerializer(serializers.ModelSerializer):
+    """
+    Serializer for viewing grid details - matches your UI form
+    """
+    # Basic grid info - using SerializerMethodField to avoid source issues
+    grid_name = serializers.SerializerMethodField()
+    user = serializers.SerializerMethodField()
+    notes = serializers.CharField(read_only=True)
+    clipped = serializers.BooleanField(read_only=True)
+    trashed = serializers.BooleanField(read_only=True)
+    
+    # Location info
+    location = serializers.SerializerMethodField()
+    
+    # Related entities
+    freezing_session = serializers.SerializerMethodField()
+    specimen = serializers.SerializerMethodField()
+    project = serializers.SerializerMethodField()
+    position_in_box = serializers.IntegerField(read_only=True)
+    copy_number = serializers.IntegerField(read_only=True)
+    
+    # Parameters
+    parameters = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CryoGrid
+        fields = [
+            'grid_name', 'user', 'notes', 'clipped', 'trashed',
+            'location', 'freezing_session', 'specimen', 'project',
+            'position_in_box', 'copy_number', 'parameters'
+        ]
+    
+    def get_grid_name(self, obj):
+        """Get grid name"""
+        return obj.name
+    
+    def get_user(self, obj):
+        """Get user username"""
+        return obj.user.username if obj.user else None
+    
+    def get_location(self, obj):
+        return {
+            "puck_id": obj.grid_box.puck.id if obj.grid_box and obj.grid_box.puck else None,
+            "puck_name": obj.grid_box.puck.name if obj.grid_box and obj.grid_box.puck else None,
+            "grid_box_id": obj.grid_box.id if obj.grid_box else None,
+            "grid_box_name": obj.grid_box.name if obj.grid_box else None,
+            "position_in_box": obj.position_in_box
+        }
+    
+    def get_freezing_session(self, obj):
+        if obj.freezing_session:
+            return {
+                "id": obj.freezing_session.id,
+                "name": f"{obj.freezing_session.datetime.date()}-{obj.freezing_session.user.username.split('@')[0] if obj.freezing_session.user else 'unknown'}-{obj.freezing_session.id}",
+                "user": obj.freezing_session.user.username if obj.freezing_session.user else None,
+                "device": obj.freezing_session.device.name if obj.freezing_session.device else None,
+                "temperature": obj.freezing_session.device_temperature,
+                "humidity": obj.freezing_session.humidity
+            }
+        return None
+    
+    def get_specimen(self, obj):
+        if obj.specimen:
+            samples = []
+            for sample in obj.specimen.samples.all():
+                samples.append({
+                    "id": sample.id,
+                    "name": sample.name,
+                    "ontology": sample.ontology
+                })
+            return {
+                "id": obj.specimen.id,
+                "name": f"Specimen ({', '.join([s['name'] for s in samples])})" if samples else "Specimen (no samples)",
+                "samples": samples,
+                "notes": obj.specimen.notes
+            }
+        return None
+    
+    def get_project(self, obj):
+        if obj.intended_project:
+            return {
+                "id": obj.intended_project.id,
+                "name": obj.intended_project.name,
+                "description": getattr(obj.intended_project, 'description', '')
+            }
+        return None
+    
+    def get_parameters(self, obj):
+        return {
+            "blot_time": obj.blot_time,
+            "blot_force": obj.blot_force,
+            "blot_distance": obj.blot_distance
+        }
+   
