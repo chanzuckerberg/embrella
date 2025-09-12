@@ -452,7 +452,7 @@
     <!-- Tabs Navigation -->
     <div class="tabs">
       <div class="tab active" onclick="openTab(event, 'workflow')">Workflow Management</div>
-      <div class="tab" onclick="openTab(event, 'search')">Search & Filters</div>
+      <div class="tab" onclick="openTab(event, 'search')">Search and View</div>
       <div class="tab" onclick="openTab(event, 'run-workflow')">Run Workflow</div>
       <div class="tab" onclick="openTab(event, 'dashboard')">Workflow Dashboard</div>
       <!-- <div class="tab" onclick="openTab(event, 'metadata')">Metadata Search</div> -->
@@ -554,12 +554,11 @@
 
     <div id="run-workflow" class="tab-content">
       <div class="section">
-        <h2>Run Workflow</h2>
+        <h2>Pre-processing</h2>
         <table class="table">
           <tr>
             <th>Aretomo</th>
             <th>DenoisET</th>
-            <th>CoPick</th>
           </tr>
           <tr>
             <td>
@@ -570,12 +569,26 @@
               <a href="/workflow/denoiset_run" class="button">DenoisET</a>
               <p>Run DenoisET</p>
             </td>
+          </tr>
+        </table> <!-- close Pre-processing table -->
+
+        <h2>Post-processing</h2>
+        <table class="table">
+          <tr>
+            <th>Copick</th>
+            <th>MembraneSeg</th>
+          </tr>
+          <tr>
             <td>
               <a href="/workflow/copick_run" class="button">CoPick</a>
-              <p>Run CoPick</p>
+              <p>Create or Import CoPick projects</p>
             </td>
+            <!-- <td>
+              <a href="/workflow/denoiset_run" class="button">DenoisET</a>
+              <p>Run DenoisET</p>
+            </td> -->
           </tr>
-        </table>
+        </table> <!-- close Post-processing table -->   
       </div>
     </div>
 
