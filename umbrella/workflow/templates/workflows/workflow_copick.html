@@ -268,22 +268,28 @@
     </div>
     </div>
 
-    <div class="form-row">
-    <div class="form-group">
-        <label for="tomoType">Tomogram Type:</label>
-        <select id="tomoType" required>
-        <option value="">Select tomogram type...</option>
-        <option value="dctf">DCTF</option>
-        <option value="wbp">WBP</option>
-        <option value="sart">SART</option>
-        <option value="denoise">Denoise</option>
-        </select>
-    </div>
-    
-    <div class="form-group">
-        <label for="tomogramRun">Tomogram Run:</label>
-        <input type="text" id="tomogramRun" required placeholder="run001" value="run001"/>
-    </div>
+    <div class="form-row-three">
+        <div class="form-group">
+            <label for="tomoType">Tomogram Type:</label>
+            <select id="tomoType" required>
+                <option value="">Select tomogram type...</option>
+                <option value="dctf">DCTF</option>
+                <option value="wbp">WBP</option>
+                <option value="sart">SART</option>
+                <option value="denoise">Denoise</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="tomogramRun">Tomogram Run:</label>
+            <input type="text" id="tomogramRun" required placeholder="run001" value="run001"/>
+        </div>
+
+        <div class="form-group">
+            <label for="tomogramVoxelSize">(Optional) Downsample (Å):</label>
+            <input type="number" id="tomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
+            <small style="color: #888;">Blank = no downsampling.</small>
+        </div>
     </div>
 
     <button type="button" onclick="createCopickProject()" id="createButton">Create Copick Project</button>
@@ -349,22 +355,28 @@
       </div>
     </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label for="importTomoType">Tomo Type:</label>
-        <select id="importTomoType" required>
-          <option value="">Select tomo type...</option>
-          <option value="dctf">DCTF</option>
-          <option value="wbp">WBP</option>
-          <option value="sart">SART</option>
-          <option value="denoise">Denoise</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label for="importTomogramRun">Tomogram Run:</label>
-        <input type="text" id="importTomogramRun" required placeholder="run001" value="run001"/>
-      </div>
+    <div class="form-row-three">
+        <div class="form-group">
+            <label for="tomoType">Tomogram Type:</label>
+            <select id="tomoType" required>
+                <option value="">Select tomogram type...</option>
+                <option value="dctf">DCTF</option>
+                <option value="wbp">WBP</option>
+                <option value="sart">SART</option>
+                <option value="denoise">Denoise</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="tomogramRun">Tomogram Run:</label>
+            <input type="text" id="tomogramRun" required placeholder="run001" value="run001"/>
+        </div>
+
+        <div class="form-group">
+            <label for="tomogramVoxelSize">(Optional) Downsample (Å):</label>
+            <input type="number" id="tomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
+            <small style="color: #888;">Blank = no downsampling.</small>
+        </div>
     </div>
 
     <button type="button" onclick="importTomograms()" id="importButton" class="secondary">Import Tomograms</button>

@@ -232,7 +232,28 @@
     <div class="note">
       Note: Please create copick projects before running this workflow.
     </div>
+    <!-- User Authentication Section -->
+    <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="text" id="userId" required readonly value="demo_user"/>
+    </div>
+    
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" required placeholder="Enter your password"/>
+    </div>
+
+    <!-- Create Copick Project Section -->    
+    <div class="section-header">
+        <h2>
+            Run MembraneSeg
+            <span class="info-icon">i</span>
+            <div class="tooltip">Run the MembraneSeg workflow in a CoPick project</div>
+        </h2>
+    </div>
   </div> <!-- close .form-container -->
+
+
 
   <script>
     function goBack() {

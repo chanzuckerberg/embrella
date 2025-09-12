@@ -558,6 +558,9 @@ def cutom_run_denoise_workflow_page(request):
 def cutom_run_create_and_import_copick_page(request):
     return render(request, 'workflows/workflow_copick.html')
 
+def custom_run_membraneseg_page(request):
+    return render(request, 'workflows/workflow_membraneseg.html')
+
 def custom_workflow_cancel(request):
     return render(request, 'workflows/workflow_cancel.html')
 
