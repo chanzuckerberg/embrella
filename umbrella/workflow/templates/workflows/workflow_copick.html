@@ -369,12 +369,24 @@
 
   <script>
     // Initialize user info
-    function initializeUserInfo() {
-      const userId = "demo_user";
-      document.getElementById("userId").value = userId;
+    async function fetchUserInfo() {
+      try {
+        const response = await fetch("/workflow/user_info");
+        const result = await response.json();
+        if (response.ok && result.username) {
+          document.getElementById("userId").value = result.username;
+          document.getElementById("cancelUserId").value = result.username;
+
+        } else {
+          alert("Failed to fetch user info.");
+        }
+      } catch (error) {
+        console.error("An error occurred while fetching user info:", error);
+        alert("An error occurred while fetching user info.");
+      }
     }
 
-        // Populate the session dropdown with session names.
+    // Populate the session dropdown with session names.
     async function populateSessionDropdown() {
       const url = "/workflow/get_msi_session_list";
       try {
@@ -692,13 +704,15 @@
 
     // Initialize the page
     document.addEventListener("DOMContentLoaded", () => {
-      try {
-        initializeUserInfo();
-        attachFieldSyncListeners();
-      } catch (error) {
-        console.error("Error during initialization:", error);
-        showStatusMessage("Error during page initialization", "error");
-      }
+      (async () => {
+        try {
+          await fetchUserInfo();
+          attachFieldSyncListeners();
+        } catch (error) {
+          console.error("Error during initialization:", error);
+          showStatusMessage("Error during page initialization", "error");
+        }
+      })();
     });
   </script>
 </body>
