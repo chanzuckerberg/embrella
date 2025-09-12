@@ -5,8 +5,8 @@ import { QualityControls } from './components/QualityControls';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
 import { OmeZarrChunkedImageViewer } from '../../../idetik/packages/react/src/components/viewers/OmeZarrChunkedImageViewer';
-import { getRegionFromZattrs, getZAxisMetadata } from './utils';
-import { Region } from '../../../idetik/packages/core/src/data/region';
+import { getRegionFromZattrs, getZAxisMetadata, regionToSliceCoordinates } from './utils';
+import { SliceCoordinates } from '../../../idetik/packages/core/src/data/chunk';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
@@ -101,7 +101,7 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
 
 export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerProps) => {
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
-  const [region, setRegion] = useState<Region | null>(null);
+  const [sliceCoordinates, setSliceCoordinates] = useState<SliceCoordinates | null>(null);
   const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
   const [zAxisMetadata, setZAxisMetadata] = useState<{ min: number; max: number; count: number } | null>(null);
   const updateZSliceRef = useRef<((zValue: number) => void) | null>(null);
@@ -130,7 +130,8 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         } else {
           // Fallback to region recreation (slower)
           const newRegion = await getRegionFromZattrs(state.detail.zarrPath, newZIndex);
-          setRegion(newRegion);
+          const newSliceCoords = regionToSliceCoordinates(newRegion);
+          setSliceCoordinates(newSliceCoords);
         }
       }
     },
@@ -284,7 +285,8 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         setCurrentZIndex(initialZIndex);
 
         const region = await getRegionFromZattrs(detail.zarrPath, initialZIndex);
-        setRegion(region);
+        const sliceCoords = regionToSliceCoordinates(region);
+        setSliceCoordinates(sliceCoords);
       }
     };
     loadDetail();
@@ -332,10 +334,10 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           onZIndexChange={handleZIndexChange}
         />
         <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
-          {state.detail?.zarrPath !== undefined && region !== null && (
+          {state.detail?.zarrPath !== undefined && sliceCoordinates !== null && (
             <OmeZarrChunkedImageViewer
               sourceUrl={state.detail.zarrPath}
-              region={region}
+              sliceCoordinates={sliceCoordinates}
               fallbackContrastLimits={state.detail?.contrastLimits || [-0.05, 0.05]}
               classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
               onLayerCreated={(layer, updateZSlice) => {

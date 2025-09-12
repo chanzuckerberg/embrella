@@ -1,4 +1,5 @@
 import { Region } from '../../../idetik/packages/core/src/data/region';
+import { SliceCoordinates } from '../../../idetik/packages/core/src/data/chunk';
 
 // const DEFAULT_REGION: Region = [
 //   { dimension: 'z', index: { type: 'full' } },
@@ -86,4 +87,17 @@ export async function getRegionFromZattrs(zarrUrl: string, zIndex?: number): Pro
     }
     return SAFE_REGION;
   }
+}
+
+export function regionToSliceCoordinates(region: Region): SliceCoordinates {
+  const sliceCoords: SliceCoordinates = {};
+  region.forEach((regionDim) => {
+    if (regionDim.index?.type === 'point') {
+      const dimension = regionDim.dimension.toLowerCase();
+      if (dimension === 'z' || dimension === 'c' || dimension === 't') {
+        sliceCoords[dimension as keyof SliceCoordinates] = regionDim.index.value;
+      }
+    }
+  });
+  return sliceCoords;
 }
