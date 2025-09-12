@@ -232,6 +232,117 @@ def create_run(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+
+# create generic proc run for post generic processing, no input tomograms needed
+@csrf_exempt
+@require_http_methods(["POST"])
+def reserve_generic_run(request):
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        plan_id = int(data.get("proc_plan"))
+        session_id = int(data.get("msi_session"))
+        run_number = (data.get("run_number") or "").strip()
+
+        if not run_number:
+            return JsonResponse({'error': 'run_number is required'}, status=400)
+
+        # normalize like create_run (allow raw “002”)
+        if not run_number.startswith('run'):
+            run_number = f"run{run_number.zfill(3)}"
+
+        proc_plan = ProcPlan.objects.get(pk=plan_id)
+        msi_session = MsiSession.objects.get(pk=session_id)
+
+        exists = ProcRun.objects.filter(
+            name=run_number, proc_plan=proc_plan, msi_session=msi_session
+        ).exists()
+        if exists:
+            return JsonResponse(
+                {'error': f'Run {run_number} already exists for this session and plan.'},
+                status=409
+            )
+
+        # No DB write here—just confirming availability
+        return JsonResponse({
+            'message': 'Reservation available.',
+            'proc_plan': proc_plan.id,
+            'msi_session': msi_session.id,
+            'run_number': run_number
+        }, status=200)
+
+    except ProcPlan.DoesNotExist:
+        return JsonResponse({'error': 'Invalid proc_plan'}, status=404)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({'error': 'Invalid msi_session'}, status=404)
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return JsonResponse({'error': 'Invalid payload'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_generic_run(request):
+    """
+    Create a lightweight ProcRun (no input tomograms, no pipe data).
+    Required JSON: proc_plan, msi_session, run_number
+    Optional JSON: pipeline (e.g., "copick"), notes
+    """
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+
+        # Validate inputs
+        try:
+            plan_id = int(data.get('proc_plan'))
+            session_id = int(data.get('msi_session'))
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'proc_plan and msi_session must be integers'}, status=400)
+
+        run_number = (data.get('run_number') or '').strip()
+        pipeline = (data.get('pipeline') or 'generic').strip()
+        notes = data.get('notes') or ''
+
+        if not run_number:
+            return JsonResponse({'error': 'run_number is required'}, status=400)
+
+        # Normalize: run### format
+        if not run_number.startswith('run'):
+            run_number = f"run{run_number.zfill(3)}"
+        name = run_number
+
+        msi_session = MsiSession.objects.get(pk=session_id)
+        proc_plan = ProcPlan.objects.get(pk=plan_id)
+
+        # Uniqueness guard
+        if ProcRun.objects.filter(name=name, msi_session=msi_session, proc_plan=proc_plan).exists():
+            return JsonResponse({'error': f'Run {name} already exists for this session and plan.'}, status=409)
+
+        run_instance = ProcRun.objects.create(
+            name=name,
+            msi_session=msi_session,
+            proc_plan=proc_plan,
+            notes=notes or f'pipeline={pipeline}'
+        )
+
+        return JsonResponse({
+            'message': 'Generic run created (no tomograms).',
+            'run_id': run_instance.id,
+            'run_number': run_instance.name,
+            'session_id': msi_session.id,
+            'plan_id': proc_plan.id,
+            'detail_url': reverse('processes:detail', args=(run_instance.id,))
+        }, status=201)
+
+    except ProcPlan.DoesNotExist:
+        return JsonResponse({'error': 'Invalid proc_plan'}, status=404)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({'error': 'Invalid msi_session'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 @extend_schema(
     methods=["GET"],
     description="Fetches all sessions (runs). Requires ?valid=true.",

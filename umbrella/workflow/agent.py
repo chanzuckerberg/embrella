@@ -242,7 +242,6 @@ class Aretomo3(object):
 
 
 
-
 class Denoiset(object):
     def __init__(self, hostname, port, username, password, remote_script_dir, local_template_path):
         """
@@ -435,3 +434,49 @@ class StatusChecker(object):
             self.ssh.close()
             self.ssh = None
             logger.info("SSH connection closed.")
+
+# A generic class to submit remote jobs using a Jinja2 template
+
+class RemoteJobSubmitter:
+    def __init__(self, hostname, port, username, password, remote_script_dir):
+        self.hostname = hostname
+        self.port = port
+        self.username = username
+        self.password = password
+        self.remote_script_dir = remote_script_dir
+        self.ssh = None
+
+    def connect(self):
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(self.hostname, self.port, self.username, self.password)
+        self.ssh = ssh
+
+    def run_script(self, template_path: str, job_name: str, **kwargs):
+        # Render any Jinja template with arbitrary parameters
+        env = Environment(loader=FileSystemLoader(os.path.dirname(template_path)))
+        template = env.get_template(os.path.basename(template_path))
+        rendered = template.render(**kwargs)
+
+        # Upload to remote
+        remote_script = os.path.join(self.remote_script_dir, f"{job_name}.sh")
+        sftp = self.ssh.open_sftp()
+        try:
+            with sftp.file(remote_script, "w") as f:
+                f.write(rendered)
+            sftp.chmod(remote_script, 0o755)
+        finally:
+            sftp.close()
+
+        # Submit via sbatch
+        cmd = f"cd {self.remote_script_dir} && sbatch {job_name}.sh"
+        stdin, stdout, stderr = self.ssh.exec_command(cmd)
+        return stdout.read().decode(), stderr.read().decode()
+
+    def close(self):
+        if self.ssh:
+            self.ssh.close()
+            self.ssh = None
+
+
+            
