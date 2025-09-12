@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create or Import Copick Projects</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .form-container {
+      max-width: 800px;
+      margin: auto;
+      padding: 30px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      background-color: white;
+      margin-bottom: 40px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #34495e;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+      margin-top: 30px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }
+    input[readonly] {
+      background-color: #f8f9fa;
+      color: #6c757d;
+    }
+    button {
+      padding: 12px 24px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-size: 16px;
+      font-weight: bold;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    button.secondary {
+      background-color: #45a049;
+    }
+    button.secondary:hover {
+      background-color: #2980b9;
+    }
+    button.import {
+      background-color: #e67e22;
+    }
+    button.import:hover {
+      background-color: #d35400;
+    }
+    .go-back {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 8px 14px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+      z-index: 1000;
+      margin: 0;
+    }
+    .go-back:hover {
+      background-color: #1e88e5;
+    }
+    .note {
+      color: red;
+      font-weight: bold;
+      margin-bottom: 20px;
+      background-color: #fff5f5;
+      padding: 10px;
+      border-left: 4px solid #e74c3c;
+      border-radius: 4px;
+    }
+    .loading-indicator {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      z-index: 2000;
+      display: none;
+    }
+    .status-message {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+      display: none;
+      font-weight: bold;
+    }
+    .status-success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status-error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .divider {
+      margin: 30px 0 20px 0;
+      border: none;
+      height: 1px;
+      background-color: #bdc3c7;
+      position: relative;
+    }
+    .divider::before {
+      content: attr(data-text);
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      background-color: white;
+      padding: 0 10px;
+      color: #7f8c8d;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .form-row-three {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .form-row, .form-row-three {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .info-icon {
+      display: inline-block;
+      margin-left: 5px;
+      width: 20px;
+      height: 20px;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+
+    .tooltip {
+      position: absolute;
+      top: 30px; /* below the icon */
+      right: 0;
+      background: #333;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none; /* don't block mouse unless shown */
+    }
+
+    .info-icon:hover + .tooltip {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+  </style>
+</head>
+<body>
+  <button class="go-back" onclick="goBack()">Go back to the startup page</button>
+  
+  <div class="loading-indicator" id="loadingIndicator">
+    Processing...
+  </div>
+
+  <div class="form-container">
+    <h1>Create or Import Copick Projects</h1>
+    <p class="note">Note: User credentials are SSH credentials for Bruno.</p>
+    
+    <!-- User Authentication Section -->
+    <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="text" id="userId" required readonly value="demo_user"/>
+    </div>
+    
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" required placeholder="Enter your password"/>
+    </div>
+
+    <!-- Create Copick Project Section -->    
+    <div class="section-header">
+        <h2>
+            Create a Copick Project
+            <span class="info-icon">i</span>
+            <div class="tooltip">Create a copick project with tomograms</div>
+        </h2>
+    </div>
+
+    <div class="form-row">
+    <div class="form-group">
+        <label for="copickSession">New Copick Session for: </label>
+        <select id="copickSession" required>
+        <option value="">Select an MSI session...</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="copickRun">Copick Run:</label>
+        <input type="text" id="copickRun" required placeholder="Enter copick run identifier"/>
+    </div>
+    </div>
+
+    <div class="form-row">
+    <div class="form-group">
+        <label for="tomoType">Tomogram Type:</label>
+        <select id="tomoType" required>
+        <option value="">Select tomogram type...</option>
+        <option value="dctf">DCTF</option>
+        <option value="wbp">WBP</option>
+        <option value="sart">SART</option>
+        <option value="denoise">Denoise</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="tomogramRun">Tomogram Run:</label>
+        <input type="text" id="tomogramRun" required placeholder="run001" value="run001"/>
+    </div>
+    </div>
+
+    <button type="button" onclick="createCopickProject()" id="createButton">Create Copick Project</button>
+
+    <!-- Add Pickable Objects Section -->
+    <div class="section-header">
+      <h2>
+        Add Pickable Objects
+        <span class="info-icon">i</span>
+        <div class="tooltip">Add pickable objects to an existing copick project</div>
+    </h2>
+    </div>
+
+    <div class="form-row-three">
+      <div class="form-group">
+        <label for="objCopickSession">Copick Session:</label>
+        <input type="text" id="objCopickSession" placeholder="Enter copick session name"/>
+      </div>
+      
+      <div class="form-group">
+        <label for="objCopickRun">Copick Run:</label>
+        <input type="text" id="objCopickRun" placeholder="Enter copick run identifier"/>
+      </div>
+      
+      <div class="form-group">
+        <label for="objectName">Object Name:</label>
+        <input type="text" id="objectName" placeholder="Enter object name"/>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="diameter">Diameter (Å):</label>
+        <input type="number" id="diameter" step="0.1" min="0" placeholder="e.g. 150.0"/>
+      </div>
+      
+      <div class="form-group">
+        <label for="objectMap">(Optional) Object Map:</label>
+        <input type="text" id="objectMap" placeholder="Enter object map reference"/>
+      </div>
+    </div>
+    
+    <button type="button" onclick="addPickableObject()" id="addObjectButton" class="secondary">Add Pickable Object</button>
+
+    <!-- Import more tomograms Section -->
+    <div class="section-header">
+      <h2>
+        Import More Tomograms
+        <span class="info-icon">i</span>
+        <div class="tooltip">Import more tomograms to an existing copick project</div>
+      </h2>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="importCopickSession">Copick Session:</label>
+        <input type="text" id="importCopickSession" placeholder="Enter copick session name"/>
+      </div>
+      
+      <div class="form-group">
+        <label for="importCopickRun">Copick Run:</label>
+        <input type="text" id="importCopickRun" placeholder="Enter copick run identifier"/>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="importTomoType">Tomo Type:</label>
+        <select id="importTomoType" required>
+          <option value="">Select tomo type...</option>
+          <option value="dctf">DCTF</option>
+          <option value="wbp">WBP</option>
+          <option value="sart">SART</option>
+          <option value="denoise">Denoise</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="importTomogramRun">Tomogram Run:</label>
+        <input type="text" id="importTomogramRun" required placeholder="run001" value="run001"/>
+      </div>
+    </div>
+
+  <script>
+    // Initialize user info
+    function initializeUserInfo() {
+      const userId = "demo_user";
+      document.getElementById("userId").value = userId;
+    }
+
+        // Populate the session dropdown with session names.
+    async function populateSessionDropdown() {
+      const url = "/workflow/get_msi_session_list";
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          credentials: "same-origin", 
+        });
+        const responseText = await response.text();
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status} | Body: ${responseText}`);
+        }
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (jsonErr) {
+          console.error("JSON parse error:", jsonErr);
+          throw new Error("Failed to parse JSON. Response was: " + responseText);
+        }
+        if (!result.session_names) {
+          console.error("No 'session_names' found in result:", result);
+          throw new Error("Missing session_names in response JSON.");
+        }
+        const sessionNamesList = document.getElementById("copickSession");
+        sessionNamesList.innerHTML = "";
+        result.session_names.forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          sessionNamesList.appendChild(option);
+        });
+      } catch (error) {
+        console.error("Error while fetching session names:", error);
+        alert("Failed to fetch session names. " + error.message);
+      }
+    }
+
+
+    // Auto-sync fields when copick project fields change
+    function attachFieldSyncListeners() {
+      const copickSession = document.getElementById("copickSession");
+      const copickRun = document.getElementById("copickRun");
+      const objCopickSession = document.getElementById("objCopickSession");
+      const objCopickRun = document.getElementById("objCopickRun");
+      const importCopickSession = document.getElementById("importCopickSession");
+      const importCopickRun = document.getElementById("importCopickRun");
+
+      copickSession.addEventListener("input", () => {
+        if (!objCopickSession.value) {
+          objCopickSession.value = copickSession.value;
+        }
+        if (!importCopickSession.value) {
+          importCopickSession.value = copickSession.value;
+        }
+      });
+
+      copickRun.addEventListener("input", () => {
+        if (!objCopickRun.value) {
+          objCopickRun.value = copickRun.value;
+        }
+        if (!importCopickRun.value) {
+          importCopickRun.value = copickRun.value;
+        }
+      });
+    }
+
+    // Create Copick Project
+    async function createCopickProject() {
+      const userId = document.getElementById("userId").value;
+      const password = document.getElementById("password").value;
+      const copickSession = document.getElementById("copickSession").value;
+      const copickRun = document.getElementById("copickRun").value;
+      const tomoType = document.getElementById("tomoType").value;
+      const tomogramRun = document.getElementById("tomogramRun").value;
+      const tomogramVoxelSize = document.getElementById("tomogramVoxelSize").value;
+
+      // Validation
+      if (!userId || !password || !copickSession || !copickRun || !tomoType || !tomogramRun || !tomogramVoxelSize) {
+        showStatusMessage("Please fill in all required fields for Copick Project creation.", "error");
+        return;
+      }
+
+      // Validate voxel size
+      const voxelSize = parseFloat(tomogramVoxelSize);
+      if (isNaN(voxelSize) || voxelSize <= 0) {
+        showStatusMessage("Please enter a valid voxel size greater than 0.", "error");
+        return;
+      }
+
+      showLoadingIndicator("Creating Copick Project...");
+      disableForm(true);
+
+      try {
+        const projectData = {
+          user_id: userId,
+          password: btoa(password),
+          copick_session: copickSession,
+          copick_run: copickRun,
+          tomo_type: tomoType,
+          tomogram_run: tomogramRun
+        };
+
+        await simulateCopickProjectCreation(projectData);
+        
+        hideLoadingIndicator();
+        disableForm(false);
+        showStatusMessage("Copick project created successfully!", "success");
+        
+      } catch (error) {
+        hideLoadingIndicator();
+        disableForm(false);
+        showStatusMessage("Failed to create Copick project: " + error.message, "error");
+      }
+    }
+
+    // Add Pickable Object
+    async function addPickableObject() {
+      const objCopickSession = document.getElementById("objCopickSession").value;
+      const objCopickRun = document.getElementById("objCopickRun").value;
+      const objectName = document.getElementById("objectName").value;
+      const diameter = document.getElementById("diameter").value;
+      const objectMap = document.getElementById("objectMap").value;
+
+      // Validation
+      if (!objCopickSession || !objCopickRun || !objectName || !diameter) {
+        showStatusMessage("Please fill in all required fields for adding pickable object (object map is optional).", "error");
+        return;
+      }
+
+      // Validate diameter
+      const diameterValue = parseFloat(diameter);
+      if (isNaN(diameterValue) || diameterValue <= 0) {
+        showStatusMessage("Please enter a valid diameter greater than 0.", "error");
+        return;
+      }
+
+      showLoadingIndicator("Adding Pickable Object...");
+      disableForm(true);
+
+      try {
+        const objectData = {
+          copick_session: objCopickSession,
+          copick_run: objCopickRun,
+          object_name: objectName,
+          diameter: diameterValue,
+          object_map: objectMap || null
+        };
+
+        await simulateAddPickableObject(objectData);
+        
+        hideLoadingIndicator();
+        disableForm(false);
+        showStatusMessage("Pickable object added successfully!", "success");
+        
+        // Clear the pickable object form after successful addition
+        clearPickableObjectForm();
+        
+      } catch (error) {
+        hideLoadingIndicator();
+        disableForm(false);
+        showStatusMessage("Failed to add pickable object: " + error.message, "error");
+      }
+    }
+
+    // Import Tomograms
+    async function importTomograms() {
+      const userId = document.getElementById("userId").value;
+      const password = document.getElementById("password").value;
+      const importCopickSession = document.getElementById("importCopickSession").value;
+      const importCopickRun = document.getElementById("importCopickRun").value;
+      const importTomoType = document.getElementById("importTomoType").value;
+      const importTomogramRun = document.getElementById("importTomogramRun").value;
+      const importTomogramVoxelSize = document.getElementById("importTomogramVoxelSize").value;
+
+      // Validation
+      if (!userId || !password || !importCopickSession || !importCopickRun || !importTomoType || !importTomogramRun || !importTomogramVoxelSize) {
+        showImportStatusMessage("Please fill in all required fields for importing tomograms.", "error");
+        return;
+      }
+
+      // Validate voxel size
+      const voxelSize = parseFloat(importTomogramVoxelSize);
+      if (isNaN(voxelSize) || voxelSize <= 0) {
+        showImportStatusMessage("Please enter a valid voxel size greater than 0.", "error");
+        return;
+      }
+
+      showLoadingIndicator("Importing Tomograms...");
+      disableForm(true);
+
+      try {
+        const importData = {
+          user_id: userId,
+          password: btoa(password),
+          copick_session: importCopickSession,
+          copick_run: importCopickRun,
+          tomo_type: importTomoType,
+          tomogram_run: importTomogramRun,
+          tomogram_voxel_size: voxelSize
+        };
+
+        await simulateImportTomograms(importData);
+        
+        hideLoadingIndicator();
+        disableForm(false);
+        showImportStatusMessage("Tomograms imported successfully!", "success");
+        
+        // Clear the import form after successful import
+        clearImportForm();
+        
+      } catch (error) {
+        hideLoadingIndicator();
+        disableForm(false);
+        showImportStatusMessage("Failed to import tomograms: " + error.message, "error");
+      }
+    }
+
+    // Mock API functions
+    async function simulateCopickProjectCreation(projectData) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log("Creating Copick project with data:", projectData);
+      
+      if (Math.random() > 0.15) {
+        return { project_id: "copick_" + Date.now(), status: "created" };
+      } else {
+        throw new Error("Simulated API failure - project creation failed");
+      }
+    }
+
+    async function simulateAddPickableObject(objectData) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log("Adding pickable object with data:", objectData);
+      
+      if (Math.random() > 0.1) {
+        return { object_id: "obj_" + Date.now(), status: "added" };
+      } else {
+        throw new Error("Simulated API failure - object addition failed");
+      }
+    }
+
+    // NEW MOCK FUNCTION for import tomograms
+    async function simulateImportTomograms(importData) {
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      console.log("Importing tomograms with data:", importData);
+      
+      if (Math.random() > 0.12) {
+        return { import_id: "import_" + Date.now(), status: "imported", count: Math.floor(Math.random() * 10) + 1 };
+      } else {
+        throw new Error("Simulated API failure - tomogram import failed");
+      }
+    }
+
+    // Utility functions
+    function showLoadingIndicator(message = "Processing...") {
+      const indicator = document.getElementById("loadingIndicator");
+      indicator.textContent = message;
+      indicator.style.display = "block";
+    }
+
+    function hideLoadingIndicator() {
+      document.getElementById("loadingIndicator").style.display = "none";
+    }
+
+    function disableForm(disabled) {
+      const inputs = document.querySelectorAll('input:not([readonly]), select, button:not(.go-back)');
+      inputs.forEach(input => {
+        input.disabled = disabled;
+      });
+    }
+
+    function showStatusMessage(message, type) {
+      const statusDiv = document.getElementById("statusMessage");
+      statusDiv.textContent = message;
+      statusDiv.className = `status-message status-${type}`;
+      statusDiv.style.display = "block";
+      
+      if (type === "success") {
+        setTimeout(() => {
+          statusDiv.style.display = "none";
+        }, 5000);
+      }
+    }
+
+    // NEW FUNCTION for import status messages
+    function showImportStatusMessage(message, type) {
+      const statusDiv = document.getElementById("importStatusMessage");
+      statusDiv.textContent = message;
+      statusDiv.className = `status-message status-${type}`;
+      statusDiv.style.display = "block";
+      
+      if (type === "success") {
+        setTimeout(() => {
+          statusDiv.style.display = "none";
+        }, 5000);
+      }
+    }
+
+    function clearPickableObjectForm() {
+      document.getElementById("objectName").value = "";
+      document.getElementById("diameter").value = "";
+      document.getElementById("objectMap").value = "";
+      // Keep copick session and run fields populated for convenience
+    }
+
+    // NEW FUNCTION to clear import form
+    function clearImportForm() {
+      document.getElementById("importTomogramRun").value = "run001";
+      document.getElementById("importTomogramVoxelSize").value = "";
+      document.getElementById("importTomoType").value = "";
+      // Keep copick session and run fields populated for convenience
+    }
+
+    function goBack() {
+      alert("Navigating back to startup page...");
+      // In real implementation: window.location.href = "/umbrella";
+    }
+
+    // Initialize the page
+    document.addEventListener("DOMContentLoaded", () => {
+      try {
+        initializeUserInfo();
+        attachFieldSyncListeners();
+      } catch (error) {
+        console.error("Error during initialization:", error);
+        showStatusMessage("Error during page initialization", "error");
+      }
+    });
+  </script>
+</body>
+</html>
