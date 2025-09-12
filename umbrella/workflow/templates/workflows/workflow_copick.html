@@ -707,6 +707,7 @@
       (async () => {
         try {
           await fetchUserInfo();
+          await populateSessionDropdown();
           attachFieldSyncListeners();
         } catch (error) {
           console.error("Error during initialization:", error);

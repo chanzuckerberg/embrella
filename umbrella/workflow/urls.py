@@ -8,6 +8,7 @@ urlpatterns = [
     path("run", views.custom_run_workflow_page, name='custom_run_workflow_page'),
     path("", views.custom_workflow_page, name='custom_workflow'),
     path("denoiset_run", views.cutom_run_denoise_workflow_page, name="custom_denoise_workflow"),
+    path("copick_run", views.cutom_run_create_and_import_copick_page, name="custom_copick_workflow"),
     path("cancel", views.custom_workflow_cancel, name='cancle workflow jobs'),
     path("track", views.custom_workflow_track, name='track workflow jobs'),
     path("logs", views.custom_workflow_logs, name='job logs'),

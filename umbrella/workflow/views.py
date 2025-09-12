@@ -555,6 +555,9 @@ def custom_run_workflow_page(request):
 def cutom_run_denoise_workflow_page(request):
     return render(request, 'workflows/workflow_denoise_run.html')
 
+def cutom_run_create_and_import_copick_page(request):
+    return render(request, 'workflows/workflow_copick.html')
+
 def custom_workflow_cancel(request):
     return render(request, 'workflows/workflow_cancel.html')
 
