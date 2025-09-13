@@ -362,6 +362,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@babel/runtime@npm:^7.23.2, @babel/runtime@npm:^7.26.0":
+  version: 7.28.4
+  resolution: "@babel/runtime@npm:7.28.4"
+  checksum: 10c0/792ce7af9750fb9b93879cc9d1db175701c4689da890e6ced242ea0207c9da411ccf16dc04e689cc01158b28d7898c40d75598f4559109f761c12ce01e959bf7
+  languageName: node
+  linkType: hard
+
 "@babel/template@npm:^7.27.1, @babel/template@npm:^7.3.3":
   version: 7.27.2
   resolution: "@babel/template@npm:7.27.2"
@@ -1917,6 +1924,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanem/svg-injector@npm:^10.1.68":
+  version: 10.1.68
+  resolution: "@tanem/svg-injector@npm:10.1.68"
+  dependencies:
+    "@babel/runtime": "npm:^7.23.2"
+    content-type: "npm:^1.0.5"
+    tslib: "npm:^2.6.2"
+  checksum: 10c0/ce94ccf666a2e1706c96ca174c53cd4bec34ade75b7f05f7193be73c1057062217c97a0b8afbd28d2a882c443b842742d51ee43f69f462425219589ad1f7c2f8
+  languageName: node
+  linkType: hard
+
 "@tanstack/react-table@npm:^8.20.5":
   version: 8.21.3
   resolution: "@tanstack/react-table@npm:8.21.3"
@@ -2241,6 +2259,13 @@ __metadata:
   version: 15.7.14
   resolution: "@types/prop-types@npm:15.7.14"
   checksum: 10c0/1ec775160bfab90b67a782d735952158c7e702ca4502968aa82565bd8e452c2de8601c8dfe349733073c31179116cf7340710160d3836aa8a1ef76d1532893b1
+  languageName: node
+  linkType: hard
+
+"@types/prop-types@npm:^15.7.14":
+  version: 15.7.15
+  resolution: "@types/prop-types@npm:15.7.15"
+  checksum: 10c0/b59aad1ad19bf1733cf524fd4e618196c6c7690f48ee70a327eb450a42aab8e8a063fbe59ca0a5701aebe2d92d582292c0fb845ea57474f6a15f6994b0e260b2
   languageName: node
   linkType: hard
 
@@ -3673,6 +3698,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"content-type@npm:^1.0.5":
+  version: 1.0.5
+  resolution: "content-type@npm:1.0.5"
+  checksum: 10c0/b76ebed15c000aee4678c3707e0860cb6abd4e680a598c0a26e17f0bfae723ec9cc2802f0ff1bc6e4d80603719010431d2231018373d4dde10f9ccff9dadf5af
+  languageName: node
+  linkType: hard
+
 "convert-source-map@npm:^1.5.0":
   version: 1.9.0
   resolution: "convert-source-map@npm:1.9.0"
@@ -3787,6 +3819,7 @@ __metadata:
     react-dom: "npm:^18.3.1"
     react-hotkeys-hook: "npm:^5.1.0"
     react-json-view: "npm:^1.21.3"
+    react-svg: "npm:^16.3.0"
     react-window: "npm:^1.8.11"
     stylelint: "npm:^15.11.0"
     stylelint-config-recommended: "npm:^13.0.0"
@@ -9225,6 +9258,21 @@ __metadata:
   version: 3.0.4
   resolution: "react-lifecycles-compat@npm:3.0.4"
   checksum: 10c0/1d0df3c85af79df720524780f00c064d53a9dd1899d785eddb7264b378026979acbddb58a4b7e06e7d0d12aa1494fd5754562ee55d32907b15601068dae82c27
+  languageName: node
+  linkType: hard
+
+"react-svg@npm:^16.3.0":
+  version: 16.3.0
+  resolution: "react-svg@npm:16.3.0"
+  dependencies:
+    "@babel/runtime": "npm:^7.26.0"
+    "@tanem/svg-injector": "npm:^10.1.68"
+    "@types/prop-types": "npm:^15.7.14"
+    prop-types: "npm:^15.8.1"
+  peerDependencies:
+    react: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 10c0/76fb8a813091951755cd7771674492f4a0faed0074aa3b175635f93b7cd38e9ca85ddff22426613f7dce52e22c9aed8602ed1f04ec17426cbed9f97cb2063256
   languageName: node
   linkType: hard
 

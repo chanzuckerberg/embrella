@@ -11,36 +11,35 @@ import {
   Card,
   CardContent,
   CardActionArea,
+  Button,
 } from '@mui/material';
+import { PuckSVG } from './PuckSVG';
 
 interface PuckSelectorProps {
   selectedUser: UsersList | null;
   onPuckSelect: (puck: PucksList | null) => void;
+  onSlotSelect?: (puck: PucksList, slotPosition: number) => void;
   selectedPuck: PucksList | null;
+  onAddPuck?: () => void;
 }
 
 export const PuckListed: React.FC<PuckSelectorProps> = ({
   selectedUser,
   onPuckSelect,
+  onSlotSelect,
   selectedPuck,
+  onAddPuck,
 }) => {
   const { pucks, isSuccess } = useGridLoggingPucksByUser(selectedUser?.id);
-  console.log('pucks', pucks, selectedUser?.id);
-  
-  // Extract pucks array from the response object
   const pucksList: PucksList[] = pucks?.pucks || [];
 
-  console.log('pucksList', pucksList);
-
-  // Handle puck selection
-  const handlePuckChange = (puckId: string) => {
-    const puck = pucksList.find(p => String(p.id) === String(puckId));
-    onPuckSelect(puck || null);
-  };
-
-  // Handle puck card click
   const handlePuckCardClick = (puck: PucksList) => {
     onPuckSelect(puck);
+  };
+
+  const handleSlotClick = (puck: PucksList, slotPosition: number) => {
+    console.log(`Slot ${slotPosition} clicked on puck ${puck.name}`);
+    onSlotSelect?.(puck, slotPosition);
   };
 
   if (!selectedUser) {
@@ -55,19 +54,44 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({
 
   return (
     <Box>
-      {/* Pucks Grid Display */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Available Pucks
+      {/* Header with Add Puck Button */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 3 
+      }}>
+        <Typography variant="h6">
+          Pucks
         </Typography>
-        
-        <Grid container spacing={2}>
+        {onAddPuck && (
+          <Button
+            variant="contained"
+            startIcon={<span style={{ fontSize: '18px' }}>+</span>}
+            onClick={onAddPuck}
+            sx={{
+              backgroundColor: '#20b2aa',
+              '&:hover': {
+                backgroundColor: '#1a9b94',
+              },
+            }}
+          >
+            Add puck
+          </Button>
+        )}
+      </Box>
+
+      {/* Pucks Grid Display with Interactive SVG */}
+      <Box sx={{ mb: 3 }}>
+        <Grid container spacing={3} justifyContent="center">
           {pucksList.map((puck) => (
-            <Grid item xs={12} sm={6} md={4} key={puck.id}>
+            <Grid item key={puck.id}>
               <Card 
                 elevation={selectedPuck?.id === puck.id ? 4 : 1}
                 sx={{ 
                   border: selectedPuck?.id === puck.id ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                  borderRadius: '12px',
+                  overflow: 'visible',
                   '&:hover': { 
                     boxShadow: 3,
                     transform: 'translateY(-2px)',
@@ -76,18 +100,26 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({
                 }}
               >
                 <CardActionArea onClick={() => handlePuckCardClick(puck)}>
-                  <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <CardContent sx={{ 
+                    textAlign: 'center', 
+                    py: 3,
+                    px: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                  }}>
+                    <PuckSVG 
+                      puck={puck}
+                      size={180}
+                      onClick={() => handlePuckCardClick(puck)}
+                      onSlotClick={(slotPosition) => handleSlotClick(puck, slotPosition)}
+                      isSelected={selectedPuck?.id === puck.id}
+                    />
                     <Typography 
-                      variant="h6" 
-                      component="div" 
-                      sx={{ 
-                        fontWeight: 'bold',
-                        color: selectedPuck?.id === puck.id ? '#1976d2' : '#333'
-                      }}
+                      variant="caption" 
+                      color="text.secondary" 
+                      sx={{ mt: 1, display: 'block' }}
                     >
-                      {puck.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                       Position in Cane: {puck.position_in_cane} | Max Boxes: {puck.max_boxes}
                     </Typography>
                   </CardContent>
