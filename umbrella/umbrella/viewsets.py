@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from rest_framework.decorators import action
 from cryo_grids.models import Puck, CryoGridBox, CryoGrid
-from .serializers import UserSerializer, PuckSerializer
+from .serializers import UserSerializer, PuckSerializer, GridDetailsSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -245,4 +245,51 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({
             "error": str(e)
             }, status=500)
-   
+
+
+    @action(detail=True, methods=['get'], url_path='grid-box/(?P<position_in_puck>[0-9]+)/grid/(?P<grid_id>[0-9]+)')
+    def grid_details(self, request, pk=None, position_in_puck=None, grid_id=None):
+        """
+        Get detailed information about a specific grid - matches your Grid Details form exactly
+        URL: /api/list/pucks/{puck_id}/grid-box/{position_in_puck}/grid/{grid_id}/
+        """
+        try:
+            puck = self.get_object()
+            
+            # Get the grid box at the specified position
+            try:
+                grid_box = CryoGridBox.objects.get(
+                    puck=puck, 
+                    position_in_puck=position_in_puck
+                )
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    "error": "Grid box not found at the specified position"
+                }, status=404)
+            
+            # Get the specific grid with all related data
+            try:
+                grid = CryoGrid.objects.select_related(
+                    'user', 'grid_box', 'specimen', 'freezing_session', 'intended_project'
+                ).prefetch_related(
+                    'specimen__samples'
+                ).get(
+                    id=grid_id,
+                    grid_box=grid_box,
+                    trashed=False
+                )
+            except CryoGrid.DoesNotExist:
+                return Response({
+                    "error": "Grid not found"
+                }, status=404)
+            
+            # Use the serializer to get data that matches your UI form exactly
+            serializer = GridDetailsSerializer(grid, context={'request': request})
+            
+            return Response(serializer.data)
+            
+        except Exception as e:
+            return Response({
+                "error": "Failed to fetch grid details",
+                "detail": str(e) if settings.DEBUG else "Please try again later"
+            }, status=500)
