@@ -75,7 +75,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
         </Box>
         
         {/* Display selected slot information */}
-        {selectedSlot && (
+        {/* {selectedSlot && (
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'center', 
@@ -100,7 +100,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
               }}
             />
           </Box>
-        )}
+        )} */}
       </CardContent>
     </Card>
   );
