@@ -13,7 +13,7 @@ import {
   CardActionArea,
   Button,
 } from '@mui/material';
-import { PuckSVG } from './PuckSVG';
+import { PuckSVG } from './PuckSvg';
 
 interface PuckSelectorProps {
   selectedUser: UsersList | null;
