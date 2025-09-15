@@ -136,7 +136,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
       </Box>
 
       {/* Bottom Section - Grid Box Information */}
-      {selectedSlot && selectedPuck && (
+      {/* {selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
           <GridBoxInfo
             selectedPuck={selectedPuck}
@@ -145,7 +145,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
             onAddGridBox={handleAddGridBox}
           />
         </Box>
-      )}
+      )} */}
     </Box>
   );
 };
