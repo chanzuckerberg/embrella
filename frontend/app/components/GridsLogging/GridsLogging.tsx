@@ -8,6 +8,7 @@ import { PucksList } from '@app/common/types/gridLogging/puckList';
 import styles from './GridLogging.module.css';
 import { PuckListed } from './PuckListed';
 import { PuckDetails } from './PuckDetails';
+import { GridBoxInfo } from './GridBoxInfo';
 import { 
   Card, 
   CardContent, 
@@ -20,7 +21,6 @@ import {
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 
-
 interface GridsLoggingProps {
   onAddPuck?: () => void;
 }
@@ -31,6 +31,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
 
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
   const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const { users, isSuccess } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
   
@@ -52,31 +53,50 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
   const handleUserChange = (userId: string) => {
     const user = usersList.find(u => String(u.id) === String(userId));
     setSelectedUser(user || null);
-      // Reset selected puck when user changes
-      setSelectedPuck(null);
+    // Reset selected puck and slot when user changes
+    setSelectedPuck(null);
+    setSelectedSlot(null);
   };
-  const handleAddPuck=()=>{
+
+  const handleAddPuck = () => {
     // Redirect to Django admin puck creation page
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/add/`;
     window.open(adminUrl, '_blank');
   }
  
-  
   const handlePuckSelect = (puck: PucksList | null) => {
     setSelectedPuck(puck);
+    // Reset selected slot when puck changes
+    setSelectedSlot(null);
   };
+
+  const handleSlotSelect = (slotPosition: number) => {
+    setSelectedSlot(slotPosition);
+  };
+
+  const handleCloseSlotDetails = () => {
+    setSelectedSlot(null);
+  };
+
+  const handleAddGridBox = () => {
+    // Add grid box logic
+    console.log('Adding grid box to slot:', selectedSlot);
+  };
+
   return (
-    <Box className={`${styles.cardContainer} ${selectedPuck ? styles.withPuckSelected : ''}`}>
-      <Card elevation={2} className={styles.leftCard}>
-        <CardHeader title="Pucks" />
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 7, flexGrow: 1 }}>
+    <Box className={styles.mainContainer}>
+      {/* Top Section - Puck List and Puck Details */}
+      <Box className={styles.topSection}>
+        <Card elevation={2} className={styles.leftCard}>
+          <CardHeader title="Pucks" />
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4, flexGrow: 1 }}>
               <FormControl variant="outlined" size="small" sx={{ minWidth: 300 }}>
-              <Select
-                value={selectedUser?.id || ''}
-                onChange={(e) => handleUserChange(String(e.target.value))}
-                displayEmpty
-            >
+                <Select
+                  value={selectedUser?.id || ''}
+                  onChange={(e) => handleUserChange(String(e.target.value))}
+                  displayEmpty
+                >
                   <MenuItem value="" disabled><em>Select User</em></MenuItem>
                   {usersList.map((user) => (
                     <MenuItem key={user.id} value={String(user.id)}>
@@ -85,30 +105,47 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
                   ))}
                 </Select>
               </FormControl>
-          </Box>
-           {/* Puck Selector Component */}
-           <PuckListed
-            selectedUser={selectedUser}
-            onPuckSelect={handlePuckSelect}
+            </Box>
+            {/* Puck Selector Component */}
+            <PuckListed
+              selectedUser={selectedUser}
+              onPuckSelect={handlePuckSelect}
+              selectedPuck={selectedPuck}
+            />
+            <Button
+              sdsType="primary"
+              sdsStyle="rounded"
+              startIcon={<Icon sdsIcon="Plus" sdsSize="s"/>}
+              onClick={handleAddPuck}
+              sx={{ marginTop: '10px' }}
+            >
+              Add puck
+            </Button>
+          </CardContent>
+        </Card>
+        
+        {/* Puck Details Component - appears on the right when a puck is selected */}
+        {selectedPuck && (
+          <PuckDetails 
             selectedPuck={selectedPuck}
+            onAddGridBox={handleAddGridBox}
+            onSlotSelect={handleSlotSelect}
+            selectedSlot={selectedSlot}
           />
-           <Button
-           sdsType="primary"
-           sdsStyle="rounded"
-           startIcon={<Icon sdsIcon="Plus" sdsSize="s"/>}
-           onClick={handleAddPuck}
-           sx={{ marginTop: '10px' }}
-           >
-             Add puck
-           </Button>
-        </CardContent>
-      </Card>
-      
-      {/* Puck Details Component - appears on the right when a puck is selected */}
-      <PuckDetails 
-        selectedPuck={selectedPuck}
-        onAddGridBox={() => {}}
-      />
+        )}
+      </Box>
+
+      {/* Bottom Section - Grid Box Information */}
+      {selectedSlot && selectedPuck && (
+        <Box className={styles.bottomSection}>
+          <GridBoxInfo
+            selectedPuck={selectedPuck}
+            selectedSlot={selectedSlot}
+            onClose={handleCloseSlotDetails}
+            onAddGridBox={handleAddGridBox}
+          />
+        </Box>
+      )}
     </Box>
   );
 };
