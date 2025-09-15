@@ -543,10 +543,10 @@
             </td>
             <td>
             </td>
-            <td>
+            <!-- <td>
               <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
               <p>Manage annotations</p>
-            </td>
+            </td> -->
           </tr>
         </table>
       </div>
@@ -575,8 +575,9 @@
         <h2>Post-processing</h2>
         <table class="table" style="table-layout: fixed;">
           <tr>
-            <th style="width: 50%;">Copick</th>
-            <th style="width: 50%;">MembraneSeg</th>
+            <th style="width:33%;">Copick</th>
+            <th style="width:33%;">MembraneSeg</th>
+            <th style="width:34%;">Octopi</th>
           </tr>
           <tr>
             <td>
@@ -587,8 +588,14 @@
               <a href="/workflow/membraneseg_run" class="button">MembraneSeg</a>
               <p>Run MembraneSeg</p>
             </td>
+            <td>
+              <a href="/workflow/octopi_run" class="button">Octopi</a>
+              <p>Pick with Octopi</p>
+            </td>
           </tr>
+        </table>
         </table> <!-- close Post-processing table -->   
+        
       </div>
     </div>
 

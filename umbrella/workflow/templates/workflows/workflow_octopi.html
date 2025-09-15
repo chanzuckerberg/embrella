@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create or Import Copick Projects</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .form-container {
+      max-width: 800px;
+      margin: auto;
+      padding: 30px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      background-color: white;
+      margin-bottom: 40px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #34495e;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+      margin-top: 30px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }
+    input[readonly] {
+      background-color: #f8f9fa;
+      color: #6c757d;
+    }
+    button {
+      padding: 12px 24px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-size: 16px;
+      font-weight: bold;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    button.secondary {
+      background-color: #45a049;
+    }
+    button.secondary:hover {
+      background-color: #2980b9;
+    }
+    button.import {
+      background-color: #e67e22;
+    }
+    button.import:hover {
+      background-color: #d35400;
+    }
+    .go-back {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 8px 14px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+      z-index: 1000;
+      margin: 0;
+    }
+    .go-back:hover {
+      background-color: #1e88e5;
+    }
+    .note {
+      color: #2c3e50;
+      font-weight: bold;
+      margin-bottom: 20px;
+      background-color: #f9f9d6; /* Light yellow */
+      padding: 10px;
+      border-left: 4px solid #f1c40f; /* Yellow border */
+      border-radius: 4px;
+    }
+    .loading-indicator {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      z-index: 2000;
+      display: none;
+    }
+    .status-message {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+      display: none;
+      font-weight: bold;
+    }
+    .status-success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status-error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .divider {
+      margin: 30px 0 20px 0;
+      border: none;
+      height: 1px;
+      background-color: #bdc3c7;
+      position: relative;
+    }
+    .divider::before {
+      content: attr(data-text);
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      background-color: white;
+      padding: 0 10px;
+      color: #7f8c8d;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .form-row-three {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 768px) {
+      .form-row, .form-row-three {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .info-icon {
+      display: inline-block;
+      margin-left: 5px;
+      width: 20px;
+      height: 20px;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+
+    .tooltip {
+      position: absolute;
+      top: 30px; /* below the icon */
+      right: 0;
+      background: #333;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none; /* don't block mouse unless shown */
+    }
+
+    .info-icon:hover + .tooltip {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+  </style>
+</head>
+
+
+<body>
+  <button class="go-back" onclick="goBack()">Go back to the startup page</button>
+  
+  <div class="form-container">
+    <h1>Run</h1>
+    <div class="note">
+      Note: Please create copick projects before running this workflow.
+    </div>
+    <!-- User Authentication Section -->
+    <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="text" id="userId" required readonly value="demo_user"/>
+    </div>
+    
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" required placeholder="Enter your password"/>
+    </div>
+
+    <!-- Create Copick Project Section -->    
+    <div class="section-header">
+        <h2>
+            Train Octopi
+            <span class="info-icon">i</span>
+            <div class="tooltip">Train an Octopi model using Copick picks and tomograms</div>
+        </h2>
+    </div>
+  </div> <!-- close .form-container -->
+
+
+
+  <script>
+    function goBack() {
+      window.location.href = "/umbrella";
+    }
+
+    // Initialize user info
+    async function fetchUserInfo() {
+      try {
+        const response = await fetch("/workflow/user_info");
+        const result = await response.json();
+        if (response.ok && result.username) {
+          document.getElementById("userId").value = result.username;
+          document.getElementById("cancelUserId").value = result.username;
+        } else {
+          alert("Failed to fetch user info.");
+        }
+      } catch (error) {
+        console.error("An error occurred while fetching user info:", error);
+        alert("An error occurred while fetching user info.");
+      }
+    }
+  </script>
+</body>
