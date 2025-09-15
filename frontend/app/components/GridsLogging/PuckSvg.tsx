@@ -11,6 +11,7 @@ interface PuckSVGProps {
   onClick?: () => void;
   onSlotClick?: (slotPosition: number) => void;
   isSelected?: boolean;
+  disableSlotClick?: boolean;
 }
 
 export const PuckSVG: React.FC<PuckSVGProps> = ({ 
@@ -19,7 +20,8 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
   size = 200, 
   onClick, 
   onSlotClick,
-  isSelected = false 
+  isSelected = false,
+  disableSlotClick = false
 }) => {
   const puckColor = puck.color.startsWith('#') ? puck.color : `#${puck.color}`;
 
@@ -41,15 +43,11 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
     
       // Replace specific colors with API color
       if (fill && isReplaceableColor(fill)) {
-        // All circle-related elements should use the main color
-        
         if (isCircleElement(index)) {
             element.setAttribute('fill', puckColor);
         } else if (isMainPuckOutline(fill)) {
-          // Use darker color for main puck outline
           element.setAttribute('fill', darkenColor(puckColor, 30));
         } else {
-          // Use main color for other elements
           element.setAttribute('fill', puckColor);
         }
       }
@@ -60,7 +58,6 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
   };
 
   const isReplaceableColor = (color: string): boolean => {
-    // Colors to replace with API color for puck1.svg
     const replaceableColors = [
       '#595959',  // Individual circles/slots
       '#363636',  // Circle borders AND some circles
@@ -69,21 +66,15 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
       '#373737',  // Other details
       '#393939',
       '#707070',
- 
-      
-      
     ];
     return replaceableColors.some(replaceable => color.includes(replaceable));
   };
 
   const isCircleElement = (index: number): boolean => {
-    // Include all circle-related elements (main circles and their borders)
-    return index >= 5 && index <= 16; // Expanded range to include all circle elements
+    return index >= 5 && index <= 16;
   };
 
-
   const isMainPuckOutline = (color: string): boolean => {
-    // Only the main puck outline should be darker
     return color.includes('#717171');
   };
 
@@ -110,19 +101,33 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
           svg.setAttribute('height', '100%');
           svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
           
-          // Add click handlers to individual circles
-          const circles = svg.querySelectorAll('path');
-          circles.forEach((circle, index) => {
-            // Add click handler for circles (slots 1-12)
-            if (index >= 5 && index <= 16) { // These are the individual circle paths
-              const slotNumber = index - 4; // Convert to 1-12
-              circle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (onSlotClick) {
-                  onSlotClick(slotNumber);
+          // Add click handlers to individual slot circles using data-position attributes
+          const allPaths = svg.querySelectorAll('path');
+          
+          allPaths.forEach((circle) => {
+            const dataPosition = circle.getAttribute('data-position');
+            const fill = circle.getAttribute('fill');
+            
+            // Check if this is a slot circle by looking for data-position attribute and specific fill color
+            if (dataPosition && fill && fill.includes('#595959')) {
+              const slotNumber = parseInt(dataPosition, 10);
+              
+              if (slotNumber >= 1 && slotNumber <= 12) {
+                
+                // Only add click handlers if slot clicking is not disabled
+                if (!disableSlotClick) {
+                  circle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (onSlotClick) {
+                      onSlotClick(slotNumber);
+                    }
+                  });
+                  circle.style.cursor = 'pointer';
+                } else {
+                  // If slot clicking is disabled, set cursor to default
+                  circle.style.cursor = 'default';
                 }
-              });
-              circle.style.cursor = 'pointer';
+              }
             }
           });
           
@@ -140,7 +145,6 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
           zIndex: 1
         }}
       />
-    
     </div>
   );
 };
