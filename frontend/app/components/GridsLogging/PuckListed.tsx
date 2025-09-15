@@ -18,7 +18,6 @@ import { PuckSVG } from './PuckSVG';
 interface PuckSelectorProps {
   selectedUser: UsersList | null;
   onPuckSelect: (puck: PucksList | null) => void;
-  onSlotSelect?: (puck: PucksList, slotPosition: number) => void;
   selectedPuck: PucksList | null;
   onAddPuck?: () => void;
 }
@@ -26,7 +25,6 @@ interface PuckSelectorProps {
 export const PuckListed: React.FC<PuckSelectorProps> = ({
   selectedUser,
   onPuckSelect,
-  onSlotSelect,
   selectedPuck,
   onAddPuck,
 }) => {
@@ -35,11 +33,6 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({
 
   const handlePuckCardClick = (puck: PucksList) => {
     onPuckSelect(puck);
-  };
-
-  const handleSlotClick = (puck: PucksList, slotPosition: number) => {
-    console.log(`Slot ${slotPosition} clicked on puck ${puck.name}`);
-    onSlotSelect?.(puck, slotPosition);
   };
 
   if (!selectedUser) {
@@ -111,16 +104,15 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({
                     <PuckSVG 
                       puck={puck}
                       size={180}
-                      onClick={() => handlePuckCardClick(puck)}
-                      onSlotClick={(slotPosition) => handleSlotClick(puck, slotPosition)}
                       isSelected={selectedPuck?.id === puck.id}
+                      disableSlotClick={true}
                     />
                     <Typography 
                       variant="caption" 
                       color="text.secondary" 
                       sx={{ mt: 1, display: 'block' }}
                     >
-                       {puck.name} | Position in Cane: {puck.position_in_cane} 
+                       CZII-{puck.name} | Position in Cane: {puck.position_in_cane} 
                     </Typography>
                   </CardContent>
                 </CardActionArea>
