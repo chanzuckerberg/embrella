@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { ReactSVG } from 'react-svg';
 import { PucksList, PuckSlots } from '@app/common/types/gridLogging/puckList';
 
@@ -22,28 +22,70 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
   isSelected = false 
 }) => {
   const puckColor = puck.color.startsWith('#') ? puck.color : `#${puck.color}`;
-  console.log(`${puck.name}: ${puckColor}`, 'puckColor from API');
 
-  const [svgContent, setSvgContent] = useState<string>('');
+  // Helper function to darken colors for borders
+  const darkenColor = (color: string, amount: number): string => {
+    const hex = color.replace('#', '');
+    const r = Math.max(0, Math.min(255, parseInt(hex.substr(0, 2), 16) - amount));
+    const g = Math.max(0, Math.min(255, parseInt(hex.substr(2, 2), 16) - amount));
+    const b = Math.max(0, Math.min(255, parseInt(hex.substr(4, 2), 16) - amount));
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  };
 
-  // Load SVG content dynamically for each puck instance
-  useEffect(() => {
-    const loadSVG = async () => {
-      try {
-        const response = await fetch('/next/puck.svg');
-        if (response.ok) {
-          const svgText = await response.text();
-          setSvgContent(svgText);
-        } else {
-          console.error('Failed to load SVG:', response.status);
-        }
-      } catch (error) {
-        console.error('Error loading SVG:', error);
-      }
-    };
+  // Function to replace colors in the SVG with the API color
+  const replaceColors = (svg: SVGElement, puckColor: string) => {
+    const elements = svg.querySelectorAll('*');
+    elements.forEach((element, index) => {
+      const fill = element.getAttribute('fill');
+      const stroke = element.getAttribute('stroke');
     
-    loadSVG();
-  }, []);
+      // Replace specific colors with API color
+      if (fill && isReplaceableColor(fill)) {
+        // All circle-related elements should use the main color
+        
+        if (isCircleElement(index)) {
+            element.setAttribute('fill', puckColor);
+        } else if (isMainPuckOutline(fill)) {
+          // Use darker color for main puck outline
+          element.setAttribute('fill', darkenColor(puckColor, 30));
+        } else {
+          // Use main color for other elements
+          element.setAttribute('fill', puckColor);
+        }
+      }
+      if (stroke && isReplaceableColor(stroke)) {
+        element.setAttribute('stroke', darkenColor(puckColor, 30));
+      }
+    });
+  };
+
+  const isReplaceableColor = (color: string): boolean => {
+    // Colors to replace with API color for puck1.svg
+    const replaceableColors = [
+      '#595959',  // Individual circles/slots
+      '#363636',  // Circle borders AND some circles
+      '#717171',  // Main puck outline
+      '#383838',  // Details
+      '#373737',  // Other details
+      '#393939',
+      '#707070',
+ 
+      
+      
+    ];
+    return replaceableColors.some(replaceable => color.includes(replaceable));
+  };
+
+  const isCircleElement = (index: number): boolean => {
+    // Include all circle-related elements (main circles and their borders)
+    return index >= 5 && index <= 16; // Expanded range to include all circle elements
+  };
+
+
+  const isMainPuckOutline = (color: string): boolean => {
+    // Only the main puck outline should be darker
+    return color.includes('#717171');
+  };
 
   return (
     <div 
@@ -54,164 +96,51 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
         filter: isSelected ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))' : 'none',
         position: 'relative',
         width: size,
-        height: size
+        height: size,
+        overflow: 'visible',
+        borderRadius: '8px'
       }}
       onClick={onClick}
     >
-      {svgContent ? (
-        <ReactSVG
-          src={`data:image/svg+xml;base64,${btoa(svgContent)}`}
-          beforeInjection={(svg) => {
-            try {
-              // Method 1: Update CSS styles - Target ALL red color classes
-              const styleElement = svg.querySelector('style');
-              if (styleElement) {
-                let styleText = styleElement.textContent || '';
-                
-                // Replace ALL red color classes with the API color
-                const redColorClasses = [
-                  '.cls-1', '.cls-4', '.cls-5', '.cls-6', '.cls-7', '.cls-8', '.cls-9', 
-                  '.cls-10', '.cls-11', '.cls-12', '.cls-14', '.cls-15', '.cls-18', 
-                  '.cls-19', '.cls-20', '.cls-21', '.cls-22', '.cls-23', '.cls-24'
-                ];
-                
-                redColorClasses.forEach(className => {
-                  const regex = new RegExp(`(${className}\\s*\\{[^}]*fill:\\s*)#[0-9a-fA-F]{6}`, 'g');
-                  styleText = styleText.replace(regex, `$1${puckColor}`);
-                  const regex3 = new RegExp(`(${className}\\s*\\{[^}]*fill:\\s*)#[0-9a-fA-F]{3}`, 'g');
-                  styleText = styleText.replace(regex3, `$1${puckColor}`);
-                });
-                
-                styleElement.textContent = styleText;
-              }
-              
-              // Method 2: Force update ALL red color elements
-              const redColorClasses = [
-                '.cls-1', '.cls-4', '.cls-5', '.cls-6', '.cls-7', '.cls-8', '.cls-9', 
-                '.cls-10', '.cls-11', '.cls-12', '.cls-14', '.cls-15', '.cls-18', 
-                '.cls-19', '.cls-20', '.cls-21', '.cls-22', '.cls-23', '.cls-24'
-              ];
-              
-              redColorClasses.forEach(className => {
-                const elements = svg.querySelectorAll(className);
-                elements.forEach(element => {
-                  // Only update if it's not a text element
-                  if (!element.tagName.toLowerCase().includes('text')) {
-                    element.setAttribute('fill', puckColor);
-                    element.style.fill = puckColor;
-                  }
-                });
+      {/* SVG Background */}
+      <ReactSVG
+        src="/next/puck.svg"
+        beforeInjection={(svg) => {
+          svg.setAttribute('width', '100%');
+          svg.setAttribute('height', '100%');
+          svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+          
+          // Add click handlers to individual circles
+          const circles = svg.querySelectorAll('path');
+          circles.forEach((circle, index) => {
+            // Add click handler for circles (slots 1-12)
+            if (index >= 5 && index <= 16) { // These are the individual circle paths
+              const slotNumber = index - 4; // Convert to 1-12
+              circle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (onSlotClick) {
+                  onSlotClick(slotNumber);
+                }
               });
-              
-              // Method 3: Update gradients
-              const gradients = svg.querySelectorAll('linearGradient, radialGradient');
-              gradients.forEach(gradient => {
-                const stops = gradient.querySelectorAll('stop');
-                stops.forEach(stop => {
-                  stop.setAttribute('stop-color', puckColor);
-                });
-              });
-              
-              console.log(`${puck.name}: Applied color ${puckColor} to ALL red elements`);
-            } catch (error) {
-              console.error('Error in color injection:', error);
+              circle.style.cursor = 'pointer';
             }
-          }}
-          afterInjection={(error, svg) => {
-            if (error) {
-              console.error('Error in afterInjection:', error);
-              return;
-            }
-            
-            try {
-              if (svg) {
-                // Make ALL circles use the API color (slots)
-                const allCircles = svg.querySelectorAll('circle');
-                allCircles.forEach((circle, index) => {
-                  const r = parseFloat(circle.getAttribute('r') || '0');
-                  
-                  // Make all circles use the API color if they're in a reasonable size range
-                  if (r > 3 && r < 25) {
-                    circle.setAttribute('fill', puckColor);
-                    circle.setAttribute('stroke', '#333333');
-                    circle.setAttribute('stroke-width', '1.5');
-                    circle.style.cursor = 'pointer';
-                    circle.style.transition = 'all 0.2s ease';
-                    
-                    // Add hover effects
-                    circle.addEventListener('mouseenter', () => {
-                      circle.setAttribute('stroke', '#ffffff');
-                      circle.setAttribute('stroke-width', '3');
-                    });
-                    
-                    circle.addEventListener('mouseleave', () => {
-                      circle.setAttribute('stroke', '#333333');
-                      circle.setAttribute('stroke-width', '1.5');
-                    });
-                    
-                    // Add click handler
-                    circle.addEventListener('click', (e) => {
-                      e.stopPropagation();
-                      console.log(`Slot ${index + 1} clicked on puck ${puck.name}`);
-                      onSlotClick?.(index + 1);
-                    });
-                  }
-                });
-                
-                // Make ALL text elements white and bold
-                const allTexts = svg.querySelectorAll('text');
-                allTexts.forEach(text => {
-                  text.setAttribute('fill', '#ffffff');
-                  text.setAttribute('font-weight', 'bold');
-                  text.setAttribute('font-size', '12');
-                });
-                
-                // Make orientation markers white
-                const allEllipses = svg.querySelectorAll('ellipse');
-                allEllipses.forEach(ellipse => {
-                  const rx = parseFloat(ellipse.getAttribute('rx') || '0');
-                  const ry = parseFloat(ellipse.getAttribute('ry') || '0');
-                  
-                  // Small ellipses are likely orientation markers
-                  if (rx < 10 && ry < 10) {
-                    ellipse.setAttribute('fill', '#ffffff');
-                    ellipse.setAttribute('stroke', '#333333');
-                    ellipse.setAttribute('stroke-width', '1');
-                  }
-                });
-                
-                console.log(`${puck.name}: Applied API color to slots and white text`);
-              }
-            } catch (error) {
-              console.error('Error in afterInjection processing:', error);
-            }
-          }}
-          style={{ width: '100%', height: '100%' }}
-        />
-      ) : (
-        <div style={{ 
+          });
+          
+          // Replace colors with API color
+          replaceColors(svg, puckColor);
+        }}
+        style={{ 
           width: '100%', 
-          height: '100%', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          backgroundColor: '#f5f5f5',
-          borderRadius: '8px'
-        }}>
-          Loading...
-        </div>
-      )}
-      
-      {/* Puck Label */}
-      <div style={{ 
-        textAlign: 'center', 
-        marginTop: '8px',
-        fontWeight: 'bold',
-        color: isSelected ? '#1976d2' : '#333',
-        fontSize: '14px'
-      }}>
-        {puck.name}
-      </div>
+          height: '100%',
+          objectFit: 'contain',
+          display: 'block',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: 1
+        }}
+      />
+    
     </div>
   );
 };
