@@ -220,8 +220,56 @@
       opacity: 1;
       pointer-events: auto;
     }
-    
-  </style>
+
+    /* Smaller info icon for the new tooltip */
+    .info-icon-small {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        text-align: center;
+        font-family: 'Hoefler Text', Georgia, serif; /* Apple-like font */
+        font-weight: bold;
+        font-style: italic;          /* optional, matches Apple i */
+        font-size: 13px;             /* similar to Apple small info button */
+        color: #007aff;              /* Apple standard blue for info icon */
+        background: #f0f0f0;         /* light grey background */
+        border-radius: 50%;
+        cursor: pointer;
+        position: relative;
+        user-select: none;           /* prevents text selection */
+}
+
+    /* New tooltip style (small, grey background) */
+    .tooltip-small {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -120%);
+        background: #f5f5f5;
+        color: #333;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: normal;    /* allows wrapping */
+        max-width: 400px;      /* wider, so lines aren’t too short */
+        min-width: 200px;  /* minimum width for readability */
+        word-wrap: break-word;  /* break long words */
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        font-family:Arial, Helvetica, sans-serif;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    /* Show tooltip on hover */
+    .info-icon-small:hover .tooltip-small {
+      opacity: 1;
+      pointer-events: auto;
+
+    }
+    </style>
 </head>
 <body>
   <button class="go-back" onclick="goBack()">Go back to the startup page</button>
@@ -256,7 +304,14 @@
 
     <div class="form-row">
     <div class="form-group">
-        <label for="copickSession">New Copick Session for: </label>
+        <label
+            for="copickSession">New Copick Session for: 
+                <span class="info-icon-small">i
+                    <div class="tooltip-small">
+                    Select the MSI session to create a new Copick run. Only sessions with existing MSI sessions appear here.
+                    </div>
+                 </span>
+        </label>
         <select id="copickSession" required>
         <option value="">Select an MSI session...</option>
         </select>
@@ -270,8 +325,8 @@
 
     <div class="form-row-three">
         <div class="form-group">
-            <label for="tomoType">Tomogram Type:</label>
-            <select id="tomoType" required>
+            <label for="importTomoType">Tomogram Type:</label>
+            <select id="importTomoType" required>
                 <option value="">Select tomogram type...</option>
                 <option value="dctf">DCTF</option>
                 <option value="wbp">WBP</option>
@@ -281,18 +336,21 @@
         </div>
         
         <div class="form-group">
-            <label for="tomogramRun">Tomogram Run:</label>
-            <input type="text" id="tomogramRun" required placeholder="run001" value="run001"/>
+        <label for="importTomogramRun">Tomogram Run:</label>
+        <select id="importTomogramRun" required>
+            <option value="">Select a run...</option>
+        </select>
         </div>
 
         <div class="form-group">
-            <label for="tomogramVoxelSize">(Optional) Downsample (Å):</label>
-            <input type="number" id="tomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
+            <label for="importTomogramVoxelSize">(Optional) Downsample (Å):</label>
+            <input type="number" id="importTomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
             <small style="color: #888;">Blank = no downsampling.</small>
         </div>
     </div>
 
     <button type="button" onclick="createCopickProject()" id="createButton">Create Copick Project</button>
+    <div id="statusMessage" class="status-message"></div>
 
     <!-- Add Pickable Objects Section -->
     <div class="section-header">
@@ -455,6 +513,61 @@ async function populateSessionDropdown() {
         alert("Failed to fetch session names. " + error.message);
     }
 }
+
+
+
+async function fetchRuns(sessionName, reconstructionType, runSelect) {
+  if (!sessionName || !reconstructionType) {
+    runSelect.innerHTML = '<option value="">Select a run...</option>';
+    return;
+  }
+
+  runSelect.innerHTML = '<option value="">Loading runs...</option>';
+
+  try {
+    const response = await fetch(`http://umbrella-dev.czbiohub.org/api/sessions/${sessionName}`);
+    console.log("Fetching:", response.url); // <-- debug line
+    if (!response.ok) throw new Error('Failed to fetch runs');
+    const data = await response.json();
+    console.log("Runs response:", data); // <-- debug line
+
+    // Filter runs by reconstruction type
+    const matchingRuns = data.runs.filter(
+      (r) => r.reconstructionType.toLowerCase() === reconstructionType.toLowerCase()
+    );
+
+    runSelect.innerHTML = '<option value="">Select a run...</option>';
+    matchingRuns.forEach((r) => {
+      const opt = document.createElement("option");
+      opt.value = r.runId;
+      opt.textContent = `${r.runId} (${r.runCounts} tomos)`;
+      runSelect.appendChild(opt);
+    });
+
+    if (matchingRuns.length === 0) {
+      runSelect.innerHTML = '<option value="">No runs available</option>';
+    }
+  } catch (error) {
+    console.error("Error in fetchRuns:", error);
+    runSelect.innerHTML = '<option value="">Error loading runs</option>';
+  }
+}
+
+async function updateTomogramRun() {
+  const sessionSelect = document.getElementById("copickSession");
+  const typeSelect = document.getElementById("importTomoType");
+  const runSelect = document.getElementById("importTomogramRun");
+
+  const sessionId = sessionSelect.value;
+  const tomoType = typeSelect.value;
+
+  console.log("updateTomogramRun called with:", sessionId, tomoType); // debug
+  await fetchRuns(sessionId, tomoType, runSelect);
+}
+
+// Attach listeners
+document.getElementById("copickSession").addEventListener("change", updateTomogramRun);
+document.getElementById("importTomoType").addEventListener("change", updateTomogramRun);
 
 // Call the function on page load
 document.addEventListener("DOMContentLoaded", populateSessionDropdown);
