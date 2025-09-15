@@ -120,7 +120,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({
                       color="text.secondary" 
                       sx={{ mt: 1, display: 'block' }}
                     >
-                      Position in Cane: {puck.position_in_cane} | Max Boxes: {puck.max_boxes}
+                       {puck.name} | Position in Cane: {puck.position_in_cane} 
                     </Typography>
                   </CardContent>
                 </CardActionArea>
