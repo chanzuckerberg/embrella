@@ -401,41 +401,63 @@
       }
     }
 
-    // Populate the session dropdown with session names.
-    async function populateSessionDropdown() {
-      const url = "/workflow/get_msi_session_list";
-      try {
+    // Populate the copickSession dropdown with session names.
+async function populateSessionDropdown() {
+    const url = "/workflow/get_msi_session_list";
+    try {
         const response = await fetch(url, {
-          method: "GET",
-          credentials: "same-origin", 
+        method: "GET",
+        credentials: "same-origin",
         });
+
         const responseText = await response.text();
         if (!response.ok) {
-          throw new Error(`HTTP error ${response.status} | Body: ${responseText}`);
+        throw new Error(`HTTP error ${response.status} | Body: ${responseText}`);
         }
+
         let result;
         try {
-          result = JSON.parse(responseText);
+        result = JSON.parse(responseText);
         } catch (jsonErr) {
-          console.error("JSON parse error:", jsonErr);
-          throw new Error("Failed to parse JSON. Response was: " + responseText);
+        console.error("JSON parse error:", jsonErr);
+        throw new Error("Failed to parse JSON. Response was: " + responseText);
         }
+
         if (!result.session_names) {
-          console.error("No 'session_names' found in result:", result);
-          throw new Error("Missing session_names in response JSON.");
+        console.error("No 'session_names' found in result:", result);
+        throw new Error("Missing session_names in response JSON.");
         }
-        const sessionNamesList = document.getElementById("copickSession");
-        sessionNamesList.innerHTML = "";
-        result.session_names.forEach((name) => {
-          const option = document.createElement("option");
-          option.value = name;
-          sessionNamesList.appendChild(option);
+
+        const sessionSelect = document.getElementById("copickSession");
+        sessionSelect.innerHTML = "";
+
+        // Add default placeholder option
+        const placeholderOption = document.createElement("option");
+        placeholderOption.value = "";
+        placeholderOption.textContent = "Select an MSI session...";
+        sessionSelect.appendChild(placeholderOption);
+
+        // Optional: sort sessions and put "summary" first
+        const sortedSessions = [...result.session_names].sort((a, b) => {
+        if (a.toLowerCase() === "summary") return -1;
+        if (b.toLowerCase() === "summary") return 1;
+        return a.localeCompare(b);
         });
-      } catch (error) {
+
+        sortedSessions.forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        sessionSelect.appendChild(option);
+        });
+    } catch (error) {
         console.error("Error while fetching session names:", error);
         alert("Failed to fetch session names. " + error.message);
-      }
     }
+}
+
+// Call the function on page load
+document.addEventListener("DOMContentLoaded", populateSessionDropdown);
 
 
     // Auto-sync fields when copick project fields change
