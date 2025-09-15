@@ -18,6 +18,7 @@ import {
   FormControl,
 } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
+import { DJANGO_URL } from '@app/common/constants/api';
 
 
 interface GridsLoggingProps {
@@ -54,7 +55,13 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
       // Reset selected puck when user changes
       setSelectedPuck(null);
   };
-
+  const handleAddPuck=()=>{
+    // Redirect to Django admin puck creation page
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/add/`;
+    window.open(adminUrl, '_blank');
+  }
+ 
+  
   const handlePuckSelect = (puck: PucksList | null) => {
     setSelectedPuck(puck);
   };
@@ -89,7 +96,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
            sdsType="primary"
            sdsStyle="rounded"
            startIcon={<Icon sdsIcon="Plus" sdsSize="s"/>}
-           onClick={onAddPuck}
+           onClick={handleAddPuck}
            sx={{ marginTop: '10px' }}
            >
              Add puck
@@ -100,6 +107,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
       {/* Puck Details Component - appears on the right when a puck is selected */}
       <PuckDetails 
         selectedPuck={selectedPuck}
+        onAddGridBox={() => {}}
       />
     </Box>
   );
