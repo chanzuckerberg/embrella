@@ -66,6 +66,10 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
       '#373737',  // Other details
       '#393939',
       '#707070',
+      '#383838',
+      '#000000',
+      '#3b3b3b',
+
     ];
     return replaceableColors.some(replaceable => color.includes(replaceable));
   };
