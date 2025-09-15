@@ -11,7 +11,6 @@ import {
   Card,
   CardContent,
   CardActionArea,
-  Button,
 } from '@mui/material';
 import { PuckSVG } from './PuckSvg';
 
@@ -47,33 +46,6 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({
 
   return (
     <Box>
-      {/* Header with Add Puck Button */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: 3 
-      }}>
-        <Typography variant="h6">
-          Pucks
-        </Typography>
-        {onAddPuck && (
-          <Button
-            variant="contained"
-            startIcon={<span style={{ fontSize: '18px' }}>+</span>}
-            onClick={onAddPuck}
-            sx={{
-              backgroundColor: '#20b2aa',
-              '&:hover': {
-                backgroundColor: '#1a9b94',
-              },
-            }}
-          >
-            Add puck
-          </Button>
-        )}
-      </Box>
-
       {/* Pucks Grid Display with Interactive SVG */}
       <Box sx={{ mb: 3 }}>
         <Grid container spacing={3} justifyContent="center">

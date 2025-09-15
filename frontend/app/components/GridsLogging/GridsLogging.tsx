@@ -17,9 +17,17 @@ import {
   MenuItem,
   FormControl,
 } from '@mui/material';
-import { Button } from '@czi-sds/components';
+import { Button, Icon } from '@czi-sds/components';
 
-export const GridsLogging = (): React.JSX.Element => {
+
+interface GridsLoggingProps {
+  onAddPuck?: () => void;
+}
+
+export const GridsLogging: React.FC<GridsLoggingProps> = ({
+  onAddPuck,
+}) => {
+
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
   const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
   const { users, isSuccess } = useGridLoggingUserList();
@@ -55,7 +63,7 @@ export const GridsLogging = (): React.JSX.Element => {
       <Card elevation={2} className={styles.leftCard}>
         <CardHeader title="Pucks" />
         <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3, flexGrow: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 7, flexGrow: 1 }}>
               <FormControl variant="outlined" size="small" sx={{ minWidth: 300 }}>
               <Select
                 value={selectedUser?.id || ''}
@@ -77,7 +85,15 @@ export const GridsLogging = (): React.JSX.Element => {
             onPuckSelect={handlePuckSelect}
             selectedPuck={selectedPuck}
           />
-          <Button sx={{ marginTop: '10px' }} sdsType="primary" sdsStyle="rounded">Add Puck</Button>
+           <Button
+           sdsType="primary"
+           sdsStyle="rounded"
+           startIcon={<Icon sdsIcon="Plus" sdsSize="s"/>}
+           onClick={onAddPuck}
+           sx={{ marginTop: '10px' }}
+           >
+             Add puck
+           </Button>
         </CardContent>
       </Card>
       
