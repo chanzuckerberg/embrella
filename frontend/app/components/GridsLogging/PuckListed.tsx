@@ -82,7 +82,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({
                     <Typography 
                       variant="caption" 
                       color="text.secondary" 
-                      sx={{ mt: 1, display: 'block' }}
+                      sx={{ mt: 5, display: 'block' }}
                     >
                        CZII-{puck.name} | Position in Cane: {puck.position_in_cane} 
                     </Typography>
