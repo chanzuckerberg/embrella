@@ -6,9 +6,9 @@ import { API } from '@app/common/constants/api';
 export const useGridLoggingPuckSlots = (puckId?: number) => {
   const url = puckId ? API.GRID_LOGGING_PUCK_SLOTINFO.replace('puck_id', puckId.toString()) : '';
   const { data, isSuccess } = useFetchData<PuckSlotsResponse>(url);
-  
+
   return {
     slotsData: data,
-    isSuccess
+    isSuccess,
   };
 };

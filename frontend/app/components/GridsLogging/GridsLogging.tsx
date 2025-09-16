@@ -1,57 +1,45 @@
 'use client';
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
-import {  UserContext } from '@app/common/context/UserProvider';
-import {  UsersList } from '@app/common/types/gridLogging/userList';
+import { UserContext } from '@app/common/context/UserProvider';
+import { UsersList } from '@app/common/types/gridLogging/userList';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import styles from './GridLogging.module.css';
 import { PuckListed } from './PuckListed';
 import { PuckDetails } from './PuckDetails';
-import { GridBoxInfo } from './GridBoxInfo';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  Box, 
-  Select,
-  MenuItem,
-  FormControl,
-} from '@mui/material';
+import { Card, CardContent, CardHeader, Box, Select, MenuItem, FormControl } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 
 interface GridsLoggingProps {
-  onAddPuck?: () => void;
+  _onAddPuck?: () => void;
 }
 
-export const GridsLogging: React.FC<GridsLoggingProps> = ({
-  onAddPuck,
-}) => {
-
+export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
   const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const { users, isSuccess } = useGridLoggingUserList();
+  const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
-  
+
   // Extract users array from the response object
-  const usersList: UsersList[] = users?.users || [];
-  
+  const usersList = useMemo(() => users?.users || [], [users]);
+
   // Set the current user as default when users are loaded
   useEffect(() => {
     if (usersList.length > 0 && currentUser && !selectedUser) {
       // Find the current user in the users list
-      const foundUser = usersList.find(u => String(u.id) === String(currentUser.id));
+      const foundUser = usersList.find((u) => String(u.id) === String(currentUser.id));
       if (foundUser) {
         setSelectedUser(foundUser);
-      } 
+      }
     }
   }, [usersList, currentUser, selectedUser]);
 
   // Handle user selection
   const handleUserChange = (userId: string) => {
-    const user = usersList.find(u => String(u.id) === String(userId));
+    const user = usersList.find((u) => String(u.id) === String(userId));
     setSelectedUser(user || null);
     // Reset selected puck and slot when user changes
     setSelectedPuck(null);
@@ -62,8 +50,8 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
     // Redirect to Django admin puck creation page
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/add/`;
     window.open(adminUrl, '_blank');
-  }
- 
+  };
+
   const handlePuckSelect = (puck: PucksList | null) => {
     setSelectedPuck(puck);
     // Reset selected slot when puck changes
@@ -72,10 +60,6 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
 
   const handleSlotSelect = (slotPosition: number) => {
     setSelectedSlot(slotPosition);
-  };
-
-  const handleCloseSlotDetails = () => {
-    setSelectedSlot(null);
   };
 
   const handleAddGridBox = () => {
@@ -97,7 +81,9 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
                   onChange={(e) => handleUserChange(String(e.target.value))}
                   displayEmpty
                 >
-                  <MenuItem value="" disabled><em>Select User</em></MenuItem>
+                  <MenuItem value="" disabled>
+                    <em>Select User</em>
+                  </MenuItem>
                   {usersList.map((user) => (
                     <MenuItem key={user.id} value={String(user.id)}>
                       {user.full_name || user.clean_username}
@@ -107,15 +93,11 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
               </FormControl>
             </Box>
             {/* Puck Selector Component */}
-            <PuckListed
-              selectedUser={selectedUser}
-              onPuckSelect={handlePuckSelect}
-              selectedPuck={selectedPuck}
-            />
+            <PuckListed selectedUser={selectedUser} onPuckSelect={handlePuckSelect} selectedPuck={selectedPuck} />
             <Button
               sdsType="primary"
               sdsStyle="rounded"
-              startIcon={<Icon sdsIcon="Plus" sdsSize="s"/>}
+              startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
               onClick={handleAddPuck}
               sx={{ marginTop: '10px' }}
             >
@@ -123,14 +105,14 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({
             </Button>
           </CardContent>
         </Card>
-        
+
         {/* Puck Details Component - appears on the right when a puck is selected */}
         {selectedPuck && (
-          <PuckDetails 
+          <PuckDetails
             selectedPuck={selectedPuck}
             onAddGridBox={handleAddGridBox}
             onSlotSelect={handleSlotSelect}
-            selectedSlot={selectedSlot}
+            _selectedSlot={selectedSlot}
           />
         )}
       </Box>
