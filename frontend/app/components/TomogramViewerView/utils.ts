@@ -1,12 +1,6 @@
 import { Region } from '../../../idetik/packages/core/src/data/region';
 import { SliceCoordinates } from '../../../idetik/packages/core/src/data/chunk';
 
-// const DEFAULT_REGION: Region = [
-//   { dimension: 'z', index: { type: 'full' } },
-//   { dimension: 'y', index: { type: 'full' } },
-//   { dimension: 'x', index: { type: 'full' } },
-// ];
-
 // Region that avoids chunk manager (for problematic zarr data)
 const SAFE_REGION: Region = [
   { dimension: 'z', index: { type: 'point', value: 0 } },
