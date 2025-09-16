@@ -2,9 +2,12 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import ValidationError
+from django.conf import settings
 from django.contrib.auth.models import User
-from cryo_grids.models import Puck
-from .serializers import UserSerializer, PuckSerializer
+from rest_framework.decorators import action
+from cryo_grids.models import Puck, CryoGridBox, CryoGrid
+from .serializers import UserSerializer, PuckSerializer, GridDetailsSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -15,23 +18,28 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserSerializer
     
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        total_count = queryset.count()  # Get count from filtered queryset
-        
-        page = self.paginate_queryset(queryset)
-        
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response_data = self.get_paginated_response(serializer.data)
-            response_data.data['total_users_count'] = total_count
-            return response_data
-        
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            'total_users_count': total_count,
-            'users': serializer.data
-        })
-
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            total_count = queryset.count()  # Get count from filtered queryset
+            
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                response_data = self.get_paginated_response(serializer.data)
+                response_data.data['total_users_count'] = total_count
+                return response_data
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'total_users_count': total_count,
+                'users': serializer.data
+            })
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching users",
+                "detail": str(e) if settings.DEBUG else "Please try again later"
+            }, status=500)
 
 class PuckViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -49,32 +57,239 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
         user_id = self.request.query_params.get('user_id', None)
         
         if user_id is not None:
-            # Filter by specific user
-            queryset = queryset.filter(user_id=user_id)
+            try:
+                user_id = int(user_id)
+                # Check if user exists
+                if not User.objects.filter(id=user_id).exists():
+                    raise ValidationError(f"User with ID {user_id} does not exist")
+                queryset = queryset.filter(user_id=user_id)
+            except ValueError:
+                raise ValidationError("Invalid user_id format. Must be a number.")
         
-        # Always return ordered queryset (all pucks or filtered by user)
         return queryset
     
     def list(self, request, *args, **kwargs):
         """
         Handle pagination and return appropriate response
+        Handles collections of objects, so it doesn't need a specific ID
         """
-        queryset = self.filter_queryset(self.get_queryset())
-        total_count = queryset.count()
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            total_count = queryset.count()
+            
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                response_data = self.get_paginated_response(serializer.data)
+                # Add total count to paginated response
+                response_data.data['total_pucks_count'] = total_count
+                return response_data
+            
+            # Fallback (though pagination should always work)
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'total_pucks_count': total_count,
+                'pucks': serializer.data
+            })
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching pucks",
+                "detail": str(e) if settings.DEBUG else "Please try again later"
+            }, status=500)
+
+        """
+        pk stands for primary key - puck_id, None means it's optional
+        Works on a specific puck, so it needs the pk to identify which puck
+        """
+    @action(detail=True, methods=['get'], url_path='slots')
+    def slots(self, request, pk=None):  
+        """
+        Get puck slots information showing which positions are filled or empty
+        URL: /api/list/pucks/{puck_id}/slots/
+        """
+        try:
+            puck = self.get_object()
+            
+            # Get all grid boxes for this puck
+            grid_boxes = CryoGridBox.objects.filter(puck=puck).values('id', 'position_in_puck')
+            
+            # Create a mapping of position to grid box
+            filled_positions = {box['position_in_puck']: box['id'] for box in grid_boxes}
+            
+            # Generate slots array for puck positions 
+            slots = []
+            for position in range(1, puck.max_boxes + 1):  # 1 to 12
+                if position in filled_positions:
+                    slots.append({
+                        "position": position,
+                        "status": "filled",
+                        "grid_box_id": filled_positions[position]
+                    })
+                else:
+                    slots.append({
+                        "position": position,
+                        "status": "empty"
+                    })
+            
+            # Calculate summary
+            filled_count = len(filled_positions)
+            empty_count = puck.max_boxes - filled_count
+            
+            response_data = {
+                "puck_id": str(puck.id),
+                "puck_name": puck.name,
+                "slots": slots,
+                "slot_summary": {
+                    "total": puck.max_boxes,
+                    "filled_count": filled_count,
+                    "empty_count": empty_count
+                }
+            }
+            
+            return Response(response_data)
+            
+        except Exception as e:
+            return Response({
+                "error": str(e)
+            }, status=500)
+
+    # def retrieve(self, request, *args, **kwargs):
+    #     """
+    #     Retrieve detailed puck information with related data
+    #     """
+    #     instance = self.get_object()
+    #     # Use select_related and prefetch_related for better performance
+    #     instance = Puck.objects.select_related(
+    #         'user', 'cane'
+    #     ).prefetch_related(
+    #         'cryogridbox_set'
+    #     ).get(pk=instance.pk)
         
-        # Always use pagination for better performance
-        page = self.paginate_queryset(queryset)
+    #     serializer = self.get_serializer(instance)
+    #     return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='grid-box/(?P<position_in_puck>[0-9]+)')
+    def grid_box_detail(self, request, pk=None, position_in_puck=None):
+        """
+        Get detailed grid box information for a specific position in a puck
+        URL: /api/list/pucks/{puck_id}/grid-box/{position_in_puck}/
+        """
+        try:
+            puck = self.get_object()
         
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response_data = self.get_paginated_response(serializer.data)
-            # Add total count to paginated response
-            response_data.data['total_pucks_count'] = total_count
-            return response_data
+            # Get the grid box at the specified position
+            try:
+                grid_box = CryoGridBox.objects.get(
+                    puck=puck, 
+                    position_in_puck=position_in_puck
+                )
+            except CryoGridBox.DoesNotExist:
+                # Return empty slot response
+                return Response({
+                    "puck_id": puck.name,
+                    "position": int(position_in_puck),
+                    "status": "empty"
+                })
         
-        # Fallback (though pagination should always work)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            'total_pucks_count': total_count,
-            'pucks': serializer.data
-        })
+            # Get all grids in this grid box
+            grids = CryoGrid.objects.filter(
+                grid_box=grid_box,
+                trashed=False
+            ).select_related('specimen').values(
+                'id', 'name', 'position_in_box'
+            )
+        
+            # Create positions array (1-4 quadrants)
+            positions = []
+            for q in range(1, grid_box.max_grids + 1):
+                grid_at_position = next(
+                    (g for g in grids if g['position_in_box'] == q), 
+                    None
+                )
+            
+                if grid_at_position:
+                    positions.append({
+                        "q": q,
+                        "occupied": True,
+                        "grid_id": f"{grid_at_position['id']}",
+                        "grid_name": grid_at_position['name'],
+                    })
+                else:
+                    positions.append({
+                        "q": q,
+                        "occupied": False
+                    })
+        
+            response_data = {
+                "puck_id": puck.id,
+                "puck_name": puck.name,
+                "position_in_puck": int(position_in_puck),
+                "status": "filled",
+                "max_grids": grid_box.max_grids,
+                "grid_box": {
+                    "grid_box_id": grid_box.id,
+                    "name": grid_box.name,
+                    "color": grid_box.color,
+                    "color_display": grid_box.get_color_display(),
+                    "numbering": grid_box.numbering,
+                    "numbering_display": grid_box.get_numbering_display(),
+                    "max_grids": grid_box.max_grids,
+                    "positions": positions
+                }
+            }
+        
+            return Response(response_data)
+        
+        except Exception as e:
+            return Response({
+            "error": str(e)
+            }, status=500)
+
+
+    @action(detail=True, methods=['get'], url_path='grid-box/(?P<position_in_puck>[0-9]+)/grid/(?P<grid_id>[0-9]+)')
+    def grid_details(self, request, pk=None, position_in_puck=None, grid_id=None):
+        """
+        Get detailed information about a specific grid - matches your Grid Details form exactly
+        URL: /api/list/pucks/{puck_id}/grid-box/{position_in_puck}/grid/{grid_id}/
+        """
+        try:
+            puck = self.get_object()
+            
+            # Get the grid box at the specified position
+            try:
+                grid_box = CryoGridBox.objects.get(
+                    puck=puck, 
+                    position_in_puck=position_in_puck
+                )
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    "error": "Grid box not found at the specified position"
+                }, status=404)
+            
+            # Get the specific grid with all related data
+            try:
+                grid = CryoGrid.objects.select_related(
+                    'user', 'grid_box', 'specimen', 'freezing_session', 'intended_project'
+                ).prefetch_related(
+                    'specimen__samples'
+                ).get(
+                    id=grid_id,
+                    grid_box=grid_box,
+                    trashed=False
+                )
+            except CryoGrid.DoesNotExist:
+                return Response({
+                    "error": "Grid not found"
+                }, status=404)
+            
+            # Use the serializer to get data that matches your UI form exactly
+            serializer = GridDetailsSerializer(grid, context={'request': request})
+            
+            return Response(serializer.data)
+            
+        except Exception as e:
+            return Response({
+                "error": "Failed to fetch grid details",
+                "detail": str(e) if settings.DEBUG else "Please try again later"
+            }, status=500)
