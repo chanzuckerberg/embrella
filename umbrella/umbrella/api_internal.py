@@ -935,15 +935,22 @@ class ReviewTomogramView(View):
                 vol_suffix = ""  # denoised
                 job_name = "denoise"
 
-            # Original zarr path construction (commented out for now)
-            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{review.msi_session.name}/{review.run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+            # Updated zarr path construction - migrated to new location
+            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/25aug25a/run003/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
 # response_data["zarrPath"] = "https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/"
             # response_data["zarrPath"] = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25jun02a/run001/vol003/Position_114_8_Vol.zarr/"
             print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
-            contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
-            response_data["contrastLimits"] = contrast_limits
-            response_data["contrastMethod"] = "gmm"
-            response_data["contrastComputed"] = True
+            try:
+                contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
+                response_data["contrastLimits"] = contrast_limits
+                response_data["contrastMethod"] = "gmm"
+                response_data["contrastComputed"] = True
+            except Exception as e:
+                print(f"Failed to compute contrast limits: {e}")
+                # Use default contrast limits if computation fails
+                response_data["contrastLimits"] = [-0.05, 0.05]
+                response_data["contrastMethod"] = "default"
+                response_data["contrastComputed"] = False
             # print(f"SART reconstruction - computed contrast limits: {response_data['contrastLimits']}")
             
             # Adjust contrast limits based on reconstruction type
