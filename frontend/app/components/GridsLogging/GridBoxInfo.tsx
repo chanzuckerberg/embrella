@@ -2,16 +2,7 @@
 
 import React from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  Typography,
-  Box,
-  Chip,
-  IconButton,
-  Divider,
-} from '@mui/material';
+import { Card, CardContent, CardHeader, Typography, Box, Chip, IconButton, Divider } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 
@@ -22,12 +13,7 @@ interface GridBoxInfoProps {
   onAddGridBox: () => void;
 }
 
-export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
-  selectedPuck,
-  selectedSlot,
-  onClose,
-  onAddGridBox,
-}) => {
+export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onClose, onAddGridBox }) => {
   if (!selectedPuck || !selectedSlot) {
     return null;
   }
@@ -45,7 +31,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
 
   return (
     <Card elevation={2} sx={{ maxWidth: 600, width: '100%', mt: 2 }}>
-      <CardHeader 
+      <CardHeader
         title={`Slot Details: ${selectedPuck.name} - Slot ${selectedSlot}`}
         action={
           <IconButton onClick={onClose} size="small">
@@ -72,11 +58,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               <Typography variant="body2" color="text.secondary">
                 Slot Position:
               </Typography>
-              <Chip 
-                label={`Slot ${selectedSlot}`}
-                color="primary"
-                size="small"
-              />
+              <Chip label={`Slot ${selectedSlot}`} color="primary" size="small" />
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
               <Typography variant="body2" color="text.secondary">
@@ -104,12 +86,14 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
           <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
             Grid Box Information
           </Typography>
-          <Box sx={{ 
-            p: 2, 
-            backgroundColor: '#f5f5f5', 
-            borderRadius: 1,
-            textAlign: 'center'
-          }}>
+          <Box
+            sx={{
+              p: 2,
+              backgroundColor: '#f5f5f5',
+              borderRadius: 1,
+              textAlign: 'center',
+            }}
+          >
             <Typography variant="body2" color="text.secondary">
               No grid box assigned to this slot
             </Typography>
@@ -121,20 +105,20 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
           <Button
             sdsType="primary"
             sdsStyle="rounded"
-            startIcon={<Icon sdsIcon="Plus" sdsSize="s"/>}
+            startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
             onClick={handleAddGridBox}
             sx={{ flex: 1 }}
           >
             Add Grid Box
           </Button>
-          <IconButton 
+          <IconButton
             onClick={handleDeleteSlot}
-            sx={{ 
+            sx={{
               border: '1px solid #d32f2f',
               color: '#d32f2f',
               '&:hover': {
-                backgroundColor: '#ffebee'
-              }
+                backgroundColor: '#ffebee',
+              },
             }}
           >
             <Icon sdsIcon="TrashCan" sdsSize="s" />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DJANGO_URL, API } from '../../constants/api';
 import { GridDetailsResponse } from '../../types/gridLogging/gridDetails';
 
@@ -24,7 +24,7 @@ export const useGridLoggingGridDetails = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchGridDetails = async () => {
+  const fetchGridDetails = useCallback(async () => {
     if (!puckId || !positionInPuck || !gridId) {
       setError('Missing required parameters');
       return;
@@ -61,11 +61,11 @@ export const useGridLoggingGridDetails = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [puckId, positionInPuck, gridId]);
 
   useEffect(() => {
     fetchGridDetails();
-  }, [puckId, positionInPuck, gridId]);
+  }, [puckId, positionInPuck, gridId, fetchGridDetails]);
 
   const refetch = () => {
     fetchGridDetails();

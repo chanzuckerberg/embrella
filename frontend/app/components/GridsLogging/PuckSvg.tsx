@@ -14,14 +14,13 @@ interface PuckSVGProps {
   disableSlotClick?: boolean;
 }
 
-export const PuckSVG: React.FC<PuckSVGProps> = ({ 
-  puck, 
-  slots = [],
-  size = 200, 
-  onClick, 
+export const PuckSVG: React.FC<PuckSVGProps> = ({
+  puck,
+  size = 200,
+  onClick,
   onSlotClick,
   isSelected = false,
-  disableSlotClick = false
+  disableSlotClick = false,
 }) => {
   const puckColor = puck.color.startsWith('#') ? puck.color : `#${puck.color}`;
 
@@ -40,11 +39,11 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
     elements.forEach((element, index) => {
       const fill = element.getAttribute('fill');
       const stroke = element.getAttribute('stroke');
-    
+
       // Replace specific colors with API color
       if (fill && isReplaceableColor(fill)) {
         if (isCircleElement(index)) {
-            element.setAttribute('fill', puckColor);
+          element.setAttribute('fill', puckColor);
         } else if (isMainPuckOutline(fill)) {
           element.setAttribute('fill', darkenColor(puckColor, 30));
         } else {
@@ -59,19 +58,18 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
 
   const isReplaceableColor = (color: string): boolean => {
     const replaceableColors = [
-      '#595959',  // Individual circles/slots
-      '#363636',  // Circle borders AND some circles
-      '#717171',  // Main puck outline
-      '#383838',  // Details
-      '#373737',  // Other details
+      '#595959', // Individual circles/slots
+      '#363636', // Circle borders AND some circles
+      '#717171', // Main puck outline
+      '#383838', // Details
+      '#373737', // Other details
       '#393939',
       '#707070',
       '#383838',
       '#000000',
       '#3b3b3b',
-
     ];
-    return replaceableColors.some(replaceable => color.includes(replaceable));
+    return replaceableColors.some((replaceable) => color.includes(replaceable));
   };
 
   const isCircleElement = (index: number): boolean => {
@@ -83,8 +81,8 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
   };
 
   return (
-    <div 
-      style={{ 
+    <div
+      style={{
         cursor: onClick ? 'pointer' : 'default',
         transform: isSelected ? 'scale(1.05)' : 'scale(1)',
         transition: 'transform 0.2s ease-in-out',
@@ -93,7 +91,7 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
         width: size,
         height: size,
         overflow: 'visible',
-        borderRadius: '8px'
+        borderRadius: '8px',
       }}
       onClick={onClick}
     >
@@ -104,20 +102,19 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
           svg.setAttribute('width', '100%');
           svg.setAttribute('height', '100%');
           svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-          
+
           // Add click handlers to individual slot circles using data-position attributes
           const allPaths = svg.querySelectorAll('path');
-          
+
           allPaths.forEach((circle) => {
             const dataPosition = circle.getAttribute('data-position');
             const fill = circle.getAttribute('fill');
-            
+
             // Check if this is a slot circle by looking for data-position attribute and specific fill color
             if (dataPosition && fill && fill.includes('#595959')) {
               const slotNumber = parseInt(dataPosition, 10);
-              
+
               if (slotNumber >= 1 && slotNumber <= 12) {
-                
                 // Only add click handlers if slot clicking is not disabled
                 if (!disableSlotClick) {
                   circle.addEventListener('click', (e) => {
@@ -134,19 +131,19 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
               }
             }
           });
-          
+
           // Replace colors with API color
           replaceColors(svg, puckColor);
         }}
-        style={{ 
-          width: '100%', 
+        style={{
+          width: '100%',
           height: '100%',
           objectFit: 'contain',
           display: 'block',
           position: 'absolute',
           top: 0,
           left: 0,
-          zIndex: 1
+          zIndex: 1,
         }}
       />
     </div>
