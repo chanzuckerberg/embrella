@@ -5,7 +5,7 @@ import { API } from '@app/common/constants/api';
 
 export const useGridLoggingUserList = () => {
   const { data, isSuccess } = useFetchData<userListResponse>(API.GRID_LOGGING_USERS);
-  
+
   return {
     users: data,
     isSuccess,
