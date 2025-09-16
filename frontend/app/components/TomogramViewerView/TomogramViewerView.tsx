@@ -122,11 +122,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
 
         // Use direct slice coordinate update if available (fluid navigation)
         if (updateZSliceRef.current) {
-          // Convert z-index to world coordinates
-          const zWorldValue =
-            zAxisMetadata.min + (newZIndex * (zAxisMetadata.max - zAxisMetadata.min)) / (zAxisMetadata.count - 1);
-
-          updateZSliceRef.current(zWorldValue);
+          updateZSliceRef.current(newZIndex);
         } else {
           // Fallback to region recreation (slower)
           const newRegion = await getRegionFromZattrs(state.detail.zarrPath, newZIndex);
@@ -278,6 +274,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
 
       if (detail.zarrPath) {
         // Get z-axis metadata and start with middle z-slice
+        // z axis metadata specifies the valid range of z indices
         const zMeta = await getZAxisMetadata(detail.zarrPath);
         setZAxisMetadata(zMeta);
 
