@@ -457,6 +457,7 @@
       <div class="tab" onclick="openTab(event, 'dashboard')">Workflow Dashboard</div>
       <!-- <div class="tab" onclick="openTab(event, 'metadata')">Metadata Search</div> -->
       <div class="tab" onclick="openTab(event, 'guide')">User Guide</div>
+      <div class="tab" onclick="openTab(event, 'archive')">Archive</div>
     </div>
     
     <!-- Tab Content -->
@@ -467,7 +468,6 @@
           <tr>
             <th>Freeze some grids</th>
             <th>Start a TEM session</th>
-            <th>Start a processing run</th>
           </tr>
           <tr>
             <td>
@@ -477,10 +477,6 @@
             <td>
               <a href="{% url 'tem:reserve' %}" class="button">New Single-Grid TEM Session</a>
               <p>Start new TEM session</p>
-            </td>
-            <td>
-              <a href="{% url 'processes:ptreserve' %}" class="button">Run Processing with Tomograms</a>
-              <p>Create processing run name</p>
             </td>
           </tr>
           <tr>
@@ -649,7 +645,18 @@
         </div>
       </div>
     </div>
-  </div>
+    <div id="archive" class="tab-content">
+      <div class="section">
+        <h2>Start a processing run</h2>
+        <div class="card-grid">
+          <div class="card">
+            <a href="{% url 'processes:ptreserve' %}" class="button">Run Processing with Tomograms</a>            
+              <p>Create processing run name</p>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
 
   <!-- Chatbot Popup Icon (bottom-right) -->
   <div id="chatbot-icon" onclick="toggleChatbot()">
