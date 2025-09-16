@@ -1,12 +1,12 @@
-import { useReducer, useEffect, useCallback, useState } from 'react';
+import { useReducer, useEffect, useCallback, useState, useRef } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
-import { OmeZarrImageViewer } from '../../../idetik/packages/react/src/components/viewers/OmeZarrImageViewer';
-import { getRegionFromZattrs } from './utils';
-import { Region } from '../../../idetik/packages/core/src/data/region';
+import { OmeZarrChunkedImageViewer } from '../../../idetik/packages/react/src/components/viewers/OmeZarrChunkedImageViewer';
+import { getRegionFromZattrs, getZAxisMetadata, regionToSliceCoordinates } from './utils';
+import { SliceCoordinates } from '../../../idetik/packages/core/src/data/chunk';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
@@ -15,9 +15,18 @@ import { DJANGO_URL } from '@app/common/constants/api';
 // import { UserContext } from '@app/common/context/UserProvider';
 // import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
-import { useIdetik } from '../../../idetik/packages/react/src/components/hooks/useIdetik';
+import { useIdetik } from '../../../idetik/packages/react/src/hooks/useIdetik';
 
 // Types
+interface ChannelProps {
+  contrastLimits: [number, number];
+}
+
+interface LayerWithChannelMethods {
+  channelProps: ChannelProps[];
+  setChannelProps: (channels: ChannelProps[]) => void;
+}
+
 interface TomogramViewerProps {
   review: Review;
   onReviewUpdate: (review: Review) => void;
@@ -92,14 +101,41 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
 
 export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerProps) => {
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
-  const [region, setRegion] = useState<Region | null>(null);
+  const [sliceCoordinates, setSliceCoordinates] = useState<SliceCoordinates | null>(null);
+  const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
+  const [zAxisMetadata, setZAxisMetadata] = useState<{ min: number; max: number; count: number } | null>(null);
+  const updateZSliceRef = useRef<((zValue: number) => void) | null>(null);
   // const currentUser = useContext(UserContext);
-  const { isInitialized, imageSeriesLayer, channels } = useIdetik();
+  // const { isInitialized, imageSeriesLayer, channels } = useIdetik();
+  const { isReady, runtime } = useIdetik();
   // Commented out to allow everyone write access
   // const userCanReview = currentUser?.id === review.owner.id;
   const userCanReview = true; // Everyone can review now
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
   const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
+
+  // Handle z-slice navigation with direct ChunkedImageLayer updates
+  const handleZIndexChange = useCallback(
+    async (newZIndex: number) => {
+      if (state.detail?.zarrPath && newZIndex !== currentZIndex && zAxisMetadata) {
+        setCurrentZIndex(newZIndex);
+
+        // Use direct slice coordinate update if available (fluid navigation)
+        if (updateZSliceRef.current) {
+          updateZSliceRef.current(newZIndex);
+        } else {
+          // Fallback to region recreation (slower)
+          const newRegion = await getRegionFromZattrs(state.detail.zarrPath, newZIndex);
+          const newSliceCoords = regionToSliceCoordinates(newRegion);
+          setSliceCoordinates(newSliceCoords);
+        }
+      }
+    },
+    [state.detail?.zarrPath, currentZIndex, zAxisMetadata]
+  );
+
+  // For now, use React state for UI updates (hybrid approach)
+  // The layer will still be updated directly, but UI uses React state
 
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
@@ -109,19 +145,27 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         return;
       }
 
+      // Update React state for UI synchronization
       dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
 
-      // Update the image layer's contrast limits if available
-      if (isInitialized && imageSeriesLayer && channels.length > 0) {
-        const updatedChannels = [...channels];
-        updatedChannels[0] = {
-          ...updatedChannels[0],
-          contrastLimits: newLimits,
-        };
-        imageSeriesLayer.setChannelProps(updatedChannels);
+      // Also update the layer directly for actual contrast changes
+      if (isReady && runtime && runtime.layerManager.layers.length > 0) {
+        const layer = runtime.layerManager.layers[0]; // Get the first (should be only) layer
+        // Type guard to ensure layer has channel properties
+        if ('channelProps' in layer && 'setChannelProps' in layer) {
+          const channels = (layer as LayerWithChannelMethods).channelProps; // Cast to access channelProps
+          if (channels && channels.length > 0) {
+            const updatedChannels = [...channels];
+            updatedChannels[0] = {
+              ...channels[0],
+              contrastLimits: newLimits,
+            };
+            (layer as LayerWithChannelMethods).setChannelProps(updatedChannels);
+          }
+        }
       }
     },
-    [isInitialized, imageSeriesLayer, channels]
+    [isReady, runtime]
   );
 
   const saveTomogram = async () => {
@@ -229,8 +273,17 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       }
 
       if (detail.zarrPath) {
-        const region = await getRegionFromZattrs(detail.zarrPath);
-        setRegion(region);
+        // Get z-axis metadata and start with middle z-slice
+        // z axis metadata specifies the valid range of z indices
+        const zMeta = await getZAxisMetadata(detail.zarrPath);
+        setZAxisMetadata(zMeta);
+
+        const initialZIndex = Math.floor(zMeta.count / 2); // Start at middle slice
+        setCurrentZIndex(initialZIndex);
+
+        const region = await getRegionFromZattrs(detail.zarrPath, initialZIndex);
+        const sliceCoords = regionToSliceCoordinates(region);
+        setSliceCoordinates(sliceCoords);
       }
     };
     loadDetail();
@@ -273,18 +326,20 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           contrastLimits={state.contrastLimits}
           onContrastLimitsChange={handleContrastLimitsChange}
           contrastRange={state.contrastRange}
+          currentZIndex={currentZIndex}
+          zAxisMetadata={zAxisMetadata || undefined}
+          onZIndexChange={handleZIndexChange}
         />
         <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
-          {state.detail?.zarrPath !== undefined && region !== null && (
-            <OmeZarrImageViewer
+          {state.detail?.zarrPath !== undefined && sliceCoordinates !== null && (
+            <OmeZarrChunkedImageViewer
               sourceUrl={state.detail.zarrPath}
-              region={region}
-              fallbackContrastLimits={state.contrastLimits}
-              resolutionLevel={state.detail.reconstructionType?.toLowerCase() === 'sart' ? 0 : 1}
-              seriesDimensionName="z"
-              shouldLoadMiddleZ
-              shouldAutoLoadAllSlices
+              sliceCoordinates={sliceCoordinates}
+              fallbackContrastLimits={state.detail?.contrastLimits || [-0.05, 0.05]}
               classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
+              onLayerCreated={(layer, updateZSlice) => {
+                updateZSliceRef.current = updateZSlice || null;
+              }}
             />
           )}
         </div>

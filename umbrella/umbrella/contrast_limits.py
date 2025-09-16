@@ -52,7 +52,8 @@ def _extract_data_from_store(store_obj, max_samples: int) -> Optional[np.ndarray
     """
     try:
         # 1) If it's a group, handle multiscales or pick first array
-        if isinstance(store_obj, zarr.hierarchy.Group):
+        # Check for both zarr v2 (zarr.hierarchy.Group) and v3 (zarr.Group) compatibility
+        if isinstance(store_obj, zarr.Group) or (hasattr(zarr, 'hierarchy') and isinstance(store_obj, zarr.hierarchy.Group)):
             if "multiscales" in store_obj.attrs:
                 ms = store_obj.attrs["multiscales"]
                 # take the first multiscale spec and its first dataset
@@ -212,7 +213,7 @@ def compute_optimal_contrast_limits(zarr_url: str, method: str = "gmm") -> Tuple
 
 
 def main():
-    url = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25jun02a/run001/vol003/Position_114_8_Vol.zarr/"
+    url = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25aug25a/run003/vol003/Position_1_4_Vol.zarr/"
     print("Computing contrast limits for:", url)
     limits = compute_optimal_contrast_limits(url, method="gmm")
     print("Contrast limits:", limits)
