@@ -40,7 +40,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
       <CardContent>
         {/* Display the selected puck SVG */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-          <PuckSVG puck={selectedPuck} size={200} isSelected={true} onSlotClick={handleSlotClick} />
+          <PuckSVG puck={selectedPuck} size={290} isSelected={true} onSlotClick={handleSlotClick} />
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
           <Button
