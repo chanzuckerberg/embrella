@@ -108,7 +108,6 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
 
           allPaths.forEach((circle) => {
             const dataPosition = circle.getAttribute('data-position');
-            const fill = circle.getAttribute('fill');
 
             // Check if this is a slot circle by looking for data-position attribute and specific fill color
             if (dataPosition) {
