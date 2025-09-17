@@ -13,7 +13,7 @@ interface GridBoxInfoProps {
   onAddGridBox: () => void;
 }
 
-export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onClose, onAddGridBox }) => {
+export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot,  onAddGridBox }) => {
   if (!selectedPuck || !selectedSlot) {
     return null;
   }
@@ -33,11 +33,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     <Card elevation={2} sx={{ maxWidth: 600, width: '100%', mt: 2 }}>
       <CardHeader
         title={`Slot Details: ${selectedPuck.name} - Slot ${selectedSlot}`}
-        action={
-          <IconButton onClick={onClose} size="small">
-            <Icon sdsIcon="XMark" sdsSize="s" />
-          </IconButton>
-        }
+        // action={
+        //   <IconButton onClick={onClose} size="small">
+        //     <Icon sdsIcon="XMark" sdsSize="s" />
+        //   </IconButton>
+        // }
       />
       <CardContent>
         {/* Slot Information */}

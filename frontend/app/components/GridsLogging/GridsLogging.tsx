@@ -8,6 +8,7 @@ import { PucksList } from '@app/common/types/gridLogging/puckList';
 import styles from './GridLogging.module.css';
 import { PuckListed } from './PuckListed';
 import { PuckDetails } from './PuckDetails';
+import { GridBoxInfo } from './GridBoxInfo';
 import { Card, CardContent, CardHeader, Box, Select, MenuItem, FormControl } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
@@ -118,16 +119,16 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
       </Box>
 
       {/* Bottom Section - Grid Box Information */}
-      {/* {selectedSlot && selectedPuck && (
+      {selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
           <GridBoxInfo
             selectedPuck={selectedPuck}
             selectedSlot={selectedSlot}
-            onClose={handleCloseSlotDetails}
+            // onClose={handleCloseSlotDetails}
             onAddGridBox={handleAddGridBox}
           />
         </Box>
-      )} */}
+      )}
     </Box>
   );
 };
