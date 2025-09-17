@@ -63,7 +63,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
                       alignItems: 'center',
                     }}
                   >
-                    <PuckSVG puck={puck} size={180} isSelected={selectedPuck?.id === puck.id} disableSlotClick={true} />
+                    <PuckSVG puck={puck} size={150} isSelected={selectedPuck?.id === puck.id} disableSlotClick={true} />
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 5, display: 'block' }}>
                       CZII-{puck.name} | Position in Cane: {puck.position_in_cane}
                     </Typography>
