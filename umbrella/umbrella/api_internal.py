@@ -923,6 +923,10 @@ class ReviewTomogramView(View):
                     "objectLabels": []
                 }
             }
+              # Extract sessionid and runid from tomogram
+            session_id = tomogram.session.name if tomogram.session else None
+            run_id = tomogram.run_id if tomogram.run_id else None
+            
 
             # Construct zarr path based on reconstruction type
             if review.reconstruction_type.lower() == "sart":
@@ -936,7 +940,7 @@ class ReviewTomogramView(View):
                 job_name = "denoise"
 
             # Updated zarr path construction - migrated to new location
-            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/25aug25a/run003/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_id}/{run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
 # response_data["zarrPath"] = "https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/"
             # response_data["zarrPath"] = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25jun02a/run001/vol003/Position_114_8_Vol.zarr/"
             print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
