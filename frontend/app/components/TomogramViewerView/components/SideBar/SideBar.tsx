@@ -18,10 +18,6 @@ interface SideBarProps {
   contrastLimits: [number, number];
   onContrastLimitsChange: (value: [number, number]) => void;
   contrastRange?: [number, number]; // Dynamic range for the slider
-  // Z-navigation props
-  currentZIndex?: number;
-  zAxisMetadata?: { min: number; max: number; count: number };
-  onZIndexChange?: (zIndex: number) => void;
 }
 
 export const SideBar = ({
@@ -36,9 +32,6 @@ export const SideBar = ({
   contrastLimits: contrast,
   onContrastLimitsChange: onContrastChange,
   contrastRange,
-  currentZIndex,
-  zAxisMetadata,
-  onZIndexChange,
 }: SideBarProps) => {
   const reviewedCount = tomograms.filter((t) => t.status !== 'pending').length;
 
@@ -78,9 +71,6 @@ export const SideBar = ({
           open={sliderOpen}
           setOpen={setSliderOpen}
           contrastRange={contrastRange}
-          currentZIndex={currentZIndex}
-          zAxisMetadata={zAxisMetadata}
-          onZIndexChange={onZIndexChange}
         />
       </SideBarSection>
     </div>
