@@ -111,7 +111,7 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
             const fill = circle.getAttribute('fill');
 
             // Check if this is a slot circle by looking for data-position attribute and specific fill color
-            if (dataPosition && fill && fill.includes('#595959')) {
+            if (dataPosition) {
               const slotNumber = parseInt(dataPosition, 10);
 
               if (slotNumber >= 1 && slotNumber <= 12) {
