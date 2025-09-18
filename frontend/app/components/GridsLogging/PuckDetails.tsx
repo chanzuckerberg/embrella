@@ -14,19 +14,15 @@ interface PuckDetailsProps {
   _selectedSlot: number | null;
 }
 
-export const PuckDetails: React.FC<PuckDetailsProps> = ({
-  selectedPuck,
-  onSlotSelect,
-  _selectedSlot,
-}) => {
+export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, _selectedSlot }) => {
   const handleSlotClick = (slotPosition: number) => {
-     onSlotSelect(slotPosition);
+    onSlotSelect(slotPosition);
   };
-  const handleAddGridBox = () =>{
-     // Redirect to Django admin puck deletion page
-     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add`;
-     window.open(adminUrl, '_blank');
-  }
+  const handleAddGridBox = () => {
+    // Redirect to Django admin puck deletion page
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add`;
+    window.open(adminUrl, '_blank');
+  };
 
   const handleDeletePuck = () => {
     // Redirect to Django admin puck deletion page
@@ -40,32 +36,37 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
 
   return (
     <Card elevation={2} sx={{ maxWidth: 600, width: '100%' }}>
-       <CardHeader 
-       title={
-         <Box className={styles.cardHeader}>
-           <Typography variant="h6" component="h2">
-             Puck Details: {selectedPuck.name}
-           </Typography>
-           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-             <Button
-               sdsType="primary"
-               sdsStyle="rounded"
-               startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
-               onClick={handleAddGridBox}
-               size="small"
-             >
-               Add Grid Box
-             </Button>
-             <IconButton onClick={handleDeletePuck} sx={{'&:hover': {
-                  backgroundColor: '#ffebee',
-                },}}>
-               <Icon sdsIcon="TrashCan" sdsSize="xl" color="red"/>
-             </IconButton>
-           </Box>
-         </Box>
-       }
-     />
-    
+      <CardHeader
+        title={
+          <Box className={styles.cardHeader}>
+            <Typography variant="h6" component="h2">
+              Puck Details: {selectedPuck.name}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Button
+                sdsType="primary"
+                sdsStyle="rounded"
+                startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
+                onClick={handleAddGridBox}
+                size="small"
+              >
+                Add Grid Box
+              </Button>
+              <IconButton
+                onClick={handleDeletePuck}
+                sx={{
+                  '&:hover': {
+                    backgroundColor: '#ffebee',
+                  },
+                }}
+              >
+                <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
+              </IconButton>
+            </Box>
+          </Box>
+        }
+      />
+
       <CardContent>
         {/* Display the selected puck SVG */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>

@@ -73,7 +73,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
       {/* Top Section - Puck List and Puck Details */}
       <Box className={styles.topSection}>
         <Card elevation={2} className={styles.leftCard}>
-        <CardHeader 
+          <CardHeader
             title={
               <Box className={styles.cardHeader}>
                 <Typography variant="h6" component="h2">
@@ -137,11 +137,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
       {/* Bottom Section - Grid Box Information */}
       {selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
-          <GridBoxInfo
-            selectedPuck={selectedPuck}
-            selectedSlot={selectedSlot}
-            onAddGridBox={handleAddGridBox}
-          />
+          <GridBoxInfo selectedPuck={selectedPuck} selectedSlot={selectedSlot} onAddGridBox={handleAddGridBox} />
         </Box>
       )}
     </Box>
