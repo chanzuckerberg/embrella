@@ -16,6 +16,7 @@ interface PuckSVGProps {
 
 export const PuckSVG: React.FC<PuckSVGProps> = ({
   puck,
+  slots = [],
   size = 200,
   onClick,
   onSlotClick,
@@ -80,6 +81,33 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
     return color.includes('#717171');
   };
 
+  // Get slot status for a given position
+  const getSlotStatus = (position: number): 'filled' | 'empty' | 'unknown' => {
+    const slot = slots.find(s => s.position === position);
+    return slot ? slot.status as 'filled' | 'empty' : 'unknown';
+  };
+
+  // Get slot style based on status
+  const getSlotStyle = (position: number) => {
+    const status = getSlotStatus(position);
+    const baseStyle = {
+      cursor: disableSlotClick ? 'default' : 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    };
+
+    switch (status) {
+      case 'filled':
+        return {
+          ...baseStyle,
+          opacity: 0.7,
+          filter: 'brightness(0.8)',
+          fill: 'grey',
+        };
+      default:
+        return baseStyle;
+    }
+  };
+
   return (
     <div
       style={{
@@ -114,6 +142,12 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
               const slotNumber = parseInt(dataPosition, 10);
 
               if (slotNumber >= 1 && slotNumber <= 12) {
+                const status = getSlotStatus(slotNumber);
+                const slotStyle = getSlotStyle(slotNumber);
+                
+                // Apply visual styling based on slot status
+                Object.assign(circle.style, slotStyle);
+
                 // Only add click handlers if slot clicking is not disabled
                 if (!disableSlotClick) {
                   circle.addEventListener('click', (e) => {
@@ -122,10 +156,6 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
                       onSlotClick(slotNumber);
                     }
                   });
-                  circle.style.cursor = 'pointer';
-                } else {
-                  // If slot clicking is disabled, set cursor to default
-                  circle.style.cursor = 'default';
                 }
               }
             }
