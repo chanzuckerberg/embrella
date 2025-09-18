@@ -9,7 +9,6 @@ import { DJANGO_URL } from '@app/common/constants/api';
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
   selectedSlot: number | null;
-  onClose: () => void;
   onAddGridBox: () => void;
 }
 
@@ -33,11 +32,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     <Card elevation={2} sx={{ maxWidth: 600, width: '100%', mt: 2 }}>
       <CardHeader
         title={`Slot Details: ${selectedPuck.name} - Slot ${selectedSlot}`}
-        // action={
-        //   <IconButton onClick={onClose} size="small">
-        //     <Icon sdsIcon="XMark" sdsSize="s" />
-        //   </IconButton>
-        // }
       />
       <CardContent>
         {/* Slot Information */}

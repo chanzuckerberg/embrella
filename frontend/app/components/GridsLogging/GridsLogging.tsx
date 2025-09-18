@@ -9,7 +9,7 @@ import styles from './GridLogging.module.css';
 import { PuckListed } from './PuckListed';
 import { PuckDetails } from './PuckDetails';
 import { GridBoxInfo } from './GridBoxInfo';
-import { Card, CardContent, CardHeader, Box, Select, MenuItem, FormControl } from '@mui/material';
+import { Card, CardContent, CardHeader, Box, Select, MenuItem, FormControl, Typography } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 
@@ -73,14 +73,39 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
       {/* Top Section - Puck List and Puck Details */}
       <Box className={styles.topSection}>
         <Card elevation={2} className={styles.leftCard}>
-          <CardHeader title="Pucks" />
+        <CardHeader 
+            title={
+              <Box className={styles.cardHeader}>
+                <Typography variant="h6" component="h2">
+                  Pucks
+                </Typography>
+                <Button
+                  sdsType="primary"
+                  sdsStyle="rounded"
+                  startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
+                  onClick={handleAddPuck}
+                  size="small"
+                >
+                  Add puck
+                </Button>
+              </Box>
+            }
+          />
           <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4, flexGrow: 1 }}>
-              <FormControl variant="outlined" size="small" sx={{ minWidth: 300 }}>
+            <Box className={styles.userSelectionContainer}>
+              <FormControl variant="outlined" size="small" className={styles.userDropdown}>
                 <Select
                   value={selectedUser?.id || ''}
                   onChange={(e) => handleUserChange(String(e.target.value))}
                   displayEmpty
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 170,
+                        overflow: 'auto',
+                      },
+                    },
+                  }}
                 >
                   <MenuItem value="" disabled>
                     <em>Select User</em>
@@ -95,15 +120,6 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
             </Box>
             {/* Puck Selector Component */}
             <PuckListed selectedUser={selectedUser} onPuckSelect={handlePuckSelect} selectedPuck={selectedPuck} />
-            <Button
-              sdsType="primary"
-              sdsStyle="rounded"
-              startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
-              onClick={handleAddPuck}
-              sx={{ marginTop: '10px' }}
-            >
-              Add puck
-            </Button>
           </CardContent>
         </Card>
 
@@ -124,7 +140,6 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
           <GridBoxInfo
             selectedPuck={selectedPuck}
             selectedSlot={selectedSlot}
-            // onClose={handleCloseSlotDetails}
             onAddGridBox={handleAddGridBox}
           />
         </Box>
