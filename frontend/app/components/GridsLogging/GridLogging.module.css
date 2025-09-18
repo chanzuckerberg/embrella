@@ -32,40 +32,68 @@
     }
   }
   
-  .cardContainer {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    padding: 2px;
-  }
-  
-  .cardContainer.withPuckSelected {
-    justify-content: flex-start;
-    gap: 20px;
-    padding: 20px;
-  }
-  
   .leftCard {
     flex: 0 0 auto;
-    max-width: 600px;
+    max-width: 500px;
     width: 100%;
   }
   
-  .rightCard {
-    flex: 0 0 auto;
-    max-width: 600px;
+  .cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     width: 100%;
-    animation: slideIn 0.3s ease-in-out;
   }
   
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateX(50px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
+  .userSelectionContainer {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 32px;
+    flex-grow: 1;
+  }
+  
+  .userDropdown {
+    min-width: 250px;
+  }
+  
+  .puckCard {
+    border-radius: 12px;
+    overflow: visible;
+    width: 100%;
+    height: 170px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .puckCard:hover {
+    box-shadow: 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+  }
+  
+  .puckCard.selected {
+    border: 2px solid #1976d2;
+    box-shadow: 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);
+  }
+  
+  .puckCard.unselected {
+    border: 1px solid #e0e0e0;
+    box-shadow: 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);
+  }
+  
+  .puckCardContent {
+    text-align: center;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 4px;
+  }
+  
+  .emptyState {
+    text-align: center;
+    padding: 32px 0;
   }
