@@ -10,20 +10,23 @@ import styles from './GridLogging.module.css';
 
 interface PuckDetailsProps {
   selectedPuck: PucksList | null;
-  onAddGridBox: () => void;
   onSlotSelect: (slotPosition: number) => void;
   _selectedSlot: number | null;
 }
 
 export const PuckDetails: React.FC<PuckDetailsProps> = ({
   selectedPuck,
-  onAddGridBox,
   onSlotSelect,
   _selectedSlot,
 }) => {
   const handleSlotClick = (slotPosition: number) => {
-    onSlotSelect(slotPosition);
+     onSlotSelect(slotPosition);
   };
+  const handleAddGridBox = () =>{
+     // Redirect to Django admin puck deletion page
+     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add`;
+     window.open(adminUrl, '_blank');
+  }
 
   const handleDeletePuck = () => {
     // Redirect to Django admin puck deletion page
@@ -48,13 +51,15 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
                sdsType="primary"
                sdsStyle="rounded"
                startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
-               onClick={onAddGridBox}
+               onClick={handleAddGridBox}
                size="small"
              >
                Add Grid Box
              </Button>
-             <IconButton onClick={handleDeletePuck}>
-               <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
+             <IconButton onClick={handleDeletePuck} sx={{'&:hover': {
+                  backgroundColor: '#ffebee',
+                },}}>
+               <Icon sdsIcon="TrashCan" sdsSize="xl" color="red"/>
              </IconButton>
            </Box>
          </Box>
