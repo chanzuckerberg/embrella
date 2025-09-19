@@ -99,9 +99,10 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
       case 'filled':
         return {
           ...baseStyle,
-          opacity: 0.7,
-          filter: 'brightness(0.8)',
-          fill: 'grey',
+          opacity: 0.3,
+          filter: 'brightness(0.4)',
+        //   fill: '#A9A9A9',
+        // fill:'grey'
         };
       default:
         return baseStyle;
