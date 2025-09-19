@@ -148,9 +148,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 borderRadius: '8px',
               }}
             />
-            <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
-              Selected Grid: {selectedGrid}
-            </Typography>
           </Box>
 
           <Box sx={{ flex: 1 }}>
@@ -209,11 +206,12 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 rows={2}
               />
               <Button
+                sdsType="primary"
                 sdsStyle="rounded"
-                variant="outlined"
+                variant="contained"
                 startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
                 onClick={handleMoveGrid}
-                sx={{ minWidth: 120 }}
+                sx={{ minWidth: 120 , fontStyle: 'italic'}}
               >
                 Move Grid
               </Button>
