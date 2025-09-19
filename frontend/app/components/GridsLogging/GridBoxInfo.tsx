@@ -5,6 +5,7 @@ import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
+import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import styles from './GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
@@ -12,7 +13,7 @@ import { GridBoxSVG } from './GridBoxSvg';
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
   selectedSlot: number | null;
-  onAddGridBox: () => void;
+  onGridSelect: (gridPosition: number, gridId: number) => void;
 }
 
 // Color options from choices.py
@@ -38,9 +39,16 @@ const GRID_BOX_NUMBERING = [
   { value: 'z', label: 'Z-top-left' },
 ];
 
-export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onAddGridBox }) => {
-  // Use the hook to fetch grid box details
-  const { gridBoxData, isSuccess } = useGridLoggingGridBoxDetail(
+export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ 
+  selectedPuck, 
+  selectedSlot, 
+  onGridSelect 
+}) => {
+  // Fetch all puck slots data (same as PuckDetails)
+  const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
+  
+  // Fetch specific grid box details for the selected slot
+  const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
   );
@@ -56,11 +64,9 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
 
   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
 
-  console.log(gridBoxData, formData,'APIDATA');
-
   // Update form data when API data is loaded
   useEffect(() => {
-    if (isSuccess && gridBoxData) {
+    if (gridBoxSuccess && gridBoxData) {
       setFormData({
         name: gridBoxData.grid_box?.name || '',
         color: gridBoxData.grid_box?.color || 'FFFFFF',
@@ -70,7 +76,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
         positionInPuck: gridBoxData.position_in_puck || 1,
       });
     }
-  }, [isSuccess, gridBoxData]);
+  }, [gridBoxSuccess, gridBoxData]);
 
   if (!selectedPuck || !selectedSlot) {
     return null;
@@ -86,7 +92,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   const handleDeleteGrid = () => {
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedSlot}/delete/`;
     window.open(adminUrl, '_blank');
-    onAddGridBox();
   };
 
   const handleAddGrid = () => {
@@ -105,11 +110,24 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
 
   const handleGridClick = (gridPosition: number) => {
     console.log('Grid clicked:', gridPosition);
-    setSelectedGrid(gridPosition);
+    // setSelectedGrid(gridPosition);
+  
+    // Check if the grid is occupied (same pattern as handleSlotClick)
+    if (gridBoxData?.grid_box?.positions) {
+      const gridData = gridBoxData.grid_box.positions.find((p: any) => p.q === gridPosition);
+      console.log(gridData?.occupied, gridData?.grid_id, 'GRID_DATA');
+      if (gridData) {
+        if (gridData.occupied && gridData.grid_id) {
+          onGridSelect(gridPosition, gridData.grid_id);
+        } else if (!gridData.occupied) {
+          handleAddGrid();
+        }
+      }
+    }
   };
 
   // Show loading state while fetching data
-  if (!isSuccess) {
+  if (!slotsSuccess || !gridBoxSuccess) {
     return (
       <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
         <CardContent>
@@ -118,6 +136,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
       </Card>
     );
   }
+
 
   return (
     <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
@@ -161,6 +180,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               size={200}
               onGridClick={handleGridClick}
               gridBoxData={gridBoxData}
+              slotsData={slotsData}
+              selectedSlot={selectedSlot}
             />
             {selectedGrid && (
               <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
@@ -285,7 +306,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               sdsType="primary"
               sdsStyle="rounded"
               variant="contained"
-              startIcon={<Icon sdsIcon="ArrowUp" sdsSize="s" />}
+              startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
               onClick={handleMoveGridBox}
               sx={{
                 mb: 2,
