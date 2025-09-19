@@ -66,13 +66,9 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
     setSelectedSlot(slotPosition);
   };
 
-  const handleAddGridBox = () => {
-    // Add grid box logic
-    console.log('Adding grid box to slot:', selectedSlot);
-  };
   const handleGridSelect = (gridPosition: number, gridId?: number) => {
     setSelectedGrid(gridPosition);
-    setSelectedGridId(gridId);
+    setSelectedGridId(gridId || null);
   };
 
   return (
@@ -140,24 +136,25 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
         )}
       </Box>
 
-      {selectedSlot && selectedPuck && (
+{selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
-            {selectedGrid ? (
+            <GridBoxInfo 
+                selectedPuck={selectedPuck} 
+                selectedSlot={selectedSlot} 
+                onGridSelect={handleGridSelect}
+        />
+        </Box>
+    )}
+    {selectedGrid && (
+        <Box className={styles.bottomSection}>
             <GridDetails 
                 selectedPuck={selectedPuck} 
                 selectedSlot={selectedSlot} 
                 selectedGrid={selectedGrid}
                 selectedGridId={selectedGridId}
             />
-            ) : (
-            <GridBoxInfo 
-                selectedPuck={selectedPuck} 
-                selectedSlot={selectedSlot} 
-                onGridSelect={handleGridSelect}
-        />
-    )}
         </Box>
-    )}
+            )}
     </Box>
   );
 };
