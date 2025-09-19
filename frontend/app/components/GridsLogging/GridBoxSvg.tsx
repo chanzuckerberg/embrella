@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ReactSVG } from 'react-svg';
+import { PuckSlotsResponse } from '@app/common/types/gridLogging/puckList';
 
 interface GridBoxSVGProps {
   size?: number;
@@ -11,7 +12,8 @@ interface GridBoxSVGProps {
   disableGridClick?: boolean;
   gridBoxData?: any;
   selectedGrid?: number | null;
-  isOccupied?: boolean;
+  slotsData?: PuckSlotsResponse; // Add slots data like PuckSVG
+  selectedSlot?: number | null;
 }
 
 export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
@@ -22,16 +24,27 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   disableGridClick = false,
   gridBoxData,
   selectedGrid = null,
-  isOccupied = false,
+  slotsData,
+  selectedSlot = null,
 }) => {
-  // Get grid status for a given position (following the same pattern as PuckSVG)
+  // Get grid status for a given position (same pattern as PuckSVG)
   const getGridStatus = (position: number): 'occupied' | 'empty' | 'unknown' => {
-    if (!gridBoxData?.grid_box?.positions) return 'unknown';
-    const gridPosition = gridBoxData.grid_box.positions.find((p: any) => p.q === position);
-    return gridPosition ? (gridPosition.occupied ? 'occupied' : 'empty') : 'unknown';
+    // First check if we have grid box data for the selected slot
+    if (gridBoxData?.grid_box?.positions) {
+      const gridPosition = gridBoxData.grid_box.positions.find((p: any) => p.q === position);
+      return gridPosition ? (gridPosition.occupied ? 'occupied' : 'empty') : 'unknown';
+    }
+    
+    // Fallback: check if the slot itself is filled (from slots data)
+    if (slotsData && selectedSlot) {
+      const slotData = slotsData.slots.find(slot => slot.position === selectedSlot);
+      return slotData?.status === 'filled' ? 'occupied' : 'empty';
+    }
+    
+    return 'unknown';
   };
 
-  // Get grid style based on status (following the EXACT same pattern as PuckSVG)
+  // Get grid style based on status (EXACT same pattern as PuckSVG)
   const getGridStyle = (position: number) => {
     const status = getGridStatus(position);
     const baseStyle = {
@@ -43,11 +56,11 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
       case 'occupied':
         return {
           ...baseStyle,
-          opacity: 0.1,        
-          filter: 'brightness(0.4)', 
+          opacity: 0.3,        // Same as PuckSVG for filled status
+          filter: 'brightness(0.4)', // Same as PuckSVG for filled status
         };
       default:
-        return baseStyle;     
+        return baseStyle;      // Same as PuckSVG - no special styling for empty
     }
   };
 
@@ -89,6 +102,15 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
                 
                 // Apply visual styling based on grid status (EXACT same pattern as PuckSVG)
                 Object.assign(path.style, gridStyle);
+              }
+               // Only add click handlers if slot clicking is not disabled
+               if (!disableGridClick) {
+                path.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  if (onGridClick) {
+                    onGridClick(gridNumber);
+                  }
+                });
               }
             }
           });

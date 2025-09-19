@@ -9,6 +9,7 @@ import styles from './GridLogging.module.css';
 import { PuckListed } from './PuckListed';
 import { PuckDetails } from './PuckDetails';
 import { GridBoxInfo } from './GridBoxInfo';
+import { GridDetails } from './GridDetails';
 import { Card, CardContent, CardHeader, Box, Select, MenuItem, FormControl, Typography } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
@@ -21,6 +22,8 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
   const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
+  const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
 
@@ -66,6 +69,10 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
   const handleAddGridBox = () => {
     // Add grid box logic
     console.log('Adding grid box to slot:', selectedSlot);
+  };
+  const handleGridSelect = (gridPosition: number, gridId?: number) => {
+    setSelectedGrid(gridPosition);
+    setSelectedGridId(gridId);
   };
 
   return (
@@ -127,19 +134,30 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
         {selectedPuck && (
           <PuckDetails
             selectedPuck={selectedPuck}
-            onAddGridBox={handleAddGridBox}
             onSlotSelect={handleSlotSelect}
             _selectedSlot={selectedSlot}
           />
         )}
       </Box>
 
-      {/* Bottom Section - Grid Box Information */}
       {selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
-          <GridBoxInfo selectedPuck={selectedPuck} selectedSlot={selectedSlot} onAddGridBox={handleAddGridBox} />
+            {selectedGrid ? (
+            <GridDetails 
+                selectedPuck={selectedPuck} 
+                selectedSlot={selectedSlot} 
+                selectedGrid={selectedGrid}
+                selectedGridId={selectedGridId}
+            />
+            ) : (
+            <GridBoxInfo 
+                selectedPuck={selectedPuck} 
+                selectedSlot={selectedSlot} 
+                onGridSelect={handleGridSelect}
+        />
+    )}
         </Box>
-      )}
+    )}
     </Box>
   );
 };
