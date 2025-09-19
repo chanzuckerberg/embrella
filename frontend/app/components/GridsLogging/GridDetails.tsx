@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField, 
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingGridDetails } from '@app/common/hooks/useGridLogging/useGridLoggingGridDetails';
-import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
-import { GridBoxSVG } from './GridBoxSvg';
 import styles from './GridLogging.module.css';
 
 interface GridDetailsProps {
@@ -113,41 +111,22 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             <Typography variant="h6" component="h2">
               Grid Details: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{selectedGrid}
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Button
-                sdsType="primary"
-                sdsStyle="rounded"
-                startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
-                onClick={handleAddGrid}
-                size="small"
-              >
-                Add Grid
-              </Button>
-              <IconButton
-                onClick={handleDeleteGrid}
-                sx={{
-                  '&:hover': {
-                    backgroundColor: '#ffebee',
-                  },
-                }}
-              >
-                <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
-              </IconButton>
-            </Box>
           </Box>
         }
       />
 
       <CardContent>
-        {/* Main Content: Grid Box SVG + Form */}
-        <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-          {/* Left Side: Interactive Grid Box SVG */}
+        <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
-            <GridBoxSVG
-              size={200}
-              onGridClick={() => {}} // No grid clicking in details view
-              gridBoxData={gridDetails}
-              selectedGrid={selectedGrid}
+            <img
+                src="/next/grid.png" 
+                alt="Grid"
+                style={{
+                width: 200,
+                height: 200,
+                objectFit: 'contain',
+                borderRadius: '8px',
+                }}
             />
             <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
               Selected Grid: {selectedGrid}
@@ -159,7 +138,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               Grid Details
             </Typography>
 
-            {/* Grid name */}
             <TextField
               fullWidth
               label="Grid name"
@@ -169,7 +147,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               sx={{ mb: 2 }}
             />
 
-            {/* User and Position */}
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
               <TextField
                 fullWidth
@@ -189,7 +166,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               />
             </Box>
 
-            {/* Copy Number and Status */}
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
               <TextField
                 fullWidth
@@ -216,7 +192,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               />
             </Box>
 
-            {/* Notes */}
             <TextField
               fullWidth
               label="Notes"
@@ -228,7 +203,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               sx={{ mb: 2 }}
             />
 
-            {/* Save Button */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
                 Save
