@@ -16,28 +16,6 @@ interface GridBoxInfoProps {
   onGridSelect: (gridPosition: number, gridId: number) => void;
 }
 
-// Color options from choices.py
-const GRID_BOX_COLORS = [
-  { value: 'CF1E01', label: 'Red' },
-  { value: 'fdb000', label: 'Orange' },
-  { value: 'fff500', label: 'Yellow' },
-  { value: '9eef66', label: 'Green' },
-  { value: '00cdf5', label: 'Sky' },
-  { value: '366de1', label: 'Blue' },
-  { value: 'd728c9', label: 'Purple' },
-  { value: 'fd5c9f', label: 'Neon Pink' },
-  { value: 'FFFFFF', label: 'White' },
-  { value: 'd4d2c5', label: 'Grey' },
-  { value: 'ffc08a', label: 'Brown' },
-  { value: '000000', label: 'Black' },
-];
-
-// Numbering options from choices.py
-const GRID_BOX_NUMBERING = [
-  { value: 'ucw', label: 'U-clockwise' },
-  { value: 'uccw', label: 'U-counter-clockwise' },
-  { value: 'z', label: 'Z-top-left' },
-];
 
 export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ 
   selectedPuck, 
@@ -57,9 +35,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     name: '',
     color: 'FFFFFF',
     numbering: 'ucw',
+    color_display: "Neon Pink",
     puck: '',
     maxGrids: 4,
     positionInPuck: 1,
+    numbering_display: 'U-counter-clockwise',
   });
 
   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
@@ -71,6 +51,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         name: gridBoxData.grid_box?.name || '',
         color: gridBoxData.grid_box?.color || 'FFFFFF',
         numbering: gridBoxData.grid_box?.numbering || 'ucw',
+        color_display: gridBoxData.grid_box?.color_display || 'Neon Pink',
+        numbering_display: gridBoxData.grid_box?.numbering_display || 'U-counter-clockwise',
         puck: gridBoxData.puckname || '',
         maxGrids: gridBoxData.grid_box?.max_grids || gridBoxData.max_grids || 4,
         positionInPuck: gridBoxData.position_in_puck || 1,
@@ -81,13 +63,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   if (!selectedPuck || !selectedSlot) {
     return null;
   }
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
 
   const handleDeleteGrid = () => {
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedSlot}/delete/`;
@@ -110,7 +85,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
 
   const handleGridClick = (gridPosition: number) => {
     console.log('Grid clicked:', gridPosition);
-    // setSelectedGrid(gridPosition);
+    setSelectedGrid(gridPosition);
   
     // Check if the grid is occupied (same pattern as handleSlotClick)
     if (gridBoxData?.grid_box?.positions) {
@@ -136,7 +111,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
       </Card>
     );
   }
-
 
   return (
     <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
@@ -172,9 +146,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
       />
 
       <CardContent>
-        {/* Main Content: Grid Box SVG + Form */}
-        <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-          {/* Left Side: Interactive Grid Box SVG */}
+        <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>   
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
             <GridBoxSVG
               size={200}
@@ -201,7 +173,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               label="Grid box name"
               disabled
               value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
               sx={{
                 mb: 2,
               }}
@@ -212,48 +183,16 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               <TextField
                 fullWidth
                 label="Color"
-                value={GRID_BOX_COLORS.find((c) => c.value === formData.color)?.label || 'White'}
+                value={formData.color_display}
                 disabled
-                onChange={(e) => {
-                  const selectedColor = GRID_BOX_COLORS.find((c) => c.label === e.target.value);
-                  if (selectedColor) {
-                    handleInputChange('color', selectedColor.value);
-                  }
-                }}
-                select
-                SelectProps={{
-                  native: true,
-                }}
-              >
-                {GRID_BOX_COLORS.map((color) => (
-                  <option key={color.value} value={color.label}>
-                    {color.label}
-                  </option>
-                ))}
-              </TextField>
+               />
 
               <TextField
                 fullWidth
                 label="Numbering"
-                value={GRID_BOX_NUMBERING.find((n) => n.value === formData.numbering)?.label || 'U-clockwise'}
+                value={formData?.numbering_display}
                 disabled
-                onChange={(e) => {
-                  const selectedNumbering = GRID_BOX_NUMBERING.find((n) => n.label === e.target.value);
-                  if (selectedNumbering) {
-                    handleInputChange('numbering', selectedNumbering.value);
-                  }
-                }}
-                select
-                SelectProps={{
-                  native: true,
-                }}
-              >
-                {GRID_BOX_NUMBERING.map((numbering) => (
-                  <option key={numbering.value} value={numbering.label}>
-                    {numbering.label}
-                  </option>
-                ))}
-              </TextField>
+              />
             </Box>
 
             {/* Puck and Max Grids - two fields side by side */}
@@ -263,14 +202,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 label="Puck"
                 value={formData.puck}
                 disabled
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#f5f5f5',
-                    '& fieldset': {
-                      borderColor: '#e0e0e0',
-                    },
-                  },
-                }}
               />
 
               <TextField
@@ -278,9 +209,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 label="Max Grids"
                 value={formData.maxGrids}
                 disabled
-                onChange={(e) => handleInputChange('maxGrids', parseInt(e.target.value) || 4)}
                 type="number"
-                inputProps={{ min: 1, max: 10 }}
               />
             </Box>
 
@@ -290,15 +219,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               label="Position in puck"
               value={formData.positionInPuck}
               disabled
-              sx={{
-                mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: '#f5f5f5',
-                  '& fieldset': {
-                    borderColor: '#e0e0e0',
-                  },
-                },
-              }}
             />
 
             {/* Move Grid Box button */}
@@ -310,6 +230,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               onClick={handleMoveGridBox}
               sx={{
                 mb: 2,
+                mt:4,
                 fontStyle: 'italic',
               }}
             >
