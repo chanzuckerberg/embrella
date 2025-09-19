@@ -114,7 +114,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
             </Box>
 
             {/* Slot summary information */}
-            <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <Box sx={{ textAlign: 'center', mb: 2, mt:8 }}>
               <Typography variant="body2" color="text.secondary">
                 Slots: {slotsData.slot_summary.filled_count} filled, {slotsData.slot_summary.empty_count} empty
                 ({slotsData.slot_summary.total} total)
