@@ -9,7 +9,8 @@ interface GridBoxSVGProps {
   onGridClick?: (gridPosition: number) => void;
   isSelected?: boolean;
   disableGridClick?: boolean;
-  gridBoxData?: any; // Add type based on your grid box data structure
+  gridBoxData?: any;
+  selectedGrid?: number | null;
 }
 
 export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
@@ -19,43 +20,8 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   isSelected = false,
   disableGridClick = false,
   gridBoxData,
+  selectedGrid = null,
 }) => {
-  // Helper function to get grid status for a given position
-  const getGridStatus = (position: number): 'filled' | 'empty' | 'unknown' => {
-    // This would be based on your gridBoxData structure
-    // For now, returning 'unknown' as placeholder
-    return 'unknown';
-  };
-
-  // Get grid style based on status
-  const getGridStyle = (position: number) => {
-    const status = getGridStatus(position);
-    const baseStyle = {
-      cursor: disableGridClick ? 'default' : 'pointer',
-      transition: 'all 0.2s ease-in-out',
-    };
-
-    switch (status) {
-      case 'filled':
-        return {
-          ...baseStyle,
-          opacity: 0.7,
-          filter: 'brightness(0.8)',
-          fill: '#4CAF50', // Green for filled grids
-        };
-      case 'empty':
-        return {
-          ...baseStyle,
-          fill: '#E0E0E0', // Light gray for empty grids
-        };
-      default:
-        return {
-          ...baseStyle,
-          fill: '#92D3D5', // Default grid box color
-        };
-    }
-  };
-
   return (
     <div
       style={{
@@ -88,14 +54,8 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
             if (dataPosition) {
               const gridNumber = parseInt(dataPosition, 10);
 
-              if (gridNumber >= 1 && gridNumber <= 4) { // Assuming 4 grids max
-                const status = getGridStatus(gridNumber);
-                const gridStyle = getGridStyle(gridNumber);
-                
-                // Apply visual styling based on grid status
-                Object.assign(path.style, gridStyle);
-
-                // Only add click handlers if grid clicking is not disabled
+              if (gridNumber >= 1 && gridNumber <= 4) { // 4 grids max
+                // Add click handlers
                 if (!disableGridClick) {
                   path.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -104,7 +64,21 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
                     }
                   });
                 }
-             
+
+                // Add hover effects
+                path.addEventListener('mouseenter', () => {
+                  if (!disableGridClick) {
+                    path.style.cursor = 'pointer';
+                    path.style.opacity = '0.8';
+                  }
+                });
+
+                path.addEventListener('mouseleave', () => {
+                  if (!disableGridClick) {
+                    path.style.cursor = 'pointer';
+                    path.style.opacity = '1';
+                  }
+                });
               }
             }
           });
