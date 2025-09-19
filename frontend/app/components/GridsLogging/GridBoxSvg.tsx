@@ -11,6 +11,7 @@ interface GridBoxSVGProps {
   disableGridClick?: boolean;
   gridBoxData?: any;
   selectedGrid?: number | null;
+  isOccupied?: boolean;
 }
 
 export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
@@ -21,7 +22,35 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   disableGridClick = false,
   gridBoxData,
   selectedGrid = null,
+  isOccupied = false,
 }) => {
+  // Get grid status for a given position (following the same pattern as PuckSVG)
+  const getGridStatus = (position: number): 'occupied' | 'empty' | 'unknown' => {
+    if (!gridBoxData?.grid_box?.positions) return 'unknown';
+    const gridPosition = gridBoxData.grid_box.positions.find((p: any) => p.q === position);
+    return gridPosition ? (gridPosition.occupied ? 'occupied' : 'empty') : 'unknown';
+  };
+
+  // Get grid style based on status (following the EXACT same pattern as PuckSVG)
+  const getGridStyle = (position: number) => {
+    const status = getGridStatus(position);
+    const baseStyle = {
+      cursor: disableGridClick ? 'default' : 'pointer',
+      transition: 'all 0.2s ease-in-out',
+    };
+
+    switch (status) {
+      case 'occupied':
+        return {
+          ...baseStyle,
+          opacity: 0.1,        
+          filter: 'brightness(0.4)', 
+        };
+      default:
+        return baseStyle;     
+    }
+  };
+
   return (
     <div
       style={{
@@ -55,30 +84,11 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
               const gridNumber = parseInt(dataPosition, 10);
 
               if (gridNumber >= 1 && gridNumber <= 4) { // 4 grids max
-                // Add click handlers
-                if (!disableGridClick) {
-                  path.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (onGridClick) {
-                      onGridClick(gridNumber);
-                    }
-                  });
-                }
-
-                // Add hover effects
-                path.addEventListener('mouseenter', () => {
-                  if (!disableGridClick) {
-                    path.style.cursor = 'pointer';
-                    path.style.opacity = '0.8';
-                  }
-                });
-
-                path.addEventListener('mouseleave', () => {
-                  if (!disableGridClick) {
-                    path.style.cursor = 'pointer';
-                    path.style.opacity = '1';
-                  }
-                });
+                const status = getGridStatus(gridNumber);
+                const gridStyle = getGridStyle(gridNumber);
+                
+                // Apply visual styling based on grid status (EXACT same pattern as PuckSVG)
+                Object.assign(path.style, gridStyle);
               }
             }
           });
