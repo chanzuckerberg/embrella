@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
+import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import styles from './GridLogging.module.css';
 import Image from 'next/image';
 
@@ -38,21 +39,42 @@ const GRID_BOX_NUMBERING = [
 ];
 
 export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onAddGridBox }) => {
-  const [gridBoxData, setGridBoxData] = useState({
+  // Use the hook to fetch grid box details
+  const { gridBoxData, isSuccess } = useGridLoggingGridBoxDetail(
+    selectedPuck?.id,
+    selectedSlot || undefined
+  );
+
+  const [formData, setFormData] = useState({
     name: '',
     color: 'FFFFFF',
     numbering: 'ucw',
-    puck: selectedPuck?.name || '',
+    puck: '',
     maxGrids: 4,
-    positionInPuck: selectedSlot || 1,
+    positionInPuck: 1,
   });
+  console.log(gridBoxData, formData,'APIDATA');
+
+  // Update form data when API data is loaded
+  useEffect(() => {
+    if (isSuccess && gridBoxData) {
+      setFormData({
+        name: gridBoxData.grid_box?.name || '',
+        color: gridBoxData.grid_box?.color || 'FFFFFF',
+        numbering: gridBoxData.grid_box?.numbering || 'ucw',
+        puck: gridBoxData.puckname || '',
+        maxGrids: gridBoxData.grid_box?.max_grids || gridBoxData.max_grids || 4,
+        positionInPuck: gridBoxData.position_in_puck || 1,
+      });
+    }
+  }, [isSuccess, gridBoxData]);
 
   if (!selectedPuck || !selectedSlot) {
     return null;
   }
 
   const handleInputChange = (field: string, value: any) => {
-    setGridBoxData((prev) => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -75,8 +97,19 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   };
 
   const handleSave = () => {
-    console.log('Save grid box:', gridBoxData);
+    console.log('Save grid box:', formData);
   };
+
+  // Show loading state while fetching data
+  if (!isSuccess) {
+    return (
+      <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
+        <CardContent>
+          <Typography>Loading grid box information...</Typography>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
@@ -128,16 +161,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
             <TextField
               fullWidth
               label="Grid box name"
-              value={gridBoxData.name}
               disabled
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
               sx={{
                 mb: 2,
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: '#f5f5f5',
-                  '& fieldset': {
-                    borderColor: '#e0e0e0',
-                  },
-                },
               }}
             />
 
@@ -146,32 +174,48 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               <TextField
                 fullWidth
                 label="Color"
-                value={GRID_BOX_COLORS.find((c) => c.value === gridBoxData.color)?.label || 'White'}
+                value={GRID_BOX_COLORS.find((c) => c.value === formData.color)?.label || 'White'}
                 disabled
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#f5f5f5',
-                    '& fieldset': {
-                      borderColor: '#e0e0e0',
-                    },
-                  },
+                onChange={(e) => {
+                  const selectedColor = GRID_BOX_COLORS.find((c) => c.label === e.target.value);
+                  if (selectedColor) {
+                    handleInputChange('color', selectedColor.value);
+                  }
                 }}
-              />
+                select
+                SelectProps={{
+                  native: true,
+                }}
+              >
+                {GRID_BOX_COLORS.map((color) => (
+                  <option key={color.value} value={color.label}>
+                    {color.label}
+                  </option>
+                ))}
+              </TextField>
 
               <TextField
                 fullWidth
                 label="Numbering"
-                value={GRID_BOX_NUMBERING.find((n) => n.value === gridBoxData.numbering)?.label || 'U-clockwise'}
+                value={GRID_BOX_NUMBERING.find((n) => n.value === formData.numbering)?.label || 'U-clockwise'}
                 disabled
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#f5f5f5',
-                    '& fieldset': {
-                      borderColor: '#e0e0e0',
-                    },
-                  },
+                onChange={(e) => {
+                  const selectedNumbering = GRID_BOX_NUMBERING.find((n) => n.label === e.target.value);
+                  if (selectedNumbering) {
+                    handleInputChange('numbering', selectedNumbering.value);
+                  }
                 }}
-              />
+                select
+                SelectProps={{
+                  native: true,
+                }}
+              >
+                {GRID_BOX_NUMBERING.map((numbering) => (
+                  <option key={numbering.value} value={numbering.label}>
+                    {numbering.label}
+                  </option>
+                ))}
+              </TextField>
             </Box>
 
             {/* Puck and Max Grids - two fields side by side */}
@@ -179,7 +223,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               <TextField
                 fullWidth
                 label="Puck"
-                value={gridBoxData.puck}
+                value={formData.puck}
                 disabled
                 sx={{
                   '& .MuiOutlinedInput-root': {
@@ -194,16 +238,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               <TextField
                 fullWidth
                 label="Max Grids"
-                value={gridBoxData.maxGrids}
+                value={formData.maxGrids}
                 disabled
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#f5f5f5',
-                    '& fieldset': {
-                      borderColor: '#e0e0e0',
-                    },
-                  },
-                }}
+                onChange={(e) => handleInputChange('maxGrids', parseInt(e.target.value) || 4)}
+                type="number"
+                inputProps={{ min: 1, max: 10 }}
               />
             </Box>
 
@@ -211,7 +250,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
             <TextField
               fullWidth
               label="Position in puck"
-              value={gridBoxData.positionInPuck}
+              value={formData.positionInPuck}
               disabled
               sx={{
                 mb: 2,
