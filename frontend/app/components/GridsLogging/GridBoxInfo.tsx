@@ -7,7 +7,7 @@ import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import styles from './GridLogging.module.css';
-import Image from 'next/image';
+import { GridBoxSVG } from './GridBoxSvg';
 
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
@@ -53,6 +53,9 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     maxGrids: 4,
     positionInPuck: 1,
   });
+
+  const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
+
   console.log(gridBoxData, formData,'APIDATA');
 
   // Update form data when API data is loaded
@@ -98,6 +101,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
 
   const handleSave = () => {
     console.log('Save grid box:', formData);
+  };
+
+  const handleGridClick = (gridPosition: number) => {
+    console.log('Grid clicked:', gridPosition);
+    setSelectedGrid(gridPosition);
   };
 
   // Show loading state while fetching data
@@ -147,9 +155,18 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
       <CardContent>
         {/* Main Content: Grid Box SVG + Form */}
         <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-          {/* Left Side: Grid Box SVG */}
+          {/* Left Side: Interactive Grid Box SVG */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
-            <Image src="/next/GridBox.svg" alt="Grid Box" width={200} height={150} style={{ objectFit: 'contain' }} />
+            <GridBoxSVG
+              size={200}
+              onGridClick={handleGridClick}
+              gridBoxData={gridBoxData}
+            />
+            {selectedGrid && (
+              <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
+                Selected Grid: {selectedGrid}
+              </Typography>
+            )}
           </Box>
 
           <Box sx={{ flex: 1 }}>
