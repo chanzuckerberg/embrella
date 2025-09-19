@@ -139,8 +139,10 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
             // Check if this is a slot circle by looking for data-position attribute and specific fill color
             if (dataPosition) {
               const slotNumber = parseInt(dataPosition, 10);
+              const maxBoxes = puck?.max_boxes || 12;
 
-              if (slotNumber >= 1 && slotNumber <= 12) {
+
+              if (slotNumber >= 1 && slotNumber <= maxBoxes) {
                 const status = getSlotStatus(slotNumber);
                 const slotStyle = getSlotStyle(slotNumber);
                 

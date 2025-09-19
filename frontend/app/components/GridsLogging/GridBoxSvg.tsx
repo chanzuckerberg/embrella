@@ -56,11 +56,11 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
       case 'occupied':
         return {
           ...baseStyle,
-          opacity: 0.3,        // Same as PuckSVG for filled status
-          filter: 'brightness(0.4)', // Same as PuckSVG for filled status
+          opacity: 0.1,      
+          filter: 'brightness(0.3)', 
         };
       default:
-        return baseStyle;      // Same as PuckSVG - no special styling for empty
+        return baseStyle;     
     }
   };
 
@@ -95,8 +95,9 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
             // Check if this is a grid area by looking for data-position attribute
             if (dataPosition) {
               const gridNumber = parseInt(dataPosition, 10);
+              const maxGrids = gridBoxData?.grid_box?.max_grids || 4;
 
-              if (gridNumber >= 1 && gridNumber <= 4) { // 4 grids max
+              if (gridNumber >= 1 && gridNumber <= maxGrids) { // 4 grids max
                 const status = getGridStatus(gridNumber);
                 const gridStyle = getGridStyle(gridNumber);
                 

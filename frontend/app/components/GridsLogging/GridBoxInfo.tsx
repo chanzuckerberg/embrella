@@ -155,11 +155,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               slotsData={slotsData}
               selectedSlot={selectedSlot}
             />
-            {selectedGrid && (
-              <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
-                Selected Grid: {selectedGrid}
-              </Typography>
-            )}
           </Box>
 
           <Box sx={{ flex: 1 }}>
