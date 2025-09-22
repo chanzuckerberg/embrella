@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { GridDetailsResponse } from '@app/common/types/gridLogging/gridDetails';
 import {
   Card,
   CardContent,
   CardHeader,
   Typography,
   Box,
-  IconButton,
   TextField,
   CircularProgress,
   Alert,
@@ -29,6 +29,22 @@ interface GridDetailsProps {
   onAddGridBox: () => void;
 }
 
+const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
+  gridName: data.grid_name || '',
+  user: data.user || '',
+  notes: data.notes || '',
+  clipped: data.clipped || false,
+  trashed: data.trashed || false,
+  positionInBox: data.position_in_box || 1,
+  copyNumber: data.copy_number || 1,
+  freezingSession: data.freezing_session?.name || '',
+  specimen: data.specimen?.name || '',
+  project: data.project?.name || '',
+  blotTime: data.parameters?.blot_time || 0,
+  blotForce: data.parameters?.blot_force || 0,
+  blotDistance: data.parameters?.blot_distance || 0,
+});
+
 export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedPuck,
   selectedSlot,
@@ -36,61 +52,22 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedGridId,
   onAddGridBox,
 }) => {
-  // Fetch grid box details to get all grid positions
+  // Early return if no selection
+  if (!selectedPuck || !selectedSlot || !selectedGrid) {
+    return null;
+  }
+
+  // Fetch data
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
   );
 
-  // Fetch specific grid details if a grid is selected
   const { gridDetails, loading, error } = useGridLoggingGridDetails({
     puckId: selectedPuck?.id || 0,
     positionInPuck: selectedSlot || 0,
     gridId: selectedGridId || 0,
   });
-
-  const [formData, setFormData] = useState({
-    gridName: '',
-    user: '',
-    notes: '',
-    clipped: false,
-    trashed: false,
-    positionInBox: 1,
-    copyNumber: 1,
-    freezingSession: '',
-    specimen: '',
-    project: '',
-    blotTime: 0,
-    blotForce: 0,
-    blotDistance: 0,
-  });
-
-  console.log(gridDetails, gridBoxData, 'GRID_DETAILS_DATA');
-
-  // Update form data when grid details are loaded
-  useEffect(() => {
-    if (gridDetails) {
-      setFormData({
-        gridName: gridDetails.grid_name || '',
-        user: gridDetails.user || '',
-        notes: gridDetails.notes || '',
-        clipped: gridDetails.clipped || false,
-        trashed: gridDetails.trashed || false,
-        positionInBox: gridDetails.position_in_box || 1,
-        copyNumber: gridDetails.copy_number || 1,
-        freezingSession: gridDetails.freezing_session?.name || '',
-        specimen: gridDetails.specimen?.name || '',
-        project: gridDetails.project?.name || '',
-        blotTime: gridDetails.parameters?.blot_time || 0,
-        blotForce: gridDetails.parameters?.blot_force || 0,
-        blotDistance: gridDetails.parameters?.blot_distance || 0,
-      });
-    }
-  }, [gridDetails]);
-
-  if (!selectedPuck || !selectedSlot || !selectedGrid) {
-    return null;
-  }
 
   const handleDeleteGrid = () => {
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/`;
@@ -134,13 +111,28 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     );
   }
 
+  // Show message if no grid details available
+  if (!gridDetails) {
+    return (
+      <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
+        <CardContent>
+          <Typography>No grid details available</Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Compute form data directly from API response
+  const formData = mapGridDetailsToFormData(gridDetails);
+
+
   return (
     <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
       <CardHeader
         title={
           <Box className={styles.cardHeader}>
             <Typography variant="h6" component="h2">
-              Grid Details: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{selectedGrid}
+              Grid Details: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{formData.gridName}
             </Typography>
           </Box>
         }
@@ -148,8 +140,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
 
       <CardContent>
         <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-          {/* Left Side: Grid Image */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200,  borderColor: '#3fb1bb', borderWidth: '2px', borderStyle: 'solid', borderRadius: '8px' }}>
             <img
               src="/next/grid.png"
               alt="Grid"
@@ -158,6 +149,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 height: 200,
                 objectFit: 'contain',
                 borderRadius: '8px',
+               
               }}
             />
           </Box>
@@ -167,13 +159,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               Grid Details
             </Typography>
 
-            {/* Grid name */}
-            <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={{ mb: 4 }} />
+              {/* Grid name */}     
+              <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={{ mb: 4 }} />
 
-            {/* User */}
-            <TextField fullWidth label="User" disabled value={formData.user} sx={{ mb: 3 }} />
-
-            {/* Checkboxes for Clipped and Trashed */}
+               {/* User */}
+              <TextField fullWidth label="User" disabled value={formData.user} sx={{ mb: 3 }} />
+            
+          {/* Checkboxes for Clipped and Trashed */}
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
               <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" />
               <FormControlLabel control={<Checkbox checked={formData.trashed} color="primary" />} label="Trashed" />
