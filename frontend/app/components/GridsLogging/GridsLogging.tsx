@@ -128,33 +128,25 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
 
         {/* Puck Details Component - appears on the right when a puck is selected */}
         {selectedPuck && (
-          <PuckDetails
-            selectedPuck={selectedPuck}
-            onSlotSelect={handleSlotSelect}
-            _selectedSlot={selectedSlot}
-          />
+          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} _selectedSlot={selectedSlot} />
         )}
       </Box>
 
-{selectedSlot && selectedPuck && (
+      {!!selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
-            <GridBoxInfo 
-                selectedPuck={selectedPuck} 
-                selectedSlot={selectedSlot} 
-                onGridSelect={handleGridSelect}
-        />
+          <GridBoxInfo selectedPuck={selectedPuck} selectedSlot={selectedSlot} onGridSelect={handleGridSelect} />
         </Box>
-    )}
-    {selectedGrid && (
+      )}
+      {!!selectedGrid && (
         <Box className={styles.bottomSection}>
-            <GridDetails 
-                selectedPuck={selectedPuck} 
-                selectedSlot={selectedSlot} 
-                selectedGrid={selectedGrid}
-                selectedGridId={selectedGridId}
-            />
+          <GridDetails
+            selectedPuck={selectedPuck}
+            selectedSlot={selectedSlot}
+            selectedGrid={selectedGrid}
+            selectedGridId={selectedGridId}
+          />
         </Box>
-            )}
+      )}
     </Box>
   );
 };

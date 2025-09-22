@@ -83,8 +83,8 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
 
   // Get slot status for a given position
   const getSlotStatus = (position: number): 'filled' | 'empty' | 'unknown' => {
-    const slot = slots.find(s => s.position === position);
-    return slot ? slot.status as 'filled' | 'empty' : 'unknown';
+    const slot = slots.find((s) => s.position === position);
+    return slot ? (slot.status as 'filled' | 'empty') : 'unknown';
   };
 
   // Get slot style based on status
@@ -141,11 +141,10 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
               const slotNumber = parseInt(dataPosition, 10);
               const maxBoxes = puck?.max_boxes || 12;
 
-
               if (slotNumber >= 1 && slotNumber <= maxBoxes) {
-                const status = getSlotStatus(slotNumber);
+                // const status = getSlotStatus(slotNumber);
                 const slotStyle = getSlotStyle(slotNumber);
-                
+
                 // Apply visual styling based on slot status
                 Object.assign(circle.style, slotStyle);
 
