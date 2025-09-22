@@ -2,7 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
-import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField, CircularProgress, Alert, Checkbox, FormControlLabel } from '@mui/material';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Box,
+  IconButton,
+  TextField,
+  CircularProgress,
+  Alert,
+  Checkbox,
+  FormControlLabel,
+} from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingGridDetails } from '@app/common/hooks/useGridLogging/useGridLoggingGridDetails';
@@ -17,12 +29,12 @@ interface GridDetailsProps {
   onAddGridBox: () => void;
 }
 
-export const GridDetails: React.FC<GridDetailsProps> = ({ 
-  selectedPuck, 
-  selectedSlot, 
+export const GridDetails: React.FC<GridDetailsProps> = ({
+  selectedPuck,
+  selectedSlot,
   selectedGrid,
   selectedGridId,
-  onAddGridBox
+  onAddGridBox,
 }) => {
   // Fetch grid box details to get all grid positions
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
@@ -139,7 +151,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
           {/* Left Side: Grid Image */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
             <img
-              src="/next/grid.png" 
+              src="/next/grid.png"
               alt="Grid"
               style={{
                 width: 200,
@@ -156,91 +168,41 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             </Typography>
 
             {/* Grid name */}
-            <TextField
-              fullWidth
-              label="Grid Name"
-              disabled
-              value={formData.gridName}
-              sx={{ mb: 2 }}
-            />
+            <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={{ mb: 4 }} />
 
             {/* User */}
-            <TextField
-              fullWidth
-              label="User"
-              disabled
-              value={formData.user}
-              sx={{ mb: 2 }}
-            />
+            <TextField fullWidth label="User" disabled value={formData.user} sx={{ mb: 3 }} />
 
             {/* Checkboxes for Clipped and Trashed */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formData.clipped}
-                    color="primary"
-                  />
-                }
-                label="Clipped"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formData.trashed}
-                    color="primary"
-                  />
-                }
-                label="Trashed"
-              />
+            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+              <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" />
+              <FormControlLabel control={<Checkbox checked={formData.trashed} color="primary" />} label="Trashed" />
             </Box>
 
             {/* Notes and Move Grid */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <TextField
-                fullWidth
-                label="Notes"
-                disabled
-                value={formData.notes}
-                multiline
-                rows={2}
-              />
+            <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
+              <TextField fullWidth label="Notes" disabled value={formData.notes} multiline rows={2} />
               <Button
                 sdsType="primary"
                 sdsStyle="rounded"
                 variant="contained"
                 startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
                 onClick={handleMoveGrid}
-                sx={{ minWidth: 120 , fontStyle: 'italic'}}
+                sx={{ minWidth: 120, fontStyle: 'italic' }}
               >
                 Move Grid
               </Button>
             </Box>
 
             {/* Freezing Session and Specimen */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <TextField
-                fullWidth
-                label="Freezing Session"
-                disabled
-                value={formData.freezingSession}
-              />
-              <TextField
-                fullWidth
-                label="Specimen"
-                disabled
-                value={formData.specimen}
-              />
+            <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
+              <TextField fullWidth label="Freezing Session" disabled value={formData.freezingSession} />
+              <TextField fullWidth label="Specimen" disabled value={formData.specimen} />
             </Box>
 
             {/* Project, Position in Box, Copy Number */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <TextField
-                fullWidth
-                label="Project"
-                disabled
-                value={formData.project}
-              />
+            <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
+              <TextField fullWidth label="Project" disabled value={formData.project} />
               <TextField
                 fullWidth
                 label="Position in Box"

@@ -21,10 +21,10 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
 
   const handleSlotClick = (slotPosition: number) => {
     if (!slotsData) return;
-    
+
     // Find the slot data for this position
-    const slotData = slotsData.slots.find(slot => slot.position === slotPosition);
-    
+    const slotData = slotsData.slots.find((slot) => slot.position === slotPosition);
+
     if (slotData) {
       if (slotData.status === 'filled' && slotData.grid_box_id) {
         // Slot is filled, pass the grid box ID to show grid box details
@@ -104,20 +104,20 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
           <>
             {/* Display the selected puck SVG with slots data */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-              <PuckSVG 
-                puck={selectedPuck} 
-                size={290} 
-                isSelected={true} 
+              <PuckSVG
+                puck={selectedPuck}
+                size={290}
+                isSelected={true}
                 onSlotClick={handleSlotClick}
                 slots={slotsData.slots}
               />
             </Box>
 
             {/* Slot summary information */}
-            <Box sx={{ textAlign: 'center', mb: 2, mt:8 }}>
+            <Box sx={{ textAlign: 'center', mb: 2, mt: 8 }}>
               <Typography variant="body2" color="text.secondary">
-                Slots: {slotsData.slot_summary.filled_count} filled, {slotsData.slot_summary.empty_count} empty
-                ({slotsData.slot_summary.total} total)
+                Slots: {slotsData.slot_summary.filled_count} filled, {slotsData.slot_summary.empty_count} empty (
+                {slotsData.slot_summary.total} total)
               </Typography>
             </Box>
 
