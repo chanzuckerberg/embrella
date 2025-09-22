@@ -83,16 +83,16 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   const handleGridClick = (gridPosition: number) => {
     setSelectedGrid(gridPosition);
 
-    if (gridBoxData?.grid_box?.positions) {
-      const gridData = gridBoxData.grid_box.positions.find((p) => p.q === gridPosition);
-      if (gridData) {
-        if (gridData.occupied && gridData.grid_id) {
-          onGridSelect(gridPosition, gridData.grid_id);
-        } else if (!gridData.occupied) {
-          handleAddGrid();
-        }
-      }
-    }
+    // if (gridBoxData?.grid_box?.positions) {
+    //   const gridData = gridBoxData.grid_box.positions.find((p) => p.q === gridPosition);
+    //   if (gridData) {
+    //     if (gridData.occupied && gridData.grid_id) {
+    //       onGridSelect(gridPosition, gridData.grid_id);
+    //     } else if (!gridData.occupied) {
+    //       handleAddGrid();
+    //     }
+    //   }
+    // }
   };
 
   // Show loading state while fetching data
