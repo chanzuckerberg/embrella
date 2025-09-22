@@ -10,6 +10,7 @@ import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/us
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
 import styles from './GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
+import { disabledTextFieldStyles } from './DisableBoxStyle';
 
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
@@ -161,7 +162,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               label="Grid box name"
               disabled
               value={formData.name}
-              sx={{ mb: 5 }}
+              sx={disabledTextFieldStyles}
             />
 
             {/* Color and Numbering */}
@@ -171,12 +172,14 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 label="Color" 
                 value={formData.color_display} 
                 disabled 
+                sx={disabledTextFieldStyles}
               />
               <TextField 
                 fullWidth 
                 label="Numbering" 
                 value={formData.numbering_display} 
                 disabled 
+                sx={disabledTextFieldStyles}
               />
             </Box>
 
@@ -187,6 +190,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 label="Puck" 
                 value={formData.puckName} 
                 disabled 
+                sx={disabledTextFieldStyles}
               />
               <TextField 
                 fullWidth 
@@ -194,6 +198,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 value={formData.maxGrids} 
                 disabled 
                 type="number" 
+                sx={disabledTextFieldStyles}
               />
             </Box>
 
@@ -203,6 +208,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               label="Position in puck" 
               value={formData.positionInPuck} 
               disabled 
+              sx={disabledTextFieldStyles}
             />
 
             {/* Move Grid Box button */}
