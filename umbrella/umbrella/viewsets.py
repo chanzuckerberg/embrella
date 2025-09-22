@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 from django.conf import settings
 from django.contrib.auth.models import User
 from rest_framework.decorators import action
+from django.db.models.functions import Lower 
 from cryo_grids.models import Puck, CryoGridBox, CryoGrid
 from .serializers import UserSerializer, PuckSerializer, GridDetailsSerializer
 
@@ -14,7 +15,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for User model - ReadOnly since we only want to list users
     """
-    queryset = User.objects.all().order_by('username')
+    queryset = User.objects.all().order_by(Lower('username'))
     serializer_class = UserSerializer
     
     def list(self, request, *args, **kwargs):
