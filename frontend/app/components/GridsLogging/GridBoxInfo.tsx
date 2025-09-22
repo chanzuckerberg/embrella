@@ -7,6 +7,7 @@ import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
+import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
 import styles from './GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
 
@@ -16,49 +17,43 @@ interface GridBoxInfoProps {
   onGridSelect: (gridPosition: number, gridId: number) => void;
 }
 
+const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
+    name: data.grid_box?.name || '',
+    color: data.grid_box?.color || 'FFFFFF',
+    numbering: data.grid_box?.numbering || 'ucw',
+    color_display: data.grid_box?.color_display || 'Neon Pink',
+    puckName: data.puck_name || '',
+    maxGrids: data.grid_box?.max_grids || data.max_grids || 4,
+    positionInPuck: data.position_in_puck || 1,
+    numbering_display: data.grid_box?.numbering_display || 'U-counter-clockwise',
+  });
 
-export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ 
-  selectedPuck, 
-  selectedSlot, 
-  onGridSelect 
-}) => {
+export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect }) => {
   // Fetch all puck slots data (same as PuckDetails)
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
-  
+
   // Fetch specific grid box details for the selected slot
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
   );
 
-  const [formData, setFormData] = useState({
+ 
+const formData = gridBoxData ? mapGridBoxDetailToFormData(gridBoxData) : {
     name: '',
     color: 'FFFFFF',
     numbering: 'ucw',
-    color_display: "Neon Pink",
-    puck: '',
+    color_display: 'Neon Pink',
+    puckName: '',
     maxGrids: 4,
     positionInPuck: 1,
     numbering_display: 'U-counter-clockwise',
-  });
-
+  };
+  console.log(formData, 'FORM_DATA');
   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
 
   // Update form data when API data is loaded
-  useEffect(() => {
-    if (gridBoxSuccess && gridBoxData) {
-      setFormData({
-        name: gridBoxData.grid_box?.name || '',
-        color: gridBoxData.grid_box?.color || 'FFFFFF',
-        numbering: gridBoxData.grid_box?.numbering || 'ucw',
-        color_display: gridBoxData.grid_box?.color_display || 'Neon Pink',
-        numbering_display: gridBoxData.grid_box?.numbering_display || 'U-counter-clockwise',
-        puck: gridBoxData.puckname || '',
-        maxGrids: gridBoxData.grid_box?.max_grids || gridBoxData.max_grids || 4,
-        positionInPuck: gridBoxData.position_in_puck || 1,
-      });
-    }
-  }, [gridBoxSuccess, gridBoxData]);
+ 
 
   if (!selectedPuck || !selectedSlot) {
     return null;
@@ -84,13 +79,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   };
 
   const handleGridClick = (gridPosition: number) => {
-    console.log('Grid clicked:', gridPosition);
     setSelectedGrid(gridPosition);
-  
+
     // Check if the grid is occupied (same pattern as handleSlotClick)
     if (gridBoxData?.grid_box?.positions) {
       const gridData = gridBoxData.grid_box.positions.find((p: any) => p.q === gridPosition);
-      console.log(gridData?.occupied, gridData?.grid_id, 'GRID_DATA');
       if (gridData) {
         if (gridData.occupied && gridData.grid_id) {
           onGridSelect(gridPosition, gridData.grid_id);
@@ -146,7 +139,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
       />
 
       <CardContent>
-        <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>   
+        <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
             <GridBoxSVG
               size={200}
@@ -169,52 +162,26 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               disabled
               value={formData.name}
               sx={{
-                mb: 2,
+                mb: 5,
               }}
             />
 
             {/* Color and Numbering - two fields side by side */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <TextField
-                fullWidth
-                label="Color"
-                value={formData.color_display}
-                disabled
-               />
+            <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
+              <TextField fullWidth label="Color" value={formData.color_display} disabled />
 
-              <TextField
-                fullWidth
-                label="Numbering"
-                value={formData?.numbering_display}
-                disabled
-              />
+              <TextField fullWidth label="Numbering" value={formData?.numbering_display} disabled />
             </Box>
 
             {/* Puck and Max Grids - two fields side by side */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <TextField
-                fullWidth
-                label="Puck"
-                value={formData.puck}
-                disabled
-              />
+            <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
+              <TextField fullWidth label="Puck" value={formData.puckName} disabled />
 
-              <TextField
-                fullWidth
-                label="Max Grids"
-                value={formData.maxGrids}
-                disabled
-                type="number"
-              />
+              <TextField fullWidth label="Max Grids" value={formData.maxGrids} disabled type="number" />
             </Box>
 
             {/* Position in puck - single wide field */}
-            <TextField
-              fullWidth
-              label="Position in puck"
-              value={formData.positionInPuck}
-              disabled
-            />
+            <TextField fullWidth label="Position in puck" value={formData.positionInPuck} disabled />
 
             {/* Move Grid Box button */}
             <Button
@@ -225,7 +192,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               onClick={handleMoveGridBox}
               sx={{
                 mb: 2,
-                mt:4,
+                mt: 4,
                 fontStyle: 'italic',
               }}
             >

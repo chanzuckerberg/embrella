@@ -1,6 +1,6 @@
 export interface GridBoxDetailResponse {
   puck_id: number;
-  puckname: string;
+  puck_name: string;
   position_in_puck: number;
   status: 'filled' | 'empty';
   max_grids?: number;
