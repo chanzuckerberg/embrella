@@ -34,13 +34,13 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
       const gridPosition = gridBoxData.grid_box.positions.find((p: any) => p.q === position);
       return gridPosition ? (gridPosition.occupied ? 'occupied' : 'empty') : 'unknown';
     }
-    
+
     // Fallback: check if the slot itself is filled (from slots data)
     if (slotsData && selectedSlot) {
-      const slotData = slotsData.slots.find(slot => slot.position === selectedSlot);
+      const slotData = slotsData.slots.find((slot) => slot.position === selectedSlot);
       return slotData?.status === 'filled' ? 'occupied' : 'empty';
     }
-    
+
     return 'unknown';
   };
 
@@ -56,11 +56,11 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
       case 'occupied':
         return {
           ...baseStyle,
-          opacity: 0.1,      
-          filter: 'brightness(0.3)', 
+          opacity: 0.1,
+          filter: 'brightness(0.3)',
         };
       default:
-        return baseStyle;     
+        return baseStyle;
     }
   };
 
@@ -97,15 +97,16 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
               const gridNumber = parseInt(dataPosition, 10);
               const maxGrids = gridBoxData?.grid_box?.max_grids || 4;
 
-              if (gridNumber >= 1 && gridNumber <= maxGrids) { // 4 grids max
+              if (gridNumber >= 1 && gridNumber <= maxGrids) {
+                // 4 grids max
                 const status = getGridStatus(gridNumber);
                 const gridStyle = getGridStyle(gridNumber);
-                
+
                 // Apply visual styling based on grid status (EXACT same pattern as PuckSVG)
                 Object.assign(path.style, gridStyle);
               }
-               // Only add click handlers if slot clicking is not disabled
-               if (!disableGridClick) {
+              // Only add click handlers if slot clicking is not disabled
+              if (!disableGridClick) {
                 path.addEventListener('click', (e) => {
                   e.stopPropagation();
                   if (onGridClick) {
