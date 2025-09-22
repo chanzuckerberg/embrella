@@ -106,3 +106,12 @@
   text-align: center;
   padding: 32px 0;
 }
+
+.pucksScrollContainer {
+    max-height: 360px; 
+    overflow-y: auto;
+    overflow-x: hidden;
+    
+  }
+  
+ 

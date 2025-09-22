@@ -36,7 +36,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
   return (
     <Box>
       {/* Pucks Grid Display with Interactive SVG */}
-      <Box>
+      <Box className={styles.pucksScrollContainer}>
         <Grid container spacing={2} justifyContent="flex-start">
           {pucksList.map((puck) => (
             <Grid item key={puck.id} xs={12} sm={6} md={4}>
