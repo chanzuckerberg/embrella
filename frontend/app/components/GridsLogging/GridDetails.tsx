@@ -20,6 +20,7 @@ import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingGridDetails } from '@app/common/hooks/useGridLogging/useGridLoggingGridDetails';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import styles from './GridLogging.module.css';
+import { disabledTextFieldStyles } from './DisableBoxStyle';
 
 interface GridDetailsProps {
   selectedPuck: PucksList | null;
@@ -160,10 +161,10 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             </Typography>
 
               {/* Grid name */}     
-              <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={{ mb: 4 }} />
+              <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={disabledTextFieldStyles}/>
 
                {/* User */}
-              <TextField fullWidth label="User" disabled value={formData.user} sx={{ mb: 3 }} />
+              <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
             
           {/* Checkboxes for Clipped and Trashed */}
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -173,7 +174,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
 
             {/* Notes and Move Grid */}
             <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
-              <TextField fullWidth label="Notes" disabled value={formData.notes} multiline rows={2} />
+              <TextField fullWidth label="Notes" disabled value={formData.notes} multiline rows={2} sx={disabledTextFieldStyles} />
               <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -188,13 +189,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
 
             {/* Freezing Session and Specimen */}
             <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
-              <TextField fullWidth label="Freezing Session" disabled value={formData.freezingSession} />
-              <TextField fullWidth label="Specimen" disabled value={formData.specimen} />
+              <TextField fullWidth label="Freezing Session" disabled value={formData.freezingSession} sx={disabledTextFieldStyles} />
+              <TextField fullWidth label="Specimen" disabled value={formData.specimen} sx={disabledTextFieldStyles} />
             </Box>
 
             {/* Project, Position in Box, Copy Number */}
             <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
-              <TextField fullWidth label="Project" disabled value={formData.project} />
+              <TextField fullWidth label="Project" disabled value={formData.project} sx={disabledTextFieldStyles} />
               <TextField
                 fullWidth
                 label="Position in Box"
@@ -202,6 +203,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 value={formData.positionInBox}
                 type="number"
                 inputProps={{ min: 1, max: 4 }}
+                sx={disabledTextFieldStyles}
               />
               <TextField
                 fullWidth
@@ -210,6 +212,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 value={formData.copyNumber}
                 type="number"
                 inputProps={{ min: 1 }}
+                sx={disabledTextFieldStyles}
               />
             </Box>
 
@@ -222,6 +225,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 value={formData.blotTime}
                 type="number"
                 inputProps={{ step: 0.1 }}
+                sx={disabledTextFieldStyles}
               />
               <TextField
                 fullWidth
@@ -230,6 +234,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 value={formData.blotForce}
                 type="number"
                 inputProps={{ step: 0.1 }}
+                sx={disabledTextFieldStyles}
               />
               <TextField
                 fullWidth
@@ -238,6 +243,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 value={formData.blotDistance}
                 type="number"
                 inputProps={{ step: 0.1 }}
+                sx={disabledTextFieldStyles}
               />
             </Box>
 
