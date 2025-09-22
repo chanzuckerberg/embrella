@@ -56,8 +56,9 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
       case 'occupied':
         return {
           ...baseStyle,
-          opacity: 0.1,
-          filter: 'brightness(0.3)',
+          opacity: 0.4,
+          filter: 'brightness(0.6)',
+          fill:'#C0C0C0'
         };
       default:
         return baseStyle;
