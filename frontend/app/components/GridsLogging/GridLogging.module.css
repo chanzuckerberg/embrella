@@ -108,10 +108,7 @@
 }
 
 .pucksScrollContainer {
-    max-height: 360px; 
-    overflow-y: auto;
-    overflow-x: hidden;
-    
-  }
-  
- 
+  max-height: 360px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}

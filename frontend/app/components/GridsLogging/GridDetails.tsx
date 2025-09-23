@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { GridDetailsResponse } from '@app/common/types/gridLogging/gridDetails';
 import {
@@ -16,7 +17,7 @@ import {
   FormControlLabel,
 } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { DJANGO_URL } from '@app/common/constants/api';
+// import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingGridDetails } from '@app/common/hooks/useGridLogging/useGridLoggingGridDetails';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import styles from './GridLogging.module.css';
@@ -27,7 +28,6 @@ interface GridDetailsProps {
   selectedSlot: number | null;
   selectedGrid: number | null;
   selectedGridId: number | null;
-  onAddGridBox: () => void;
 }
 
 const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
@@ -51,18 +51,9 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedSlot,
   selectedGrid,
   selectedGridId,
-  onAddGridBox,
 }) => {
-  // Early return if no selection
-  if (!selectedPuck || !selectedSlot || !selectedGrid) {
-    return null;
-  }
-
   // Fetch data
-  const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
-    selectedPuck?.id,
-    selectedSlot || undefined
-  );
+  const { isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
 
   const { gridDetails, loading, error } = useGridLoggingGridDetails({
     puckId: selectedPuck?.id || 0,
@@ -70,16 +61,20 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     gridId: selectedGridId || 0,
   });
 
-  const handleDeleteGrid = () => {
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/`;
-    window.open(adminUrl, '_blank');
-    onAddGridBox();
-  };
+  // Early return if no selection
+  if (!selectedPuck || !selectedSlot || !selectedGrid) {
+    return null;
+  }
 
-  const handleAddGrid = () => {
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/`;
-    window.open(adminUrl, '_blank');
-  };
+  //   const handleDeleteGrid = () => {
+  //     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/`;
+  //     window.open(adminUrl, '_blank');
+  //   };
+
+  //   const handleAddGrid = () => {
+  //     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/`;
+  //     window.open(adminUrl, '_blank');
+  //   };
 
   const handleMoveGrid = () => {
     console.log('Move grid');
@@ -126,7 +121,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   // Compute form data directly from API response
   const formData = mapGridDetailsToFormData(gridDetails);
 
-
   return (
     <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
       <CardHeader
@@ -141,8 +135,19 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
 
       <CardContent>
         <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200,  borderColor: '#3fb1bb', borderWidth: '2px', borderStyle: 'solid', borderRadius: '8px' }}>
-            <img
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: 200,
+              borderColor: '#3fb1bb',
+              borderWidth: '2px',
+              borderStyle: 'solid',
+              borderRadius: '8px',
+            }}
+          >
+            <Image
               src="/next/grid.png"
               alt="Grid"
               style={{
@@ -150,7 +155,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 height: 200,
                 objectFit: 'contain',
                 borderRadius: '8px',
-               
               }}
             />
           </Box>
@@ -160,13 +164,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               Grid Details
             </Typography>
 
-              {/* Grid name */}     
-              <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={disabledTextFieldStyles}/>
+            {/* Grid name */}
+            <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={disabledTextFieldStyles} />
 
-               {/* User */}
-              <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
-            
-          {/* Checkboxes for Clipped and Trashed */}
+            {/* User */}
+            <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
+
+            {/* Checkboxes for Clipped and Trashed */}
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
               <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" />
               <FormControlLabel control={<Checkbox checked={formData.trashed} color="primary" />} label="Trashed" />
@@ -174,7 +178,15 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
 
             {/* Notes and Move Grid */}
             <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
-              <TextField fullWidth label="Notes" disabled value={formData.notes} multiline rows={2} sx={disabledTextFieldStyles} />
+              <TextField
+                fullWidth
+                label="Notes"
+                disabled
+                value={formData.notes}
+                multiline
+                rows={2}
+                sx={disabledTextFieldStyles}
+              />
               <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -189,7 +201,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
 
             {/* Freezing Session and Specimen */}
             <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
-              <TextField fullWidth label="Freezing Session" disabled value={formData.freezingSession} sx={disabledTextFieldStyles} />
+              <TextField
+                fullWidth
+                label="Freezing Session"
+                disabled
+                value={formData.freezingSession}
+                sx={disabledTextFieldStyles}
+              />
               <TextField fullWidth label="Specimen" disabled value={formData.specimen} sx={disabledTextFieldStyles} />
             </Box>
 

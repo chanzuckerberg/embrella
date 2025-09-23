@@ -4,7 +4,7 @@ import React from 'react';
 import { useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
-import { Box, Typography, Grid, Card, CardContent, CardActionArea } from '@mui/material';
+import { Box, Typography, Card, CardContent, CardActionArea, Grid } from '@mui/material';
 import { PuckSVG } from './PuckSvg';
 import styles from './GridLogging.module.css';
 
@@ -39,7 +39,19 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
       <Box className={styles.pucksScrollContainer}>
         <Grid container spacing={2} justifyContent="flex-start">
           {pucksList.map((puck) => (
-            <Grid item key={puck.id} xs={12} sm={6} md={4}>
+            <Grid
+              key={puck.id}
+              sx={{
+                width: {
+                  xs: '100%',
+                  sm: 'calc(50% - 8px)',
+                  md: 'calc(33.333% - 8px)',
+                  margin: '3px',
+                  marginTop: '8px',
+                },
+                maxWidth: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.333% - 8px)' },
+              }}
+            >
               <Card
                 elevation={selectedPuck?.id === puck.id ? 4 : 1}
                 className={`${styles.puckCard} ${selectedPuck?.id === puck.id ? styles.selected : styles.unselected}`}
