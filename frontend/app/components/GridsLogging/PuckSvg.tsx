@@ -95,17 +95,20 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
       transition: 'all 0.2s ease-in-out',
     };
 
-    switch (status) {
-      case 'filled':
-        return {
-          ...baseStyle,
-          opacity: 0.4,
+    if (status === 'filled') {
+      return {
+        ...baseStyle,
+        opacity: 0.4,
         //   filter: 'brightness(0.3)',
-          fill:'#C0C0C0'
-        };
-      default:
-        return baseStyle;
+        fill: '#C0C0C0',
+        stroke: 'black',
+        strokeLinecap: 'round',
+        strokeOpacity: '1',
+        strokeWidth: '3px',
+      };
     }
+
+    return baseStyle;
   };
 
   return (
