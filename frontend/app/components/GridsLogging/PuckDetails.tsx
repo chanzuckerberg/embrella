@@ -36,7 +36,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
     }
   };
 
-  const handleAddGridBox = (slotPosition?: number) => {
+  const handleAddGridBox = (_slotPosition?: number) => {
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add`;
     window.open(adminUrl, '_blank');
   };
@@ -115,16 +115,18 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
 
             {/* Slot summary information */}
             <Box sx={{ textAlign: 'center', mb: 2, mt: 8 }}>
-              <Typography variant="body2" color="text.secondary">
-                Slots: {slotsData.slot_summary.filled_count} filled, {slotsData.slot_summary.empty_count} empty (
-                {slotsData.slot_summary.total} total)
+              <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
+                Light-colored Slots : {slotsData.slot_summary.filled_count} Filled
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
+                Dark-colored Slots: {slotsData.slot_summary.empty_count} Empty
               </Typography>
             </Box>
 
             {/* Instructions */}
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="caption" color="text.secondary">
-                Click on active slots to add grid boxes, click on disabled slots to view details
+                Click on the individual slots to view/add grid boxes
               </Typography>
             </Box>
           </>
