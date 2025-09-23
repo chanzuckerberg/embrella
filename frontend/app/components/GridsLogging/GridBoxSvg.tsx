@@ -3,6 +3,7 @@
 import React from 'react';
 import { ReactSVG } from 'react-svg';
 import { PuckSlotsResponse } from '@app/common/types/gridLogging/puckList';
+import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
 
 interface GridBoxSVGProps {
   size?: number;
@@ -10,9 +11,9 @@ interface GridBoxSVGProps {
   onGridClick?: (gridPosition: number) => void;
   isSelected?: boolean;
   disableGridClick?: boolean;
-  gridBoxData?: any;
+  gridBoxData?: GridBoxDetailResponse;
   selectedGrid?: number | null;
-  slotsData?: PuckSlotsResponse; // Add slots data like PuckSVG
+  slotsData?: PuckSlotsResponse;
   selectedSlot?: number | null;
 }
 
@@ -23,7 +24,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   isSelected = false,
   disableGridClick = false,
   gridBoxData,
-  selectedGrid = null,
+  selectedGrid: _selectedGrid = null,
   slotsData,
   selectedSlot = null,
 }) => {
@@ -31,7 +32,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   const getGridStatus = (position: number): 'occupied' | 'empty' | 'unknown' => {
     // First check if we have grid box data for the selected slot
     if (gridBoxData?.grid_box?.positions) {
-      const gridPosition = gridBoxData.grid_box.positions.find((p: any) => p.q === position);
+      const gridPosition = gridBoxData.grid_box.positions.find((p) => p.q === position);
       return gridPosition ? (gridPosition.occupied ? 'occupied' : 'empty') : 'unknown';
     }
 
@@ -52,17 +53,20 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
       transition: 'all 0.2s ease-in-out',
     };
 
-    switch (status) {
-      case 'occupied':
-        return {
-          ...baseStyle,
-          opacity: 0.4,
-          filter: 'brightness(0.6)',
-          fill:'#C0C0C0'
-        };
-      default:
-        return baseStyle;
+    if (status === 'occupied') {
+      return {
+        ...baseStyle,
+        opacity: 0.3,
+        fill: '#D3D3D3',
+        // stroke: 'black',
+        strokeLinecap: 'round',
+        strokeOpacity: '1',
+        strokeWidth: '3px',
+        filter: 'brightness(0.2)',
+      };
     }
+
+    return baseStyle;
   };
 
   return (
@@ -100,7 +104,6 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
 
               if (gridNumber >= 1 && gridNumber <= maxGrids) {
                 // 4 grids max
-                const status = getGridStatus(gridNumber);
                 const gridStyle = getGridStyle(gridNumber);
 
                 // Apply visual styling based on grid status (EXACT same pattern as PuckSVG)
