@@ -9,8 +9,8 @@ import styles from './GridLogging.module.css';
 import { PuckListed } from './PuckListed';
 import { PuckDetails } from './PuckDetails';
 import { GridBoxInfo } from './GridBoxInfo';
-import { GridDetails } from './GridDetails';
-import { Card, CardContent, CardHeader, Box, Select, MenuItem, FormControl, Typography } from '@mui/material';
+// import { GridDetails } from './GridDetails';
+import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 
@@ -22,8 +22,8 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
   const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
-  const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
+  //   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
+  //   const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
 
@@ -41,10 +41,9 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
     }
   }, [usersList, currentUser, selectedUser]);
 
-  // Handle user selection
-  const handleUserChange = (userId: string) => {
-    const user = usersList.find((u) => String(u.id) === String(userId));
-    setSelectedUser(user || null);
+  // Handle user selection - updated for Autocomplete
+  const handleUserChange = (event: React.SyntheticEvent, newValue: UsersList | null) => {
+    setSelectedUser(newValue);
     // Reset selected puck and slot when user changes
     setSelectedPuck(null);
     setSelectedSlot(null);
@@ -66,10 +65,10 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
     setSelectedSlot(slotPosition);
   };
 
-  const handleGridSelect = (gridPosition: number, gridId?: number) => {
-    setSelectedGrid(gridPosition);
-    setSelectedGridId(gridId || null);
-  };
+  //   const handleGridSelect = (gridPosition: number, gridId?: number) => {
+  //     setSelectedGrid(gridPosition);
+  //     setSelectedGridId(gridId || null);
+  //   };
 
   return (
     <Box className={styles.mainContainer}>
@@ -96,30 +95,33 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
           />
           <CardContent>
             <Box className={styles.userSelectionContainer}>
-              <FormControl variant="outlined" size="small" className={styles.userDropdown}>
-                <Select
-                  value={selectedUser?.id || ''}
-                  onChange={(e) => handleUserChange(String(e.target.value))}
-                  displayEmpty
-                  MenuProps={{
-                    PaperProps: {
-                      style: {
-                        maxHeight: 170,
-                        overflow: 'auto',
-                      },
-                    },
-                  }}
-                >
-                  <MenuItem value="" disabled>
-                    <em>Select User</em>
-                  </MenuItem>
-                  {usersList.map((user) => (
-                    <MenuItem key={user.id} value={String(user.id)}>
-                      {user.full_name || user.clean_username}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                value={selectedUser}
+                onChange={handleUserChange}
+                options={usersList}
+                getOptionLabel={(option) => option.full_name || option.clean_username}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="outlined"
+                    size="small"
+                    placeholder="Select User"
+                    className={styles.userDropdown}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    {option.full_name || option.clean_username}
+                  </Box>
+                )}
+                noOptionsText="No users found"
+                sx={{
+                  '& .MuiAutocomplete-inputRoot': {
+                    padding: '8px 14px',
+                  },
+                }}
+              />
             </Box>
             {/* Puck Selector Component */}
             <PuckListed selectedUser={selectedUser} onPuckSelect={handlePuckSelect} selectedPuck={selectedPuck} />
@@ -134,10 +136,14 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
 
       {!!selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
-          <GridBoxInfo selectedPuck={selectedPuck} selectedSlot={selectedSlot} onGridSelect={handleGridSelect} />
+          <GridBoxInfo
+            selectedPuck={selectedPuck}
+            selectedSlot={selectedSlot}
+            //    onGridSelect={handleGridSelect}
+          />
         </Box>
       )}
-      {!!selectedGrid && (
+      {/* {!!selectedGrid && (
         <Box className={styles.bottomSection}>
           <GridDetails
             selectedPuck={selectedPuck}
@@ -146,7 +152,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
             selectedGridId={selectedGridId}
           />
         </Box>
-      )}
+      )} */}
     </Box>
   );
 };
