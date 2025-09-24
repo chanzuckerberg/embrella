@@ -165,43 +165,26 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               Grid Details
             </Typography>
 
-            {/* Grid name */}
+            <Box sx={{ display: 'flex', gap: 2}}>
             <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={disabledTextFieldStyles} />
-
-            {/* User */}
             <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
-
-            {/* Checkboxes for Clipped and Trashed */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-              <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" />
-              <FormControlLabel control={<Checkbox checked={formData.trashed} color="primary" />} label="Trashed" />
             </Box>
 
-            {/* Notes and Move Grid */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 fullWidth
                 label="Notes"
                 disabled
                 value={formData.notes}
                 multiline
-                rows={2}
+                rows={1}
                 sx={disabledTextFieldStyles}
               />
-              <Button
-                sdsType="primary"
-                sdsStyle="rounded"
-                variant="contained"
-                startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
-                onClick={handleMoveGrid}
-                sx={{ minWidth: 120, fontStyle: 'italic' }}
-              >
-                Move Grid
-              </Button>
+                 <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" />
+                 <FormControlLabel control={<Checkbox checked={formData.trashed} color="primary" />} label="Trashed" />
             </Box>
 
-            {/* Freezing Session and Specimen */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 fullWidth
                 label="Freezing Session"
@@ -211,9 +194,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               />
               <TextField fullWidth label="Specimen" disabled value={formData.specimen} sx={disabledTextFieldStyles} />
             </Box>
-
-            {/* Project, Position in Box, Copy Number */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 5 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField fullWidth label="Project" disabled value={formData.project} sx={disabledTextFieldStyles} />
               <TextField
                 fullWidth
@@ -221,7 +202,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 disabled
                 value={formData.positionInBox}
                 type="number"
-                inputProps={{ min: 1, max: 4 }}
                 sx={disabledTextFieldStyles}
               />
               <TextField
@@ -230,20 +210,16 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 disabled
                 value={formData.copyNumber}
                 type="number"
-                inputProps={{ min: 1 }}
                 sx={disabledTextFieldStyles}
               />
             </Box>
-
-            {/* Blot Parameters */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 fullWidth
                 label="Blot Time"
                 disabled
                 value={formData.blotTime}
                 type="number"
-                inputProps={{ step: 0.1 }}
                 sx={disabledTextFieldStyles}
               />
               <TextField
@@ -252,7 +228,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 disabled
                 value={formData.blotForce}
                 type="number"
-                inputProps={{ step: 0.1 }}
                 sx={disabledTextFieldStyles}
               />
               <TextField
@@ -261,14 +236,22 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 disabled
                 value={formData.blotDistance}
                 type="number"
-                inputProps={{ step: 0.1 }}
                 sx={disabledTextFieldStyles}
               />
             </Box>
 
-            {/* Save Button */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Button
+                sdsType="primary"
+                sdsStyle="rounded"
+                variant="contained"
+                startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
+                onClick={handleMoveGrid}
+                sx={{ minWidth: 120, fontStyle: 'italic' }}
+              >
+                Move Grid
+              </Button>
+              <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave} startIcon={<Icon sdsIcon="Save" sdsSize="l" />}>
                 Save
               </Button>
             </Box>
