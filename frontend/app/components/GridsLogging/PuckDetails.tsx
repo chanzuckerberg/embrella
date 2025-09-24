@@ -57,7 +57,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
         title={
           <Box className={styles.cardHeader}>
             <Typography variant="h6" component="h2">
-              Puck Details: {selectedPuck.name}
+              Puck Name: {selectedPuck.name}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <Button
@@ -116,10 +116,10 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
             {/* Slot summary information */}
             <Box sx={{ textAlign: 'center', mb: 2, mt: 8 }}>
               <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
-                Light-colored Slots : {slotsData.slot_summary.filled_count} Filled
+                Occupied Slots : {slotsData.slot_summary.filled_count} Filled with grid boxes
               </Typography>
               <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
-                Dark-colored Slots: {slotsData.slot_summary.empty_count} Empty
+                Empty Slots: {slotsData.slot_summary.empty_count} Empty
               </Typography>
             </Box>
 
