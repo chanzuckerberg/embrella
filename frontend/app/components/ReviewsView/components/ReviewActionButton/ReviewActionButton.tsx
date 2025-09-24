@@ -29,7 +29,7 @@ export const ReviewActionButton = ({
   }
 
   // Check if all tomograms have been reviewed
-  const allTomogramsReviewed = reviewedCount > 0 && reviewedCount === totalCount;
+  // const allTomogramsReviewed = reviewedCount > 0 && reviewedCount === totalCount;
 
   console.log('review: ', reviewId);
   const reviewUrl = `/reviews/${reviewId}`;
@@ -64,7 +64,7 @@ export const ReviewActionButton = ({
   };
 
   // Show "View Results" with download option when all tomograms are reviewed
-  if (allTomogramsReviewed) {
+  // if (allTomogramsReviewed) {
     return (
       <div className="flex justify-end">
         <Button
@@ -122,16 +122,16 @@ export const ReviewActionButton = ({
         />
       </div>
     );
-  } else {
-    // Show "Start Review" or "Resume Review" when not all tomograms are reviewed
-    return (
-      <div className="flex justify-end">
-        <Link href={reviewUrl}>
-          <Button sdsType="secondary" sdsStyle="square" size="small" className="w-[125px]">
-            {reviewStatus === 'Not Started' ? 'Start Review' : 'Resume Review'}
-          </Button>
-        </Link>
-      </div>
-    );
-  }
+  // } else {
+  //   // Show "Start Review" or "Resume Review" when not all tomograms are reviewed
+  //   return (
+  //     <div className="flex justify-end">
+  //       <Link href={reviewUrl}>
+  //         <Button sdsType="secondary" sdsStyle="square" size="small" className="w-[125px]">
+  //           {reviewStatus === 'Not Started' ? 'Start Review' : 'Resume Review'}
+  //         </Button>
+  //       </Link>
+  //     </div>
+  //   );
+  // }
 };
