@@ -127,7 +127,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         title={
           <Box className={styles.cardHeader}>
             <Typography variant="h6" component="h2">
-              Grid Details: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{formData.gridName}
+              Grid Name: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{formData.gridName}
             </Typography>
           </Box>
         }

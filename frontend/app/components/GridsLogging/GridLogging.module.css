@@ -17,8 +17,17 @@
 .bottomSection {
   display: flex;
   justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
   width: 100%;
   animation: slideUp 0.3s ease-in-out;
+  flex-wrap: wrap;
+}
+
+.bottomSection > * {
+  max-width: 580px;
+  width: 100%;
+  flex: 1;
 }
 
 @keyframes slideUp {

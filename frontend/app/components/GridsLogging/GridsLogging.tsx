@@ -137,16 +137,14 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
       {!!selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
           <GridBoxInfo selectedPuck={selectedPuck} selectedSlot={selectedSlot} onGridSelect={handleGridSelect} />
-        </Box>
-      )}
-      {!!selectedGrid && (
-        <Box className={styles.bottomSection}>
-          <GridDetails
-            selectedPuck={selectedPuck}
-            selectedSlot={selectedSlot}
-            selectedGrid={selectedGrid}
-            selectedGridId={selectedGridId}
-          />
+          {!!selectedGrid && (
+            <GridDetails
+              selectedPuck={selectedPuck}
+              selectedSlot={selectedSlot}
+              selectedGrid={selectedGrid}
+              selectedGridId={selectedGridId}
+            />
+          )}
         </Box>
       )}
     </Box>
