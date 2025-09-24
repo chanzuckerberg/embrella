@@ -110,7 +110,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
             <Typography variant="h6" component="h2">
               GridBox Name: Puck-{selectedPuck.name}/Slot-{formData.name}
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -135,8 +135,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
         }
       />
 
-      <CardContent>
-        <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
+      <CardContent sx={{ padding: '0px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
             <GridBoxSVG
               size={200}
@@ -210,7 +210,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 sdsType="primary"
                 sdsStyle="rounded"
                 variant="contained"
-                startIcon={<Icon sdsIcon="Save" sdsSize="l" />}
                 onClick={handleSave}
               >
                 Save
