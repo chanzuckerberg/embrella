@@ -206,12 +206,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               >
                 Move Grid Box
               </Button>
-              <Button
-                sdsType="primary"
-                sdsStyle="rounded"
-                variant="contained"
-                onClick={handleSave}
-              >
+              <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
                 Save
               </Button>
             </Box>

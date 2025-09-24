@@ -141,8 +141,9 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               borderWidth: '2px',
               borderRadius: '8px',
               marginTop: '20px',
-              marginLeft:'7px',
-              flexDirection: 'column', alignItems: 'center'
+              marginLeft: '7px',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
           >
             <Image
@@ -247,12 +248,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               >
                 Move Grid
               </Button>
-              <Button
-                sdsType="primary"
-                sdsStyle="rounded"
-                variant="contained"
-                onClick={handleSave}
-              >
+              <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
                 Save
               </Button>
             </Box>
