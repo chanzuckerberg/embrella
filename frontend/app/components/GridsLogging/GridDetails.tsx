@@ -140,8 +140,9 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
+              justifyContent: 'center',
               minWidth: 200,
-              borderColor: '#3fb1bb',
+              borderColor: '#debf41',
               borderWidth: '2px',
               borderStyle: 'solid',
               borderRadius: '8px',
@@ -150,9 +151,9 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             <Image
               src="/next/grid.png"
               alt="Grid"
+              width={200}
+              height={200}
               style={{
-                width: 200,
-                height: 200,
                 objectFit: 'contain',
                 borderRadius: '8px',
               }}

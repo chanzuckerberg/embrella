@@ -9,7 +9,7 @@ import styles from './GridLogging.module.css';
 import { PuckListed } from './PuckListed';
 import { PuckDetails } from './PuckDetails';
 import { GridBoxInfo } from './GridBoxInfo';
-// import { GridDetails } from './GridDetails';
+import { GridDetails } from './GridDetails';
 import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
@@ -22,8 +22,8 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
   const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  //   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
-  //   const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
+  const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
+  const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
 
@@ -65,10 +65,10 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
     setSelectedSlot(slotPosition);
   };
 
-  //   const handleGridSelect = (gridPosition: number, gridId?: number) => {
-  //     setSelectedGrid(gridPosition);
-  //     setSelectedGridId(gridId || null);
-  //   };
+  const handleGridSelect = (gridPosition: number, gridId?: number) => {
+    setSelectedGrid(gridPosition);
+    setSelectedGridId(gridId || null);
+  };
 
   return (
     <Box className={styles.mainContainer}>
@@ -116,9 +116,9 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
                   </Box>
                 )}
                 noOptionsText="No users found"
-                sx={{
-                  '& .MuiAutocomplete-inputRoot': {
-                    padding: '8px 14px',
+                ListboxProps={{
+                  sx: {
+                    maxHeight: 150, // 👈 reduce dropdown height
                   },
                 }}
               />
@@ -136,14 +136,10 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
 
       {!!selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
-          <GridBoxInfo
-            selectedPuck={selectedPuck}
-            selectedSlot={selectedSlot}
-            //    onGridSelect={handleGridSelect}
-          />
+          <GridBoxInfo selectedPuck={selectedPuck} selectedSlot={selectedSlot} onGridSelect={handleGridSelect} />
         </Box>
       )}
-      {/* {!!selectedGrid && (
+      {!!selectedGrid && (
         <Box className={styles.bottomSection}>
           <GridDetails
             selectedPuck={selectedPuck}
@@ -152,7 +148,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
             selectedGridId={selectedGridId}
           />
         </Box>
-      )} */}
+      )}
     </Box>
   );
 };

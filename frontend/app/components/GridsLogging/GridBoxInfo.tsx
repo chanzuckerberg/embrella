@@ -15,7 +15,7 @@ import { disabledTextFieldStyles } from './DisableBoxStyle';
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
   selectedSlot: number | null;
-  //  onGridSelect: (gridPosition: number, gridId: number) => void;
+  onGridSelect: (gridPosition: number, gridId: number) => void;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -29,8 +29,7 @@ const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
   numbering_display: data.grid_box?.numbering_display || 'U-counter-clockwise',
 });
 
-// export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect }) => {
-export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot }) => {
+export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
@@ -80,16 +79,16 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     setSelectedGrid(gridPosition);
     console.log('Selected grid:', selectedGrid);
 
-    // if (gridBoxData?.grid_box?.positions) {
-    //   const gridData = gridBoxData.grid_box.positions.find((p) => p.q === gridPosition);
-    //   if (gridData) {
-    //     if (gridData.occupied && gridData.grid_id) {
-    //       onGridSelect(gridPosition, gridData.grid_id);
-    //     } else if (!gridData.occupied) {
-    //       handleAddGrid();
-    //     }
-    //   }
-    // }
+    if (gridBoxData?.grid_box?.positions) {
+      const gridData = gridBoxData.grid_box.positions.find((p) => p.q === gridPosition);
+      if (gridData) {
+        if (gridData.occupied && gridData.grid_id) {
+          onGridSelect(gridPosition, gridData.grid_id);
+        } else if (!gridData.occupied) {
+          handleAddGrid();
+        }
+      }
+    }
   };
 
   // Show loading state while fetching data
