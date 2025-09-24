@@ -745,8 +745,8 @@ def export_review_results(request, review_id):
 
         # If reviewedOnly is true, allow export during review
         # If reviewedOnly is false, only allow export when review is completed
-        # if not reviewed_only and review.status != 'completed':
-        #     return JsonResponse({"error": "Review must be completed before exporting all tomograms"}, status=400)
+        if not reviewed_only and review.status != 'completed':
+            return JsonResponse({"error": "Review must be completed before exporting all tomograms"}, status=400)
 
         # Get tomograms for this review
         if reviewed_only:
