@@ -165,9 +165,9 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               Grid Details
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: 2}}>
-            <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={disabledTextFieldStyles} />
-            <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={disabledTextFieldStyles} />
+              <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
             </Box>
 
             <Box sx={{ display: 'flex', gap: 2 }}>
@@ -180,8 +180,8 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 rows={1}
                 sx={disabledTextFieldStyles}
               />
-                 <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" />
-                 <FormControlLabel control={<Checkbox checked={formData.trashed} color="primary" />} label="Trashed" />
+              <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" />
+              <FormControlLabel control={<Checkbox checked={formData.trashed} color="primary" />} label="Trashed" />
             </Box>
 
             <Box sx={{ display: 'flex', gap: 2 }}>
@@ -241,7 +241,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Button
+              <Button
                 sdsType="primary"
                 sdsStyle="rounded"
                 variant="contained"
@@ -251,7 +251,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               >
                 Move Grid
               </Button>
-              <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave} startIcon={<Icon sdsIcon="Save" sdsSize="l" />}>
+              <Button
+                sdsType="primary"
+                sdsStyle="rounded"
+                variant="contained"
+                onClick={handleSave}
+                startIcon={<Icon sdsIcon="Save" sdsSize="l" />}
+              >
                 Save
               </Button>
             </Box>
