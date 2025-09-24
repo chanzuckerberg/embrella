@@ -147,7 +147,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
             />
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
-                Occupied Slots: {gridBoxData?.grid_box?.positions?.filter((pos) => pos.occupied).length || 0} Filled with grid
+                Occupied Slots: {gridBoxData?.grid_box?.positions?.filter((pos) => pos.occupied).length || 0} Filled
+                with grid
               </Typography>
               <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
                 Empty Slots: {gridBoxData?.grid_box?.positions?.filter((pos) => !pos.occupied).length || 0} Empty
@@ -176,14 +177,14 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               />
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 2}}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
-              fullWidth
-              label="Position in puck"
-              value={formData.positionInPuck}
-              disabled
-              sx={disabledTextFieldStyles}
-             />
+                fullWidth
+                label="Position in puck"
+                value={formData.positionInPuck}
+                disabled
+                sx={disabledTextFieldStyles}
+              />
               <TextField
                 fullWidth
                 label="Max Grids"
@@ -194,24 +195,30 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               />
             </Box>
 
-            <Box sx={{ display: 'flex', justifyContent:'space-between' }}>
-                <Button
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Button
                 sdsType="primary"
                 sdsStyle="rounded"
                 variant="contained"
                 startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
                 onClick={handleMoveGridBox}
                 sx={{ minWidth: 120, fontStyle: 'italic' }}
-                >
+              >
                 Move Grid Box
-                </Button>
-                <Button sdsType="primary" sdsStyle="rounded" variant="contained" startIcon={<Icon sdsIcon="Save" sdsSize="l" />} onClick={handleSave}>
-                    Save 
-                </Button>
+              </Button>
+              <Button
+                sdsType="primary"
+                sdsStyle="rounded"
+                variant="contained"
+                startIcon={<Icon sdsIcon="Save" sdsSize="l" />}
+                onClick={handleSave}
+              >
+                Save
+              </Button>
             </Box>
           </Box>
         </Box>
       </CardContent>
     </Card>
   );
-}
+};
