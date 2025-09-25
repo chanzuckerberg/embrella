@@ -50,8 +50,14 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
   };
 
   const handleAddPuck = () => {
-    // Redirect to Django admin puck creation page
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/add/`;
+    const prefillParams = new URLSearchParams();
+
+    // Prefill user with current user ID
+    if (currentUser?.id) {
+      prefillParams.append('user', currentUser.id.toString());
+    }
+
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/add/?${prefillParams.toString()}`;
     window.open(adminUrl, '_blank');
   };
 
