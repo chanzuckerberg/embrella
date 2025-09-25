@@ -79,6 +79,10 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     window.location.href = adminUrl;
   };
 
+  const handleDuplicateGrid = () => {
+    window.location.href = `${DJANGO_URL}/cryo_grids/grid_detail/${selectedGridId}/`;
+  };
+
   // Show loading state
   if (!gridBoxSuccess || loading) {
     return (
