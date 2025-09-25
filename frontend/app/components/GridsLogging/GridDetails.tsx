@@ -66,16 +66,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     return null;
   }
 
-  //   const handleDeleteGrid = () => {
-  //     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/`;
-  //     window.open(adminUrl, '_blank');
-  //   };
-
-  //   const handleAddGrid = () => {
-  //     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/`;
-  //     window.open(adminUrl, '_blank');
-  //   };
-
   const handleMoveGrid = () => {
     console.log('Move grid');
   };

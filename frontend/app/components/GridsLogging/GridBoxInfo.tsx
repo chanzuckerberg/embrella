@@ -56,8 +56,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   }
 
   const formData = mapGridBoxDetailToFormData(gridBoxData);
-  console.log(formData, 'FORM_DATA');
-
   // Event handlers
   const handleDeleteGrid = () => {
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedSlot}/delete/`;
@@ -96,7 +94,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
 
   const handleGridClick = (gridPosition: number) => {
     setSelectedGrid(gridPosition);
-    console.log('Selected grid:', selectedGrid);
 
     if (gridBoxData?.grid_box?.positions) {
       const gridData = gridBoxData.grid_box.positions.find((p) => p.q === gridPosition);

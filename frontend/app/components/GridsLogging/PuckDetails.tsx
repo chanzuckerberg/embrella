@@ -12,10 +12,9 @@ import styles from './GridLogging.module.css';
 interface PuckDetailsProps {
   selectedPuck: PucksList | null;
   onSlotSelect: (slotPosition: number, gridBoxId?: number) => void;
-  _selectedSlot: number | null;
 }
 
-export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, _selectedSlot }) => {
+export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect }) => {
   // Fetch puck slots data
   const { slotsData, isSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
 
@@ -48,7 +47,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
       prefillParams.append('position_in_puck', slotPosition.toString());
     }
 
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add?${prefillParams.toString()}`;
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add/?${prefillParams.toString()}`;
     window.open(adminUrl, '_blank');
   };
 

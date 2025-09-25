@@ -31,7 +31,6 @@ export const ReviewActionButton = ({
   // Check if all tomograms have been reviewed
   const allTomogramsReviewed = reviewedCount > 0 && reviewedCount === totalCount;
 
-  console.log('review: ', reviewId);
   const reviewUrl = `/reviews/${reviewId}`;
 
   // Download handler for export

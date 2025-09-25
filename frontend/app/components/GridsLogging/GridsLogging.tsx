@@ -14,11 +14,8 @@ import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 
-interface GridsLoggingProps {
-  _onAddPuck?: () => void;
-}
 
-export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
+export const GridsLogging: React.FC = ({  }) => {
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
   const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
@@ -136,7 +133,7 @@ export const GridsLogging: React.FC<GridsLoggingProps> = ({ _onAddPuck }) => {
 
         {/* Puck Details Component - appears on the right when a puck is selected */}
         {selectedPuck && (
-          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} _selectedSlot={selectedSlot} />
+          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} />
         )}
       </Box>
 
