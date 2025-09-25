@@ -48,6 +48,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
                   md: 'calc(33.333% - 8px)',
                   margin: '3px',
                   marginTop: '8px',
+                  marginLeft: '5px',
                 },
                 maxWidth: { xs: '100%', sm: 'calc(50% - 8px)', md: 'calc(33.333% - 8px)' },
               }}

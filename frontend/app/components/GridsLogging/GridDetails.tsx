@@ -133,29 +133,26 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         }
       />
 
-      <CardContent>
-        <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
+      <CardContent sx={{ padding: '0px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
           <Box
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: 200,
               borderColor: '#debf41',
               borderWidth: '2px',
-              borderStyle: 'solid',
               borderRadius: '8px',
+              marginTop: '20px',
+              marginLeft: '7px',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
           >
             <Image
               src="/next/grid.png"
               alt="Grid"
-              width={200}
-              height={200}
+              width={150}
+              height={150}
               style={{
                 objectFit: 'contain',
-                borderRadius: '8px',
               }}
             />
           </Box>
@@ -251,13 +248,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               >
                 Move Grid
               </Button>
-              <Button
-                sdsType="primary"
-                sdsStyle="rounded"
-                variant="contained"
-                onClick={handleSave}
-                startIcon={<Icon sdsIcon="Save" sdsSize="l" />}
-              >
+              <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
                 Save
               </Button>
             </Box>
