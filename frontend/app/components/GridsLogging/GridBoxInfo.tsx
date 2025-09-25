@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
@@ -11,6 +11,7 @@ import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDeta
 import styles from './GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
+import { UserContext } from '@app/common/context/UserProvider';
 
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
@@ -41,6 +42,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   if (!selectedPuck || !selectedSlot) {
     return null;
   }
+  const currentUser = useContext(UserContext);
 
   // Show loading state while fetching data
   if (!slotsSuccess || !gridBoxSuccess || !gridBoxData) {
@@ -62,8 +64,25 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     window.open(adminUrl, '_blank');
   };
 
-  const handleAddGrid = () => {
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/`;
+  const handleAddGrid = (positionInBox?: number) => {
+    const prefillParams = new URLSearchParams();
+
+    // Prefill grid_box with current grid box ID
+    if (gridBoxData?.grid_box?.grid_box_id) {
+      prefillParams.append('grid_box', gridBoxData.grid_box.grid_box_id.toString());
+    }
+
+    // Prefill position if provided (when called from handleGridClick)
+    if (positionInBox !== undefined) {
+      prefillParams.append('position_in_box', positionInBox.toString());
+    }
+
+    // Get current user from context
+    if (currentUser?.id) {
+      prefillParams.append('user', currentUser.id);
+    }
+
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/?${prefillParams.toString()}`;
     window.open(adminUrl, '_blank');
   };
 
@@ -85,7 +104,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
         if (gridData.occupied && gridData.grid_id) {
           onGridSelect(gridPosition, gridData.grid_id);
         } else if (!gridData.occupied) {
-          handleAddGrid();
+          handleAddGrid(gridPosition);
         }
       }
     }
@@ -115,7 +134,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 sdsType="primary"
                 sdsStyle="rounded"
                 startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
-                onClick={handleAddGrid}
+                onClick={() => handleAddGrid()}
                 size="small"
               >
                 Add Grid
