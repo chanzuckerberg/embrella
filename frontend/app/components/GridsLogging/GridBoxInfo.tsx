@@ -57,8 +57,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
 
   const formData = mapGridBoxDetailToFormData(gridBoxData);
   // Event handlers
-  const handleDeleteGrid = () => {
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedSlot}/delete/`;
+  const handleDeleteGridBox = () => {
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/${selectedSlot}/delete/`;
     window.open(adminUrl, '_blank');
   };
 
@@ -137,7 +137,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 Add Grid
               </Button>
               <IconButton
-                onClick={handleDeleteGrid}
+                onClick={handleDeleteGridBox}
                 sx={{
                   '&:hover': {
                     backgroundColor: '#ffebee',

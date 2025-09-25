@@ -15,9 +15,10 @@ import {
   Alert,
   Checkbox,
   FormControlLabel,
+  IconButton,
 } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-// import { DJANGO_URL } from '@app/common/constants/api';
+import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingGridDetails } from '@app/common/hooks/useGridLogging/useGridLoggingGridDetails';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import styles from './GridLogging.module.css';
@@ -73,6 +74,10 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   const handleSave = () => {
     console.log('Save grid details:', formData);
   };
+  const handleDeleteGrid = () => {
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/`;
+    window.open(adminUrl, '_blank');
+  };
 
   // Show loading state
   if (!gridBoxSuccess || loading) {
@@ -119,6 +124,16 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             <Typography variant="h6" component="h2">
               Grid Name: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{formData.gridName}
             </Typography>
+            <IconButton
+                onClick={handleDeleteGrid}
+                sx={{
+                  '&:hover': {
+                    backgroundColor: '#ffebee',
+                  },
+                }}
+              >
+                <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
+              </IconButton>
           </Box>
         }
       />
