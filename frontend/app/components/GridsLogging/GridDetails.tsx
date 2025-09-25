@@ -67,13 +67,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     return null;
   }
 
-  const handleMoveGrid = () => {
-    console.log('Move grid');
-  };
+  // const handleMoveGrid = () => {
+  //   console.log('Move grid');
+  // };
 
-  const handleSave = () => {
-    console.log('Save grid details:', formData);
-  };
+  // const handleSave = () => {
+  //   console.log('Save grid details:', formData);
+  // };
   const handleDeleteGrid = () => {
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/`;
     window.location.href = adminUrl;
@@ -129,15 +129,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               Grid Name: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{formData.gridName}
             </Typography>
             <IconButton
-              onClick={handleDeleteGrid}
-              sx={{
-                '&:hover': {
-                  backgroundColor: '#ffebee',
-                },
-              }}
-            >
-              <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
-            </IconButton>
               onClick={handleDeleteGrid}
               sx={{
                 '&:hover': {
@@ -256,7 +247,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Button
+              {/* <Button
                 sdsType="primary"
                 sdsStyle="rounded"
                 variant="contained"
@@ -265,7 +256,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 sx={{ minWidth: 120, fontStyle: 'italic' }}
               >
                 Move Grid
-              </Button>
+              </Button> */}
               <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -275,9 +266,9 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               >
                 Duplicate Grid
               </Button>
-              <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
+              {/* <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
                 Save
-              </Button>
+              </Button> */}
             </Box>
           </Box>
         </Box>
