@@ -79,6 +79,10 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     window.location.href = adminUrl;
   };
 
+  const handleDuplicateGrid = () => {
+    window.location.href = `${DJANGO_URL}/cryo_grids/grid_detail/${selectedGridId}/`;
+  };
+
   // Show loading state
   if (!gridBoxSuccess || loading) {
     return (
@@ -252,6 +256,15 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 sx={{ minWidth: 120, fontStyle: 'italic' }}
               >
                 Move Grid
+              </Button>
+              <Button
+                sdsType="primary"
+                sdsStyle="rounded"
+                onClick={handleDuplicateGrid}
+                sx={{ minWidth: 120, fontStyle: 'italic' }}
+                startIcon={<Icon sdsIcon="Copy" sdsSize="s" />}
+              >
+                Duplicate Grid
               </Button>
               <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
                 Save
