@@ -138,15 +138,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             >
               <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
             </IconButton>
-              onClick={handleDeleteGrid}
-              sx={{
-                '&:hover': {
-                  backgroundColor: '#ffebee',
-                },
-              }}
-            >
-              <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
-            </IconButton>
           </Box>
         }
       />
