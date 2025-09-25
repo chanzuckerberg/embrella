@@ -36,8 +36,19 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
     }
   };
 
-  const handleAddGridBox = (_slotPosition?: number) => {
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add`;
+  const handleAddGridBox = (slotPosition?: number) => {
+    const prefillParams = new URLSearchParams();
+    // Prefill puck with current puck ID
+    if (selectedPuck?.id) {
+      prefillParams.append('puck', selectedPuck.id.toString());
+    }
+
+    // Prefill position_in_puck if provided (when called from handleSlotClick)
+    if (slotPosition !== undefined) {
+      prefillParams.append('position_in_puck', slotPosition.toString());
+    }
+
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add?${prefillParams.toString()}`;
     window.open(adminUrl, '_blank');
   };
 
