@@ -84,13 +84,13 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     window.location.href = adminUrl;
   };
 
-  const handleMoveGridBox = () => {
-    console.log('Move grid box');
-  };
+  // const handleMoveGridBox = () => {
+  //   console.log('Move grid box');
+  // };
 
-  const handleSave = () => {
-    console.log('Save grid box:', formData);
-  };
+  // const handleSave = () => {
+  //   console.log('Save grid box:', formData);
+  // };
 
   const handleGridClick = (gridPosition: number) => {
     setSelectedGrid(gridPosition);
@@ -211,8 +211,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               />
             </Box>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Button
+            {/* <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+               <Button
                 sdsType="primary"
                 sdsStyle="rounded"
                 variant="contained"
@@ -221,11 +221,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 sx={{ minWidth: 120, fontStyle: 'italic' }}
               >
                 Move Grid Box
-              </Button>
+              </Button> 
               <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
                 Save
               </Button>
-            </Box>
+            </Box> */}
           </Box>
         </Box>
       </CardContent>
