@@ -73,7 +73,8 @@ class CryoGridBox(models.Model):
 
     def __str__(self):
         # return 'Cryo grid box %s in color %s and %s numbering' % (self.name, self.get_color_display(), self.get_numbering_display())
-        return f'{self.name} in color {self.get_color_display()}'
+        puck_info = f" (Puck: {self.puck.name})" if self.puck else " (No Puck)"
+        return f'{self.name} in color {self.get_color_display()}{puck_info}'
 
 class CryoGridCassette(models.Model):
     name = models.CharField(max_length=20, unique=True)

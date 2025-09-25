@@ -6,6 +6,7 @@ from django.contrib import messages
 from django import forms
 import datetime
 import logging
+import os
 
 from .models import Site, Dewar, Cane, Puck, CryoGridBox, CryoGridCassette
 from .models import PlungeFreezingDevice, PlungeFreezingSession, Specimen, CryoGrid, Sample
@@ -13,12 +14,21 @@ from .views import _save_copied_grid, get_available_positions
 
 logger = logging.getLogger(__name__)
 
+# Add this function to get the correct frontend URL
+def get_frontend_url():
+    """Get the frontend URL based on environment"""
+    environment = os.getenv('DJANGO_ENV', 'development')
+    if environment == 'staging':
+        return 'http://umbrella-dev.czbiohub.org'
+    elif environment == 'production':
+        return 'http://umbrella.czbiohub.org'
+    else:  # development
+        return 'http://localhost:3000/next'
+
 # Register standard models
 admin.site.register(Site)
 admin.site.register(Dewar)
 admin.site.register(Cane)
-admin.site.register(Puck)
-admin.site.register(CryoGridBox)
 admin.site.register(CryoGridCassette)
 admin.site.register(PlungeFreezingDevice)
 admin.site.register(PlungeFreezingSession)
@@ -74,9 +84,53 @@ class CopyGridForm(forms.Form):
                 )
         
         return cleaned_data
+# Custom admin classes for models that need redirect
+class PuckAdmin(admin.ModelAdmin):
+    def response_add(self, request, obj, post_url_continue=None):
+        if "_addanother" not in request.POST and "_continue" not in request.POST:
+            frontend_url = f"{get_frontend_url()}/grid_logging"
+            return HttpResponseRedirect(frontend_url)
+    
+    def response_change(self, request, obj):
+        if "_addanother" not in request.POST and "_continue" not in request.POST:
+            frontend_url = f"{get_frontend_url()}/grid_logging"
+            return HttpResponseRedirect(frontend_url)
+    
+    def response_delete(self, request, obj_display, obj_id):
+        frontend_url = f"{get_frontend_url()}/grid_logging"
+        return HttpResponseRedirect(frontend_url)
+
+class CryoGridBoxAdmin(admin.ModelAdmin):
+    def response_add(self, request, obj, post_url_continue=None):
+        if "_addanother" not in request.POST and "_continue" not in request.POST:
+            frontend_url = f"{get_frontend_url()}/grid_logging"
+            return HttpResponseRedirect(frontend_url)
+    
+    def response_change(self, request, obj):
+        if "_addanother" not in request.POST and "_continue" not in request.POST:
+            frontend_url = f"{get_frontend_url()}/grid_logging"
+            return HttpResponseRedirect(frontend_url)
+    
+    def response_delete(self, request, obj_display, obj_id):
+        frontend_url = f"{get_frontend_url()}/grid_logging"
+        return HttpResponseRedirect(frontend_url)
 
 class CryoGridAdmin(admin.ModelAdmin):
     change_form_template = "cryo_grids/change_form.html"
+    
+    def response_add(self, request, obj, post_url_continue=None):
+        if "_addanother" not in request.POST and "_continue" not in request.POST:
+            frontend_url = f"{get_frontend_url()}/grid_logging"
+            return HttpResponseRedirect(frontend_url)
+    
+    def response_change(self, request, obj):
+        if "_addanother" not in request.POST and "_continue" not in request.POST:
+            frontend_url = f"{get_frontend_url()}/grid_logging"
+            return HttpResponseRedirect(frontend_url)
+    
+    def response_delete(self, request, obj_display, obj_id):
+        frontend_url = f"{get_frontend_url()}/grid_logging"
+        return HttpResponseRedirect(frontend_url)
 
     def run_custom_action(self, request, object_id):
         obj = self.get_object(request, object_id)
@@ -247,5 +301,8 @@ class CryoGridAdmin(admin.ModelAdmin):
         ]
         logger.debug(f"Custom URLs registered: {custom_urls}")
         return custom_urls + urls
-# Register CryoGrid with the custom admin
-admin.site.register(CryoGrid, CryoGridAdmin)
+
+# Register models with custom admin classes
+admin.site.register(CryoGrid, CryoGridAdmin),
+admin.site.register(Puck, PuckAdmin)
+admin.site.register(CryoGridBox, CryoGridBoxAdmin)

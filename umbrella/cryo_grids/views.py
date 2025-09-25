@@ -11,6 +11,7 @@ from django.utils.timezone import now
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
+import os
 
 # python library import
 from datetime import timedelta
@@ -34,6 +35,16 @@ from stores.models import Path
 logger = logging.getLogger(__name__)
 
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
+
+def get_frontend_url():
+    """Get the frontend URL based on environment"""
+    environment = os.getenv('DJANGO_ENV', 'development')
+    if environment == 'staging':
+        return 'http://umbrella-dev.czbiohub.org'
+    elif environment == 'production':
+        return 'http://umbrella.czbiohub.org'
+    else:  # development
+        return 'http://localhost:3000/next'
 
 def msi_session_sort_key(name):
     """
@@ -730,7 +741,9 @@ def _handle_grid_to_copy_post(request):
     for p in new_positions[:number_to_copy]:
         _save_copied_grid(old_grid, box, p)
     # TODO apply grid box filter or redirect to grid filter page
-    return HttpResponseRedirect(reverse('cryo_grids:detail'))
+    # return HttpResponseRedirect(reverse('cryo_grids:detail'))
+        frontend_url = f"{get_frontend_url()}/grid_logging"
+        return HttpResponseRedirect(frontend_url)
 
 def copy_grid_to_box(request, error_msg=''):
     """
@@ -738,6 +751,7 @@ def copy_grid_to_box(request, error_msg=''):
     """
     if request.method == 'POST':
         return _handle_grid_to_copy_post(request)
+
 
 def clear_cassette_view(request,error_msg=''):
     '''

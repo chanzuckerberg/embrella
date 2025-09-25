@@ -76,7 +76,11 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   };
   const handleDeleteGrid = () => {
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/`;
-    window.open(adminUrl, '_blank');
+    window.location.href = adminUrl;
+  };
+
+  const handleDuplicateGrid = () => {
+    window.location.href = `${DJANGO_URL}/cryo_grids/grid_detail/${selectedGridId}/`;
   };
 
   // Show loading state
@@ -125,15 +129,15 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               Grid Name: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{formData.gridName}
             </Typography>
             <IconButton
-                onClick={handleDeleteGrid}
-                sx={{
-                  '&:hover': {
-                    backgroundColor: '#ffebee',
-                  },
-                }}
-              >
-                <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
-              </IconButton>
+              onClick={handleDeleteGrid}
+              sx={{
+                '&:hover': {
+                  backgroundColor: '#ffebee',
+                },
+              }}
+            >
+              <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
+            </IconButton>
           </Box>
         }
       />
@@ -252,6 +256,15 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 sx={{ minWidth: 120, fontStyle: 'italic' }}
               >
                 Move Grid
+              </Button>
+              <Button
+                sdsType="primary"
+                sdsStyle="rounded"
+                onClick={handleDuplicateGrid}
+                sx={{ minWidth: 120, fontStyle: 'italic' }}
+                startIcon={<Icon sdsIcon="Copy" sdsSize="s" />}
+              >
+                Duplicate Grid
               </Button>
               <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
                 Save
