@@ -12,10 +12,9 @@ interface PuckSelectorProps {
   selectedUser: UsersList | null;
   onPuckSelect: (puck: PucksList | null) => void;
   selectedPuck: PucksList | null;
-  _onAddPuck?: () => void;
 }
 
-export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSelect, selectedPuck, _onAddPuck }) => {
+export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSelect, selectedPuck }) => {
   const { pucks } = useGridLoggingPucksByUser(selectedUser?.id);
   const pucksList: PucksList[] = pucks?.pucks || [];
 
