@@ -59,7 +59,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   // Event handlers
   const handleDeleteGridBox = () => {
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/${selectedSlot}/delete/`;
-    window.open(adminUrl, '_blank');
+    window.location.href = adminUrl;
   };
 
   const handleAddGrid = (positionInBox?: number) => {
@@ -81,7 +81,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     }
 
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/?${prefillParams.toString()}`;
-    window.open(adminUrl, '_blank');
+    window.location.href = adminUrl;
   };
 
   const handleMoveGridBox = () => {

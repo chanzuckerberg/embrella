@@ -76,7 +76,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   };
   const handleDeleteGrid = () => {
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/`;
-    window.open(adminUrl, '_blank');
+    window.location.href = adminUrl;
   };
 
   // Show loading state
@@ -125,15 +125,15 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               Grid Name: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{formData.gridName}
             </Typography>
             <IconButton
-                onClick={handleDeleteGrid}
-                sx={{
-                  '&:hover': {
-                    backgroundColor: '#ffebee',
-                  },
-                }}
-              >
-                <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
-              </IconButton>
+              onClick={handleDeleteGrid}
+              sx={{
+                '&:hover': {
+                  backgroundColor: '#ffebee',
+                },
+              }}
+            >
+              <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
+            </IconButton>
           </Box>
         }
       />

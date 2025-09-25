@@ -48,13 +48,13 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
     }
 
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add/?${prefillParams.toString()}`;
-    window.open(adminUrl, '_blank');
+    window.location.href = adminUrl;
   };
 
   const handleDeletePuck = () => {
     // Redirect to Django admin puck deletion page
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/${selectedPuck?.id}/delete/`;
-    window.open(adminUrl, '_blank');
+    window.location.href = adminUrl;
   };
 
   if (!selectedPuck) {
