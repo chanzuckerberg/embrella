@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 
-export const GridsLogging: React.FC = ({}) => {
+export const GridsLogging: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
   const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);

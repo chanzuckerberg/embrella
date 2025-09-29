@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useContext } from 'react';
+import React, { useContext } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
@@ -36,13 +36,12 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     selectedPuck?.id,
     selectedSlot || undefined
   );
+  const currentUser = useContext(UserContext);
 
-  const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {
     return null;
   }
-  const currentUser = useContext(UserContext);
 
   // Show loading state while fetching data
   if (!slotsSuccess || !gridBoxSuccess || !gridBoxData) {
@@ -93,8 +92,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   // };
 
   const handleGridClick = (gridPosition: number) => {
-    setSelectedGrid(gridPosition);
-
     if (gridBoxData?.grid_box?.positions) {
       const gridData = gridBoxData.grid_box.positions.find((p) => p.q === gridPosition);
       if (gridData) {
