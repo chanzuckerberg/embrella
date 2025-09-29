@@ -702,23 +702,33 @@ def grid_detail_view(request, grid_id=1, error_msg=''):
     context = {'old_grid':old_grid, 'fields':fields, 'form':form,'number_form': number_form, 'error_msg':error_msg}
     return render(request, "cryo_grids/grid_detail.html", context)
 
-def _save_copied_grid(old_grid, box, position):
+def _save_copied_grid(old_grid, box, position, number_of_copies=1):
     # grids sharing the same unique requirement except copy_number
     existing_grids = CryoGrid.objects.filter(name=old_grid.name,freezing_session=old_grid.freezing_session, specimen=old_grid.specimen)
     existing_numbers = list(map((lambda x:x.copy_number), existing_grids))
-    copy_number = max(existing_numbers) + 1
-    new_grid = CryoGrid.objects.get(id=old_grid.id)
-    new_grid.id = None
-    new_grid.grid_cassette = None
-    new_grid.slot_number_in_cassette = None
-    new_grid.trashed = False
-    new_grid.grid_box = box
-    new_grid.position_in_box = position
-    new_grid.copy_number = copy_number
-    new_grid.create_on = datetime.date.today()
-    new_grid.updated_on = datetime.date.today()
-    new_grid.save()
-    return new_grid
+    
+    # Find the next available copy numbers
+    max_existing = max(existing_numbers) if existing_numbers else 0
+    new_copy_numbers = list(range(max_existing + 1, max_existing + 1 + number_of_copies))
+    
+    created_grids = []
+    
+    # Create multiple grids if number_of_copies > 1
+    for i, copy_number in enumerate(new_copy_numbers):
+        new_grid = CryoGrid.objects.get(id=old_grid.id)
+        new_grid.id = None
+        new_grid.grid_cassette = None
+        new_grid.slot_number_in_cassette = None
+        new_grid.trashed = False
+        new_grid.grid_box = box
+        new_grid.position_in_box = position + i  # Increment position for each copy
+        new_grid.copy_number = copy_number
+        new_grid.create_on = datetime.date.today()
+        new_grid.updated_on = datetime.date.today()
+        new_grid.save()
+        created_grids.append(new_grid)
+    
+    return created_grids[0] if len(created_grids) == 1 else created_grids
 
 def _handle_grid_to_copy_post(request):
     """
@@ -737,13 +747,18 @@ def _handle_grid_to_copy_post(request):
     if number_to_copy > len(new_positions):
         error_msg = 'Box "%s" has only %d position(s) left.  Not enough to put in %d grids. Please try again.' % (box, len(new_positions), number_to_copy)
         return HttpResponseRedirect(reverse('cryo_grids:grid_detail', kwargs={'grid_id':old_grid_id, 'error_msg':error_msg}))
-    # saving
-    for p in new_positions[:number_to_copy]:
-        _save_copied_grid(old_grid, box, p)
-    # TODO apply grid box filter or redirect to grid filter page
-    # return HttpResponseRedirect(reverse('cryo_grids:detail'))
-        frontend_url = f"{get_frontend_url()}/grid_logging"
-        return HttpResponseRedirect(frontend_url)
+    
+    # Create multiple copies at once
+    if number_to_copy > 1:
+        # Use the updated _save_copied_grid function
+        created_grids = _save_copied_grid(old_grid, box, new_positions[0], number_to_copy)
+    else:
+        # Single copy
+        for p in new_positions[:number_to_copy]:
+            _save_copied_grid(old_grid, box, p)
+    
+    frontend_url = f"{get_frontend_url()}/grid_logging"
+    return HttpResponseRedirect(frontend_url)
 
 def copy_grid_to_box(request, error_msg=''):
     """
