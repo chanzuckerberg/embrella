@@ -19,9 +19,9 @@ def get_frontend_url():
     """Get the frontend URL based on environment"""
     environment = os.getenv('DJANGO_ENV', 'development')
     if environment == 'staging':
-        return 'http://umbrella-dev.czbiohub.org'
+        return 'http://umbrella-dev.czbiohub.org/next'
     elif environment == 'production':
-        return 'http://umbrella.czbiohub.org'
+        return 'http://umbrella.czbiohub.org/next'
     else:  # development
         return 'http://localhost:3000/next'
 
