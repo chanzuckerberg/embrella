@@ -29,6 +29,8 @@ import google
 from processes.views import available_annotation_filter
 from umbrella.user import get_user_info
 
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+
 # Create a router and register our viewsets with it
 router = DefaultRouter()
 router.register(r'api/list/all/users', UserViewSet, basename='user')
@@ -67,6 +69,11 @@ urlpatterns = [
     path('api/reviews/<str:review_id>/export', export_review_results, name='export_review_results'),
     path('api/reviews/<str:review_id>/tomograms', get_review_tomograms, name='get_review_tomograms'),
     path('api/reviews/<str:review_id>/tomograms/<str:tomogram_id>', ReviewTomogramView.as_view(), name='review_tomogram_detail_no_slash'),
+
+   
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'), #Raw JSON data 
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'), #Swagger UI
+    
 ]
 
 

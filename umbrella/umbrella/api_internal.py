@@ -37,6 +37,9 @@ from projects.models import Project
 from rapidfuzz import fuzz, process
 from tem.models import MsiSession, Project
 from .contrast_limits import compute_optimal_contrast_limits
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rest_framework.decorators import api_view
+
 
 HOST = "10.50.120.90"
 PORT = 22
@@ -44,7 +47,15 @@ USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 
-
+@extend_schema(
+    methods=["GET"],
+    description="Returns cryo grids for a specific user with metadata and is_default flag.",
+    parameters=[
+        OpenApiParameter(name='user_id', required=False, type=str, description='User ID to filter cryo grids'),
+    ],
+    responses={200: 'List of cryo grids'}
+)
+@api_view(["GET"])
 def get_grids_by_user(request):
     user_id = request.GET.get('user_id')
 
