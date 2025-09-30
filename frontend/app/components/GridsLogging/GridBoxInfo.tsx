@@ -17,6 +17,7 @@ interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
   selectedSlot: number | null;
   onGridSelect: (gridPosition: number, gridId: number) => void;
+  selectedUser?: any; // Add selectedUser to props
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -30,7 +31,7 @@ const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
   numbering_display: data.grid_box?.numbering_display || 'U-counter-clockwise',
 });
 
-export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect }) => {
+export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect, selectedUser }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
@@ -57,7 +58,16 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   const formData = mapGridBoxDetailToFormData(gridBoxData);
   // Event handlers
   const handleDeleteGridBox = () => {
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/${selectedSlot}/delete/`;
+    const prefillParams = new URLSearchParams();
+
+    if (selectedUser?.id) {
+      prefillParams.append('return_user_id', selectedUser.id.toString());
+    }
+    if (selectedPuck?.id) {
+      prefillParams.append('return_puck_id', selectedPuck.id.toString());
+    }
+
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/${selectedSlot}/delete/?${prefillParams.toString()}`;
     window.location.href = adminUrl;
   };
 
@@ -77,6 +87,17 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     // Get current user from context
     if (currentUser?.id) {
       prefillParams.append('user', currentUser.id);
+    }
+
+     // Add return state parameters
+     if (selectedUser?.id) {
+      prefillParams.append('return_user_id', selectedUser.id.toString());
+    }
+    if (selectedPuck?.id) {
+      prefillParams.append('return_puck_id', selectedPuck.id.toString());
+    }
+    if (selectedSlot !== null) {
+      prefillParams.append('return_slot_position', selectedSlot.toString());
     }
 
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/?${prefillParams.toString()}`;
