@@ -12,9 +12,10 @@ import styles from './GridLogging.module.css';
 interface PuckDetailsProps {
   selectedPuck: PucksList | null;
   onSlotSelect: (slotPosition: number, gridBoxId?: number) => void;
+  selectedUser?: any; // Add selectedUser to props
 }
 
-export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect }) => {
+export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser }) => {
   // Fetch puck slots data
   const { slotsData, isSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
 
@@ -47,11 +48,28 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
       prefillParams.append('position_in_puck', slotPosition.toString());
     }
 
+      // Add return state parameters
+      if (selectedUser?.id) {
+        prefillParams.append('return_user_id', selectedUser.id.toString());
+      }
+      if (selectedPuck?.id) {
+        prefillParams.append('return_puck_id', selectedPuck.id.toString());
+      }
+      if (slotPosition !== undefined) {
+        prefillParams.append('return_slot_position', slotPosition.toString());
+      }
+
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add/?${prefillParams.toString()}`;
     window.location.href = adminUrl;
   };
 
   const handleDeletePuck = () => {
+    const prefillParams = new URLSearchParams();
+    
+    // Add return state parameters
+    if (selectedUser?.id) {
+      prefillParams.append('return_user_id', selectedUser.id.toString());
+    }
     // Redirect to Django admin puck deletion page
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/${selectedPuck?.id}/delete/`;
     window.location.href = adminUrl;

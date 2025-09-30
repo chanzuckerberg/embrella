@@ -24,6 +24,43 @@ def get_frontend_url():
         return 'http://umbrella.czbiohub.org/next'
     else:  # development
         return 'http://localhost:3000/next'
+    
+def build_frontend_url_with_state(request, base_path="/grid_logging"):
+    """Build frontend URL with state parameters from request"""
+    frontend_url = f"{get_frontend_url()}{base_path}"
+    
+    # Get state parameters from request
+    state_params = []
+    
+    # User ID state
+    return_user_id = request.GET.get('return_user_id')
+    if return_user_id:
+        state_params.append(f"user_id={return_user_id}")
+    
+    # Puck ID state  
+    return_puck_id = request.GET.get('return_puck_id')
+    if return_puck_id:
+        state_params.append(f"puck_id={return_puck_id}")
+    
+    # Slot position state
+    return_slot_position = request.GET.get('return_slot_position')
+    if return_slot_position:
+        state_params.append(f"slot_position={return_slot_position}")
+    
+    # Grid position state
+    return_grid_position = request.GET.get('return_grid_position')
+    if return_grid_position:
+        state_params.append(f"grid_position={return_grid_position}")
+    
+    # Grid ID state
+    return_grid_id = request.GET.get('return_grid_id')
+    if return_grid_id:
+        state_params.append(f"grid_id={return_grid_id}")
+    
+    # Add state parameters to URL if any exist
+    if state_params:
+        frontend_url += "?" + "&".join(state_params)
+    return frontend_url
 
 # Register standard models
 admin.site.register(Site)
@@ -88,31 +125,31 @@ class CopyGridForm(forms.Form):
 class PuckAdmin(admin.ModelAdmin):
     def response_add(self, request, obj, post_url_continue=None):
         if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = f"{get_frontend_url()}/grid_logging"
+            frontend_url = build_frontend_url_with_state(request)
             return HttpResponseRedirect(frontend_url)
     
     def response_change(self, request, obj):
         if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = f"{get_frontend_url()}/grid_logging"
+            frontend_url = build_frontend_url_with_state(request)
             return HttpResponseRedirect(frontend_url)
     
     def response_delete(self, request, obj_display, obj_id):
-        frontend_url = f"{get_frontend_url()}/grid_logging"
+        frontend_url = build_frontend_url_with_state(request)
         return HttpResponseRedirect(frontend_url)
 
 class CryoGridBoxAdmin(admin.ModelAdmin):
     def response_add(self, request, obj, post_url_continue=None):
         if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = f"{get_frontend_url()}/grid_logging"
+            frontend_url = build_frontend_url_with_state(request)
             return HttpResponseRedirect(frontend_url)
     
     def response_change(self, request, obj):
         if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = f"{get_frontend_url()}/grid_logging"
+            frontend_url = build_frontend_url_with_state(request)
             return HttpResponseRedirect(frontend_url)
     
     def response_delete(self, request, obj_display, obj_id):
-        frontend_url = f"{get_frontend_url()}/grid_logging"
+        frontend_url = build_frontend_url_with_state(request)
         return HttpResponseRedirect(frontend_url)
 
 class CryoGridAdmin(admin.ModelAdmin):
@@ -120,16 +157,16 @@ class CryoGridAdmin(admin.ModelAdmin):
     
     def response_add(self, request, obj, post_url_continue=None):
         if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = f"{get_frontend_url()}/grid_logging"
+            frontend_url = build_frontend_url_with_state(request)
             return HttpResponseRedirect(frontend_url)
     
     def response_change(self, request, obj):
         if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = f"{get_frontend_url()}/grid_logging"
+            frontend_url = build_frontend_url_with_state(request)
             return HttpResponseRedirect(frontend_url)
     
     def response_delete(self, request, obj_display, obj_id):
-        frontend_url = f"{get_frontend_url()}/grid_logging"
+        frontend_url = build_frontend_url_with_state(request)
         return HttpResponseRedirect(frontend_url)
 
     def run_custom_action(self, request, object_id):

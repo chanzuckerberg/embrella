@@ -29,6 +29,7 @@ interface GridDetailsProps {
   selectedSlot: number | null;
   selectedGrid: number | null;
   selectedGridId: number | null;
+  selectedUser?: any; // Add selectedUser to props
 }
 
 const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
@@ -52,6 +53,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedSlot,
   selectedGrid,
   selectedGridId,
+  selectedUser,
 }) => {
   // Fetch data
   const { isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
@@ -75,8 +77,20 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   //   console.log('Save grid details:', formData);
   // };
   const handleDeleteGrid = () => {
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/`;
-    window.location.href = adminUrl;
+    const prefillParams = new URLSearchParams();
+    
+    // Add return state parameters
+  if (selectedUser?.id) {
+    prefillParams.append('return_user_id', selectedUser.id.toString());
+  }
+  if (selectedPuck?.id) {
+    prefillParams.append('return_puck_id', selectedPuck.id.toString());
+  }
+  if (selectedSlot !== null) {
+    prefillParams.append('return_slot_position', selectedSlot.toString());
+  }
+  const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/?${prefillParams.toString()}`;
+  window.location.href = adminUrl;
   };
 
   const handleDuplicateGrid = () => {
