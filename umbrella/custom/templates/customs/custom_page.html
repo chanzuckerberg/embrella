@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+{% load static %}
 <head>
   <title>Embrella Home</title>
   <style>
@@ -577,7 +578,10 @@
           </tr>
           <tr>
             <td>
-              <a href="/workflow/copick_run" class="button">CoPick</a>
+              <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <img src="{% static 'customs/copick-logo.png' %}" alt="CoPick Logo" style="width:45px; height:auto;">
+                <a href="/workflow/copick_run" class="button">CoPick</a>
+              </div>
               <p>Create or Import CoPick projects</p>
             </td>
             <td>
@@ -585,7 +589,10 @@
               <p>Run MembraneSeg</p>
             </td>
             <td>
-              <a href="/workflow/octopi_run" class="button">Octopi</a>
+              <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <img src="{% static 'customs/octopi-logo.png' %}" alt="Octopi Logo" style="width:35px; height:auto;">
+                <a href="/workflow/octopi_run" class="button">Octopi</a>
+              </div>
               <p>Pick with Octopi</p>
             </td>
           </tr>
