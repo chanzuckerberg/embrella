@@ -104,28 +104,30 @@
       {{ error_msg }}
     </div>
     <br>
-    <!- simple view of the metadata BEGIN -!>
-    <!-- <table class="table table-hover table-bordered">
-      <thead class="thead-dark">
-        <tr>
-          <th>Key</th>
-          <th>Value</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for f, v in fields.items %}
-        <tr>
-          <td>{{ f }}</td>
-          <td>{{ v }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table> -->
-    <!- simple view of the metadata END -!>
+    
+    <!-- Conditional Table Display -->
+    {% if not request.GET.return_user_id %}
+      <table class="table table-hover table-bordered">
+        <thead class="thead-dark">
+          <tr>
+            <th>Key</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for f, v in fields.items %}
+          <tr>
+            <td>{{ f }}</td>
+            <td>{{ v }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
   </div>
 
   <div class="container">
-    <!- actions available -!>
+    <!-- actions available -->
     <form id="CopyGridToBoxForm" action="{% url 'cryo_grids:copy_grid_to_box' %}" method="post">
     {% csrf_token %}
       <div class="form-group">
@@ -162,9 +164,14 @@
         <input type="submit" value="Duplicate this grid and save the new grids in box">
       </div>
     </form>
-    <!-- <div class="form-group">
-      <button class="edit-button" onclick='window.location.href="{% url 'admin:cryo_grids_cryogrid_change' old_grid.id %}"'>Edit this grid in admin interface</button>
-    </div> -->
+    
+    <!-- Conditional Edit Button -->
+    {% if not request.GET.return_user_id %}
+      <div class="form-group">
+        <button class="edit-button" onclick='window.location.href="/admin/cryo_grids/cryogrid/{{ old_grid.id }}/change/"'>Edit this grid in admin interface</button>
+      </div>
+    {% endif %}
+    
     <div class="warning" id="warningMessage" style="display: true;">
       {{ error_msg }}
     </div>
