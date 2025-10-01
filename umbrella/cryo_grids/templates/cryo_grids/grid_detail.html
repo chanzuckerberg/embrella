@@ -142,12 +142,29 @@
         {{ number_form }}
         <p> (<= available positions of the box chosen) </p>
         <input type="hidden" id="old_grid" name="old_grid" value={{ old_grid.id }}>
+
+          <!-- Add hidden fields for return state parameters -->
+        {% if request.GET.return_user_id %}
+        <input type="hidden" name="return_user_id" value="{{ request.GET.return_user_id }}">
+        {% endif %}
+        {% if request.GET.return_puck_id %}
+          <input type="hidden" name="return_puck_id" value="{{ request.GET.return_puck_id }}">
+        {% endif %}
+        {% if request.GET.return_slot_position %}
+          <input type="hidden" name="return_slot_position" value="{{ request.GET.return_slot_position }}">
+        {% endif %}
+        {% if request.GET.return_grid_position %}
+          <input type="hidden" name="return_grid_position" value="{{ request.GET.return_grid_position }}">
+        {% endif %}
+        {% if request.GET.return_grid_id %}
+          <input type="hidden" name="return_grid_id" value="{{ request.GET.return_grid_id }}">
+        {% endif %}
         <input type="submit" value="Duplicate this grid and save the new grids in box">
       </div>
     </form>
-    <div class="form-group">
+    <!-- <div class="form-group">
       <button class="edit-button" onclick='window.location.href="{% url 'admin:cryo_grids_cryogrid_change' old_grid.id %}"'>Edit this grid in admin interface</button>
-    </div>
+    </div> -->
     <div class="warning" id="warningMessage" style="display: true;">
       {{ error_msg }}
     </div>

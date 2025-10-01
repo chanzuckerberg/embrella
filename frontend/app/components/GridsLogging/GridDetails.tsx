@@ -94,7 +94,28 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   };
 
   const handleDuplicateGrid = () => {
-    window.location.href = `${DJANGO_URL}/cryo_grids/grid_detail/${selectedGridId}/`;
+    const prefillParams = new URLSearchParams();
+  
+    // Add return state parameters
+    if (selectedUser?.id) {
+      prefillParams.append('return_user_id', selectedUser.id.toString());
+    }
+    if (selectedPuck?.id) {
+      prefillParams.append('return_puck_id', selectedPuck.id.toString());
+    }
+    if (selectedSlot !== null) {
+      prefillParams.append('return_slot_position', selectedSlot.toString());
+    }
+    if (selectedGrid !== null) {
+      prefillParams.append('return_grid_position', selectedGrid.toString());
+    }
+    if (selectedGridId !== null) {
+      prefillParams.append('return_grid_id', selectedGridId.toString());
+    }
+    
+    // Use the prefillParams in the URL
+    const adminUrl = `${DJANGO_URL}/cryo_grids/grid_detail/${selectedGridId}/?${prefillParams.toString()}`;
+    window.location.href = adminUrl;
   };
 
   // Show loading state
