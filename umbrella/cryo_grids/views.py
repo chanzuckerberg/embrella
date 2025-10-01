@@ -45,6 +45,45 @@ def get_frontend_url():
         return 'http://umbrella.czbiohub.org/next'
     else:  # development
         return 'http://localhost:3000/next'
+    
+def build_frontend_url_with_state(request, base_path="/grid_logging"):
+    """Build frontend URL with state parameters from request"""
+    frontend_url = f"{get_frontend_url()}{base_path}"
+    
+    # Get state parameters from request (check both GET and POST)
+    state_params = []
+    
+    # User ID state
+    return_user_id = request.GET.get('return_user_id') or request.POST.get('return_user_id')
+    if return_user_id:
+        state_params.append(f"user_id={return_user_id}")
+    
+    # Puck ID state  
+    return_puck_id = request.GET.get('return_puck_id') or request.POST.get('return_puck_id')
+    if return_puck_id:
+        state_params.append(f"puck_id={return_puck_id}")
+    
+    # Slot position state
+    return_slot_position = request.GET.get('return_slot_position') or request.POST.get('return_slot_position')
+    if return_slot_position:
+        state_params.append(f"slot_position={return_slot_position}")
+    
+    # Grid position state
+    return_grid_position = request.GET.get('return_grid_position') or request.POST.get('return_grid_position')
+    if return_grid_position:
+        state_params.append(f"grid_position={return_grid_position}")
+    
+    # Grid ID state
+    return_grid_id = request.GET.get('return_grid_id') or request.POST.get('return_grid_id')
+    if return_grid_id:
+        state_params.append(f"grid_id={return_grid_id}")
+    
+    # Add state parameters to URL if any exist
+    if state_params:
+        frontend_url += "?" + "&".join(state_params)
+    
+    return frontend_url
+
 
 def msi_session_sort_key(name):
     """
@@ -757,7 +796,7 @@ def _handle_grid_to_copy_post(request):
         for p in new_positions[:number_to_copy]:
             _save_copied_grid(old_grid, box, p)
     
-    frontend_url = f"{get_frontend_url()}/grid_logging"
+    frontend_url = build_frontend_url_with_state(request)
     return HttpResponseRedirect(frontend_url)
 
 def copy_grid_to_box(request, error_msg=''):
