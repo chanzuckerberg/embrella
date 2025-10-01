@@ -397,8 +397,9 @@ def run_aretomo3(request):
             output, error = aretomo.run_script(session_name, run_number, pix_size, total_dose, frame_dose, user_id)
 
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
-            job_id_str = ",".join(found_ids) if found_ids else None
+            job_id_str = ",".join(str(int(id) + 1) for id in found_ids) if found_ids else None
 
+   
             # Log success without an error message
             store_log(job_name='Aretomo3',
                       request=request,
@@ -414,7 +415,8 @@ def run_aretomo3(request):
                 subprocess.Popen(['python', syncer_script_path, 
                                 '--session', session_name,
                                 '--run', run_number,
-                                '--job-id', job_id_str], 
+                                '--job-id', job_id_str,
+                                '--continuous'],
                                env=dict(os.environ, 
                                       PYTHONPATH=os.path.dirname(os.path.dirname(__file__))))
                 logging.info(f"Started AreTomo3 syncer for session {session_name}, run {run_number}, tracking job {job_id_str}")
@@ -1702,7 +1704,7 @@ def trigger_syncer(request):
             # Run the syncer with job tracking and continuous mode
             subprocess.Popen(['python', syncer_script_path, 
                             '--session', session_name,
-                            '--run', run_number,
+                            '--run', f"run{run_number.zfill(3)}",
                             '--job-id', job_id if job_id else '',
                             '--continuous'],  # Add continuous mode
                            env=dict(os.environ, 
