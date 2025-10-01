@@ -8,11 +8,12 @@ import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import styles from './GridLogging.module.css';
+import { UsersList } from '@app/common/types/gridLogging/userList';
 
 interface PuckDetailsProps {
   selectedPuck: PucksList | null;
   onSlotSelect: (slotPosition: number, gridBoxId?: number) => void;
-  selectedUser?: any; // Add selectedUser to props
+  selectedUser?: UsersList | null;
 }
 
 export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser }) => {
@@ -48,16 +49,16 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
       prefillParams.append('position_in_puck', slotPosition.toString());
     }
 
-      // Add return state parameters
-      if (selectedUser?.id) {
-        prefillParams.append('return_user_id', selectedUser.id.toString());
-      }
-      if (selectedPuck?.id) {
-        prefillParams.append('return_puck_id', selectedPuck.id.toString());
-      }
-      if (slotPosition !== undefined) {
-        prefillParams.append('return_slot_position', slotPosition.toString());
-      }
+    // Add return state parameters
+    if (selectedUser?.id) {
+      prefillParams.append('return_user_id', selectedUser.id.toString());
+    }
+    if (selectedPuck?.id) {
+      prefillParams.append('return_puck_id', selectedPuck.id.toString());
+    }
+    if (slotPosition !== undefined) {
+      prefillParams.append('return_slot_position', slotPosition.toString());
+    }
 
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add/?${prefillParams.toString()}`;
     window.location.href = adminUrl;
@@ -65,7 +66,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
 
   const handleDeletePuck = () => {
     const prefillParams = new URLSearchParams();
-    
+
     // Add return state parameters
     if (selectedUser?.id) {
       prefillParams.append('return_user_id', selectedUser.id.toString());
