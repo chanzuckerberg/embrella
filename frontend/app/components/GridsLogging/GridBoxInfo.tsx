@@ -12,12 +12,13 @@ import styles from './GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
 import { UserContext } from '@app/common/context/UserProvider';
+import { UsersList } from '@app/common/types/gridLogging/userList';
 
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
   selectedSlot: number | null;
   onGridSelect: (gridPosition: number, gridId: number) => void;
-  selectedUser?: any; // Add selectedUser to props
+  selectedUser?: UsersList | null;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -89,8 +90,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
       prefillParams.append('user', currentUser.id);
     }
 
-     // Add return state parameters
-     if (selectedUser?.id) {
+    // Add return state parameters
+    if (selectedUser?.id) {
       prefillParams.append('return_user_id', selectedUser.id.toString());
     }
     if (selectedPuck?.id) {

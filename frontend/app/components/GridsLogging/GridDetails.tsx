@@ -23,13 +23,14 @@ import { useGridLoggingGridDetails } from '@app/common/hooks/useGridLogging/useG
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import styles from './GridLogging.module.css';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
+import { UsersList } from '@app/common/types/gridLogging/userList';
 
 interface GridDetailsProps {
   selectedPuck: PucksList | null;
   selectedSlot: number | null;
   selectedGrid: number | null;
   selectedGridId: number | null;
-  selectedUser?: any; // Add selectedUser to props
+  selectedUser?: UsersList | null;
 }
 
 const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
@@ -78,24 +79,24 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   // };
   const handleDeleteGrid = () => {
     const prefillParams = new URLSearchParams();
-    
+
     // Add return state parameters
-  if (selectedUser?.id) {
-    prefillParams.append('return_user_id', selectedUser.id.toString());
-  }
-  if (selectedPuck?.id) {
-    prefillParams.append('return_puck_id', selectedPuck.id.toString());
-  }
-  if (selectedSlot !== null) {
-    prefillParams.append('return_slot_position', selectedSlot.toString());
-  }
-  const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/?${prefillParams.toString()}`;
-  window.location.href = adminUrl;
+    if (selectedUser?.id) {
+      prefillParams.append('return_user_id', selectedUser.id.toString());
+    }
+    if (selectedPuck?.id) {
+      prefillParams.append('return_puck_id', selectedPuck.id.toString());
+    }
+    if (selectedSlot !== null) {
+      prefillParams.append('return_slot_position', selectedSlot.toString());
+    }
+    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/?${prefillParams.toString()}`;
+    window.location.href = adminUrl;
   };
 
   const handleDuplicateGrid = () => {
     const prefillParams = new URLSearchParams();
-  
+
     // Add return state parameters
     if (selectedUser?.id) {
       prefillParams.append('return_user_id', selectedUser.id.toString());
@@ -112,7 +113,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     if (selectedGridId !== null) {
       prefillParams.append('return_grid_id', selectedGridId.toString());
     }
-    
+
     // Use the prefillParams in the URL
     const adminUrl = `${DJANGO_URL}/cryo_grids/grid_detail/${selectedGridId}/?${prefillParams.toString()}`;
     window.location.href = adminUrl;

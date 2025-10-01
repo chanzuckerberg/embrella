@@ -45,7 +45,7 @@ export const GridsLogging: React.FC = () => {
 
     // Restore user selection
     if (userId && usersList.length > 0) {
-      const user = usersList.find(u => String(u.id) === userId);
+      const user = usersList.find((u) => String(u.id) === userId);
       if (user) {
         setSelectedUser(user);
       }
@@ -53,7 +53,7 @@ export const GridsLogging: React.FC = () => {
 
     // Restore puck selection - now that we have pucksList
     if (puckId && pucksList.length > 0) {
-      const puck = pucksList.find(p => String(p.id) === puckId);
+      const puck = pucksList.find((p) => String(p.id) === puckId);
       if (puck) {
         setSelectedPuck(puck);
       }
@@ -127,7 +127,7 @@ export const GridsLogging: React.FC = () => {
     setSelectedSlot(null);
   };
 
-  const handleSlotSelect = (slotPosition: number, gridBoxId?: number) => {
+  const handleSlotSelect = (slotPosition: number, _gridBoxId?: number) => {
     setSelectedSlot(slotPosition);
     // Reset grid selection when slot changes
     setSelectedGrid(null);
@@ -179,7 +179,6 @@ export const GridsLogging: React.FC = () => {
                     className={styles.userDropdown}
                   />
                 )}
-               
                 noOptionsText="No users found"
                 ListboxProps={{
                   sx: {
@@ -194,12 +193,19 @@ export const GridsLogging: React.FC = () => {
         </Card>
 
         {/* Puck Details Component - appears on the right when a puck is selected */}
-        {selectedPuck && <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} selectedUser={selectedUser} />}
+        {selectedPuck && (
+          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} selectedUser={selectedUser} />
+        )}
       </Box>
 
       {!!selectedSlot && selectedPuck && (
         <Box className={styles.bottomSection}>
-          <GridBoxInfo selectedPuck={selectedPuck} selectedSlot={selectedSlot} onGridSelect={handleGridSelect} selectedUser={selectedUser} />
+          <GridBoxInfo
+            selectedPuck={selectedPuck}
+            selectedSlot={selectedSlot}
+            onGridSelect={handleGridSelect}
+            selectedUser={selectedUser}
+          />
           {!!selectedGrid && (
             <GridDetails
               selectedPuck={selectedPuck}
