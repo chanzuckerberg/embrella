@@ -137,6 +137,14 @@ class PuckAdmin(admin.ModelAdmin):
         frontend_url = build_frontend_url_with_state(request)
         return HttpResponseRedirect(frontend_url)
 
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context.update({
+            'show_save_and_add_another': False,
+            'show_save_and_continue': False,
+        })
+        return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
+
 class CryoGridBoxAdmin(admin.ModelAdmin):
     def response_add(self, request, obj, post_url_continue=None):
         if "_addanother" not in request.POST and "_continue" not in request.POST:
@@ -151,6 +159,14 @@ class CryoGridBoxAdmin(admin.ModelAdmin):
     def response_delete(self, request, obj_display, obj_id):
         frontend_url = build_frontend_url_with_state(request)
         return HttpResponseRedirect(frontend_url)
+    
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context.update({
+            'show_save_and_add_another': False,
+            'show_save_and_continue': False,
+        })
+        return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
 
 class CryoGridAdmin(admin.ModelAdmin):
     change_form_template = "cryo_grids/change_form.html"
@@ -168,6 +184,15 @@ class CryoGridAdmin(admin.ModelAdmin):
     def response_delete(self, request, obj_display, obj_id):
         frontend_url = build_frontend_url_with_state(request)
         return HttpResponseRedirect(frontend_url)
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context.update({
+            'show_save_and_add_another': False,
+            'show_save_and_continue': False,
+        })
+        return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
+
 
     def run_custom_action(self, request, object_id):
         obj = self.get_object(request, object_id)
