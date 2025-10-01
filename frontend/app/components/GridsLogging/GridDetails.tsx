@@ -222,8 +222,8 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 rows={1}
                 sx={disabledTextFieldStyles}
               />
-              <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" />
-              <FormControlLabel control={<Checkbox checked={formData.trashed} color="primary" />} label="Trashed" />
+              {/* {/* <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" /> */}
+              <FormControlLabel control={<Checkbox checked={formData.trashed}  onClick={handleDeleteGrid}  color="primary" />} label="Trashed" /> 
             </Box>
 
             <Box sx={{ display: 'flex', gap: 2 }}>
