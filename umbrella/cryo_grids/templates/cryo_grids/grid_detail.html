@@ -42,20 +42,29 @@
       border: 1px solid #ced4da;
       font-size: 16px;
     }
-    button, input[type="submit"] {
+    .btn-primary, .btn-success {
       width: 50%;
       padding: 10px;
-      background-color: #007bff;
-      color: white;
       border: none;
       border-radius: 5px;
       font-size: 16px;
       cursor: pointer;
       display: block;
-      margin: 0 auto;
+      margin: 10px auto 0;
     }
-    button:hover, input[type="submit"]:hover {
+    .btn-primary {
+      background-color: #007bff;
+      color: white;
+    }
+    .btn-primary:hover {
       background-color: #0056b3;
+    }
+    .btn-success {
+      background-color: #28a745;
+      color: white;
+    }
+    .btn-success:hover {
+      background-color: #218838;
     }
     .warning {
       color: red;
@@ -66,71 +75,36 @@
       position: absolute;
       top: 20px;
       left: 20px;
-      width: 200px; /* 버튼 크기 조정 */
-      height: 50px; /* 버튼 높이 조정 */
+      width: 200px;
+      height: 50px;
       background-color: #6c757d;
       color: white;
       border: none;
       border-radius: 5px;
-      font-size: 14px; /* 글씨 크기 축소 */
+      font-size: 14px;
       cursor: pointer;
     }
     .go-back-btn:hover {
       background-color: #5a6268;
     }
-    .edit-button {
-      width: 50%;
-      padding: 10px;
-      margin-top: 20px;
-      background-color: #28a745;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-size: 16px;
-      cursor: pointer;
-      display: block;
-      margin: 10px auto 0;
-    }
-    .edit-button:hover {
-      background-color: #218838;
-    }
   </style>
 </head>
 <body>
   <button class="go-back-btn" onclick="window.location.href='/umbrella/'">Go back to the startup page</button>
+  
   <div class="container">
-    <h2 class="text-center"><u>Grid Details</u></h2>
-    <div class="warning" id="warningMessage" style="display: true;">
+    <!-- Single warning message -->
+    {% if error_msg %}
+    <div class="warning" id="warningMessage">
       {{ error_msg }}
     </div>
-    <br>
-    
-    <!-- Conditional Table Display -->
-    {% if not request.GET.return_user_id %}
-      <table class="table table-hover table-bordered">
-        <thead class="thead-dark">
-          <tr>
-            <th>Key</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for f, v in fields.items %}
-          <tr>
-            <td>{{ f }}</td>
-            <td>{{ v }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
     {% endif %}
-  </div>
-
-  <div class="container">
-    <!-- actions available -->
+    
+    <!-- Duplicate Grid Form -->
     <form id="CopyGridToBoxForm" action="{% url 'cryo_grids:copy_grid_to_box' %}" method="post">
-    {% csrf_token %}
+      {% csrf_token %}
       <div class="form-group">
+        <h2 class="text-center"><u>Duplicate Grid</u></h2>
         <label for="new_box">Box to put duplicated grid in</label>
         <select id="new_box" name="new_box" required>
         {% for option in form.grid_box.field.choices %}
@@ -144,8 +118,8 @@
         {{ number_form }}
         <p> (<= available positions of the box chosen) </p>
         <input type="hidden" id="old_grid" name="old_grid" value={{ old_grid.id }}>
-
-          <!-- Add hidden fields for return state parameters -->
+        
+        <!-- Hidden fields for return state parameters -->
         {% if request.GET.return_user_id %}
         <input type="hidden" name="return_user_id" value="{{ request.GET.return_user_id }}">
         {% endif %}
@@ -161,20 +135,36 @@
         {% if request.GET.return_grid_id %}
           <input type="hidden" name="return_grid_id" value="{{ request.GET.return_grid_id }}">
         {% endif %}
-        <input type="submit" value="Duplicate this grid and save the new grids in box">
+        
+        <input type="submit" class="btn-primary" value="Duplicate this grid and save the new grids in box">
+        
+        {% if not request.GET.return_user_id %}
+        <button type="button" class="btn-success" onclick='window.location.href="/admin/cryo_grids/cryogrid/{{ old_grid.id }}/change/"'>Edit this grid in admin interface</button>
+        {% endif %}
       </div>
     </form>
     
-    <!-- Conditional Edit Button -->
+    <!-- Grid Details Table (only show if not returning to user interface) -->
     {% if not request.GET.return_user_id %}
-      <div class="form-group">
-        <button class="edit-button" onclick='window.location.href="/admin/cryo_grids/cryogrid/{{ old_grid.id }}/change/"'>Edit this grid in admin interface</button>
-      </div>
+    <br>
+    <h2 class="text-center"><u>Grid Details</u></h2>
+    <table class="table table-hover table-bordered">
+      <thead class="thead-dark">
+        <tr>
+          <th>Key</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for f, v in fields.items %}
+        <tr>
+          <td>{{ f }}</td>
+          <td>{{ v }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
     {% endif %}
-    
-    <div class="warning" id="warningMessage" style="display: true;">
-      {{ error_msg }}
-    </div>
   </div>
 </body>
 </html>
