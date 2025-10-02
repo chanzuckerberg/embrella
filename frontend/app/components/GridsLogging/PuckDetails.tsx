@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { PuckSVG } from './PuckSvg';
+import { DeletePuck } from './DeletePuck';
 import { Card, CardContent, CardHeader, Box, IconButton, Typography, CircularProgress, Alert } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
@@ -19,6 +20,7 @@ interface PuckDetailsProps {
 export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser }) => {
   // Fetch puck slots data
   const { slotsData, isSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const handleSlotClick = (slotPosition: number) => {
     if (!slotsData) return;
@@ -65,15 +67,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
   };
 
   const handleDeletePuck = () => {
-    const prefillParams = new URLSearchParams();
-
-    // Add return state parameters
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
-    }
-    // Redirect to Django admin puck deletion page
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/${selectedPuck?.id}/delete/`;
-    window.location.href = adminUrl;
+    setDeleteDialogOpen(true);
   };
 
   if (!selectedPuck) {
@@ -81,6 +75,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
   }
 
   return (
+    <>
     <Card elevation={2} sx={{ maxWidth: 600, width: '100%' }}>
       <CardHeader
         title={
@@ -162,5 +157,15 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
         )}
       </CardContent>
     </Card>
+
+     {/* Delete dialog  */}
+    <DeletePuck
+      open={deleteDialogOpen}
+      onClose={() => setDeleteDialogOpen(false)}
+      selectedPuck={selectedPuck}
+      slotsData={slotsData || null}
+      selectedUser={selectedUser}
+    />
+    </>
   );
 };
