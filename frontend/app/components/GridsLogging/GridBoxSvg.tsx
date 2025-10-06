@@ -28,7 +28,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   slotsData,
   selectedSlot = null,
 }) => {
-  // Get grid status for a given position (same pattern as PuckSVG)
+  // Get grid status for a given position 
   const getGridStatus = (position: number): 'occupied' | 'empty' | 'unknown' => {
     // First check if we have grid box data for the selected slot
     if (gridBoxData?.grid_box?.positions) {
@@ -45,7 +45,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
     return 'unknown';
   };
 
-  // Get grid style based on status (EXACT same pattern as PuckSVG)
+  // Get grid style based on status 
   const getGridStyle = (position: number) => {
     const status = getGridStatus(position);
     const baseStyle = {
@@ -58,7 +58,6 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
         ...baseStyle,
         opacity: 0.3,
         fill: '#D3D3D3',
-        // stroke: 'black',
         strokeLinecap: 'round',
         strokeOpacity: '1',
         strokeWidth: '3px',
@@ -106,7 +105,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
                 // 4 grids max
                 const gridStyle = getGridStyle(gridNumber);
 
-                // Apply visual styling based on grid status (EXACT same pattern as PuckSVG)
+                // Apply visual styling based on grid status 
                 Object.assign(path.style, gridStyle);
               }
               // Only add click handlers if slot clicking is not disabled
