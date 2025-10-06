@@ -209,7 +209,16 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
 
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField fullWidth label="Grid Name" disabled value={formData.gridName} sx={disabledTextFieldStyles} />
+              <TextField
+                fullWidth
+                label="Copy Number"
+                disabled
+                value={formData.copyNumber}
+                type="number"
+                sx={disabledTextFieldStyles}
+              />
               <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
+
             </Box>
 
             <Box sx={{ display: 'flex', gap: 2 }}>
@@ -246,14 +255,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 label="Position in Box"
                 disabled
                 value={formData.positionInBox}
-                type="number"
-                sx={disabledTextFieldStyles}
-              />
-              <TextField
-                fullWidth
-                label="Copy Number"
-                disabled
-                value={formData.copyNumber}
                 type="number"
                 sx={disabledTextFieldStyles}
               />

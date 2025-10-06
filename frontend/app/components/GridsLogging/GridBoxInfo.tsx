@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
@@ -10,6 +10,7 @@ import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/us
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
 import styles from './GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
+import { DeleteGridBox } from './DeleteGridBox';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
 import { UserContext } from '@app/common/context/UserProvider';
 import { UsersList } from '@app/common/types/gridLogging/userList';
@@ -34,6 +35,7 @@ const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
 
 export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect, selectedUser }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
@@ -59,17 +61,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   const formData = mapGridBoxDetailToFormData(gridBoxData);
   // Event handlers
   const handleDeleteGridBox = () => {
-    const prefillParams = new URLSearchParams();
-
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
-    }
-    if (selectedPuck?.id) {
-      prefillParams.append('return_puck_id', selectedPuck.id.toString());
-    }
-
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/${selectedSlot}/delete/?${prefillParams.toString()}`;
-    window.location.href = adminUrl;
+   setDeleteDialogOpen(true);
   };
 
   const handleAddGrid = (positionInBox?: number) => {
@@ -138,6 +130,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   }
 
   return (
+    <>
     <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
       <CardHeader
         title={
@@ -249,5 +242,14 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
         </Box>
       </CardContent>
     </Card>
+    <DeleteGridBox
+      open={deleteDialogOpen}
+      onClose={() => setDeleteDialogOpen(false)}
+      selectedPuck={selectedPuck}
+      selectedSlot={selectedSlot}
+      selectedUser={selectedUser}
+      gridBoxData={gridBoxData || null}
+    />
+    </>
   );
 };

@@ -99,7 +99,6 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
       return {
         ...baseStyle,
         opacity: 0.4,
-        //   filter: 'brightness(0.3)',
         fill: '#C0C0C0',
         stroke: 'black',
         strokeLinecap: 'round',
