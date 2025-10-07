@@ -64,12 +64,16 @@ def create_pipeline_plan():
                 version='version in .json')
     denoiser = ProcSoftware.objects.create(name='denoise',
                 version='version in .json')
+    copick = ProcSoftware.objects.create(name='copick',
+                version='version in .json')
     for t in tasks[:-1]:
         aretomo3.capable_tasks.add(t)
     for t in tasks[-1:]:
         denoiser.capable_tasks.add(t)
     plan1 = ProcPlan.objects.create(name='czii-live')
     plan2 = ProcPlan.objects.create(name='czii-denoise')
+    plan3 = ProcPlan.objects.create(name='czii-copick')
+
     # AreTomo3-5A recon
     pipe1 = Pipe.objects.create(name='vol001',software=aretomo3)
     # AreTomo3-10A recon
@@ -125,6 +129,7 @@ def create_pipeline_plan():
                 static_path=get_static_path('deno'),
                 overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{pipe}/{run}_Vol.mrc',
     ))
+
     for t in tasks[:-1]:
         # everything at 5 Å except denoising
         pipe1.tasks_performed.add(t)
