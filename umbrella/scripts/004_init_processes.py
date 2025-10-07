@@ -61,9 +61,9 @@ def createStandardTasks():
 def create_pipeline_plan():
     tasks = createStandardTasks()
     aretomo3 = ProcSoftware.objects.create(name='aretomo3',
-                version='2024-03-10')
+                version='version in .json')
     denoiser = ProcSoftware.objects.create(name='denoise',
-                version='2024-03-10')
+                version='version in .json')
     for t in tasks[:-1]:
         aretomo3.capable_tasks.add(t)
     for t in tasks[-1:]:
