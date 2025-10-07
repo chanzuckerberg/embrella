@@ -80,6 +80,19 @@ def get_grids_by_user(request):
     grids = queryset.values('id', 'name', 'project_name', 'username', 'is_default', 'create_on')
     return JsonResponse(list(grids), safe=False)
 
+@extend_schema(
+    methods=["GET"],
+    description="Returns a list of available cryo grids for a given project ID.",
+    parameters=[
+        OpenApiParameter(name='project_id', required=True, type=str, description='ID of the project'),
+    ],
+    responses={
+        200: 'List of available cryo grids',
+        400: 'Missing project_id',
+        404: 'Project not found'
+    }
+)
+@api_view(["GET"])
 def get_available_grids(request):
     project_id = request.GET.get('project_id')
 
@@ -110,6 +123,18 @@ def get_available_grids(request):
     else:
         return JsonResponse({"error": "Project ID not provided."}, status=400)
 
+@extend_schema(
+    methods=["GET"],
+    description="Returns grids associated with a given cassette ID.",
+    parameters=[
+        OpenApiParameter(name='cassette_id', required=True, type=str, description='ID of the grid cassette'),
+    ],
+    responses={
+        200: 'List of grids by cassette',
+        400: 'Missing cassette_id',
+    }
+)
+@api_view(["GET"])
 def get_grids_by_cassette(request):
     cassette_id = request.GET.get('cassette_id')
     if cassette_id:
@@ -148,6 +173,27 @@ def _get_data_by_msi_session_data_type(plan, session, data_types=[]):
             valid_pipes.append(input_joints[0].input_pipe_in_plan.pipe)
         return valid_pipes
 
+
+@extend_schema(
+    methods=["GET"],
+    description="""
+    Returns form selector options for Tomograms and Annotations belonging to an MSI session,
+    that are valid as inputs of the first pipe in the specified processing plan.
+    Returns a 2-element list:
+    1. List of tomograms with `rec`/`deno` data types.
+    2. List of annotation picks (`point` type) with `pick` data type.
+    """,
+    parameters=[
+        OpenApiParameter(name='plan_id', required=True, type=str, description='Processing Plan ID'),
+        OpenApiParameter(name='session_id', required=True, type=str, description='MSI Session ID'),
+    ],
+    responses={
+        200: 'List of tomograms and picks',
+        400: 'Missing required parameters',
+        404: 'Plan or Session not found, or data fetch error',
+    }
+)
+@api_view(["GET"])
 def get_tomo_by_msi_session(request):
     """
     Return form selector options as json response of Tomograms
