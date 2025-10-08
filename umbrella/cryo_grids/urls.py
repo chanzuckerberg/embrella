@@ -23,4 +23,5 @@ urlpatterns = [
     path('available-positions/<int:object_id>', 
          views.get_available_positions, 
          name='get_available_positions'),
+    path('update-grid-trashed/<int:grid_id>/', views.update_grid_trashed_status, name='update_grid_trashed_status'),
 ]
