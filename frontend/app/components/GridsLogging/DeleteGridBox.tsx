@@ -26,7 +26,7 @@ export const DeleteGridBox: React.FC<DeleteGridBoxProps> = ({
   selectedUser
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
-  let gridBoxId= gridBoxData?.grid_box?.grid_box_id;
+  const gridBoxId= gridBoxData?.grid_box?.grid_box_id;
 
   if (!selectedPuck || !gridBoxId) return null;
 

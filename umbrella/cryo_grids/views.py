@@ -849,6 +849,81 @@ def clear_cassette_move(request, error_msg=''):
                 grid.save()
         return HttpResponseRedirect(reverse('cryo_grids:clear_cassette_filter', args=(cassette_id,)))
 
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def update_grid_trashed_status(request, grid_id):
+    """
+    Update the trashed status of a specific grid
+    """
+    try:
+        grid = CryoGrid.objects.get(id=grid_id)
+        
+        # Parse JSON data instead of form data
+        import json
+        data = json.loads(request.body)
+        trashed_status = data.get('trashed', False)
+        
+        # Update the trashed status
+        grid.trashed = trashed_status
+        
+        # If trashing, remove from grid box (and thus puck hierarchy)
+        if trashed_status:
+            grid.grid_box = None
+            # grid.position_in_box = None
+        
+        grid.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Grid {"trashed" if trashed_status else "restored"} successfully',
+            'trashed': grid.trashed
+        })
+        
+    except CryoGrid.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Grid not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+    try:
+        grid = CryoGrid.objects.get(id=grid_id)
+        
+        # Parse JSON data instead of form data
+        import json
+        data = json.loads(request.body)
+        trashed_status = data.get('trashed', False)
+        
+        # Update the trashed status
+        grid.trashed = trashed_status
+        
+        # If trashing, remove from grid box (and thus puck hierarchy)
+        if trashed_status:
+            grid.grid_box = None
+            grid.position_in_box = None 
+        
+        grid.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Grid {"trashed" if trashed_status else "restored"} successfully',
+            'trashed': grid.trashed
+        })
+        
+    except CryoGrid.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Grid not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 @require_http_methods(["GET"])
 def get_available_positions(request, object_id):

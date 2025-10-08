@@ -118,17 +118,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     }
   };
 
-  // Show loading state while fetching data
-  if (!slotsSuccess || !gridBoxSuccess) {
-    return (
-      <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
-        <CardContent>
-          <Typography>Loading grid box information...</Typography>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <>
     <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
