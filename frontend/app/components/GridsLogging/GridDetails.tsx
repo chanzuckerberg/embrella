@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { GridDetailsResponse } from '@app/common/types/gridLogging/gridDetails';
@@ -64,7 +64,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     positionInPuck: selectedSlot || 0,
     gridId: selectedGridId || 0,
   });
-
+  const [trashedValue, setLocalTrashed] = useState<boolean | null>(null);
   // Early return if no selection
   if (!selectedPuck || !selectedSlot || !selectedGrid) {
     return null;
@@ -77,6 +77,40 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   // const handleSave = () => {
   //   console.log('Save grid details:', formData);
   // };
+ 
+  const handleTrashedGrid = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedGridId) return;
+    
+    const newTrashedStatus = event.target.checked;
+    setLocalTrashed(newTrashedStatus);
+    
+    try {
+      const response = await fetch(`${DJANGO_URL}/cryo_grids/update-grid-trashed/${selectedGridId}/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', 
+        body: JSON.stringify({
+          trashed: newTrashedStatus
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log(result.message);
+          // Reload to refresh all data
+        window.location.reload();
+      } else {
+        console.error('Failed to update grid status');
+        setLocalTrashed(null);
+      }
+    } catch (error) {
+      console.error('Error updating grid status:', error);
+      setLocalTrashed(null);
+    }
+  };
+
   const handleDeleteGrid = () => {
     const prefillParams = new URLSearchParams();
 
@@ -233,7 +267,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               />
               {/* {/* <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" /> */}
               <FormControlLabel
-                control={<Checkbox checked={formData.trashed} onClick={handleDeleteGrid} color="primary" />}
+                control={<Checkbox checked={trashedValue} onChange={handleTrashedGrid} color="primary" />}
                 label="Trashed"
               />
             </Box>
