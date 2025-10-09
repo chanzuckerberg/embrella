@@ -103,11 +103,11 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         window.location.reload();
       } else {
         console.error('Failed to update grid status');
-        setLocalTrashed(null);
+        setLocalTrashed(false);
       }
     } catch (error) {
       console.error('Error updating grid status:', error);
-      setLocalTrashed(null);
+      setLocalTrashed(false);
     }
   };
 

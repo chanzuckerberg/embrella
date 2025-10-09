@@ -870,7 +870,7 @@ def update_grid_trashed_status(request, grid_id):
         # If trashing, remove from grid box (and thus puck hierarchy)
         if trashed_status:
             grid.grid_box = None
-            # grid.position_in_box = None
+            grid.position_in_box = None
         
         grid.save()
         
