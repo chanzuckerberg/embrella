@@ -6,7 +6,7 @@ import { UsersList } from '@app/common/types/gridLogging/userList';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { Box, Typography, Card, CardContent, CardActionArea, Grid } from '@mui/material';
 import { PuckSVG } from './PuckSvg';
-import styles from './GridLogging.module.css';
+import styles from '../GridLogging.module.css';
 
 interface PuckSelectorProps {
   selectedUser: UsersList | null;

@@ -21,8 +21,8 @@ import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingGridDetails } from '@app/common/hooks/useGridLogging/useGridLoggingGridDetails';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
-import styles from './GridLogging.module.css';
-import { disabledTextFieldStyles } from './DisableBoxStyle';
+import styles from '../GridLogging.module.css';
+import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 
 interface GridDetailsProps {
