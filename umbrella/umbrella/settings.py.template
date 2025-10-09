@@ -31,12 +31,12 @@ ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*'
+SECRET_KEY = 'your-django-secure-key'
 
 # Constant value
-ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts/run_aretomo_sta_pipeline_basic_v2.sh'
-DENOISET_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/denoise/scripts'
-ARETOMO3_ADVANCED_PATH = '/hpc/projects/krios1.processing/aretomo3/scripts/run_aretomo3_advanced_v2.sh'
+ARETOMO3_SCRIPT_PATH = '/your_run_aretomo3_default.sh'
+DENOISET_SCRIPT_PATH = '/your_run_denoiset/scripts'
+ARETOMO3_ADVANCED_PATH = '/your_run_aretomo3_advanced.sh'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -44,10 +44,10 @@ DEBUG = True
 # CORS_ALLOWED_ORIGINS = [
 #     'http://localhost:3000',
 #     'http://localhost:8000',
-#     'https://umbrella.czbiohub.org',
+#     'https://your.production.site',
 # ]
 CORS_ALLOW_ALL_ORIGINS = True
-ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'umbrella.czbiohub.org', '*']
+ALLOWED_HOSTS = ['127.0.0.1', '127.0.0.1:8000', 'your.production.site', '*']
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
@@ -204,16 +204,16 @@ GOOGLE_SSO_CLIENT_ID = os.environ.get('GOOGLE_SSO_CLIENT_ID')
 GOOGLE_SSO_PROJECT_ID = os.environ.get('GOOGLE_SSO_PROJECT_ID')
 GOOGLE_SSO_CLIENT_SECRET = os.environ.get('GOOGLE_SSO_CLIENT_SECRET')
 
-GOOGLE_SSO_ALLOWABLE_DOMAINS = ["umbrella.czbiohub.org", "127.0.0.1:8000", "127.0.0.1", 'czii.org']
+GOOGLE_SSO_ALLOWABLE_DOMAINS = ["umbrella.czbiohub.org", "127.0.0.1:8000", "127.0.0.1", 'your.org']
 
 GOOGLE_SSO_PRE_LOGIN_CALLBACK = "umbrella.hooks.pre_login_callback"
 
 ROOT_URLCONF = 'umbrella.urls'
 
 
-ALLOWED_DOMAINS = ['czii.org', 'czbiohub.org']
+ALLOWED_DOMAINS = ['your.org', 'your2.org']
 
-GOOGLE_SSO_ALLOWED_DOMAINS = ['czii.org', 'gmail.com']
+GOOGLE_SSO_ALLOWED_DOMAINS = ['your.org', 'gmail.com']
 
 TEMPLATES = [
     {
