@@ -64,7 +64,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     positionInPuck: selectedSlot || 0,
     gridId: selectedGridId || 0,
   });
-  const [trashedValue, setLocalTrashed] = useState<boolean | null>(null);
+  const [trashedValue, setLocalTrashed] = useState<boolean>(false);
   // Early return if no selection
   if (!selectedPuck || !selectedSlot || !selectedGrid) {
     return null;
