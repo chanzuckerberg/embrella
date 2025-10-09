@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, Box, IconButton, Typography, CircularPro
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
-import styles from './GridLogging.module.css';
+import styles from '../GridLogging.module.css';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 
 interface PuckDetailsProps {

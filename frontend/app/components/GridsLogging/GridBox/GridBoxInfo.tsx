@@ -8,7 +8,7 @@ import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
-import styles from './GridLogging.module.css';
+import styles from '../GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
 import { DeleteGridBox } from './DeleteGridBox';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
