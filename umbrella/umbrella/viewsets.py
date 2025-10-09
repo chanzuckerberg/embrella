@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from django.db.models.functions import Lower 
 from cryo_grids.models import Puck, CryoGridBox, CryoGrid
 from .serializers import UserSerializer, PuckSerializer, GridDetailsSerializer
+from umbrella.choices import (CANE_COLORS, PUCK_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING)
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -294,3 +295,37 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
                 "error": "Failed to fetch grid details",
                 "detail": str(e) if settings.DEBUG else "Please try again later"
             }, status=500)
+
+class GridLoggingChoicesViewSet(viewsets.ViewSet):
+    """
+    ViewSet for grid logging choices (colors, numbering patterns...)
+    READ-ONLY - returns static configuration choices
+    """
+    
+    def list(self, request):
+        """
+        Get all choices for grid logging forms
+        URL: /api/grid-logging/choices/
+        """
+        return Response({
+            "cane_colors": [
+                {'value': code, 'label': name} 
+                for code, name in CANE_COLORS
+            ],
+            "puck_colors": [
+                {'value': code, 'label': name} 
+                for code, name in PUCK_COLORS
+            ],
+            "grid_box_colors": [
+                {'value': code, 'label': name} 
+                for code, name in GRID_BOX_COLORS
+            ],
+            "grid_box_numbering": [
+                {'value': code, 'label': name} 
+                for code, name in GRID_BOX_NUMBERING
+            ],
+            "grid_cassette_numbering": [
+                {'value': code, 'label': name} 
+                for code, name in GRID_CASSETTE_NUMBERING
+            ]
+        })
