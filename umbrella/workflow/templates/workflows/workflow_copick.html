@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Create or Import Copick Projects</title>
+  
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -325,7 +327,7 @@
                     </div>
                  </span>
         </label>
-        <input type="text" id="copickRun" required placeholder="Enter copick run identifier"/>
+        <input type="text" id="copickRun" required placeholder="Enter copick procrun to create"/>
     </div>
     </div>
 
@@ -335,7 +337,7 @@
             <select id="importTomoType" required>
                 <option value="">Select tomogram type...</option>
                 <option value="dctf">DCTF</option>
-                <!-- <option value="wbp">WBP</option> -->
+                <option value="wbp">WBP</option>
                 <option value="sart">SART</option>
                 <option value="denoise">Denoise</option>
             </select>
@@ -349,8 +351,8 @@
         </div>
 
         <div class="form-group">
-            <label for="importTomogramVoxelSize">(Optional) Downsample (Å):</label>
-            <input type="number" id="importTomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
+            <label for="downsampleTomogramVoxelSize">(Optional) Downsample (Å):</label>
+            <input type="number" id="downsampleTomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
             <small style="color: #888;">Blank = no downsampling.</small>
         </div>
     </div>
@@ -425,7 +427,7 @@
             <select id="tomoType" required>
                 <option value="">Select tomogram type...</option>
                 <option value="dctf">DCTF</option>
-                <!-- <option value="wbp">WBP</option> -->
+                <option value="wbp">WBP</option>
                 <option value="sart">SART</option>
                 <option value="denoise">Denoise</option>
             </select>
@@ -622,6 +624,46 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
         }
       });
     }
+
+// Listener for CoPick: fetch run numbers without +1
+    function attachCopickNewRunListener() {
+      const sessionEl = document.getElementById('copickSession');
+      const runEl = document.getElementById('copickRun');
+      if (!sessionEl || !runEl) return;
+
+      // Helper: given array of strings like ["003","02","1"] → next zero-padded number
+      const nextRun = (runs) => {
+        if (!Array.isArray(runs) || runs.length === 0) return '001';
+        // Normalize: extract digits only, keep padding width from the longest run
+        const numeric = runs
+          .map(s => (s ?? '').toString().match(/\d+/)?.[0] ?? '')
+          .filter(s => s.length > 0);
+        if (numeric.length === 0) return '001';
+        const width = Math.max(3, ...numeric.map(s => s.length));
+        const maxVal = Math.max(...numeric.map(s => parseInt(s, 10)));
+        const nextVal = (maxVal + 1).toString().padStart(width, '0');
+        return nextVal;
+      };
+
+      const handler = async () => {
+        const sessionName = sessionEl.value.trim();
+        if (!sessionName) { runEl.value = '001'; return; }
+
+        try {
+          const res = await fetch(`/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const runs = data?.sessions?.[0]?.run_numbers || [];
+          runEl.value = nextRun(runs);
+        } catch (e) {
+          console.error('CoPick next-run fetch failed:', e);
+          runEl.value = '001';
+        }
+      };
+
+  // Fire when the session changes (use 'input' if you want live updates while typing)
+  sessionEl.addEventListener('change', handler);
+}
 
     // Create Copick Project
     async function createCopickProject() {
@@ -880,12 +922,16 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
           await fetchUserInfo();
           await populateSessionDropdown();
           attachFieldSyncListeners();
+          attachCopickNewRunListener();
         } catch (error) {
           console.error("Error during initialization:", error);
           showStatusMessage("Error during page initialization", "error");
         }
       })();
     });
+
+
+
   </script>
 </body>
 </html>

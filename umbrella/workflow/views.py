@@ -628,12 +628,17 @@ def get_msi_params_list(request):
         session_name_filter = request.GET.get('session_name', None)
         plan_type = request.GET.get('plan_type', 'aretomo3')  # Default to aretomo3 for backward compatibility
 
-        # Get the plan ID based on plan type
-        if plan_type == 'denoise':
-            plan_name = 'czii-denoise'
-        elif plan_type == 'aretomo3':
-            plan_name = 'czii-live'
+        # Map plan_type → ProcPlan.name
+        plan_map = {
+            'aretomo3': 'czii-live',
+            'denoise':  'czii-denoise',
+            'copick':   'czii-copick',
+            'octopi':   'czii-octopi',
+        }
+        if plan_type not in plan_map:
+            return JsonResponse({'error': f'Unsupported plan_type "{plan_type}"'}, status=400)
 
+        plan_name = plan_map[plan_type]
         logger.info(f"Plan type: {plan_type}, Plan name: {plan_name}")
 
         # Get the plan ID
