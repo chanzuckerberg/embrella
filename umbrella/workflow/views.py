@@ -2,7 +2,7 @@ from umbrella_logger import logger
 from .utils import jsonify, ssh_connect, extract_parameters, hostname, port, username, password, ssh_file_exists, ssh_list_directory
 from django.http import JsonResponse
 from django.shortcuts import render
-from .agent import Aretomo3, Denoiset, StatusChecker
+from .agent import Aretomo3, Denoiset, StatusChecker, RemoteJobSubmitter
 from umbrella.settings import ARETOMO3_SCRIPT_PATH, ARETOMO3_ADVANCED_PATH, DENOISET_SCRIPT_PATH
 import os
 import base64
@@ -74,6 +74,7 @@ KEYS = ('PixSize',
 # HOST = '10.50.120.52'
 # HOST = 'login-1.czii.org'
 HOST = "10.50.120.90"
+HOST_BRUNO = "192.168.98.229"
 PORT = 22
 USERNAME = os.getenv('REMOTE_ID')
 PASSWORD = os.getenv('REMOTE_PASSWORD')
@@ -1730,3 +1731,4 @@ def trigger_syncer(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
