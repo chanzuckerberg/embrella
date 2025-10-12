@@ -47,6 +47,9 @@ STATUS_CHECKER_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/softwar
 ARETOMO3_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'templates', 'workflows', 'aretomo3_advanced_template.sh')
 ARETOMO3_BASIC_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'templates', 'workflows', 'aretomo3_basic_template.sh')
 ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts'
+COPICK_SCRIPT_DIR = '/hpc/projects/group.czii/krios1.processing/copick/scripts'
+COPICK_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'workflows', 'copick_create_template.sh') 
+
 KEYS = ('PixSize',
         'SplitSum',
         'Resume',
@@ -1732,3 +1735,103 @@ def trigger_syncer(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+
+
+@csrf_exempt
+@login_required
+def run_create_copick(request):
+    if request.method != 'POST':
+        store_log(
+            job_name='CreateCopick',
+            request=request,
+            data_sanitized={},
+            error="Invalid request method",
+            advanced_status=False,
+            job_id=None
+        )
+        return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+
+        # Required fields (adjust names to match your frontend payload)
+        session_name = data.get('session_name')                 # e.g. "25sep18a"
+        copick_run   = data.get('copick_run')                   # e.g. "run003"
+        import_type  = data.get('import_tomo_type')             # e.g. "DCTF"
+        import_run   = data.get('import_tomogram_run')          # e.g. "run001"
+
+        # Optional
+        downsample_vox = data.get('downsample_tomogram_voxel_size', "")
+
+        # Auth
+        user_id = data.get('user_id')
+        encoded_password = data.get('password')  # base64 string from client
+        decoded_password = base64.b64decode(encoded_password).decode('utf-8') if encoded_password else ""
+
+        # Persist minimal auth in session (if you need it later)
+        request.session['user_id'] = user_id
+        request.session['decoded_password'] = decoded_password
+
+        # Sanitize for logging
+        data_sanitized = dict(data)
+        data_sanitized.pop('password', None)
+
+        # Build submitter
+        submitter = RemoteJobSubmitter(
+            hostname=HOST_BRUNO,
+            port=PORT,
+            username=user_id,
+            password=decoded_password,
+            remote_script_dir=COPICK_SCRIPT_DIR,                 
+        )
+        submitter.connect()
+
+        # Job name for the remote .sh
+        job_name = f"{session_name}_create_copick_{copick_run}"
+
+        # Render + submit. **Keys must match your Jinja placeholders.**
+        out, err = submitter.run_script(
+            template_path=COPICK_CREATE_TEMPLATE_PATH,           # e.g. "templates/create_copick.sh"
+            job_name=job_name,
+            session=session_name,
+            copickRun=copick_run,
+            importTomoType=import_type,
+            importTomogramRun=import_run,
+            downsampleTomogramVoxelSize=downsample_vox,
+        )
+
+        # Extract Slurm job id(s)
+        ids = re.findall(r"Submitted batch job (\d+)", out)
+        job_id_str = ",".join(ids) if ids else None
+
+        # Log success
+        store_log(
+            job_name='CreateCopick',
+            request=request,
+            data_sanitized=data_sanitized,
+            error="",
+            advanced_status=True,
+            job_id=job_id_str
+        )
+
+        return JsonResponse({
+            'message': f'Session {session_name}: create_copick submitted.',
+            'output': out,
+            'error': err,
+            'job_id': job_id_str
+        })
+
+    except Exception as e:
+        store_log(
+            job_name='CreateCopick',
+            request=request,
+            data_sanitized=data_sanitized if 'data_sanitized' in locals() else {},
+            error=str(e),
+            advanced_status=False,
+            job_id=None
+        )
+        return JsonResponse({'error': f'{e}: 500'}, status=500)
+
+    finally:
+        if 'submitter' in locals():
+            submitter.close()
