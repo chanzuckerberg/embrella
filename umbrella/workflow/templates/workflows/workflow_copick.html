@@ -285,11 +285,18 @@
     <p class="note">Note: User credentials are SSH credentials for Bruno.</p>
     
     <!-- User Authentication Section -->
-    <div class="form-group">
+    <!-- <div class="form-group">
       <label for="userId">User ID:</label>
       <input type="text" id="userId" required readonly value="demo_user"/>
+    </div> -->
+
+    <div class="form-group">
+    <label for="userId">User ID</label>
+    <input id="userId"
+          type="text"
+          autocomplete="username" />
     </div>
-    
+
     <div class="form-group">
       <label for="password">Password:</label>
       <input type="password" id="password" required placeholder="Enter your password"/>
@@ -671,20 +678,12 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
       const password = document.getElementById("password").value;
       const copickSession = document.getElementById("copickSession").value;
       const copickRun = document.getElementById("copickRun").value;
-      const tomoType = document.getElementById("tomoType").value;
-      const tomogramRun = document.getElementById("tomogramRun").value;
+      const tomoType = document.getElementById("importTomoType").value;
+      const tomogramRun = document.getElementById("importTomogramRun").value;
       const tomogramVoxelSize = document.getElementById("tomogramVoxelSize").value;
 
-      // Validation
-      if (!userId || !password || !copickSession || !copickRun || !tomoType || !tomogramRun || !tomogramVoxelSize) {
+      if (!userId || !password || !copickSession || !copickRun || !tomoType || !tomogramRun) {
         showStatusMessage("Please fill in all required fields for Copick Project creation.", "error");
-        return;
-      }
-
-      // Validate voxel size
-      const voxelSize = parseFloat(tomogramVoxelSize);
-      if (isNaN(voxelSize) || voxelSize <= 0) {
-        showStatusMessage("Please enter a valid voxel size greater than 0.", "error");
         return;
       }
 
@@ -692,29 +691,47 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
       disableForm(true);
 
       try {
-        const projectData = {
+        const payload = {
           user_id: userId,
           password: btoa(password),
-          copick_session: copickSession,
+          session_name: copickSession,             
           copick_run: copickRun,
-          tomo_type: tomoType,
-          tomogram_run: tomogramRun
+          import_tomo_type: tomoType,
+          import_tomogram_run: tomogramRun,
         };
 
-        await simulateCopickProjectCreation(projectData);
-        
+
+        // Add tomogramVoxelSize only if provided
+        if (tomogramVoxelSize && tomogramVoxelSize.trim() !== "") {
+          payload.downsample_tomogram_voxel_size = tomogramVoxelSize;
+        }
+
+        const res = await fetch("/workflow/run-create-copick/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          // credentials: "include", // uncomment if you require session auth cookies
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+
         hideLoadingIndicator();
         disableForm(false);
-        showStatusMessage("Copick project created successfully!", "success");
-        
+
+        const extra = json.job_id ? ` (Job ID: ${json.job_id})` : "";
+        showStatusMessage("Copick project created successfully!" + extra, "success");
+        // Optionally display json.output somewhere
+
       } catch (error) {
         hideLoadingIndicator();
         disableForm(false);
         showStatusMessage("Failed to create Copick project: " + error.message, "error");
       }
     }
+        
 
-    // Add Pickable Object
+// Add Pickable Object
     async function addPickableObject() {
       const objCopickSession = document.getElementById("objCopickSession").value;
       const objCopickRun = document.getElementById("objCopickRun").value;
@@ -929,7 +946,6 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
         }
       })();
     });
-
 
 
   </script>

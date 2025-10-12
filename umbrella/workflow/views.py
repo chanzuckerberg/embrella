@@ -48,7 +48,7 @@ ARETOMO3_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'templates', 'workfl
 ARETOMO3_BASIC_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'templates', 'workflows', 'aretomo3_basic_template.sh')
 ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts'
 COPICK_SCRIPT_DIR = '/hpc/projects/group.czii/krios1.processing/copick/scripts'
-COPICK_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'workflows', 'copick_create_template.sh') 
+COPICK_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_create_template.sh') 
 
 KEYS = ('PixSize',
         'SplitSum',
