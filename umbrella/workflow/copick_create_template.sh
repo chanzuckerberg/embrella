@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=denoise
+#SBATCH --job-name=create_copick
 #SBATCH --time=140:00:00
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
@@ -24,8 +24,8 @@ mkdir -p "${copick_dir}"
 
 # --- dynamically set log paths for this job ---
 JOBTAG="${session}_${copick_procrun}_${SLURM_JOB_ID:-$$}"
-LOG_OUT="${copick_dir}/${JOBTAG}.out"
-LOG_ERR="${copick_dir}/${JOBTAG}.err"
+LOG_OUT="create_copick_${JOBTAG}.out"
+LOG_ERR="create_copick_${JOBTAG}.err"
 exec >"${LOG_OUT}" 2>"${LOG_ERR}"
 
 # map tomogram paths
