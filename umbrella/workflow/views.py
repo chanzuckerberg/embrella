@@ -1791,7 +1791,7 @@ def run_create_copick(request):
 
         # Render + submit. **Keys must match your Jinja placeholders.**
         out, err = submitter.run_script(
-            template_path=COPICK_CREATE_TEMPLATE_PATH,           # e.g. "templates/create_copick.sh"
+            template_path=COPICK_TEMPLATE_PATH,          
             job_name=job_name,
             session=session_name,
             copickRun=copick_run,

@@ -34,4 +34,6 @@ urlpatterns = [
     path('get_plan_id', views.get_plan_id, name='get_plan_id'),
     path('get_msisession_id', views.get_msisession_id, name='get_msisession_id'),
     path('trigger_syncer/', views.trigger_syncer, name='trigger_syncer'),
+    path("run-create-copick/", views.run_create_copick, name="run_create_copick"),
+
 ]
