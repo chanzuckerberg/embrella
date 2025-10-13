@@ -932,6 +932,19 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
       window.location.href = "/umbrella";
     }
 
+    document.addEventListener("DOMContentLoaded", () => {
+      const copickRunInput = document.getElementById("copickRun");
+      if (!copickRunInput) return; // nothing to do if the field isn't present
+
+      copickRunInput.addEventListener("blur", () => {
+        // When user leaves the field, normalize it
+        const raw = copickRunInput.value.trim();
+        if (raw && !/^run/i.test(raw)) {
+          copickRunInput.value = `run${raw}`;
+        }
+      });
+    });
+
     // Initialize the page
     document.addEventListener("DOMContentLoaded", () => {
       (async () => {
