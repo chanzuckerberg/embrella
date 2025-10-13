@@ -690,12 +690,46 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
       showLoadingIndicator("Creating Copick Project...");
       disableForm(true);
 
+
+      // normalize copickRun to always start with "run" ---
+      let runNorm = copickRun.trim();
+      if (runNorm && !/^run/i.test(runNorm)) {
+        runNorm = `run${runNorm}`;
+      }
+
+      // pre-flight check that run doesn't already exist ---
+      try {
+        // Reuse your existing endpoint style; denoise uses this with ?plan_type=denoise
+        // Here we pass plan_type=copick
+        const checkUrl = `/workflow/denoise_params?session_name=${encodeURIComponent(copickSession)}&plan_type=copick`;
+        const checkRes = await fetch(checkUrl);
+        if (!checkRes.ok) throw new Error(`Run check failed (${checkRes.status})`);
+        const checkJson = await checkRes.json();
+
+        // Expecting shape like: { sessions: [{ run_numbers: ["001","002",...] }, ...] }
+        const existingRunNumbers = checkJson.sessions?.[0]?.run_numbers || [];
+        const bare = runNorm.replace(/^run/i, "");  // compare against bare number
+
+        if (existingRunNumbers.includes(bare)) {
+          showStatusMessage(`ProcRun ${runNorm} already exists for ${copickSession}. Please choose a different one.`, "error");
+          disableForm(false);
+          hideLoadingIndicator();
+          return;
+        }
+      } catch (err) {
+        // If you want to block on unknown run state, keep this as an error; otherwise, downgrade to warning
+        showStatusMessage(`Failed to check if ProcRun exists: ${err.message}`, "error");
+        disableForm(false);
+        hideLoadingIndicator();
+        return;
+      }
+
       try {
         const payload = {
           user_id: userId,
           password: btoa(password),
-          session_name: copickSession,             
-          copick_run: copickRun,
+          session_name: copickSession,
+          copick_run: runNorm,
           import_tomo_type: tomoType,
           import_tomogram_run: tomogramRun,
         };
@@ -931,19 +965,6 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
     function goBack() {
       window.location.href = "/umbrella";
     }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const copickRunInput = document.getElementById("copickRun");
-      if (!copickRunInput) return; // nothing to do if the field isn't present
-
-      copickRunInput.addEventListener("blur", () => {
-        // When user leaves the field, normalize it
-        const raw = copickRunInput.value.trim();
-        if (raw && !/^run/i.test(raw)) {
-          copickRunInput.value = `run${raw}`;
-        }
-      });
-    });
 
     // Initialize the page
     document.addEventListener("DOMContentLoaded", () => {
