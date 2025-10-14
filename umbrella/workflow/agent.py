@@ -477,3 +477,6 @@ class RemoteJobSubmitter:
         if self.ssh:
             self.ssh.close()
             self.ssh = None
+
+
+            

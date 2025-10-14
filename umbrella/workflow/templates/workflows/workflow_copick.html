@@ -364,7 +364,7 @@
         </div>
     </div>
 
-    <button type="button" onclick="createCopickProject()" id="createButton">Create Copick Project</button>
+    <button type="button" onclick="createCopickProject()" id="createButton">Create Copick Project and Import Tomograms</button>
     <div id="statusMessage" class="status-message"></div>
 
     <!-- Add Pickable Objects Section -->
@@ -687,7 +687,7 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
       const runInput = document.getElementById("copickRun").value;
       const tomoType = document.getElementById("importTomoType").value;
       const tomoRun  = document.getElementById("importTomogramRun").value;
-      const voxelOpt = document.getElementById("tomogramVoxelSize").value;
+      const voxelOpt = document.getElementById("downsampleTomogramVoxelSize").value;
 
       if (!userId || !password || !session || !runInput || !tomoType || !tomoRun) {
         showStatusMessage("Please fill in all required fields for Copick Project creation.", "error");
@@ -733,7 +733,10 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
           import_tomo_type: tomoType,
           import_tomogram_run: tomoRun,
         };
-        if (voxelOpt && voxelOpt.trim()) jobPayload.downsample_tomogram_voxel_size = voxelOpt.trim();
+        if (voxelOpt && voxelOpt.trim()) {
+          jobPayload.downsample_tomogram_voxel_size = voxelOpt.trim();
+        }
+        console.log("Submitting job payload:", jobPayload);
 
         const jobResp = await fetch("/workflow/run-create-copick/", {
           method: "POST",
