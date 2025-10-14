@@ -657,7 +657,10 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
         if (!sessionName) { runEl.value = '001'; return; }
 
         try {
-          const res = await fetch(`/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}`);
+          const res = await fetch(
+            `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=copick&_ts=${Date.now()}`,
+            { cache: "no-store" }
+          );
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
           const runs = data?.sessions?.[0]?.run_numbers || [];
