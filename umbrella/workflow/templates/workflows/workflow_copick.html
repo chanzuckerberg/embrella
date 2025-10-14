@@ -544,27 +544,23 @@ async function fetchRuns(sessionName, reconstructionType, runSelect) {
     const data = await response.json();
     console.log("Runs response:", data);
 
-    // Map tomo type → expected processing plan
-    const planByType = { dctf: "czii-live", sart: "czii-live", denoise: "czii-denoise" };
-    const typeKey = reconstructionType.toLowerCase();
-    const expectedPlan = planByType[typeKey];
+    // Map UI → API type synonyms
+    const typeKeyRaw = (reconstructionType || "").toLowerCase();
+    const typeSyn = { denoise: "denoised" }; // UI "denoise" corresponds to API "Denoised"
+    const typeKey = typeSyn[typeKeyRaw] ?? typeKeyRaw;
 
-    // Normalize run record shape
+    // Normalize each run object to a consistent shape
     const normalize = (r) => ({
       runId: r.runId || r.name || "",
       reconstructionType: (r.reconstructionType || r.type || "").toLowerCase(),
-      planName: (r.procPlan || r.planName || r.plan || "").toLowerCase(),
-      runCounts: r.runCounts ?? r.count ?? 0,
+      // prefer the real API field:
+      runCounts: (r.numTomograms ?? r.runCounts ?? r.count ?? 0)
     });
 
-    // Filter by reconstruction type and expected plan
+    // Filter by reconstruction type
     const matchingRuns = (data.runs || [])
       .map(normalize)
-      .filter(
-        (r) =>
-          r.reconstructionType === typeKey &&
-          (!expectedPlan || !r.planName || r.planName === expectedPlan)
-      );
+      .filter((r) => r.reconstructionType === typeKey);
 
     // Sort by numeric part of runId (descending)
     matchingRuns.sort((a, b) => {
