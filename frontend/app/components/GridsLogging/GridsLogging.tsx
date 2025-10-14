@@ -14,7 +14,7 @@ import { GridBoxInfo } from './GridBox/GridBoxInfo';
 import { GridDetails } from './Grid/GridDetails';
 import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { DJANGO_URL } from '@app/common/constants/api';
+import { AddPuck } from './Pucks/AddPuck';
 
 export const GridsLogging: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
@@ -22,6 +22,7 @@ export const GridsLogging: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
   const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
+  const [isAddPuckDialogOpen, setIsAddPuckDialogOpen] = useState(false);
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
   const searchParams = useSearchParams();
@@ -93,32 +94,7 @@ export const GridsLogging: React.FC = () => {
   };
 
   const handleAddPuck = () => {
-    const prefillParams = new URLSearchParams();
-
-    // Prefill user with current user ID
-    if (currentUser?.id) {
-      prefillParams.append('user', currentUser.id.toString());
-    }
-
-    // Add return state parameters
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
-    }
-    if (selectedPuck?.id) {
-      prefillParams.append('return_puck_id', selectedPuck.id.toString());
-    }
-    if (selectedSlot !== null) {
-      prefillParams.append('return_slot_position', selectedSlot.toString());
-    }
-    if (selectedGrid !== null) {
-      prefillParams.append('return_grid_position', selectedGrid.toString());
-    }
-    if (selectedGridId !== null) {
-      prefillParams.append('return_grid_id', selectedGridId.toString());
-    }
-
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/add/?${prefillParams.toString()}`;
-    window.location.href = adminUrl;
+    setIsAddPuckDialogOpen(true)
   };
 
   const handlePuckSelect = (puck: PucksList | null) => {
@@ -217,6 +193,13 @@ export const GridsLogging: React.FC = () => {
           )}
         </Box>
       )}
+    <AddPuck 
+      open={isAddPuckDialogOpen} 
+      onClose={() => setIsAddPuckDialogOpen(false)} 
+      selectedUser={selectedUser} 
+      caneId={1} 
+    />
+ 
     </Box>
   );
 };
