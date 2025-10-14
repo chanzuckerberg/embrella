@@ -1089,71 +1089,59 @@ class SessionView(View):
     """View to handle both /api/sessions and /api/sessions/{session_id} endpoints"""
 
     def get_session_data(self, session):
-        """Get runs data for a session"""
         runs_data = []
-        seen_runs = set()  # Track unique combinations of runId and reconstructionType
+        seen_runs = set()
 
-        # Get all ProcRuns for this session
-        proc_runs = session.procrun_set.all()
+        # only runs that belong to plans we want to expose here
+        proc_runs = session.procrun_set.filter(
+            proc_plan__name__in=['czii-live', 'czii-denoise']
+        ).select_related('proc_plan')
 
         for proc_run in proc_runs:
-            # Get tomogram count directly from ReviewTomogram table
+            # Count tomograms grouped by reconstruction_type
             review_data = ReviewTomogram.objects.filter(
-                run_id=proc_run.name,
-                session=session
+                run_id=proc_run.name, session=session
             ).values('reconstruction_type').annotate(
                 tomogram_count=Count('tomogram_id', distinct=True)
             )
+            tomogram_counts = {
+                d['reconstruction_type']: d['tomogram_count'] for d in review_data
+            }
 
-            # Create a dictionary to store tomogram counts by reconstruction type
-            tomogram_counts = {data['reconstruction_type']: data['tomogram_count'] for data in review_data}
-
-            # Check all three possibilities for each run
-            reconstruction_types = [
-                {
-                    'type': 'DCTF',
-                    'job_name': 'aretomo3',
-                    'vol_number': 'vol001'
-                },
-                {
-                    'type': 'SART',
-                    'job_name': 'aretomo3',
-                    'vol_number': 'vol003'
-                },
-                {
-                    'type': 'Denoised',
-                    'job_name': 'denoise',
-                    'vol_number': 'vol001'
-                }
-            ]
+            # choose recon types based on plan
+            if proc_run.proc_plan.name == 'czii-live':
+                reconstruction_types = [
+                    {'type': 'DCTF',   'job_name': 'aretomo3', 'vol_number': 'vol001'},
+                    {'type': 'SART',   'job_name': 'aretomo3', 'vol_number': 'vol003'},
+                ]
+            elif proc_run.proc_plan.name == 'czii-denoise':
+                reconstruction_types = [
+                    {'type': 'Denoised','job_name': 'denoise', 'vol_number': 'vol001'},
+                ]
+            else:
+                # skip other plans (e.g., czii-copick)
+                continue
 
             for recon_info in reconstruction_types:
                 recon_type = recon_info['type']
-                job_name = recon_info['job_name']
-                vol_number = recon_info['vol_number']
-
-                # Create a unique key for this run and reconstruction type combination
                 run_key = f"{proc_run.name}_{recon_type}"
+                if run_key in seen_runs:
+                    continue
+                seen_runs.add(run_key)
 
-                # Only add if we haven't seen this combination before
-                if run_key not in seen_runs:
-                    seen_runs.add(run_key)
-
-                    # Construct save path
-                    save_path = f"/hpc/group.czii/krios1.processing/project/{job_name}/{session.name}/{proc_run.name}/{vol_number}"
-
-                    # Get tomogram count for this reconstruction type, default to 0 if not found
-                    tomogram_count = tomogram_counts.get(recon_type, 0)
-
-                    runs_data.append({
-                        "runId": proc_run.name,
-                        "numTomograms": tomogram_count,
-                        "reconstructionType": recon_type,
-                        "savePath": save_path
-                    })
+                save_path = (
+                    f"/hpc/group.czii/krios1.processing/project/"
+                    f"{recon_info['job_name']}/{session.name}/{proc_run.name}/{recon_info['vol_number']}"
+                )
+                runs_data.append({
+                    "runId": proc_run.name,
+                    "numTomograms": tomogram_counts.get(recon_type, 0),
+                    "reconstructionType": recon_type,
+                    "savePath": save_path,
+                })
 
         return {
-            "sessionId": session.id,  # Use session name as ID
+            "sessionId": session.id,
             "sessionName": session.name,
             "createdAt": session.created_at.isoformat() if session.created_at else None,
             "projectName": session.project.name if session.project else None,

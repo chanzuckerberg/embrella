@@ -529,7 +529,6 @@ async function populateSessionDropdown() {
     }
 }
 
-
 async function fetchRuns(sessionName, reconstructionType, runSelect) {
   if (!sessionName || !reconstructionType) {
     runSelect.innerHTML = '<option value="">Select a run...</option>';
@@ -539,40 +538,50 @@ async function fetchRuns(sessionName, reconstructionType, runSelect) {
   runSelect.innerHTML = '<option value="">Loading runs...</option>';
 
   try {
-    const url = `/api/sessions/${sessionName}/`;
-    console.log("Fetching runs from:", url);
-
-    const response = await fetch(url, {
-      method: "GET",
-      credentials: "same-origin",
-    });
-
-    if (!response.ok) throw new Error('Failed to fetch runs');
+    const url = `/api/sessions/${encodeURIComponent(sessionName)}/`;
+    const response = await fetch(url, { method: "GET", credentials: "same-origin" });
+    if (!response.ok) throw new Error("Failed to fetch runs");
     const data = await response.json();
-    console.log("Runs response:", data); // <-- debug line
+    console.log("Runs response:", data);
 
-    // Filter runs by reconstruction type
-    const matchingRuns = data.runs.filter(
-      (r) => r.reconstructionType.toLowerCase() === reconstructionType.toLowerCase()
-    );
+    // Map tomo type → expected processing plan
+    const planByType = { dctf: "czii-live", sart: "czii-live", denoise: "czii-denoise" };
+    const typeKey = reconstructionType.toLowerCase();
+    const expectedPlan = planByType[typeKey];
 
-    // Sort runs by runId in descending order (larger numbers first)
-    matchingRuns.sort((a, b) => {
-      // Extract numeric part from runId (assuming format like "run001", "run002", etc.)
-      const numA = parseInt(a.runId.replace(/\D/g, ''), 10) || 0;
-      const numB = parseInt(b.runId.replace(/\D/g, ''), 10) || 0;
-      return numB - numA; // Descending order
+    // Normalize run record shape
+    const normalize = (r) => ({
+      runId: r.runId || r.name || "",
+      reconstructionType: (r.reconstructionType || r.type || "").toLowerCase(),
+      planName: (r.procPlan || r.planName || r.plan || "").toLowerCase(),
+      runCounts: r.runCounts ?? r.count ?? 0,
     });
 
+    // Filter by reconstruction type and expected plan
+    const matchingRuns = (data.runs || [])
+      .map(normalize)
+      .filter(
+        (r) =>
+          r.reconstructionType === typeKey &&
+          (!expectedPlan || !r.planName || r.planName === expectedPlan)
+      );
+
+    // Sort by numeric part of runId (descending)
+    matchingRuns.sort((a, b) => {
+      const numA = parseInt((a.runId || "").replace(/\D/g, ""), 10) || 0;
+      const numB = parseInt((b.runId || "").replace(/\D/g, ""), 10) || 0;
+      return numB - numA;
+    });
+
+    // Populate dropdown
     runSelect.innerHTML = '<option value="">Select a run...</option>';
-    matchingRuns.forEach((r) => {
+    for (const r of matchingRuns) {
       const opt = document.createElement("option");
       opt.value = r.runId;
       opt.textContent = `${r.runId} (${r.runCounts} tomos)`;
       runSelect.appendChild(opt);
-    });
+    }
 
-    // Pre-select the first option if available (now the highest numbered run)
     if (matchingRuns.length > 0) {
       runSelect.value = matchingRuns[0].runId;
     } else {
@@ -592,7 +601,7 @@ async function updateTomogramRun() {
   const sessionId = sessionSelect.value;
   const tomoType = typeSelect.value;
 
-  console.log("updateTomogramRun called with:", sessionId, tomoType); // debug
+  console.log("updateTomogramRun called with:", sessionId, tomoType);
   await fetchRuns(sessionId, tomoType, runSelect);
 }
 
@@ -602,7 +611,6 @@ document.getElementById("importTomoType").addEventListener("change", updateTomog
 
 // Call the function on page load
 document.addEventListener("DOMContentLoaded", populateSessionDropdown);
-
 
     // Auto-sync fields when copick project fields change
     function attachFieldSyncListeners() {

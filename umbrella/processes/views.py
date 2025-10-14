@@ -260,14 +260,20 @@ def reserve_generic_run(request):
 @require_http_methods(["POST"])
 def create_generic_run(request):
     """
-    Create a lightweight ProcRun that does not require input tomograms.
+    Create a lightweight ProcRun (no input tomograms, no pipe data).
     Required JSON: proc_plan, msi_session, run_number
     Optional JSON: pipeline (e.g., "copick"), notes
     """
     try:
         data = json.loads(request.body.decode('utf-8'))
-        plan_id = int(data.get('proc_plan'))
-        session_id = int(data.get('msi_session'))
+
+        # Validate inputs
+        try:
+            plan_id = int(data.get('proc_plan'))
+            session_id = int(data.get('msi_session'))
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'proc_plan and msi_session must be integers'}, status=400)
+
         run_number = (data.get('run_number') or '').strip()
         pipeline = (data.get('pipeline') or 'generic').strip()
         notes = data.get('notes') or ''
@@ -275,7 +281,7 @@ def create_generic_run(request):
         if not run_number:
             return JsonResponse({'error': 'run_number is required'}, status=400)
 
-        # Same normalization used by create_run
+        # Normalize: run### format
         if not run_number.startswith('run'):
             run_number = f"run{run_number.zfill(3)}"
         name = run_number
@@ -285,27 +291,18 @@ def create_generic_run(request):
 
         # Uniqueness guard
         if ProcRun.objects.filter(name=name, msi_session=msi_session, proc_plan=proc_plan).exists():
-            return JsonResponse({
-                'error': f'Run number {name} already exists for this session and plan.'
-            }, status=400)
+            return JsonResponse({'error': f'Run {name} already exists for this session and plan.'}, status=409)
 
         run_instance = ProcRun.objects.create(
             name=name,
             msi_session=msi_session,
             proc_plan=proc_plan,
-            notes=notes
+            notes=notes or f'pipeline={pipeline}'
         )
-        # If your model has helpers; keep consistent with create_run:
-        # These won’t fail if they assume tomograms—so call only what’s safe.
-        try:
-            run_instance.save_pipe_run_data()
-        except Exception:
-            pass
-        # Don’t call create_tomogram_collection() since this generic flow
-        # doesn’t register input tomograms.
+
 
         return JsonResponse({
-            'message': 'Generic run created.',
+            'message': 'Generic run created (no tomograms).',
             'run_id': run_instance.id,
             'run_number': run_instance.name,
             'session_id': msi_session.id,
@@ -317,11 +314,11 @@ def create_generic_run(request):
         return JsonResponse({'error': 'Invalid proc_plan'}, status=404)
     except MsiSession.DoesNotExist:
         return JsonResponse({'error': 'Invalid msi_session'}, status=404)
-    except (ValueError, TypeError, json.JSONDecodeError):
-        return JsonResponse({'error': 'Invalid payload'}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
+    
 
 @require_http_methods(["GET"])
 def get_all_runs(request):
