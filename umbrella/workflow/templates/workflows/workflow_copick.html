@@ -416,40 +416,48 @@
       </h2>
     </div>
 
+    <!-- Row 1: Session + Copick ProcRun (2 columns) -->
     <div class="form-row">
       <div class="form-group">
         <label for="importCopickSession">Copick Session:</label>
-        <input type="text" id="importCopickSession" placeholder="Enter copick session name"/>
+        <select id="importCopickSession">
+          <option value="">Loading sessions…</option>
+        </select>
       </div>
-      
-      <div class="form-group">
-        <label for="importCopickRun">Copick ProcRun:</label>
-        <input type="text" id="importCopickRun" placeholder="Enter copick run identifier"/>
-      </div>
+
+    <div class="form-group">
+      <label for="importCopickRun">Copick ProcRun:</label>
+      <select id="importCopickRun">
+        <option value="">Select a copick run…</option>
+      </select>
+    </div>
     </div>
 
+    <!-- Row 2: Tomogram Type + Tomogram ProcRun + Optional Downsample (3 columns) -->
     <div class="form-row-three">
-        <div class="form-group">
-            <label for="tomoType">Tomogram Type:</label>
-            <select id="tomoType" required>
-                <option value="">Select tomogram type...</option>
-                <option value="dctf">DCTF</option>
-                <option value="wbp">WBP</option>
-                <option value="sart">SART</option>
-                <option value="denoise">Denoise</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="tomogramRun">Tomogram ProcRun:</label>
-            <input type="text" id="tomogramRun" required placeholder="run001" value="run001"/>
-        </div>
+      <div class="form-group">
+        <label for="tomoType">Tomogram Type:</label>
+        <select id="tomoType" required>
+          <option value="">Select tomogram type...</option>
+          <option value="dctf">DCTF</option>
+          <option value="wbp">WBP</option>
+          <option value="sart">SART</option>
+          <option value="denoise">Denoise</option>
+        </select>
+      </div>
+      
+  <div class="form-group">
+    <label for="tomogramRun">Tomogram ProcRun:</label>
+    <select id="tomogramRun" required>
+      <option value="">Select a run…</option>
+    </select>
+  </div>
 
-        <div class="form-group">
-            <label for="tomogramVoxelSize">(Optional) Downsample (Å):</label>
-            <input type="number" id="tomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
-            <small style="color: #888;">Blank = no downsampling.</small>
-        </div>
+      <div class="form-group">
+          <label for="downsampleTomogramVoxelSize">(Optional) Downsample (Å):</label>
+          <input type="number" id="downsampleTomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
+          <small style="color: #888;">Blank = no downsampling.</small>
+      </div>
     </div>
 
     <button type="button" onclick="importTomograms()" id="importButton" class="secondary">Import Tomograms</button>
@@ -475,138 +483,138 @@
     }
 
     // Populate the copickSession dropdown with session names.
-async function populateSessionDropdown() {
-    const url = "/workflow/get_msi_session_list";
-    try {
-        const response = await fetch(url, {
-        method: "GET",
-        credentials: "same-origin",
-        });
-
-        const responseText = await response.text();
-        if (!response.ok) {
-        throw new Error(`HTTP error ${response.status} | Body: ${responseText}`);
-        }
-
-        let result;
+    async function populateSessionDropdown() {
+        const url = "/workflow/get_msi_session_list";
         try {
-        result = JSON.parse(responseText);
-        } catch (jsonErr) {
-        console.error("JSON parse error:", jsonErr);
-        throw new Error("Failed to parse JSON. Response was: " + responseText);
+            const response = await fetch(url, {
+            method: "GET",
+            credentials: "same-origin",
+            });
+
+            const responseText = await response.text();
+            if (!response.ok) {
+            throw new Error(`HTTP error ${response.status} | Body: ${responseText}`);
+            }
+
+            let result;
+            try {
+            result = JSON.parse(responseText);
+            } catch (jsonErr) {
+            console.error("JSON parse error:", jsonErr);
+            throw new Error("Failed to parse JSON. Response was: " + responseText);
+            }
+
+            if (!result.session_names) {
+            console.error("No 'session_names' found in result:", result);
+            throw new Error("Missing session_names in response JSON.");
+            }
+
+            const sessionSelect = document.getElementById("copickSession");
+            sessionSelect.innerHTML = "";
+
+            // Add default placeholder option
+            const placeholderOption = document.createElement("option");
+            placeholderOption.value = "";
+            placeholderOption.textContent = "Select an MSI session...";
+            sessionSelect.appendChild(placeholderOption);
+
+            // Optional: sort sessions and put "summary" first
+            const sortedSessions = [...result.session_names].sort((a, b) => {
+            if (a.toLowerCase() === "summary") return -1;
+            if (b.toLowerCase() === "summary") return 1;
+            return a.localeCompare(b);
+            });
+
+            sortedSessions.forEach((name) => {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            sessionSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error("Error while fetching session names:", error);
+            alert("Failed to fetch session names. " + error.message);
         }
+    }
 
-        if (!result.session_names) {
-        console.error("No 'session_names' found in result:", result);
-        throw new Error("Missing session_names in response JSON.");
-        }
+    async function fetchRuns(sessionName, reconstructionType, runSelect) {
+      if (!sessionName || !reconstructionType) {
+        runSelect.innerHTML = '<option value="">Select a run...</option>';
+        return;
+      }
 
-        const sessionSelect = document.getElementById("copickSession");
-        sessionSelect.innerHTML = "";
+      runSelect.innerHTML = '<option value="">Loading runs...</option>';
 
-        // Add default placeholder option
-        const placeholderOption = document.createElement("option");
-        placeholderOption.value = "";
-        placeholderOption.textContent = "Select an MSI session...";
-        sessionSelect.appendChild(placeholderOption);
+      try {
+        const url = `/api/sessions/${encodeURIComponent(sessionName)}/`;
+        const response = await fetch(url, { method: "GET", credentials: "same-origin" });
+        if (!response.ok) throw new Error("Failed to fetch runs");
+        const data = await response.json();
+        console.log("Runs response:", data);
 
-        // Optional: sort sessions and put "summary" first
-        const sortedSessions = [...result.session_names].sort((a, b) => {
-        if (a.toLowerCase() === "summary") return -1;
-        if (b.toLowerCase() === "summary") return 1;
-        return a.localeCompare(b);
+        // Map UI → API type synonyms
+        const typeKeyRaw = (reconstructionType || "").toLowerCase();
+        const typeSyn = { denoise: "denoised" }; // UI "denoise" corresponds to API "Denoised"
+        const typeKey = typeSyn[typeKeyRaw] ?? typeKeyRaw;
+
+        // Normalize each run object to a consistent shape
+        const normalize = (r) => ({
+          runId: r.runId || r.name || "",
+          reconstructionType: (r.reconstructionType || r.type || "").toLowerCase(),
+          // prefer the real API field:
+          runCounts: (r.numTomograms ?? r.runCounts ?? r.count ?? 0)
         });
 
-        sortedSessions.forEach((name) => {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        sessionSelect.appendChild(option);
+        // Filter by reconstruction type
+        const matchingRuns = (data.runs || [])
+          .map(normalize)
+          .filter((r) => r.reconstructionType === typeKey);
+
+        // Sort by numeric part of runId (descending)
+        matchingRuns.sort((a, b) => {
+          const numA = parseInt((a.runId || "").replace(/\D/g, ""), 10) || 0;
+          const numB = parseInt((b.runId || "").replace(/\D/g, ""), 10) || 0;
+          return numB - numA;
         });
-    } catch (error) {
-        console.error("Error while fetching session names:", error);
-        alert("Failed to fetch session names. " + error.message);
-    }
-}
 
-async function fetchRuns(sessionName, reconstructionType, runSelect) {
-  if (!sessionName || !reconstructionType) {
-    runSelect.innerHTML = '<option value="">Select a run...</option>';
-    return;
-  }
+        // Populate dropdown
+        runSelect.innerHTML = '<option value="">Select a run...</option>';
+        for (const r of matchingRuns) {
+          const opt = document.createElement("option");
+          opt.value = r.runId;
+          opt.textContent = `${r.runId} (${r.runCounts} tomos)`;
+          runSelect.appendChild(opt);
+        }
 
-  runSelect.innerHTML = '<option value="">Loading runs...</option>';
-
-  try {
-    const url = `/api/sessions/${encodeURIComponent(sessionName)}/`;
-    const response = await fetch(url, { method: "GET", credentials: "same-origin" });
-    if (!response.ok) throw new Error("Failed to fetch runs");
-    const data = await response.json();
-    console.log("Runs response:", data);
-
-    // Map UI → API type synonyms
-    const typeKeyRaw = (reconstructionType || "").toLowerCase();
-    const typeSyn = { denoise: "denoised" }; // UI "denoise" corresponds to API "Denoised"
-    const typeKey = typeSyn[typeKeyRaw] ?? typeKeyRaw;
-
-    // Normalize each run object to a consistent shape
-    const normalize = (r) => ({
-      runId: r.runId || r.name || "",
-      reconstructionType: (r.reconstructionType || r.type || "").toLowerCase(),
-      // prefer the real API field:
-      runCounts: (r.numTomograms ?? r.runCounts ?? r.count ?? 0)
-    });
-
-    // Filter by reconstruction type
-    const matchingRuns = (data.runs || [])
-      .map(normalize)
-      .filter((r) => r.reconstructionType === typeKey);
-
-    // Sort by numeric part of runId (descending)
-    matchingRuns.sort((a, b) => {
-      const numA = parseInt((a.runId || "").replace(/\D/g, ""), 10) || 0;
-      const numB = parseInt((b.runId || "").replace(/\D/g, ""), 10) || 0;
-      return numB - numA;
-    });
-
-    // Populate dropdown
-    runSelect.innerHTML = '<option value="">Select a run...</option>';
-    for (const r of matchingRuns) {
-      const opt = document.createElement("option");
-      opt.value = r.runId;
-      opt.textContent = `${r.runId} (${r.runCounts} tomos)`;
-      runSelect.appendChild(opt);
+        if (matchingRuns.length > 0) {
+          runSelect.value = matchingRuns[0].runId;
+        } else {
+          runSelect.innerHTML = '<option value="">No runs available</option>';
+        }
+      } catch (error) {
+        console.error("Error in fetchRuns:", error);
+        runSelect.innerHTML = '<option value="">Error loading runs</option>';
+      }
     }
 
-    if (matchingRuns.length > 0) {
-      runSelect.value = matchingRuns[0].runId;
-    } else {
-      runSelect.innerHTML = '<option value="">No runs available</option>';
+    async function updateTomogramRun() {
+      const sessionSelect = document.getElementById("copickSession");
+      const typeSelect = document.getElementById("importTomoType");
+      const runSelect = document.getElementById("importTomogramRun");
+
+      const sessionId = sessionSelect.value;
+      const tomoType = typeSelect.value;
+
+      console.log("updateTomogramRun called with:", sessionId, tomoType);
+      await fetchRuns(sessionId, tomoType, runSelect);
     }
-  } catch (error) {
-    console.error("Error in fetchRuns:", error);
-    runSelect.innerHTML = '<option value="">Error loading runs</option>';
-  }
-}
-
-async function updateTomogramRun() {
-  const sessionSelect = document.getElementById("copickSession");
-  const typeSelect = document.getElementById("importTomoType");
-  const runSelect = document.getElementById("importTomogramRun");
-
-  const sessionId = sessionSelect.value;
-  const tomoType = typeSelect.value;
-
-  console.log("updateTomogramRun called with:", sessionId, tomoType);
-  await fetchRuns(sessionId, tomoType, runSelect);
-}
 
 // Attach listeners
-document.getElementById("copickSession").addEventListener("change", updateTomogramRun);
-document.getElementById("importTomoType").addEventListener("change", updateTomogramRun);
+    document.getElementById("copickSession").addEventListener("change", updateTomogramRun);
+    document.getElementById("importTomoType").addEventListener("change", updateTomogramRun);
 
-// Call the function on page load
-document.addEventListener("DOMContentLoaded", populateSessionDropdown);
+    // Call the function on page load
+    document.addEventListener("DOMContentLoaded", populateSessionDropdown);
 
     // Auto-sync fields when copick project fields change
     function attachFieldSyncListeners() {
@@ -772,6 +780,97 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
       }
     }
 
+    // Populate the CopickSession dropdown
+    async function populateCopickSessionDropdown() {
+      const sel = document.getElementById("importCopickSession");
+      if (!sel) return;
+
+      try {
+        // This uses your existing view: path("copick_params", views.get_msi_params_list, …)
+        const res = await fetch("/workflow/copick_params?plan_type=copick");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // Expected shape: { sessions: [{ name: "25oct01b", run_numbers: ["001","002",...] }, ...] }
+        const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+
+        // Sort newest-looking sessions first (simple lexicographic desc; adjust if needed)
+        sessions.sort((a,b) => (b.name || "").localeCompare(a.name || ""));
+
+        sel.innerHTML = '<option value="">Select a copick session…</option>';
+        for (const s of sessions) {
+          const opt = document.createElement("option");
+          opt.value = s.name;            // value used elsewhere
+          opt.textContent = s.name;      // label shown to user
+          sel.appendChild(opt);
+        }
+      } catch (e) {
+        console.error("Failed to load copick sessions:", e);
+        const sel = document.getElementById("importCopickSession");
+        if (sel) sel.innerHTML = '<option value="">Error loading sessions</option>';
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      populateCopickSessionDropdown();
+    });
+
+
+// Populate the "Copick ProcRun" dropdown based on selected Copick session
+    async function populateCopickRun(sessionName) {
+      const runSel = document.getElementById('importCopickRun');
+      if (!runSel) return;
+
+      if (!sessionName) {
+        runSel.innerHTML = '<option value="">Select a Copick run…</option>';
+        return;
+      }
+
+      runSel.innerHTML = '<option value="">Loading runs…</option>';
+
+      try {
+        // Pull Copick runs from DB for the selected session
+        const url = `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=copick&_ts=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const json = await res.json();
+        // Expected response: { sessions: [ { name: "25oct01b", run_numbers: ["001","002",...] } ] }
+        const runs = json?.sessions?.[0]?.run_numbers ?? [];
+
+        // Sort runs descending (newest first)
+        const sorted = [...runs].sort((a, b) => (parseInt(b, 10) || 0) - (parseInt(a, 10) || 0));
+
+        // Populate dropdown
+        runSel.innerHTML = '<option value="">Select a Copick run…</option>';
+        for (const r of sorted) {
+          const val = `run${String(r).padStart(3, '0')}`;
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val;
+          runSel.appendChild(opt);
+        }
+
+        if (sorted.length === 0) {
+          runSel.innerHTML = '<option value="">No Copick runs found</option>';
+        }
+      } catch (e) {
+        console.error('populateCopickRun failed:', e);
+        runSel.innerHTML = '<option value="">Error loading runs</option>';
+      }
+    }
+
+    // Hook: refresh the list whenever the session changes
+    document.addEventListener('DOMContentLoaded', () => {
+      const sessionSel = document.getElementById('importCopickSession');
+      if (!sessionSel) return;
+
+      sessionSel.addEventListener('change', () => {
+        const sessionName = sessionSel.value.trim();
+        populateCopickRun(sessionName);
+      });
+    });
+
 
 // Add Pickable Object
     async function addPickableObject() {
@@ -821,6 +920,87 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
         showStatusMessage("Failed to add pickable object: " + error.message, "error");
       }
     }
+
+
+    // Only used by the "Import More Tomograms" section
+    async function fetchImportRuns(sessionName, reconstructionType, runSelect) {
+      if (!sessionName || !reconstructionType) {
+        runSelect.innerHTML = '<option value="">Select a run…</option>';
+        return;
+      }
+
+      runSelect.innerHTML = '<option value="">Loading runs…</option>';
+
+      try {
+        const url = `/api/sessions/${encodeURIComponent(sessionName)}/`;
+        const resp = await fetch(url, { method: "GET", credentials: "same-origin" });
+        if (!resp.ok) throw new Error("Failed to fetch runs");
+        const data = await resp.json();
+
+        // UI → API synonyms (UI uses "denoise", API returns "Denoised")
+        const typeKeyRaw = (reconstructionType || "").toLowerCase();
+        const typeSyn = { denoise: "denoised" };
+        const typeKey = typeSyn[typeKeyRaw] ?? typeKeyRaw;
+
+        // Normalize records
+        const normalize = (r) => ({
+          runId: (r.runId || r.name || "").trim(),
+          type: (r.reconstructionType || r.type || "").toLowerCase(),
+          count: (r.numTomograms ?? r.runCounts ?? r.count ?? 0),
+        });
+
+        // Filter to the selected type
+        const matching = (data.runs || [])
+          .map(normalize)
+          .filter(r => r.type === typeKey)
+          .sort((a, b) => {
+            const na = parseInt(a.runId.replace(/\D/g, ""), 10) || 0;
+            const nb = parseInt(b.runId.replace(/\D/g, ""), 10) || 0;
+            return nb - na; // highest run first
+          });
+
+        // Populate dropdown
+        runSelect.innerHTML = '<option value="">Select a run…</option>';
+        for (const r of matching) {
+          const opt = document.createElement("option");
+          opt.value = r.runId;
+          opt.textContent = `${r.runId} (${r.count} tomos)`;
+          runSelect.appendChild(opt);
+        }
+        if (matching.length === 0) {
+          runSelect.innerHTML = '<option value="">No runs available</option>';
+        } else {
+          runSelect.value = matching[0].runId;
+        }
+      } catch (err) {
+        console.error("Error in fetchImportRuns:", err);
+        runSelect.innerHTML = '<option value="">Error loading runs</option>';
+      }
+    }
+
+    async function updateTomogramRunImport() {
+      const sessionEl = document.getElementById("importCopickSession");
+      const typeEl = document.getElementById("tomoType");
+      const runEl = document.getElementById("tomogramRun");
+      if (!sessionEl || !typeEl || !runEl) return;
+
+      const sessionName = sessionEl.value;
+      const tomoType = typeEl.value;
+      await fetchImportRuns(sessionName, tomoType, runEl);
+    }
+
+    // Attach listeners (call once on page load)
+    document.addEventListener("DOMContentLoaded", () => {
+      const sessionEl = document.getElementById("importCopickSession");
+      const typeEl = document.getElementById("tomoType");
+
+      if (sessionEl) sessionEl.addEventListener("change", updateTomogramRunImport);
+      if (typeEl) typeEl.addEventListener("change", updateTomogramRunImport);
+
+      // Optional: populate immediately if both have values
+      updateTomogramRunImport();
+    });
+
 
     // Import Tomograms
     async function importTomograms() {
