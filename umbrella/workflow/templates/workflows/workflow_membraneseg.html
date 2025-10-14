@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Create or Import Copick Projects</title>
+  
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -112,12 +114,12 @@
       background-color: #1e88e5;
     }
     .note {
-      color: #2c3e50;
+      color: red;
       font-weight: bold;
       margin-bottom: 20px;
-      background-color: #f9f9d6; /* Light yellow */
+      background-color: #fff5f5;
       padding: 10px;
-      border-left: 4px solid #f1c40f; /* Yellow border */
+      border-left: 4px solid #e74c3c;
       border-radius: 4px;
     }
     .loading-indicator {
@@ -220,30 +222,88 @@
       opacity: 1;
       pointer-events: auto;
     }
-    
-</style>
+
+    /* Smaller info icon for the new tooltip */
+    .info-icon-small {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        text-align: center;
+        font-family: 'Hoefler Text', Georgia, serif; /* Apple-like font */
+        font-weight: bold;
+        font-style: italic;          /* optional, matches Apple i */
+        font-size: 13px;             /* similar to Apple small info button */
+        color: #007aff;              /* Apple standard blue for info icon */
+        background: #f0f0f0;         /* light grey background */
+        border-radius: 50%;
+        cursor: pointer;
+        position: relative;
+        user-select: none;           /* prevents text selection */
+}
+
+    /* New tooltip style (small, grey background) */
+    .tooltip-small {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -120%);
+        background: #f5f5f5;
+        color: #333;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: normal;    /* allows wrapping */
+        max-width: 400px;      /* wider, so lines aren’t too short */
+        min-width: 200px;  /* minimum width for readability */
+        word-wrap: break-word;  /* break long words */
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        font-family:Arial, Helvetica, sans-serif;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    /* Show tooltip on hover */
+    .info-icon-small:hover .tooltip-small {
+      opacity: 1;
+      pointer-events: auto;
+
+    }
+    </style>
 </head>
 
 <body>
   <button class="go-back" onclick="goBack()">Go back to the startup page</button>
   
+  <div class="loading-indicator" id="loadingIndicator">
+    Processing...
+  </div>
+
   <div class="form-container">
-    <h1>Run</h1>
-    <div class="note">
-      Note: Please create copick projects before running this workflow.
-    </div>
+    <h1>Create or Import Copick Projects</h1>
+    <p class="note">Note: User credentials are SSH credentials for Bruno.</p>
+    
     <!-- User Authentication Section -->
-    <div class="form-group">
+    <!-- <div class="form-group">
       <label for="userId">User ID:</label>
       <input type="text" id="userId" required readonly value="demo_user"/>
+    </div> -->
+
+    <div class="form-group">
+    <label for="userId">User ID</label>
+    <input id="userId"
+          type="text"
+          autocomplete="username" />
     </div>
-    
+
     <div class="form-group">
       <label for="password">Password:</label>
       <input type="password" id="password" required placeholder="Enter your password"/>
     </div>
 
-    <!-- Create Copick Project Section -->    
+    <!-- run membrane segmentation -->    
     <div class="section-header">
         <h2>
             Run MembraneSeg
@@ -259,7 +319,6 @@
     function goBack() {
       window.location.href = "/umbrella";
     }
-
     // Initialize user info
     async function fetchUserInfo() {
       try {
@@ -268,6 +327,7 @@
         if (response.ok && result.username) {
           document.getElementById("userId").value = result.username;
           document.getElementById("cancelUserId").value = result.username;
+
         } else {
           alert("Failed to fetch user info.");
         }
@@ -276,5 +336,16 @@
         alert("An error occurred while fetching user info.");
       }
     }
+
+    // Auto-fetch user info on page load
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log("[init] Running fetchUserInfo...");
+      try {
+        fetchUserInfo();
+      } catch (err) {
+        console.error("[init] fetchUserInfo() threw an error:", err);
+      }
+    });
+
   </script>
 </body>

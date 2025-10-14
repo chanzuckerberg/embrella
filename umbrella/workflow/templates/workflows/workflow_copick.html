@@ -454,14 +454,14 @@
   </div>
 
       <div class="form-group">
-          <label for="downsampleTomogramVoxelSize">(Optional) Downsample (Å):</label>
-          <input type="number" id="downsampleTomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
+          <label for="importDownsampleTomogramVoxelSize">(Optional) Downsample (Å):</label>
+          <input type="number" id="importDownsampleTomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
           <small style="color: #888;">Blank = no downsampling.</small>
       </div>
     </div>
 
-    <button type="button" onclick="importTomograms()" id="importButton" class="secondary">Import Tomograms</button>
-    <div id="importStatusMessage" class="status-message"></div>
+  <button type="button" onclick="importTomograms()" id="importButton" class="secondary">Import Tomograms</button>
+  <div id="importStatusMessage" class="status-message"></div>
 
   <script>
     // Initialize user info
@@ -1002,93 +1002,105 @@
     });
 
 
-    // Import Tomograms
+    // Import tomograms to an existing copick project
+    function normalizeRun(val) {
+      const s = (val || "").toString().trim();
+      if (!s) return "";
+      if (/^run/i.test(s)) {
+        const n = s.replace(/^run/i, "");
+        return `run${(n.replace(/\D/g, "") || "1").padStart(3, "0")}`;
+      }
+      return `run${(s.replace(/\D/g, "") || "1").padStart(3, "0")}`;
+    }
+
     async function importTomograms() {
-      const userId = document.getElementById("userId").value;
-      const password = document.getElementById("password").value;
-      const importCopickSession = document.getElementById("importCopickSession").value;
-      const importCopickRun = document.getElementById("importCopickRun").value;
-      const importTomoType = document.getElementById("importTomoType").value;
-      const importTomogramRun = document.getElementById("importTomogramRun").value;
-      const importTomogramVoxelSize = document.getElementById("importTomogramVoxelSize").value;
+      console.log("[importTomograms] clicked");
 
-      // Validation
-      if (!userId || !password || !importCopickSession || !importCopickRun || !importTomoType || !importTomogramRun || !importTomogramVoxelSize) {
-        showImportStatusMessage("Please fill in all required fields for importing tomograms.", "error");
+      const userId   = document.getElementById("userId")?.value ?? "";
+      const password = document.getElementById("password")?.value ?? "";
+
+      const session  = document.getElementById("importCopickSession")?.value ?? "";
+      const runInput = document.getElementById("importCopickRun")?.value ?? "";
+      const tomoType = document.getElementById("tomoType")?.value ?? "";
+      const tomoRun  = document.getElementById("tomogramRun")?.value ?? "";
+      // 👇 matches your new HTML id
+      const voxelOpt = document.getElementById("importDownsampleTomogramVoxelSize")?.value ?? "";
+
+      const statusBox = document.getElementById("importStatusMessage");
+
+      if (!userId || !password || !session || !runInput || !tomoType || !tomoRun) {
+        if (statusBox) {
+          statusBox.textContent = "Please fill in all required fields (user, password, session, Copick run, tomogram type, tomogram run).";
+          statusBox.className = "status-message status-error";
+          statusBox.style.display = "block";
+        }
         return;
       }
 
-      // Validate voxel size
-      const voxelSize = parseFloat(importTomogramVoxelSize);
-      if (isNaN(voxelSize) || voxelSize <= 0) {
-        showImportStatusMessage("Please enter a valid voxel size greater than 0.", "error");
-        return;
-      }
+      const copickRunNorm = normalizeRun(runInput);
+      const tomoRunNorm   = normalizeRun(tomoRun);
 
-      showLoadingIndicator("Importing Tomograms...");
-      disableForm(true);
+      if (typeof showLoadingIndicator === "function") showLoadingIndicator("Submitting import job…");
+      if (typeof disableForm === "function") disableForm(true);
+      if (statusBox) {
+        statusBox.textContent = "Submitting import job…";
+        statusBox.className = "status-message";
+        statusBox.style.display = "block";
+      }
 
       try {
-        const importData = {
+        const jobPayload = {
           user_id: userId,
           password: btoa(password),
-          copick_session: importCopickSession,
-          copick_run: importCopickRun,
-          tomo_type: importTomoType,
-          tomogram_run: importTomogramRun,
-          tomogram_voxel_size: voxelSize
+          session_name: session,
+          copick_run: copickRunNorm,
+          import_tomo_type: tomoType,
+          import_tomogram_run: tomoRunNorm,
         };
+        if (voxelOpt && voxelOpt.trim()) {
+          jobPayload.downsample_tomogram_voxel_size = voxelOpt.trim();
+        }
+        console.log("[importTomograms] payload", jobPayload);
 
-        await simulateImportTomograms(importData);
-        
-        hideLoadingIndicator();
-        disableForm(false);
-        showImportStatusMessage("Tomograms imported successfully!", "success");
-        
-        // Clear the import form after successful import
-        clearImportForm();
-        
-      } catch (error) {
-        hideLoadingIndicator();
-        disableForm(false);
-        showImportStatusMessage("Failed to import tomograms: " + error.message, "error");
+        const res = await fetch("/workflow/run-import-tomogram-copick/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(jobPayload),
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `Job submit failed (${res.status})`);
+
+        const extra = json.job_id ? ` (Job ID: ${json.job_id})` : "";
+        if (statusBox) {
+          statusBox.textContent = `Import submitted successfully${extra}`;
+          statusBox.className = "status-message status-success";
+          statusBox.style.display = "block";
+        }
+      } catch (e) {
+        console.error("[importTomograms] error", e);
+        if (statusBox) {
+          statusBox.textContent = `Failed to submit import: ${e.message}`;
+          statusBox.className = "status-message status-error";
+          statusBox.style.display = "block";
+        }
+      } finally {
+        if (typeof hideLoadingIndicator === "function") hideLoadingIndicator();
+        if (typeof disableForm === "function") disableForm(false);
       }
     }
 
-    // Mock API functions
-    async function simulateCopickProjectCreation(projectData) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log("Creating Copick project with data:", projectData);
-      
-      if (Math.random() > 0.15) {
-        return { project_id: "copick_" + Date.now(), status: "created" };
-      } else {
-        throw new Error("Simulated API failure - project creation failed");
-      }
-    }
+    // ensure the inline onclick can find it
+    window.importTomograms = importTomograms;
 
-    async function simulateAddPickableObject(objectData) {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Adding pickable object with data:", objectData);
-      
-      if (Math.random() > 0.1) {
-        return { object_id: "obj_" + Date.now(), status: "added" };
-      } else {
-        throw new Error("Simulated API failure - object addition failed");
+    // (optional) also wire the button by id for redundancy
+    document.addEventListener("DOMContentLoaded", () => {
+      const btn = document.getElementById("importButton");
+      if (btn) {
+        btn.onclick = null; // avoid double calling if inline present
+        btn.addEventListener("click", importTomograms);
       }
-    }
-
-    // NEW MOCK FUNCTION for import tomograms
-    async function simulateImportTomograms(importData) {
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      console.log("Importing tomograms with data:", importData);
-      
-      if (Math.random() > 0.12) {
-        return { import_id: "import_" + Date.now(), status: "imported", count: Math.floor(Math.random() * 10) + 1 };
-      } else {
-        throw new Error("Simulated API failure - tomogram import failed");
-      }
-    }
+    });
 
     // Utility functions
     function showLoadingIndicator(message = "Processing...") {
@@ -1139,14 +1151,6 @@
       document.getElementById("objectName").value = "";
       document.getElementById("diameter").value = "";
       document.getElementById("objectMap").value = "";
-      // Keep copick session and run fields populated for convenience
-    }
-
-    // NEW FUNCTION to clear import form
-    function clearImportForm() {
-      document.getElementById("importTomogramRun").value = "run001";
-      document.getElementById("importTomogramVoxelSize").value = "";
-      document.getElementById("importTomoType").value = "";
       // Keep copick session and run fields populated for convenience
     }
 

@@ -35,4 +35,5 @@ urlpatterns = [
     path('get_msisession_id', views.get_msisession_id, name='get_msisession_id'),
     path('trigger_syncer/', views.trigger_syncer, name='trigger_syncer'),
     path("run-create-copick/", views.run_create_copick, name="run_create_copick"),
+    path("run-import-tomogram-copick/", views.run_import_tomogram_copick, name="run_import_tomogram_copick"),
 ]

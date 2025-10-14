@@ -49,6 +49,7 @@ ARETOMO3_BASIC_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'templates', '
 ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scripts'
 COPICK_SCRIPT_DIR = '/hpc/projects/group.czii/krios1.processing/copick/scripts'
 COPICK_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_create_template.sh') 
+COPICK_IMPORT_TOMO_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_import_tomo_template.sh')
 
 KEYS = ('PixSize',
         'SplitSum',
@@ -1832,6 +1833,128 @@ def run_create_copick(request):
         )
         return JsonResponse({'error': f'{e}: 500'}, status=500)
 
+    finally:
+        if 'submitter' in locals():
+            submitter.close()
+
+@csrf_exempt
+@login_required
+def run_import_tomogram_copick(request):
+    """
+    Submit a 'copick import tomograms' job via the remote template.
+    Required JSON:
+      - user_id
+      - password (base64)
+      - session_name        (Copick session)
+      - copick_run          (e.g., 'run003' or '003')
+      - import_tomo_type    ('dctf'|'sart'|'wbp'|'denoise')
+      - import_tomogram_run (e.g., 'run001')
+    Optional:
+      - downsample_tomogram_voxel_size (e.g., '10')
+    """
+    if request.method != 'POST':
+        store_log(
+            job_name="CopickImport",
+            request=request,
+            data_sanitized={},
+            error="Invalid request method",
+            advanced_status=False,
+            job_id=None,
+        )
+        return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
+
+    try:
+        data = json.loads(request.body)
+
+        # -------- inputs --------
+        session_name = (data.get('session_name') or '').strip()
+        copick_run = (data.get('copick_run') or '').strip()
+        import_type = (data.get('import_tomo_type') or '').strip().lower()
+        import_run = (data.get('import_tomogram_run') or '').strip()
+        downsample_vox = (data.get('downsample_tomogram_voxel_size') or '').strip()
+
+        user_id = (data.get('user_id') or '').strip()
+        encoded_password = data.get('password') or ""
+        decoded_password = base64.b64decode(encoded_password).decode('utf-8') if encoded_password else ""
+
+        # Basic validation
+        missing = [k for k, v in {
+            "user_id": user_id,
+            "password": encoded_password,
+            "session_name": session_name,
+            "copick_run": copick_run,
+            "import_tomo_type": import_type,
+            "import_tomogram_run": import_run,
+        }.items() if not v]
+        if missing:
+            return JsonResponse({'error': f'Missing fields: {", ".join(missing)}'}, status=400)
+
+        # Normalize run label: ensure "run###"
+        if not copick_run.lower().startswith("run"):
+            digits = "".join(ch for ch in copick_run if ch.isdigit())
+            copick_run = f"run{digits.zfill(3)}" if digits else "run001"
+
+        # Persist minimal auth (if you need later)
+        request.session['user_id'] = user_id
+        request.session['decoded_password'] = decoded_password
+
+        # Sanitize copy for log (drop password)
+        data_sanitized = dict(data)
+        data_sanitized.pop('password', None)
+
+        # -------- submit ----------
+        submitter = RemoteJobSubmitter(
+            hostname=HOST_BRUNO,
+            port=PORT,
+            username=user_id,
+            password=decoded_password,
+            remote_script_dir=COPICK_SCRIPT_DIR,
+        )
+        submitter.connect()
+
+        job_name = f"{session_name}_import_copick_{copick_run}"
+
+        # Jinja keys must match your template placeholders
+        out, err = submitter.run_script(
+            template_path=COPICK_IMPORT_TOMO_TEMPLATE_PATH,
+            job_name=job_name,
+            session=session_name,
+            copickRun=copick_run,
+            importTomoType=import_type,
+            importTomogramRun=import_run,
+            downsampleTomogramVoxelSize=downsample_vox,
+        )
+
+        # Parse Slurm job id(s)
+        ids = re.findall(r"Submitted batch job (\d+)", out or "")
+        job_id_str = ",".join(ids) if ids else None
+
+        store_log(
+            job_name="CopickImport",
+            request=request,
+            data_sanitized=data_sanitized,
+            error="",
+            advanced_status=True,
+            job_id=job_id_str,
+        )
+
+        return JsonResponse({
+            'message': f'Session {session_name}: copick import submitted.',
+            'output': out,
+            'error': err,
+            'job_id': job_id_str,
+        })
+
+    except Exception as e:
+        store_log(
+            job_name="CopickImport",
+            request=request,
+            data_sanitized=data_sanitized if 'data_sanitized' in locals() else {},
+            error=str(e),
+            advanced_status=False,
+            job_id=None,
+        )
+        return JsonResponse({'error': f'{e}: 500'}, status=500)
     finally:
         if 'submitter' in locals():
             submitter.close()
