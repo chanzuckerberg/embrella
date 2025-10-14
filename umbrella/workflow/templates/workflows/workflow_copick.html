@@ -674,96 +674,94 @@ document.addEventListener("DOMContentLoaded", populateSessionDropdown);
 
     // Create Copick Project
     async function createCopickProject() {
-      const userId = document.getElementById("userId").value;
+      const userId   = document.getElementById("userId").value;
       const password = document.getElementById("password").value;
-      const copickSession = document.getElementById("copickSession").value;
-      const copickRun = document.getElementById("copickRun").value;
+      const session  = document.getElementById("copickSession").value;
+      const runInput = document.getElementById("copickRun").value;
       const tomoType = document.getElementById("importTomoType").value;
-      const tomogramRun = document.getElementById("importTomogramRun").value;
-      const tomogramVoxelSize = document.getElementById("tomogramVoxelSize").value;
+      const tomoRun  = document.getElementById("importTomogramRun").value;
+      const voxelOpt = document.getElementById("tomogramVoxelSize").value;
 
-      if (!userId || !password || !copickSession || !copickRun || !tomoType || !tomogramRun) {
+      if (!userId || !password || !session || !runInput || !tomoType || !tomoRun) {
         showStatusMessage("Please fill in all required fields for Copick Project creation.", "error");
         return;
       }
 
-      showLoadingIndicator("Creating Copick Project...");
+      let runNorm = runInput.trim();
+      if (!/^run/i.test(runNorm)) {
+        const bare = runNorm.replace(/\D/g, "");
+        runNorm = `run${bare.padStart(3, "0")}`;
+      }
+
+      showLoadingIndicator("Creating Copick Project…");
       disableForm(true);
 
-
-      // normalize copickRun to always start with "run" ---
-      let runNorm = copickRun.trim();
-      if (runNorm && !/^run/i.test(runNorm)) {
-        runNorm = `run${runNorm}`;
-      }
-
-      // pre-flight check that run doesn't already exist ---
       try {
-        // Reuse your existing endpoint style; denoise uses this with ?plan_type=denoise
-        // Here we pass plan_type=copick
-        const checkUrl = `/workflow/denoise_params?session_name=${encodeURIComponent(copickSession)}&plan_type=copick`;
-        const checkRes = await fetch(checkUrl);
-        if (!checkRes.ok) throw new Error(`Run check failed (${checkRes.status})`);
-        const checkJson = await checkRes.json();
+        // get session and plan IDs
+        const COPICK_PLAN_NAME = "czii-copick";
 
-        // Expecting shape like: { sessions: [{ run_numbers: ["001","002",...] }, ...] }
-        const existingRunNumbers = checkJson.sessions?.[0]?.run_numbers || [];
-        const bare = runNorm.replace(/^run/i, "");  // compare against bare number
+        const sessionResp = await fetch(`/workflow/get_msisession_id?session_name=${encodeURIComponent(session)}`);
+        const { session_id: sessionId } = await sessionResp.json();
 
-        if (existingRunNumbers.includes(bare)) {
-          showStatusMessage(`ProcRun ${runNorm} already exists for ${copickSession}. Please choose a different one.`, "error");
-          disableForm(false);
-          hideLoadingIndicator();
-          return;
-        }
-      } catch (err) {
-        // If you want to block on unknown run state, keep this as an error; otherwise, downgrade to warning
-        showStatusMessage(`Failed to check if ProcRun exists: ${err.message}`, "error");
-        disableForm(false);
-        hideLoadingIndicator();
-        return;
-      }
+        const planResp = await fetch(`/workflow/get_plan_id?plan_name=${encodeURIComponent(COPICK_PLAN_NAME)}`);
+        const { plan_id: planId } = await planResp.json();
 
-      try {
-        const payload = {
-          user_id: userId,
-          password: btoa(password),
-          session_name: copickSession,
-          copick_run: runNorm,
-          import_tomo_type: tomoType,
-          import_tomogram_run: tomogramRun,
-        };
-
-
-        // Add tomogramVoxelSize only if provided
-        if (tomogramVoxelSize && tomogramVoxelSize.trim() !== "") {
-          payload.downsample_tomogram_voxel_size = tomogramVoxelSize;
-        }
-
-        const res = await fetch("/workflow/run-create-copick/", {
+        // reserve
+        const reserveResp = await fetch("/processes/post_generic/reserve", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          // credentials: "include", // uncomment if you require session auth cookies
+          body: JSON.stringify({ proc_plan: planId, msi_session: sessionId, run_number: runNorm }),
         });
+        if (reserveResp.status === 409) {
+          const msg = (await reserveResp.json()).error || `Run ${runNorm} already exists.`;
+          throw new Error(msg);
+        }
 
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+        // run remote Copick job
+        const jobPayload = {
+          user_id: userId,
+          password: btoa(password),
+          session_name: session,
+          copick_run: runNorm,
+          import_tomo_type: tomoType,
+          import_tomogram_run: tomoRun,
+        };
+        if (voxelOpt && voxelOpt.trim()) jobPayload.downsample_tomogram_voxel_size = voxelOpt.trim();
 
+        const jobResp = await fetch("/workflow/run-create-copick/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(jobPayload),
+        });
+        const jobJson = await jobResp.json();
+        if (!jobResp.ok) throw new Error(jobJson.error || `Job submit failed (${jobResp.status})`);
+
+        // create DB record
+        const createResp = await fetch("/processes/post_generic/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            proc_plan: planId,
+            msi_session: sessionId,
+            run_number: runNorm,
+            pipeline: "copick",
+            notes: `Copick init (type=${tomoType}, import_run=${tomoRun}${voxelOpt ? `, voxel=${voxelOpt}` : ""})`,
+          }),
+        });
+        const createJson = await createResp.json();
+        if (!createResp.ok) throw new Error(createJson.error || `DB create failed (${createResp.status})`);
+
+        const extra = jobJson.job_id ? ` (Job ID: ${jobJson.job_id})` : "";
+        showStatusMessage(`Copick project created successfully${extra}`, "success");
+
+      } catch (e) {
+        showStatusMessage(`Failed to create Copick project: ${e.message}`, "error");
+      } finally {
         hideLoadingIndicator();
         disableForm(false);
-
-        const extra = json.job_id ? ` (Job ID: ${json.job_id})` : "";
-        showStatusMessage("Copick project created successfully!" + extra, "success");
-        // Optionally display json.output somewhere
-
-      } catch (error) {
-        hideLoadingIndicator();
-        disableForm(false);
-        showStatusMessage("Failed to create Copick project: " + error.message, "error");
       }
     }
-        
+
 
 // Add Pickable Object
     async function addPickableObject() {
