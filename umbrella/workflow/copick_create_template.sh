@@ -6,6 +6,7 @@
 #SBATCH --gpus=1
 #SBATCH --mem-per-cpu=196G
 
+
 ml anaconda
 conda activate /hpc/projects/group.czii/conda_environments/pyczii
 
@@ -24,9 +25,18 @@ mkdir -p "${copick_dir}"
 
 # --- dynamically set log paths for this job ---
 JOBTAG="${session}_${copick_procrun}_${SLURM_JOB_ID:-$$}"
-LOG_OUT="create_copick_${JOBTAG}.out"
-LOG_ERR="create_copick_${JOBTAG}.err"
+LOG_OUT="${copick_dir}/create_copick_${JOBTAG}.out"
+LOG_ERR="${copick_dir}/create_copick_${JOBTAG}.err"
 exec >"${LOG_OUT}" 2>"${LOG_ERR}"
+
+# --- dynamically send email notifications ---
+EMAIL_DOMAIN="czii.org"
+MAIL_TO="${SLURM_JOB_USER:-$USER}@${EMAIL_DOMAIN}"
+
+if [[ -n "${SLURM_JOB_ID:-}" ]]; then
+  scontrol update JobId=${SLURM_JOB_ID} MailUser=${MAIL_TO} MailType=BEGIN,END,FAIL
+fi
+
 
 # map tomogram paths
 case "${tomo_type,,}" in
