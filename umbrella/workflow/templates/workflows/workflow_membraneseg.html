@@ -311,6 +311,24 @@
             <div class="tooltip">Run the MembraneSeg workflow in a CoPick project</div>
         </h2>
     </div>
+
+        <!-- Row 1: Session + Copick ProcRun (2 columns) -->
+    <div class="form-row">
+      <div class="form-group">
+        <label for="importCopickSession">Copick Session:</label>
+        <select id="importCopickSession">
+          <option value="">Loading sessions…</option>
+        </select>
+      </div>
+
+    <div class="form-group">
+      <label for="importCopickRun">Copick ProcRun:</label>
+      <select id="importCopickRun">
+        <option value="">Select a copick run…</option>
+      </select>
+    </div>
+    </div>
+
   </div> <!-- close .form-container -->
 
 
@@ -346,6 +364,98 @@
         console.error("[init] fetchUserInfo() threw an error:", err);
       }
     });
+
+        // Populate the CopickSession dropdown
+    async function populateCopickSessionDropdown() {
+      const sel = document.getElementById("importCopickSession");
+      if (!sel) return;
+
+      try {
+        // This uses your existing view: path("copick_params", views.get_msi_params_list, …)
+        const res = await fetch("/workflow/copick_params?plan_type=copick");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // Expected shape: { sessions: [{ name: "25oct01b", run_numbers: ["001","002",...] }, ...] }
+        const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+
+        // Sort newest-looking sessions first (simple lexicographic desc; adjust if needed)
+        sessions.sort((a,b) => (b.name || "").localeCompare(a.name || ""));
+
+        sel.innerHTML = '<option value="">Select a copick session…</option>';
+        for (const s of sessions) {
+          const opt = document.createElement("option");
+          opt.value = s.name;            // value used elsewhere
+          opt.textContent = s.name;      // label shown to user
+          sel.appendChild(opt);
+        }
+      } catch (e) {
+        console.error("Failed to load copick sessions:", e);
+        const sel = document.getElementById("importCopickSession");
+        if (sel) sel.innerHTML = '<option value="">Error loading sessions</option>';
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      populateCopickSessionDropdown();
+    });
+
+
+    // Populate the "Copick ProcRun" dropdown based on selected Copick session
+    async function populateCopickRun(sessionName) {
+      const runSel = document.getElementById('importCopickRun');
+      if (!runSel) return;
+
+      if (!sessionName) {
+        runSel.innerHTML = '<option value="">Select a Copick run…</option>';
+        return;
+      }
+
+      runSel.innerHTML = '<option value="">Loading runs…</option>';
+
+      try {
+        // Pull Copick runs from DB for the selected session
+        const url = `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=copick&_ts=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const json = await res.json();
+        // Expected response: { sessions: [ { name: "25oct01b", run_numbers: ["001","002",...] } ] }
+        const runs = json?.sessions?.[0]?.run_numbers ?? [];
+
+        // Sort runs descending (newest first)
+        const sorted = [...runs].sort((a, b) => (parseInt(b, 10) || 0) - (parseInt(a, 10) || 0));
+
+        // Populate dropdown
+        runSel.innerHTML = '<option value="">Select a Copick run…</option>';
+        for (const r of sorted) {
+          const val = `run${String(r).padStart(3, '0')}`;
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val;
+          runSel.appendChild(opt);
+        }
+
+        if (sorted.length === 0) {
+          runSel.innerHTML = '<option value="">No Copick runs found</option>';
+        }
+      } catch (e) {
+        console.error('populateCopickRun failed:', e);
+        runSel.innerHTML = '<option value="">Error loading runs</option>';
+      }
+    }
+
+    // Hook: refresh the list whenever the session changes
+    document.addEventListener('DOMContentLoaded', () => {
+      const sessionSel = document.getElementById('importCopickSession');
+      if (!sessionSel) return;
+
+      sessionSel.addEventListener('change', () => {
+        const sessionName = sessionSel.value.trim();
+        populateCopickRun(sessionName);
+      });
+    });
+
 
   </script>
 </body>
