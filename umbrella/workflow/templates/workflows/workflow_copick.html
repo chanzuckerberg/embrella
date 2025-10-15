@@ -355,7 +355,7 @@
         <label for="copickRun">Copick ProcRun:
                 <span class="info-icon-small">i
                     <div class="tooltip-small">
-                    ProcRun is the processing run identifier for the copick project (e.g. run001).
+                    ProcRun is the processing run for the copick project (e.g. run001).
                     </div>
                  </span>
         </label>
@@ -398,9 +398,10 @@
         Add Pickable Objects
         <span class="info-icon">i</span>
         <div class="tooltip">Add pickable objects and create empty picks to an existing copick project.</div>
-    </h2>
+      </h2>
     </div>
 
+    <!-- Row 1: Copick Session + Copick ProcRun + Object Map -->
     <div class="form-row-three">
       <div class="form-group">
         <label for="objCopickSession">Copick Session:</label>
@@ -415,23 +416,10 @@
           <option value="">Select a Copick run…</option>
         </select>
       </div>
-      
-      <div class="form-group">
-        <label for="objectName">Object Name:</label>
-        <input type="text" id="objectName" placeholder="Enter object name"/>
-      </div>
-    </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label for="diameter">Diameter (Å):</label>
-        <input type="number" id="diameter" step="0.1" min="0" placeholder="e.g. 150.0"/>
-      </div>
-
- <!-- pick object map -->
       <div class="form-group" style="position: relative;">
         <label for="objectMap">
-          Object Map (optional):
+          Reference Map (optional):
           <span class="info-icon-small">i
             <div class="tooltip-small">
               Choose from predefined template maps (type to search, or leave blank for none).
@@ -447,15 +435,25 @@
           oninput="filterObjectMapOptions()"
           onclick="toggleObjectMapDropdown(true)"
         />
-
         <!-- custom dropdown list -->
         <div id="objectMapDropdown" class="dropdown-list"></div>
-
         <small id="objectMapMeta" style="color:#666; display:block; margin-top:4px;"></small>
       </div>
-
     </div>
-    
+
+    <!-- Row 2: Object Name + Diameter -->
+    <div class="form-row">
+      <div class="form-group">
+        <label for="objectName">Object Name:</label>
+        <input type="text" id="objectName" placeholder="Enter object name"/>
+      </div>
+
+      <div class="form-group">
+        <label for="diameter">Diameter (Å):</label>
+        <input type="number" id="diameter" step="0.1" min="0" placeholder="e.g. 150.0"/>
+      </div>
+    </div>
+
     <button type="button" onclick="addPickableObject()" id="addObjectButton" class="secondary">
       Add Pickable Object
     </button>
