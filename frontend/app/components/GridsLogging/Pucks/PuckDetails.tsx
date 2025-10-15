@@ -10,6 +10,7 @@ import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGri
 import styles from '../GridLogging.module.css';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { AddGridBox } from '../GridBox/AddGridBox';
+import { AddGridBox } from '../GridBox/AddGridBox';
 
 interface PuckDetailsProps {
   selectedPuck: PucksList | null;
@@ -21,6 +22,8 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
   // Fetch puck slots data
   const { slotsData, isSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isCreateGridBoxOpen, setIsCreateGridBoxOpen] = useState(false);
+  const [selectedSlotForGridBox, setSelectedSlotForGridBox] = useState<number | null>(null);
   const [isCreateGridBoxOpen, setIsCreateGridBoxOpen] = useState(false);
   const [selectedSlotForGridBox, setSelectedSlotForGridBox] = useState<number | null>(null);
 
@@ -42,8 +45,34 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
   };
 
   const handleAddGridBox = (slotPosition?: number) => {
+    console.log('AddedslotPosition', slotPosition);
     setSelectedSlotForGridBox(slotPosition || null);
     setIsCreateGridBoxOpen(true);
+
+    // const prefillParams = new URLSearchParams();
+    // // Prefill puck with current puck ID
+    // if (selectedPuck?.id) {
+    //   prefillParams.append('puck', selectedPuck.id.toString());
+    // }
+
+    // // Prefill position_in_puck if provided (when called from handleSlotClick)
+    // if (slotPosition !== undefined) {
+    //   prefillParams.append('position_in_puck', slotPosition.toString());
+    // }
+
+    // // Add return state parameters
+    // if (selectedUser?.id) {
+    //   prefillParams.append('return_user_id', selectedUser.id.toString());
+    // }
+    // if (selectedPuck?.id) {
+    //   prefillParams.append('return_puck_id', selectedPuck.id.toString());
+    // }
+    // if (slotPosition !== undefined) {
+    //   prefillParams.append('return_slot_position', slotPosition.toString());
+    // }
+
+    // const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add/?${prefillParams.toString()}`;
+    // window.location.href = adminUrl;
   };
 
   const handleDeletePuck = () => {
@@ -126,6 +155,45 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
               <CircularProgress size={40} />
             </Box>
           )}
+      <Card elevation={2} sx={{ maxWidth: 600, width: '100%' }}>
+        <CardHeader
+          title={
+            <Box className={styles.cardHeader}>
+              <Typography variant="h6" component="h2">
+                Puck Name: {selectedPuck.name}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Button
+                  sdsType="primary"
+                  sdsStyle="rounded"
+                  startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
+                  onClick={() => handleAddGridBox()}
+                  size="small"
+                >
+                  Add Grid Box
+                </Button>
+                <IconButton
+                  onClick={handleDeletePuck}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: '#ffebee',
+                    },
+                  }}
+                >
+                  <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
+                </IconButton>
+              </Box>
+            </Box>
+          }
+        />
+
+        <CardContent>
+          {/* Loading state */}
+          {!isSuccess && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+              <CircularProgress size={40} />
+            </Box>
+          )}
         <CardContent>
           {/* Loading state */}
           {!isSuccess && (
@@ -146,7 +214,26 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
               <Alert severity="error">Failed to load puck slots data</Alert>
             </Box>
           )}
+          {/* Error state */}
+          {isSuccess && !slotsData && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+              <Alert severity="error">Failed to load puck slots data</Alert>
+            </Box>
+          )}
 
+          {/* Puck SVG with slots data */}
+          {isSuccess && slotsData && (
+            <>
+              {/* Display the selected puck SVG with slots data */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                <PuckSVG
+                  puck={selectedPuck}
+                  size={290}
+                  isSelected={true}
+                  onSlotClick={handleSlotClick}
+                  slots={slotsData.slots}
+                />
+              </Box>
           {/* Puck SVG with slots data */}
           {isSuccess && slotsData && (
             <>
@@ -192,7 +279,26 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
                   Empty Slots: {slotsData.slot_summary.empty_count} Empty
                 </Typography>
               </Box>
+              {/* Slot summary information */}
+              <Box sx={{ textAlign: 'center', mb: 2, mt: 8 }}>
+                <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
+                  Occupied Slots : {slotsData.slot_summary.filled_count} Filled with grid boxes
+                </Typography>
+                <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
+                  Empty Slots: {slotsData.slot_summary.empty_count} Empty
+                </Typography>
+              </Box>
 
+              {/* Instructions */}
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Click on the individual slots to view/add grid boxes
+                </Typography>
+              </Box>
+            </>
+          )}
+        </CardContent>
+      </Card>
               {/* Instructions */}
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="caption" color="text.secondary">
@@ -221,6 +327,18 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
         selectedPuck={selectedPuck}
         slotsData={slotsData || null}
         selectedUser={selectedUser}
+      />
+
+      <AddGridBox
+        open={isCreateGridBoxOpen}
+        onClose={() => {
+          setIsCreateGridBoxOpen(false);
+          setSelectedSlotForGridBox(null);
+        }}
+        selectedUser={selectedUser}
+        puckId={selectedPuck?.id}
+        puckName={selectedPuck?.name}
+        positionInPuck={selectedSlotForGridBox || undefined}
       />
     </>
   );

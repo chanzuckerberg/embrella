@@ -67,7 +67,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
 
   return (
     <Dialog onClose={onClose} open={open} sdsSize="xs">
-      <DialogTitle title="Add a Grid Box" subtitle={selectedUser?.full_name || ''} onClose={onClose} />
+      <DialogTitle title="Create a Grid Box" subtitle={selectedUser?.full_name || ''} onClose={onClose} />
       <DialogContent>
         <Box
           sx={{
