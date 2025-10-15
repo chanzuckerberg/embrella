@@ -40,8 +40,6 @@ ARETOMO3_ADVANCED_PATH = '/hpc/projects/krios1.processing/aretomo3/scripts/run_a
 COPICK_SCRIPT_PATH = '/hpc/projects/krios1.processing/copick/scripts/embrella_copick_create_template.sh'
 COPICK_IMPORT_TOMO_SCRIPT_PATH = '/hpc/projects/krios1.processing/copick/scripts/embrella_copick_import_tomo_template.sh'
 
-
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 

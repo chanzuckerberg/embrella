@@ -1,5 +1,5 @@
 from umbrella_logger import logger
-from .utils import jsonify, ssh_connect, extract_parameters, hostname, port, username, password, ssh_file_exists, ssh_list_directory
+from .utils import jsonify, ssh_connect, ssh_connect_bruno, extract_parameters, hostname, port, username, password, ssh_file_exists, ssh_list_directory
 from django.http import JsonResponse
 from django.shortcuts import render
 from .agent import Aretomo3, Denoiset, StatusChecker, RemoteJobSubmitter
@@ -31,6 +31,8 @@ from io import StringIO
 import subprocess
 import logging
 from processes.models import ProcRun
+from django.conf import settings
+
 CELERY_BEAT_SCHEDULE = {
     'update_job_data_cache_every_5_seconds': {
         'task': 'workflow.tasks.update_job_data_cache',
@@ -50,6 +52,8 @@ ARETOMO3_SCRIPT_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/scri
 COPICK_SCRIPT_DIR = '/hpc/projects/group.czii/krios1.processing/copick/scripts'
 COPICK_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_create_template.sh') 
 COPICK_IMPORT_TOMO_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_import_tomo_template.sh')
+COPICK_ADD_OBJECT_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_add_object_template.sh')
+
 
 KEYS = ('PixSize',
         'SplitSum',
@@ -1958,3 +1962,381 @@ def run_import_tomogram_copick(request):
     finally:
         if 'submitter' in locals():
             submitter.close()
+
+@require_http_methods(["GET"])
+def get_template_map_json(request):
+    """
+    Return list of available template maps.
+    """
+
+    # Configurable path
+    local_path = getattr(
+        settings,
+        "PYTOM_TEMPLATE_PARAMS_PATH",
+        "/hpc/projects/group.czii/krios1.processing/pytom/scripts/model_templates/template_params.json",
+    )
+
+    # Optional remote fallback path (same path on Bruno)
+    remote_path = "/hpc/projects/group.czii/krios1.processing/pytom/scripts/model_templates/template_params.json"
+
+    # Optional query filter
+    q = (request.GET.get("q") or "").strip().lower()
+
+    try:
+        # Try local first
+        if os.path.exists(local_path):
+            logger.info(f"[get_template_map_json] Reading local JSON: {local_path}")
+            with open(local_path, "r") as fh:
+                raw_data = fh.read()
+        else:
+            # Fallback to remote SSH fetch
+            logger.info(f"[get_template_map_json] Local file not found, fetching via SSH: {remote_path}")
+            raw_data = ssh_connect_bruno(remote_path)
+
+        # Parse JSON using your helper
+        full_data = jsonify(raw_data)
+
+        base_path = full_data.get("templateFolderPath", "")
+        proteins  = full_data.get("proteins", {})
+
+        templates = []
+        for name, meta in proteins.items():
+            loc = meta.get("modelLocation", "")
+            absolute = loc if os.path.isabs(loc) else os.path.join(base_path, loc)
+            item = {
+                "name": name,
+                "label": f"{name} — {loc}",
+                "modelLocation": loc,
+                "absolutePath": absolute,
+                "voxelSize": meta.get("modelVoxelSize"),
+                "diameter": meta.get("modelDiameter"),
+                "symmetry": meta.get("symmetry"),
+                "pdbID": meta.get("pdbID"),
+            }
+
+            # optional filtering (?q=)
+            if q:
+                hay = " ".join([
+                    name.lower(),
+                    str(loc).lower(),
+                    str(meta.get("pdbID") or "").lower(),
+                ])
+                if q not in hay:
+                    continue
+
+            templates.append(item)
+
+        templates.sort(key=lambda x: x["name"].lower())
+        return JsonResponse({"basePath": base_path, "templates": templates}, status=200)
+
+    except FileNotFoundError:
+        err = f"Template JSON not found locally or remotely at {local_path}"
+        logger.error(err)
+        return JsonResponse({"error": err}, status=404)
+    except ValueError as ve:
+        logger.exception(f"Invalid JSON content: {ve}")
+        return JsonResponse({"error": f"Invalid JSON: {ve}"}, status=500)
+    except Exception as e:
+        logger.exception(f"Unexpected error in get_template_map_json: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
+
+# run add objects to copick
+@csrf_exempt
+@login_required
+@csrf_exempt
+def run_copick_add_object(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+
+    try:
+        data = json.loads(request.body or "{}")
+
+        user_id   = (data.get("user_id") or "").strip()
+        b64_pass  = (data.get("password") or "").strip()
+        password  = base64.b64decode(b64_pass).decode("utf-8") if b64_pass else ""
+
+        # Required
+        session_name   = (data.get("session") or "").strip()
+        copick_procrun = (data.get("copick_procrun") or "").strip()
+        object_name    = (data.get("object_name") or "").strip()
+        object_diam    = (data.get("object_diameter") or "").strip()
+
+        # Optional
+        pdb_id            = (data.get("pdb_id") or "").strip()
+        object_map_file   = (data.get("object_map_file") or "").strip()   # absolute path OK
+        object_voxel_size = (data.get("object_voxel_size") or "").strip() # must be numeric if provided
+
+        missing = [k for k, v in {
+            "user_id": user_id,
+            "password": b64_pass,
+            "session": session_name,
+            "copick_procrun": copick_procrun,
+            "object_name": object_name,
+            "object_diameter": object_diam,
+        }.items() if not v]
+        if missing:
+            return JsonResponse({"error": f"Missing fields: {', '.join(missing)}"}, status=400)
+
+        # Normalize run ("run###")
+        if not copick_procrun.lower().startswith("run"):
+            digits = "".join(ch for ch in copick_procrun if ch.isdigit())
+            copick_procrun = f"run{digits.zfill(3)}" if digits else "run001"
+
+        # Validate numeric diameter (and optional voxel)
+        try:
+            _ = float(object_diam)
+        except ValueError:
+            return JsonResponse({"error": "object_diameter must be numeric"}, status=400)
+        if object_voxel_size and not re.fullmatch(r"\d+(\.\d+)?", object_voxel_size):
+            return JsonResponse({"error": "object_voxel_size must be numeric when provided"}, status=400)
+
+        # Submit job
+        submitter = RemoteJobSubmitter(
+            hostname=HOST_BRUNO,
+            port=PORT,
+            username=user_id,
+            password=password,
+            remote_script_dir=COPICK_SCRIPT_DIR,
+        )
+        submitter.connect()
+
+        job_name = f"{session_name}_add_object_{copick_procrun}"
+
+        out, err = submitter.run_script(
+            template_path=COPICK_ADD_OBJECT_TEMPLATE_PATH,
+            job_name=job_name,
+            session=session_name,
+            copickRun=copick_procrun,
+            objectName=object_name,
+            objectDiameter=str(object_diam),
+            pdbID=pdb_id,
+            objectMapFile=object_map_file,
+            objectVoxelSize=str(object_voxel_size) if object_voxel_size else "",
+        )
+
+        ids = re.findall(r"Submitted batch job (\d+)", out or "")
+        job_id_str = ",".join(ids) if ids else None
+
+        return JsonResponse({
+            "message": f"Add-object submitted for {session_name}/{copick_procrun}",
+            "output": out,
+            "error": err,
+            "job_id": job_id_str,
+        })
+    except Exception as e:
+        return JsonResponse({"error": f"{e}: 500"}, status=500)
+    finally:
+        if "submitter" in locals():
+            submitter.close()
+    """
+    Submit a 'copick add object' job via the remote template.
+
+    Required JSON:
+      - user_id
+      - password (base64)
+      - session_name        (Copick session, e.g. "25sep18a")
+      - copick_run          (e.g., "run003" or "003")
+      - object_name         (e.g., "VLP")
+      - object_diameter     (numeric, Å)
+
+    Optional JSON:
+      - pdb_id              (e.g., "6N4V" or "NA")
+      - object_map_file     (absolute path to a map; leave empty to skip)
+      - object_voxel_size   (numeric; leave empty to skip)
+    """
+    JOBTAG = "CopickAddObject"
+
+    if request.method != 'POST':
+        store_log(
+            job_name=JOBTAG,
+            request=request,
+            data_sanitized={},
+            error="Invalid request method",
+            advanced_status=False,
+            job_id=None,
+        )
+        return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
+
+    try:
+        data = json.loads(request.body or "{}")
+
+        # -------- inputs --------
+        session_name  = (data.get('session_name') or '').strip()
+        copick_run    = (data.get('copick_run') or '').strip()
+        object_name   = (data.get('object_name') or '').strip()
+        diameter_raw  = (data.get('object_diameter') or '').strip()
+
+        pdb_id            = (data.get('pdb_id') or '').strip()                  # optional
+        object_map_file   = (data.get('object_map_file') or '').strip()         # optional (absolute path expected)
+        voxel_size_raw    = (data.get('object_voxel_size') or '').strip()       # optional
+
+        user_id           = (data.get('user_id') or '').strip()
+        encoded_password  = data.get('password') or ""
+        decoded_password  = base64.b64decode(encoded_password).decode('utf-8') if encoded_password else ""
+
+        # Basic required-field validation
+        missing = [k for k, v in {
+            "user_id": user_id,
+            "password": encoded_password,
+            "session_name": session_name,
+            "copick_run": copick_run,
+            "object_name": object_name,
+            "object_diameter": diameter_raw,
+        }.items() if not v]
+        if missing:
+            return JsonResponse({'error': f'Missing fields: {", ".join(missing)}'}, status=400)
+
+        # Normalize run label: ensure "run###"
+        if not copick_run.lower().startswith("run"):
+            digits = "".join(ch for ch in copick_run if ch.isdigit())
+            copick_run = f"run{digits.zfill(3)}" if digits else "run001"
+
+        # Numeric validations: radius is derived from diameter, but both must be numeric strings
+        try:
+            object_diameter = float(diameter_raw)
+            if object_diameter <= 0:
+                return JsonResponse({'error': 'object_diameter must be > 0'}, status=400)
+        except ValueError:
+            return JsonResponse({'error': 'object_diameter must be numeric'}, status=400)
+
+        if voxel_size_raw:
+            try:
+                object_voxel_size = float(voxel_size_raw)
+                if object_voxel_size <= 0:
+                    return JsonResponse({'error': 'object_voxel_size must be > 0 if provided'}, status=400)
+            except ValueError:
+                return JsonResponse({'error': 'object_voxel_size must be numeric if provided'}, status=400)
+        else:
+            object_voxel_size = ""  # pass empty string to template
+
+        # Persist minimal auth (if you need later)
+        request.session['user_id'] = user_id
+        request.session['decoded_password'] = decoded_password
+
+        # Sanitize copy for log (drop password)
+        data_sanitized = dict(data)
+        data_sanitized.pop('password', None)
+
+        # -------- submit ----------
+        submitter = RemoteJobSubmitter(
+            hostname=HOST_BRUNO,
+            port=PORT,
+            username=user_id,
+            password=decoded_password,
+            remote_script_dir=COPICK_SCRIPT_DIR,
+        )
+        submitter.connect()
+
+        job_name = f"{session_name}_add_object_{copick_run}"
+
+        # Jinja keys must match your template placeholders exactly
+        out, err = submitter.run_script(
+            template_path=COPICK_ADD_OBJECT_TEMPLATE_PATH,
+            job_name=job_name,
+            session=session_name,
+            copickRun=copick_run,
+            objectName=object_name,
+            objectDiameter=str(object_diameter),   # keep numeric string for bash math
+            pdbID=pdb_id,                          # may be empty or "NA"
+            objectMapFile=object_map_file,         # may be empty
+            objectVoxelSize=str(object_voxel_size) if object_voxel_size else "",  # may be empty
+        )
+
+        # Parse Slurm job id(s)
+        ids = re.findall(r"Submitted batch job (\d+)", out or "")
+        job_id_str = ",".join(ids) if ids else None
+
+        store_log(
+            job_name=JOBTAG,
+            request=request,
+            data_sanitized=data_sanitized,
+            error="",
+            advanced_status=True,
+            job_id=job_id_str,
+        )
+
+        return JsonResponse({
+            'message': f'Session {session_name}: copick add object submitted.',
+            'output': out,
+            'error': err,
+            'job_id': job_id_str,
+        })
+
+    except Exception as e:
+        store_log(
+            job_name=JOBTAG,
+            request=request,
+            data_sanitized=data_sanitized if 'data_sanitized' in locals() else {},
+            error=str(e),
+            advanced_status=False,
+            job_id=None,
+        )
+        return JsonResponse({'error': f'{e}: 500'}, status=500)
+    finally:
+        if 'submitter' in locals():
+            submitter.close()
+    """
+    Return a list of available template maps.
+    """
+    json_path = getattr(
+        settings,
+        "PYTOM_TEMPLATE_PARAMS_PATH",
+        "https://ondemand.bruno.czbiohub.org/pun/sys/dashboard/files/fs//hpc/projects/group.czii/krios1.processing/pytom/scripts/model_templates/template_params.json",
+    )
+
+    q = (request.GET.get("q") or "").strip().lower()  # optional filter
+
+    try:
+        # Read the raw JSON string from disk
+        with open(json_path, "r") as fh:
+            raw_data = fh.read()
+
+        # Parse it with your jsonify() utility
+        full_data = jsonify(raw_data)
+
+        base_path = full_data.get("templateFolderPath", "")
+        proteins  = full_data.get("proteins", {})
+
+        templates = []
+        for name, meta in proteins.items():
+            loc = meta.get("modelLocation", "")
+            absolute = loc if os.path.isabs(loc) else os.path.join(base_path, loc)
+            item = {
+                "name": name,
+                "label": f"{name} — {loc}",
+                "modelLocation": loc,
+                "absolutePath": absolute,
+                "voxelSize": meta.get("modelVoxelSize"),
+                "diameter": meta.get("modelDiameter"),
+                "symmetry": meta.get("symmetry"),
+                "pdbID": meta.get("pdbID"),
+            }
+
+            if q:
+                hay = " ".join([
+                    name.lower(),
+                    str(loc).lower(),
+                    str(meta.get("pdbID") or "").lower(),
+                ])
+                if q not in hay:
+                    continue
+
+            templates.append(item)
+
+        templates.sort(key=lambda x: x["name"].lower())
+
+        return JsonResponse(
+            {"basePath": base_path, "templates": templates},
+            status=200
+        )
+
+    except FileNotFoundError:
+        logger.error("Template JSON not found: %s", json_path)
+        return JsonResponse({"error": "Template JSON not found"}, status=404)
+    except ValueError as ve:
+        # Raised by jsonify() when input is empty or invalid
+        logger.exception("Invalid JSON content: %s", ve)
+        return JsonResponse({"error": f"Invalid JSON content: {ve}"}, status=500)
+    except Exception as e:
+        logger.exception("Unexpected error in get_template_map_json: %s", e)
+        return JsonResponse({"error": str(e)}, status=500)

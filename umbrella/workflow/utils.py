@@ -6,6 +6,7 @@ from umbrella_logger import logger
 from cryptography.fernet import Fernet
 # Other connection details
 hostname = "10.50.120.90"
+hostname_bruno = "192.168.98.229"
 port = 22
 username = os.getenv('REMOTE_ID')
 password = os.getenv('REMOTE_PASSWORD')
@@ -21,6 +22,28 @@ def ssh_connect(remote_path, shell=False):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(hostname, port, username, password)
+
+    # Open an SFTP session
+    sftp = ssh.open_sftp()
+
+    # Open the remote file
+    with sftp.file(remote_path, 'r') as remote_file:
+        file_contents = remote_file.read()
+
+    # Close the SFTP session and SSH client
+    sftp.close()
+    ssh.close()
+    return file_contents.decode('utf-8')
+
+def ssh_connect_bruno(remote_path, shell=False):
+    # Check if password is retrieved successfully
+    if password is None:
+        raise ValueError("Password not found in environment variables. Please set REMOTE_PASSWORD.")
+
+    # Create an SSH client
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname_bruno, port, username, password)
 
     # Open an SFTP session
     sftp = ssh.open_sftp()
