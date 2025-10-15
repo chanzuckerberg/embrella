@@ -243,17 +243,28 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 Save
               </Button>
             </Box> */}
-            </Box>
           </Box>
-        </CardContent>
-      </Card>
-      <DeleteGridBox
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        selectedPuck={selectedPuck}
-        selectedSlot={selectedSlot}
+        </Box>
+      </CardContent>
+    </Card>
+    <DeleteGridBox
+      open={deleteDialogOpen}
+      onClose={() => setDeleteDialogOpen(false)}
+      selectedPuck={selectedPuck}
+      selectedSlot={selectedSlot}
+      selectedUser={selectedUser}
+      gridBoxData={gridBoxData || null}
+    />
+
+<AddGrid
+        open={addGridDialogOpen}
+        onClose={() => setAddGridDialogOpen(false)}
         selectedUser={selectedUser}
-        gridBoxData={gridBoxData || null}
+        gridBoxId={gridBoxData?.grid_box?.grid_box_id}
+        gridBoxName={gridBoxData?.grid_box?.name}
+        positionInBox={selectedPositionInBox || undefined}
+        // puckId={selectedPuck?.id}
+        // puckName={selectedPuck?.name}
       />
     </>
   );

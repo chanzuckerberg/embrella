@@ -74,7 +74,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
 
   return (
     <Dialog onClose={onClose} open={open} sdsSize="xs">
-      <DialogTitle title="Add a Grid" subtitle={selectedUser?.full_name || ''} onClose={onClose} />
+      <DialogTitle title="Create a Grid" subtitle={selectedUser?.full_name || ''} onClose={onClose} />
       <DialogContent>
         <Box
           sx={{
@@ -144,7 +144,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
             <TextField
               required
               label="Position in box"
-              value={positionInBox}
+              value={formData.positionInBox}
               disabled
               sx={{ ...disabledTextFieldStyles, flex: 1 }}
             />

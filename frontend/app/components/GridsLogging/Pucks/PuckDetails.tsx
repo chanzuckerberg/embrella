@@ -45,34 +45,8 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
   };
 
   const handleAddGridBox = (slotPosition?: number) => {
-    console.log('AddedslotPosition', slotPosition);
     setSelectedSlotForGridBox(slotPosition || null);
     setIsCreateGridBoxOpen(true);
-
-    // const prefillParams = new URLSearchParams();
-    // // Prefill puck with current puck ID
-    // if (selectedPuck?.id) {
-    //   prefillParams.append('puck', selectedPuck.id.toString());
-    // }
-
-    // // Prefill position_in_puck if provided (when called from handleSlotClick)
-    // if (slotPosition !== undefined) {
-    //   prefillParams.append('position_in_puck', slotPosition.toString());
-    // }
-
-    // // Add return state parameters
-    // if (selectedUser?.id) {
-    //   prefillParams.append('return_user_id', selectedUser.id.toString());
-    // }
-    // if (selectedPuck?.id) {
-    //   prefillParams.append('return_puck_id', selectedPuck.id.toString());
-    // }
-    // if (slotPosition !== undefined) {
-    //   prefillParams.append('return_slot_position', slotPosition.toString());
-    // }
-
-    // const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add/?${prefillParams.toString()}`;
-    // window.location.href = adminUrl;
   };
 
   const handleDeletePuck = () => {
