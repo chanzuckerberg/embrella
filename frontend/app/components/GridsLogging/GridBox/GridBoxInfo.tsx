@@ -4,7 +4,6 @@ import React, { useContext, useState } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
@@ -14,6 +13,7 @@ import { DeleteGridBox } from './DeleteGridBox';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
 import { UserContext } from '@app/common/context/UserProvider';
 import { UsersList } from '@app/common/types/gridLogging/userList';
+import { AddGrid } from '../Grid/AddGrid';
 
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
@@ -36,6 +36,8 @@ const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
 export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect, selectedUser }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
+  const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
@@ -65,36 +67,38 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   };
 
   const handleAddGrid = (positionInBox?: number) => {
-    const prefillParams = new URLSearchParams();
+    setAddGridDialogOpen(true);
+    setSelectedPositionInBox(positionInBox || null);
+    // const prefillParams = new URLSearchParams();
 
-    // Prefill grid_box with current grid box ID
-    if (gridBoxData?.grid_box?.grid_box_id) {
-      prefillParams.append('grid_box', gridBoxData.grid_box.grid_box_id.toString());
-    }
+    // // Prefill grid_box with current grid box ID
+    // if (gridBoxData?.grid_box?.grid_box_id) {
+    //   prefillParams.append('grid_box', gridBoxData.grid_box.grid_box_id.toString());
+    // }
 
-    // Prefill position if provided (when called from handleGridClick)
-    if (positionInBox !== undefined) {
-      prefillParams.append('position_in_box', positionInBox.toString());
-    }
+    // // Prefill position if provided (when called from handleGridClick)
+    // if (positionInBox !== undefined) {
+    //   prefillParams.append('position_in_box', positionInBox.toString());
+    // }
 
-    // Get current user from context
-    if (currentUser?.id) {
-      prefillParams.append('user', currentUser.id);
-    }
+    // // Get current user from context
+    // if (currentUser?.id) {
+    //   prefillParams.append('user', currentUser.id);
+    // }
 
-    // Add return state parameters
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
-    }
-    if (selectedPuck?.id) {
-      prefillParams.append('return_puck_id', selectedPuck.id.toString());
-    }
-    if (selectedSlot !== null) {
-      prefillParams.append('return_slot_position', selectedSlot.toString());
-    }
+    // // Add return state parameters
+    // if (selectedUser?.id) {
+    //   prefillParams.append('return_user_id', selectedUser.id.toString());
+    // }
+    // if (selectedPuck?.id) {
+    //   prefillParams.append('return_puck_id', selectedPuck.id.toString());
+    // }
+    // if (selectedSlot !== null) {
+    //   prefillParams.append('return_slot_position', selectedSlot.toString());
+    // }
 
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/?${prefillParams.toString()}`;
-    window.location.href = adminUrl;
+    // const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/?${prefillParams.toString()}`;
+    // window.location.href = adminUrl;
   };
 
   // const handleMoveGridBox = () => {
