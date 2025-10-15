@@ -43,33 +43,33 @@ if [[ -n "${SLURM_JOB_ID:-}" ]]; then
 fi
 
 # compose base command
-is_number() {
-  [[ $1 =~ ^[0-9]+([.][0-9]+)?$ ]]
-}
+is_number() { [[ $1 =~ ^[0-9]+([.][0-9]+)?$ ]]; }
+
 cmd="copick add object \
   --config \"${copick_dir}/config.json\" \
   --name \"${object_name}\" \
   --object-type particle \
   --radius ${radius}"
 
-# Optional: pdb-id
-if [[ -n "$pdb_id" && "$pdb_id" != "NA" && "$pdb_id" != "{{ pdbID }}" ]]; then
-  cmd+=" --pdb-id \"$pdb_id\""
+# append optional parameters if provided
+# pdb-id
+if [[ -n "$pdb_id" && "$pdb_id" != "NA" ]]; then
+  cmd+=' --pdb-id "'"$pdb_id"'"'
 fi
 
-# Optional: volume (absolute path already provided)
-if [[ -n "$object_volume" && "$object_volume" != "{{ objectMapFile }}" ]]; then
-  cmd+=" --volume \"$object_volume\""
+# volume (absolute path)
+if [[ -n "$object_volume" ]]; then
+  cmd+=' --volume "'"$object_volume"'"'
 fi
 
-# Optional: voxel size (must be numeric)
-if [[ -n "$object_voxel_size" && "$object_voxel_size" != "{{ objectVoxelSize }}" ]]; then
-  if [[ "$object_voxel_size" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+# voxel size (must be numeric)
+if [[ -n "$object_voxel_size" ]]; then
+  if is_number "$object_voxel_size"; then
     cmd+=" --voxel-size $object_voxel_size"
   else
     echo "Warning: object_voxel_size '$object_voxel_size' is not numeric; skipping." >&2
   fi
 fi
 
-echo "Running: ${cmd}"
-eval "${cmd}"
+echo "Running: $cmd"
+eval "$cmd"
