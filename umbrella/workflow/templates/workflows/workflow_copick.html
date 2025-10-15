@@ -180,6 +180,12 @@
       grid-template-columns: 1fr 1fr 1fr;
       gap: 20px;
     }
+    .form-row-three-2-1 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 2fr; /* 1+1=2 parts left, 2 parts right */
+      gap: 20px;
+    }
+
     @media (max-width: 768px) {
       .form-row, .form-row-three {
         grid-template-columns: 1fr;
@@ -355,7 +361,7 @@
         <label for="copickRun">Copick ProcRun:
                 <span class="info-icon-small">i
                     <div class="tooltip-small">
-                    ProcRun is the processing run for the copick project (e.g. run001).
+                    ProcRun is the processing run for the copick project.
                     </div>
                  </span>
         </label>
@@ -397,12 +403,12 @@
       <h2>
         Add Pickable Objects
         <span class="info-icon">i</span>
-        <div class="tooltip">Add pickable objects and create empty picks to an existing copick project.</div>
+        <div class="tooltip">Add pickable objects in copick confi.</div>
       </h2>
     </div>
 
     <!-- Row 1: Copick Session + Copick ProcRun + Object Map -->
-    <div class="form-row-three">
+    <div class="form-row-three-2-1">
       <div class="form-group">
         <label for="objCopickSession">Copick Session:</label>
         <select id="objCopickSession">
@@ -435,7 +441,6 @@
           oninput="filterObjectMapOptions()"
           onclick="toggleObjectMapDropdown(true)"
         />
-        <!-- custom dropdown list -->
         <div id="objectMapDropdown" class="dropdown-list"></div>
         <small id="objectMapMeta" style="color:#666; display:block; margin-top:4px;"></small>
       </div>
@@ -980,8 +985,21 @@
       window.location.href = "/workflow/startup";
     }
 
+
+// overwrite-friendly helper
+function applySelectedMapToFields(map, force = false) {
+  if (!map) return;
+  const nameEl = document.getElementById("objectName");
+  const diaEl  = document.getElementById("diameter");
+
+  const derivedName = map.name || (map.label ? map.label.split(" — ")[0] : "");
+  const derivedDiameter = map.diameter || map.modelDiameter || "";
+
+  if (nameEl && (force || !nameEl.value)) nameEl.value = derivedName;
+  if (diaEl && (force || !diaEl.value || Number(diaEl.value) <= 0)) diaEl.value = derivedDiameter;
+}
+
 // Populate objectMap dropdown from /workflow/template_maps/
-// populate template maps
 async function populateObjectMapDropdown() {
   const dropdown = document.getElementById("objectMapDropdown");
   const input = document.getElementById("objectMap");
@@ -1006,6 +1024,7 @@ async function populateObjectMapDropdown() {
         dropdown.style.display = "none";
         meta.textContent = `voxel ${t.voxelSize}Å • diameter ${t.diameter}Å • symmetry ${t.symmetry} • pdbID ${t.pdbID}`;
         meta.style.display = "block";
+        applySelectedMapToFields(t, true); // <-- force overwrite on every selection
       };
       dropdown.appendChild(item);
     });
@@ -1014,6 +1033,19 @@ async function populateObjectMapDropdown() {
     dropdown.innerHTML = `<div class="dropdown-item">Error loading maps</div>`;
   }
 }
+
+document.getElementById("objectMap")?.addEventListener("change", () => {
+  const sel = getSelectedObjectMap();
+  if (sel) {
+    const meta = document.getElementById("objectMapMeta");
+    if (meta) {
+      meta.textContent = `voxel ${sel.voxelSize}Å • diameter ${sel.diameter}Å • symmetry ${sel.symmetry} • pdbID ${sel.pdbID}`;
+      meta.style.display = "block";
+    }
+    applySelectedMapToFields(sel);
+  }
+});
+
 
 // toggle dropdown visibility
 function toggleObjectMapDropdown(show) {
@@ -1052,6 +1084,7 @@ function getSelectedObjectMap() {
 }
 
 document.addEventListener("DOMContentLoaded", populateObjectMapDropdown);
+
 
 
 // Add Pickable Object
@@ -1393,7 +1426,6 @@ async function addPickableObject() {
         }
       })();
     });
-
 
   </script>
 </body>
