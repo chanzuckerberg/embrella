@@ -538,60 +538,38 @@
       }
     }
 
-    // Populate the MSI dropdown with session names.
-    async function populateSessionDropdown() {
+      async function populateSessionDropdown() {
         const url = "/workflow/get_msi_session_list";
         try {
-            const response = await fetch(url, {
-            method: "GET",
-            credentials: "same-origin",
-            });
+          const res = await fetch(url, { method: "GET", credentials: "same-origin" });
+          const text = await res.text();
+          if (!res.ok) throw new Error(`HTTP ${res.status} | ${text}`);
+          const result = JSON.parse(text);
+          if (!Array.isArray(result.session_names)) throw new Error("Missing session_names");
 
-            const responseText = await response.text();
-            if (!response.ok) {
-            throw new Error(`HTTP error ${response.status} | Body: ${responseText}`);
-            }
+          const sessionSelect = document.getElementById("copickSession");
+          sessionSelect.innerHTML = "";
 
-            let result;
-            try {
-            result = JSON.parse(responseText);
-            } catch (jsonErr) {
-            console.error("JSON parse error:", jsonErr);
-            throw new Error("Failed to parse JSON. Response was: " + responseText);
-            }
+          // Placeholder
+          sessionSelect.appendChild(new Option("Select an MSI session...", "", true, false));
 
-            if (!result.session_names) {
-            console.error("No 'session_names' found in result:", result);
-            throw new Error("Missing session_names in response JSON.");
-            }
+          // Preserve backend order, only move 'summary' (case-insensitive) to top
+          const names = result.session_names.slice();
+          const i = names.findIndex(n => String(n).toLowerCase() === "summary");
+          if (i >= 0) {
+            const [summary] = names.splice(i, 1);
+            names.unshift(summary);
+          }
 
-            const sessionSelect = document.getElementById("copickSession");
-            sessionSelect.innerHTML = "";
-
-            // Add default placeholder option
-            const placeholderOption = document.createElement("option");
-            placeholderOption.value = "";
-            placeholderOption.textContent = "Select an MSI session...";
-            sessionSelect.appendChild(placeholderOption);
-
-            // Optional: sort sessions and put "summary" first
-            const sortedSessions = [...result.session_names].sort((a, b) => {
-            if (a.toLowerCase() === "summary") return -1;
-            if (b.toLowerCase() === "summary") return 1;
-            return a.localeCompare(b);
-            });
-
-            sortedSessions.forEach((name) => {
-            const option = document.createElement("option");
-            option.value = name;
-            option.textContent = name;
-            sessionSelect.appendChild(option);
-            });
-        } catch (error) {
-            console.error("Error while fetching session names:", error);
-            alert("Failed to fetch session names. " + error.message);
+          // Render in (mostly) original order
+          for (const name of names) {
+            sessionSelect.appendChild(new Option(name, name));
+          }
+        } catch (err) {
+          console.error("Error while fetching session names:", err);
+          alert("Failed to fetch session names. " + err.message);
         }
-    }
+      }
 
     async function fetchRuns(sessionName, reconstructionType, runSelect) {
       if (!sessionName || !reconstructionType) {
@@ -845,7 +823,8 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const sessions = Array.isArray(data.sessions) ? data.sessions : [];
-        sessions.sort((a,b) => (b.name || "").localeCompare(a.name || ""));
+        // removed sorting to preserve backend order
+        // sessions.sort((a,b) => (b.name || "").localeCompare(a.name || ""));
 
         sel.innerHTML = '<option value="">Select a copick session…</option>';
         for (const s of sessions) {
