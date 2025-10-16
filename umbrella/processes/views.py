@@ -2,6 +2,9 @@ from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from rest_framework.decorators import api_view
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from .forms import ProcRunForm, ReserveFrameProcRunForm, UpdateNotesForm
 from django.contrib.auth.decorators import login_required
 from . import models
@@ -155,7 +158,26 @@ def reserve_run(request):
         form = ReserveFrameProcRunForm()
         return render(request, "processes/reserve.html", {"form": form})
     
+@extend_schema(
+    methods=["POST"],
+    description="Creates a new ProcRun given a processing plan and MSI session. Returns a redirect to the run's detail page.",
+    request={
+        "type": "object",
+        "properties": {
+            "proc_plan": {"type": "integer", "description": "ID of the processing plan"},
+            "msi_session": {"type": "integer", "description": "ID of the MSI session"}
+        },
+        "required": ["proc_plan", "msi_session"]
+    },
+    responses={
+        302: OpenApiTypes.STR,
+        400: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT,
+        405: OpenApiTypes.OBJECT
+    }
+)
 @csrf_exempt
+@api_view(["POST"])
 # @login_required
 def create_run(request):
     if request.method == 'POST':
@@ -210,6 +232,15 @@ def create_run(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+@extend_schema(
+    methods=["GET"],
+    description="Fetches all sessions (runs). Requires ?valid=true.",
+    parameters=[
+        OpenApiParameter(name='valid', required=True, type=bool, description='Must be true')
+    ],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT}
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_all_runs(request):
     if not request.GET.get('valid', 'true') == 'true':
@@ -219,6 +250,16 @@ def get_all_runs(request):
     run_data = json.loads(serialized_runs)
     return JsonResponse(run_data, safe=False)
 
+@extend_schema(
+    methods=["GET"],
+    description="Returns paths for images in ProcSoftware records. Requires ?valid=true.",
+    parameters=[
+        OpenApiParameter(name='valid', required=True, type=bool),
+        OpenApiParameter(name='name', required=False, type=str, description='Name to filter by')
+    ],
+    responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT}
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_all_image_paths(request):
     if request.GET.get('valid', 'true') != 'true':
@@ -274,6 +315,15 @@ def get_all_image_paths(request):
     return JsonResponse(data=error_response.dict(), status=404, safe=False)
 
 
+@extend_schema(
+    methods=["GET"],
+    description="Returns available filters for ProcRuns based on selected criteria passed via 'q' query param.",
+    parameters=[
+        OpenApiParameter(name='q', required=True, type=OpenApiTypes.STR, description='JSON-encoded filter list')
+    ],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 422: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def available_filters(request):
     try:
@@ -449,7 +499,18 @@ def available_filters(request):
     except Exception as e:
         logger.error(f'An unexpected error occurred: {str(e)}')
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
-    
+
+@extend_schema(
+    methods=["GET"],
+    description="Returns a paginated list of tomogram-related metadata and filters using 'q' param.",
+    parameters=[
+        OpenApiParameter(name='q', required=False, type=OpenApiTypes.STR),
+        OpenApiParameter(name='page', required=False, type=int),
+        OpenApiParameter(name='pageSize', required=False, type=int),
+    ],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_tomo_details(request):
     try:
@@ -713,6 +774,15 @@ def get_tomo_details(request):
         return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
     
 
+@extend_schema(
+    methods=["GET"],
+    description="Returns annotation filter options for filtering annotations in UI.",
+    parameters=[
+        OpenApiParameter(name='q', required=True, type=OpenApiTypes.STR)
+    ],
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def available_annotation_filter(request):
     try:
@@ -906,7 +976,17 @@ def available_annotation_filter(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-
+@extend_schema(
+    methods=["GET"],
+    description="Returns detailed annotation data with filters, pagination, and sorting using 'q' param.",
+    parameters=[
+        OpenApiParameter(name='q', required=False, type=OpenApiTypes.STR),
+        OpenApiParameter(name='page', required=False, type=int),
+        OpenApiParameter(name='pageSize', required=False, type=int),
+    ],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_annotation_details(request):
     try:
@@ -1162,6 +1242,15 @@ def get_annotation_details(request):
         logger.error(f"An unexpected error occurred: {str(e)}")
         return JsonResponse({'error': f"An unexpected error occurred: {str(e)}"}, status=500)
 
+@extend_schema(
+    methods=["GET"],
+    description="Returns the ID of a session given a session name (query param: name).",
+    parameters=[
+        OpenApiParameter(name='name', required=True, type=str, description='Name of the MSI session')
+    ],
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_session_id(request):
     """
