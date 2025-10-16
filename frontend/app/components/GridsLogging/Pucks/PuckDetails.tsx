@@ -76,96 +76,96 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
 
   return (
     <>
-    <Card elevation={2} sx={{ maxWidth: 600, width: '100%' }}>
-      <CardHeader
-        title={
-          <Box className={styles.cardHeader}>
-            <Typography variant="h6" component="h2">
-              Puck Name: {selectedPuck.name}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Button
-                sdsType="primary"
-                sdsStyle="rounded"
-                startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
-                onClick={() => handleAddGridBox()}
-                size="small"
-              >
-                Add Grid Box
-              </Button>
-              <IconButton
-                onClick={handleDeletePuck}
-                sx={{
-                  '&:hover': {
-                    backgroundColor: '#ffebee',
-                  },
-                }}
-              >
-                <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
-              </IconButton>
+      <Card elevation={2} sx={{ maxWidth: 600, width: '100%' }}>
+        <CardHeader
+          title={
+            <Box className={styles.cardHeader}>
+              <Typography variant="h6" component="h2">
+                Puck Name: {selectedPuck.name}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Button
+                  sdsType="primary"
+                  sdsStyle="rounded"
+                  startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
+                  onClick={() => handleAddGridBox()}
+                  size="small"
+                >
+                  Add Grid Box
+                </Button>
+                <IconButton
+                  onClick={handleDeletePuck}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: '#ffebee',
+                    },
+                  }}
+                >
+                  <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
+                </IconButton>
+              </Box>
             </Box>
-          </Box>
-        }
-      />
+          }
+        />
 
-      <CardContent>
-        {/* Loading state */}
-        {!isSuccess && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-            <CircularProgress size={40} />
-          </Box>
-        )}
-
-        {/* Error state */}
-        {isSuccess && !slotsData && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-            <Alert severity="error">Failed to load puck slots data</Alert>
-          </Box>
-        )}
-
-        {/* Puck SVG with slots data */}
-        {isSuccess && slotsData && (
-          <>
-            {/* Display the selected puck SVG with slots data */}
+        <CardContent>
+          {/* Loading state */}
+          {!isSuccess && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-              <PuckSVG
-                puck={selectedPuck}
-                size={290}
-                isSelected={true}
-                onSlotClick={handleSlotClick}
-                slots={slotsData.slots}
-              />
+              <CircularProgress size={40} />
             </Box>
+          )}
 
-            {/* Slot summary information */}
-            <Box sx={{ textAlign: 'center', mb: 2, mt: 8 }}>
-              <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
-                Occupied Slots : {slotsData.slot_summary.filled_count} Filled with grid boxes
-              </Typography>
-              <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
-                Empty Slots: {slotsData.slot_summary.empty_count} Empty
-              </Typography>
+          {/* Error state */}
+          {isSuccess && !slotsData && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+              <Alert severity="error">Failed to load puck slots data</Alert>
             </Box>
+          )}
 
-            {/* Instructions */}
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="caption" color="text.secondary">
-                Click on the individual slots to view/add grid boxes
-              </Typography>
-            </Box>
-          </>
-        )}
-      </CardContent>
-    </Card>
+          {/* Puck SVG with slots data */}
+          {isSuccess && slotsData && (
+            <>
+              {/* Display the selected puck SVG with slots data */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                <PuckSVG
+                  puck={selectedPuck}
+                  size={290}
+                  isSelected={true}
+                  onSlotClick={handleSlotClick}
+                  slots={slotsData.slots}
+                />
+              </Box>
 
-     {/* Delete dialog  */}
-    <DeletePuck
-      open={deleteDialogOpen}
-      onClose={() => setDeleteDialogOpen(false)}
-      selectedPuck={selectedPuck}
-      slotsData={slotsData || null}
-      selectedUser={selectedUser}
-    />
+              {/* Slot summary information */}
+              <Box sx={{ textAlign: 'center', mb: 2, mt: 8 }}>
+                <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
+                  Occupied Slots : {slotsData.slot_summary.filled_count} Filled with grid boxes
+                </Typography>
+                <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
+                  Empty Slots: {slotsData.slot_summary.empty_count} Empty
+                </Typography>
+              </Box>
+
+              {/* Instructions */}
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Click on the individual slots to view/add grid boxes
+                </Typography>
+              </Box>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delete dialog  */}
+      <DeletePuck
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        selectedPuck={selectedPuck}
+        slotsData={slotsData || null}
+        selectedUser={selectedUser}
+      />
     </>
   );
 };
