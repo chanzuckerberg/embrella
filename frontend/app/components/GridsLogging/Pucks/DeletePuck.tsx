@@ -16,13 +16,7 @@ interface DeletePuckProps {
   selectedUser?: UsersList | null;
 }
 
-export const DeletePuck: React.FC<DeletePuckProps> = ({
-  open,
-  onClose,
-  selectedPuck,
-  slotsData,
-  selectedUser
-}) => {
+export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedPuck, slotsData, selectedUser }) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   if (!selectedPuck || !slotsData) return null;
@@ -31,46 +25,38 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({
 
   const handleConfirmDelete = () => {
     if (!selectedPuck) return;
-    
+
     setIsDeleting(true);
     const prefillParams = new URLSearchParams();
-    
+
     // Add return state parameters
     if (selectedUser?.id) {
       prefillParams.append('return_user_id', selectedUser.id.toString());
     }
-    
+
     // Redirect to Django admin puck deletion page
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/${selectedPuck.id}/delete/?${prefillParams.toString()}`;
     window.location.href = adminUrl;
   };
 
   return (
-    <Dialog 
-      onClose={onClose} 
-      open={open} 
-      sdsSize="xs"
-    >
-      <DialogTitle 
-        title={`Delete Puck ${selectedPuck.name}?`} 
-        onClose={onClose} 
-      />
+    <Dialog onClose={onClose} open={open} sdsSize="xs">
+      <DialogTitle title={`Delete Puck ${selectedPuck.name}?`} onClose={onClose} />
       <DialogContent>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            width: 48,
-            height: 48,
-            borderRadius: '50%',
-            backgroundColor: hasFilledGridBoxes ? '#ffebee' : '#fff3e0',
-            flexShrink: 0
-          }}>
-            <Icon 
-              sdsIcon="ExclamationMarkCircle" 
-              sdsSize="l" 
-            />
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              backgroundColor: hasFilledGridBoxes ? '#ffebee' : '#fff3e0',
+              flexShrink: 0,
+            }}
+          >
+            <Icon sdsIcon="ExclamationMarkCircle" sdsSize="l" />
           </Box>
           <Box sx={{ flex: 1 }}>
             {hasFilledGridBoxes ? (
@@ -79,7 +65,7 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({
                   Puck {selectedPuck.name} has filled grid boxes!
                 </Typography>
                 <Typography variant="caption" sx={{ mb: 2 }}>
-                 if proceeding with deleting, all objects in the puck will be trashed
+                  if proceeding with deleting, all objects in the puck will be trashed
                 </Typography>
               </>
             ) : (
@@ -94,14 +80,9 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({
             )}
           </Box>
         </Box>
-        
+
         <Box sx={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-          <Button
-            sdsType="secondary"
-            sdsStyle="rounded"
-            onClick={onClose}
-            disabled={isDeleting}
-          >
+          <Button sdsType="secondary" sdsStyle="rounded" onClick={onClose} disabled={isDeleting}>
             No
           </Button>
           <Button

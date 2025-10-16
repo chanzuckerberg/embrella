@@ -35,7 +35,7 @@ export enum API {
   GRID_LOGGING_PUCK_GRIDBOXINFO = '/api/list/pucks/puck_id/grid-box/position_in_puck',
   GRID_LOGGING_GRID_DETAILS = '/api/list/pucks/puck_id/grid-box/position_in_puck/grid/grid_id',
   //http://127.0.0.1:8000/api/list/pucks/22/grid-box/2/grid/36/
-  GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',  
+  GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',
 }
 
 export enum POST_API {
