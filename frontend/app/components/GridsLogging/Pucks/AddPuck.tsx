@@ -82,7 +82,8 @@ export const AddPuck: React.FC<AddPuckProps> = ({
       sdsSize="xs"
     >
       <DialogTitle 
-        title={`Add Puck - ${selectedUser?.full_name||''}`} 
+        title='Add Puck' 
+        subtitle= {`${selectedUser?.full_name||''}`}
         onClose={onClose} 
       />
       <DialogContent>    
@@ -92,6 +93,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({
           gap: 3,
           pt: 2,
           pb: 2,
+          mt: 2,
           // maxHeight:'200px'
         }}>
          
