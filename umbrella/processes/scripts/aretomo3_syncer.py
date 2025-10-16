@@ -299,7 +299,7 @@ def main():
         parser.add_argument('--job-id', help='Job ID to track')
         args = parser.parse_args()
 
-        # Validate run format
+        # print(f"args.run: {args.run}")
         if args.run and not args.run.startswith('run'):
             parser.error("--run must be in format 'run001' (e.g., run001, run002, etc.)")
 
@@ -310,7 +310,7 @@ def main():
         if args.continuous:
             logging.info("Starting AreTomo3 sync service in continuous mode...")
             consecutive_failures = 0
-            max_failures = 3  # Maximum number of consecutive failures before stopping
+            max_failures = 5  # Maximum number of consecutive failures before stopping
             
             while True:
                 try:
@@ -326,9 +326,9 @@ def main():
                     
                     # Reset failure counter on success
                     consecutive_failures = 0
-                    
-                    logging.info("Waiting 60 seconds before next sync...")
-                    time.sleep(60)  # Sleep for 60 seconds
+
+                    logging.info("Waiting 300 seconds before next sync...")
+                    time.sleep(300)  # Sleep for 300 seconds
                 except Exception as e:
                     consecutive_failures += 1
                     logging.error(f"Error in sync cycle: {e}")

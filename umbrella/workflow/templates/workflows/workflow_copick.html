@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create or Import Copick Projects</title>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    .form-container {
+      max-width: 800px;
+      margin: auto;
+      padding: 30px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      background-color: white;
+      margin-bottom: 40px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #34495e;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+      margin-top: 30px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }
+    input[readonly] {
+      background-color: #f8f9fa;
+      color: #6c757d;
+    }
+    button {
+      padding: 12px 24px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-size: 16px;
+      font-weight: bold;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    button.secondary {
+      background-color: #45a049;
+    }
+    button.secondary:hover {
+      background-color: #2980b9;
+    }
+    button.import {
+      background-color: #e67e22;
+    }
+    button.import:hover {
+      background-color: #d35400;
+    }
+    .go-back {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      padding: 8px 14px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+      z-index: 1000;
+      margin: 0;
+    }
+    .go-back:hover {
+      background-color: #1e88e5;
+    }
+    .note {
+      color: red;
+      font-weight: bold;
+      margin-bottom: 20px;
+      background-color: #fff5f5;
+      padding: 10px;
+      border-left: 4px solid #e74c3c;
+      border-radius: 4px;
+    }
+    .loading-indicator {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      z-index: 2000;
+      display: none;
+    }
+    .status-message {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+      display: none;
+      font-weight: bold;
+    }
+    .status-success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status-error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .divider {
+      margin: 30px 0 20px 0;
+      border: none;
+      height: 1px;
+      background-color: #bdc3c7;
+      position: relative;
+    }
+    .divider::before {
+      content: attr(data-text);
+      position: absolute;
+      top: -10px;
+      left: 20px;
+      background-color: white;
+      padding: 0 10px;
+      color: #7f8c8d;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .form-row-three {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+    .form-row-three-2-1 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 2fr; /* 1+1=2 parts left, 2 parts right */
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .form-row, .form-row-three {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .info-icon {
+      display: inline-block;
+      margin-left: 5px;
+      width: 20px;
+      height: 20px;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+
+    .tooltip {
+      position: absolute;
+      top: 30px; /* below the icon */
+      right: 0;
+      background: #333;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none; /* don't block mouse unless shown */
+    }
+
+    .info-icon:hover + .tooltip {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Smaller info icon for the new tooltip */
+    .info-icon-small {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+        text-align: center;
+        font-family: 'Hoefler Text', Georgia, serif; /* Apple-like font */
+        font-weight: bold;
+        font-style: italic;          /* optional, matches Apple i */
+        font-size: 13px;             /* similar to Apple small info button */
+        color: #007aff;              /* Apple standard blue for info icon */
+        background: #f0f0f0;         /* light grey background */
+        border-radius: 50%;
+        cursor: pointer;
+        position: relative;
+        user-select: none;           /* prevents text selection */
+}
+
+    /* New tooltip style (small, grey background) */
+    .tooltip-small {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -120%);
+        background: #f5f5f5;
+        color: #333;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: normal;    /* allows wrapping */
+        max-width: 400px;      /* wider, so lines aren’t too short */
+        min-width: 200px;  /* minimum width for readability */
+        word-wrap: break-word;  /* break long words */
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        font-family:Arial, Helvetica, sans-serif;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    /* Show tooltip on hover */
+    .info-icon-small:hover .tooltip-small {
+      opacity: 1;
+      pointer-events: auto;
+
+    }
+
+    .dropdown-list {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 180px;        /* controls scroll height */
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      z-index: 999;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .dropdown-item {
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .dropdown-item:hover {
+      background-color: #f1f1f1;
+    }   
+    </style>
+</head>
+<body>
+  <button class="go-back" onclick="goBack()">Go back to the startup page</button>
+  
+  <div class="loading-indicator" id="loadingIndicator">
+    Processing...
+  </div>
+
+  <div class="form-container">
+    <h1>Create or Import Copick Projects</h1>
+    <p class="note">Note: User credentials are SSH credentials for Bruno.</p>
+    
+    <!-- User Authentication Section -->
+    <!-- <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="text" id="userId" required readonly value="demo_user"/>
+    </div> -->
+
+    <div class="form-group">
+    <label for="userId">User ID</label>
+    <input id="userId"
+          type="text"
+          autocomplete="username" />
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" required placeholder="Enter your password"/>
+    </div>
+
+    <!-- Create Copick Project Section -->    
+    <div class="section-header">
+        <h2>
+            Create a Copick Project
+            <span class="info-icon">i</span>
+            <div class="tooltip">Create a copick project with tomograms</div>
+        </h2>
+    </div>
+
+    <div class="form-row">
+    <div class="form-group">
+        <label
+            for="copickSession">New Copick Session for: 
+                <span class="info-icon-small">i
+                    <div class="tooltip-small">
+                    Select the MSI session to create a new Copick run.
+                    </div>
+                 </span>
+        </label>
+        <select id="copickSession" required>
+        <option value="">Select an MSI session...</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="copickRun">Copick ProcRun:
+                <span class="info-icon-small">i
+                    <div class="tooltip-small">
+                    ProcRun is the processing run for the copick project.
+                    </div>
+                 </span>
+        </label>
+        <input type="text" id="copickRun" required placeholder="Enter copick procrun to create"/>
+    </div>
+    </div>
+
+    <div class="form-row-three">
+        <div class="form-group">
+            <label for="importTomoType">Tomogram Type:</label>
+            <select id="importTomoType" required>
+                <option value="">Select tomogram type...</option>
+                <option value="dctf">DCTF</option>
+                <option value="wbp">WBP</option>
+                <option value="sart">SART</option>
+                <option value="denoise">Denoise</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+        <label for="importTomogramRun">Tomogram ProcRun:</label>
+        <select id="importTomogramRun" required>
+            <option value="">Select a run...</option>
+        </select>
+        </div>
+
+        <div class="form-group">
+            <label for="downsampleTomogramVoxelSize">(Optional) Downsample (Å):</label>
+            <input type="number" id="downsampleTomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
+            <small style="color: #888;">Blank = no downsampling.</small>
+        </div>
+    </div>
+
+    <button type="button" onclick="createCopickProject()" id="createButton">Create Copick Project and Import Tomograms</button>
+    <div id="statusMessage" class="status-message"></div>
+
+    <!-- Add Pickable Objects Section -->
+    <div class="section-header">
+      <h2>
+        Add Pickable Objects
+        <span class="info-icon">i</span>
+        <div class="tooltip">Add pickable objects in copick confi.</div>
+      </h2>
+    </div>
+
+    <!-- Row 1: Copick Session + Copick ProcRun + Object Map -->
+    <div class="form-row-three-2-1">
+      <div class="form-group">
+        <label for="objCopickSession">Copick Session:</label>
+        <select id="objCopickSession">
+          <option value="">Loading sessions…</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="objCopickRun">Copick ProcRun:</label>
+        <select id="objCopickRun">
+          <option value="">Select a Copick run…</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="position: relative;">
+        <label for="objectMap">
+          Reference Map (optional):
+          <span class="info-icon-small">i
+            <div class="tooltip-small">
+              Choose from predefined template maps (type to search, or leave blank for none).
+            </div>
+          </span>
+        </label>
+
+        <input
+          type="text"
+          id="objectMap"
+          placeholder="Search or select a template map..."
+          autocomplete="off"
+          oninput="filterObjectMapOptions()"
+          onclick="toggleObjectMapDropdown(true)"
+        />
+        <div id="objectMapDropdown" class="dropdown-list"></div>
+        <small id="objectMapMeta" style="color:#666; display:block; margin-top:4px;"></small>
+      </div>
+    </div>
+
+    <!-- Row 2: Object Name + Diameter -->
+    <div class="form-row">
+      <div class="form-group">
+        <label for="objectName">Object Name:</label>
+        <input type="text" id="objectName" placeholder="Enter object name"/>
+      </div>
+
+      <div class="form-group">
+        <label for="diameter">Diameter (Å):</label>
+        <input type="number" id="diameter" step="0.1" min="0" placeholder="e.g. 150.0"/>
+      </div>
+    </div>
+
+    <button type="button" onclick="addPickableObject()" id="addObjectButton" class="secondary">
+      Add Pickable Object
+    </button>
+
+    <!-- Import more tomograms Section -->
+    <div class="section-header">
+      <h2>
+        Import More Tomograms
+        <span class="info-icon">i</span>
+        <div class="tooltip">Import more tomograms to an existing copick project</div>
+      </h2>
+    </div>
+
+    <!-- Row 1: Session + Copick ProcRun (2 columns) -->
+    <div class="form-row">
+      <div class="form-group">
+        <label for="importCopickSession">Copick Session:</label>
+        <select id="importCopickSession">
+          <option value="">Loading sessions…</option>
+        </select>
+      </div>
+
+    <div class="form-group">
+      <label for="importCopickRun">Copick ProcRun:</label>
+      <select id="importCopickRun">
+        <option value="">Select a copick run…</option>
+      </select>
+    </div>
+    </div>
+
+    <!-- Row 2: Tomogram Type + Tomogram ProcRun + Optional Downsample (3 columns) -->
+    <div class="form-row-three">
+      <div class="form-group">
+        <label for="tomoType">Tomogram Type:</label>
+        <select id="tomoType" required>
+          <option value="">Select tomogram type...</option>
+          <option value="dctf">DCTF</option>
+          <option value="wbp">WBP</option>
+          <option value="sart">SART</option>
+          <option value="denoise">Denoise</option>
+        </select>
+      </div>
+      
+  <div class="form-group">
+    <label for="tomogramRun">Tomogram ProcRun:</label>
+    <select id="tomogramRun" required>
+      <option value="">Select a run…</option>
+    </select>
+  </div>
+
+      <div class="form-group">
+          <label for="importDownsampleTomogramVoxelSize">(Optional) Downsample (Å):</label>
+          <input type="number" id="importDownsampleTomogramVoxelSize" step="5" min="10" placeholder="e.g. downsample to voxel size in Å"/>
+          <small style="color: #888;">Blank = no downsampling.</small>
+      </div>
+    </div>
+
+  <button type="button" onclick="importTomograms()" id="importButton" class="secondary">Import Tomograms</button>
+  <div id="importStatusMessage" class="status-message"></div>
+
+  <script>
+    // Initialize user info
+    async function fetchUserInfo() {
+      try {
+        const response = await fetch("/workflow/user_info");
+        const result = await response.json();
+        if (response.ok && result.username) {
+          document.getElementById("userId").value = result.username;
+          document.getElementById("cancelUserId").value = result.username;
+
+        } else {
+          alert("Failed to fetch user info.");
+        }
+      } catch (error) {
+        console.error("An error occurred while fetching user info:", error);
+        alert("An error occurred while fetching user info.");
+      }
+    }
+
+    // Populate the MSI dropdown with session names.
+    async function populateSessionDropdown() {
+        const url = "/workflow/get_msi_session_list";
+        try {
+            const response = await fetch(url, {
+            method: "GET",
+            credentials: "same-origin",
+            });
+
+            const responseText = await response.text();
+            if (!response.ok) {
+            throw new Error(`HTTP error ${response.status} | Body: ${responseText}`);
+            }
+
+            let result;
+            try {
+            result = JSON.parse(responseText);
+            } catch (jsonErr) {
+            console.error("JSON parse error:", jsonErr);
+            throw new Error("Failed to parse JSON. Response was: " + responseText);
+            }
+
+            if (!result.session_names) {
+            console.error("No 'session_names' found in result:", result);
+            throw new Error("Missing session_names in response JSON.");
+            }
+
+            const sessionSelect = document.getElementById("copickSession");
+            sessionSelect.innerHTML = "";
+
+            // Add default placeholder option
+            const placeholderOption = document.createElement("option");
+            placeholderOption.value = "";
+            placeholderOption.textContent = "Select an MSI session...";
+            sessionSelect.appendChild(placeholderOption);
+
+            // Optional: sort sessions and put "summary" first
+            const sortedSessions = [...result.session_names].sort((a, b) => {
+            if (a.toLowerCase() === "summary") return -1;
+            if (b.toLowerCase() === "summary") return 1;
+            return a.localeCompare(b);
+            });
+
+            sortedSessions.forEach((name) => {
+            const option = document.createElement("option");
+            option.value = name;
+            option.textContent = name;
+            sessionSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error("Error while fetching session names:", error);
+            alert("Failed to fetch session names. " + error.message);
+        }
+    }
+
+    async function fetchRuns(sessionName, reconstructionType, runSelect) {
+      if (!sessionName || !reconstructionType) {
+        runSelect.innerHTML = '<option value="">Select a run...</option>';
+        return;
+      }
+
+      runSelect.innerHTML = '<option value="">Loading runs...</option>';
+
+      try {
+        const url = `/api/sessions/${encodeURIComponent(sessionName)}/`;
+        const response = await fetch(url, { method: "GET", credentials: "same-origin" });
+        if (!response.ok) throw new Error("Failed to fetch runs");
+        const data = await response.json();
+        console.log("Runs response:", data);
+
+        // Map UI → API type synonyms
+        const typeKeyRaw = (reconstructionType || "").toLowerCase();
+        const typeSyn = { denoise: "denoised" }; // UI "denoise" corresponds to API "Denoised"
+        const typeKey = typeSyn[typeKeyRaw] ?? typeKeyRaw;
+
+        // Normalize each run object to a consistent shape
+        const normalize = (r) => ({
+          runId: r.runId || r.name || "",
+          reconstructionType: (r.reconstructionType || r.type || "").toLowerCase(),
+          // prefer the real API field:
+          runCounts: (r.numTomograms ?? r.runCounts ?? r.count ?? 0)
+        });
+
+        // Filter by reconstruction type
+        const matchingRuns = (data.runs || [])
+          .map(normalize)
+          .filter((r) => r.reconstructionType === typeKey);
+
+        // Sort by numeric part of runId (descending)
+        matchingRuns.sort((a, b) => {
+          const numA = parseInt((a.runId || "").replace(/\D/g, ""), 10) || 0;
+          const numB = parseInt((b.runId || "").replace(/\D/g, ""), 10) || 0;
+          return numB - numA;
+        });
+
+        // Populate dropdown
+        runSelect.innerHTML = '<option value="">Select a run...</option>';
+        for (const r of matchingRuns) {
+          const opt = document.createElement("option");
+          opt.value = r.runId;
+          opt.textContent = `${r.runId} (${r.runCounts} tomos)`;
+          runSelect.appendChild(opt);
+        }
+
+        if (matchingRuns.length > 0) {
+          runSelect.value = matchingRuns[0].runId;
+        } else {
+          runSelect.innerHTML = '<option value="">No runs available</option>';
+        }
+      } catch (error) {
+        console.error("Error in fetchRuns:", error);
+        runSelect.innerHTML = '<option value="">Error loading runs</option>';
+      }
+    }
+
+    async function updateTomogramRun() {
+      const sessionSelect = document.getElementById("copickSession");
+      const typeSelect = document.getElementById("importTomoType");
+      const runSelect = document.getElementById("importTomogramRun");
+
+      const sessionId = sessionSelect.value;
+      const tomoType = typeSelect.value;
+
+      console.log("updateTomogramRun called with:", sessionId, tomoType);
+      await fetchRuns(sessionId, tomoType, runSelect);
+    }
+
+    document.getElementById("copickSession").addEventListener("change", updateTomogramRun);
+    document.getElementById("importTomoType").addEventListener("change", updateTomogramRun);
+    document.addEventListener("DOMContentLoaded", populateSessionDropdown);
+
+    // Auto-sync fields when copick project fields change
+    function attachFieldSyncListeners() {
+      const copickSession = document.getElementById("copickSession");
+      const copickRun = document.getElementById("copickRun");
+      const objCopickSession = document.getElementById("objCopickSession");
+      const objCopickRun = document.getElementById("objCopickRun");
+      const importCopickSession = document.getElementById("importCopickSession");
+      const importCopickRun = document.getElementById("importCopickRun");
+
+      copickSession.addEventListener("input", () => {
+        if (!objCopickSession.value) {
+          objCopickSession.value = copickSession.value;
+        }
+        if (!importCopickSession.value) {
+          importCopickSession.value = copickSession.value;
+        }
+      });
+
+      copickRun.addEventListener("input", () => {
+        if (!objCopickRun.value) {
+          objCopickRun.value = copickRun.value;
+        }
+        if (!importCopickRun.value) {
+          importCopickRun.value = copickRun.value;
+        }
+      });
+    }
+
+// Listener for CoPick: fetch run numbers without +1
+    function attachCopickNewRunListener() {
+      const sessionEl = document.getElementById('copickSession');
+      const runEl = document.getElementById('copickRun');
+      if (!sessionEl || !runEl) return;
+
+      // Helper: given array of strings like ["003","02","1"] → next zero-padded number
+      const nextRun = (runs) => {
+        if (!Array.isArray(runs) || runs.length === 0) return '001';
+        // Normalize: extract digits only, keep padding width from the longest run
+        const numeric = runs
+          .map(s => (s ?? '').toString().match(/\d+/)?.[0] ?? '')
+          .filter(s => s.length > 0);
+        if (numeric.length === 0) return '001';
+        const width = Math.max(3, ...numeric.map(s => s.length));
+        const maxVal = Math.max(...numeric.map(s => parseInt(s, 10)));
+        const nextVal = (maxVal + 1).toString().padStart(width, '0');
+        return nextVal;
+      };
+
+      const handler = async () => {
+        const sessionName = sessionEl.value.trim();
+        if (!sessionName) { runEl.value = '001'; return; }
+
+        try {
+          const res = await fetch(
+            `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=copick&_ts=${Date.now()}`,
+            { cache: "no-store" }
+          );
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const runs = data?.sessions?.[0]?.run_numbers || [];
+          runEl.value = nextRun(runs);
+        } catch (e) {
+          console.error('CoPick next-run fetch failed:', e);
+          runEl.value = '001';
+        }
+      };
+
+  // Fire when the session changes (use 'input' if you want live updates while typing)
+  sessionEl.addEventListener('change', handler);
+}
+
+    // Create Copick Project
+    async function createCopickProject() {
+      const userId   = document.getElementById("userId").value;
+      const password = document.getElementById("password").value;
+      const session  = document.getElementById("copickSession").value;
+      const runInput = document.getElementById("copickRun").value;
+      const tomoType = document.getElementById("importTomoType").value;
+      const tomoRun  = document.getElementById("importTomogramRun").value;
+      const voxelOpt = document.getElementById("downsampleTomogramVoxelSize").value;
+
+      if (!userId || !password || !session || !runInput || !tomoType || !tomoRun) {
+        showStatusMessage("Please fill in all required fields for Copick Project creation.", "error");
+        return;
+      }
+
+      let runNorm = runInput.trim();
+      if (!/^run/i.test(runNorm)) {
+        const bare = runNorm.replace(/\D/g, "");
+        runNorm = `run${bare.padStart(3, "0")}`;
+      }
+
+      showLoadingIndicator("Creating Copick Project…");
+      disableForm(true);
+
+      try {
+        // get session and plan IDs
+        const COPICK_PLAN_NAME = "czii-copick";
+
+        const sessionResp = await fetch(`/workflow/get_msisession_id?session_name=${encodeURIComponent(session)}`);
+        const { session_id: sessionId } = await sessionResp.json();
+
+        const planResp = await fetch(`/workflow/get_plan_id?plan_name=${encodeURIComponent(COPICK_PLAN_NAME)}`);
+        const { plan_id: planId } = await planResp.json();
+
+        // reserve
+        const reserveResp = await fetch("/processes/post_generic/reserve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ proc_plan: planId, msi_session: sessionId, run_number: runNorm }),
+        });
+        if (reserveResp.status === 409) {
+          const msg = (await reserveResp.json()).error || `Run ${runNorm} already exists.`;
+          throw new Error(msg);
+        }
+
+        // run remote Copick job
+        const jobPayload = {
+          user_id: userId,
+          password: btoa(password),
+          session_name: session,
+          copick_run: runNorm,
+          import_tomo_type: tomoType,
+          import_tomogram_run: tomoRun,
+        };
+        if (voxelOpt && voxelOpt.trim()) {
+          jobPayload.downsample_tomogram_voxel_size = voxelOpt.trim();
+        }
+        console.log("Submitting job payload:", jobPayload);
+
+        const jobResp = await fetch("/workflow/run-create-copick/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(jobPayload),
+        });
+        const jobJson = await jobResp.json();
+        if (!jobResp.ok) throw new Error(jobJson.error || `Job submit failed (${jobResp.status})`);
+
+        // create DB record
+        const createResp = await fetch("/processes/post_generic/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            proc_plan: planId,
+            msi_session: sessionId,
+            run_number: runNorm,
+            pipeline: "copick",
+            notes: `Copick init (type=${tomoType}, import_run=${tomoRun}${voxelOpt ? `, voxel=${voxelOpt}` : ""})`,
+          }),
+        });
+        const createJson = await createResp.json();
+        if (!createResp.ok) throw new Error(createJson.error || `DB create failed (${createResp.status})`);
+
+        const extra = jobJson.job_id ? ` (Job ID: ${jobJson.job_id})` : "";
+        showStatusMessage(`Copick project created successfully${extra}`, "success");
+
+      } catch (e) {
+        showStatusMessage(`Failed to create Copick project: ${e.message}`, "error");
+      } finally {
+        hideLoadingIndicator();
+        disableForm(false);
+      }
+    }
+
+// Part 2: Add Pickable Object
+
+    // Generic: populate a Copick session <select> by element ID
+    async function populateCopickSessionSelect(selectId) {
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
+
+      try {
+        const res = await fetch("/workflow/copick_params?plan_type=copick");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+        sessions.sort((a,b) => (b.name || "").localeCompare(a.name || ""));
+
+        sel.innerHTML = '<option value="">Select a copick session…</option>';
+        for (const s of sessions) {
+          const opt = document.createElement("option");
+          opt.value = s.name;
+          opt.textContent = s.name;
+          sel.appendChild(opt);
+        }
+      } catch (e) {
+        console.error("populateCopickSessionSelect failed:", e);
+        sel.innerHTML = '<option value="">Error loading sessions</option>';
+      }
+    }
+
+    // Generic: populate a Copick run <select> by element ID for a given session
+    async function populateCopickRunSelect(sessionName, runSelectId) {
+      const runSel = document.getElementById(runSelectId);
+      if (!runSel) return;
+
+      if (!sessionName) {
+        runSel.innerHTML = '<option value="">Select a Copick run…</option>';
+        return;
+      }
+
+      runSel.innerHTML = '<option value="">Loading runs…</option>';
+      try {
+        const url = `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=copick&_ts=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const runs = json?.sessions?.[0]?.run_numbers ?? [];
+        const sorted = [...runs].sort((a, b) => (parseInt(b, 10) || 0) - (parseInt(a, 10) || 0));
+
+        runSel.innerHTML = '<option value="">Select a Copick run…</option>';
+        for (const r of sorted) {
+          const val = `run${String(r).padStart(3, '0')}`;
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val;
+          runSel.appendChild(opt);
+        }
+        if (sorted.length === 0) {
+          runSel.innerHTML = '<option value="">No Copick runs found</option>';
+        }
+      } catch (e) {
+        console.error('populateCopickRunSelect failed:', e);
+        runSel.innerHTML = '<option value="">Error loading runs</option>';
+      }
+    }
+    
+    async function populateCopickSessionDropdown() {
+      return populateCopickSessionSelect("importCopickSession");
+    }
+
+    async function populateCopickRun(sessionName) {
+      return populateCopickRunSelect(sessionName, "importCopickRun");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      populateCopickSessionDropdown();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const sessionSel = document.getElementById('importCopickSession');
+      if (!sessionSel) return;
+
+      sessionSel.addEventListener('change', () => {
+        const sessionName = sessionSel.value.trim();
+        populateCopickRun(sessionName);
+      });
+    });
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Populate the Add-Object session dropdown
+      await populateCopickSessionSelect("objCopickSession");
+
+      const objSessionSel = document.getElementById("objCopickSession");
+      const objRunSel     = document.getElementById("objCopickRun");
+
+      // When session changes, refresh the runs list
+      if (objSessionSel) {
+        objSessionSel.addEventListener("change", () => {
+          const name = (objSessionSel.value || "").trim();
+          populateCopickRunSelect(name, "objCopickRun");
+        });
+
+        // If there’s already a value (e.g., restored state), populate runs now
+        if (objSessionSel.value) {
+          populateCopickRunSelect(objSessionSel.value.trim(), "objCopickRun");
+        }
+      }
+
+      // (Optional) If you want to pre-disable runs until a session is chosen:
+      if (objRunSel && !objSessionSel.value) {
+        objRunSel.innerHTML = '<option value="">Select a Copick session first…</option>';
+      }
+    });
+
+    // Show status messages
+    function showStatusMessage(message, type) {
+      const statusDiv = document.getElementById("statusMessage");
+      if (!statusDiv) return;
+      statusDiv.textContent = message;
+      statusDiv.className = `status-message ${type}`;
+    }
+
+    function showLoadingIndicator(message) {
+      const indicator = document.getElementById("loadingIndicator");
+      if (indicator) {
+        indicator.textContent = message || "Processing...";
+        indicator.style.display = "block";
+      }
+    }
+
+    function hideLoadingIndicator() {
+      const indicator = document.getElementById("loadingIndicator");
+      if (indicator) {
+        indicator.style.display = "none";
+      }
+    }
+
+    function disableForm(disable) {
+      const elements = document.querySelectorAll("input, select, button");
+      elements.forEach(el => el.disabled = disable);
+    }
+
+    function clearPickableObjectForm() {
+      document.getElementById("objCopickSession").value = "";
+      document.getElementById("objCopickRun").innerHTML = '<option value="">Select a Copick run…</option>';
+      document.getElementById("objectName").value = "";
+      document.getElementById("diameter").value = "";
+      document.getElementById("objectMap").value = "";
+      document.getElementById("objectMapMeta").textContent = "";
+    }
+
+    function goBack() {
+      window.location.href = "/workflow/startup";
+    }
+
+
+// overwrite-friendly helper
+function applySelectedMapToFields(map, force = false) {
+  if (!map) return;
+  const nameEl = document.getElementById("objectName");
+  const diaEl  = document.getElementById("diameter");
+
+  const derivedName = map.name || (map.label ? map.label.split(" — ")[0] : "");
+  const derivedDiameter = map.diameter || map.modelDiameter || "";
+
+  if (nameEl && (force || !nameEl.value)) nameEl.value = derivedName;
+  if (diaEl && (force || !diaEl.value || Number(diaEl.value) <= 0)) diaEl.value = derivedDiameter;
+}
+
+// Populate objectMap dropdown from /workflow/template_maps/
+async function populateObjectMapDropdown() {
+  const dropdown = document.getElementById("objectMapDropdown");
+  const input = document.getElementById("objectMap");
+  const meta = document.getElementById("objectMapMeta");
+  if (!dropdown || !input) return;
+
+  try {
+    const res = await fetch("/workflow/template_maps/");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    const templates = Array.isArray(data.templates) ? data.templates : [];
+    window.__objectMapTemplates = templates;
+
+    dropdown.innerHTML = "";
+    templates.forEach(t => {
+      const item = document.createElement("div");
+      item.className = "dropdown-item";
+      item.textContent = t.label;
+      item.onclick = () => {
+        input.value = t.label;
+        dropdown.style.display = "none";
+        meta.textContent = `voxel ${t.voxelSize}Å • diameter ${t.diameter}Å • symmetry ${t.symmetry} • pdbID ${t.pdbID}`;
+        meta.style.display = "block";
+        applySelectedMapToFields(t, true); // <-- force overwrite on every selection
+      };
+      dropdown.appendChild(item);
+    });
+  } catch (e) {
+    console.error("Failed to load maps:", e);
+    dropdown.innerHTML = `<div class="dropdown-item">Error loading maps</div>`;
+  }
+}
+
+document.getElementById("objectMap")?.addEventListener("change", () => {
+  const sel = getSelectedObjectMap();
+  if (sel) {
+    const meta = document.getElementById("objectMapMeta");
+    if (meta) {
+      meta.textContent = `voxel ${sel.voxelSize}Å • diameter ${sel.diameter}Å • symmetry ${sel.symmetry} • pdbID ${sel.pdbID}`;
+      meta.style.display = "block";
+    }
+    applySelectedMapToFields(sel);
+  }
+});
+
+
+// toggle dropdown visibility
+function toggleObjectMapDropdown(show) {
+  const dropdown = document.getElementById("objectMapDropdown");
+  if (!dropdown) return;
+  dropdown.style.display = show ? "block" : "none";
+}
+
+// filter as user types
+function filterObjectMapOptions() {
+  const input = document.getElementById("objectMap");
+  const filter = input.value.toLowerCase();
+  const dropdown = document.getElementById("objectMapDropdown");
+  const items = dropdown.querySelectorAll(".dropdown-item");
+  dropdown.style.display = "block"; // always show while typing
+  items.forEach(item => {
+    const txt = item.textContent.toLowerCase();
+    item.style.display = txt.includes(filter) ? "block" : "none";
+  });
+}
+
+// close dropdown if click outside
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#objectMapDropdown") && !e.target.closest("#objectMap")) {
+    toggleObjectMapDropdown(false);
+  }
+});
+
+// helper to retrieve selected map info later
+function getSelectedObjectMap() {
+  const val = document.getElementById("objectMap")?.value.trim();
+  if (!val || !window.__objectMapTemplates) return null;
+  return window.__objectMapTemplates.find(
+    t => t.label === val || t.name === val
+  ) || null;
+}
+
+document.addEventListener("DOMContentLoaded", populateObjectMapDropdown);
+
+
+
+// Add Pickable Object
+async function addPickableObject() {
+  const statusBox = document.getElementById("statusMessage");
+
+  const userId   = document.getElementById("userId")?.value ?? "";
+  const password = document.getElementById("password")?.value ?? "";
+
+  const sessionName = document.getElementById("objCopickSession")?.value ?? "";
+  const runInput    = document.getElementById("objCopickRun")?.value ?? "";
+  const objectName  = document.getElementById("objectName")?.value ?? "";
+  const diameterStr = document.getElementById("diameter")?.value ?? "";
+
+  const tmpl = getSelectedObjectMap(); // {pdbID, absolutePath, voxelSize} or null
+  const pdbId      = tmpl?.pdbID || "";
+  const objectPath = tmpl?.absolutePath || "";
+  const voxelSize  = tmpl?.voxelSize || "";
+
+  if (!userId || !password || !sessionName || !runInput || !objectName || !diameterStr) {
+    if (statusBox) {
+      statusBox.textContent = "Please fill in all required fields (user, password, session, Copick run, object name, diameter).";
+      statusBox.className = "status-message status-error";
+      statusBox.style.display = "block";
+    }
+    return;
+  }
+
+  const diameterNum = Number(diameterStr);
+  if (!Number.isFinite(diameterNum) || diameterNum <= 0) {
+    if (statusBox) {
+      statusBox.textContent = "Diameter must be a positive number (Å).";
+      statusBox.className = "status-message status-error";
+      statusBox.style.display = "block";
+    }
+    return;
+  }
+
+  const copickRunNorm = normalizeRun(runInput);
+
+  if (typeof showLoadingIndicator === "function") showLoadingIndicator("Submitting add-object job…");
+  if (typeof disableForm === "function") disableForm(true);
+  if (statusBox) {
+    statusBox.textContent = "Submitting add-object job…";
+    statusBox.className = "status-message";
+    statusBox.style.display = "block";
+  }
+
+  try {
+    const payload = {
+      user_id: userId,
+      password: btoa(password),
+      session: sessionName,
+      copick_procrun: copickRunNorm,
+      object_name: objectName,
+      object_diameter: String(diameterNum),
+    };
+
+    // Optionals (only include if present & valid)
+    if (pdbId)       payload.pdb_id = pdbId;
+    if (objectPath)  payload.object_map_file = objectPath;   // absolute path is fine
+    if (voxelSize && !isNaN(Number(voxelSize))) payload.object_voxel_size = String(voxelSize);
+
+    const res = await fetch("/workflow/run-copick-add-object/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // If you *do* enable CSRF later, add the token header here.
+      body: JSON.stringify(payload),
+    });
+
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || `Job submit failed (${res.status})`);
+
+    const extra = json.job_id ? ` (Job ID: ${json.job_id})` : "";
+    if (statusBox) {
+      statusBox.textContent = `Add-object submitted successfully${extra}`;
+      statusBox.className = "status-message status-success";
+      statusBox.style.display = "block";
+    }
+  } catch (e) {
+    if (statusBox) {
+      statusBox.textContent = `Failed to submit add-object: ${e.message}`;
+      statusBox.className = "status-message status-error";
+      statusBox.style.display = "block";
+    }
+  } finally {
+    if (typeof hideLoadingIndicator === "function") hideLoadingIndicator();
+    if (typeof disableForm === "function") disableForm(false);
+  }
+}
+   
+// Import more tomograms
+    async function fetchImportRuns(sessionName, reconstructionType, runSelect) {
+      if (!sessionName || !reconstructionType) {
+        runSelect.innerHTML = '<option value="">Select a run…</option>';
+        return;
+      }
+
+      runSelect.innerHTML = '<option value="">Loading runs…</option>';
+
+      try {
+        const url = `/api/sessions/${encodeURIComponent(sessionName)}/`;
+        const resp = await fetch(url, { method: "GET", credentials: "same-origin" });
+        if (!resp.ok) throw new Error("Failed to fetch runs");
+        const data = await resp.json();
+
+        // UI → API synonyms (UI uses "denoise", API returns "Denoised")
+        const typeKeyRaw = (reconstructionType || "").toLowerCase();
+        const typeSyn = { denoise: "denoised" };
+        const typeKey = typeSyn[typeKeyRaw] ?? typeKeyRaw;
+
+        // Normalize records
+        const normalize = (r) => ({
+          runId: (r.runId || r.name || "").trim(),
+          type: (r.reconstructionType || r.type || "").toLowerCase(),
+          count: (r.numTomograms ?? r.runCounts ?? r.count ?? 0),
+        });
+
+        // Filter to the selected type
+        const matching = (data.runs || [])
+          .map(normalize)
+          .filter(r => r.type === typeKey)
+          .sort((a, b) => {
+            const na = parseInt(a.runId.replace(/\D/g, ""), 10) || 0;
+            const nb = parseInt(b.runId.replace(/\D/g, ""), 10) || 0;
+            return nb - na; // highest run first
+          });
+
+        // Populate dropdown
+        runSelect.innerHTML = '<option value="">Select a run…</option>';
+        for (const r of matching) {
+          const opt = document.createElement("option");
+          opt.value = r.runId;
+          opt.textContent = `${r.runId} (${r.count} tomos)`;
+          runSelect.appendChild(opt);
+        }
+        if (matching.length === 0) {
+          runSelect.innerHTML = '<option value="">No runs available</option>';
+        } else {
+          runSelect.value = matching[0].runId;
+        }
+      } catch (err) {
+        console.error("Error in fetchImportRuns:", err);
+        runSelect.innerHTML = '<option value="">Error loading runs</option>';
+      }
+    }
+
+    async function updateTomogramRunImport() {
+      const sessionEl = document.getElementById("importCopickSession");
+      const typeEl = document.getElementById("tomoType");
+      const runEl = document.getElementById("tomogramRun");
+      if (!sessionEl || !typeEl || !runEl) return;
+
+      const sessionName = sessionEl.value;
+      const tomoType = typeEl.value;
+      await fetchImportRuns(sessionName, tomoType, runEl);
+    }
+
+    // Attach listeners (call once on page load)
+    document.addEventListener("DOMContentLoaded", () => {
+      const sessionEl = document.getElementById("importCopickSession");
+      const typeEl = document.getElementById("tomoType");
+
+      if (sessionEl) sessionEl.addEventListener("change", updateTomogramRunImport);
+      if (typeEl) typeEl.addEventListener("change", updateTomogramRunImport);
+
+      // Optional: populate immediately if both have values
+      updateTomogramRunImport();
+    });
+
+
+    // Import tomograms to an existing copick project
+    function normalizeRun(val) {
+      const s = (val || "").toString().trim();
+      if (!s) return "";
+      if (/^run/i.test(s)) {
+        const n = s.replace(/^run/i, "");
+        return `run${(n.replace(/\D/g, "") || "1").padStart(3, "0")}`;
+      }
+      return `run${(s.replace(/\D/g, "") || "1").padStart(3, "0")}`;
+    }
+
+    async function importTomograms() {
+      console.log("[importTomograms] clicked");
+
+      const userId   = document.getElementById("userId")?.value ?? "";
+      const password = document.getElementById("password")?.value ?? "";
+
+      const session  = document.getElementById("importCopickSession")?.value ?? "";
+      const runInput = document.getElementById("importCopickRun")?.value ?? "";
+      const tomoType = document.getElementById("tomoType")?.value ?? "";
+      const tomoRun  = document.getElementById("tomogramRun")?.value ?? "";
+      // 👇 matches your new HTML id
+      const voxelOpt = document.getElementById("importDownsampleTomogramVoxelSize")?.value ?? "";
+
+      const statusBox = document.getElementById("importStatusMessage");
+
+      if (!userId || !password || !session || !runInput || !tomoType || !tomoRun) {
+        if (statusBox) {
+          statusBox.textContent = "Please fill in all required fields (user, password, session, Copick run, tomogram type, tomogram run).";
+          statusBox.className = "status-message status-error";
+          statusBox.style.display = "block";
+        }
+        return;
+      }
+
+      const copickRunNorm = normalizeRun(runInput);
+      const tomoRunNorm   = normalizeRun(tomoRun);
+
+      if (typeof showLoadingIndicator === "function") showLoadingIndicator("Submitting import job…");
+      if (typeof disableForm === "function") disableForm(true);
+      if (statusBox) {
+        statusBox.textContent = "Submitting import job…";
+        statusBox.className = "status-message";
+        statusBox.style.display = "block";
+      }
+
+      try {
+        const jobPayload = {
+          user_id: userId,
+          password: btoa(password),
+          session_name: session,
+          copick_run: copickRunNorm,
+          import_tomo_type: tomoType,
+          import_tomogram_run: tomoRunNorm,
+        };
+        if (voxelOpt && voxelOpt.trim()) {
+          jobPayload.downsample_tomogram_voxel_size = voxelOpt.trim();
+        }
+        console.log("[importTomograms] payload", jobPayload);
+
+        const res = await fetch("/workflow/run-import-tomogram-copick/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(jobPayload),
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `Job submit failed (${res.status})`);
+
+        const extra = json.job_id ? ` (Job ID: ${json.job_id})` : "";
+        if (statusBox) {
+          statusBox.textContent = `Import submitted successfully${extra}`;
+          statusBox.className = "status-message status-success";
+          statusBox.style.display = "block";
+        }
+      } catch (e) {
+        console.error("[importTomograms] error", e);
+        if (statusBox) {
+          statusBox.textContent = `Failed to submit import: ${e.message}`;
+          statusBox.className = "status-message status-error";
+          statusBox.style.display = "block";
+        }
+      } finally {
+        if (typeof hideLoadingIndicator === "function") hideLoadingIndicator();
+        if (typeof disableForm === "function") disableForm(false);
+      }
+    }
+
+    // ensure the inline onclick can find it
+    window.importTomograms = importTomograms;
+
+    // (optional) also wire the button by id for redundancy
+    document.addEventListener("DOMContentLoaded", () => {
+      const btn = document.getElementById("importButton");
+      if (btn) {
+        btn.onclick = null; // avoid double calling if inline present
+        btn.addEventListener("click", importTomograms);
+      }
+    });
+
+    // Utility functions
+    function showLoadingIndicator(message = "Processing...") {
+      const indicator = document.getElementById("loadingIndicator");
+      indicator.textContent = message;
+      indicator.style.display = "block";
+    }
+
+    function hideLoadingIndicator() {
+      document.getElementById("loadingIndicator").style.display = "none";
+    }
+
+    function disableForm(disabled) {
+      const inputs = document.querySelectorAll('input:not([readonly]), select, button:not(.go-back)');
+      inputs.forEach(input => {
+        input.disabled = disabled;
+      });
+    }
+
+    function showStatusMessage(message, type) {
+      const statusDiv = document.getElementById("statusMessage");
+      statusDiv.textContent = message;
+      statusDiv.className = `status-message status-${type}`;
+      statusDiv.style.display = "block";
+      
+      if (type === "success") {
+        setTimeout(() => {
+          statusDiv.style.display = "none";
+        }, 5000);
+      }
+    }
+
+    // import status messages
+    function showImportStatusMessage(message, type) {
+      const statusDiv = document.getElementById("importStatusMessage");
+      statusDiv.textContent = message;
+      statusDiv.className = `status-message status-${type}`;
+      statusDiv.style.display = "block";
+      
+      if (type === "success") {
+        setTimeout(() => {
+          statusDiv.style.display = "none";
+        }, 5000);
+      }
+    }
+
+    function clearPickableObjectForm() {
+      document.getElementById("objectName").value = "";
+      document.getElementById("diameter").value = "";
+      document.getElementById("objectMap").value = "";
+      // Keep copick session and run fields populated for convenience
+    }
+
+    function goBack() {
+      window.location.href = "/umbrella";
+    }
+
+    // Initialize the page
+    document.addEventListener("DOMContentLoaded", () => {
+      (async () => {
+        try {
+          await fetchUserInfo();
+          await populateSessionDropdown();
+          attachFieldSyncListeners();
+          attachCopickNewRunListener();
+        } catch (error) {
+          console.error("Error during initialization:", error);
+          showStatusMessage("Error during page initialization", "error");
+        }
+      })();
+    });
+
+  </script>
+</body>
+</html>

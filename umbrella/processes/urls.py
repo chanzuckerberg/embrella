@@ -24,4 +24,6 @@ urlpatterns = [
     path('get_runs/', views.get_runs, name='get_runs'),
     path('get_tomogram_stats/', views.get_tomogram_stats, name='get_tomogram_stats'),
     path('start_sync/', views.start_sync, name='start_sync'),
+    path("post_generic/reserve", views.reserve_generic_run, name="pg_reserve"),
+    path("post_generic/create", views.create_generic_run, name="pg_create"),
 ]

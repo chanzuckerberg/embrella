@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from rest_framework.decorators import api_view
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from .forms import ProcRunForm, ReserveFrameProcRunForm, UpdateNotesForm
 from django.contrib.auth.decorators import login_required
@@ -231,6 +231,336 @@ def create_run(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+# create generic proc run for post generic processing, no input tomograms needed
+@extend_schema(
+    methods=["POST"],
+    summary="Check availability for a new processing run",
+    description=(
+        "Checks whether a proposed run number is available for a given processing plan "
+        "and microscopy session, without creating a new record. "
+        "Accepts JSON body containing the IDs for `proc_plan` and `msi_session`, "
+        "and a run number that will be normalized to the `run###` format if needed."
+    ),
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "proc_plan": {
+                    "type": "integer",
+                    "example": 12,
+                    "description": "Primary key of the processing plan (`ProcPlan.id`)."
+                },
+                "msi_session": {
+                    "type": "integer",
+                    "example": 34,
+                    "description": "Primary key of the microscopy session (`MsiSession.id`)."
+                },
+                "run_number": {
+                    "type": "string",
+                    "example": "002",
+                    "description": "Run number (with or without 'run' prefix). Will be normalized to 'run###'."
+                },
+            },
+            "required": ["proc_plan", "msi_session", "run_number"]
+        }
+    },
+    responses={
+        200: OpenApiResponse(
+            description="Run number is available for reservation.",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Available",
+                    value={
+                        "message": "Reservation available.",
+                        "proc_plan": 12,
+                        "msi_session": 34,
+                        "run_number": "run002"
+                    },
+                    response_only=True,
+                )
+            ],
+        ),
+        400: OpenApiResponse(
+            description="Invalid or incomplete payload.",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Missing run_number",
+                    value={"error": "run_number is required"},
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Invalid payload",
+                    value={"error": "Invalid payload"},
+                    response_only=True,
+                ),
+            ],
+        ),
+        404: OpenApiResponse(
+            description="Invalid proc_plan or msi_session reference.",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Plan not found",
+                    value={"error": "Invalid proc_plan"},
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Session not found",
+                    value={"error": "Invalid msi_session"},
+                    response_only=True,
+                ),
+            ],
+        ),
+        409: OpenApiResponse(
+            description="Conflict – run already exists for this plan and session.",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Already exists",
+                    value={"error": "Run run002 already exists for this session and plan."},
+                    response_only=True,
+                )
+            ],
+        ),
+        500: OpenApiResponse(
+            description="Unhandled server error.",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Server error",
+                    value={"error": "Unexpected error: 500"},
+                    response_only=True,
+                ),
+            ],
+        ),
+    },
+    tags=["processes"],
+)
+@api_view(["POST"])
+@csrf_exempt
+@require_http_methods(["POST"])
+def reserve_generic_run(request):
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        plan_id = int(data.get("proc_plan"))
+        session_id = int(data.get("msi_session"))
+        run_number = (data.get("run_number") or "").strip()
+
+        if not run_number:
+            return JsonResponse({'error': 'run_number is required'}, status=400)
+
+        # normalize like create_run (allow raw “002”)
+        if not run_number.startswith('run'):
+            run_number = f"run{run_number.zfill(3)}"
+
+        proc_plan = ProcPlan.objects.get(pk=plan_id)
+        msi_session = MsiSession.objects.get(pk=session_id)
+
+        exists = ProcRun.objects.filter(
+            name=run_number, proc_plan=proc_plan, msi_session=msi_session
+        ).exists()
+        if exists:
+            return JsonResponse(
+                {'error': f'Run {run_number} already exists for this session and plan.'},
+                status=409
+            )
+
+        # No DB write here—just confirming availability
+        return JsonResponse({
+            'message': 'Reservation available.',
+            'proc_plan': proc_plan.id,
+            'msi_session': msi_session.id,
+            'run_number': run_number
+        }, status=200)
+
+    except ProcPlan.DoesNotExist:
+        return JsonResponse({'error': 'Invalid proc_plan'}, status=404)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({'error': 'Invalid msi_session'}, status=404)
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return JsonResponse({'error': 'Invalid payload'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@extend_schema(
+    methods=["POST"],
+    summary="Create a generic ProcRun (no tomograms)",
+    description=(
+        "Creates a minimal `ProcRun` linked to a given processing plan and microscopy session. "
+        "Normalizes `run_number` to the `run###` format if needed. "
+        "Does **not** attach tomograms or pipeline data; stores optional `notes` or a default note (`pipeline=<pipeline>`)."
+    ),
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "proc_plan": {
+                    "type": "integer",
+                    "example": 12,
+                    "description": "Primary key of `ProcPlan`."
+                },
+                "msi_session": {
+                    "type": "integer",
+                    "example": 34,
+                    "description": "Primary key of `MsiSession`."
+                },
+                "run_number": {
+                    "type": "string",
+                    "example": "002",
+                    "description": "Run number with or without 'run' prefix. Will be normalized to 'run###'."
+                },
+                "pipeline": {
+                    "type": "string",
+                    "nullable": True,
+                    "example": "copick",
+                    "description": "Optional label; defaults to 'generic'."
+                },
+                "notes": {
+                    "type": "string",
+                    "nullable": True,
+                    "example": "initial dry run",
+                    "description": "Optional freeform notes."
+                },
+            },
+            "required": ["proc_plan", "msi_session", "run_number"],
+        }
+    },
+    responses={
+        201: OpenApiResponse(
+            description="Run created",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Created",
+                    value={
+                        "message": "Generic run created (no tomograms).",
+                        "run_id": 987,
+                        "run_number": "run002",
+                        "session_id": 34,
+                        "plan_id": 12,
+                        "detail_url": "/processes/987/"
+                    },
+                    response_only=True,
+                )
+            ],
+        ),
+        400: OpenApiResponse(
+            description="Invalid input",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Missing run_number",
+                    value={"error": "run_number is required"},
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Type error",
+                    value={"error": "proc_plan and msi_session must be integers"},
+                    response_only=True,
+                ),
+                OpenApiExample(
+                    "Bad JSON",
+                    value={"error": "Invalid JSON"},
+                    response_only=True,
+                ),
+            ],
+        ),
+        404: OpenApiResponse(
+            description="Invalid foreign key",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample("Plan not found", value={"error": "Invalid proc_plan"}, response_only=True),
+                OpenApiExample("Session not found", value={"error": "Invalid msi_session"}, response_only=True),
+            ],
+        ),
+        409: OpenApiResponse(
+            description="Conflict (duplicate run for given session+plan)",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Duplicate",
+                    value={"error": "Run run002 already exists for this session and plan."},
+                    response_only=True,
+                )
+            ],
+        ),
+        500: OpenApiResponse(
+            description="Unhandled server error",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample("Server error", value={"error": "Unexpected error details"}, response_only=True),
+            ],
+        ),
+    },
+    tags=["processes"],
+)
+@api_view(["POST"])
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_generic_run(request):
+    """
+    Create a lightweight ProcRun (no input tomograms, no pipe data).
+    Required JSON: proc_plan, msi_session, run_number
+    Optional JSON: pipeline (e.g., "copick"), notes
+    """
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+
+        # Validate inputs
+        try:
+            plan_id = int(data.get('proc_plan'))
+            session_id = int(data.get('msi_session'))
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'proc_plan and msi_session must be integers'}, status=400)
+
+        run_number = (data.get('run_number') or '').strip()
+        pipeline = (data.get('pipeline') or 'generic').strip()
+        notes = data.get('notes') or ''
+
+        if not run_number:
+            return JsonResponse({'error': 'run_number is required'}, status=400)
+
+        # Normalize: run### format
+        if not run_number.startswith('run'):
+            run_number = f"run{run_number.zfill(3)}"
+        name = run_number
+
+        msi_session = MsiSession.objects.get(pk=session_id)
+        proc_plan = ProcPlan.objects.get(pk=plan_id)
+
+        # Uniqueness guard
+        if ProcRun.objects.filter(name=name, msi_session=msi_session, proc_plan=proc_plan).exists():
+            return JsonResponse({'error': f'Run {name} already exists for this session and plan.'}, status=409)
+
+        run_instance = ProcRun.objects.create(
+            name=name,
+            msi_session=msi_session,
+            proc_plan=proc_plan,
+            notes=notes or f'pipeline={pipeline}'
+        )
+
+        return JsonResponse({
+            'message': 'Generic run created (no tomograms).',
+            'run_id': run_instance.id,
+            'run_number': run_instance.name,
+            'session_id': msi_session.id,
+            'plan_id': proc_plan.id,
+            'detail_url': reverse('processes:detail', args=(run_instance.id,))
+        }, status=201)
+
+    except ProcPlan.DoesNotExist:
+        return JsonResponse({'error': 'Invalid proc_plan'}, status=404)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({'error': 'Invalid msi_session'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 
 @extend_schema(
     methods=["GET"],
