@@ -3,7 +3,9 @@
 CANE_COLORS = [
     ('CF1E01','Red'), # Hex=#CF1E01 RGB=(207,30,1)
     ('B9BAB2','Silver'), # Hex=#B9BAB2 RGB=(185,186,178)
-    ('FFC0CB', 'Pink')
+    ('FFC0CB', 'Pink'),
+    ('996699','Purple'), # RGB=(153,102,153)
+    ('E5C100','Gold'), # RGB=(229,193,0)
 ]
 
 PUCK_COLORS = [
@@ -14,6 +16,7 @@ PUCK_COLORS = [
     ('817B93','Lavendar'), # RGBB=(129,123,147)
     ('000000','Black'), # RGB=(0,0,0)
     ('B9BAB2','Silver'), # RGB=(185,186,178)
+    ('FFC0CB', 'Pink'), # RGB=(255,192,203)
     ('996699','Purple'), # RGB=(153,102,153)
     ('5C6C90','Silver Blue'), # RGB=(92,108,144)
     ('E5C100','Gold'), # RGB=(229,193,0)
