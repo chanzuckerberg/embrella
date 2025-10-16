@@ -135,7 +135,7 @@ class CryoGrid(models.Model):
     name = models.CharField(max_length=32, default='grid1')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True,help_text='notes about freezing and grid condition on this grid')
-    freezing_session = models.ForeignKey(PlungeFreezingSession, on_delete=models.CASCADE, help_text='who and when the grid was frozen')
+    freezing_session = models.ForeignKey(PlungeFreezingSession,blank=True, null=True, on_delete=models.CASCADE, help_text='who and when the grid was frozen')
     specimen = models.ForeignKey(Specimen, on_delete=models.CASCADE, blank=True, null=True, help_text='referring to specimen')
     grid_box = models.ForeignKey(CryoGridBox, on_delete=models.CASCADE, null=True, blank=True, help_text='cryo grid box fit in pucks')
     position_in_box = models.PositiveSmallIntegerField(default=1, null=True, blank=True)
