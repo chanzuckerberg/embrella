@@ -299,7 +299,7 @@ def main():
         parser.add_argument('--job-id', help='Job ID to track')
         args = parser.parse_args()
 
-        print(f"args.run: {args.run}")
+        # print(f"args.run: {args.run}")
         if args.run and not args.run.startswith('run'):
             parser.error("--run must be in format 'run001' (e.g., run001, run002, etc.)")
 
