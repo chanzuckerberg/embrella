@@ -3,7 +3,7 @@ from .utils import jsonify, ssh_connect, ssh_connect_bruno, extract_parameters, 
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.decorators import api_view, permission_classes
 from .agent import Aretomo3, Denoiset, StatusChecker, RemoteJobSubmitter
@@ -1931,6 +1931,69 @@ def trigger_syncer(request):
 
 
 
+@extend_schema(
+    methods=["POST"],
+    summary="Submit a CoPick creation job",
+    description="Run remote `create_copick` job on the cluster. Reads a JSON body; returns raw stdout/stderr and parsed Slurm job ID(s).",
+    parameters=[
+        OpenApiParameter(
+            name='session',
+            required=True,
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='Session name in query (e.g. 23sep23a). Note: the JSON body must also include `session_name`.'
+        ),
+        OpenApiParameter(
+            name='run_id',
+            required=True,
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description='Run ID in query (e.g. 001). Note: the JSON body must also include `copick_run` (e.g. "run001"/"run003").'
+        ),
+    ],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'session_name': {'type': 'string', 'example': '25sep18a'},
+                'copick_run': {'type': 'string', 'example': 'run003'},
+                'import_tomo_type': {'type': 'string', 'example': 'DCTF'},
+                'import_tomogram_run': {'type': 'string', 'example': 'run001'},
+                'downsample_tomogram_voxel_size': {'type': 'string', 'nullable': True, 'example': '12'},
+                'user_id': {'type': 'string', 'example': 'yyu'},
+                'password': {'type': 'string', 'description': 'Base64-encoded password', 'example': 'c2VjcmV0MTIz'}
+            },
+            'required': ['session_name', 'copick_run', 'import_tomo_type', 'import_tomogram_run', 'user_id']
+        }
+    },
+    responses={
+        200: OpenApiResponse(
+            description="Job submission succeeded",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    'Success',
+                    value={
+                        'message': 'Session 25sep18a: create_copick submitted.',
+                        'output': 'Submitted batch job 123456\nSubmitted batch job 123457\n',
+                        'error': '',
+                        'job_id': '123456,123457'
+                    },
+                    response_only=True
+                )
+            ]
+        ),
+        500: OpenApiResponse(
+            description="Unhandled server error during submission",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample('Server error', value={'error': 'Some traceback or error string: 500'}, response_only=True)
+            ]
+        ),
+    },
+    tags=["workflow"]
+)
+@api_view(["POST"])
 @csrf_exempt
 @login_required
 def run_create_copick(request):
@@ -2030,6 +2093,97 @@ def run_create_copick(request):
         if 'submitter' in locals():
             submitter.close()
 
+@extend_schema(
+    methods=["POST"],
+    summary="Import tomograms into a CoPick procrun",
+    description=(
+        "Submits a remote Slurm job using the CoPick **import tomograms** template. "
+        "Reads credentials and parameters from the JSON request body. "
+        "`copick_run` may be provided as '003' or 'run003' and will be normalized server-side."
+    ),
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                # Auth
+                'user_id': {'type': 'string', 'example': 'yyu'},
+                'password': {'type': 'string', 'description': 'Base64-encoded password', 'example': 'c2VjcmV0MTIz'},
+
+                # Required job params
+                'session_name': {'type': 'string', 'example': '25sep18a'},
+                'copick_run': {'type': 'string', 'example': '003'},
+                'import_tomo_type': {
+                    'type': 'string',
+                    'enum': ['dctf', 'sart', 'wbp', 'denoise'],
+                    'example': 'dctf'
+                },
+                'import_tomogram_run': {'type': 'string', 'example': 'run001'},
+
+                # Optional
+                'downsample_tomogram_voxel_size': {
+                    'type': 'string',
+                    'nullable': True,
+                    'example': '10'
+                },
+            },
+            'required': [
+                'user_id',
+                'password',
+                'session_name',
+                'copick_run',
+                'import_tomo_type',
+                'import_tomogram_run'
+            ]
+        }
+    },
+    responses={
+        200: OpenApiResponse(
+            description="Job submission succeeded",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    'Success',
+                    value={
+                        'message': 'Session 25sep18a: copick import submitted.',
+                        'output': 'Submitted batch job 123456\n',
+                        'error': '',
+                        'job_id': '123456'
+                    },
+                    response_only=True
+                )
+            ]
+        ),
+        400: OpenApiResponse(
+            description="Bad request (missing fields or non-POST)",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    'Invalid method',
+                    value={'error': 'Invalid request method: 400'},
+                    response_only=True
+                ),
+                OpenApiExample(
+                    'Missing fields',
+                    value={'error': 'Missing fields: user_id, password'},
+                    response_only=True
+                ),
+            ]
+        ),
+        500: OpenApiResponse(
+            description="Unhandled server error during submission",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    'Server error',
+                    value={'error': 'Some traceback or error string: 500'},
+                    response_only=True
+                )
+            ]
+        ),
+    },
+    tags=["workflow"]  
+)
+@api_view(["POST"])
 @csrf_exempt
 @login_required
 def run_import_tomogram_copick(request):
@@ -2152,6 +2306,81 @@ def run_import_tomogram_copick(request):
         if 'submitter' in locals():
             submitter.close()
 
+@extend_schema(
+    methods=["GET"],
+    summary="List available template maps",
+    description=(
+        "Returns the available **template maps** by reading a local JSON file (or a remote fallback via SSH_connect_bruno). "
+        "Use the optional `q` query to filter by name, relative path, or PDB ID (case-insensitive substring)."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="q",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=False,
+            description="Optional filter; matches against name, modelLocation, or pdbID (e.g. `?q=actin`)"
+        ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            description="OK",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Success",
+                    value={
+                        "basePath": "/hpc/projects/.../model_templates/",
+                        "templates": [
+                            {
+                                "name": "actin",
+                                "label": "actin — models/actin_12A.mrc",
+                                "modelLocation": "models/actin_12A.mrc",
+                                "absolutePath": "/hpc/projects/.../model_templates/models/actin_12A.mrc",
+                                "voxelSize": 12,
+                                "diameter": 70,
+                                "symmetry": "C1",
+                                "pdbID": "1J6Z"
+                            },
+                            {
+                                "name": "ribosome",
+                                "label": "ribosome — models/ribo_10A.mrc",
+                                "modelLocation": "models/ribo_10A.mrc",
+                                "absolutePath": "/hpc/projects/.../model_templates/models/ribo_10A.mrc",
+                                "voxelSize": 10,
+                                "diameter": 220,
+                                "symmetry": "C1",
+                                "pdbID": "4V6X"
+                            }
+                        ]
+                    },
+                    response_only=True
+                )
+            ]
+        ),
+        404: OpenApiResponse(
+            description="Template JSON not found locally or remotely",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Not Found",
+                    value={"error": "Template JSON not fuound at /hpc/projects/.../template_params.json"},
+                    response_only=True
+                )
+            ]
+        ),
+        500: OpenApiResponse(
+            description="Invalid JSON or unexpected server error",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample("Invalid JSON", value={"error": "Invalid JSON: Expecting value: line 1 column 1 (char 0)"}, response_only=True),
+                OpenApiExample("Server error", value={"error": "Unexpected error in get_template_map_json: <details>"}, response_only=True),
+            ]
+        ),
+    },
+    tags=["workflow"]
+)
+@api_view(["GET"])
 @require_http_methods(["GET"])
 def get_template_map_json(request):
     """
@@ -2230,6 +2459,99 @@ def get_template_map_json(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 # run add objects to copick
+@extend_schema(
+    methods=["POST"],
+    summary="Add object to a CoPick procrun",
+    description=(
+        "Submits a remote Slurm job to add a new object to an existing CoPick processing run. "
+        "Requires POST JSON body with authentication, session/run identifiers, and object name/diameter. Optional fields include PDB ID, object map file path, and map voxel size. "
+    ),
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                # Authentication
+                "user_id": {"type": "string", "example": "yyu"},
+                "password": {
+                    "type": "string",
+                    "description": "Base64-encoded password",
+                    "example": "c2VjcmV0MTIz"
+                },
+
+                # Required job info
+                "session": {"type": "string", "example": "25sep18a"},
+                "copick_procrun": {"type": "string", "example": "run002"},
+                "object_name": {"type": "string", "example": "actin"},
+                "object_diameter": {"type": "number", "example": 70},
+
+                # Optional fields
+                "pdb_id": {"type": "string", "nullable": True, "example": "1J6Z"},
+                "object_map_file": {
+                    "type": "string",
+                    "nullable": True,
+                    "description": "Absolute or relative path to an object map file",
+                    "example": "/hpc/projects/.../models/actin_12A.mrc"
+                },
+                "object_voxel_size": {
+                    "type": "number",
+                    "nullable": True,
+                    "example": 12.0,
+                    "description": "Voxel size (must be numeric if provided)"
+                },
+            },
+            "required": [
+                "user_id",
+                "password",
+                "session",
+                "copick_procrun",
+                "object_name",
+                "object_diameter",
+            ],
+        }
+    },
+    responses={
+        200: OpenApiResponse(
+            description="Job submitted successfully",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Success",
+                    value={
+                        "message": "Add-object submitted for 25sep18a/run002",
+                        "output": "Submitted batch job 456789\n",
+                        "error": "",
+                        "job_id": "456789",
+                    },
+                    response_only=True,
+                ),
+            ],
+        ),
+        400: OpenApiResponse(
+            description="Bad request (missing or invalid fields)",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Missing fields",
+                    value={"error": "Missing fields: user_id, session"},
+                    response_only=True,
+                )
+            ],
+        ),
+        500: OpenApiResponse(
+            description="Unhandled server or remote submission error",
+            response=OpenApiTypes.OBJECT,
+            examples=[
+                OpenApiExample(
+                    "Server error",
+                    value={"error": "Some traceback or connection error: 500"},
+                    response_only=True,
+                ),
+            ],
+        ),
+    },
+    tags=["workflow"],
+)
+@api_view(["POST"])
 @csrf_exempt
 @login_required
 @csrf_exempt
