@@ -341,7 +341,7 @@ def create_run(request):
     },
     tags=["processes"],
 )
-@api_view(["POST"])
+# @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -500,7 +500,7 @@ def reserve_generic_run(request):
     },
     tags=["processes"],
 )
-@api_view(["POST"])
+# @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @csrf_exempt
 @require_http_methods(["POST"])
