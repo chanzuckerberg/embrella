@@ -66,10 +66,9 @@ export const useGridLoggingGridDetails = ({
     fetchGridDetails();
   }, [puckId, positionInPuck, gridId, fetchGridDetails]);
 
-
   return {
     gridDetails,
     loading,
-    error
+    error,
   };
 };

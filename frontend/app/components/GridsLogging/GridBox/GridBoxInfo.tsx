@@ -61,7 +61,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   const formData = mapGridBoxDetailToFormData(gridBoxData);
   // Event handlers
   const handleDeleteGridBox = () => {
-   setDeleteDialogOpen(true);
+    setDeleteDialogOpen(true);
   };
 
   const handleAddGrid = (positionInBox?: number) => {
@@ -120,99 +120,111 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
 
   return (
     <>
-    <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
-      <CardHeader
-        title={
-          <Box className={styles.cardHeader}>
-            <Typography variant="h6" component="h2">
-              GridBox Name: Puck-{selectedPuck.name}/Slot-{formData.name}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Button
-                sdsType="primary"
-                sdsStyle="rounded"
-                startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
-                onClick={() => handleAddGrid()}
-                size="small"
-              >
-                Add Grid
-              </Button>
-              <IconButton
-                onClick={handleDeleteGridBox}
-                sx={{
-                  '&:hover': {
-                    backgroundColor: '#ffebee',
-                  },
-                }}
-              >
-                <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
-              </IconButton>
-            </Box>
-          </Box>
-        }
-      />
-
-      <CardContent sx={{ padding: '0px' }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
-            <GridBoxSVG
-              size={200}
-              onGridClick={handleGridClick}
-              gridBoxData={gridBoxData}
-              slotsData={slotsData}
-              selectedSlot={selectedSlot}
-            />
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
-                Occupied Slots: {gridBoxData?.grid_box?.positions?.filter((pos) => pos.occupied).length || 0} Filled
-                with grid
+      <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
+        <CardHeader
+          title={
+            <Box className={styles.cardHeader}>
+              <Typography variant="h6" component="h2">
+                GridBox Name: Puck-{selectedPuck.name}/Slot-{formData.name}
               </Typography>
-              <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
-                Empty Slots: {gridBoxData?.grid_box?.positions?.filter((pos) => !pos.occupied).length || 0} Empty
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Button
+                  sdsType="primary"
+                  sdsStyle="rounded"
+                  startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
+                  onClick={() => handleAddGrid()}
+                  size="small"
+                >
+                  Add Grid
+                </Button>
+                <IconButton
+                  onClick={handleDeleteGridBox}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: '#ffebee',
+                    },
+                  }}
+                >
+                  <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
+                </IconButton>
+              </Box>
+            </Box>
+          }
+        />
+
+        <CardContent sx={{ padding: '0px' }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
+              <GridBoxSVG
+                size={200}
+                onGridClick={handleGridClick}
+                gridBoxData={gridBoxData}
+                slotsData={slotsData}
+                selectedSlot={selectedSlot}
+              />
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
+                  Occupied Slots: {gridBoxData?.grid_box?.positions?.filter((pos) => pos.occupied).length || 0} Filled
+                  with grid
+                </Typography>
+                <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
+                  Empty Slots: {gridBoxData?.grid_box?.positions?.filter((pos) => !pos.occupied).length || 0} Empty
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+                GridBox Information
               </Typography>
-            </Box>
-          </Box>
 
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-              GridBox Information
-            </Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Grid box name"
+                  disabled
+                  value={formData.name}
+                  sx={disabledTextFieldStyles}
+                />
+                <TextField fullWidth label="Puck" value={formData.puckName} disabled sx={disabledTextFieldStyles} />
+              </Box>
 
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField fullWidth label="Grid box name" disabled value={formData.name} sx={disabledTextFieldStyles} />
-              <TextField fullWidth label="Puck" value={formData.puckName} disabled sx={disabledTextFieldStyles} />
-            </Box>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Color"
+                  value={formData.color_display}
+                  disabled
+                  sx={disabledTextFieldStyles}
+                />
+                <TextField
+                  fullWidth
+                  label="Numbering"
+                  value={formData.numbering_display}
+                  disabled
+                  sx={disabledTextFieldStyles}
+                />
+              </Box>
 
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField fullWidth label="Color" value={formData.color_display} disabled sx={disabledTextFieldStyles} />
-              <TextField
-                fullWidth
-                label="Numbering"
-                value={formData.numbering_display}
-                disabled
-                sx={disabledTextFieldStyles}
-              />
-            </Box>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Position in puck"
+                  value={formData.positionInPuck}
+                  disabled
+                  sx={disabledTextFieldStyles}
+                />
+                <TextField
+                  fullWidth
+                  label="Max Grids"
+                  value={formData.maxGrids}
+                  disabled
+                  type="number"
+                  sx={disabledTextFieldStyles}
+                />
+              </Box>
 
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Position in puck"
-                value={formData.positionInPuck}
-                disabled
-                sx={disabledTextFieldStyles}
-              />
-              <TextField
-                fullWidth
-                label="Max Grids"
-                value={formData.maxGrids}
-                disabled
-                type="number"
-                sx={disabledTextFieldStyles}
-              />
-            </Box>
-
-            {/* <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              {/* <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -227,18 +239,18 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 Save
               </Button>
             </Box> */}
+            </Box>
           </Box>
-        </Box>
-      </CardContent>
-    </Card>
-    <DeleteGridBox
-      open={deleteDialogOpen}
-      onClose={() => setDeleteDialogOpen(false)}
-      selectedPuck={selectedPuck}
-      selectedSlot={selectedSlot}
-      selectedUser={selectedUser}
-      gridBoxData={gridBoxData || null}
-    />
+        </CardContent>
+      </Card>
+      <DeleteGridBox
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        selectedPuck={selectedPuck}
+        selectedSlot={selectedSlot}
+        selectedUser={selectedUser}
+        gridBoxData={gridBoxData || null}
+      />
     </>
   );
 };

@@ -77,29 +77,29 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   // const handleSave = () => {
   //   console.log('Save grid details:', formData);
   // };
- 
+
   const handleTrashedGrid = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedGridId) return;
-    
+
     const newTrashedStatus = event.target.checked;
     setLocalTrashed(newTrashedStatus);
-    
+
     try {
       const response = await fetch(`${DJANGO_URL}/cryo_grids/update-grid-trashed/${selectedGridId}/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', 
+        credentials: 'include',
         body: JSON.stringify({
-          trashed: newTrashedStatus
-        })
+          trashed: newTrashedStatus,
+        }),
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log(result.message);
-          // Reload to refresh all data
+        // Reload to refresh all data
         window.location.reload();
       } else {
         console.error('Failed to update grid status');
@@ -252,7 +252,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 sx={disabledTextFieldStyles}
               />
               <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
-
             </Box>
 
             <Box sx={{ display: 'flex', gap: 2 }}>
