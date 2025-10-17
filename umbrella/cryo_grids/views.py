@@ -705,7 +705,10 @@ def format_specimen(item):
 
 
 def format_freezing_session(item):
-    return FreezingSessionModel(id=item['fz_session_id'], createdAt=str(item['fz_session_datetime']))
+    if item['fz_session_id'] and item['fz_session_datetime']:
+        return FreezingSessionModel(id=item['fz_session_id'], createdAt=str(item['fz_session_datetime']))
+    else:
+        return FreezingSessionModel(id=None, createdAt=None)
 
 def add_msi_session(msi_session_list, item):
     base_url = get_base_url()
