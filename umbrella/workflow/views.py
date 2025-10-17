@@ -1994,6 +1994,7 @@ def trigger_syncer(request):
     tags=["workflow"]
 )
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @login_required
 def run_create_copick(request):
@@ -2184,6 +2185,7 @@ def run_create_copick(request):
     tags=["workflow"]  
 )
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @login_required
 def run_import_tomogram_copick(request):

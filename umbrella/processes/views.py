@@ -1,8 +1,9 @@
 from django.shortcuts import render
+from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from .forms import ProcRunForm, ReserveFrameProcRunForm, UpdateNotesForm
@@ -341,6 +342,7 @@ def create_run(request):
     tags=["processes"],
 )
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @require_http_methods(["POST"])
 def reserve_generic_run(request):
@@ -499,6 +501,7 @@ def reserve_generic_run(request):
     tags=["processes"],
 )
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @require_http_methods(["POST"])
 def create_generic_run(request):
