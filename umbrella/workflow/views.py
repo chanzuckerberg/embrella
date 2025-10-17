@@ -1993,9 +1993,10 @@ def trigger_syncer(request):
     },
     tags=["workflow"]
 )
-@api_view(["POST"])
+# @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
-@login_required
+# @login_required
 def run_create_copick(request):
     if request.method != 'POST':
         store_log(
@@ -2183,7 +2184,8 @@ def run_create_copick(request):
     },
     tags=["workflow"]  
 )
-@api_view(["POST"])
+# @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @login_required
 def run_import_tomogram_copick(request):
@@ -2551,7 +2553,8 @@ def get_template_map_json(request):
     },
     tags=["workflow"],
 )
-@api_view(["POST"])
+# @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @login_required
 @csrf_exempt

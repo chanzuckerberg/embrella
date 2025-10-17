@@ -569,35 +569,34 @@
           </tr>
         </table> <!-- close Pre-processing table -->
 
-        <h2>Post-processing</h2>
-        <table class="table" style="table-layout: fixed;">
-          <tr>
-            <th style="width:33%;">Copick</th>
-            <th style="width:33%;">MembraneSeg</th>
-            <th style="width:34%;">Octopi</th>
-          </tr>
-          <tr>
-            <td>
-              <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <img src="{% static 'customs/copick-logo.png' %}" alt="CoPick Logo" style="width:45px; height:auto;">
-                <a href="/workflow/copick_run" class="button">CoPick</a>
-              </div>
-              <p>Create or Import CoPick projects</p>
-            </td>
-            <td>
-              <a href="/workflow/membraneseg_run" class="button">MembraneSeg</a>
-              <p>Run MembraneSeg</p>
-            </td>
-            <td>
-              <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <img src="{% static 'customs/octopi-logo.png' %}" alt="Octopi Logo" style="width:35px; height:auto;">
-                <a href="/workflow/octopi_run" class="button">Octopi</a>
-              </div>
-              <p>Pick with Octopi</p>
-            </td>
-          </tr>
-        </table>
-        </table> <!-- close Post-processing table -->   
+    <h2>Post-processing</h2>
+    <table class="table" style="table-layout: fixed;">
+      <tr>
+        <th style="width:33%;">Copick</th>
+        <th style="width:33%">MembraneSeg</th>
+        <th style="width:34%">Octopi</th>
+      </tr>
+      <tr>
+        <td>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <img src="{% static 'customs/copick-logo.png' %}" alt="CoPick Logo" style="width:45px; height:auto;">
+            <a href="/workflow/copick_run" class="button">CoPick</a>
+          </div>
+          <p>Create or Import CoPick projects</p>
+        </td>
+        <td style="visibility:hidden;">
+          <a href="/workflow/membraneseg_run" class="button">MembraneSeg</a>
+          <p>Run MembraneSeg</p>
+        </td>
+        <td style="visibility:hidden;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <img src="{% static 'customs/octopi-logo.png' %}" alt="Octopi Logo" style="width:35px; height:auto;">
+            <a href="/workflow/octopi_run" class="button">Octopi</a>
+          </div>
+          <p>Pick with Octopi</p>
+        </td>
+      </tr>
+    </table>
         
       </div>
     </div>
