@@ -2554,6 +2554,7 @@ def get_template_map_json(request):
     tags=["workflow"],
 )
 @api_view(["POST"])
+@permission_classes([IsAuthenticated])
 @csrf_exempt
 @login_required
 @csrf_exempt
