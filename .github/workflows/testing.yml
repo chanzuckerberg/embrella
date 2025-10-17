@@ -5,8 +5,8 @@ on:
       - autodeploytesting
 jobs:
   build:
-    timeout-minutes: 5
     #if: false
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
