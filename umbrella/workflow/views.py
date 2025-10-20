@@ -1930,7 +1930,6 @@ def trigger_syncer(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
-
 @extend_schema(
     methods=["POST"],
     summary="Submit a CoPick creation job",

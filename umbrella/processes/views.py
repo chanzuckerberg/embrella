@@ -178,7 +178,7 @@ def reserve_run(request):
     }
 )
 @csrf_exempt
-@api_view(["POST"])
+# @api_view(["POST"])
 # @login_required
 def create_run(request):
     if request.method == 'POST':
