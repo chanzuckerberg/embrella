@@ -1,17 +1,18 @@
-from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.exceptions import ValidationError
+from cryo_grids.models import CryoGrid, CryoGridBox, Puck
 from django.conf import settings
 from django.contrib.auth.models import User
-from rest_framework.decorators import action
-from django.db.models.functions import Lower 
-from django.views.decorators.csrf import csrf_exempt
+from django.db.models.functions import Lower
 from django.utils.decorators import method_decorator
-from cryo_grids.models import Puck, CryoGridBox, CryoGrid
-from .serializers import UserSerializer, PuckSerializer, GridDetailsSerializer, CryoGridBoxSerializer
-from umbrella.choices import (CANE_COLORS, PUCK_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING)
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+
+from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
+
+from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -37,12 +38,12 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             return Response({
                 'total_users_count': total_count,
-                'users': serializer.data
+                'users': serializer.data,
             })
         except Exception as e:
             return Response({
                 "error": "Internal server error occurred while fetching users",
-                "detail": str(e) if settings.DEBUG else "Please try again later"
+                "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)
 
 class PuckViewSet(viewsets.ModelViewSet):
@@ -62,7 +63,7 @@ class PuckViewSet(viewsets.ModelViewSet):
         queryset = Puck.objects.select_related('user', 'cane').order_by('name')
         user_id = self.request.query_params.get('user_id', None)
         cane_id = self.request.query_params.get('cane_id', None)
-        
+
         if user_id is not None:
             try:
                 user_id = int(user_id)
@@ -104,14 +105,14 @@ class PuckViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             return Response({
                 'total_pucks_count': total_count,
-                'pucks': serializer.data
+                'pucks': serializer.data,
             })
         except Exception as e:
             return Response({
                 "error": "Internal server error occurred while fetching pucks",
-                "detail": str(e) if settings.DEBUG else "Please try again later"
+                "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)
-    
+
     @method_decorator(csrf_exempt)
     def create(self, request, *args, **kwargs):
         """
@@ -121,20 +122,20 @@ class PuckViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
-            
+
             return Response({
                 'message': 'Puck created successfully',
-                'puck': serializer.data
+                'puck': serializer.data,
             }, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({
                 'error': 'Validation error',
-                'detail': e.detail
+                'detail': e.detail,
             }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({
                 "error": "Internal server error occurred while creating puck",
-                "detail": str(e) if settings.DEBUG else "Please try again later"
+                "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         """
@@ -142,7 +143,7 @@ class PuckViewSet(viewsets.ModelViewSet):
         Works on a specific puck, so it needs the pk to identify which puck
         """
     @action(detail=True, methods=['get'], url_path='slots')
-    def slots(self, request, pk=None):  
+    def slots(self, request, pk=None):
         """
         Get puck slots information showing which positions are filled or empty
         URL: /api/list/pucks/{puck_id}/slots/
@@ -156,19 +157,19 @@ class PuckViewSet(viewsets.ModelViewSet):
             # Create a mapping of position to grid box
             filled_positions = {box['position_in_puck']: box['id'] for box in grid_boxes}
             
-            # Generate slots array for puck positions 
+            # Generate slots array for puck positions
             slots = []
             for position in range(1, puck.max_boxes + 1):  # 1 to 12
                 if position in filled_positions:
                     slots.append({
                         "position": position,
                         "status": "filled",
-                        "grid_box_id": filled_positions[position]
+                        "grid_box_id": filled_positions[position],
                     })
                 else:
                     slots.append({
                         "position": position,
-                        "status": "empty"
+                        "status": "empty",
                     })
             
             # Calculate summary
@@ -182,15 +183,15 @@ class PuckViewSet(viewsets.ModelViewSet):
                 "slot_summary": {
                     "total": puck.max_boxes,
                     "filled_count": filled_count,
-                    "empty_count": empty_count
-                }
+                    "empty_count": empty_count,
+                },
             }
             
             return Response(response_data)
             
         except Exception as e:
             return Response({
-                "error": str(e)
+                "error": str(e),
             }, status=500)
 
     # def retrieve(self, request, *args, **kwargs):
@@ -220,31 +221,31 @@ class PuckViewSet(viewsets.ModelViewSet):
             # Get the grid box at the specified position
             try:
                 grid_box = CryoGridBox.objects.get(
-                    puck=puck, 
-                    position_in_puck=position_in_puck
+                    puck=puck,
+                    position_in_puck=position_in_puck,
                 )
             except CryoGridBox.DoesNotExist:
                 # Return empty slot response
                 return Response({
                     "puck_id": puck.name,
                     "position": int(position_in_puck),
-                    "status": "empty"
+                    "status": "empty",
                 })
         
             # Get all grids in this grid box
             grids = CryoGrid.objects.filter(
                 grid_box=grid_box,
-                trashed=False
+                trashed=False,
             ).select_related('specimen').values(
-                'id', 'name', 'position_in_box'
+                'id', 'name', 'position_in_box',
             )
         
             # Create positions array (1-4 quadrants)
             positions = []
             for q in range(1, grid_box.max_grids + 1):
                 grid_at_position = next(
-                    (g for g in grids if g['position_in_box'] == q), 
-                    None
+                    (g for g in grids if g['position_in_box'] == q),
+                    None,
                 )
             
                 if grid_at_position:
@@ -257,7 +258,7 @@ class PuckViewSet(viewsets.ModelViewSet):
                 else:
                     positions.append({
                         "q": q,
-                        "occupied": False
+                        "occupied": False,
                     })
         
             response_data = {
@@ -274,15 +275,15 @@ class PuckViewSet(viewsets.ModelViewSet):
                     "numbering": grid_box.numbering,
                     "numbering_display": grid_box.get_numbering_display(),
                     "max_grids": grid_box.max_grids,
-                    "positions": positions
-                }
+                    "positions": positions,
+                },
             }
         
             return Response(response_data)
         
         except Exception as e:
             return Response({
-            "error": str(e)
+            "error": str(e),
             }, status=500)
 
 
@@ -298,28 +299,28 @@ class PuckViewSet(viewsets.ModelViewSet):
             # Get the grid box at the specified position
             try:
                 grid_box = CryoGridBox.objects.get(
-                    puck=puck, 
-                    position_in_puck=position_in_puck
+                    puck=puck,
+                    position_in_puck=position_in_puck,
                 )
             except CryoGridBox.DoesNotExist:
                 return Response({
-                    "error": "Grid box not found at the specified position"
+                    "error": "Grid box not found at the specified position",
                 }, status=404)
             
             # Get the specific grid with all related data
             try:
                 grid = CryoGrid.objects.select_related(
-                    'user', 'grid_box', 'specimen', 'freezing_session', 'intended_project'
+                    'user', 'grid_box', 'specimen', 'freezing_session', 'intended_project',
                 ).prefetch_related(
-                    'specimen__samples'
+                    'specimen__samples',
                 ).get(
                     id=grid_id,
                     grid_box=grid_box,
-                    trashed=False
+                    trashed=False,
                 )
             except CryoGrid.DoesNotExist:
                 return Response({
-                    "error": "Grid not found"
+                    "error": "Grid not found",
                 }, status=404)
             
             # Use the serializer to get data that matches your UI form exactly
@@ -330,7 +331,7 @@ class PuckViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({
                 "error": "Failed to fetch grid details",
-                "detail": str(e) if settings.DEBUG else "Please try again later"
+                "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)
 
     @method_decorator(csrf_exempt)
@@ -358,42 +359,42 @@ class PuckViewSet(viewsets.ModelViewSet):
         """
         try:
             puck = self.get_object()
-            
+
             # Extract puck_name from request if provided (for validation)
             puck_name = request.data.get('puck_name', None)
 
             if puck_name and puck.name != puck_name:
                 return Response({
                     'error': 'Puck name mismatch',
-                    'detail': f'Expected puck "{puck.name}" but got "{puck_name}"'
+                    'detail': f'Expected puck "{puck.name}" but got "{puck_name}"',
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             # Add puck_id to the request data
             data = request.data.copy()
             data['puck'] = puck.id
-            
+
             # Remove puck_name from data as it's not a model field
             if 'puck_name' in data:
                 del data['puck_name']
-            
+
             # Create serializer with the data
             serializer = CryoGridBoxSerializer(data=data)
             serializer.is_valid(raise_exception=True)
             grid_box = serializer.save()
-                
+
             return Response({
                 'message': 'Grid box created successfully',
-                'grid_box': serializer.data
+                'grid_box': serializer.data,
             }, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({
                 'error': 'Validation error',
-                'detail': e.detail
+                'detail': e.detail,
             }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({
                 "error": "Internal server error occurred while creating grid box",
-                "detail": str(e) if settings.DEBUG else "Please try again later"
+                "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class GridLoggingChoicesViewSet(viewsets.ViewSet):
@@ -409,23 +410,23 @@ class GridLoggingChoicesViewSet(viewsets.ViewSet):
         """
         return Response({
             "cane_colors": [
-                {'value': code, 'label': name} 
+                {'value': code, 'label': name}
                 for code, name in CANE_COLORS
             ],
             "puck_colors": [
-                {'value': code, 'label': name} 
+                {'value': code, 'label': name}
                 for code, name in PUCK_COLORS
             ],
             "grid_box_colors": [
-                {'value': code, 'label': name} 
+                {'value': code, 'label': name}
                 for code, name in GRID_BOX_COLORS
             ],
             "grid_box_numbering": [
-                {'value': code, 'label': name} 
+                {'value': code, 'label': name}
                 for code, name in GRID_BOX_NUMBERING
             ],
             "grid_cassette_numbering": [
-                {'value': code, 'label': name} 
+                {'value': code, 'label': name}
                 for code, name in GRID_CASSETTE_NUMBERING
-            ]
+            ],
         })

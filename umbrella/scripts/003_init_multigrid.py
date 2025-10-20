@@ -1,14 +1,19 @@
-from django.contrib.auth.models import User
-import sys
-import django
 import os
+import sys
+
+import django
+from cryo_grids.models import CryoGrid, CryoGridCassette
+from django.contrib.auth.models import User
+from tem.models import Camera, ImagingWorkflow, Microscope, SessionPlan, Software
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 #from cryo_grids.models import Site, Dewar, Cane, Puck, CryoGridBox, Sample
-from cryo_grids.models import *
-from tem.models import *
-from stores.models import StaticPath,PathType, fill_place_holders
+#from cryo_grids.models import *
+from stores.models import PathType, StaticPath
+
+#from tem.models import *
+
 
 def get_scope_camera():
     scope = Microscope.objects.get(pk=1)

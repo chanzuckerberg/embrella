@@ -1,18 +1,36 @@
-from django.contrib.auth.models import User
-import sys
-import django
 import os
+import sys
+
+import django
+from django.contrib.auth.models import User
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 #from cryo_grids.models import Site, Dewar, Cane, Puck, CryoGridBox, Sample
-from cryo_grids.models import *
-from tem.models import *
 from clouddocs.models import DriveFolder
 from confluence.models import Space
+
+#from cryo_grids.models import *
+from cryo_grids.models import (
+    Cane,
+    CryoGrid,
+    CryoGridBox,
+    Dewar,
+    PlungeFreezingDevice,
+    PlungeFreezingSession,
+    Puck,
+    Sample,
+    Site,
+    Specimen,
+)
 from projects.models import Project
-from stores.models import StaticPath,PathType, fill_place_holders
-from umbrella.choices import PUCK_COLORS
+from stores.models import PathType, StaticPath
+
+#from tem.models import *
+from tem.models import Camera, ImagingWorkflow, Microscope, SessionPlan, Software
+
+from umbrella.umbrella.choices import PUCK_COLORS
+
 
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
@@ -93,7 +111,7 @@ def create_tomo5_plan(scope, camera):
     )
     atlas_path_type = PathType.objects.create(
                 static_path=create_tem_static_path('atlas'),
-                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/Atlas_{timestamp}.mrc'
+                overlay_path='/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/Atlas_{timestamp}.mrc',
     )
     software = Software.objects.create(name='tomo5',
                 frames=frame_path_type,

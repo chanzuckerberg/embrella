@@ -1,7 +1,7 @@
-from django.db import models
-from django.forms import Form, ModelForm, IntegerField
-from .models import CryoGrid, CryoGridCassette
-from django import forms
+from django.forms import Form, IntegerField, ModelForm
+
+from .models import CryoGrid
+
 
 class CopyGridForm(ModelForm):
     class Meta:

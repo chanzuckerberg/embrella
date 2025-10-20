@@ -2,11 +2,10 @@ import logging
 from abc import abstractmethod
 from typing import Literal, Optional, Tuple
 
-import numpy as np
 import dask.array as da
-import zarr
 import fsspec
-from scipy.signal import find_peaks
+import numpy as np
+import zarr
 from sklearn.mixture import GaussianMixture
 
 LOGGER = logging.getLogger(__name__)

@@ -1,17 +1,14 @@
-from django.shortcuts import render
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponseRedirect
+
+from django.forms import ModelChoiceField
+from django.http import HttpResponseRedirect, JsonResponse
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
-from .forms import ProcRunForm, ReserveTomoProcRunForm, UpdateNotesForm
-from django.forms import CharField, HiddenInput, ModelChoiceField
-from . import models
-from processes.models import ProcRun, ProcPlan, ProcSoftware, RunPipeData, Tomograms
-from processes.models import Annotation
+from processes.models import Annotation, ProcPlan, ProcRun, RunPipeData, Tomograms
 from tem.models import MsiSession
-from django.core.serializers import serialize
-from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
-import json
+
+from . import models
+from .forms import ReserveTomoProcRunForm, UpdateNotesForm
+
 
 def detail(request, run_id):
     run = get_object_or_404(ProcRun, pk=run_id)
@@ -41,7 +38,7 @@ def detail(request, run_id):
             "pipe_data": all_pipe_data,
             "paths": {
                     "update_notes": form,
-            }
+            },
     }
     return render(request, "processes/ptdetail.html", context)
 
@@ -93,12 +90,12 @@ def create_run(request):
             existing_run = ProcRun.objects.filter(
                 name=name,
                 msi_session=msi_session,
-                proc_plan=proc_plan
+                proc_plan=proc_plan,
             ).first()
             
             if existing_run:
                 return JsonResponse({
-                    'error': f'Run number {name} already exists for this session and plan. Please choose a different run number.'
+                    'error': f'Run number {name} already exists for this session and plan. Please choose a different run number.',
                 }, status=400)
         else:
             # Fallback to the old behavior if no run number is specified

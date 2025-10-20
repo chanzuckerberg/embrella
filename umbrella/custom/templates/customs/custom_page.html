@@ -46,7 +46,6 @@
     .header-banner {
       background: linear-gradient(135deg, #028a87, #028a87);
       color: #fff;
-      padding: 30px 20px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     .header-content {
@@ -63,11 +62,62 @@
       font-size: 1.1em;
       opacity: 0.9;
     }
-    
+    .brand-link {
+        display: block;
+        font-size: 1.75rem;
+        line-height: 1.5;
+        padding: .8125rem .5rem;
+        transition: width .3s ease-in-out;
+        white-space: nowrap;
+    }
+    .header-content .brand-link .brand-image {
+        float: left;
+        line-height: .8;
+        margin-left: .8rem;
+        margin-right: 1rem;
+        margin-top: -3px;
+        max-height: 45px;
+        width: auto;
+    }
+    .header-content .elevation-3 {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, .19), 0 6px 6px rgba(0, 0, 0, .23) !important;
+    }
+    .header-content .img-circle {
+        border-radius: 50%;
+    }
+    .header-content img {
+        vertical-align: middle;
+        border-style: none;
+        overflow-clip-margin: content-box;
+        overflow: clip;
+    }
+    .footer {
+        display: flex;
+        justify-content: center;
+        font-size: small;
+        color: darkgrey;
+    }
     /* User Controls */
     .user-controls {
       display: flex;
+      justify-content: flex-end;
       gap: 10px;
+    }
+
+    .user-login-message {
+        display: flex;
+        justify-content: right;
+        padding-bottom: 2px;
+        padding-right: 10px;
+        padding-left: 10px;
+        font-size: small;
+        text-align: center;
+    }
+    .user-login-message .img-circle {
+        opacity: .8;
+        width: 20px;
+        padding:5px;
+        padding-right:8px;
     }
 
     /* Button Styles */
@@ -134,16 +184,17 @@
     /* Tab Content */
     .tab-content {
       display: none;
-      padding: 20px;
+      padding: 20px 20px 20px 20px;
       background: #fff;
       border-radius: 0 0 8px 8px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      margin-bottom: 20px;
+      margin-bottom: 5px;
     }
     .tab-content.active {
-      display: block;
+        display: block;
       animation: fadeIn 0.5s ease;
     }
+
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
@@ -177,6 +228,8 @@
     /* Table-like layout for Workflow Management & Search Filters */
     .table {
       width: 100%;
+      margin-left: auto;
+      margin-right: auto;
       border-collapse: separate;
       border-spacing: 0;
       background: #fff;
@@ -435,16 +488,24 @@
   <div class="header-banner">
     <div class="header-content">
       <div class="header-title">
-        <h1>Welcome to Embrella</h1>
-        <p>You are logged in as {{ user.username }}.</p>
+        <div class="brand-link">
+            <img src="/static/jazzmin/img/logo.png" alt="Embrella Logo" class="brand-image elevation-3" style="opacity: .8">
+            <span class="brand-text font-weight-light">Embrella</span>
+        </div>
       </div>
-      <div class="user-controls">
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}
-          <button type="submit" class="button button-logout">Logout</button>
-        </form>
-        <a href="{% url 'admin:index' %}" class="button button-secondary">Admin</a>
-      </div>
+        <div>
+            <div class="user-controls">
+                <a href="{% url 'admin:index' %}"><button class="button button-secondary">Admin</button></a>
+                <a href="/docs/tutorials/userguide/" target="_blank"><button class="button button-secondary">Docs</button></a>
+                <form method="post" action="{% url 'logout' %}">
+                  {% csrf_token %}
+                  <button type="submit" class="button button-logout">Logout</button>
+                </form>
+          </div>
+          <div class="user-login-message">
+              <div><img src="/static/customs/user-icon.svg" class="img-circle">{{ user.username }}</div>
+          </div>
+        </div>
     </div>
   </div>
 
@@ -457,7 +518,6 @@
       <div class="tab" onclick="openTab(event, 'run-workflow')">Run Workflow</div>
       <div class="tab" onclick="openTab(event, 'dashboard')">Workflow Dashboard</div>
       <!-- <div class="tab" onclick="openTab(event, 'metadata')">Metadata Search</div> -->
-      <div class="tab" onclick="openTab(event, 'guide')">User Guide</div>
       <div class="tab" onclick="openTab(event, 'archive')">Archive</div>
     </div>
     
@@ -465,10 +525,11 @@
     <div id="workflow" class="tab-content active">
       <div class="section">
         <h2>Workflow Management</h2>
-        <table class="table">
+          <div class="inner">
+              <table class="table">
           <tr>
-            <th>Freeze some grids</th>
-            <th>Start a TEM session</th>
+            <th style="width: 50%;">Grids</th>
+            <th style="width: 50%;">TEM Sessions</th>
           </tr>
           <tr>
             <td>
@@ -481,22 +542,17 @@
             </td>
           </tr>
           <tr>
-            <td></td>
-            <td>
-              <a href="{% url 'tem:scrnreserve' %}" class="button">Screen Multiple Grids</a>
-              <p>New directory name for screening</p>
-            </td>
-            <td></td>
-          </tr>
-          <tr>
-            <td></td>
             <td>
               <a href="{% url 'cryo_grids:clear_cassette' %}" class="button">Clear a Cassette</a>
               <p>Remove grids from a cassette</p>
             </td>
-            <td></td>
+            <td>
+              <a href="{% url 'tem:scrnreserve' %}" class="button">Screen Multiple Grids</a>
+              <p>New directory name for screening</p>
+            </td>
           </tr>
         </table>
+          </div>
       </div>
     </div>
 
@@ -505,9 +561,9 @@
         <h2>Search Filters</h2>
         <table class="table">
           <tr>
-            <th>Grids</th>
-            <th>TEM Sessions</th>
-            <th>Processing Runs</th>
+            <th style="width: 33%;">Grids</th>
+            <th style="width: 34%;">TEM Sessions</th>
+            <th style="width: 33%;">Processing Runs</th>
           </tr>
           <tr>
             <td>
@@ -520,7 +576,7 @@
             </td>
             <td>
               <a href="javascript:void(0)" class="button" onclick="window.location.href=getReviewsUrl()">Reviews</a>
-              <p>View or manage Session Reviews</p>
+              <p>Review Tomograms</p>
             </td>
           </tr>
           <tr>
@@ -532,7 +588,7 @@
             </td>
             <td>
               <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
-              <p>View and manage tomograms</p>
+              <p>View Tomogram Metadata</p>
             </td>
           </tr>
           <tr>
@@ -664,18 +720,6 @@
         </table>
       </div>
     </div> -->
-
-    <div id="guide" class="tab-content">
-      <div class="section">
-        <h2>User Guide</h2>
-        <div class="card-grid">
-          <div class="card">
-            <a href="umbrella/user_guide" class="button">Read User Guide</a>
-            <p>Learn how to use the Embrella system effectively</p>
-          </div>
-        </div>
-      </div>
-    </div>
     <div id="archive" class="tab-content">
       <div class="section">
         <h2>Start a processing run</h2>
@@ -687,32 +731,36 @@
         </div>
       </div>
     </div>
+      <div class="footer">
+        <p>{{ git_branch }}{{ git_hash }} {{ start_time }}</p>
+      </div>
 </div>
 
-  <!-- Chatbot Popup Icon (bottom-right) -->
-  <div id="chatbot-icon" onclick="toggleChatbot()">
-    &#128172;
-  </div>
 
-  <!-- Chatbot Popup -->
-  <div id="chatbot-popup">
-    <header>
-      <span>Chatbot Agent (Beta)</span>
-      <button class="close-btn" onclick="toggleChatbot()">&times;</button>
-    </header>
-    <p class="chatbot-disclaimer">
-      ⚠️ This is a beta service. Please understand that responses may have latency and inaccuracies.
-    </p>
-    <div class="chat-container">
-      <div class="chat-box" id="chat-box">
-        <!-- Chat messages dynamically inserted here -->
-      </div>
-      <div class="input-box">
-        <input type="text" id="user-input" placeholder="Type your message..."/>
-        <button onclick="sendMessage()">Send</button>
-      </div>
-    </div>
-  </div>
+{#  <!-- Chatbot Popup Icon (bottom-right) -->#}
+{#  <div id="chatbot-icon" onclick="toggleChatbot()">#}
+{#    &#128172;#}
+{#  </div>#}
+{##}
+{#  <!-- Chatbot Popup -->#}
+{#  <div id="chatbot-popup">#}
+{#    <header>#}
+{#      <span>Chatbot Agent (Beta)</span>#}
+{#      <button class="close-btn" onclick="toggleChatbot()">&times;</button>#}
+{#    </header>#}
+{#    <p class="chatbot-disclaimer">#}
+{#      ⚠️ This is a beta service. Please understand that responses may have latency and inaccuracies.#}
+{#    </p>#}
+{#    <div class="chat-container">#}
+{#      <div class="chat-box" id="chat-box">#}
+{#        <!-- Chat messages dynamically inserted here -->#}
+{#      </div>#}
+{#      <div class="input-box">#}
+{#        <input type="text" id="user-input" placeholder="Type your message..."/>#}
+{#        <button onclick="sendMessage()">Send</button>#}
+{#      </div>#}
+{#    </div>#}
+{#  </div>#}
 
   <script>
     // JavaScript for URL generation
@@ -762,62 +810,62 @@
       evt.currentTarget.classList.add("active");
     }
 
-    // Toggle the chatbot popup
-    function toggleChatbot() {
-      const popup = document.getElementById('chatbot-popup');
-      popup.classList.toggle('open');
-    }
-
-    // Add event listener for Enter key on input field
-    document.getElementById("user-input").addEventListener("keypress", function(event) {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        sendMessage();
-      }
-    });
-
-    // Chatbot sendMessage function
-    async function sendMessage() {
-      const userInput = document.getElementById("user-input").value;
-      if (!userInput) return;
-
-      const chatBox = document.getElementById("chat-box");
-
-      // Append user message
-      const userMessage = document.createElement("div");
-      userMessage.className = "message user-message";
-      userMessage.innerText = "You: " + userInput;
-      chatBox.appendChild(userMessage);
-      document.getElementById("user-input").value = "";
-
-      // Scroll to bottom
-      chatBox.scrollTop = chatBox.scrollHeight;
-
-      // Fetch bot response
-      try {
-        const response = await fetch("/agent/confluence/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: userInput })
-        });
-
-        const htmlResponse = await response.text();
-
-        // Append bot message
-        const botMessage = document.createElement("div");
-        botMessage.className = "message bot-message";
-        botMessage.innerHTML = `<div class="message-text">${htmlResponse}</div>`;
-        chatBox.appendChild(botMessage);
-      } catch (error) {
-        const errorMessage = document.createElement("div");
-        errorMessage.className = "message bot-message";
-        errorMessage.innerHTML = `<div class="message-text">Error fetching response.</div>`;
-        chatBox.appendChild(errorMessage);
-      }
-
-      // Scroll to bottom again
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
+    {#// Toggle the chatbot popup#}
+    {#function toggleChatbot() {#}
+    {#  const popup = document.getElementById('chatbot-popup');#}
+    {#  popup.classList.toggle('open');#}
+    {#}#}
+    {##}
+    {#// Add event listener for Enter key on input field#}
+    {#document.getElementById("user-input").addEventListener("keypress", function(event) {#}
+    {#  if (event.key === "Enter") {#}
+    {#    event.preventDefault();#}
+    {#    sendMessage();#}
+    {#  }#}
+    {#});#}
+    {##}
+    {#// Chatbot sendMessage function#}
+    {#async function sendMessage() {#}
+    {#  const userInput = document.getElementById("user-input").value;#}
+    {#  if (!userInput) return;#}
+    {##}
+    {#  const chatBox = document.getElementById("chat-box");#}
+    {##}
+    {#  // Append user message#}
+    {#  const userMessage = document.createElement("div");#}
+    {#  userMessage.className = "message user-message";#}
+    {#  userMessage.innerText = "You: " + userInput;#}
+    {#  chatBox.appendChild(userMessage);#}
+    {#  document.getElementById("user-input").value = "";#}
+    {##}
+    {#  // Scroll to bottom#}
+    {#  chatBox.scrollTop = chatBox.scrollHeight;#}
+    {##}
+    {#  // Fetch bot response#}
+    {#  try {#}
+    {#    const response = await fetch("/agent/confluence/", {#}
+    {#      method: "POST",#}
+    {#      headers: { "Content-Type": "application/json" },#}
+    {#      body: JSON.stringify({ prompt: userInput })#}
+    {#    });#}
+    {##}
+    {#    const htmlResponse = await response.text();#}
+    {##}
+    {#    // Append bot message#}
+    {#    const botMessage = document.createElement("div");#}
+    {#    botMessage.className = "message bot-message";#}
+    {#    botMessage.innerHTML = `<div class="message-text">${htmlResponse}</div>`;#}
+    {#    chatBox.appendChild(botMessage);#}
+    {#  } catch (error) {#}
+    {#    const errorMessage = document.createElement("div");#}
+    {#    errorMessage.className = "message bot-message";#}
+    {#    errorMessage.innerHTML = `<div class="message-text">Error fetching response.</div>`;#}
+    {#    chatBox.appendChild(errorMessage);#}
+    {#  }#}
+    {##}
+    {#  // Scroll to bottom again#}
+    {#  chatBox.scrollTop = chatBox.scrollHeight;#}
+    {#}#}
   </script>
 </body>
 </html>

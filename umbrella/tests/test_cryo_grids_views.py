@@ -1,17 +1,11 @@
-from datetime import datetime
-from cryo_grids.views import filter_by_sample_name, add_msi_session, format_grid, get_base_url, format_queryset_results, apply_filters, get_cryo_grids_details, available_filters
-import pytest
-from cryo_grids.utils import CryoGridsQueryParams, QueryParams
-from django.db.models import Q
-from unittest.mock import patch, Mock
-from cryo_grids.views import get_freezing_plan_list
-from django.test import RequestFactory
-from django.core.exceptions import ObjectDoesNotExist
 import json
-from django.core.exceptions import ValidationError
+from unittest.mock import Mock, patch
+
+import pytest
+from cryo_grids.models import CryoGrid, Project
+from cryo_grids.utils import QueryParams
+from django.test import Client, RequestFactory
 from django.urls import reverse
-from django.test import Client
-from cryo_grids.models import CryoGrid, PlungeFreezingPlan, Project, User, GridBox, Puck, FreezingSession
 
 
 @pytest.fixture
@@ -51,7 +45,7 @@ def test_available_filters_valid_query(mock_queryset, client, cryogrid_objects):
     
     # Valid query with a JSON string as the query parameter
     valid_query = json.dumps([
-        {"category": "project", "value": ["Project A", "Project B"]}
+        {"category": "project", "value": ["Project A", "Project B"]},
     ])
 
     # Make the request
@@ -84,7 +78,7 @@ def test_available_filters_invalid_query(client):
 # Test case for invalid Pydantic validation
 def test_available_filters_pydantic_validation_error(client):
     invalid_query = json.dumps([
-        {"category": "unknown_category", "value": ["Invalid"]}
+        {"category": "unknown_category", "value": ["Invalid"]},
     ])
 
     response = client.get(reverse('available_filters'), {'q': invalid_query})

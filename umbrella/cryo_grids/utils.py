@@ -1,9 +1,9 @@
-from pydantic import BaseModel, validator, ValidationError, constr
-from typing import Union, Optional, List, ClassVar
-from rest_framework import status
-from rest_framework.exceptions import APIException
-from django.http import JsonResponse
 import re
+from typing import ClassVar, List, Optional, Union
+
+from pydantic import BaseModel, constr, validator
+from rest_framework.exceptions import APIException
+
 
 class UnprocessableEntity(APIException):
     status_code = 422  # Define the 422 status code here
@@ -19,7 +19,7 @@ class CryoGridsQueryParams(BaseModel):
     
     
     # Define the allowed category names in camelCase
-    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "puck", "user", "screeningSession", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "cassette", "sample", "date", "freezingSession", "date"}
+    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "puck", "user", "screeningSession", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "cassette", "sample", "date", "freezingSession"}
 
     @validator('q')
     def validate_q(cls, value):
@@ -112,7 +112,7 @@ class CryoGridResultModel(BaseModel):
 class CryoGridResponseModel(BaseModel):
     result: Optional[List[CryoGridResultModel]]
     pagination: Optional[PaginationMetadataModel]
-    sort: Optional[SortMetadataModel] = None 
+    sort: Optional[SortMetadataModel] = None
 ## available set API
 class DateRangeModel(BaseModel):
     range: Optional[str]

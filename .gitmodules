@@ -1,3 +1,0 @@
-[submodule "frontend/idetik"]
-	path = frontend/idetik
-	url = git@github.com:chanzuckerberg/idetik.git

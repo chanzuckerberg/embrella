@@ -1,14 +1,23 @@
-from django.contrib.auth.models import User
-import sys
-import django
 import os
+import sys
+
+import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
-from tem.models import *
-from stores.models import StaticPath,PathType, fill_place_holders
-from processes.models import ProcSoftware,Task, ProcPlan, Pipe, PipeInPlan, ReconMethod, TomogramVoxelSpacing
-from processes.models import PipeJoint, AnnotationMethod
+from processes.models import (
+    AnnotationMethod,
+    Pipe,
+    PipeInPlan,
+    PipeJoint,
+    ProcPlan,
+    ProcSoftware,
+    Task,
+)
+from stores.models import PathType, StaticPath
+
+#from tem.models import *
+
 
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
@@ -107,7 +116,7 @@ def create_pipeline_plan():
         pipe3.tasks_performed.add(t)
     # input/output
     for p in output_path_types[0:1]:
-        pipe1.output.add(p) 
+        pipe1.output.add(p)
     for p in output_path_types[1:2]: #recon
        pipe2.output.add(p)
     for p in output_path_types[2:3]:
@@ -142,7 +151,7 @@ def run():
     except r.DoesNotExist:
         print('Please run init_processes first')
         sys.exit(1)
-    except Exception as e:
+    except Exception:
         print('Error: %s. Need reconstruction StaticPath instances to run')
         sys.exit(1)
     create_pipeline_plan()

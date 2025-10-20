@@ -1,26 +1,34 @@
-from django.shortcuts import render
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponseRedirect
-from rest_framework.decorators import api_view
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-from drf_spectacular.types import OpenApiTypes
-from django.urls import reverse
-from .forms import MsiSessionForm, ReserveMsiSessionForm, UpdateNotesForm
-from .forms import ScreenSessionGroupForm, ReserveScreenSessionGroupForm, UpdateOrderForm
-from . import models
-from .models import User, CryoGrid
-from stores.models import Path
-from .models import MsiSession, SessionPlan, Software
-from projects.models import Project
-from cryo_grids.models import CryoGrid, CryoGridCassette
-from tem.models import SessionPlan, SoftwareFieldsResponse, SoftwareResponseModel, ErrorResponse, PathInfo, UserBase, ProjectBase, MsiSessionBase
-from tem.models import ScreenSessionGroup, AtlasSession
-from django.core.serializers import serialize
-from django.core.exceptions import ValidationError
-from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
-import json
 import re
+
+from cryo_grids.models import CryoGridCassette
+from django.http import HttpResponseRedirect, JsonResponse
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
+from django.views.decorators.http import require_http_methods
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from projects.models import Project
+from rest_framework.decorators import api_view
+from stores.models import Path
+from tem.models import (
+    AtlasSession,
+    MsiSessionBase,
+    PathInfo,
+    ProjectBase,
+    ScreenSessionGroup,
+    SoftwareFieldsResponse,
+    SoftwareResponseModel,
+    UserBase,
+)
+
+from . import models
+from .forms import (
+    ReserveMsiSessionForm,
+    ReserveScreenSessionGroupForm,
+    UpdateNotesForm,
+)
+from .models import CryoGrid, MsiSession, SessionPlan, Software
+
 
 def detail(request, session_id):
     session = get_object_or_404(MsiSession, pk=session_id)
@@ -61,7 +69,7 @@ def detail(request, session_id):
                     'parent path pattern':session.get_session_parents_glob(),
                     'atlas image path pattern':session.get_session_atlas_glob(),
             "update_notes": form,
-            }
+            },
     }
     return render(request, "tem/detail.html", context)
 
@@ -129,7 +137,7 @@ def validate_msi_name(request):
     """
     if 'name' in request.POST.keys():
         name_by_user = request.POST['name']
-        regex = re.compile('[@_!#$%^&*()<>?/\|}{~:]')
+        regex = re.compile(r'[@_!#$%^&*()<>?/\|}{~:]')
         if regex.search(name_by_user) or len(name_by_user.split(' ')) > 1:
             data = {'error_msg': 'Session name "%s" can not include special characters nor space.  Try again, please.' % name_by_user}
             return create_msi_name(request,data)
@@ -157,7 +165,7 @@ def create_session(request):
         if not all([plan_id, project_id, grid_id, name]):
             raise ValueError("Missing required fields")
 
-    except (TypeError, ValueError, IndexError) as e:
+    except (TypeError, ValueError, IndexError):
         # Return to form with error message
         data = {'error_msg': 'Invalid form data. Please ensure all fields are filled correctly.'}
         return create_msi_name(request, data)
@@ -169,7 +177,7 @@ def create_session(request):
                     project=Project.objects.get(pk=project_id),
                     grid=grid_instance,
                     session_plan=SessionPlan.objects.get(pk=plan_id),
-                    user=request.user
+                    user=request.user,
         )
         session_instance.save()
         my_pk = session_instance.id
@@ -258,7 +266,7 @@ def create_scrn_session_group(request):
         group_instance.save()
         for i in order_list:
             # create screen session for each grid and make association with
-            # the group 
+            # the group
             grids=CryoGrid.objects.filter(grid_cassette=cassette,slot_number_in_cassette=i)
             _create_scrn_session(request.user, group_instance, grids[0])
     return HttpResponseRedirect(reverse('tem:scrndetail', args=(group_instance.id,)))
@@ -288,7 +296,7 @@ def _create_scrn_session(user,group_instance,grid):
     responses={
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
-    }
+    },
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -301,11 +309,11 @@ def get_all_sessions(request):
     # Fetch sessions and related stores_path records, filter by name if provided
     if session_name:
         sessions = MsiSession.objects.filter(name=session_name).select_related(
-            'grid', 'project', 'user', 'mdocs', 'sums', 'parents', 'atlas', 'frames'
+            'grid', 'project', 'user', 'mdocs', 'sums', 'parents', 'atlas', 'frames',
         )
     else:
         sessions = MsiSession.objects.select_related(
-            'grid', 'project', 'user', 'mdocs', 'sums', 'parents', 'atlas', 'frames'
+            'grid', 'project', 'user', 'mdocs', 'sums', 'parents', 'atlas', 'frames',
         ).all()
 
     session_list = []
@@ -319,24 +327,24 @@ def get_all_sessions(request):
             project=ProjectBase(name=session.project.name),
             frames=PathInfo(
                 static_path=session.frames.static_path if session.frames.static_path else None,
-                overlay_path=session.frames.overlay_path if session.frames.overlay_path else None
+                overlay_path=session.frames.overlay_path if session.frames.overlay_path else None,
             ),
             mdocs=PathInfo(
                 static_path=session.mdocs.static_path if session.mdocs.static_path else None,
-                overlay_path=session.mdocs.overlay_path if session.mdocs.overlay_path else None
+                overlay_path=session.mdocs.overlay_path if session.mdocs.overlay_path else None,
             ),
             sums=PathInfo(
                 static_path=session.sums.static_path if session.sums.static_path else None,
-                overlay_path=session.sums.overlay_path if session.sums.overlay_path else None
+                overlay_path=session.sums.overlay_path if session.sums.overlay_path else None,
             ),
             parents=PathInfo(
                 static_path=session.parents.static_path if session.parents.static_path else None,
-                overlay_path=session.parents.overlay_path if session.parents.overlay_path else None
+                overlay_path=session.parents.overlay_path if session.parents.overlay_path else None,
             ),
             atlas=PathInfo(
                 static_path=session.atlas.static_path if session.atlas.static_path else None,
-                overlay_path=session.atlas.overlay_path if session.atlas.overlay_path else None
-            )
+                overlay_path=session.atlas.overlay_path if session.atlas.overlay_path else None,
+            ),
         )
         # Convert Pydantic model to dictionary and append to the list
         session_list.append(session_data.dict())
@@ -355,7 +363,7 @@ def get_all_sessions(request):
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
         404: OpenApiTypes.OBJECT,
-    }
+    },
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -369,7 +377,7 @@ def get_all_image_paths(request):
     # Query the Software table and prefetch related paths via nested "select_related"
     software_query = Software.objects.prefetch_related(
         'frames__static_path', 'sums__static_path', 'mdocs__static_path',
-        'parents__static_path', 'atlas__static_path'
+        'parents__static_path', 'atlas__static_path',
     ).all()
 
     result_list = []
@@ -400,7 +408,7 @@ def get_all_image_paths(request):
                     static_path= software.atlas.static_path.static_path if software.atlas and software.atlas.static_path else None,
                     overlay_path= software.atlas.overlay_path if software.atlas else None,
                 ),
-            )
+            ),
         )
         result_list.append(software_data.dict())
 
@@ -416,23 +424,20 @@ def get_all_image_paths(request):
     return JsonResponse({'error': 'No matching software found'}, status=404, safe=False)
 
 
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from .models import ScreenSessionGroup
+
 
 
 @extend_schema(
     methods=["GET"],
     description="Returns all unique screen session group names.",
     parameters=[
-        OpenApiParameter(name="valid", required=True, type=OpenApiTypes.BOOL, description="Must be 'true'")
+        OpenApiParameter(name="valid", required=True, type=OpenApiTypes.BOOL, description="Must be 'true'"),
     ],
     responses={
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
         500: OpenApiTypes.OBJECT,
-    }
+    },
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -453,8 +458,8 @@ def render_screening_form(request):
     context = {
         'title': 'Screening Session',
         'data': {
-            'id': data_id
-        }
+            'id': data_id,
+        },
     }
     return render(request, 'tem/filter.html', context)
 
@@ -467,14 +472,14 @@ def render_screening_form(request):
             name="session_name",
             required=True,
             type=OpenApiTypes.STR,
-            description="Name of the screen session group to fetch"
-        )
+            description="Name of the screen session group to fetch",
+        ),
     ],
     responses={
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
-        500: OpenApiTypes.OBJECT
-    }
+        500: OpenApiTypes.OBJECT,
+    },
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -505,7 +510,7 @@ def get_specific_session(request):
                 'atlas_name': atlas_session.name,
                 'grid_name': atlas_session.grid.name if atlas_session.grid else None,
                 'grid_id': atlas_session.grid.id if atlas_session.grid else None,
-                'quality': atlas_session.quality
+                'quality': atlas_session.quality,
             }
             session_data.append(session_info)
 
@@ -516,7 +521,7 @@ def get_specific_session(request):
 @extend_schema(
     methods=["GET"],
     description="Fetches all project records with `id` and `name` fields.",
-    responses={200: OpenApiTypes.OBJECT}
+    responses={200: OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
 def get_projects(request):

@@ -1,7 +1,9 @@
-from django.db import models
-from django.forms import ModelForm
-from .models import MsiSession, ScreenSessionGroup, User, SessionPlan
 from django import forms
+from django.forms import ModelForm
+
+from .models import MsiSession, ScreenSessionGroup, SessionPlan, User
+
+
 class ReserveMsiSessionForm(ModelForm):
     user = forms.ModelChoiceField(queryset=User.objects.all())
 

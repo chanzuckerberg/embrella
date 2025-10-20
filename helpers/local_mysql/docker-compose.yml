@@ -1,0 +1,10 @@
+version: '3.3'
+
+services:
+  db:
+    image: mariadb:10.5.22
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: 'garbage'
+    ports:
+      - '3306:3306'

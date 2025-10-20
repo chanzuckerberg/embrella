@@ -1,0 +1,12 @@
+name: umbrella
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - just
+  - mamba=2.2.0
+  - openssl=3.5.4
+  - sqlite=3.50.2
+  - conda-forge::libsqlite
+  - conda-forge::python-uv=0.9.4
+  - nodejs=20.17.*

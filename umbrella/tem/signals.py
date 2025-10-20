@@ -1,9 +1,11 @@
 # signals.py
 
+from django.contrib.auth import get_user
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+
 from .models import MsiSession
-from django.contrib.auth import get_user
+
 
 @receiver(pre_save, sender=MsiSession)
 def set_user(sender, instance, **kwargs):

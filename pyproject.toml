@@ -1,0 +1,130 @@
+[project]
+name = "czii-umbrella-django"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "~=3.11.0"
+dependencies = [
+    "atlassian-python-api==3.41",
+    "black==25.9.0",
+    "celery>=5.5.3",
+    "chromadb>=1.2.0",
+    "cryptography>=46.0.3",
+    "dask>=2025.10.0",
+    "django==5.2.7",
+    "django-cors-headers>=4.9.0",
+    "django-extensions==4.1",
+    "django-google-sso==6.2.1",
+    "django-jazzmin>=3.0",
+    "django-login-required-middleware>=0.9.0",
+    "django-object-actions==4.2.0",
+    "djangorestframework==3.15.2",
+    "drf-spectacular>=0.28.0",
+    "drf-yasg>=1.21.11",
+    "google-api-core==2.19.0",
+    "google-api-python-client==2.133.0",
+    "google-auth==2.30.0",
+    "google-auth-httplib2==0.2.0",
+    "google-auth-oauthlib==1.0.0",
+    "google-cloud==0.34.0",
+    "google-cloud-core==2.4.1",
+    "google-cloud-storage==2.17.0",
+    "google-crc32c==1.5.0",
+    "google-oauth==1.0.1",
+    "google-resumable-media==2.7.1",
+    "googleapis-common-protos==1.63.1",
+    "gunicorn==23.0.0",
+    "html5lib==1.1",
+    "ipdb>=0.13.13",
+    "jinja2>=3.1.6",
+    "langchain>=0.2.5",
+    "langchain-community>=0.2.5",
+    "langchain-openai>=0.1.14",
+    "lxml==5.1",
+    "markdown>=3.9",
+    "mkdocs==1.6.1",
+    "mkdocs-autorefs==1.4.2",
+    "mkdocs-material==9.6.14",
+    "mkdocstrings[python]==0.29.1",
+    "mysqlclient==2.2.7",
+    "pandas>=2.3.3",
+    "paramiko>=4.0.0",
+    "pycryptodome>=3.23.0",
+    "pydantic==2.7.1",
+    "pytest>=8.4.2",
+    "pytest-django>=4.11.1",
+    "rapidfuzz>=3.14.1",
+    "requests-oauthlib==1.3.1",
+    "ruff==0.14.0",
+    "scikit-learn>=1.7.2",
+    "scipy>=1.16.2",
+    "setuptools==70.0.0",
+    "social-auth-app-django==5.4.1",
+    "social-auth-core==4.5.4",
+    "whitenoise==6.11.0",
+    "zarr>=3.1.3",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+    "mkdocs.yml",
+    "frontend/",
+]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "B",       # bugbear
+    "I",       # isort
+    "N",       # pep8-naming
+    "ASYNC",   # async
+    "COM",     # commas
+    "C4",      # comprehensions
+    "DTZ",     # datetimez
+    "ISC",     # implicit-str-concat
+    "G",       # logging-format
+    "T20",     # print
+    "SIM",     # simplify
+]
+ignore = [
+    "G004",   # logging format
+    "W291",   # trailing whitespace
+    "W293",   # blank line contains whitespace
+    "B008",   # Do not perform calls in argument defaults
+    "B905",   # `zip()` without an explicit `strict=` parameter
+    "N802",   # Function name should be lowercase
+    "N805",   # First argument of a method should be named `self`
+    "N806",   # Variable in function should be lowercase
+    "N815",   # mixed case variables
+    "N999",   # Invalid module name
+    "E501",   # line too long
+    "C408",   # rewrite empty built-ins as literals
+    "T201",   # print statements.
+    "DTZ007", # Datetime objects without timezones.
+    "DTZ005", # More datetimes without timezones.
+    "SIM102", # allow nested if
+    "SIM108", # don't require ternary
+    "SIM112", # env variables can be lowercase
+    "F841",   # assigned to variable never used
+    "E402",   # module level import not at top
+    "E722",   # bare excepts
+    "SIM105", # except silence
+    "E701",   # multiple on one line
+    "C414",   # sorted(list( allowed
+    "B904",   # except from
+    "C417",   # unnecessary map()
+    "SIM118", # key in dict
+    "C405",   # unnecessary list literal
+    "B006",   # mutable default in argument
+    "N801",   # capwords class name
+    "DTZ003", # utcnow() calls
+]
+
+[tool.ruff.lint.isort]
+known-first-party =["common"]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"

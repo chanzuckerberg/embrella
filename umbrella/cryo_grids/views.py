@@ -1,35 +1,43 @@
-from django.shortcuts import render
-from django.http import HttpResponseRedirect
-from django.urls import reverse
-from django.views.decorators.http import require_http_methods
-from django.db.models import Q
-from pydantic import ValidationError
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Case, When, F, Value, CharField, Count
-from django.db.models.functions import Substr, StrIndex, Trim
-from django.utils.timezone import now
-from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import JsonResponse
+import json
+import logging
 import os
+import re
 
 # python library import
-from datetime import timedelta
-from datetime import datetime
-import datetime
-import json
-import os
-import logging
-import re
+from datetime import datetime, timedelta
 from functools import reduce
 
 # project app imports
-from cryo_grids.models import CryoGrid, CryoGridBox, CryoGridCassette, Puck, CryoGridCassette, \
-    PlungeFreezingSession
-from .models import CryoGrid, CryoGridBox, Specimen, Sample
-from .utils import CryoGridsQueryParams, QueryParams, CryoGridResponseModel, PaginationMetadataModel, SortMetadataModel, GridModel,MSISessionModel, CassetteModel, ProjectModel, PuckModel, UserModel, FreezingSessionModel, UnprocessableEntity, PaginationMetadataModel, SortMetadataModel
-from .forms import CopyGridForm, ClearCassetteForm, NumberToCopyGridForm
+from cryo_grids.models import CryoGridCassette
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db.models import Case, CharField, Count, F, Q, Value, When
+from django.db.models.functions import StrIndex, Substr, Trim
+from django.http import HttpResponseRedirect, JsonResponse
+from django.shortcuts import render
+from django.urls import reverse
+from django.utils.timezone import now
+from django.views.decorators.http import require_http_methods
+from pydantic import ValidationError
 from stores.models import Path
+
+from .forms import ClearCassetteForm, CopyGridForm, NumberToCopyGridForm
+from .models import CryoGrid, CryoGridBox, Sample, Specimen
+from .utils import (
+    CassetteModel,
+    CryoGridsQueryParams,
+    FreezingSessionModel,
+    GridModel,
+    MSISessionModel,
+    PaginationMetadataModel,
+    ProjectModel,
+    PuckModel,
+    QueryParams,
+    SortMetadataModel,
+    UnprocessableEntity,
+    UserModel,
+)
 
 # from umbrella.settings import ENVIRONMENT
 logger = logging.getLogger(__name__)
@@ -58,7 +66,7 @@ def build_frontend_url_with_state(request, base_path="/grid_logging"):
     if return_user_id:
         state_params.append(f"user_id={return_user_id}")
     
-    # Puck ID state  
+    # Puck ID state
     return_puck_id = request.GET.get('return_puck_id') or request.POST.get('return_puck_id')
     if return_puck_id:
         state_params.append(f"puck_id={return_puck_id}")
@@ -100,7 +108,7 @@ def msi_session_sort_key(name):
         # Convert month to number for proper sorting
         month_map = {
             'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
         }
         
         # Check if month is valid
@@ -152,7 +160,7 @@ def get_all_grid_boxes(request):
                 'name': box.name,
                 'display_name': display_name,
                 'puck_name': puck_name,
-                'slot': slot
+                'slot': slot,
             })
 
         return JsonResponse({"grid_boxes": unique_boxes}, safe=False)
@@ -168,8 +176,8 @@ def grid_boxes_view(request):
     context = {
         'title': 'Gridboxes',
         'data': {
-            'id': data_id
-        }
+            'id': data_id,
+        },
     }
     return render(request, 'cryo_grids/detail.html', context)
 
@@ -204,7 +212,7 @@ def get_specific_grids(request):
         specific_grids = specific_grids.select_related('grid_box', 'user', 'grid_cassette').values(
             'id', 'create_on', 'name', 'notes', 'position_in_box', 'grid_box_id',
             'clipped', 'trashed', 'slot_number_in_cassette', 'grid_cassette_id',
-            'user__username', 'grid_cassette__name'
+            'user__username', 'grid_cassette__name',
         )
 
         # Format the data
@@ -215,7 +223,6 @@ def get_specific_grids(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 from django.views.decorators.csrf import csrf_exempt
-
 
 
 @require_http_methods(["GET"])
@@ -242,10 +249,10 @@ def available_filters(request):
         # Base queryset with annotations for counting occurrences
         queryset = CryoGrid.objects.select_related(
             'intended_project', 'freezing_session', 'grid_box__puck', 'user',
-            'grid_cassette', 'specimen', 'sample'
+            'grid_cassette', 'specimen', 'sample',
         ).prefetch_related(
             'msisession', 'specimen__samples',
-            'atlassession__group'
+            'atlassession__group',
         )
 
         current_time = now()
@@ -321,9 +328,9 @@ def available_filters(request):
                                     When(user__username__contains='@',
                                          then=Substr(F('user__username'), 1, StrIndex(F('user__username'), Value('@')) - 1)),
                                     default=F('user__username'),
-                                    output_field=CharField()
-                                )
-                            )
+                                    output_field=CharField(),
+                                ),
+                            ),
                         ).values(user_temp_name=F('user_temp_name'))
                         .annotate(count=Count('id'))
                         .order_by('user_temp_name')
@@ -333,9 +340,9 @@ def available_filters(request):
                     .annotate(msi_session_temp_name=F('msisession__name'))
                     .values(msi_session_temp_name=F('msi_session_temp_name'))
                     .annotate(count=Count('id'))
-                    .values(name=F('msi_session_temp_name'), count=F('count'))
+                    .values(name=F('msi_session_temp_name'), count=F('count')),
                 ),
-                key=lambda x: msi_session_sort_key(x['name'])
+                key=lambda x: msi_session_sort_key(x['name']),
             ),
             'status': list(queryset.annotate(status_name=F('trashed'))
                        .values('status_name')
@@ -345,8 +352,8 @@ def available_filters(request):
             'date': [
                 {"name": "last_1_month", "count": queryset.filter(create_on__gte=date_ranges['last_1_month']).count()},
                 {"name": "last_3_months", "count": queryset.filter(create_on__gte=date_ranges['last_3_months']).count()},
-                {"name": "last_6_months", "count": queryset.filter(create_on__gte=date_ranges['last_6_months']).count()}
-            ]
+                {"name": "last_6_months", "count": queryset.filter(create_on__gte=date_ranges['last_6_months']).count()},
+            ],
         }
         # Process the 'sample' filter and replace sample_name with the detailed information
         processed_samples = []
@@ -360,7 +367,7 @@ def available_filters(request):
                     processed_samples.append({
                         'name': display_name,
                         'count': item['count'],
-                        'selected': False
+                        'selected': False,
                     })
                 except Sample.DoesNotExist:
                     processed_samples.append(item)
@@ -375,7 +382,7 @@ def available_filters(request):
 
         # Convert to the expected output format
         response_data = {
-            "filters": filters
+            "filters": filters,
         }
 
         return JsonResponse(response_data)
@@ -440,10 +447,10 @@ def get_cryo_grids_details(request):
         queryset = CryoGrid.objects.select_related(
             'intended_project', 'freezing_session',
             'grid_box__puck', 'user',
-            'grid_cassette', 'specimen'
+            'grid_cassette', 'specimen',
         ).prefetch_related(
             'msisession',
-            'atlassession__group'
+            'atlassession__group',
         ).values(
             'id',
             grid_name=F('name'),
@@ -509,7 +516,7 @@ def get_cryo_grids_details(request):
             ).model_dump(),
             'sortBy': SortMetadataModel(
                 sort='modifiedOn' if sort_field == 'updated_on' else sort_field,
-                asc=asc
+                asc=asc,
             ).model_dump(),
         }
 
@@ -525,7 +532,6 @@ def apply_filters(queryset, filters):
     """
     Apply filters to a queryset based on a list of filter items.
     """
-    from django.db.models import Q
     filter_mappings = {
         'project': 'intended_project__name__in',
         'cassette': 'grid_cassette__name__in',
@@ -542,7 +548,7 @@ def apply_filters(queryset, filters):
     date_mapping = {
         'last_1_month': 1,
         'last_3_months': 3,
-        'last_6_months': 6
+        'last_6_months': 6,
     }
 
     for filter_item in filters:
@@ -574,7 +580,6 @@ def apply_filters(queryset, filters):
                 start_date = now_dt - timedelta(days=months * 30)
                 filter_q_objects.append(Q(updated_on__gte=start_date))
 
-    from functools import reduce
 
     if filter_type == 'OR':
         q_filters = reduce(lambda x, y: x | y, filter_q_objects, Q())
@@ -601,7 +606,7 @@ def format_queryset_results(queryset):
                 'specimen': format_specimen(item),
                 'freezingSession': format_freezing_session(item).model_dump(),
                 'screeningSession': item['screening_session_name'],
-                'msiSession': []
+                'msiSession': [],
             }
         # Attach MSI session
         if item['msisession_id']:
@@ -621,7 +626,7 @@ def get_specimen_list(specimen_id):
             specimen_list.append({
                 'id': sample.id,
                 'name': sample.name,
-                'url': sample_url
+                'url': sample_url,
             })
         return specimen_list
     except ObjectDoesNotExist:
@@ -674,7 +679,7 @@ def format_grid(item):
         trashed=item['status'],
         url=grid_url,
         createdAt=item['created_on'].isoformat() if item['created_on'] else None,
-        updatedAt=item['grid_updated_on'].isoformat() if item['grid_updated_on'] else None
+        updatedAt=item['grid_updated_on'].isoformat() if item['grid_updated_on'] else None,
     )
 
 def format_cassette(item):
@@ -710,7 +715,7 @@ def get_specimen_info(specimen_id):
         return {
             'id': specimen.id,
             'name': f"Specimen ({', '.join(sample_names)})" if sample_names else "Specimen (no samples)",
-            'samples': samples_list
+            'samples': samples_list,
         }
     except ObjectDoesNotExist:
         return {}
@@ -730,7 +735,7 @@ def add_msi_session(msi_session_list, item):
     msi_session_entry = MSISessionModel(
         id=item['msisession_id'],
         name=item['msisession_name'],
-        url=f"{base_url}/tem/{item['msisession_id']}"
+        url=f"{base_url}/tem/{item['msisession_id']}",
     ).model_dump()
     if msi_session_entry not in msi_session_list:
         msi_session_list.append(msi_session_entry)
@@ -862,8 +867,8 @@ def clear_cassette_move(request, error_msg=''):
                 cassette_id = grid.grid_cassette.pk
                 grid.grid_cassette = None
                 if value.endswith('trash'):
-                    setattr(grid, 'grid_box',None)
-                    setattr(grid, 'trashed',True)
+                    grid.grid_box = None
+                    grid.trashed = True
                 grid.save()
         return HttpResponseRedirect(reverse('cryo_grids:clear_cassette_filter', args=(cassette_id,)))
 
@@ -895,18 +900,18 @@ def update_grid_trashed_status(request, grid_id):
         return JsonResponse({
             'success': True,
             'message': f'Grid {"trashed" if trashed_status else "restored"} successfully',
-            'trashed': grid.trashed
+            'trashed': grid.trashed,
         })
         
     except CryoGrid.DoesNotExist:
         return JsonResponse({
             'success': False,
-            'error': 'Grid not found'
+            'error': 'Grid not found',
         }, status=404)
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': str(e),
         }, status=500)
     try:
         grid = CryoGrid.objects.get(id=grid_id)
@@ -922,25 +927,25 @@ def update_grid_trashed_status(request, grid_id):
         # If trashing, remove from grid box (and thus puck hierarchy)
         if trashed_status:
             grid.grid_box = None
-            grid.position_in_box = None 
+            grid.position_in_box = None
         
         grid.save()
         
         return JsonResponse({
             'success': True,
             'message': f'Grid {"trashed" if trashed_status else "restored"} successfully',
-            'trashed': grid.trashed
+            'trashed': grid.trashed,
         })
         
     except CryoGrid.DoesNotExist:
         return JsonResponse({
             'success': False,
-            'error': 'Grid not found'
+            'error': 'Grid not found',
         }, status=404)
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': str(e),
         }, status=500)
 
 @require_http_methods(["GET"])
@@ -951,7 +956,7 @@ def get_available_positions(request, object_id):
         max_grids = box.max_grids or 4
         used_positions = list(CryoGrid.objects.filter(
             grid_box=box,
-            trashed=False
+            trashed=False,
         ).values_list('position_in_box', flat=True))
         
         all_positions = list(range(1, max_grids + 1))
@@ -965,7 +970,7 @@ def get_available_positions(request, object_id):
         
         return JsonResponse({
             'max_positions': max_positions,
-            'available_positions': available_positions
+            'available_positions': available_positions,
         })
     except CryoGridBox.DoesNotExist:
         return JsonResponse({'max_positions': 0, 'error': 'Box not found'})

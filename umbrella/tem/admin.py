@@ -1,7 +1,17 @@
 from django.contrib import admin
-from .models import Microscope, Camera, ImagingWorkflow, Software, SessionPlan, MsiSession
-from .models import ScreenSessionGroup, AtlasSession
-from .models import Magnification, CalibratedPixelSize
+
+from .models import (
+    AtlasSession,
+    CalibratedPixelSize,
+    Camera,
+    ImagingWorkflow,
+    Magnification,
+    Microscope,
+    MsiSession,
+    ScreenSessionGroup,
+    SessionPlan,
+    Software,
+)
 
 # Register your models here.
 admin.site.register(Microscope)

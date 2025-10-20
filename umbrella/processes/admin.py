@@ -1,6 +1,35 @@
 from django.contrib import admin
 
-from .models import *
+from .models import (
+    Alignment,
+    Annotation,
+    AnnotationMethod,
+    Ctf,
+    Frames,
+    GlobalParam,
+    MetaKey,
+    ParticleGallery,
+    Pipe,
+    PipeInPlan,
+    PipeJoint,
+    PipeParam,
+    ProcPlan,
+    ProcRun,
+    ProcSoftware,
+    RawTiltSeries,
+    ReconMethod,
+    Review,
+    ReviewTomogram,
+    RunGlobalValue,
+    RunPipeData,
+    RunPipeValue,
+    Task,
+    TiltAngles,
+    Tomograms,
+    TomogramVoxelSpacing,
+    TomoPostProcessMethod,
+)
+
 # Register your models here.
 admin.site.register(MetaKey)
 admin.site.register(Task)

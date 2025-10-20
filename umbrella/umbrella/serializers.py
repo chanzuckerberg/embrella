@@ -1,6 +1,7 @@
-from rest_framework import serializers
+from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Puck
 from django.contrib.auth.models import User
-from cryo_grids.models import Puck, CryoGridBox, Cane, CryoGrid
+from rest_framework import serializers
+
 from umbrella.choices import PUCK_COLORS
 
 
@@ -14,13 +15,13 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 
-            'username', 
+            'id',
+            'username',
             'clean_username',
-            'first_name', 
-            'last_name', 
+            'first_name',
+            'last_name',
             'full_name',
-            'email', 
+            'email',
         ]
     
     def get_full_name(self, obj):
@@ -47,14 +48,14 @@ class PuckSerializer(serializers.ModelSerializer):
         model = Puck
         fields = [
             'id',
-            'name', 
+            'name',
             'color',
             'color_display',
             'position_in_cane',
             'max_boxes',
             'user',
             'user_name',
-            'cane'
+            'cane',
         ]
         validators = []
 
@@ -67,10 +68,10 @@ class PuckSerializer(serializers.ModelSerializer):
         color = data.get('color')
         cane = data.get('cane')
         position_in_cane = data.get('position_in_cane')
-            
+
         # Get instance for update operations
         instance = self.instance
-            
+
         # Validate unique name+color
         if name and color:
             puck_query = Puck.objects.filter(name=name, color=color)
@@ -80,9 +81,9 @@ class PuckSerializer(serializers.ModelSerializer):
             if puck_query.exists():
                 color_display = dict(PUCK_COLORS).get(color, color)
                 raise serializers.ValidationError({
-                    'name': f'A puck with name "CZII-0{name}" and color "{color_display}" already exists.'
+                    'name': f'A puck with name "CZII-0{name}" and color "{color_display}" already exists.',
                 })
-             
+
         # Validate unique cane+position
         if cane and position_in_cane:
             position_query = Puck.objects.filter(cane=cane, position_in_cane=position_in_cane)
@@ -90,9 +91,9 @@ class PuckSerializer(serializers.ModelSerializer):
                 position_query = position_query.exclude(pk=instance.pk)
             if position_query.exists():
                 raise serializers.ValidationError({
-                    'position_in_cane': f'Position {position_in_cane} in this cane is already occupied.'
+                    'position_in_cane': f'Position {position_in_cane} in this cane is already occupied.',
                 })
-            
+
         return data
 
         def create(self, validated_data):
@@ -107,8 +108,8 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
     """
     color_display = serializers.CharField(source='get_color_display', read_only=True)
     numbering_display = serializers.CharField(source='get_numbering_display', read_only=True)
-    puck_user = serializers.CharField(source='puck.user.username', read_only=True)  
-    
+    puck_user = serializers.CharField(source='puck.user.username', read_only=True)
+
     class Meta:
         model = CryoGridBox
         fields = [
@@ -121,7 +122,7 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
             'position_in_puck',
             'max_grids',
             'puck',
-            'puck_user'
+            'puck_user',
         ]
         validators = [] #disables default validators
         extra_kwargs = {
@@ -135,9 +136,9 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
         name = data.get('name')
         puck = data.get('puck')
         position_in_puck = data.get('position_in_puck')
-            
+
         instance = self.instance
-            
+
         if name:
             name_query = CryoGridBox.objects.filter( puck=puck,
             position_in_puck=position_in_puck,
@@ -146,23 +147,23 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
                 name_query = name_query.exclude(pk=instance.pk)
             if name_query.exists():
                 raise serializers.ValidationError({
-                    'name': f'A grid box with name "{name}" at position {position_in_puck} in this puck already exists.'
+                    'name': f'A grid box with name "{name}" at position {position_in_puck} in this puck already exists.',
                 })
-            
+
         if puck and position_in_puck:
             position_query = CryoGridBox.objects.filter(
-                puck=puck, 
-                position_in_puck=position_in_puck
+                puck=puck,
+                position_in_puck=position_in_puck,
             )
             if instance:  # If updating, exclude current instance
                 position_query = position_query.exclude(pk=instance.pk)
             if position_query.exists():
                 raise serializers.ValidationError({
-                    'position_in_puck': f'Position {position_in_puck} in this puck is already occupied.'
+                    'position_in_puck': f'Position {position_in_puck} in this puck is already occupied.',
                 })
-            
+
         return data
-    
+
 
 class CaneSerializer(serializers.ModelSerializer):
     """
@@ -181,7 +182,7 @@ class CaneSerializer(serializers.ModelSerializer):
             'position_in_dewar',
             'max_pucks',
             'dewar',
-            'pucks_count'
+            'pucks_count',
         ]
     
         def get_pucks_count(self, obj):
@@ -199,7 +200,7 @@ class PuckDetailSerializer(serializers.ModelSerializer):
         model = Puck
         fields = [
             'id',
-            'name', 
+            'name',
             'color',
             'color_display',
             'position_in_cane',
@@ -246,7 +247,7 @@ class GridDetailsSerializer(serializers.ModelSerializer):
         fields = [
             'grid_name', 'user', 'notes', 'clipped', 'trashed',
             'location', 'freezing_session', 'specimen', 'project',
-            'position_in_box', 'copy_number', 'parameters'
+            'position_in_box', 'copy_number', 'parameters',
         ]
     
     def get_grid_name(self, obj):
@@ -263,7 +264,7 @@ class GridDetailsSerializer(serializers.ModelSerializer):
             "puck_name": obj.grid_box.puck.name if obj.grid_box and obj.grid_box.puck else None,
             "grid_box_id": obj.grid_box.id if obj.grid_box else None,
             "grid_box_name": obj.grid_box.name if obj.grid_box else None,
-            "position_in_box": obj.position_in_box
+            "position_in_box": obj.position_in_box,
         }
     
     def get_freezing_session(self, obj):
@@ -274,7 +275,7 @@ class GridDetailsSerializer(serializers.ModelSerializer):
                 "user": obj.freezing_session.user.username if obj.freezing_session.user else None,
                 "device": obj.freezing_session.device.name if obj.freezing_session.device else None,
                 "temperature": obj.freezing_session.device_temperature,
-                "humidity": obj.freezing_session.humidity
+                "humidity": obj.freezing_session.humidity,
             }
         return None
     
@@ -285,13 +286,13 @@ class GridDetailsSerializer(serializers.ModelSerializer):
                 samples.append({
                     "id": sample.id,
                     "name": sample.name,
-                    "ontology": sample.ontology
+                    "ontology": sample.ontology,
                 })
             return {
                 "id": obj.specimen.id,
                 "name": f"Specimen ({', '.join([s['name'] for s in samples])})" if samples else "Specimen (no samples)",
                 "samples": samples,
-                "notes": obj.specimen.notes
+                "notes": obj.specimen.notes,
             }
         return None
     
@@ -300,7 +301,7 @@ class GridDetailsSerializer(serializers.ModelSerializer):
             return {
                 "id": obj.intended_project.id,
                 "name": obj.intended_project.name,
-                "description": getattr(obj.intended_project, 'description', '')
+                "description": getattr(obj.intended_project, 'description', ''),
             }
         return None
     
@@ -308,6 +309,6 @@ class GridDetailsSerializer(serializers.ModelSerializer):
         return {
             "blot_time": obj.blot_time,
             "blot_force": obj.blot_force,
-            "blot_distance": obj.blot_distance
+            "blot_distance": obj.blot_distance,
         }
-   
+

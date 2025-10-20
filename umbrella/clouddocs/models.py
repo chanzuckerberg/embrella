@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class DriveFolder(models.Model):
     name = models.CharField(max_length=32, default='BD01', unique=True)
     url = models.URLField()

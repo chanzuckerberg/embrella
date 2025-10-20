@@ -2,6 +2,7 @@
 from django.contrib import messages
 from loguru import logger
 
+
 def pre_login_callback(user, request):
     """Callback function called before user is logged in."""
     messages.info(request, f"Running Pre-Login callback for user: {user}.")
