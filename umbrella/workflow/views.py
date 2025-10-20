@@ -1,41 +1,35 @@
-from umbrella_logger import logger
-from .utils import jsonify, ssh_connect, ssh_connect_bruno, extract_parameters, hostname, port, username, password, ssh_file_exists, ssh_list_directory
+import base64
+import json
+import logging
+import os
+import re
+import subprocess
+
+#from workflow.utils import ssh_connect
+import time
+from io import StringIO
+
+import pandas as pd
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.db.models import F
 from django.http import JsonResponse
 from django.shortcuts import render
-from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
-from drf_spectacular.types import OpenApiTypes
-from rest_framework.decorators import api_view, permission_classes
-from .agent import Aretomo3, Denoiset, StatusChecker, RemoteJobSubmitter
-from umbrella.settings import ARETOMO3_SCRIPT_PATH, ARETOMO3_ADVANCED_PATH, DENOISET_SCRIPT_PATH
-import os
-import base64
-import re
-import json
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.models import User
-from django.http import JsonResponse
-from processes.models import ProcPlan
 from django.views.decorators.http import require_http_methods
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
+from processes.models import JobLog, ProcPlan, ProcRun
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from tem.models import MsiSession
-from processes.models import JobLog
-from django.db.models import F
-from celery import shared_task
-from django.core.cache import cache
-import re
-import requests
-from django.http import StreamingHttpResponse
-from django.core.cache import cache
-from workflow.utils import ssh_connect
-import time
-import pandas as pd
-import paramiko
-from io import StringIO
-import subprocess
-import logging
-from processes.models import ProcRun
-from django.conf import settings
+from umbrella_logger import logger
+
+#from .utils import jsonify, ssh_connect, ssh_connect_bruno, extract_parameters, hostname, port, username
+from common import clusterio
+from common.clusterio import jsonify
+
+from .agent import Aretomo3, Denoiset, RemoteJobSubmitter, StatusChecker
 
 CELERY_BEAT_SCHEDULE = {
     'update_job_data_cache_every_5_seconds': {
@@ -88,8 +82,10 @@ KEYS = ('PixSize',
 HOST = "10.50.120.90"
 HOST_BRUNO = "192.168.98.229"
 PORT = 22
-USERNAME = os.getenv('REMOTE_ID')
-PASSWORD = os.getenv('REMOTE_PASSWORD')
+#USERNAME = os.getenv('REMOTE_ID')
+#PASSWORD = os.getenv('REMOTE_PASSWORD')
+USERNAME = os.getenv('SLURM_USER')
+KEYFILE = os.getenv('SLURM_KEYFILE')
 ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 METADATA_SUMMARY_PATH = '/hpc/projects/group.czii/krios1.processing/aretomo3/'
 DATA_COLLECTION_PATH = '/hpc/instruments/czii.krios1/OffloadData/'
@@ -112,7 +108,7 @@ def store_log(job_name, request, data_sanitized, error, advanced_status=False, j
                 advanced=advanced_status,
                 job_id=job_id,  # No job ID available in case of error
                 parameters=data_sanitized,
-                error_message=str(error)  # Store the error message
+                error_message=str(error),  # Store the error message
             )
 
 @extend_schema(
@@ -126,8 +122,8 @@ def store_log(job_name, request, data_sanitized, error, advanced_status=False, j
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
         404: OpenApiTypes.OBJECT,
-        500: OpenApiTypes.OBJECT
-    }
+        500: OpenApiTypes.OBJECT,
+    },
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -144,7 +140,7 @@ def get_aretomo3_json(request):
     remote_path = f'/hpc/projects/group.czii/krios1.processing/aretomo3/{session_name}/run{run_id}/AreTomo3_Session.json'
 
     try:
-        json_data = ssh_connect(remote_path)
+        json_data = clusterio.ssh_connect(remote_path)
         full_data = jsonify(json_data)
 
         # Extract version and gain
@@ -152,14 +148,14 @@ def get_aretomo3_json(request):
         gain = full_data['input']['Gain']
 
         # Extract other parameters
-        parsed_data = extract_parameters(full_data, KEYS)
+        parsed_data = clusterio.extract_parameters(full_data, KEYS)
 
         # Insert version and gain at the beginning
         ordered_parsed_data = {"Version": version, "Gain": gain, **parsed_data}
 
         return JsonResponse(ordered_parsed_data, safe=False)
-    except FileNotFoundError as fnf_err:
-        error_msg = f"File not found"
+    except FileNotFoundError:
+        error_msg = "File not found"
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=404)
     except Exception as err:
@@ -193,23 +189,23 @@ def get_aretomo3_json(request):
             "tilt_offset": {"type": "string"},
             "thickness_mesaure": {"type": "string"},
         },
-        "required": ["project_name", "use_old_gain", "user_id", "password"]
+        "required": ["project_name", "use_old_gain", "user_id", "password"],
     },
     responses={
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
         422: OpenApiTypes.OBJECT,
         500: OpenApiTypes.OBJECT,
-    }
+    },
 )
-# @api_view(["POST"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @login_required
 @csrf_exempt
 def run_aretomo3_advanced(request):
     data_sanitized = {}  # Initialize this variable at the start
     if request.method == 'POST':
-        data = json.loads(request.body)
+        data = request.data #json.loads(request.body)
 
         project_name = data.get('project_name')
         use_old_gain = data.get('use_old_gain')  # "yes" or "no"
@@ -222,7 +218,7 @@ def run_aretomo3_advanced(request):
         if not project_name_pattern.match(project_name):
             return JsonResponse(
                 {'error': 'Invalid project_name format. Please check the project name: 422'},
-                status=422
+                status=422,
             )
         data_sanitized = dict(data)
         data_sanitized.pop('password', None)
@@ -288,7 +284,7 @@ def run_aretomo3_advanced(request):
             else:
                 return JsonResponse(
                     {'error': 'Invalid use_old_gain value. Must be "yes" or "no": 422'},
-                    status=422
+                    status=422,
                 )
 
             # Check if run number already exists in the database
@@ -305,12 +301,12 @@ def run_aretomo3_advanced(request):
                 existing_run = ProcRun.objects.filter(
                     name=run_number,
                     msi_session=msi_session,
-                    proc_plan=proc_plan
+                    proc_plan=proc_plan,
                 ).first()
                 
                 if existing_run:
                     return JsonResponse({
-                        'error': f'Run number {run_number} already exists for session {project_name}. Please choose a different run number.'
+                        'error': f'Run number {run_number} already exists for session {project_name}. Please choose a different run number.',
                     }, status=400)
                     
             except MsiSession.DoesNotExist:
@@ -323,14 +319,10 @@ def run_aretomo3_advanced(request):
             request.session['decoded_password'] = decoded_password
 
             # Initialize the Aretomo3 object and connect
-            aretomo = Aretomo3(
-                HOST, 
-                PORT, 
-                user_id, 
-                decoded_password,
-                ARETOMO3_SCRIPT_PATH,  # remote_script_dir
-                ARETOMO3_TEMPLATE_PATH  # local_template_path
-            )
+            aretomo = Aretomo3(cluster_id='czii',
+                               auth={ 'username': user_id, 'password': decoded_password},
+                               remote_script_dir=ARETOMO3_SCRIPT_PATH,
+                               local_template_path=ARETOMO3_BASIC_TEMPLATE_PATH)
             aretomo.connect()
 
             # Now you can safely call the script, because the variables
@@ -341,7 +333,7 @@ def run_aretomo3_advanced(request):
                 use_old_gain,
                 use_advanced_params,
                 pixel_size,
-                denoiset_training
+                denoiset_training,
             )
 
             output, error = aretomo.run_advanced_script(
@@ -362,7 +354,7 @@ def run_aretomo3_advanced(request):
                 local_shift=local_shift,
                 tilt_offset=tilt_offset,
                 thickness_mesaure=thickness_mesaure,
-                user_id=user_id
+                user_id=user_id,
             )
 
             found_ids = re.findall(r"Submitted batch job (\d+)", output)
@@ -377,7 +369,7 @@ def run_aretomo3_advanced(request):
                 'message': f'Advanced job for project {project_name} submitted successfully.',
                 'output': output,
                 'error': error,
-                'job_id': job_id_str
+                'job_id': job_id_str,
             })
 
         except Exception as e:
@@ -408,22 +400,22 @@ def run_aretomo3_advanced(request):
             "user_id": {"type": "string"},
             "password": {"type": "string", "description": "Base64-encoded SSH password"},
         },
-        "required": ["session_name", "run_number", "pixel_size", "total_dose", "num_checks", "user_id", "password"]
+        "required": ["session_name", "run_number", "pixel_size", "total_dose", "num_checks", "user_id", "password"],
     },
     responses={
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
         422: OpenApiTypes.OBJECT,
         500: OpenApiTypes.OBJECT,
-    }
+    },
 )
-# @api_view(["POST"])
+@api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @login_required
 @csrf_exempt
 def run_aretomo3(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
+        data = request.data
         session_name = data.get('session_name')
         run_number = data.get('run_number')
         pix_size = data.get('pixel_size')
@@ -443,23 +435,23 @@ def run_aretomo3(request):
             # Get the session and plan
             msi_session = MsiSession.objects.get(name=session_name)
             proc_plan = ProcPlan.objects.get(name='czii-live')  # AreTomo3 uses czii-live plan
-            
+
             # Ensure the run number has the correct format (e.g., "run001")
             if not run_number.startswith('run'):
                 run_number = f"run{run_number.zfill(3)}"
-            
+
             # Check if this run number already exists for this session and plan
             existing_run = ProcRun.objects.filter(
                 name=run_number,
                 msi_session=msi_session,
-                proc_plan=proc_plan
+                proc_plan=proc_plan,
             ).first()
-            
+
             if existing_run:
                 return JsonResponse({
-                    'error': f'Run number {run_number} already exists for session {session_name}. Please choose a different run number.'
+                    'error': f'Run number {run_number} already exists for session {session_name}. Please choose a different run number.',
                 }, status=400)
-                
+
         except MsiSession.DoesNotExist:
             return JsonResponse({'error': f'Session {session_name} not found in database'}, status=404)
         except ProcPlan.DoesNotExist:
@@ -474,14 +466,10 @@ def run_aretomo3(request):
         job_id_str = None
 
         try:
-            aretomo = Aretomo3(
-                HOST, 
-                PORT, 
-                user_id, 
-                decoded_password,
-                ARETOMO3_SCRIPT_PATH,  # remote_script_dir
-                ARETOMO3_BASIC_TEMPLATE_PATH  # local_template_path
-            )
+            aretomo = Aretomo3(cluster_id='czii',
+                               auth={ 'username': user_id, 'password': decoded_password},
+                               remote_script_dir=ARETOMO3_SCRIPT_PATH,
+                               local_template_path=ARETOMO3_BASIC_TEMPLATE_PATH)
             # Connect to the remote server
             aretomo.connect()
 
@@ -504,12 +492,12 @@ def run_aretomo3(request):
             try:
                 syncer_script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'processes', 'scripts', 'aretomo3_syncer.py')
                 # Run the syncer once with job tracking
-                subprocess.Popen(['python', syncer_script_path, 
+                subprocess.Popen(['python', syncer_script_path,
                                 '--session', session_name,
                                 '--run', run_number,
                                 '--job-id', job_id_str,
                                 '--continuous'],
-                               env=dict(os.environ, 
+                               env=dict(os.environ,
                                       PYTHONPATH=os.path.dirname(os.path.dirname(__file__))))
                 logging.info(f"Started AreTomo3 syncer for session {session_name}, run {run_number}, tracking job {job_id_str}")
             except Exception as e:
@@ -519,7 +507,7 @@ def run_aretomo3(request):
                 'message': f'Session {session_name} for Aretomo3 is submitted successfully. Please check the output directory below',
                 'output': output,
                 'error': error,
-                'job_id': job_id_str
+                'job_id': job_id_str,
             })
         except Exception as e:
             # Log the error details
@@ -549,7 +537,7 @@ def run_aretomo3(request):
     responses={
         200: OpenApiTypes.OBJECT,
         401: OpenApiTypes.OBJECT,
-    }
+    },
 )
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -571,20 +559,20 @@ def user_info(request):
             "user_id": {"type": "string", "description": "Remote login user ID"},
             "password": {"type": "string", "description": "Base64-encoded remote password"},
         },
-        "required": ["job_number"]
+        "required": ["job_number"],
     },
     responses={
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
-        500: OpenApiTypes.OBJECT
-    }
+        500: OpenApiTypes.OBJECT,
+    },
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @login_required
 def cancel_jobs(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
+        data = request.data # json.loads(request.body)
         job_number = data.get('job_number')
         
         # Retrieve user_id and decoded_password from session
@@ -596,19 +584,18 @@ def cancel_jobs(request):
             encoded_password = data.get('password')
             decoded_password = base64.b64decode(encoded_password).decode('utf-8')
 
-        aretomo = Aretomo3(HOST, PORT, user_id, decoded_password, ARETOMO3_SCRIPT_PATH, ARETOMO3_TEMPLATE_PATH)
-
+        canceler = RemoteJobSubmitter(cluster_id='czii', auth={'username': user_id, 'password': decoded_password}, remote_script_dir=None)
         try:
             # Connect to the remote server
-            aretomo.connect()
+            canceler.connect()
 
-            output, error = aretomo.cancel(job_number)
+            output, error = canceler.cancel(job_number)
             return JsonResponse(
-                {'message': f'Job - {job_number} for Aretomo3 is canceld successfully'})
+                {'message': f'Job - {job_number} for canceled successfully'})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
         finally:
-            aretomo.close()
+            canceler.close()
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
@@ -621,22 +608,24 @@ def track_jobs(request):
     if request.method == 'GET':
         job_name = request.GET.get('job_name')  # None if not provided
 
-        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH, ARETOMO3_TEMPLATE_PATH)
+        checker = StatusChecker(cluster_id='czii', auth=clusterio.AUTH_SERVICE_USER,
+                                remote_script_dir=ARETOMO3_SCRIPT_PATH,
+                                local_template_path=ARETOMO3_TEMPLATE_PATH)
         try:
             # Connect to the remote server
-            aretomo.connect()
+            checker.connect()
 
             if job_name is None:
-                output, error = aretomo.track_jobs(job_name=None, all=True)
+                output, error = checker.track_jobs(job_name=None, all=True)
             else:
-                output, error = aretomo.track_jobs(job_name)
+                output, error = checker.track_jobs(job_name)
 
             formatted_output = format_job_output(output)
             return JsonResponse({'jobs': formatted_output})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
         finally:
-            aretomo.close()
+            checker.close()
 
     # If the request is not GET, return an error
     return JsonResponse({'error': 'Invalid request method'}, status=400)
@@ -663,10 +652,11 @@ def format_job_output(output):
         job_info['USER'] = job_data[3]
         job_info['ST'] = job_data[4]
         job_info['TIME'] = job_data[5]
-        job_info['NODES'] = job_data[6]
+        job_info['TIMELEFT'] = job_data[6]
+        job_info['NODES'] = job_data[7]
 
         # The remaining part is NODELIST(REASON)
-        job_info['NODELIST(REASON)'] = ' '.join(job_data[7:])
+        job_info['NODELIST(REASON)'] = ' '.join(job_data[8:])
 
         jobs.append(job_info)
 
@@ -704,8 +694,8 @@ def custom_workflow_logs(request):
     description="Returns a list of all MSI session names.",
     responses={
         200: OpenApiTypes.OBJECT,
-        500: OpenApiTypes.OBJECT
-    }
+        500: OpenApiTypes.OBJECT,
+    },
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -726,7 +716,7 @@ def get_msi_session_list(request):
                 # Convert month to number for proper sorting
                 month_map = {
                     'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+                    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
                 }
                 
                 # Check if month is valid
@@ -759,12 +749,12 @@ def get_msi_session_list(request):
     methods=["GET"],
     description="Returns MSI sessions and associated run numbers. Filters by session name if provided.",
     parameters=[
-        OpenApiParameter(name='session_name', required=False, type=OpenApiTypes.STR, description='Optional MSI session name to filter')
+        OpenApiParameter(name='session_name', required=False, type=OpenApiTypes.STR, description='Optional MSI session name to filter'),
     ],
     responses={
         200: OpenApiTypes.OBJECT,
-        500: OpenApiTypes.OBJECT
-    }
+        500: OpenApiTypes.OBJECT,
+    },
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -803,7 +793,7 @@ def get_msi_params_list(request):
             .filter(procrun__proc_plan_id=plan_id)  # Filter by processing plan first
             .annotate(
                 run_number=F('procrun__name'),  # Map the 'name' field from the procrun table
-                run_created_at=F('procrun__created_at')  # Include the created_at field for sorting
+                run_created_at=F('procrun__created_at'),  # Include the created_at field for sorting
             )
             .values('name', 'run_number', 'run_created_at')
             .distinct()  # Remove duplicates
@@ -847,7 +837,7 @@ def get_msi_params_list(request):
         formatted_sessions = [
             {
                 "name": name,
-                "run_numbers": [run[0] for run in sorted(run_numbers, key=lambda x: x[1], reverse=True)]
+                "run_numbers": [run[0] for run in sorted(run_numbers, key=lambda x: x[1], reverse=True)],
             }
             for name, run_numbers in grouped_sessions.items()
         ]
@@ -863,12 +853,12 @@ def get_msi_params_list(request):
     methods=["GET"],
     description="Returns job logs for all users or filters by a specific username if provided.",
     parameters=[
-        OpenApiParameter(name='user_name', required=False, type=OpenApiTypes.STR, description='Filter logs by user name')
+        OpenApiParameter(name='user_name', required=False, type=OpenApiTypes.STR, description='Filter logs by user name'),
     ],
     responses={
         200: OpenApiTypes.OBJECT,
-        500: OpenApiTypes.OBJECT
-    }
+        500: OpenApiTypes.OBJECT,
+    },
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -879,13 +869,13 @@ def get_job_logs(request):
 
         # Fetch all JobLog entries
         job_logs = JobLog.objects.all().values(
-            'user', 
-            'job_name', 
-            'advanced', 
-            'job_id', 
-            'created_at', 
-            'parameters', 
-            'error_message'
+            'user',
+            'job_name',
+            'advanced',
+            'job_id',
+            'created_at',
+            'parameters',
+            'error_message',
         )
 
         job_logs_list = list(job_logs)
@@ -927,23 +917,23 @@ def get_job_logs(request):
             "denoise_run_number": {"type": "string"},
             "user_id": {"type": "string"},
             "password": {"type": "string", "description": "Base64-encoded password"},
-            "live_denoising": {"type": "boolean", "default": False}
+            "live_denoising": {"type": "boolean", "default": False},
         },
-        "required": ["session_name", "run_number", "model_name", "denoise_run_number", "user_id", "password"]
+        "required": ["session_name", "run_number", "model_name", "denoise_run_number", "user_id", "password"],
     },
     responses={
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
-        500: OpenApiTypes.OBJECT
-    }
+        500: OpenApiTypes.OBJECT,
+    },
 )
-# @api_view(["POST"])
-# @login_required
+@api_view(["POST"])
+@login_required
 @csrf_exempt
 def run_denoiset(request):
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
+            data = request.data #json.loads(request.body)
             session_name = data.get('session_name')
             run_number = data.get('run_number')
             model_name = data.get('model_name')
@@ -961,15 +951,10 @@ def run_denoiset(request):
             data_sanitized.pop('password', None)
 
             # Create the Denoiset instance.
-            denoiset = Denoiset(
-                HOST, 
-                PORT, 
-                user_id, 
-                decoded_password, 
-                DENOISET_SCRIPT_PATH, 
-                DENOISET_TEMPLATE_PATH
-            )
-
+            denoiset = Denoiset(cluster_id='czii',
+                                auth={ 'username': user_id, 'password': decoded_password },
+                                remote_script_dir=DENOISET_SCRIPT_PATH,
+                                local_template_path=DENOISET_TEMPLATE_PATH)
             # Connect to the remote server.
             denoiset.connect()
 
@@ -986,29 +971,29 @@ def run_denoiset(request):
             # Log the successful submission.
             store_log(
                 job_name='DenoisET',
-                request=request, 
-                data_sanitized=data_sanitized, 
-                error="", 
-                advanced_status=True, 
-                job_id=job_id_str
+                request=request,
+                data_sanitized=data_sanitized,
+                error="",
+                advanced_status=True,
+                job_id=job_id_str,
             )
 
             return JsonResponse({
                 'message': f'Session {session_name} for Denoiset is submitted successfully. Please check the output directory.',
                 'output': output,
                 'error': error,
-                'job_id': job_id_str
+                'job_id': job_id_str,
             })
 
         except Exception as e:
             # Log error details.
             store_log(
                 job_name='DenoisET',
-                request=request, 
-                data_sanitized=data_sanitized if 'data_sanitized' in locals() else {}, 
-                error=str(e), 
-                advanced_status=False, 
-                job_id=None
+                request=request,
+                data_sanitized=data_sanitized if 'data_sanitized' in locals() else {},
+                error=str(e),
+                advanced_status=False,
+                job_id=None,
             )
             return JsonResponse({'error': str(e) + ': 500'}, status=500)
 
@@ -1020,11 +1005,11 @@ def run_denoiset(request):
     # For non-POST requests.
     store_log(
         job_name='DenoisET',
-        request=request, 
-        data_sanitized={}, 
-        error="Invalid request method", 
-        advanced_status=False, 
-        job_id=None
+        request=request,
+        data_sanitized={},
+        error="Invalid request method",
+        advanced_status=False,
+        job_id=None,
     )
     return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
@@ -1045,12 +1030,14 @@ def workflow_get_data(request):
     the 'group_by' request parameter.
     """
     try:
-        # Initialize and connect to Aretomo
-        aretomo = Aretomo3(HOST, PORT, USERNAME, PASSWORD, ARETOMO3_SCRIPT_PATH, ARETOMO3_TEMPLATE_PATH)
-        aretomo.connect()
+        # Initialize and connect to remote
+        checker = StatusChecker(cluster_id='czii', auth=clusterio.AUTH_SERVICE_USER,
+                                remote_script_dir=None,
+                                local_template_path=None)
+        checker.connect()
 
         # Since we want all jobs, set job_name=None and all=True
-        output, error = aretomo.track_jobs(job_name=None, all=True)
+        output, error = checker.track_jobs(job_name=None, all=True)
 
         # Close the connection in the finally block
         formatted_output = format_job_output(output)
@@ -1085,7 +1072,7 @@ def workflow_get_data(request):
     finally:
         # Ensure the connection is closed even if an exception is raised
         try:
-            aretomo.close()
+            checker.close()
         except:
             pass
 
@@ -1153,14 +1140,14 @@ def parse_script_output(raw_output):
             name='session_name',
             required=True,
             type=OpenApiTypes.STR,
-            description="MSI session name used to run the status-check script"
-        )
+            description="MSI session name used to run the status-check script",
+        ),
     ],
     responses={
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
-        500: OpenApiTypes.OBJECT
-    }
+        500: OpenApiTypes.OBJECT,
+    },
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -1171,7 +1158,7 @@ def status_check_api(request):
     Expects a query parameter: ?session_name=your_session_id
 
     The SSH credentials and configuration are read from environment variables/constants:
-      - HOST, PORT, USERNAME, PASSWORD
+      - HOST, PORT, USERNAME, KEYFILE
       - STATUS_CHECKER_SCRIPT_PATH (remote_script_dir)
       - STATUS_CHECKER_TEMPLATE_PATH (local_template_path)
     """
@@ -1185,20 +1172,20 @@ def status_check_api(request):
         local_template_path = STATUS_CHECKER_TEMPLATE_PATH
 
 
-        if not all([HOST, PORT, USERNAME, PASSWORD, remote_script_dir, local_template_path]):
+        if not all([HOST, PORT, USERNAME, KEYFILE, remote_script_dir, local_template_path]):
             return JsonResponse(
                 {"error": "Server configuration incomplete. Please check environment variables."},
-                status=500
+                status=500,
             )
 
         # Instantiate and use the StatusChecker
-        status_checker = StatusChecker(
-            HOST, PORT, USERNAME, PASSWORD, remote_script_dir, local_template_path
-        )
-        status_checker.connect()
+        checker = StatusChecker(cluster_id='czii', auth=clusterio.AUTH_SERVICE_USER,
+                                remote_script_dir=remote_script_dir,
+                                local_template_path=local_template_path)
+        checker.connect()
         # live_denoising is set to False by default
-        raw_output, script_error = status_checker.check_status(session_name, live_denoising=False)
-        status_checker.close()
+        raw_output, script_error = checker.check_status(session_name, live_denoising=False)
+        checker.close()
 
         # Parse the raw output into a structured dictionary
         parsed_output = parse_script_output(raw_output)
@@ -1226,8 +1213,8 @@ def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_ur
     try:
         # Load data from remote server using ssh_connect
         logger.info(f"Attempting to read metrics file: {metrics_path}")
-        metrics_content = ssh_connect(metrics_path)
-        logger.info(f"Successfully read metrics file")
+        metrics_content = clusterio.ssh_connect(metrics_path)
+        logger.info("Successfully read metrics file")
         
         # Convert string content to pandas DataFrame
         metrics_df = pd.read_csv(StringIO(metrics_content))
@@ -1240,8 +1227,8 @@ def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_ur
         
         if merge == "True":
             logger.info(f"Attempting to read timestamp file: {timestamp_path}")
-            timestamp_content = ssh_connect(timestamp_path)
-            logger.info(f"Successfully read timestamp file")
+            timestamp_content = clusterio.ssh_connect(timestamp_path)
+            logger.info("Successfully read timestamp file")
             
             # Convert string content to pandas DataFrame
             timestamp_df = pd.read_csv(StringIO(timestamp_content))
@@ -1251,10 +1238,10 @@ def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_ur
 
             # Add thumbnail paths directly to the merged dataframe
             merged_df["thumbnail_path"] = merged_df["Tilt_Series"].apply(
-                lambda ts: f"{thumbnail_base_url}{ts}.jpeg"
+                lambda ts: f"{thumbnail_base_url}{ts}.jpeg",
             )
             merged_df["ctf_path"] = merged_df["Tilt_Series"].apply(
-                lambda ts: f"{ctf_base_url}{ts}.jpeg"
+                lambda ts: f"{ctf_base_url}{ts}.jpeg",
             )
             
             # Sort Tilt_Series using natural sort
@@ -1304,15 +1291,15 @@ def compute_stats(df: pd.DataFrame) -> list:
         'CTF_Res(A)': 'CTF Resolution (Å)',
         'Thickness(A)': 'Thickness (Å)',
         'Tilt_Axis': 'Tilt Axis (°)',
-        'Global_Shift(A)': 'Global Shift (Å)',   
+        'Global_Shift(A)': 'Global Shift (Å)',
         'Bad_Patch_Low': 'Bad patch low_angle (fraction)',
         'Bad_Patch_All': 'Bad patch all_angle (fraction)',
         'Alpha0': 'Alpha Offset (°)',
-        'Beta0': 'Beta Offset (°)'
+        'Beta0': 'Beta Offset (°)',
     }
 
     # Select only columns to report (only include columns that exist in the dataframe)
-    columns_of_interest = [col for col in column_mapping.keys() if col in df.columns]
+    columns_of_interest = [col for col in column_mapping if col in df.columns]
     stats_df = df[columns_of_interest].agg(['mean', 'median', 'std'])
 
     result = []
@@ -1321,7 +1308,7 @@ def compute_stats(df: pd.DataFrame) -> list:
             "name": column_mapping[col],
             "mean": round(stats_df[col]["mean"], 3),
             "median": round(stats_df[col]["median"], 3),
-            "std": round(stats_df[col]["std"], 3)
+            "std": round(stats_df[col]["std"], 3),
         })
 
     return result
@@ -1340,22 +1327,7 @@ def get_metadata_summary(request):
 
     try:
         # Create a persistent SSH connection with optimized parameters
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        
-        # Add connection optimization parameters
-        ssh_config = {
-            'hostname': HOST,
-            'port': PORT,
-            'username': USERNAME,
-            'password': PASSWORD,
-            'timeout': 10,
-            'allow_agent': False,
-            'look_for_keys': False,
-            'compress': True,
-            'banner_timeout': 10
-        }
-        ssh.connect(**ssh_config)
+        ssh = clusterio.get_cluster_ssh_connection(cluster_id='czii')
         
         # Create SFTP client with optimized buffer sizes
         sftp = ssh.open_sftp()
@@ -1441,12 +1413,12 @@ def get_metadata_summary(request):
                 "computed_metrics": computed_metrics,
                 "user_name": user_name,
                 "project_name": project_name,
-                "grid_name": grid_name, 
+                "grid_name": grid_name,
                 "timing": {
                     "infra_access_sec": round(infra_time, 3),
                     "file_fetch_sec": round(fetch_time, 3),
                     "data_compute_sec": round(compute_time, 3),
-                }
+                },
             }
 
             return JsonResponse(response, json_dumps_params={"indent": 2})
@@ -1484,7 +1456,7 @@ def calculate_metric_ranges(df: pd.DataFrame) -> dict[str, list[float]]:
         'ExtPhase(Deg)': 'extphase',
         'Pix_Size(A)': 'pixel_size',
         'Alpha0': 'alpha0',
-        'Beta0': 'beta0'
+        'Beta0': 'beta0',
     }
     
     ranges = {}
@@ -1552,7 +1524,7 @@ def apply_filters(df, filter_config):
             'defocus': 'Defocus(A)',
             'extphase': 'ExtPhase(Deg)',
             'alpha0': 'Alpha0',
-            'beta0': 'Beta0'
+            'beta0': 'Beta0',
     }
         
     mask = None
@@ -1630,7 +1602,7 @@ def get_metadata_viz_data(request):
         # Parse filters if provided
         filter_config = json.loads(q) if q else {}
 
-        # Read the CSV file 
+        # Read the CSV file
         base_proc_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
         metrics_path = os.path.join(base_proc_dir, "TiltSeries_Metrics.csv")
         timestamp_path = os.path.join(base_proc_dir, "TiltSeries_TimeStamp.csv")
@@ -1645,23 +1617,7 @@ def get_metadata_viz_data(request):
         print(merged_df)
         
         # Create a persistent SSH connection with optimized parameters
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        
-        # Add connection optimization parameters
-        ssh_config = {
-            'hostname': HOST,
-            'port': PORT,
-            'username': USERNAME,
-            'password': PASSWORD,
-            'timeout': 10,
-            'allow_agent': False,
-            'look_for_keys': False,
-            'compress': True,
-            'banner_timeout': 10
-        }
-        
-        ssh.connect(**ssh_config)
+        ssh = clusterio.get_cluster_ssh_connection(cluster_id='czii')
        
         # Create SFTP client with optimized buffer sizes
         sftp = ssh.open_sftp()
@@ -1699,7 +1655,7 @@ def get_metadata_viz_data(request):
             required_columns = [
                 'Tilt_Series', 'Thickness(Pix)', 'Tilt_Axis', 'Global_Shift(Pix)',
                 'Bad_Patch_Low', 'Bad_Patch_All', 'CTF_Res(A)', 'CTF_Score',
-                 'Pix_Size(A)', 'Alpha0', 'Beta0'
+                 'Pix_Size(A)', 'Alpha0', 'Beta0',
             ]
 
             # Check for missing required columns
@@ -1721,16 +1677,16 @@ def get_metadata_viz_data(request):
 
             # Add thumbnail paths directly to the dataframe
             df["thumbnail_path"] = df["Tilt_Series"].apply(
-                lambda ts: f"{thumbnail_base_url}{ts}.jpeg"
+                lambda ts: f"{thumbnail_base_url}{ts}.jpeg",
             )
             df["ctf_thumbnails_path"] = df["Tilt_Series"].apply(
-                lambda ts: f"{ctf_base_url}{ts}.jpeg"
+                lambda ts: f"{ctf_base_url}{ts}.jpeg",
             )
 
             # Use the new custom sorting function
             df = df.sort_values(
                 by="Tilt_Series",
-                key=lambda col: col.map(natural_position_sort_key)
+                key=lambda col: col.map(natural_position_sort_key),
             ).reset_index(drop=True)
             fetch_time = time.time() - fetch_start
         
@@ -1774,13 +1730,13 @@ def get_metadata_viz_data(request):
                         'extphase': float(row['ExtPhase(Deg)']),
                         'pixel_size': float(row['Pix_Size(A)']),
                         'alpha0': float(row['Alpha0']),
-                        'beta0': float(row['Beta0']) if not pd.isna(row['Beta0']) else float('nan')
+                        'beta0': float(row['Beta0']) if not pd.isna(row['Beta0']) else float('nan'),
                     }
                     result.append({
                         'name': item_name,
                         'metrics': metrics,
                         'thumbnail_path': item_image_path_to_return,
-                        'ctf_path': ctf_thumbnails_path
+                        'ctf_path': ctf_thumbnails_path,
                     })
                 
                 # Apply sorting if requested
@@ -1797,15 +1753,15 @@ def get_metadata_viz_data(request):
                         'defocus': 'defocus',
                         'extphase': 'extphase',
                         'alpha0': 'alpha0',
-                        'beta0': 'beta0'
+                        'beta0': 'beta0',
                     }
                     
-                    metric_key = metric_key_mapping.get(sort_by, None)
+                    metric_key = metric_key_mapping.get(sort_by)
                     if metric_key:
                         # Sort by the selected metric
                         result.sort(
                             key=lambda x: x['metrics'].get(metric_key, 0),
-                            reverse=(sort_direction.lower() == 'desc')
+                            reverse=(sort_direction.lower() == 'desc'),
                         )
                 
                 return result
@@ -1829,11 +1785,11 @@ def get_metadata_viz_data(request):
                 'total_rejected': len(rejected_results),
                 'filters_applied': {
                     'filters': filter_config.get('filters'),
-                    'filter_type': filter_config.get('filter_type', 'AND').upper()
+                    'filter_type': filter_config.get('filter_type', 'AND').upper(),
                 },
                 'metric_ranges': metric_ranges,
                 'accepted_results': accepted_results,
-                'rejected_results': rejected_results
+                'rejected_results': rejected_results,
             }
             
             return JsonResponse(response_data, json_dumps_params={"indent": 2})
@@ -1905,12 +1861,12 @@ def trigger_syncer(request):
             syncer_script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'processes', 'scripts', syncer_script)
             
             # Run the syncer with job tracking and continuous mode
-            subprocess.Popen(['python', syncer_script_path, 
+            subprocess.Popen(['python', syncer_script_path,
                             '--session', session_name,
                             '--run', f"run{run_number.zfill(3)}",
                             '--job-id', job_id if job_id else '',
                             '--continuous'],  # Add continuous mode
-                           env=dict(os.environ, 
+                           env=dict(os.environ,
                                   PYTHONPATH=os.path.dirname(os.path.dirname(__file__))))
             
             logger.info(f"Started {syncer_type} syncer for session {session_name}, run {run_number}, tracking job {job_id}")
@@ -1920,7 +1876,7 @@ def trigger_syncer(request):
                 'session': session_name,
                 'run': run_number,
                 'job_id': job_id,
-                'status': 'running'
+                'status': 'running',
             })
 
         except Exception as e:
@@ -1940,14 +1896,14 @@ def trigger_syncer(request):
             required=True,
             type=OpenApiTypes.STR,
             location=OpenApiParameter.QUERY,
-            description='Session name in query (e.g. 23sep23a). Note: the JSON body must also include `session_name`.'
+            description='Session name in query (e.g. 23sep23a). Note: the JSON body must also include `session_name`.',
         ),
         OpenApiParameter(
             name='run_id',
             required=True,
             type=OpenApiTypes.STR,
             location=OpenApiParameter.QUERY,
-            description='Run ID in query (e.g. 001). Note: the JSON body must also include `copick_run` (e.g. "run001"/"run003").'
+            description='Run ID in query (e.g. 001). Note: the JSON body must also include `copick_run` (e.g. "run001"/"run003").',
         ),
     ],
     request={
@@ -1960,10 +1916,10 @@ def trigger_syncer(request):
                 'import_tomogram_run': {'type': 'string', 'example': 'run001'},
                 'downsample_tomogram_voxel_size': {'type': 'string', 'nullable': True, 'example': '12'},
                 'user_id': {'type': 'string', 'example': 'yyu'},
-                'password': {'type': 'string', 'description': 'Base64-encoded password', 'example': 'c2VjcmV0MTIz'}
+                'password': {'type': 'string', 'description': 'Base64-encoded password', 'example': 'c2VjcmV0MTIz'},
             },
-            'required': ['session_name', 'copick_run', 'import_tomo_type', 'import_tomogram_run', 'user_id']
-        }
+            'required': ['session_name', 'copick_run', 'import_tomo_type', 'import_tomogram_run', 'user_id'],
+        },
     },
     responses={
         200: OpenApiResponse(
@@ -1976,25 +1932,25 @@ def trigger_syncer(request):
                         'message': 'Session 25sep18a: create_copick submitted.',
                         'output': 'Submitted batch job 123456\nSubmitted batch job 123457\n',
                         'error': '',
-                        'job_id': '123456,123457'
+                        'job_id': '123456,123457',
                     },
-                    response_only=True
-                )
-            ]
+                    response_only=True,
+                ),
+            ],
         ),
         500: OpenApiResponse(
             description="Unhandled server error during submission",
             response=OpenApiTypes.OBJECT,
             examples=[
-                OpenApiExample('Server error', value={'error': 'Some traceback or error string: 500'}, response_only=True)
-            ]
+                OpenApiExample('Server error', value={'error': 'Some traceback or error string: 500'}, response_only=True),
+            ],
         ),
     },
-    tags=["workflow"]
+    tags=["workflow"],
 )
-# @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+
 @csrf_exempt
+@api_view(["POST"])
 # @login_required
 def run_create_copick(request):
     if request.method != 'POST':
@@ -2004,12 +1960,12 @@ def run_create_copick(request):
             data_sanitized={},
             error="Invalid request method",
             advanced_status=False,
-            job_id=None
+            job_id=None,
         )
         return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
     try:
-        data = json.loads(request.body)
+        data = request.data # json.loads(request.body)
 
         # Required fields (adjust names to match your frontend payload)
         session_name = data.get('session_name')                 # e.g. "25sep18a"
@@ -2035,10 +1991,8 @@ def run_create_copick(request):
 
         # Build submitter
         submitter = RemoteJobSubmitter(
-            hostname=HOST_BRUNO,
-            port=PORT,
-            username=user_id,
-            password=decoded_password,
+            cluster_id='bruno',
+            auth={ 'username': user_id, 'password': decoded_password },
             remote_script_dir=COPICK_SCRIPT_DIR,
         )
         submitter.connect()
@@ -2068,14 +2022,14 @@ def run_create_copick(request):
             data_sanitized=data_sanitized,
             error="",
             advanced_status=True,
-            job_id=job_id_str
+            job_id=job_id_str,
         )
 
         return JsonResponse({
             'message': f'Session {session_name}: create_copick submitted.',
             'output': out,
             'error': err,
-            'job_id': job_id_str
+            'job_id': job_id_str,
         })
 
     except Exception as e:
@@ -2085,7 +2039,7 @@ def run_create_copick(request):
             data_sanitized=data_sanitized if 'data_sanitized' in locals() else {},
             error=str(e),
             advanced_status=False,
-            job_id=None
+            job_id=None,
         )
         return JsonResponse({'error': f'{e}: 500'}, status=500)
 
@@ -2115,7 +2069,7 @@ def run_create_copick(request):
                 'import_tomo_type': {
                     'type': 'string',
                     'enum': ['dctf', 'sart', 'wbp', 'denoise'],
-                    'example': 'dctf'
+                    'example': 'dctf',
                 },
                 'import_tomogram_run': {'type': 'string', 'example': 'run001'},
 
@@ -2123,7 +2077,7 @@ def run_create_copick(request):
                 'downsample_tomogram_voxel_size': {
                     'type': 'string',
                     'nullable': True,
-                    'example': '10'
+                    'example': '10',
                 },
             },
             'required': [
@@ -2132,9 +2086,9 @@ def run_create_copick(request):
                 'session_name',
                 'copick_run',
                 'import_tomo_type',
-                'import_tomogram_run'
-            ]
-        }
+                'import_tomogram_run',
+            ],
+        },
     },
     responses={
         200: OpenApiResponse(
@@ -2147,11 +2101,11 @@ def run_create_copick(request):
                         'message': 'Session 25sep18a: copick import submitted.',
                         'output': 'Submitted batch job 123456\n',
                         'error': '',
-                        'job_id': '123456'
+                        'job_id': '123456',
                     },
-                    response_only=True
-                )
-            ]
+                    response_only=True,
+                ),
+            ],
         ),
         400: OpenApiResponse(
             description="Bad request (missing fields or non-POST)",
@@ -2160,14 +2114,14 @@ def run_create_copick(request):
                 OpenApiExample(
                     'Invalid method',
                     value={'error': 'Invalid request method: 400'},
-                    response_only=True
+                    response_only=True,
                 ),
                 OpenApiExample(
                     'Missing fields',
                     value={'error': 'Missing fields: user_id, password'},
-                    response_only=True
+                    response_only=True,
                 ),
-            ]
+            ],
         ),
         500: OpenApiResponse(
             description="Unhandled server error during submission",
@@ -2176,16 +2130,16 @@ def run_create_copick(request):
                 OpenApiExample(
                     'Server error',
                     value={'error': 'Some traceback or error string: 500'},
-                    response_only=True
-                )
-            ]
+                    response_only=True,
+                ),
+            ],
         ),
     },
-    tags=["workflow"]  
+    tags=["workflow"],
 )
-# @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+
 @csrf_exempt
+@api_view(["POST"])
 @login_required
 def run_import_tomogram_copick(request):
     """
@@ -2212,7 +2166,7 @@ def run_import_tomogram_copick(request):
         return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
 
     try:
-        data = json.loads(request.body)
+        data = request.data #json.loads(request.body)
 
         # -------- inputs --------
         session_name = (data.get('session_name') or '').strip()
@@ -2252,10 +2206,8 @@ def run_import_tomogram_copick(request):
 
         # -------- submit ----------
         submitter = RemoteJobSubmitter(
-            hostname=HOST_BRUNO,
-            port=PORT,
-            username=user_id,
-            password=decoded_password,
+            cluster_id='bruno',
+            auth={ 'username': user_id, 'password': decoded_password },
             remote_script_dir=COPICK_SCRIPT_DIR,
         )
         submitter.connect()
@@ -2320,7 +2272,7 @@ def run_import_tomogram_copick(request):
             type=OpenApiTypes.STR,
             location=OpenApiParameter.QUERY,
             required=False,
-            description="Optional filter; matches against name, modelLocation, or pdbID (e.g. `?q=actin`)"
+            description="Optional filter; matches against name, modelLocation, or pdbID (e.g. `?q=actin`)",
         ),
     ],
     responses={
@@ -2341,7 +2293,7 @@ def run_import_tomogram_copick(request):
                                 "voxelSize": 12,
                                 "diameter": 70,
                                 "symmetry": "C1",
-                                "pdbID": "1J6Z"
+                                "pdbID": "1J6Z",
                             },
                             {
                                 "name": "ribosome",
@@ -2351,13 +2303,13 @@ def run_import_tomogram_copick(request):
                                 "voxelSize": 10,
                                 "diameter": 220,
                                 "symmetry": "C1",
-                                "pdbID": "4V6X"
-                            }
-                        ]
+                                "pdbID": "4V6X",
+                            },
+                        ],
                     },
-                    response_only=True
-                )
-            ]
+                    response_only=True,
+                ),
+            ],
         ),
         404: OpenApiResponse(
             description="Template JSON not found locally or remotely",
@@ -2366,9 +2318,9 @@ def run_import_tomogram_copick(request):
                 OpenApiExample(
                     "Not Found",
                     value={"error": "Template JSON not fuound at /hpc/projects/.../template_params.json"},
-                    response_only=True
-                )
-            ]
+                    response_only=True,
+                ),
+            ],
         ),
         500: OpenApiResponse(
             description="Invalid JSON or unexpected server error",
@@ -2376,10 +2328,10 @@ def run_import_tomogram_copick(request):
             examples=[
                 OpenApiExample("Invalid JSON", value={"error": "Invalid JSON: Expecting value: line 1 column 1 (char 0)"}, response_only=True),
                 OpenApiExample("Server error", value={"error": "Unexpected error in get_template_map_json: <details>"}, response_only=True),
-            ]
+            ],
         ),
     },
-    tags=["workflow"]
+    tags=["workflow"],
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -2410,7 +2362,7 @@ def get_template_map_json(request):
         else:
             # Fallback to remote SSH fetch
             logger.info(f"[get_template_map_json] Local file not found, fetching via SSH: {remote_path}")
-            raw_data = ssh_connect_bruno(remote_path)
+            raw_data = clusterio.ssh_connect_bruno(remote_path)
 
         # Parse JSON using your helper
         full_data = jsonify(raw_data)
@@ -2476,7 +2428,7 @@ def get_template_map_json(request):
                 "password": {
                     "type": "string",
                     "description": "Base64-encoded password",
-                    "example": "c2VjcmV0MTIz"
+                    "example": "c2VjcmV0MTIz",
                 },
 
                 # Required job info
@@ -2491,13 +2443,13 @@ def get_template_map_json(request):
                     "type": "string",
                     "nullable": True,
                     "description": "Absolute or relative path to an object map file",
-                    "example": "/hpc/projects/.../models/actin_12A.mrc"
+                    "example": "/hpc/projects/.../models/actin_12A.mrc",
                 },
                 "object_voxel_size": {
                     "type": "number",
                     "nullable": True,
                     "example": 12.0,
-                    "description": "Voxel size (must be numeric if provided)"
+                    "description": "Voxel size (must be numeric if provided)",
                 },
             },
             "required": [
@@ -2508,7 +2460,7 @@ def get_template_map_json(request):
                 "object_name",
                 "object_diameter",
             ],
-        }
+        },
     },
     responses={
         200: OpenApiResponse(
@@ -2535,7 +2487,7 @@ def get_template_map_json(request):
                     "Missing fields",
                     value={"error": "Missing fields: user_id, session"},
                     response_only=True,
-                )
+                ),
             ],
         ),
         500: OpenApiResponse(
@@ -2552,17 +2504,16 @@ def get_template_map_json(request):
     },
     tags=["workflow"],
 )
-# @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+
 @csrf_exempt
+@api_view(["POST"])
 @login_required
-@csrf_exempt
 def run_copick_add_object(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
     try:
-        data = json.loads(request.body or "{}")
+        data = request.data #json.loads(request.body or "{}")
 
         user_id   = (data.get("user_id") or "").strip()
         b64_pass  = (data.get("password") or "").strip()
@@ -2605,14 +2556,11 @@ def run_copick_add_object(request):
 
         # Submit job
         submitter = RemoteJobSubmitter(
-            hostname=HOST_BRUNO,
-            port=PORT,
-            username=user_id,
-            password=password,
+            cluster_id='bruno',
+            auth={ 'username': user_id, 'password': password },
             remote_script_dir=COPICK_SCRIPT_DIR,
         )
         submitter.connect()
-
         job_name = f"{session_name}_add_object_{copick_procrun}"
 
         out, err = submitter.run_script(
@@ -2732,10 +2680,8 @@ def run_copick_add_object(request):
 
         # -------- submit ----------
         submitter = RemoteJobSubmitter(
-            hostname=HOST_BRUNO,
-            port=PORT,
-            username=user_id,
-            password=decoded_password,
+            cluster_id='bruno',
+            auth={ 'username': user_id, 'password': decoded_password },
             remote_script_dir=COPICK_SCRIPT_DIR,
         )
         submitter.connect()
@@ -2840,7 +2786,7 @@ def run_copick_add_object(request):
 
         return JsonResponse(
             {"basePath": base_path, "templates": templates},
-            status=200
+            status=200,
         )
 
     except FileNotFoundError:

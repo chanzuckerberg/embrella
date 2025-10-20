@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Space(models.Model):
     name = models.CharField(max_length=32,  default='BD01', unique=True)
     space_id = models.CharField(max_length=50, unique=True)

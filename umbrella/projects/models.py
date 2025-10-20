@@ -1,7 +1,9 @@
-from django.db import models
-from confluence.models import Space
 from clouddocs.models import DriveFolder
+from confluence.models import Space
 from django.contrib.auth.models import User
+from django.db import models
+
+
 # Create your models here.
 class Project(models.Model):
     name = models.CharField(max_length=32, default='TRD05', unique=True)

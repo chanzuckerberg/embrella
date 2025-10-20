@@ -9,6 +9,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 .idea/
+.vscode/
 build/
 develop-eggs/
 dist/
@@ -128,6 +129,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env*
 
 # Spyder project settings
 .spyderproject
@@ -161,9 +163,11 @@ cython_debug/
 #.idea/
 
 #umbrella-django
-umbrella/umbrella/settings.py
 .DS_Store
 # Ignore specific file
 ../.idea/workspace.xml
 
 .autoenv*
+
+.scratch/
+docs_build/

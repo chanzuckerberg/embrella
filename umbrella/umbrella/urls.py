@@ -14,21 +14,29 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path
-from umbrella.ping import ping
-from umbrella.api_internal import get_tomo_by_msi_session
-from umbrella.api_internal import get_grids_by_user, get_available_grids, get_grids_by_cassette, ReviewView, export_review_results, get_review_tomograms, ReviewTomogramView, SessionView
-from rest_framework.routers import DefaultRouter
-from umbrella.viewsets import UserViewSet, PuckViewSet, GridLoggingChoicesViewSet
-
-from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
-import google
+from django.urls import include, path, re_path
+from django.views.generic import RedirectView
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from processes.views import available_annotation_filter
-from umbrella.user import get_user_info
+from rest_framework.routers import DefaultRouter
 
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from umbrella.api_internal import (
+    ReviewTomogramView,
+    ReviewView,
+    SessionView,
+    export_review_results,
+    get_available_grids,
+    get_grids_by_cassette,
+    get_grids_by_user,
+    get_review_tomograms,
+    get_tomo_by_msi_session,
+)
+from umbrella.ping import ping
+from umbrella.user import get_user_info
+from umbrella.viewsets import GridLoggingChoicesViewSet, PuckViewSet, UserViewSet
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
@@ -36,13 +44,41 @@ router.register(r'api/list/all/users', UserViewSet, basename='user')
 router.register(r'api/list/pucks', PuckViewSet, basename='puck')
 router.register(r'api/grid-logging/choices', GridLoggingChoicesViewSet, basename='grid-logging-choices')
 
+import mimetypes
+
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+from django.views.static import serve
 
 
-urlpatterns = [
+@login_required
+def documentation_view(request, path):
+    if path == '':
+        path = 'index.html'
+    elif path[-1] == '/':
+        path = f'{path}index.html'
+    #if not settings.DOCUMENTATION_ACCESS_FUNCTION(request.user):
+    #    return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
+    if not settings.DOCUMENTATION_XSENDFILE:
+        return serve(
+            request,
+            path,
+            settings.DOCUMENTATION_HTML_ROOT)
+    mimetype, encoding = mimetypes.guess_type(path)
+    response = HttpResponse(content_type=mimetype)
+    response['Content-Encoding'] = encoding
+    response['Content-Disposition'] = ''
+    response['X-Sendfile'] = "".join([settings.DOCUMENTATION_HTML_ROOT, path])
+    return response
+
+
+# sURLs =[static(settings.STATIC_URL, document_root=settings.STATIC_ROOT),
+#         static("/docs/", document_root=settings.STATIC_ROOT),]
+urlpatterns = ([
     path('', RedirectView.as_view(url='/umbrella/', permanent=True)),
     path('admin/', admin.site.urls, name='admin'),
     path(
-        "google_sso/", include("django_google_sso.urls", namespace="django_google_sso")
+        "google_sso/", include("django_google_sso.urls", namespace="django_google_sso"),
     ),
     path('umbrella/', include('custom.urls'),name='umbrella'),
     path('projects/', include('projects.urls')),
@@ -69,12 +105,11 @@ urlpatterns = [
     path('api/reviews/<str:review_id>/export', export_review_results, name='export_review_results'),
     path('api/reviews/<str:review_id>/tomograms', get_review_tomograms, name='get_review_tomograms'),
     path('api/reviews/<str:review_id>/tomograms/<str:tomogram_id>', ReviewTomogramView.as_view(), name='review_tomogram_detail_no_slash'),
-
-   
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'), #Raw JSON data 
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'), #Raw JSON data
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'), #Swagger UI
-    
-]
+    path('api/redocs/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    re_path(r'^docs/(?P<path>.*)$', documentation_view, name="docs"),
+])
 
 
 # Include router URLs

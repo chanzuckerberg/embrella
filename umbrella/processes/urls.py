@@ -1,7 +1,6 @@
 from django.urls import path
 
-from . import views
-from . import views_post_tomo
+from . import views, views_post_tomo
 
 #register app namespace
 app_name = "processes"

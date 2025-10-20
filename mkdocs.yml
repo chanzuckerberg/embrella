@@ -1,0 +1,94 @@
+# Note: this MkDocs setup was copied from https://github.com/copick/copick.
+
+site_name: umbrella
+site_dir: docs_build
+repo_url: "https://github.com/czimaginginstitute/czii-umbrella-django"
+repo_name: "czimaginginstitute/czii-umbrella-django"
+copyright: "2025, CZ Imaging Institute"
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+  #logo: assets/umbrella.svg
+  logo: assets/logo.png
+  features:
+    - content.code.copy
+nav:
+  - Home: index.md
+  - Tutorials:
+    - User Guide: "tutorials/userguide.md"
+  - Contributing:
+    - Getting Started: "contributing/gettingstarted.md"
+    - Managing Environment Secrets: "contributing/environments.md"
+    - Running/Deploying: "contributing/deployment.md"
+    - Updating Documentation: "contributing/documentation.md"
+    - Version Control/Release Convention: "contributing/convention.md"
+
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
+      default_handler: python
+      handlers:
+        python:
+          options:
+            # General
+            show_source: false
+            preload_modules: [pydantic]
+            # Headings
+            show_symbol_type_toc: true
+            show_symbol_type_heading: true
+            show_root_full_path: true
+            show_root_heading: true
+            # Members
+            group_by_category: true
+            show_labels: false
+            inherited_members: false
+            members_order: source
+            # Docstrings
+            docstring_section_style: list
+            merge_init_into_class: false
+            docstring_style: google
+            # Signatures
+            show_signature_annotations: true
+            signature_crossrefs: false
+            separate_signature: true
+            line_length: 60
+
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.snippets:
+      check_paths: true
+      base_path: [ docs/snippets, docs/templates, "." ]
+
+extra_css:
+  - stylesheets/extra.css

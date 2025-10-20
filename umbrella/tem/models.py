@@ -1,18 +1,16 @@
-from django.db import models
-from django.contrib.auth.models import User
-from django.db.models import Q
-from django.core.validators import validate_comma_separated_integer_list
-
-from projects.models import Project
-from cryo_grids.models import CryoGrid, CryoGridCassette
-from stores.models import Path, PathType, fill_place_holders
-import sys
-from django.utils import timezone
-import os
-import time
 import string
+import sys
+import time
+
+from cryo_grids.models import CryoGrid, CryoGridCassette
+from django.contrib.auth.models import User
+from django.core.validators import validate_comma_separated_integer_list
+from django.db import models
+from django.db.models import Q
+from django.utils import timezone
+from projects.models import Project
 from pydantic import BaseModel
-from typing import List, Union, Optional
+from stores.models import Path, PathType, fill_place_holders
 
 TEM_CHOICES = {
     'imaging_mode': [
@@ -26,7 +24,7 @@ TEM_CHOICES = {
         ('ptyc', 'Ptychography'),
         ('idpc', 'iDPC'),
         ('clem', 'CLEM Mapping'),
-    ]
+    ],
 }
 
 # This determines file structure
@@ -172,7 +170,7 @@ class AtlasSession(models.Model):
     atlas = models.ForeignKey(Path, related_name='screenatlas', on_delete=models.SET_NULL, null=True)
     quality = models.SmallIntegerField(
             default=-1,
-            help_text='grid quality score 0-5 5=highest, -1=not started, 0=failed'
+            help_text='grid quality score 0-5 5=highest, -1=not started, 0=failed',
     )
     notes = models.TextField(max_length=255, blank=True, null=True)
 
@@ -180,7 +178,7 @@ class AtlasSession(models.Model):
         unique_together = [["name","group"]]
         constraints = [
             models.CheckConstraint(check=models.Q(quality__lte=5),name='quality_score_exceed_max'),
-            models.CheckConstraint(check=models.Q(quality__gte=-1),name='quality_score_not_valid')
+            models.CheckConstraint(check=models.Q(quality__gte=-1),name='quality_score_not_valid'),
         ]
  
     def get_replacement_map(self):
@@ -201,7 +199,7 @@ class AtlasSession(models.Model):
             out_path = '.'
         else:
             out_path = fill_place_holders(my_attr.overlay_path,
-                    self.get_replacement_map()
+                    self.get_replacement_map(),
             )
             return out_path
 
@@ -212,11 +210,11 @@ class AtlasSession(models.Model):
         plan = self.group.session_plan
         path_obj = getattr(plan.software, type_name)
         static_path = fill_place_holders(path_obj.static_path.static_path,
-                    self.get_replacement_map()
+                    self.get_replacement_map(),
         )
         session_attr = getattr(self, 'get_session_%s_glob' % type_name)
         overlay_path = fill_place_holders(session_attr(),
-                    self.get_replacement_map()
+                    self.get_replacement_map(),
         )
         path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
         if not path_set:
@@ -266,8 +264,8 @@ class MsiSession(models.Model):
                                             {
                                                 'workflow': plan.imaging_workflow.workflow,
                                                 'scope': scope_name,
-                                                'msi_session': self.name
-                                          }
+                                                'msi_session': self.name,
+                                          },
                                           )
             return out_path
 
@@ -301,16 +299,16 @@ class MsiSession(models.Model):
                                          {
                                              'workflow': plan.imaging_workflow.workflow,
                                              'scope': scope_name,
-                                             'msi_session': self.name
-                                         }
+                                             'msi_session': self.name,
+                                         },
                                          )
         session_attr = getattr(self, 'get_session_%s_glob' % type_name)
         overlay_path = fill_place_holders(session_attr(),
                                           {
                                               'workflow': plan.imaging_workflow.workflow,
                                               'scope': scope_name,
-                                              'msi_session': self.name
-                                          }
+                                              'msi_session': self.name,
+                                          },
                                           )
         path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
         if not path_set:

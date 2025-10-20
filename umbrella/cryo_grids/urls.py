@@ -20,8 +20,8 @@ urlpatterns = [
     path('clear_cassette_filter/<int:cassette_id>/', views.clear_cassette_filter, name='clear_cassette_filter'),
     path('clear_cassette_move/', views.clear_cassette_move, name='clear_cassette_move'),
     path('get_available_box/', views.get_available_positions, name='get'),
-    path('available-positions/<int:object_id>', 
-         views.get_available_positions, 
+    path('available-positions/<int:object_id>',
+         views.get_available_positions,
          name='get_available_positions'),
     path('update-grid-trashed/<int:grid_id>/', views.update_grid_trashed_status, name='update_grid_trashed_status'),
 ]

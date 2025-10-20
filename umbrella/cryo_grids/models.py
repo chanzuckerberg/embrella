@@ -1,11 +1,10 @@
-from django.db import models
-from django.contrib.auth.models import User
-from django import forms
 from confluence.models import Page
+from django.contrib.auth.models import User
+from django.db import models
 from projects.models import Project
 
-from umbrella.choices import CANE_COLORS, PUCK_COLORS
-from umbrella.choices import GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING
+from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
+
 
 class Site(models.Model):
     name = models.CharField(max_length=20, default='3400Bridge', unique=True)
@@ -46,11 +45,11 @@ class Puck(models.Model):
     max_boxes = models.PositiveSmallIntegerField(default=12, help_text="Maximum number of boxes fit on the puck")
     # NEW: Add user foreign key
     user = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        help_text='User who created or is responsible for this puck'
+        help_text='User who created or is responsible for this puck',
     )
 
     class Meta:
@@ -87,7 +86,7 @@ class CryoGridCassette(models.Model):
 class PlungeFreezingDevice(models.Model):
     name = models.CharField(max_length=100, unique=True)
     maker_model = models.CharField(max_length=32, default='Leica GP2')
-    site = models.ForeignKey(Site, on_delete=models.CASCADE,)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
@@ -95,7 +94,7 @@ class PlungeFreezingDevice(models.Model):
 class PlungeFreezingSession(models.Model):
     datetime = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True)
-    device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE,)
+    device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE)
     device_temperature = models.FloatField(default=4.0, help_text='Temperature of the freezing chamber in degree Celsius')
     humidity = models.PositiveSmallIntegerField(default=95)
     # number_of_grids = models.PositiveSmallIntegerField(default=1)
@@ -116,9 +115,9 @@ class Sample(models.Model):
 class Specimen(models.Model):
     
     samples = models.ManyToManyField(
-        Sample, 
-        blank=True, 
-        help_text='Associated samples from the Sample'
+        Sample,
+        blank=True,
+        help_text='Associated samples from the Sample',
     )
     notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for sample prep')
     notes = models.TextField(max_length=255, blank=True)
@@ -131,7 +130,7 @@ class Specimen(models.Model):
 
 class CryoGrid(models.Model):
     create_on = models.DateField(auto_now_add=True)
-    updated_on = models.DateField(auto_now=True) 
+    updated_on = models.DateField(auto_now=True)
     name = models.CharField(max_length=32, default='grid1')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     notes = models.TextField(max_length=255, blank=True, null=True,help_text='notes about freezing and grid condition on this grid')

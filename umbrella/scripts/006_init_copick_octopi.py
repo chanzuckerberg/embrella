@@ -1,14 +1,22 @@
-from django.contrib.auth.models import User
-import sys
-import django
 import os
+import sys
+
+import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
-from tem.models import *
-from stores.models import StaticPath,PathType, fill_place_holders
-from processes.models import ProcSoftware,Task, ProcPlan, Pipe, PipeInPlan, ReconMethod, TomogramVoxelSpacing
-from processes.models import PipeJoint
+from processes.models import (
+    Pipe,
+    PipeInPlan,
+    PipeJoint,
+    ProcPlan,
+    ProcSoftware,
+    Task,
+)
+from stores.models import PathType, StaticPath
+
+#from tem.models import *
+
 
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
@@ -93,12 +101,12 @@ def create_pipeline_plan():
 
     # input/output
     for p in output_path_types[0:1]:
-        pipe1.output.add(p) 
+        pipe1.output.add(p)
     for p in output_path_types[1:2]: #recon
        pipe2.output.add(p)
 
-    pipe1.input.add(get_static_path('rec'))   
-    pipe2.input.add(get_static_path('rec')) 
+    pipe1.input.add(get_static_path('rec'))
+    pipe2.input.add(get_static_path('rec'))
 
     # pipe joints
     plan_cpck = ProcPlan.objects.get(pk=1)
@@ -109,7 +117,7 @@ def create_pipeline_plan():
 
 
     producer_rec = PipeInPlan.objects.filter(
-        pipe__output__static_path__data_type='rec'
+        pipe__output__static_path__data_type='rec',
     ).first()
 
     if producer_rec:

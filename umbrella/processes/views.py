@@ -1,73 +1,62 @@
-from django.shortcuts import render
-from rest_framework.permissions import IsAuthenticated
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponseRedirect
-from django.urls import reverse
-from rest_framework.decorators import api_view, permission_classes
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
-from drf_spectacular.types import OpenApiTypes
-from .forms import ProcRunForm, ReserveFrameProcRunForm, UpdateNotesForm
-from django.contrib.auth.decorators import login_required
-from . import models
-from django.views.decorators.csrf import csrf_exempt
-from processes.models import ProcRun, ProcPlan, ProcSoftware, RunPipeData, suggest_name
-from tem.models import MsiSession
-from django.core.serializers import serialize
-from django.views.decorators.http import require_http_methods
-from django.http import JsonResponse
+# from umbrella.settings import ENVIRONMENT
+import io
 import json
-from django.db.models.functions import Substr, StrIndex, Trim
-from pydantic import ValidationError
-from django.utils.timezone import now
-from datetime import timedelta
-from datetime import datetime
-from tem.models import MsiSession
-from django.db.models import Case, When, F, Value, CharField, Count
-from cryo_grids.models import CryoGrid, PlungeFreezingSession, Specimen, Sample
-from processes.models import *
-from processes.utils import QueryParams, InputTomogramModel,AnnotationModel, AnnotationResponseModel, annotationQueryParams,SortMetadataModel, TomogramModel, tomoQueryParams, UnprocessableEntity, ResponseModel, ProcPlanModel, ProcRunModel,ProjectModel,JsonModel,GridModel,PaginationMetadataModel, UserModel,MSISessionModel
-from tem.models import MsiSession
-from processes.scripts.import_tomograms import get_available_sessions, main as import_tomograms_main
-from django.db.models import F,Q
-from django.http import JsonResponse
-from pydantic import ValidationError
-from typing import List
-from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 import logging
 import os
-from django.forms.models import model_to_dict  # ensure this is imported
-# from umbrella.settings import ENVIRONMENT
-import asyncio
-import glob
-import requests
-from urllib.parse import urljoin
-import re
-from bs4 import BeautifulSoup
-from asgiref.sync import sync_to_async
-import io
-import sys
 from contextlib import redirect_stdout
-import json
-import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Union
 
+from asgiref.sync import sync_to_async
+from cryo_grids.models import Sample
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
-from django.db.models import Q, Count, F, CharField, Case, When, Value
-from django.db.models.functions import Substr, StrIndex, Trim
-from django.http import JsonResponse
-from django.utils.decorators import method_decorator
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db.models import Case, CharField, Count, F, Q, Value, When
+from django.db.models.functions import StrIndex, Substr, Trim
+from django.http import HttpResponseRedirect, JsonResponse
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
+from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.views.generic import View
-from django.utils.timezone import now
-from pydantic import BaseModel, ValidationError as PydanticValidationError
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, OpenApiResponse, extend_schema
 
-from processes.models import ProcRun, ProcPlan
-from processes.utils import tomoQueryParams, QueryParams, UnprocessableEntity
+#from processes.models import *
+from processes.models import (
+    Annotation,
+    ProcPlan,
+    ProcRun,
+    Review,
+    ReviewTomogram,
+    RunPipeData,
+    suggest_name,
+)
+from processes.utils import (
+    AnnotationModel,
+    AnnotationResponseModel,
+    GridModel,
+    InputTomogramModel,
+    JsonModel,
+    MSISessionModel,
+    ProcPlanModel,
+    ProcRunModel,
+    ProjectModel,
+    QueryParams,
+    ResponseModel,
+    SortMetadataModel,
+    TomogramModel,
+    UnprocessableEntity,
+    UserModel,
+    annotationQueryParams,
+    tomoQueryParams,
+)
+from pydantic import ValidationError
+from rest_framework.decorators import api_view
 from tem.models import MsiSession
-from cryo_grids.models import Sample
+
+from common import clusterio
+
+from .forms import ReserveFrameProcRunForm, UpdateNotesForm
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +75,7 @@ def msi_session_sort_key(name):
         # Convert month to number for proper sorting
         month_map = {
             'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
         }
         
         # Check if month is valid
@@ -147,7 +136,7 @@ def detail(request, run_id):
             "pipe_data": all_pipe_data,
             "paths": {
                     "update_notes": form,
-            }
+            },
     }
     return render(request, "processes/detail.html", context)
 @login_required
@@ -166,24 +155,24 @@ def reserve_run(request):
         "type": "object",
         "properties": {
             "proc_plan": {"type": "integer", "description": "ID of the processing plan"},
-            "msi_session": {"type": "integer", "description": "ID of the MSI session"}
+            "msi_session": {"type": "integer", "description": "ID of the MSI session"},
         },
-        "required": ["proc_plan", "msi_session"]
+        "required": ["proc_plan", "msi_session"],
     },
     responses={
         302: OpenApiTypes.STR,
         400: OpenApiTypes.OBJECT,
         500: OpenApiTypes.OBJECT,
-        405: OpenApiTypes.OBJECT
-    }
+        405: OpenApiTypes.OBJECT,
+    },
 )
 @csrf_exempt
-# @api_view(["POST"])
-# @login_required
+@api_view(["POST"])
+@require_http_methods(["POST"])
 def create_run(request):
     if request.method == 'POST':
         try:
-            data = json.loads(request.body.decode('utf-8'))  # Parse JSON data
+            data = request.data #json.loads(request.body.decode('utf-8'))  # Parse JSON data
             plan_id = int(data.get('proc_plan'))  # Extract `proc_plan`
             session_id = int(data.get('msi_session'))  # Extract `msi_session`
             run_number = data.get('run_number')  # Extract the actual run number specified by user
@@ -202,12 +191,12 @@ def create_run(request):
                 existing_run = ProcRun.objects.filter(
                     name=name,
                     msi_session=msi_session,
-                    proc_plan=proc_plan
+                    proc_plan=proc_plan,
                 ).first()
                 
                 if existing_run:
                     return JsonResponse({
-                        'error': f'Run number {name} already exists for this session and plan. Please choose a different run number.'
+                        'error': f'Run number {name} already exists for this session and plan. Please choose a different run number.',
                     }, status=400)
             else:
                 # Fallback to the old behavior if no run number is specified
@@ -251,21 +240,21 @@ def create_run(request):
                 "proc_plan": {
                     "type": "integer",
                     "example": 12,
-                    "description": "Primary key of the processing plan (`ProcPlan.id`)."
+                    "description": "Primary key of the processing plan (`ProcPlan.id`).",
                 },
                 "msi_session": {
                     "type": "integer",
                     "example": 34,
-                    "description": "Primary key of the microscopy session (`MsiSession.id`)."
+                    "description": "Primary key of the microscopy session (`MsiSession.id`).",
                 },
                 "run_number": {
                     "type": "string",
                     "example": "002",
-                    "description": "Run number (with or without 'run' prefix). Will be normalized to 'run###'."
+                    "description": "Run number (with or without 'run' prefix). Will be normalized to 'run###'.",
                 },
             },
-            "required": ["proc_plan", "msi_session", "run_number"]
-        }
+            "required": ["proc_plan", "msi_session", "run_number"],
+        },
     },
     responses={
         200: OpenApiResponse(
@@ -278,10 +267,10 @@ def create_run(request):
                         "message": "Reservation available.",
                         "proc_plan": 12,
                         "msi_session": 34,
-                        "run_number": "run002"
+                        "run_number": "run002",
                     },
                     response_only=True,
-                )
+                ),
             ],
         ),
         400: OpenApiResponse(
@@ -324,7 +313,7 @@ def create_run(request):
                     "Already exists",
                     value={"error": "Run run002 already exists for this session and plan."},
                     response_only=True,
-                )
+                ),
             ],
         ),
         500: OpenApiResponse(
@@ -341,13 +330,13 @@ def create_run(request):
     },
     tags=["processes"],
 )
-# @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+
 @csrf_exempt
+@api_view(["POST"])
 @require_http_methods(["POST"])
 def reserve_generic_run(request):
     try:
-        data = json.loads(request.body.decode("utf-8"))
+        data = request.data # json.loads(request.body.decode("utf-8"))
         plan_id = int(data.get("proc_plan"))
         session_id = int(data.get("msi_session"))
         run_number = (data.get("run_number") or "").strip()
@@ -363,12 +352,12 @@ def reserve_generic_run(request):
         msi_session = MsiSession.objects.get(pk=session_id)
 
         exists = ProcRun.objects.filter(
-            name=run_number, proc_plan=proc_plan, msi_session=msi_session
+            name=run_number, proc_plan=proc_plan, msi_session=msi_session,
         ).exists()
         if exists:
             return JsonResponse(
                 {'error': f'Run {run_number} already exists for this session and plan.'},
-                status=409
+                status=409,
             )
 
         # No DB write here—just confirming availability
@@ -376,7 +365,7 @@ def reserve_generic_run(request):
             'message': 'Reservation available.',
             'proc_plan': proc_plan.id,
             'msi_session': msi_session.id,
-            'run_number': run_number
+            'run_number': run_number,
         }, status=200)
 
     except ProcPlan.DoesNotExist:
@@ -403,33 +392,33 @@ def reserve_generic_run(request):
                 "proc_plan": {
                     "type": "integer",
                     "example": 12,
-                    "description": "Primary key of `ProcPlan`."
+                    "description": "Primary key of `ProcPlan`.",
                 },
                 "msi_session": {
                     "type": "integer",
                     "example": 34,
-                    "description": "Primary key of `MsiSession`."
+                    "description": "Primary key of `MsiSession`.",
                 },
                 "run_number": {
                     "type": "string",
                     "example": "002",
-                    "description": "Run number with or without 'run' prefix. Will be normalized to 'run###'."
+                    "description": "Run number with or without 'run' prefix. Will be normalized to 'run###'.",
                 },
                 "pipeline": {
                     "type": "string",
                     "nullable": True,
                     "example": "copick",
-                    "description": "Optional label; defaults to 'generic'."
+                    "description": "Optional label; defaults to 'generic'.",
                 },
                 "notes": {
                     "type": "string",
                     "nullable": True,
                     "example": "initial dry run",
-                    "description": "Optional freeform notes."
+                    "description": "Optional freeform notes.",
                 },
             },
             "required": ["proc_plan", "msi_session", "run_number"],
-        }
+        },
     },
     responses={
         201: OpenApiResponse(
@@ -444,10 +433,10 @@ def reserve_generic_run(request):
                         "run_number": "run002",
                         "session_id": 34,
                         "plan_id": 12,
-                        "detail_url": "/processes/987/"
+                        "detail_url": "/processes/987/",
                     },
                     response_only=True,
-                )
+                ),
             ],
         ),
         400: OpenApiResponse(
@@ -487,7 +476,7 @@ def reserve_generic_run(request):
                     "Duplicate",
                     value={"error": "Run run002 already exists for this session and plan."},
                     response_only=True,
-                )
+                ),
             ],
         ),
         500: OpenApiResponse(
@@ -500,9 +489,9 @@ def reserve_generic_run(request):
     },
     tags=["processes"],
 )
-# @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+
 @csrf_exempt
+@api_view(["POST"])
 @require_http_methods(["POST"])
 def create_generic_run(request):
     """
@@ -511,7 +500,7 @@ def create_generic_run(request):
     Optional JSON: pipeline (e.g., "copick"), notes
     """
     try:
-        data = json.loads(request.body.decode('utf-8'))
+        data = request.data # json.loads(request.body.decode('utf-8'))
 
         # Validate inputs
         try:
@@ -543,7 +532,7 @@ def create_generic_run(request):
             name=name,
             msi_session=msi_session,
             proc_plan=proc_plan,
-            notes=notes or f'pipeline={pipeline}'
+            notes=notes or f'pipeline={pipeline}',
         )
 
         return JsonResponse({
@@ -552,7 +541,7 @@ def create_generic_run(request):
             'run_number': run_instance.name,
             'session_id': msi_session.id,
             'plan_id': proc_plan.id,
-            'detail_url': reverse('processes:detail', args=(run_instance.id,))
+            'detail_url': reverse('processes:detail', args=(run_instance.id,)),
         }, status=201)
 
     except ProcPlan.DoesNotExist:
@@ -565,96 +554,96 @@ def create_generic_run(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@extend_schema(
-    methods=["GET"],
-    description="Fetches all sessions (runs). Requires ?valid=true.",
-    parameters=[
-        OpenApiParameter(name='valid', required=True, type=bool, description='Must be true')
-    ],
-    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT}
-)
-@api_view(["GET"])
-@require_http_methods(["GET"])
-def get_all_runs(request):
-    if not request.GET.get('valid', 'true') == 'true':
-        return JsonResponse({'error': 'Invalid request'}, status=400)
-    run_list = Session.objects.all()
-    serialized_runs = serialize('json', run_list)
-    run_data = json.loads(serialized_runs)
-    return JsonResponse(run_data, safe=False)
+# @extend_schema(
+#     methods=["GET"],
+#     description="Fetches all sessions (runs). Requires ?valid=true.",
+#     parameters=[
+#         OpenApiParameter(name='valid', required=True, type=bool, description='Must be true'),
+#     ],
+#     responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
+# )
+# @api_view(["GET"])
+# @require_http_methods(["GET"])
+# def get_all_runs(request):
+#     if not request.GET.get('valid', 'true') == 'true':
+#         return JsonResponse({'error': 'Invalid request'}, status=400)
+#     run_list = Session.objects.all()
+#     serialized_runs = serialize('json', run_list)
+#     run_data = json.loads(serialized_runs)
+#     return JsonResponse(run_data, safe=False)
 
-@extend_schema(
-    methods=["GET"],
-    description="Returns paths for images in ProcSoftware records. Requires ?valid=true.",
-    parameters=[
-        OpenApiParameter(name='valid', required=True, type=bool),
-        OpenApiParameter(name='name', required=False, type=str, description='Name to filter by')
-    ],
-    responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT}
-)
-@api_view(["GET"])
-@require_http_methods(["GET"])
-def get_all_image_paths(request):
-    if request.GET.get('valid', 'true') != 'true':
-        return JsonResponse({'error': 'Invalid request'}, status=400)
-
-    name_param = request.GET.get('name')
-
-    software_query = ProcSoftware.objects.select_related(
-        'frames', 'sums', 'mdocs', 'parents', 'atlas'
-    ).all()
-
-    result_list: List[dict] = []
-    for software in software_query:
-        software_data = ProcSoftwareResponseModel(
-            model="tem.software",
-            pk=software.pk,
-            fields=ProcSoftwareFieldsResponse(
-                name=software.name,
-                frames=PathInfo(
-                    static_path=software.frames.static_path if software.frames else None,
-                    overlay_path=software.frames.overlay_path if software.frames else None,
-                ),
-                sums=PathInfo(
-                    static_path=software.sums.static_path if software.sums else None,
-                    overlay_path=software.sums.overlay_path if software.sums else None,
-                ),
-                mdocs=PathInfo(
-                    static_path=software.mdocs.static_path if software.mdocs else None,
-                    overlay_path=software.mdocs.overlay_path if software.mdocs else None,
-                ),
-                parents=PathInfo(
-                    static_path=software.parents.static_path if software.parents else None,
-                    overlay_path=software.parents.overlay_path if software.parents else None,
-                ),
-                atlas=PathInfo(
-                    static_path=software.atlas.static_path if software.atlas else None,
-                    overlay_path=software.atlas.overlay_path if software.atlas else None,
-                )
-            )
-        )
-        result_list.append(software_data.dict())
-
-    if not name_param:
-        return JsonResponse(content=result_list.dict())
-    #case sensitive
-    filtered_results = [item for item in result_list if item['fields']['name'].lower() == name_param.lower()]
-    if filtered_results:
-        return JsonResponse(data=filtered_results[0], safe=False)
-
-    # Use ErrorResponse model correctly by converting it to a dictionary
-    error_response = ErrorResponse(error='No matching software found')
-
-    return JsonResponse(data=error_response.dict(), status=404, safe=False)
+# @extend_schema(
+#     methods=["GET"],
+#     description="Returns paths for images in ProcSoftware records. Requires ?valid=true.",
+#     parameters=[
+#         OpenApiParameter(name='valid', required=True, type=bool),
+#         OpenApiParameter(name='name', required=False, type=str, description='Name to filter by'),
+#     ],
+#     responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+# )
+# @api_view(["GET"])
+# @require_http_methods(["GET"])
+# def get_all_image_paths(request):
+#     if request.GET.get('valid', 'true') != 'true':
+#         return JsonResponse({'error': 'Invalid request'}, status=400)
+#
+#     name_param = request.GET.get('name')
+#
+#     software_query = ProcSoftware.objects.select_related(
+#         'frames', 'sums', 'mdocs', 'parents', 'atlas',
+#     ).all()
+#
+#     result_list: List[dict] = []
+#     for software in software_query:
+#         software_data = ProcSoftwareResponseModel(
+#             model="tem.software",
+#             pk=software.pk,
+#             fields=ProcSoftwareFieldsResponse(
+#                 name=software.name,
+#                 frames=PathInfo(
+#                     static_path=software.frames.static_path if software.frames else None,
+#                     overlay_path=software.frames.overlay_path if software.frames else None,
+#                 ),
+#                 sums=PathInfo(
+#                     static_path=software.sums.static_path if software.sums else None,
+#                     overlay_path=software.sums.overlay_path if software.sums else None,
+#                 ),
+#                 mdocs=PathInfo(
+#                     static_path=software.mdocs.static_path if software.mdocs else None,
+#                     overlay_path=software.mdocs.overlay_path if software.mdocs else None,
+#                 ),
+#                 parents=PathInfo(
+#                     static_path=software.parents.static_path if software.parents else None,
+#                     overlay_path=software.parents.overlay_path if software.parents else None,
+#                 ),
+#                 atlas=PathInfo(
+#                     static_path=software.atlas.static_path if software.atlas else None,
+#                     overlay_path=software.atlas.overlay_path if software.atlas else None,
+#                 ),
+#             ),
+#         )
+#         result_list.append(software_data.dict())
+#
+#     if not name_param:
+#         return JsonResponse(content=result_list.dict())
+#     #case sensitive
+#     filtered_results = [item for item in result_list if item['fields']['name'].lower() == name_param.lower()]
+#     if filtered_results:
+#         return JsonResponse(data=filtered_results[0], safe=False)
+#
+#     # Use ErrorResponse model correctly by converting it to a dictionary
+#     error_response = ErrorResponse(error='No matching software found')
+#
+#     return JsonResponse(data=error_response.dict(), status=404, safe=False)
 
 
 @extend_schema(
     methods=["GET"],
     description="Returns available filters for ProcRuns based on selected criteria passed via 'q' query param.",
     parameters=[
-        OpenApiParameter(name='q', required=True, type=OpenApiTypes.STR, description='JSON-encoded filter list')
+        OpenApiParameter(name='q', required=True, type=OpenApiTypes.STR, description='JSON-encoded filter list'),
     ],
-    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 422: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 422: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -688,10 +677,10 @@ def available_filters(request):
             'msi_session__user',
             'msi_session__atlas_session',
             'msi_session__atlas_session__group',
-            'msi_session__grid__specimen'
+            'msi_session__grid__specimen',
         ).prefetch_related(
             'msi_session__grid__specimen__samples',  # Updated: prefetch the samples (many-to-many)
-            'runpipedata_set__tomograms_set'
+            'runpipedata_set__tomograms_set',
         ).filter(filter_criteria, proc_plan__name__in=['czii-live', 'czii-denoise'])
 
         # Add date ranges
@@ -726,7 +715,7 @@ def available_filters(request):
                 queryset.values(project_name=F('msi_session__project__name'))
                 .annotate(count=Count('id'))
                 .order_by('project_name')
-                .values(name=F('project_name'), count=F('count'))
+                .values(name=F('project_name'), count=F('count')),
             ),
             'sample': [],
             'user': list(
@@ -738,48 +727,48 @@ def available_filters(request):
                                 then=Substr(
                                     F('msi_session__user__username'),
                                     1,
-                                    StrIndex(F('msi_session__user__username'), Value('@')) - 1
-                                )
+                                    StrIndex(F('msi_session__user__username'), Value('@')) - 1,
+                                ),
                             ),
                             default=F('msi_session__user__username'),
-                            output_field=CharField()
-                        )
-                    )
+                            output_field=CharField(),
+                        ),
+                    ),
                 )
                 .values(user_temp_name=F('user_temp_name'))
                 .annotate(count=Count('id'))
                 .order_by('user_temp_name')
-                .values(name=F('user_temp_name'), count=F('count'))
+                .values(name=F('user_temp_name'), count=F('count')),
             ),
             'msiSession': sorted(
                 list(
                     queryset.exclude(msi_session__name__isnull=True)
                     .values(session_name=F('msi_session__name'))
                     .annotate(count=Count('id'))
-                    .values(name=F('session_name'), count=F('count'))
+                    .values(name=F('session_name'), count=F('count')),
                 ),
-                key=lambda x: msi_session_sort_key(x['name'])
+                key=lambda x: msi_session_sort_key(x['name']),
             ),
             'screeningSession': list(
                 queryset.exclude(msi_session__atlas_session__group__name__isnull=True)
                 .values(screening_session_name=F('msi_session__atlas_session__group__name'))
                 .annotate(count=Count('id'))
                 .order_by('screening_session_name')
-                .values(name=F('screening_session_name'), count=F('count'))
+                .values(name=F('screening_session_name'), count=F('count')),
             ),
             'procPlan': list(
                 queryset.filter(
-                    proc_plan__name__in=['czii-denoise', 'czii-live']
+                    proc_plan__name__in=['czii-denoise', 'czii-live'],
                 )
                 .values(plan_name=F('proc_plan__name'))
                 .annotate(count=Count('id'))
                 .order_by('plan_name')
-                .values(name=F('plan_name'), count=F('count'))
+                .values(name=F('plan_name'), count=F('count')),
             ),
             'date': [
                 {
                     "name": key,
-                    "count": queryset.filter(updated_at__gte=value).count()
+                    "count": queryset.filter(updated_at__gte=value).count(),
                 }
                 for key, value in date_ranges.items()
             ],
@@ -812,7 +801,7 @@ def available_filters(request):
                 processed_samples[sample_name] = {
                     'name': display_name,
                     'count': item['count'],
-                    'selected': False
+                    'selected': False,
                 }
         filters['sample'] = list(processed_samples.values())
 
@@ -822,7 +811,7 @@ def available_filters(request):
 
         # Convert to the expected output format
         response_data = {
-            "filters": filters
+            "filters": filters,
         }
 
         return JsonResponse(response_data)
@@ -841,7 +830,7 @@ def available_filters(request):
         OpenApiParameter(name='page', required=False, type=int),
         OpenApiParameter(name='pageSize', required=False, type=int),
     ],
-    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -903,12 +892,12 @@ def get_tomo_details(request):
             'msi_session__user',
             'msi_session__atlas_session',
             'msi_session__atlas_session__group',
-            'msi_session__grid__specimen'
+            'msi_session__grid__specimen',
         ).prefetch_related(
             'msi_session__grid__specimen__samples',  # Updated prefetch: use many-to-many field "samples"
-            'runpipedata_set'
+            'runpipedata_set',
         ).filter(
-            proc_plan__name__in=['czii-live', 'czii-denoise']
+            proc_plan__name__in=['czii-live', 'czii-denoise'],
         ).values(
             'id',
             'name',
@@ -940,7 +929,7 @@ def get_tomo_details(request):
         date_mapping = {
             'last_1_month': 1,
             'last_3_months': 3,
-            'last_6_months': 6
+            'last_6_months': 6,
         }
 
         filter_criteria = Q()
@@ -999,12 +988,12 @@ def get_tomo_details(request):
                         ontology_value = parts[1].strip() if len(parts) > 1 else None
                         sample_filter |= Q(
                             msi_session__grid__specimen__samples__name=sample_name,
-                            msi_session__grid__specimen__samples__ontology__icontains=ontology_value
+                            msi_session__grid__specimen__samples__ontology__icontains=ontology_value,
                         )
                     elif "without tag" in value:
                         sample_name = value.replace(" without tag", "").strip()
                         sample_filter |= Q(
-                            msi_session__grid__specimen__samples__name=sample_name
+                            msi_session__grid__specimen__samples__name=sample_name,
                         ) & (Q(msi_session__grid__specimen__samples__ontology='') | Q(msi_session__grid__specimen__samples__ontology__isnull=True))
                     else:
                         sample_filter |= Q(msi_session__grid__specimen__samples__name=value)
@@ -1025,39 +1014,39 @@ def get_tomo_details(request):
                     tomograms=TomogramModel(
                         id=tomogram_id,
                         name="{} (id={})".format(entry.get('name'), tomogram_id),
-                        url=f"{base_url}/admin/processes/tomograms/{tomogram_id}"
+                        url=f"{base_url}/admin/processes/tomograms/{tomogram_id}",
                     ),
                     procPlan=ProcPlanModel(
                         id=entry.get('proc_plan_plan_id'),
                         name=entry.get('proc_plan_name'),
-                        url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}"
+                        url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}",
                     ),
                     procRun=ProcRunModel(
                         id=procrun_id,
                         notes=entry.get('notes'),
-                        updatedAt=str(proc_run_updated_at)
+                        updatedAt=str(proc_run_updated_at),
                     ),
                     grid=GridModel(
                         id=entry.get('cryogrid_id'),
                         name="{} (id={})".format(entry.get('cryogrid_name'), entry.get('cryogrid_id')),
                         trashed=entry.get('cryogrid_trashed'),
                         url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
-                        createdAt=str(cryogrid_created_at)
+                        createdAt=str(cryogrid_created_at),
                     ),
                     project=ProjectModel(
                         id=entry.get('project_id'),
                         name=entry.get('project_name'),
-                        url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"
+                        url=f"{base_url}/admin/projects/project/{entry.get('project_id')}",
                     ),
                     user=UserModel(
                         id=entry.get('user_id'),
-                        name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')
+                        name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name'),
                     ),
                     msiSession=MSISessionModel(
                         id=entry.get('msi_session_id'),
                         name=entry.get('msi_session_name'),
-                        url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_id')}"
-                    )
+                        url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_id')}",
+                    ),
                 )
                 unique_results[procrun_id] = response_model.dict()
 
@@ -1074,7 +1063,7 @@ def get_tomo_details(request):
                     run_number = run_number.split(" (id=")[0]
                 item['metadata_url'] = f"{base_url}/metadata/view/{session_name}/{run_number}"
             else:
-                item['metadata_url'] = None        
+                item['metadata_url'] = None
 
         # Paginate the formatted response data using Django's Paginator
         paginator = Paginator(response_data, page_size)
@@ -1095,8 +1084,8 @@ def get_tomo_details(request):
             },
             'sortBy': SortMetadataModel(
                 sort='updatedAt' if sort_field is not None else None,
-                asc=asc
-            ).model_dump()
+                asc=asc,
+            ).model_dump(),
         }
 
         return JsonResponse(result, safe=False)
@@ -1111,9 +1100,9 @@ def get_tomo_details(request):
     methods=["GET"],
     description="Returns annotation filter options for filtering annotations in UI.",
     parameters=[
-        OpenApiParameter(name='q', required=True, type=OpenApiTypes.STR)
+        OpenApiParameter(name='q', required=True, type=OpenApiTypes.STR),
     ],
-    responses={200: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+    responses={200: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -1148,11 +1137,11 @@ def available_annotation_filter(request):
             'msi_session__grid__specimen',
             'msi_session__grid__gridpreparationlog',
             'msi_session__atlas_session__group',
-            'pipe_data__run__proc_plan'
+            'pipe_data__run__proc_plan',
         ).prefetch_related(
-            'msi_session__grid__specimen__samples'
+            'msi_session__grid__specimen__samples',
         ).exclude(
-            pipe_data__run__proc_plan__name__in=['czii-live', 'czii-denoise']
+            pipe_data__run__proc_plan__name__in=['czii-live', 'czii-denoise'],
         ).values(
             'id',
             'updated_at',
@@ -1166,7 +1155,7 @@ def available_annotation_filter(request):
             specimen_sample=F('msi_session__grid__specimen__samples__name'),
             specimen_tags=F('msi_session__grid__specimen__samples__ontology'),
             screen_session_display_name=F('msi_session__atlas_session__group__name'),
-            proc_plan_display_name=F('pipe_data__run__proc_plan__name')
+            proc_plan_display_name=F('pipe_data__run__proc_plan__name'),
         ).filter(filter_criteria)
 
         current_time = now()
@@ -1200,7 +1189,7 @@ def available_annotation_filter(request):
                 queryset.values(project_name=F('project_display_name'))
                 .annotate(count=Count('id'))
                 .order_by('project_name')
-                .values(name=F('project_name'), count=F('count'))
+                .values(name=F('project_name'), count=F('count')),
             ),
             'user': list(
                 queryset.annotate(
@@ -1211,57 +1200,57 @@ def available_annotation_filter(request):
                                 then=Substr(
                                     F('user_display_name'),
                                     1,
-                                    StrIndex(F('user_display_name'), Value('@')) - 1
-                                )
+                                    StrIndex(F('user_display_name'), Value('@')) - 1,
+                                ),
                             ),
                             default=F('user_display_name'),
-                            output_field=CharField()
-                        )
-                    )
+                            output_field=CharField(),
+                        ),
+                    ),
                 )
                 .values(user_temp_name=F('user_temp_name'))
                 .annotate(count=Count('id'))
                 .order_by('user_temp_name')
-                .values(name=F('user_temp_name'), count=F('count'))
+                .values(name=F('user_temp_name'), count=F('count')),
             ),
             'msiSession': sorted(
                 list(
                     queryset.exclude(msi_session__name__isnull=True)
                     .values(msi_session_name=F('msi_session__name'))
                     .annotate(count=Count('id'))
-                    .values(name=F('msi_session_name'), count=F('count'))
+                    .values(name=F('msi_session_name'), count=F('count')),
                 ),
-                key=lambda x: msi_session_sort_key(x['name'])
+                key=lambda x: msi_session_sort_key(x['name']),
             ),
             'screeningSession': list(
                 queryset.exclude(screen_session_display_name__isnull=True)
                 .values(screen_session_name=F('screen_session_display_name'))
                 .annotate(count=Count('id'))
                 .order_by('screen_session_name')
-                .values(name=F('screen_session_name'), count=F('count'))
+                .values(name=F('screen_session_name'), count=F('count')),
             ),
             'sample': list(
                 queryset.values(sample_name=F('specimen_sample'))
                 .annotate(count=Count('id', distinct=True))
                 .order_by('sample_name')
-                .values(name=F('sample_name'), count=F('count'))
+                .values(name=F('sample_name'), count=F('count')),
             ),
             'grid': list(
                 queryset.values(grid_name=F('grid_display_name'))
                 .annotate(count=Count('id'))
                 .order_by('grid_name')
-                .values(name=F('grid_name'), count=F('count'))
+                .values(name=F('grid_name'), count=F('count')),
             ),
             'procPlan': list(
                 queryset.values(proc_plan_name=F('proc_plan_display_name'))
                 .annotate(count=Count('id'))
                 .order_by('proc_plan_name')
-                .values(name=F('proc_plan_name'), count=F('count'))
+                .values(name=F('proc_plan_name'), count=F('count')),
             ),
             'date': [
                 {
                     "name": key,
-                    "count": queryset.filter(updated_at__gte=value).count()
+                    "count": queryset.filter(updated_at__gte=value).count(),
                 }
                 for key, value in date_ranges.items()
             ],
@@ -1271,7 +1260,7 @@ def available_annotation_filter(request):
         sample_data = (
             queryset.values(
                 sample_name=F('msi_session__grid__specimen__samples__name'),
-                ontology=F('msi_session__grid__specimen__samples__ontology')
+                ontology=F('msi_session__grid__specimen__samples__ontology'),
             )
             .annotate(count=Count('id'))
             .order_by('sample_name', 'ontology')
@@ -1289,7 +1278,7 @@ def available_annotation_filter(request):
                 processed_samples[sample_name] = {
                     'name': display_name,
                     'count': item['count'],
-                    'selected': False
+                    'selected': False,
                 }
             else:
                 processed_samples[sample_name]['count'] += item['count']
@@ -1301,7 +1290,7 @@ def available_annotation_filter(request):
             add_selected_status(filter_list, key)
 
         response_data = {
-            "filters": filters
+            "filters": filters,
         }
 
         return JsonResponse(response_data)
@@ -1317,7 +1306,7 @@ def available_annotation_filter(request):
         OpenApiParameter(name='page', required=False, type=int),
         OpenApiParameter(name='pageSize', required=False, type=int),
     ],
-    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -1370,7 +1359,7 @@ def get_annotation_details(request):
         date_mapping = {
             'last_1_month': 1,
             'last_3_months': 3,
-            'last_6_months': 6
+            'last_6_months': 6,
         }
 
         # Determine sort order
@@ -1386,9 +1375,9 @@ def get_annotation_details(request):
             'pipe_data__run__msi_session__atlas_session__group',
             'tomograms',
             'tomograms__pipe_data',  # Join on processes_runpipedata
-            'tomograms__pipe_data__run'
+            'tomograms__pipe_data__run',
         ).exclude(
-            pipe_data__run__proc_plan__name__in=['czii-live', 'czii-denoise']
+            pipe_data__run__proc_plan__name__in=['czii-live', 'czii-denoise'],
         ).values(
             'id',
             'updated_at',
@@ -1414,7 +1403,7 @@ def get_annotation_details(request):
             msi_session_identifier=F('pipe_data__run__msi_session__id'),
             msi_session_name=F('pipe_data__run__msi_session__name'),
             tomogram_id=F('tomograms__id'),
-            tomogram_name=F('tomograms__pipe_data__run__name')
+            tomogram_name=F('tomograms__pipe_data__run__name'),
         ).order_by(sort_order)
         # print(queryset)
         # Apply filters from q_param
@@ -1470,12 +1459,12 @@ def get_annotation_details(request):
                         ontology_value = parts[1].strip() if len(parts) > 1 else None
                         sample_filter |= Q(
                             pipe_data__run__msi_session__grid__specimen__samples__name=sample_name,
-                            pipe_data__run__msi_session__grid__specimen__samples__ontology__icontains=ontology_value
+                            pipe_data__run__msi_session__grid__specimen__samples__ontology__icontains=ontology_value,
                         )
                     elif "without tag" in value:
                         sample_name = value.replace(" without tag", "").strip()
                         sample_filter |= Q(
-                            pipe_data__run__msi_session__grid__specimen__samples__name=sample_name
+                            pipe_data__run__msi_session__grid__specimen__samples__name=sample_name,
                         ) & (Q(pipe_data__run__msi_session__grid__specimen__samples__ontology='') | Q(pipe_data__run__msi_session__grid__specimen__samples__ontology__isnull=True))
                     else:
                         sample_filter |= Q(pipe_data__run__msi_session__grid__specimen__samples__name=value)
@@ -1484,7 +1473,7 @@ def get_annotation_details(request):
         queryset = queryset.filter(filter_criteria)
 
         # Prepare unique results for the response
-        response_data = [] 
+        response_data = []
         for entry in queryset:
             procrun_id = entry.get('proc_run_id')  # Using `proc_run_id` from the query
             # print(procrun_id)
@@ -1504,43 +1493,43 @@ def get_annotation_details(request):
                     name=f"{entry.get('proc_run_display_name')} (id={entry.get('annotation_id')})",
                     url=f"{base_url}/admin/processes/annotation/{entry.get('annotation_id')}/",
                     updatedAt=datetime.fromisoformat(str(entry.get('annotation_updated_at'))).strftime('%Y-%m-%d'),
-                    notes=f"{entry.get('notes')}"
+                    notes=f"{entry.get('notes')}",
                 ),
                 procPlan=ProcPlanModel(
                     id=entry.get('proc_plan_id'),
                     name=entry.get('proc_plan_name'),
-                    url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_id')}"
+                    url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_id')}",
                 ),
                 inputTomogram=InputTomogramModel(
                     id=entry.get('tomogram_id'),
                     name="{} (id={})".format(entry.get('tomogram_name'), entry.get('tomogram_id')),
-                    url=f"{base_url}/admin/processes/tomograms/{entry.get('tomogram_id')}"
+                    url=f"{base_url}/admin/processes/tomograms/{entry.get('tomogram_id')}",
                 ),
                 json=JsonModel(
                     id=1,
-                    name="/24sep11c/{run}/deno/denoiset/run001/den001/"
+                    name="/24sep11c/{run}/deno/denoiset/run001/den001/",
                 ),
                 grid=GridModel(
                     id=entry.get('cryogrid_id'),
                     name=f"{entry.get('cryogrid_name')} (id={entry.get('cryogrid_id')})",
                     trashed=entry.get('cryogrid_trashed'),
                     url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
-                    createdAt=cryogrid_created_at
+                    createdAt=cryogrid_created_at,
                 ),
                 project=ProjectModel(
                     id=entry.get('project_id'),
                     name=entry.get('project_name'),
-                    url=f"{base_url}/admin/projects/project/{entry.get('project_id')}"
+                    url=f"{base_url}/admin/projects/project/{entry.get('project_id')}",
                 ),
                 user=UserModel(
                     id=entry.get('user_id'),
-                    name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name')
+                    name=entry.get('user_name').split('@')[0] if '@' in entry.get('user_name') else entry.get('user_name'),
                 ),
                 msiSession=MSISessionModel(
                     id=entry.get('msi_session_identifier'),
                     name=entry.get('msi_session_name'),
-                    url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_identifier')}"
-                )
+                    url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_identifier')}",
+                ),
             )
             response_data.append(response_model.dict())
 
@@ -1563,8 +1552,8 @@ def get_annotation_details(request):
             },
             'sortBy': SortMetadataModel(
                 sort='updatedAt' if sort_field is not None else None,
-                asc=asc
-            ).model_dump()
+                asc=asc,
+            ).model_dump(),
         }
 
         return JsonResponse(result, safe=False)
@@ -1579,9 +1568,9 @@ def get_annotation_details(request):
     methods=["GET"],
     description="Returns the ID of a session given a session name (query param: name).",
     parameters=[
-        OpenApiParameter(name='name', required=True, type=str, description='Name of the MSI session')
+        OpenApiParameter(name='name', required=True, type=str, description='Name of the MSI session'),
     ],
-    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT}
+    responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT, 500: OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
 @require_http_methods(["GET"])
@@ -1622,20 +1611,20 @@ def sync_tomograms_view(request):
             sessions_data.append({
                 "sessionId": str(session.id),
                 "sessionName": session.name,
-                "createdAt": session.created_at.isoformat() if session.created_at else None
+                "createdAt": session.created_at.isoformat() if session.created_at else None,
             })
         
         print(f"Found {len(sessions_data)} sessions")  # Debug print
         
         return render(request, 'customs/sync_tomograms.html', {
             'sessions': sessions_data,
-            'error': None
+            'error': None,
         })
     except Exception as e:
         logger.error(f"Error in sync_tomograms_view: {str(e)}")
         return render(request, 'customs/sync_tomograms.html', {
             'sessions': [],
-            'error': f"Error loading sessions: {str(e)}"
+            'error': f"Error loading sessions: {str(e)}",
         })
 
 @require_http_methods(["GET"])
@@ -1651,50 +1640,52 @@ def get_runs(request):
     except MsiSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
 
-def get_zarr_files(session_name, run_id, recon_type):
-    """Get zarr files from the specified path"""
-    if recon_type.lower() == 'sart':
-        vol_dir = 'vol003'
-        job_name = 'aretomo3'
-    elif recon_type.lower() == 'dctf':
-        vol_dir = 'vol001'
-        job_name = 'aretomo3'
-    else:  # denoised
-        vol_dir = ''
-        job_name = 'denoise'
-    base_path = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_name}/{run_id}"
-    
-    # Construct the full path
-    if vol_dir:
-        full_path = f"{base_path}/{vol_dir}"
-    else:
-        full_path = base_path
-    
-    # Get all zarr files
-    try:
-        # Make a request to list the directory contents
-        response = requests.get(full_path)
-        response.raise_for_status()
+# def get_zarr_files(session_name, run_id, recon_type):
+#     """Get zarr files from the specified path"""
+#     if recon_type.lower() == 'sart':
+#         vol_dir = 'vol003'
+#         job_name = 'aretomo3'
+#     elif recon_type.lower() == 'dctf':
+#         vol_dir = 'vol001'
+#         job_name = 'aretomo3'
+#     else:  # denoised
+#         vol_dir = ''
+#         job_name = 'denoise'
+#     base_path = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_name}/{run_id}"
+#
+#     # Construct the full path
+#     if vol_dir:
+#         full_path = f"{base_path}/{vol_dir}"
+#     else:
+#         full_path = base_path
+#
+#     # Get all zarr files
+#     try:
+#         # Make a request to list the directory contents
+#         response = requests.get(full_path)
+#         response.raise_for_status()
+#
+#         soup = BeautifulSoup(response.text, 'html.parser')
+#         file_rows = soup.find_all('tr', class_='file')
+#         valid_zarr_files = []
+#
+#         for row in file_rows:
+#             name_tag = row.find('span', class_='name')
+#             if name_tag:
+#                 filename = name_tag.text.strip()
+#                 print(filename)
+#                 # Check if it's a zarr directory (ends with .zarr/)
+#                 if filename.endswith('.zarr/'):
+#                     # Remove the trailing slash to get the actual filename
+#                     filename = filename[:-1]
+#                     valid_zarr_files.append(filename)
+#         return valid_zarr_files
+#
+#     except requests.RequestException as e:
+#         print(f"❌ Failed to fetch ZARR files from web: {e}")
+#         return []
 
-        soup = BeautifulSoup(response.text, 'html.parser')
-        file_rows = soup.find_all('tr', class_='file')
-        valid_zarr_files = []
 
-        for row in file_rows:
-            name_tag = row.find('span', class_='name')
-            if name_tag:
-                filename = name_tag.text.strip()
-                print(filename)
-                # Check if it's a zarr directory (ends with .zarr/)
-                if filename.endswith('.zarr/'):
-                    # Remove the trailing slash to get the actual filename
-                    filename = filename[:-1]
-                    valid_zarr_files.append(filename)
-        return valid_zarr_files
-
-    except requests.RequestException as e:
-        print(f"❌ Failed to fetch ZARR files from web: {e}")
-        return []
 
 @require_http_methods(["GET"])
 def get_tomogram_stats(request):
@@ -1710,14 +1701,14 @@ def get_tomogram_stats(request):
         session = MsiSession.objects.get(id=session_id)
         print(f"Found session: {session.name}")
         
-        zarr_files = get_zarr_files(session.name, run_id, recon_type)
+        zarr_files = clusterio.get_zarr_files_processes(session.name, run_id, recon_type)
         print(f"Found {len(zarr_files)} zarr files")
         
         # Simplified query directly on ReviewTomogram
         query = ReviewTomogram.objects.filter(
             session_id=session_id,
             run_id=run_id,
-            reconstruction_type__iexact=recon_type
+            reconstruction_type__iexact=recon_type,
         )
 
         print(f"Query: {query}")
@@ -1735,17 +1726,17 @@ def get_tomogram_stats(request):
             'zarr_files': zarr_files,  # Include the list of zarr files in the response
             'session_name': session.name,
             'run_id': run_id,
-            'recon_type': recon_type
+            'recon_type': recon_type,
         })
     except MsiSession.DoesNotExist:
         print(f"Session {session_id} not found")
         return JsonResponse({
-            'error': 'Session not found'
+            'error': 'Session not found',
         }, status=404)
     except Exception as e:
         print(f"Error in get_tomogram_stats: {str(e)}")
         return JsonResponse({
-            'error': str(e)
+            'error': str(e),
         }, status=500)
     
 @require_http_methods(["POST"])
@@ -1760,7 +1751,7 @@ async def start_sync(request):
     if not all([session_id, run_id, recon_type]):
         return JsonResponse({
             'success': False,
-            'message': 'Missing required parameters'
+            'message': 'Missing required parameters',
         }, status=400)
 
     try:
@@ -1772,7 +1763,7 @@ async def start_sync(request):
         existing_tomograms = await sync_to_async(list)(ReviewTomogram.objects.filter(
             session=session,
             run_id=run_id,
-            reconstruction_type__iexact=recon_type
+            reconstruction_type__iexact=recon_type,
         ))
         
         if existing_tomograms:
@@ -1788,7 +1779,7 @@ async def start_sync(request):
             review = await sync_to_async(Review.objects.select_related('msi_session').get)(
                 msi_session_id=session_id,
                 run_id=run_id,
-                reconstruction_type__iexact=recon_type
+                reconstruction_type__iexact=recon_type,
             )
             print(f"Found existing review: {review}")
             review_id = review.review_id
@@ -1798,19 +1789,29 @@ async def start_sync(request):
             review_id = None
         
         # Import the sync functions
-        from processes.scripts.aretomo3_syncer import sync_aretomo3_results
-        from processes.scripts.denoise_syncer import sync_denoise_results
-        
+        from processes.scripts.aretomo3_syncer import AretomoSyncer
+        from processes.scripts.denoise_syncer import DenoiseSyncer
+
         # Capture stdout to get progress information
         output = io.StringIO()
         with redirect_stdout(output):
             # Use the appropriate sync function based on reconstruction type
             if recon_type.lower() in ['dctf', 'sart']:
                 print(f"Starting AreTomo3 sync for session {session.name}, run {run_id}, type {recon_type}")
-                await sync_to_async(sync_aretomo3_results)(session.name, run_id)
+                syncer = AretomoSyncer(
+                    base_path="/hpc/projects/krios1.processing/aretomo3",
+                    log_dir=os.path.join(os.path.dirname(__file__), "logs"),
+                )
+                syncer.setup(run_id=run_id, session_name=session.name)
+                await sync_to_async(syncer.sync_results)()
             elif recon_type.lower() == 'denoised':
                 print(f"Starting Denoise sync for session {session.name}, run {run_id}")
-                await sync_to_async(sync_denoise_results)(session.name, run_id)
+                syncer = DenoiseSyncer(
+                    base_path="/hpc/projects/krios1.processing/denoise",
+                    log_dir=os.path.join(os.path.dirname(__file__), "logs"),
+                )
+                syncer.setup(run_id=run_id, session_name=session.name)
+                await sync_to_async(syncer.sync_results)()
             else:
                 raise ValueError(f"Unsupported reconstruction type: {recon_type}")
         
@@ -1826,7 +1827,7 @@ async def start_sync(request):
                 tomogram_count = await sync_to_async(ReviewTomogram.objects.filter)(
                     session=session,
                     run_id=run_id,
-                    reconstruction_type__iexact=recon_type
+                    reconstruction_type__iexact=recon_type,
                 ).count()
                 
                 old_count = review.total_count
@@ -1844,18 +1845,18 @@ async def start_sync(request):
             'progress': progress_output,
             'existing_tomograms': len(existing_tomograms) if existing_tomograms else 0,
             'review_associated': review_id is not None,
-            'updated_total_count': updated_total_count
+            'updated_total_count': updated_total_count,
         })
     except MsiSession.DoesNotExist:
         print(f"Session {session_id} not found in database")
         return JsonResponse({
             'success': False,
-            'message': f'Session with ID {session_id} not found'
+            'message': f'Session with ID {session_id} not found',
         }, status=404)
     except Exception as e:
         logger.error(f"Error in start_sync: {str(e)}")
         return JsonResponse({
             'success': False,
-            'message': str(e)
+            'message': str(e),
         }, status=500)
     

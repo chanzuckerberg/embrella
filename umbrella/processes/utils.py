@@ -1,9 +1,9 @@
-from pydantic import BaseModel, validator, ValidationError, constr
-from typing import Union, Optional, List, ClassVar
-from rest_framework import status
-from rest_framework.exceptions import APIException
-from django.http import JsonResponse
 import re
+from typing import ClassVar, List, Optional, Union
+
+from pydantic import BaseModel, constr, validator
+from rest_framework.exceptions import APIException
+
 
 class FilterItem(BaseModel):
     category: constr(strip_whitespace=True)
@@ -37,7 +37,7 @@ class tomoQueryParams(BaseModel):
 
 
     # Define the allowed category names in camelCase
-    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "updatedAt", "tomogram", "user","userName", "procPlan", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "sample","date", "procPlan", "json", 'grid', 'tomograms','screeningSession'}
+    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "updatedAt", "tomogram", "user","userName", "procPlan", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "sample","date", "json", 'grid', 'tomograms','screeningSession'}
 
     @validator('q')
     def validate_q(cls, value):
@@ -77,7 +77,7 @@ class annotationQueryParams(BaseModel):
 
 
     # Define the allowed category names in camelCase
-    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "tomogram", "user","userName", "procPlan", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "sample","date", "procPlan", "json", 'grid', 'tomograms','screeningSession'}
+    ALLOWED_CATEGORIES: ClassVar[set[str]] = {"filterType", "tomogram", "user","userName", "procPlan", "msiSession", "project", "sort", "asc", "page", "pageSize", "status", "sample","date", "json", 'grid', 'tomograms','screeningSession'}
 
     @validator('q')
     def validate_q(cls, value):

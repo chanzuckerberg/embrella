@@ -1,36 +1,29 @@
-import paramiko
-
-from umbrella_logger import logger
-import subprocess
 import os
+
 from jinja2 import Environment, FileSystemLoader
 from umbrella_logger import logger
-import paramiko
+
+from common import clusterio
+
 
 class Aretomo3(object):
-    def __init__(self, hostname, port, username, password, remote_script_dir, local_template_path):
+    def __init__(self, cluster_id, auth, remote_script_dir, local_template_path):
         """
-        :param hostname: Remote host to connect to.
-        :param port: SSH port.
-        :param username: SSH username.
-        :param password: SSH password.
+        :param cluster_id: Cluster to use
+        :param auth: Cluster credentials.
         :param remote_script_dir: Remote directory where job scripts are stored.
         :param local_template_path: Local file path to the Jinja2 template.
         """
-        self.hostname = hostname
-        self.port = port
-        self.username = username
-        self.password = password
+        self.cluster_id = cluster_id
+        self.auth = auth
         self.remote_script_dir = remote_script_dir
         self.local_template_path = local_template_path
         self.ssh = None
 
     def connect(self):
         # Create an SSH client
-        self.ssh = paramiko.SSHClient()
-        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.ssh.connect(self.hostname, self.port, self.username, self.password)
-        logger.info(f"Connected to {self.hostname}")
+        self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
+        logger.info(f"Connected to {self.cluster_id}")
 
     def run_advanced_script(self, project_name, use_old_gain, run_number, pixel_size, dose_number, frame_dose, gain_file_name=None, denoise_training=None, use_advanced_params=None, tilt_axis=None, tilt_axis_refine=None, align_z=None, vol_z=None, imod_option=None, local_shift=None, tilt_offset=None, thickness_mesaure=None, user_id=None):
         if self.ssh is None:
@@ -55,10 +48,10 @@ class Aretomo3(object):
                 template_dir = os.path.dirname(self.local_template_path)
                 template_file = os.path.basename(self.local_template_path)
                 logger.info(f"Loading template from: {template_dir}/{template_file}")
-                
+
                 if not os.path.exists(self.local_template_path):
                     raise FileNotFoundError(f"Template file not found: {self.local_template_path}")
-                
+
                 env = Environment(loader=FileSystemLoader(template_dir))
                 template = env.get_template(template_file)
             except Exception as e:
@@ -96,7 +89,7 @@ class Aretomo3(object):
                     thickness_mesaure=thickness_mesaure,
                     user_id=user_id,
                     tomo_bin_5A=tomo_bin_5A,
-                    tomo_bin_10A=tomo_bin_10A
+                    tomo_bin_10A=tomo_bin_10A,
                 )
                 logger.info(f"Successfully rendered template for project {project_name}")
             except Exception as e:
@@ -178,7 +171,7 @@ class Aretomo3(object):
                 frame_dose=frame_dose,
                 tomo_bin_5A=tomo_bin_5A,
                 tomo_bin_10A=tomo_bin_10A,
-                user_id=user_id
+                user_id=user_id,
             )
 
             # Upload the rendered script to the remote server
@@ -206,72 +199,32 @@ class Aretomo3(object):
             logger.error(error_msg)
             return "", error_msg
 
-    def cancel(self, job_number):
-        if self.ssh is None:
-            raise Exception("SSH connection not established. Call connect() first.")
-
-        # Execute the scancel command with the given job number
-        stdin, stdout, stderr = self.ssh.exec_command(f'scancel {job_number}')
-
-        # Read the output and error streams
-        output = stdout.read().decode('utf-8')
-        error = stderr.read().decode('utf-8')
-
-        if error:
-            logger.error(f"Cancel Error: {error}")
-
-        return output, error
-
-    def track_jobs(self, job_name, all=False):
-        if self.ssh is None:
-            raise Exception("SSH connection not established. Call connect() first.")
-        if all and job_name is None:
-            stdin, stdout, stderr = self.ssh.exec_command(f'squeue')
-        else:
-            # Execute the squeue command
-            stdin, stdout, stderr = self.ssh.exec_command(f'squeue -n {job_name}')
-
-        # Read the output and error streams
-        output = stdout.read().decode('utf-8')
-        error = stderr.read().decode('utf-8')
-
-        if error:
-            logger.error(f"Track Jobs Error: {error}")
-
-        return output, error
-
 
 
 class Denoiset(object):
-    def __init__(self, hostname, port, username, password, remote_script_dir, local_template_path):
+    def __init__(self, cluster_id, auth, remote_script_dir, local_template_path):
         """
-        :param hostname: Remote host to connect to.
-        :param port: SSH port.
-        :param username: SSH username.
-        :param password: SSH password.
+        :param cluster_id: Cluster to use.
+        :param auth: Cluster credentials.
         :param remote_script_dir: Remote directory where job scripts are stored.
         :param local_template_path: Local file path to the Jinja2 template (e.g., 'denoiset_template.sh').
         """
-        self.hostname = hostname
-        self.port = port
-        self.username = username
-        self.password = password
+        self.cluster_id = cluster_id
+        self.auth = auth
         self.remote_script_dir = remote_script_dir  # e.g. "/hpc/projects/group.czii/krios1.processing/denoise/scripts"
         self.local_template_path = local_template_path
         self.ssh = None
 
     def connect(self):
         # Establish an SSH connection.
-        self.ssh = paramiko.SSHClient()
-        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.ssh.connect(self.hostname, self.port, self.username, self.password)
-        logger.info(f"Connected to {self.hostname}")
+        self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
+        logger.info(f"Connected to {self.cluster_id}")
 
     def run_script(self, session_name, run_number, denoise_run_number, model_name, user_id=None, live_denoising=False):
         """
         Loads an external Jinja2 template, renders it with the provided parameters,
         uploads the rendered script to the remote server, and submits it via sbatch.
-        
+
         :param session_name: The session identifier (e.g., "24aug30a")
         :param run_number: The run number (e.g., "run001") to be used for both aretomo_run and denoise_run.
         :param model_name: The model name (e.g., "lysosome.pth")
@@ -291,13 +244,13 @@ class Denoiset(object):
                 aretomo_run=run_number,
                 denoise_run=denoise_run_number,  # Adjust if denoise_run should be different.
                 model_name=model_name,
-                live_denoising=live_denoising
+                live_denoising=live_denoising,
             )
             logger.info(f"Rendered script for session {session_name}:\n{rendered_script}")
             # Define the remote file name and full path.
             remote_script_filename = f"{session_name}_predict3d.sh"
             remote_script_path = os.path.join(self.remote_script_dir, remote_script_filename)
-            
+
             # Upload the rendered script to the remote server using SFTP.
             sftp = self.ssh.open_sftp()
 
@@ -339,19 +292,15 @@ class Denoiset(object):
 
 
 class StatusChecker(object):
-    def __init__(self, hostname, port, username, password, remote_script_dir, local_template_path):
+    def __init__(self, cluster_id, auth, remote_script_dir, local_template_path):
         """
-        :param hostname: Remote host to connect to.
-        :param port: SSH port.
-        :param username: SSH username.
-        :param password: SSH password.
+        :param cluster_id: Cluster to use
+        :param auth: Cluster credentials.
         :param remote_script_dir: Remote directory where the status-check script will be stored.
         :param local_template_path: Local path to the Jinja2 template for the status-check script.
         """
-        self.hostname = hostname
-        self.port = port
-        self.username = username
-        self.password = password
+        self.cluster_id = cluster_id
+        self.auth = auth
         self.remote_script_dir = remote_script_dir
         self.local_template_path = local_template_path
         self.ssh = None
@@ -360,16 +309,14 @@ class StatusChecker(object):
         """
         Establish an SSH connection to the remote server.
         """
-        self.ssh = paramiko.SSHClient()
-        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.ssh.connect(self.hostname, self.port, self.username, self.password)
-        logger.info(f"Connected to {self.hostname}")
+        self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
+        logger.info(f"Connected to {self.cluster_id}")
 
     def check_status(self, session_name, live_denoising=False):
         """
         Loads a Jinja2-based status-check script, renders it with the given parameters,
         uploads it to the remote server, and then executes it with 'bash'.
-        
+
         :param session_name: The session identifier (e.g., "24aug30a")
         :return: (script_output, script_error) as a tuple of strings
         """
@@ -426,6 +373,25 @@ class StatusChecker(object):
             logger.error(f"Error during status check: {e}")
             raise
 
+    def track_jobs(self, job_name, all=False):
+        if self.ssh is None:
+            raise Exception("SSH connection not established. Call connect() first.")
+        format_mod = "--Format=jobid,partition,name,username:30,state,TimeUsed,TimeLeft,numnodes,reasonlist"
+        if all and job_name is None:
+            stdin, stdout, stderr = self.ssh.exec_command(f'squeue {format_mod}')
+        else:
+            # Execute the squeue command
+            stdin, stdout, stderr = self.ssh.exec_command(f'squeue -n {job_name} -{format_mod}')
+
+        # Read the output and error streams
+        output = stdout.read().decode('utf-8')
+        error = stderr.read().decode('utf-8')
+
+        if error:
+            logger.error(f"Track Jobs Error: {error}")
+
+        return output, error
+
     def close(self):
         """
         Close the SSH connection.
@@ -438,19 +404,14 @@ class StatusChecker(object):
 # A generic class to submit remote jobs using a Jinja2 template
 
 class RemoteJobSubmitter:
-    def __init__(self, hostname, port, username, password, remote_script_dir):
-        self.hostname = hostname
-        self.port = port
-        self.username = username
-        self.password = password
+    def __init__(self, cluster_id, auth, remote_script_dir):
+        self.cluster_id = cluster_id
+        self.auth = auth
         self.remote_script_dir = remote_script_dir
         self.ssh = None
 
     def connect(self):
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(self.hostname, self.port, self.username, self.password)
-        self.ssh = ssh
+        self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
 
     def run_script(self, template_path: str, job_name: str, **kwargs):
         # Render any Jinja template with arbitrary parameters
@@ -473,10 +434,25 @@ class RemoteJobSubmitter:
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
         return stdout.read().decode(), stderr.read().decode()
 
+    def cancel(self, job_number):
+        if self.ssh is None:
+            raise Exception("SSH connection not established. Call connect() first.")
+
+        # Execute the scancel command with the given job number
+        stdin, stdout, stderr = self.ssh.exec_command(f'scancel {job_number}')
+
+        # Read the output and error streams
+        output = stdout.read().decode('utf-8')
+        error = stderr.read().decode('utf-8')
+
+        if error:
+            logger.error(f"Cancel Error: {error}")
+
+        return output, error
+
     def close(self):
         if self.ssh:
             self.ssh.close()
             self.ssh = None
 
 
-            

@@ -1,15 +1,12 @@
-from django.db import models
-from django.db.models import Q
-from tem.models import MsiSession, SessionPlan
-from stores.models import StaticPath, Path, PathType, fill_place_holders
 import sys
 import uuid
 
-
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
+from django.db.models import Q
 from django.utils.timezone import now
-
+from stores.models import Path, PathType, StaticPath, fill_place_holders
+from tem.models import MsiSession, SessionPlan
 
 '''
 from stores.models import DataRecord, 
@@ -62,7 +59,7 @@ class ProcSoftware(models.Model):
     """
     name = models.CharField(max_length=32, default='aretomo3')
     version = models.CharField(max_length=32, default='2024-03-10')
-    capable_tasks = models.ManyToManyField(Task,)
+    capable_tasks = models.ManyToManyField(Task)
     callback_function = models.CharField(max_length=32, default='run_aretomo3')
     logger = models.CharField(max_length=32, default='my_log')
     #diagnosis
@@ -87,7 +84,7 @@ class Pipe(models.Model):
     """
     name = models.CharField(max_length=32, default='voxelspacing10.000a')
     software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
-    tasks_performed = models.ManyToManyField(Task,)
+    tasks_performed = models.ManyToManyField(Task)
     input = models.ManyToManyField(StaticPath,related_name='staticpath_in_input')
     output = models.ManyToManyField(PathType,related_name='pathtype_in_output')
 
@@ -208,7 +205,7 @@ class ProcRun(models.Model):
         print(input_pipes)
         pks = list(set(map((lambda x:x.pk), input_pipes)))
         if not pks:
-            return [0,] # from msi_session acquisition
+            return [0] # from msi_session acquisition
         return pks
 
     def create_tomogram_collection(self, input_objects={}):
@@ -238,18 +235,18 @@ class ProcRun(models.Model):
         if not tomo_input:
             if frames_fd:
                 # processing run starts from frames
-                self.created_objects = {0:[('frames',frames_fd),]} #by pipe pk
+                self.created_objects = {0:[('frames',frames_fd)]} #by pipe pk
         else:
             # processing run starts from tomogram
             pipe_pk = tomo_input.pipe_data.pipe.pk
             ptype = tomo_input.pipe_data.pathtype.static_path.data_type
-            self.created_objects = {pipe_pk:[(ptype,tomo_input),]}
-            input_pipe_pks = [tomo_input.pipe_data.pipe.pk,]
+            self.created_objects = {pipe_pk:[(ptype,tomo_input)]}
+            input_pipe_pks = [tomo_input.pipe_data.pipe.pk]
             if pick_input:
                 # processing run needing pick_input such as 2d gallery making
                 pipe_pk = pick_input.pipe_data.pipe.pk
                 ptype = pick_input.pipe_data.pathtype.static_path.data_type
-                self.created_objects[pipe_pk] = [(ptype,pick_input),]
+                self.created_objects[pipe_pk] = [(ptype,pick_input)]
                 input_pipe_pks.append(pick_input.pipe_data.pipe.pk)
             
         input_objects = {}
@@ -258,7 +255,7 @@ class ProcRun(models.Model):
             results = list(filter((lambda x: x.pathtype.static_path.data_type ==ptype), run_pipe_datas))
             if tomo_input and ptype in ('rec'):
                 # only allow the tomo_input result to be considered
-                results = [tomo_input.pipe_data,]
+                results = [tomo_input.pipe_data]
                 input_objects['tomo']=tomo_input
             if pick_input and ptype in ('pick'):
                 # add pick as an input object
@@ -276,9 +273,9 @@ class ProcRun(models.Model):
                             self.created_objects[my_pipe_pk]=[]
                         self.created_objects[my_pipe_pk].append((ptype,saved))
                         print(self.created_objects)
-                    except Exception as e:
+                    except Exception:
+                        print("ERROR: not able to save pipe_id=%d" % my_pipe_pk)
                         raise
-                        print('ERROR: not able to save pipe_id=%d' % my_pipe_pk)
         return True
 
     def _add_other_objects(self, class_name, my_rpdata, input_pipe_pks):
@@ -356,13 +353,13 @@ class ProcRun(models.Model):
                 if pr.input_pathtype.static_path.data_type in tomogram_making_data_type:
                     parent_tomo_pipe = pr.input_pipe_in_plan.pipe
                     return parent_tomo_pipe
-        return None 
+        return None
     
     def _save_instance(self, pdata, input_pipe_pks, input_objects={}):
         """
         Save instances of various cryo-ET models
         """
-        model_map = {   
+        model_map = {
                         # PathType.static_name: (class name, attribute name in other classes)
                         'frames':('Frames', 'frames'),
                         'rawst':('RawTiltSeries','tiltseries'),
@@ -424,14 +421,14 @@ class ProcRun(models.Model):
                 # denoised tomogram is derived from a parent
                 if ptype == 'deno' and k == 'rec':
                     # tomogram is derived from others
-                    setattr(my_instance,'parent_tomo', obj)
+                    my_instance.parent_tomo = obj
                     for attr_name in my_field_names:
                         if attr_name in ('id','pipe_data','parent_tomo'):
                             continue
                         setattr(my_instance, attr_name, getattr(obj, attr_name))
                 # when tomograms are the input, it is referred as tomograms in model fields.
                 if 'tomo_input' in input_objects.keys() and attr_name == 'tomograms':
-                    setattr(my_instance,'tomograms', obj)
+                    my_instance.tomograms = obj
 
         # add everything created in my_pipe
         for item in self.created_objects[my_pipe_pk]:
@@ -446,7 +443,7 @@ class ProcRun(models.Model):
                 deno_method = TomoPostProcessMethod.objects.create(software=pdata.pipe.software)
             else:
                 deno_method = deno_methods[0]
-            setattr(my_instance,'post_process', deno_method)
+            my_instance.post_process = deno_method
         # specific to annotation
         atype_map = {'pick':'point','seg':'volume mask'}
         if ptype in ['pick','seg']:
@@ -643,7 +640,7 @@ def suggest_name(prefix, msi_session, plan, model_name='ProcRun'):
             return prefix_search + '%03d' % 1
         used_numbers = list(map((lambda x: int(x.split(prefix_search)[-1])), used_names))
         return '%s%03d' % (prefix,max(used_numbers)+1)
-    else: 
+    else:
         raise ValueError('Prefix must not be empty string for run name')
 
 
@@ -716,9 +713,9 @@ class ReviewTomogram(models.Model):
             ('pending', 'Pending'),
             ('accepted', 'Accepted'),
             ('rejected', 'Rejected'),
-            ('uncertain', 'Uncertain')
+            ('uncertain', 'Uncertain'),
         ],
-        default='pending'
+        default='pending',
     )
     rejection_reasons = models.JSONField(default=list, blank=True)
     object_labels = models.JSONField(default=list, blank=True)

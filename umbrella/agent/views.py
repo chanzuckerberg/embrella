@@ -1,21 +1,19 @@
-import os
-from langchain_community.document_loaders import ConfluenceLoader
-from langchain.text_splitter import CharacterTextSplitter, TokenTextSplitter
-from langchain_community.embeddings.openai import OpenAIEmbeddings
-from langchain.prompts import PromptTemplate
-from langchain_community.chat_models import ChatOpenAI
-from langchain_openai.chat_models.base import BaseChatOpenAI
-import markdown
-from django.http import HttpResponse
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 import json
+import os
+import threading
+
+import markdown
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from langchain.chains import RetrievalQA
+from langchain.prompts import PromptTemplate
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.chat_models import ChatOpenAI
+from langchain_community.document_loaders import ConfluenceLoader
+from langchain_community.embeddings.openai import OpenAIEmbeddings
+
 # from langchain.chains.qa_with_sources import load_qa_chain
 from langchain_community.vectorstores import Chroma
-from langchain.chains import RetrievalQA
-import threading
 
 # Constants
 EMB_OPENAI_ADA = "text-embedding-ada-002"
@@ -43,7 +41,7 @@ class ConfluenceQA:
             self.embedding = OpenAIEmbeddings(
                 model=EMB_OPENAI_ADA,
                 api_key=os.environ["OPENAI_API_KEY"],
-                timeout=30  # Add timeout
+                timeout=30,  # Add timeout
             )
 
     def init_models(self) -> None:
@@ -51,7 +49,7 @@ class ConfluenceQA:
             self.llm = ChatOpenAI(
                 model_name=LLM_OPENAI_GPT40,
                 temperature=0.2,
-                request_timeout=60  # Add timeout
+                request_timeout=60,  # Add timeout
             )
 
     def vector_db_confluence_docs(self, force_reload: bool = False) -> None:
@@ -68,7 +66,7 @@ class ConfluenceQA:
             try:
                 self.vectordb = Chroma(
                     persist_directory=persist_directory,
-                    embedding_function=self.embedding
+                    embedding_function=self.embedding,
                 )
                 print("Loaded existing vector database.")
                 return  # Early return if successfully loaded
@@ -106,7 +104,7 @@ class ConfluenceQA:
                     url=confluence_url,
                     username=username,
                     api_key=api_key,
-                    space_key=space_key
+                    space_key=space_key,
                 )
                 documents = loader.load(limit=400)
                 for doc in documents:
@@ -126,7 +124,7 @@ class ConfluenceQA:
         if self.vectordb is not None:
             try:
                 existing_data = self.vectordb._collection.get(
-                    where={}, include=["metadatas"]
+                    where={}, include=["metadatas"],
                 )
                 existing_ids = {
                     meta.get("id")
@@ -153,7 +151,7 @@ class ConfluenceQA:
         recursive_splitter = RecursiveCharacterTextSplitter(
             chunk_size=100,  # Smaller chunks
             chunk_overlap=30,
-            separators=["\n\n", "\n", " ", ""]
+            separators=["\n\n", "\n", " ", ""],
         )
         texts = recursive_splitter.split_documents(new_documents)
 
@@ -162,7 +160,7 @@ class ConfluenceQA:
                 self.vectordb = Chroma.from_documents(
                     documents=texts,
                     embedding=self.embedding,
-                    persist_directory=persist_directory
+                    persist_directory=persist_directory,
                 )
                 print(f"Created a new vector database with {len(texts)} document chunks.")
             else:
@@ -223,8 +221,8 @@ class ConfluenceQA:
         """
 
         CUSTOM_PROMPT = PromptTemplate(
-            template=custom_prompt_template, 
-            input_variables=["context", "question"]
+            template=custom_prompt_template,
+            input_variables=["context", "question"],
         )
 
         # Create the retriever
@@ -236,7 +234,7 @@ class ConfluenceQA:
             chain_type="stuff",  # Changed from 'refine' to 'stuff'
             retriever=self.retriever,
             return_source_documents=False,  # Changed to False
-            chain_type_kwargs={"prompt": CUSTOM_PROMPT}
+            chain_type_kwargs={"prompt": CUSTOM_PROMPT},
         )
 
     def initialize(self):

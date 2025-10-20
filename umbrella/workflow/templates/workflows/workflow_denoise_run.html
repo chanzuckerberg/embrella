@@ -455,7 +455,9 @@
     async function startSyncerJob(sessionName, runId, jobId) {
       try {
         const csrftoken = getCookie("csrftoken");
-        const response = await fetch("/workflow/trigger_syncer", {
+        console.log("Starting syncer job for:", { sessionName, runId, jobId });
+
+        const response = await fetch("/workflow/trigger_syncer/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -472,11 +474,14 @@
         const result = await response.json();
         if (response.ok) {
           console.log("Syncer job started successfully:", result);
+          alert("Syncer job started successfully!");
         } else {
           console.error("Failed to start syncer job:", result.error);
+          alert(`Failed to start syncer job: ${result.error || 'Unknown error'}`);
         }
       } catch (error) {
         console.error("Error starting syncer job:", error);
+        alert(`Error starting syncer job: ${error.message || 'Unknown error'}`);
       }
     }
 

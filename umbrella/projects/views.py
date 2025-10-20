@@ -1,12 +1,15 @@
 import json
 
-from django.shortcuts import render
-from .models import Project
 from django.core.serializers import serialize
 from django.http import JsonResponse
-from rest_framework.decorators import api_view
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from django.shortcuts import render
 from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework.decorators import api_view
+
+from .models import Project
+
+
 def index(request):
     project_list = Project.objects.all()
     context = {
@@ -22,17 +25,17 @@ def index(request):
             name='valid',
             required=True,
             type=bool,
-            description='Must be true to get project list'
+            description='Must be true to get project list',
         ),
     ],
     responses={
         200: OpenApiTypes.OBJECT,
         400: OpenApiTypes.OBJECT,
-    }
+    },
 )
 @api_view(["GET"])
 def getproject(request):
-    if not request.GET.get('valid', 'true') == 'true':
+    if request.GET.get('valid', 'true') != 'true':
         return JsonResponse({'error': 'Invalid request'}, status=400)
     project_list = Project.objects.all()
     serialized_projects = serialize('json', project_list)

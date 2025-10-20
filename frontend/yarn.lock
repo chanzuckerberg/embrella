@@ -794,12 +794,12 @@ __metadata:
 
 "@idetik/core@file:./idetik/packages/core::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=2243e4&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=8e7d41&locator=create-sds-app%40workspace%3A."
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/6b80dd41d0120caf2bbb91a40774b858d874a355620440bcdc923112f9d6df027b64c4aa5ea0d5310c3e0e9ce1704f550f102424a73caa9cc562b4f5d83e4205
+  checksum: 10c0/fb0b535af77b57b1da9d41b80c32b60a84db7ee72d251419e3ffeeda2f1db83909d8e664a8a8cd87934241640ab262d730f1b2ed737535b888cf6fef1d1b8fee
   languageName: node
   linkType: hard
 
@@ -815,7 +815,7 @@ __metadata:
 
 "@idetik/react@file:./idetik/packages/react::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=b27cc5&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=358c6a&locator=create-sds-app%40workspace%3A."
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
@@ -833,7 +833,7 @@ __metadata:
     "@czi-sds/components": ^22.3.0
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/01dc34767520e61bf8c191d8563dd6e5e6b9f162ecf38755a015a0d410471c669b79778ed84c3877545eaef72e421ddef756c606b41411780a2e1e71117cb20e
+  checksum: 10c0/548613617485016045abb4e2e66128fd103b0398368a7bd68e272c714c48f56a1733b1cb82772f0f3f6101e7ac4e931a699aed0d283e5bda469edcad0b76530d
   languageName: node
   linkType: hard
 

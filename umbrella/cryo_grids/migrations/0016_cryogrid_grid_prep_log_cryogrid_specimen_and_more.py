@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
             model_name="specimen",
             name="name",
             field=models.CharField(
-                help_text="Enter each specimen name on a new line.", max_length=150
+                help_text="Enter each specimen name on a new line.", max_length=150,
             ),
         ),
     ]

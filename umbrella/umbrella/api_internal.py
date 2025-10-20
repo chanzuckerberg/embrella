@@ -1,51 +1,34 @@
 import json
-from math import ceil
-import os
-import os.path
-import random
-import socket
 import traceback
 import uuid
 from datetime import datetime, timezone
-from urllib.parse import urljoin
+from math import ceil
 
-import paramiko
-import requests
-from bs4 import BeautifulSoup
 from cryo_grids.models import CryoGrid
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models import BooleanField, Case, Count, F, Q, Value, When
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from processes.models import (
     Annotation,
-    Pipe,
     PipeInPlan,
     PipeJoint,
     ProcPlan,
-    ProcRun,
     Review,
     ReviewTomogram,
     Tomograms,
 )
 from processes.utils import SortMetadataModel
 from processes.views import get_base_url
-from projects.models import Project
-from rapidfuzz import fuzz, process
-from tem.models import MsiSession, Project
-from .contrast_limits import compute_optimal_contrast_limits
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rapidfuzz import fuzz
 from rest_framework.decorators import api_view
+from tem.models import MsiSession, Project
 
+from .contrast_limits import compute_optimal_contrast_limits
 
-HOST = "10.50.120.90"
-PORT = 22
-USERNAME = os.getenv('REMOTE_ID')
-PASSWORD = os.getenv('REMOTE_PASSWORD')
-ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
 
 @extend_schema(
     methods=["GET"],
@@ -53,7 +36,7 @@ ENVIRONMENT = os.getenv('DJANGO_ENV', 'development')
     parameters=[
         OpenApiParameter(name='user_id', required=False, type=str, description='User ID to filter cryo grids'),
     ],
-    responses={200: 'List of cryo grids'}
+    responses={200: 'List of cryo grids'},
 )
 @api_view(["GET"])
 def get_grids_by_user(request):
@@ -66,8 +49,8 @@ def get_grids_by_user(request):
         is_default=Case(
             When(name__icontains="default grid", then=Value(True)),
             default=Value(False),
-            output_field=BooleanField()
-        )
+            output_field=BooleanField(),
+        ),
     )
 
     if user_id:
@@ -89,8 +72,8 @@ def get_grids_by_user(request):
     responses={
         200: 'List of available cryo grids',
         400: 'Missing project_id',
-        404: 'Project not found'
-    }
+        404: 'Project not found',
+    },
 )
 @api_view(["GET"])
 def get_available_grids(request):
@@ -106,7 +89,7 @@ def get_available_grids(request):
         # Get the available grids for the given project
         available_grids = CryoGrid.objects.filter(
             trashed=False,
-            msisession__project=project
+            msisession__project=project,
         ).select_related('grid_box').distinct()
 
         # Format the data
@@ -132,7 +115,7 @@ def get_available_grids(request):
     responses={
         200: 'List of grids by cassette',
         400: 'Missing cassette_id',
-    }
+    },
 )
 @api_view(["GET"])
 def get_grids_by_cassette(request):
@@ -191,7 +174,7 @@ def _get_data_by_msi_session_data_type(plan, session, data_types=[]):
         200: 'List of tomograms and picks',
         400: 'Missing required parameters',
         404: 'Plan or Session not found, or data fetch error',
-    }
+    },
 )
 @api_view(["GET"])
 def get_tomo_by_msi_session(request):
@@ -227,7 +210,7 @@ def get_tomo_by_msi_session(request):
     input_tomos = []
     for valid_pipe in valid_pipes:
         tomo = Tomograms.objects.filter(
-            msi_session=session, pipe_data__pipe=valid_pipe
+            msi_session=session, pipe_data__pipe=valid_pipe,
         )
         if run_number and run_number.strip():  # Check if run_number exists and is not empty
             tomo = tomo.filter(pipe_data__run__name=run_number)
@@ -249,7 +232,7 @@ def get_tomo_by_msi_session(request):
     input_picks = []
     for valid_pipe in valid_pipes:
         pick = Annotation.objects.filter(
-            msi_session=session, pipe_data__pipe=valid_pipe, annotation_type='point'
+            msi_session=session, pipe_data__pipe=valid_pipe, annotation_type='point',
         )
         if run_number and run_number.strip():  # Check if run_number exists and is not empty
             pick = pick.filter(pipe_data__run__name=run_number)
@@ -309,7 +292,7 @@ class ReviewView(View):
                 'updatedAt': 'updated_at',
                 'reviewName': 'review_name',
                 'sessionId': 'msi_session__name',
-                'status': 'status'
+                'status': 'status',
             }
 
             # Start with base queryset
@@ -328,7 +311,7 @@ class ReviewView(View):
                 filtered_reviews = []
 
                 for review in all_reviews:
-                    if (fuzz.ratio(search, review.review_name) >= SIMILARITY_THRESHOLD or 
+                    if (fuzz.ratio(search, review.review_name) >= SIMILARITY_THRESHOLD or
                         fuzz.ratio(search, review.requestor.username) >= SIMILARITY_THRESHOLD or
                         fuzz.ratio(search, review.msi_session.name) >= SIMILARITY_THRESHOLD or
                         fuzz.ratio(search, review.reconstruction_type) >= SIMILARITY_THRESHOLD or
@@ -340,7 +323,7 @@ class ReviewView(View):
 
                 # Update queryset with filtered reviews
                 queryset = Review.objects.filter(
-                    review_id__in=[r.review_id for r in filtered_reviews]
+                    review_id__in=[r.review_id for r in filtered_reviews],
                 ).select_related('msi_session', 'requestor')
 
             # Apply sorting
@@ -376,8 +359,8 @@ class ReviewView(View):
                         "name": review.review_name,
                         "type": review.review_type,
                         "url": f"{get_base_url()}/admin/processes/review/{review.review_id}",
-                        "annotationObjects": review.objects_of_interest.split(',') 
-                            if review.objects_of_interest is not None else []
+                        "annotationObjects": review.objects_of_interest.split(',')
+                            if review.objects_of_interest is not None else [],
                     },
                     "session": {
                         "id": review.msi_session.pk,
@@ -392,8 +375,8 @@ class ReviewView(View):
                     "totalCount": review.total_count,
                     "reviewer": {
                         "id": str(review.requestor.id) if review.requestor else None,
-                        "name": review.requestor.username if review.requestor else None
-                    }
+                        "name": review.requestor.username if review.requestor else None,
+                    },
                 })
 
             return JsonResponse({
@@ -402,12 +385,12 @@ class ReviewView(View):
                     "page": requested_page,
                     "pageSize": limit,
                     "totalPages": ceil(total_count / limit),
-                    "totalResults": total_count
+                    "totalResults": total_count,
                 },
                 "sortBy": SortMetadataModel(
                     sort='updatedAt' if sort_field is not None else None,
-                    asc=sort_order == 'asc'
-                ).model_dump()
+                    asc=sort_order == 'asc',
+                ).model_dump(),
             }, safe=False)
 
         except Exception as e:
@@ -459,7 +442,7 @@ class ReviewView(View):
                 {
                     "tomogramId": tomo['tomogram_id'],
                     "status": tomo['quality'] if tomo['quality'] else 'pending',
-                    "position": tomo['position_id'] if tomo['position_id'] else "None"
+                    "position": tomo['position_id'] if tomo['position_id'] else "None",
                 }
                 for tomo in tomograms
             ]
@@ -496,11 +479,11 @@ class ReviewView(View):
                 "reviewName": review.review_name,
                 "owner": {
                     "id": str(review.requestor.id) if review.requestor else None,
-                    "name": review.requestor.username if review.requestor else None
+                    "name": review.requestor.username if review.requestor else None,
                 },
-                "availableAnnotationObjects": review.objects_of_interest.split(',') 
+                "availableAnnotationObjects": review.objects_of_interest.split(',')
                     if review.objects_of_interest is not None else [],
-                "tomograms": tomograms_list
+                "tomograms": tomograms_list,
             }
 
             return JsonResponse(response_data)
@@ -561,20 +544,20 @@ class ReviewView(View):
         if Review.objects.filter(review_name=data['reviewName']).exists():
             return JsonResponse({
                 "error": "Duplicate review name",
-                "details": f"A review with name '{data['reviewName']}' already exists"
+                "details": f"A review with name '{data['reviewName']}' already exists",
             }, status=400)
 
         # Check if there are tomograms to review
         tomogram_count = ReviewTomogram.objects.filter(
             session=session,
             run_id=data['runId'],
-            reconstruction_type=data['reconstructionType']
+            reconstruction_type=data['reconstructionType'],
         ).count()
 
         if tomogram_count == 0:
             return JsonResponse({
                 "error": "No tomograms found for review",
-                "details": f"No tomograms found for session {session.name}, run {data['runId']}, and reconstruction type {data['reconstructionType']}"
+                "details": f"No tomograms found for session {session.name}, run {data['runId']}, and reconstruction type {data['reconstructionType']}",
             }, status=400)
 
         # Create the review
@@ -589,14 +572,14 @@ class ReviewView(View):
                 status='not_started',
                 total_count=tomogram_count,  # Set total count to actual tomogram count
                 reviewed_count=0,
-                objects_of_interest=data['annotationObjects']
+                objects_of_interest=data['annotationObjects'],
             )
 
             # Update ReviewTomogram records to associate them with this review
             ReviewTomogram.objects.filter(
                 session=session,
                 run_id=data['runId'],
-                reconstruction_type=data['reconstructionType']
+                reconstruction_type=data['reconstructionType'],
             ).update(review=review)
 
             # Return the created review
@@ -608,7 +591,7 @@ class ReviewView(View):
                 "reviewName": review.review_name,
                 "totalCount": review.total_count,
                 "status": "not_started",
-                "createdAt": review.created_at.isoformat()
+                "createdAt": review.created_at.isoformat(),
             }, status=201)
 
         except Exception as e:
@@ -657,7 +640,7 @@ class ReviewView(View):
                 try:
                     tomogram = ReviewTomogram.objects.get(
                         review=review,
-                        tomogram_id=annotation['tomogramId']
+                        tomogram_id=annotation['tomogramId'],
                     )
                     print(f"Updating tomogram: {tomogram.tomogram_id}")  # Debug log
 
@@ -686,7 +669,7 @@ class ReviewView(View):
             total_count = ReviewTomogram.objects.filter(review=review).count()
             reviewed_count = ReviewTomogram.objects.filter(
                 review=review,
-                quality__in=['accepted', 'rejected', 'uncertain']
+                quality__in=['accepted', 'rejected', 'uncertain'],
             ).count()
 
             # Update review's save path and reviewed count
@@ -700,7 +683,7 @@ class ReviewView(View):
                 "savedAt": datetime.now(timezone.utc).isoformat(),
                 "savePath": data['savePath'],
                 "reviewedCount": reviewed_count,
-                "totalCount": total_count
+                "totalCount": total_count,
             })
 
         except Exception as e:
@@ -757,10 +740,9 @@ class ReviewView(View):
             review.save()
 
             # Update review counts
-            review = tomogram.review
             review.reviewed_count = ReviewTomogram.objects.filter(
                 review=review,
-                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary']
+                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary'],
             ).count()
             review.save()
 
@@ -768,7 +750,7 @@ class ReviewView(View):
             return JsonResponse({
                 "ok": True,
                 "finishedAt": datetime.utcnow().isoformat() + 'Z',
-                "savePath": review.save_path if review.save_path else None
+                "savePath": review.save_path if review.save_path else None,
             })
 
         except Exception as e:
@@ -810,7 +792,7 @@ def export_review_results(request, review_id):
             # Only get reviewed tomograms (not pending)
             tomograms = ReviewTomogram.objects.filter(
                 review=review,
-                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary']
+                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary'],
             )
         else:
             # Get all tomograms (including pending)
@@ -829,7 +811,7 @@ def export_review_results(request, review_id):
             "objects_of_interest": review.objects_of_interest,
             "msi_session_name": review.msi_session.name,
             "reconstruction_type": review.reconstruction_type,
-            "tomograms": []
+            "tomograms": [],
         }
 
         # Add tomogram annotations
@@ -840,7 +822,7 @@ def export_review_results(request, review_id):
                 "rejection_reasons": tomogram.rejection_reasons if tomogram.rejection_reasons else [],
                 "object_labels": tomogram.object_labels if tomogram.object_labels else [],
                 "position_id": tomogram.position_id,
-                "created_at": tomogram.created_at.isoformat()
+                "created_at": tomogram.created_at.isoformat(),
             }
             export_data["tomograms"].append(annotation)
 
@@ -902,7 +884,7 @@ def get_review_tomograms(request, review_id):
 
         # Get tomograms for the review
         tomograms = ReviewTomogram.objects.filter(
-            review=review
+            review=review,
         ).values('tomogram_id', 'quality')
 
         print(f"Found {tomograms.count()} tomograms")
@@ -911,7 +893,7 @@ def get_review_tomograms(request, review_id):
         tomograms_data = [
             {
                 "tomogramId": tomo['tomogram_id'],
-                "status": tomo['quality'] if tomo['quality'] else 'pending'
+                "status": tomo['quality'] if tomo['quality'] else 'pending',
             }
             for tomo in tomograms
         ]
@@ -961,7 +943,7 @@ class ReviewTomogramView(View):
             try:
                 tomogram = ReviewTomogram.objects.get(
                     review__review_id=review_id,
-                    tomogram_id=tomogram_id
+                    tomogram_id=tomogram_id,
                 )
                 print(f"Found tomogram: {tomogram.tomogram_id}")
             except ReviewTomogram.DoesNotExist:
@@ -977,8 +959,8 @@ class ReviewTomogramView(View):
                 "existingReview": {
                     "quality": None,
                     "rejectionReasons": [],
-                    "objectLabels": []
-                }
+                    "objectLabels": [],
+                },
             }
               # Extract sessionid and runid from tomogram
             session_id = tomogram.session.name if tomogram.session else None
@@ -1104,7 +1086,7 @@ class ReviewTomogramView(View):
             try:
                 tomogram = ReviewTomogram.objects.get(
                     review__review_id=review_id,
-                    tomogram_id=tomogram_id
+                    tomogram_id=tomogram_id,
                 )
                 print(f"Found tomogram: {tomogram.tomogram_id}")
             except ReviewTomogram.DoesNotExist:
@@ -1131,7 +1113,7 @@ class ReviewTomogramView(View):
             review = tomogram.review
             review.reviewed_count = ReviewTomogram.objects.filter(
                 review=review,
-                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary']
+                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary'],
             ).count()
             review.save()
 
@@ -1151,15 +1133,15 @@ class SessionView(View):
 
         # only runs that belong to plans we want to expose here
         proc_runs = session.procrun_set.filter(
-            proc_plan__name__in=['czii-live', 'czii-denoise']
+            proc_plan__name__in=['czii-live', 'czii-denoise'],
         ).select_related('proc_plan')
 
         for proc_run in proc_runs:
             # Count tomograms grouped by reconstruction_type
             review_data = ReviewTomogram.objects.filter(
-                run_id=proc_run.name, session=session
+                run_id=proc_run.name, session=session,
             ).values('reconstruction_type').annotate(
-                tomogram_count=Count('tomogram_id', distinct=True)
+                tomogram_count=Count('tomogram_id', distinct=True),
             )
             tomogram_counts = {
                 d['reconstruction_type']: d['tomogram_count'] for d in review_data
@@ -1202,7 +1184,7 @@ class SessionView(View):
             "sessionName": session.name,
             "createdAt": session.created_at.isoformat() if session.created_at else None,
             "projectName": session.project.name if session.project else None,
-            "runs": runs_data
+            "runs": runs_data,
         }
 
     def get(self, request, session_id=None):
@@ -1228,16 +1210,16 @@ class SessionView(View):
 
                 # Start with base queryset
                 sessions_qs = MsiSession.objects.select_related(
-                    'project'
+                    'project',
                 ).prefetch_related(
-                    'procrun_set'
+                    'procrun_set',
                 )
 
                 # Apply search filter if provided
                 if search:
                     sessions_qs = sessions_qs.filter(
                         Q(name__icontains=search) |
-                        Q(project__name__icontains=search)
+                        Q(project__name__icontains=search),
                     )
 
                 # Get all sessions

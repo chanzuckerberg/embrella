@@ -1,13 +1,13 @@
-from django.contrib.auth.models import User, Group, Permission
-import sys
-import django
 import os
+import sys
+
+import django
+from django.contrib.auth.models import Group, Permission, User
 from django.core.exceptions import ObjectDoesNotExist
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 
-from django.contrib.auth.models import Group, Permission
 
 
 def create_group_with_permission_ids(name, permission_ids=None):

@@ -1,14 +1,23 @@
-from django.contrib.auth.models import User
-import sys
-import django
 import os
+import sys
+
+import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
-from tem.models import *
-from stores.models import StaticPath,PathType, fill_place_holders
-from processes.models import ProcSoftware,Task, ProcPlan, Pipe, PipeInPlan, ReconMethod, TomogramVoxelSpacing
-from processes.models import PipeJoint
+from processes.models import (
+    Pipe,
+    PipeInPlan,
+    PipeJoint,
+    ProcPlan,
+    ProcSoftware,
+    ReconMethod,
+    Task,
+    TomogramVoxelSpacing,
+)
+from stores.models import PathType, StaticPath
+
+#from tem.models import *
 
 
 def _get_first_of(model_class):
@@ -145,7 +154,7 @@ def create_pipeline_plan():
     pipe1.input.add(get_static_path('mdoc'))
     for p in output_path_types[:-1]:
         # all except denoise
-        pipe1.output.add(p) 
+        pipe1.output.add(p)
     pipe2.input.add(get_static_path('tangl'))
     pipe2.input.add(get_static_path('aln'))
     pipe2.input.add(get_static_path('rawst'))
@@ -166,11 +175,11 @@ def create_pipeline_plan():
 
     add_pipe_joints(plan1_pipe2, plan1_pipe1,['rawst','tangl','aln'])
     add_pipe_joints(plan1_pipe3, plan1_pipe1,['rawst','tangl','aln'])
-    add_pipe_joints(plan2_pipe4, plan1_pipe1,['rec',])
+    add_pipe_joints(plan2_pipe4, plan1_pipe1,['rec'])
 
 def create_default_spacings():
-    TomogramVoxelSpacing.objects.create(spacing=5.0) 
-    TomogramVoxelSpacing.objects.create(spacing=10.0) 
+    TomogramVoxelSpacing.objects.create(spacing=5.0)
+    TomogramVoxelSpacing.objects.create(spacing=10.0)
 
 def create_default_recon_methods():
     ReconMethod.objects.create(name='weighted back projection')
@@ -183,7 +192,7 @@ def run():
     except r.DoesNotExist:
         print('Please run init first')
         sys.exit(1)
-    except Exception as e:
+    except Exception:
         print('Error: %s. Need frames and mdoc StaticPath instances to run')
         sys.exit(1)
     create_pipeline_plan()

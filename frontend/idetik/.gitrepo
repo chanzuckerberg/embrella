@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:chanzuckerberg/idetik.git
+	branch = 2768222bb34aa13447c6515dfacfffe297a4dfeb
+	commit = 2768222bb34aa13447c6515dfacfffe297a4dfeb
+	parent = a0889521b5e737ae2261dd9696e26ce053e766ef
+	method = merge
+	cmdver = 0.4.9
