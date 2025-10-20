@@ -202,7 +202,7 @@ def get_aretomo3_json(request):
         500: OpenApiTypes.OBJECT,
     }
 )
-@api_view(["POST"])
+# @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @login_required
 @csrf_exempt
@@ -417,7 +417,7 @@ def run_aretomo3_advanced(request):
         500: OpenApiTypes.OBJECT,
     }
 )
-@api_view(["POST"])
+# @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 @login_required
 @csrf_exempt
@@ -937,7 +937,7 @@ def get_job_logs(request):
         500: OpenApiTypes.OBJECT
     }
 )
-@api_view(["POST"])
+# @api_view(["POST"])
 # @login_required
 @csrf_exempt
 def run_denoiset(request):
@@ -1928,7 +1928,6 @@ def trigger_syncer(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
-
 
 
 @extend_schema(
