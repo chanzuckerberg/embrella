@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box,  
   CircularProgress, 
@@ -14,25 +14,28 @@ import { Button, Dialog, DialogTitle, DialogContent } from '@czi-sds/components'
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
-import { DJANGO_URL } from '@app/common/constants/api';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
+import {useCreatePuck} from '@app/common/hooks/useGridLogging/useCreatePuck';
 
 interface AddPuckProps {
   open: boolean;
   onClose: () => void;
   selectedUser?: UsersList | null;
   caneId?: number;
+  onPuckCreated: (puck: any) => void;
 }
 
 export const AddPuck: React.FC<AddPuckProps> = ({
   open,
   onClose,
   selectedUser,
-  caneId
+  caneId,
+  onPuckCreated,
+
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    user: selectedUser?.id || '',
+    user: selectedUser?.id || 0,
     puckName: '',
     color: '',
     cane: caneId || '',
@@ -41,6 +44,21 @@ export const AddPuck: React.FC<AddPuckProps> = ({
 
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
+  const { createPuck, isCreating, error } = useCreatePuck();
+
+  useEffect(() => {
+    console.log('useEffect triggered with selectedUser:', selectedUser);
+    console.log('selectedUser?.id:', selectedUser?.id);
+    if (selectedUser?.id) {
+      console.log('Setting formData.user to:', selectedUser.id);
+      setFormData(prev => ({
+        ...prev,
+        user: selectedUser.id
+      }));
+    } else {
+      console.log('selectedUser.id is falsy, not updating formData');
+    }
+  }, [selectedUser?.id]);
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
@@ -49,32 +67,39 @@ export const AddPuck: React.FC<AddPuckProps> = ({
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate required fields
-    if (!formData.user || !formData.puckName || !formData.color || !formData.cane || !formData.positionInCane) {
+    if (!selectedUser?.id || formData.user === 0 || !formData.puckName || !formData.color || !formData.cane || !formData.positionInCane) {
       alert('Please fill in all required fields');
       return;
     }
 
-    setIsSubmitting(true);
-    
-    // Build URL with prefill parameters
-    const prefillParams = new URLSearchParams();
-    prefillParams.append('user', formData.user.toString());
-    prefillParams.append('name', formData.puckName);
-    prefillParams.append('color', formData.color);
-    prefillParams.append('cane', formData.cane.toString());
-    prefillParams.append('position_in_cane', formData.positionInCane.toString());
-
-    // Add return state parameters
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
+    const newPuck = await createPuck({
+      user_id: Number(formData.user),
+      puckName: formData.puckName,
+      color: formData.color,
+      cane: Number(formData.cane),
+      position_in_cane: Number(formData.positionInCane),
+    });
+console.log('newPuck', newPuck);
+    if (newPuck) {
+      // Call the callback to refresh the puck list
+      if (onPuckCreated) {
+        onPuckCreated(newPuck);
+      }
+      onClose();
+      console.log('selectedUserID', selectedUser?.id);
+      // Reset form
+      setFormData({
+        user: selectedUser?.id || 0,
+        puckName: '',
+        color: '',
+        cane: caneId || '',
+        positionInCane: ''
+      });
     }
-
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryopuck/add/?${prefillParams.toString()}`;
-    window.location.href = adminUrl;
   };
-
+ 
   return (
     <Dialog 
       onClose={onClose} 

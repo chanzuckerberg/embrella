@@ -1,9 +1,17 @@
+export interface PuckBase {
+  user_id: number;
+  name: string;
+  color: string;
+  cane: number;
+  position_in_cane: number;
+}
+
 export interface pucksListResponse {
   total_pucks_count: number;
   pucks: PucksList[];
 }
 
-export interface PucksList {
+export interface PucksList extends PuckBase {
   id: number;
   name: string;
   color: string;
@@ -32,3 +40,8 @@ export interface PuckSlots {
   status: string;
   grid_box_id?: number;
 }
+
+
+export type CreatePuckData = Omit<PuckBase, 'name'> & {
+  puckName: string; // Frontend uses 'puckName' but API expects 'name'
+};
