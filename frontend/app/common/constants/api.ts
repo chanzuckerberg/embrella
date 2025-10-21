@@ -43,6 +43,7 @@ export enum POST_API {
   SAVE_REVIEW = '/api/reviews/:reviewId/save',
   COMPLETE_REVIEW = '/api/reviews/:reviewId/complete',
   UPDATE_TOMOGRAM_REVIEW = '/api/reviews/:reviewId/tomograms/:tomogramId',
+  CREATE_PUCK = '/api/list/pucks/',
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

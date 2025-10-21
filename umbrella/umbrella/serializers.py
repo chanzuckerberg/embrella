@@ -51,10 +51,53 @@ class PuckSerializer(serializers.ModelSerializer):
             'color_display',
             'position_in_cane',
             'max_boxes',
-            'user_id',
+            'user',
             'user_name',
             'cane'
         ]
+
+        def validate(self, data):
+            """
+            Custom validation for puck creation/update
+            """
+            # Check for unique name + color combination
+            name = data.get('name')
+            color = data.get('color')
+            cane = data.get('cane')
+            position_in_cane = data.get('position_in_cane')
+            
+            # Get instance for update operations
+            instance = self.instance
+            
+            # Validate unique name+color
+            if name and color:
+                puck_query = Puck.objects.filter(name=name, color=color)
+                print(puck_query)
+                if instance:
+                    puck_query = puck_query.exclude(pk=instance.pk)
+                if puck_query.exists():
+                    raise serializers.ValidationError({
+                        'name': 'A puck with this name and color combination already exists.'
+                    })
+            
+            # Validate unique cane+position
+            if cane and position_in_cane:
+                position_query = Puck.objects.filter(cane=cane, position_in_cane=position_in_cane)
+                if instance:
+                    position_query = position_query.exclude(pk=instance.pk)
+                if position_query.exists():
+                    raise serializers.ValidationError({
+                        'position_in_cane': f'Position {position_in_cane} in this cane is already occupied.'
+                    })
+            
+            return data
+
+        def create(self, validated_data):
+            """
+            Create and return a new Puck instance
+            """
+            return Puck.objects.create(**validated_data)
+
 class CryoGridBoxSerializer(serializers.ModelSerializer):
     """
     Serializer for CryoGridBox model
