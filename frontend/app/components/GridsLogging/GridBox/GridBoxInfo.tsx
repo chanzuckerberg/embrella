@@ -255,6 +255,17 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
         selectedUser={selectedUser}
         gridBoxData={gridBoxData || null}
       />
+     
+     <AddGrid
+        open={addGridDialogOpen}
+        onClose={() => setAddGridDialogOpen(false)}
+        selectedUser={selectedUser}
+        gridBoxId={gridBoxData?.grid_box?.grid_box_id}
+        gridBoxName={gridBoxData?.grid_box?.name}
+        positionInBox={selectedPositionInBox || undefined}
+        // puckId={selectedPuck?.id}
+        // puckName={selectedPuck?.name}
+      />
     </>
   );
 };
