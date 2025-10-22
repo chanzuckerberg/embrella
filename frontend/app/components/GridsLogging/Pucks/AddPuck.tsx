@@ -16,6 +16,7 @@ import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridL
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import {useCreatePuck} from '@app/common/hooks/useGridLogging/useCreatePuck';
+import { DJANGO_URL } from '@app/common/constants/api';
 
 interface AddPuckProps {
   open: boolean;
@@ -42,23 +43,51 @@ export const AddPuck: React.FC<AddPuckProps> = ({
     positionInCane: ''
   });
 
+  // state for tracking filled positions
+  const [filledPositions, setFilledPositions] = useState<number[]>([]);
+
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
   const { createPuck, isCreating, error } = useCreatePuck();
 
   useEffect(() => {
-    console.log('useEffect triggered with selectedUser:', selectedUser);
-    console.log('selectedUser?.id:', selectedUser?.id);
     if (selectedUser?.id) {
-      console.log('Setting formData.user to:', selectedUser.id);
       setFormData(prev => ({
         ...prev,
         user: selectedUser.id
       }));
-    } else {
-      console.log('selectedUser.id is falsy, not updating formData');
     }
   }, [selectedUser?.id]);
+
+ 
+  const fetchFilledPositions = async (caneId: number) => {
+    try {
+      const response = await fetch(`${DJANGO_URL}/api/list/pucks/`);
+      const data = await response.json();
+      
+      // Filter pucks by cane 
+      const filteredPucks = data.pucks?.filter((puck: any) => puck.cane === caneId) || [];
+      const positions = filteredPucks.map((puck: any) => puck.position_in_cane);
+      
+      setFilledPositions(positions);
+    } catch (error) {
+      setFilledPositions([]);
+    }
+  };
+
+  // fetch positions when cane changes
+  useEffect(() => {
+    if (formData.cane) {
+      fetchFilledPositions(Number(formData.cane));
+      // Reset position selection when cane changes
+      setFormData(prev => ({
+        ...prev,
+        positionInCane: ''
+      }));
+    } else {
+      setFilledPositions([]);
+    }
+  }, [formData.cane]);
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({
@@ -81,14 +110,11 @@ export const AddPuck: React.FC<AddPuckProps> = ({
       cane: Number(formData.cane),
       position_in_cane: Number(formData.positionInCane),
     });
-console.log('newPuck', newPuck);
     if (newPuck) {
-      // Call the callback to refresh the puck list
       if (onPuckCreated) {
         onPuckCreated(newPuck);
       }
       onClose();
-      console.log('selectedUserID', selectedUser?.id);
       // Reset form
       setFormData({
         user: selectedUser?.id || 0,
@@ -119,16 +145,9 @@ console.log('newPuck', newPuck);
           pt: 2,
           pb: 2,
           mt: 2,
-          // maxHeight:'200px'
         }}>
          
           <Box sx={{ display: 'flex', gap: 2 }}>
-            {/* <TextField
-              label="User"
-              value={selectedUser?.full_name || ''}
-              disabled
-              sx={{ ...disabledTextFieldStyles, flex: 1 }}
-            /> */}
             <TextField
               required
               label="Puck Name"
@@ -149,6 +168,7 @@ console.log('newPuck', newPuck);
                 <MenuItem value={1}>Cane 1</MenuItem>
                 <MenuItem value={2}>Cane 2</MenuItem>
                 <MenuItem value={3}>Cane 3</MenuItem>
+                <MenuItem value={4}>Cane 4</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -173,8 +193,6 @@ console.log('newPuck', newPuck);
               </Select>
             </FormControl>
 
-           
-
             <FormControl required sx={{ flex: 1 }}>
               <InputLabel id="position-label">Position in Cane</InputLabel>
               <Select
@@ -184,11 +202,19 @@ console.log('newPuck', newPuck);
                 label="Position in Cane"
                 sx={disabledTextFieldStyles}
               >
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((position) => (
-                  <MenuItem key={position} value={position}>
-                    Position {position}
-                  </MenuItem>
-                ))}
+                {/* Show all positions with status indicators */}
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((position) => {
+                  const isFilled = filledPositions.includes(position);
+                  return (
+                    <MenuItem 
+                      key={position} 
+                      value={position}
+                      disabled={isFilled}
+                    >
+                      Position {position} {isFilled ? '(Filled)' : '(Available)'}
+                    </MenuItem>
+                  );
+                })}
               </Select>
             </FormControl>
           </Box>

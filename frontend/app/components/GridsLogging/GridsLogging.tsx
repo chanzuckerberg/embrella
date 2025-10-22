@@ -114,6 +114,10 @@ export const GridsLogging: React.FC = () => {
     setSelectedGrid(gridPosition);
     setSelectedGridId(gridId || null);
   };
+  const handlePuckCreated = (newPuck: PucksList) => {
+    window.location.reload();
+  };
+
 
   return (
     <Box className={styles.mainContainer}>
@@ -198,6 +202,7 @@ export const GridsLogging: React.FC = () => {
       onClose={() => setIsAddPuckDialogOpen(false)} 
       selectedUser={selectedUser} 
       caneId={1} 
+      onPuckCreated={handlePuckCreated}
     />
  
     </Box>
