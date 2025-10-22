@@ -62,20 +62,14 @@ export const AddGrid: React.FC<AddGridProps> = ({
 
   const handleAddSpecimen = (specimenName: string) => {
     console.log('Adding new specimen:', specimenName);
-    // Here you would typically make an API call to create the specimen
-    // and then refresh the choices or add it to the current form
   };
 
   const handleAddProject = (projectName: string) => {
     console.log('Adding new project:', projectName);
-    // Here you would typically make an API call to create the project
-    // and then refresh the choices or add it to the current form
   };
 
   const handleAddFreezingSession = (sessionName: string) => {
     console.log('Adding new freezing session:', sessionName);
-    // Here you would typically make an API call to create the freezing session
-    // and then refresh the choices or add it to the current form
   };
 
   const handleSave = () => {
@@ -93,8 +87,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
 
     setIsSubmitting(true);
     console.log('Saving grid:', formData);
-    // Here you would make the API call to save the grid
-    // setIsSubmitting(false);
   };
 
   return (
@@ -102,7 +94,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
       <BaseFormDialog
         open={open}
         onClose={onClose}
-        title="Create a Grid"
+        title="Add a Grid"
         subtitle={selectedUser?.full_name || ''}
         onSave={handleSave}
         isSubmitting={isSubmitting}
