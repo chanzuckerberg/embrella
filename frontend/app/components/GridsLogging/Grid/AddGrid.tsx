@@ -8,9 +8,9 @@ import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGrid
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
-import { AddItemDialog } from '@app/common/components/Forms/AddItemDialog';
 import { AddSpecimenDialog } from './AddSpecimenDialog';
 import {AddProjectDialog} from '@app/components/GridsLogging/Grid/AddProjectDialog';
+import {AddFreezingSessionDialog} from '@app/components/GridsLogging/Grid/AddFreezingSessionDialog';
 
 interface AddGridProps {
   open: boolean;
@@ -69,6 +69,19 @@ export const AddGrid: React.FC<AddGridProps> = ({
     { id: '2', name: 'Phantom 2' },
   ];
 
+  const devices = [
+    { id: '1', name: 'GP2' },
+    { id: '2', name: 'Vitrobot' },
+    { id: '3', name: 'Leica EM Ice [High Pressure Freezing]' },
+    { id: '4', name: 'CryoCapCell' },
+
+  ];
+
+  const notesPages = [
+    { id: '1', url: 'VLP Freezing' },
+    { id: '1', url: 'Sample Prep Notes' },
+  ];
+
   const handleSaveProject = async (data: {
     name: string;
     description: string;
@@ -95,12 +108,22 @@ export const AddGrid: React.FC<AddGridProps> = ({
     console.log('Adding new specimen:', specimenData);
   };
 
-  const handleAddProject = (projectName: string) => {
-    console.log('Adding new project:', projectName);
-  };
+ 
 
-  const handleAddFreezingSession = (sessionName: string) => {
-    console.log('Adding new freezing session:', sessionName);
+  const handleAddFreezingSession = async (data: {
+    user: string;
+    device: string;
+    name: string;
+    temperature: string;
+    humidity: string;
+    notesPage: string;
+  }) => {
+    console.log('Adding new freezing session:', data);
+    
+    setFormData((prev) => ({
+      ...prev,
+      freezingSession: data.name,
+    }));
   };
 
   const handleSave = () => {
@@ -237,13 +260,15 @@ export const AddGrid: React.FC<AddGridProps> = ({
         googleDriveFolders={googleDriveFolders}
       />
 
-      <AddItemDialog
+      <AddFreezingSessionDialog
         open={addFreezingSessionDialogOpen}
         onClose={() => setAddFreezingSessionDialogOpen(false)}
-        title="Add New Freezing Session"
-        fieldLabel="Freezing Session Name"
-        fieldPlaceholder="Enter freezing session name"
+       
+        users={projectLeaders}
+        devices={devices}
+        notesPages={notesPages}
         onSave={handleAddFreezingSession}
+
       />
     </>
   );
