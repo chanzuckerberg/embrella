@@ -41,7 +41,6 @@ export interface PuckSlots {
   grid_box_id?: number;
 }
 
-
 export type CreatePuckData = Omit<PuckBase, 'name'> & {
   puckName: string; // Frontend uses 'puckName' but API expects 'name'
 };

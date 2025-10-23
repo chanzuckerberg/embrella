@@ -1,14 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Box,  
-  TextField,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select
-} from '@mui/material';
+import { Box, TextField, MenuItem, FormControl, InputLabel, Select } from '@mui/material';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
@@ -25,19 +18,13 @@ interface AddPuckProps {
   onPuckCreated: (puck: any) => void;
 }
 
-export const AddPuck: React.FC<AddPuckProps> = ({
-  open,
-  onClose,
-  selectedUser,
-  caneId,
-  onPuckCreated,
-}) => {
+export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, caneId, onPuckCreated }) => {
   const [formData, setFormData] = useState({
     user: selectedUser?.id || 0,
     puckName: '',
     color: '',
     cane: caneId || '',
-    positionInCane: ''
+    positionInCane: '',
   });
 
   // state for tracking filled positions
@@ -49,9 +36,9 @@ export const AddPuck: React.FC<AddPuckProps> = ({
 
   useEffect(() => {
     if (selectedUser?.id) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        user: selectedUser.id
+        user: selectedUser.id,
       }));
     }
   }, [selectedUser?.id]);
@@ -60,11 +47,11 @@ export const AddPuck: React.FC<AddPuckProps> = ({
     try {
       const response = await fetch(`${DJANGO_URL}/api/list/pucks/`);
       const data = await response.json();
-      
-      // Filter pucks by cane 
+
+      // Filter pucks by cane
       const filteredPucks = data.pucks?.filter((puck: any) => puck.cane === caneId) || [];
       const positions = filteredPucks.map((puck: any) => puck.position_in_cane);
-      
+
       setFilledPositions(positions);
     } catch (error) {
       setFilledPositions([]);
@@ -76,9 +63,9 @@ export const AddPuck: React.FC<AddPuckProps> = ({
     if (formData.cane) {
       fetchFilledPositions(Number(formData.cane));
       // Reset position selection when cane changes
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        positionInCane: ''
+        positionInCane: '',
       }));
     } else {
       setFilledPositions([]);
@@ -86,15 +73,22 @@ export const AddPuck: React.FC<AddPuckProps> = ({
   }, [formData.cane]);
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const handleSave = async () => {
     // Validate required fields
-    if (!selectedUser?.id || formData.user === 0 || !formData.puckName || !formData.color || !formData.cane || !formData.positionInCane) {
+    if (
+      !selectedUser?.id ||
+      formData.user === 0 ||
+      !formData.puckName ||
+      !formData.color ||
+      !formData.cane ||
+      !formData.positionInCane
+    ) {
       alert('Please fill in all required fields');
       return;
     }
@@ -106,7 +100,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({
       cane: Number(formData.cane),
       position_in_cane: Number(formData.positionInCane),
     });
-    
+
     if (newPuck) {
       if (onPuckCreated) {
         onPuckCreated(newPuck);
@@ -117,18 +111,18 @@ export const AddPuck: React.FC<AddPuckProps> = ({
         puckName: '',
         color: '',
         cane: caneId || '',
-        positionInCane: ''
+        positionInCane: '',
       });
       onClose();
     }
   };
 
-  const isFormValid = 
-    selectedUser?.id && 
-    formData.user !== 0 && 
-    formData.puckName && 
-    formData.color && 
-    formData.cane && 
+  const isFormValid =
+    selectedUser?.id &&
+    formData.user !== 0 &&
+    formData.puckName &&
+    formData.color &&
+    formData.cane &&
     formData.positionInCane;
 
   return (
@@ -199,11 +193,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({
             {Array.from({ length: 10 }, (_, i) => i + 1).map((position) => {
               const isFilled = filledPositions.includes(position);
               return (
-                <MenuItem 
-                  key={position} 
-                  value={position}
-                  disabled={isFilled}
-                >
+                <MenuItem key={position} value={position} disabled={isFilled}>
                   Position {position} {isFilled ? '(Filled)' : '(Available)'}
                 </MenuItem>
               );

@@ -170,7 +170,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
             ))}
           </Select>
         </FormControl>
-        
+
         <FormControl required sx={{ flex: 1 }}>
           <InputLabel id="max-grids-label">Max Grids</InputLabel>
           <Select

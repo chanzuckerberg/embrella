@@ -94,7 +94,7 @@ export const GridsLogging: React.FC = () => {
   };
 
   const handleAddPuck = () => {
-    setIsAddPuckDialogOpen(true)
+    setIsAddPuckDialogOpen(true);
   };
 
   const handlePuckSelect = (puck: PucksList | null) => {
@@ -117,7 +117,6 @@ export const GridsLogging: React.FC = () => {
   const handlePuckCreated = (newPuck: PucksList) => {
     window.location.reload();
   };
-
 
   return (
     <Box className={styles.mainContainer}>
@@ -197,14 +196,13 @@ export const GridsLogging: React.FC = () => {
           )}
         </Box>
       )}
-    <AddPuck 
-      open={isAddPuckDialogOpen} 
-      onClose={() => setIsAddPuckDialogOpen(false)} 
-      selectedUser={selectedUser} 
-      caneId={1} 
-      onPuckCreated={handlePuckCreated}
-    />
- 
+      <AddPuck
+        open={isAddPuckDialogOpen}
+        onClose={() => setIsAddPuckDialogOpen(false)}
+        selectedUser={selectedUser}
+        caneId={1}
+        onPuckCreated={handlePuckCreated}
+      />
     </Box>
   );
 };

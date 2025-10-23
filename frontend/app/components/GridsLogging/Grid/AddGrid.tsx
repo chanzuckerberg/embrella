@@ -34,7 +34,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const [addSpecimenDialogOpen, setAddSpecimenDialogOpen] = useState(false);
   const [addProjectDialogOpen, setAddProjectDialogOpen] = useState(false);
   const [addFreezingSessionDialogOpen, setAddFreezingSessionDialogOpen] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
     gridName: '',
@@ -195,7 +195,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
       <AddSpecimenDialog
         open={addSpecimenDialogOpen}
         onClose={() => setAddSpecimenDialogOpen(false)}
-    
         onSave={handleAddSpecimen}
       />
 

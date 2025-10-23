@@ -12,9 +12,9 @@ interface FormFieldWithAddProps {
   onAdd?: () => void;
   required?: boolean;
   disabled?: boolean;
-  options?: Array<{value: string, label: string}>;
+  options?: Array<{ value: string; label: string }>;
   placeholder?: string;
-  flex?: number; 
+  flex?: number;
 }
 
 export const FormFieldWithAdd: React.FC<FormFieldWithAddProps> = ({
@@ -26,7 +26,7 @@ export const FormFieldWithAdd: React.FC<FormFieldWithAddProps> = ({
   disabled = false,
   options = [],
   placeholder,
-  flex = 1 // Default to flex: 1
+  flex = 1, // Default to flex: 1
 }) => {
   return (
     <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flex: flex }}>

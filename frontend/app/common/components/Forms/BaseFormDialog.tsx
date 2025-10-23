@@ -25,7 +25,7 @@ export const BaseFormDialog: React.FC<BaseFormDialogProps> = ({
   onSave,
   isSubmitting = false,
   saveButtonText = 'Save',
-  disabled = false
+  disabled = false,
 }) => {
   return (
     <Dialog onClose={onClose} open={open} sdsSize="xs">
@@ -33,7 +33,7 @@ export const BaseFormDialog: React.FC<BaseFormDialogProps> = ({
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2, pb: 2, mt: 2 }}>
           {children}
-          
+
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
             <Button sdsType="secondary" sdsStyle="rounded" onClick={onClose} disabled={isSubmitting}>
               Cancel

@@ -20,7 +20,7 @@ export const AddItemDialog: React.FC<AddItemDialogProps> = ({
   title,
   fieldLabel,
   fieldPlaceholder,
-  onSave
+  onSave,
 }) => {
   const [value, setValue] = useState('');
 
@@ -33,13 +33,7 @@ export const AddItemDialog: React.FC<AddItemDialogProps> = ({
   };
 
   return (
-    <BaseFormDialog
-      open={open}
-      onClose={onClose}
-      title={title}
-      onSave={handleSave}
-      disabled={!value.trim()}
-    >
+    <BaseFormDialog open={open} onClose={onClose} title={title} onSave={handleSave} disabled={!value.trim()}>
       <TextField
         required
         label={fieldLabel}

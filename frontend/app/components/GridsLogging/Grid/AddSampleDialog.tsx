@@ -16,20 +16,16 @@ interface AddSampleDialogProps {
   onSave: (data: SampleFormData) => void;
 }
 
-export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({
-  open,
-  onClose,
-  onSave
-}) => {
+export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose, onSave }) => {
   const [formData, setFormData] = useState<SampleFormData>({
     name: '',
-    ontology: ''
+    ontology: '',
   });
 
   const handleInputChange = (field: keyof SampleFormData, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -37,12 +33,12 @@ export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({
     if (formData.name.trim()) {
       onSave({
         name: formData.name.trim(),
-        ontology: formData.ontology.trim()
+        ontology: formData.ontology.trim(),
       });
       // Reset form
       setFormData({
         name: '',
-        ontology: ''
+        ontology: '',
       });
       onClose();
     }
@@ -52,7 +48,7 @@ export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({
     // Reset form on close
     setFormData({
       name: '',
-      ontology: ''
+      ontology: '',
     });
     onClose();
   };
