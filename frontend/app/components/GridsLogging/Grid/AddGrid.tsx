@@ -9,6 +9,7 @@ import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { AddItemDialog } from '@app/common/components/Forms/AddItemDialog';
+import { AddSpecimenDialog } from './AddSpecimenDialog';
 
 interface AddGridProps {
   open: boolean;
@@ -60,8 +61,8 @@ export const AddGrid: React.FC<AddGridProps> = ({
     }));
   };
 
-  const handleAddSpecimen = (specimenName: string) => {
-    console.log('Adding new specimen:', specimenName);
+  const handleAddSpecimen = (specimenData: { sampleName: string; notesPage: string; notes: string }) => {
+    console.log('Adding new specimen:', specimenData);
   };
 
   const handleAddProject = (projectName: string) => {
@@ -144,7 +145,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
           <TextField
             required
             label="Position in box"
-            value={formData.positionInBox}
+            value={positionInBox}
             disabled
             sx={{ ...disabledTextFieldStyles, flex: 1 }}
           />
@@ -191,12 +192,10 @@ export const AddGrid: React.FC<AddGridProps> = ({
         </Box>
       </BaseFormDialog>
 
-      <AddItemDialog
+      <AddSpecimenDialog
         open={addSpecimenDialogOpen}
         onClose={() => setAddSpecimenDialogOpen(false)}
-        title="Add New Specimen"
-        fieldLabel="Specimen Name"
-        fieldPlaceholder="Enter specimen name"
+    
         onSave={handleAddSpecimen}
       />
 
