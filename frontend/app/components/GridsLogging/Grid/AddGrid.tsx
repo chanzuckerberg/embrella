@@ -10,6 +10,7 @@ import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { AddItemDialog } from '@app/common/components/Forms/AddItemDialog';
 import { AddSpecimenDialog } from './AddSpecimenDialog';
+import {AddProjectDialog} from '@app/components/GridsLogging/Grid/AddProjectDialog';
 
 interface AddGridProps {
   open: boolean;
@@ -53,6 +54,35 @@ export const AddGrid: React.FC<AddGridProps> = ({
 
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { users, isSuccess: usersLoaded } = useGridLoggingUserList();
+
+  const projectLeaders = users?.users?.map(user => ({
+    id: user.id.toString(),
+    name: user.full_name
+  })) || [];
+
+  const confluenceSpaces = [
+    { id: '1', url: 'https://czbiohub.atlassian.net/wiki/spaces/CHOL/overview' },
+  ];
+
+  const googleDriveFolders = [
+    { id: '1', name: 'BD01' },
+    { id: '2', name: 'Phantom 2' },
+  ];
+
+  const handleSaveProject = async (data: {
+    name: string;
+    description: string;
+    projectLeader: string;
+    confluenceSpace: string;
+    googleDriveFolder: string;
+  }) => {
+    console.log('Saving project:', data);
+  
+    setFormData((prev) => ({
+      ...prev,
+      project: data.name,
+    }));
+  };
 
   const handleInputChange = (field: string, value: string | number | boolean) => {
     setFormData((prev) => ({
@@ -116,7 +146,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
             onChange={(value) => handleInputChange('freezingSession', value)}
             onAdd={() => setAddFreezingSessionDialogOpen(true)}
             disabled={!choicesLoaded}
-            options={choices?.freezing_sessions || []}
+            // options={choices?.freezing_sessions || []}
           />
         </Box>
 
@@ -128,7 +158,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
             onAdd={() => setAddSpecimenDialogOpen(true)}
             required
             disabled={!choicesLoaded}
-            options={choices?.specimens || []}
+            // options={choices?.specimens || []}
           />
           <FormFieldWithAdd
             label="Project"
@@ -137,7 +167,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
             onAdd={() => setAddProjectDialogOpen(true)}
             required
             disabled={!choicesLoaded}
-            options={choices?.projects || []}
+            // options={choices?.projects || []}
           />
         </Box>
 
@@ -198,13 +228,13 @@ export const AddGrid: React.FC<AddGridProps> = ({
         onSave={handleAddSpecimen}
       />
 
-      <AddItemDialog
+      <AddProjectDialog
         open={addProjectDialogOpen}
         onClose={() => setAddProjectDialogOpen(false)}
-        title="Add New Project"
-        fieldLabel="Project Name"
-        fieldPlaceholder="Enter project name"
-        onSave={handleAddProject}
+        onSave={handleSaveProject}
+        projectLeaders={projectLeaders}
+        confluenceSpaces={confluenceSpaces}
+        googleDriveFolders={googleDriveFolders}
       />
 
       <AddItemDialog
