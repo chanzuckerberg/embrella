@@ -21,8 +21,8 @@ interface AddPuckProps {
 export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, caneId, onPuckCreated }) => {
   const [formData, setFormData] = useState({
     user: selectedUser?.id || 0,
-    puckName: '',
-    color: '',
+    puckName: 'CZII-0',
+    color: 'CF1E01',
     cane: caneId || '',
     positionInCane: '',
   });
@@ -109,7 +109,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
       setFormData({
         user: selectedUser?.id || 0,
         puckName: '',
-        color: '',
+        color: 'red',
         cane: caneId || '',
         positionInCane: '',
       });
@@ -144,25 +144,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
           onChange={(e) => handleInputChange('puckName', e.target.value)}
           sx={{ ...disabledTextFieldStyles, flex: 1 }}
         />
-        <FormControl required sx={{ flex: 1 }}>
-          <InputLabel id="cane-label">Cane</InputLabel>
-          <Select
-            labelId="cane-label"
-            value={formData.cane}
-            onChange={(e) => handleInputChange('cane', e.target.value)}
-            label="Cane"
-            sx={disabledTextFieldStyles}
-          >
-            <MenuItem value={1}>Cane 1</MenuItem>
-            <MenuItem value={2}>Cane 2</MenuItem>
-            <MenuItem value={3}>Cane 3</MenuItem>
-            <MenuItem value={4}>Cane 4</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
-
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        <FormControl required sx={{ flex: 1 }}>
+        <FormControl sx={{ flex: 1 }}>
           <InputLabel id="color-label">Color</InputLabel>
           <Select
             labelId="color-label"
@@ -171,6 +153,13 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
             label="Color"
             disabled={!choicesLoaded}
             sx={disabledTextFieldStyles}
+            MenuProps={{
+              PaperProps: {
+                style: {
+                  maxHeight: 180,
+                },
+              },
+            }}
           >
             {choices?.puck_colors?.map((color) => (
               <MenuItem key={color.value} value={color.value}>
@@ -179,8 +168,27 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
             ))}
           </Select>
         </FormControl>
+      </Box>
 
-        <FormControl required sx={{ flex: 1 }}>
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        <FormControl sx={{ flex: 1 }}>
+          <InputLabel id="cane-label">Cane</InputLabel>
+          <Select
+            labelId="cane-label"
+            value={formData.cane}
+            onChange={(e) => handleInputChange('cane', e.target.value)}
+            label="Cane"
+            sx={disabledTextFieldStyles}
+          >
+            {choices?.cane_colors?.map((cane, index) => (
+              <MenuItem key={cane.value} value={index + 1}>
+                {cane.label} Cane
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl sx={{ flex: 1 }}>
           <InputLabel id="position-label">Position in Cane</InputLabel>
           <Select
             labelId="position-label"
@@ -188,6 +196,13 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
             onChange={(e) => handleInputChange('positionInCane', e.target.value)}
             label="Position in Cane"
             sx={disabledTextFieldStyles}
+            MenuProps={{
+              PaperProps: {
+                style: {
+                  maxHeight: 180,
+                },
+              },
+            }}
           >
             {/* Positions with status indicators */}
             {Array.from({ length: 10 }, (_, i) => i + 1).map((position) => {
