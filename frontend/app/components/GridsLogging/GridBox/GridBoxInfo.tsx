@@ -68,7 +68,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
 
   const handleAddGrid = (positionInBox?: number) => {
     setAddGridDialogOpen(true);
-    setSelectedPositionInBox(positionInBox || null);  
+    setSelectedPositionInBox(positionInBox || null);
   };
 
   // const handleMoveGridBox = () => {

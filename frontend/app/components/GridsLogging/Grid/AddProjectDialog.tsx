@@ -31,9 +31,9 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
   confluenceSpaces = [],
   googleDriveFolders = [],
 }) => {
-     // Fetch projects list
+  // Fetch projects list
   const { projects, isSuccess: projectsLoaded } = useProjectsList();
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ProjectFormData>({
     name: '',
