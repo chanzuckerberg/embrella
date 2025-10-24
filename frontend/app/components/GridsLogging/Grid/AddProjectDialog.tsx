@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
+import { useProjectsList } from '@app/common/hooks/useGridLogging/useProjectList';
 
 interface ProjectFormData {
   name: string;
@@ -30,6 +31,9 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
   confluenceSpaces = [],
   googleDriveFolders = [],
 }) => {
+     // Fetch projects list
+  const { projects, isSuccess: projectsLoaded } = useProjectsList();
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ProjectFormData>({
     name: '',
@@ -92,10 +96,7 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
   };
 
   const isFormValid =
-    formData.name.trim() &&
-    formData.projectLeader &&
-    formData.confluenceSpace &&
-    formData.googleDriveFolder;
+    formData.name.trim() && formData.projectLeader && formData.confluenceSpace && formData.googleDriveFolder;
 
   return (
     <BaseFormDialog
