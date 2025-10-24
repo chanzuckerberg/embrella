@@ -90,8 +90,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
     confluenceSpace: string;
     googleDriveFolder: string;
   }) => {
-    console.log('Saving project:', data);
-
     setFormData((prev) => ({
       ...prev,
       project: data.name,
@@ -117,8 +115,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
     humidity: string;
     notesPage: string;
   }) => {
-    console.log('Adding new freezing session:', data);
-
     setFormData((prev) => ({
       ...prev,
       freezingSession: data.name,

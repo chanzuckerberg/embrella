@@ -138,7 +138,6 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
         </CardContent>
       </Card>
 
-      {/* Delete dialog  */}
       <DeletePuck
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}

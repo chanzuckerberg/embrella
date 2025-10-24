@@ -36,7 +36,6 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
   };
 
   const handleAddSample = (sampleData: { name: string; ontology: string }) => {
-    console.log('Adding new sample:', sampleData);
     setFormData((prev) => ({
       ...prev,
       sampleName: sampleData.name, // or the ID returned from API
@@ -79,7 +78,6 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
         disabled={!formData.sampleName.trim()}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Field 1: Sample Name - Required */}
           <FormFieldWithAdd
             label="Sample Name"
             value={formData.sampleName}

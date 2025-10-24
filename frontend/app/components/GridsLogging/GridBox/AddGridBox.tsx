@@ -64,7 +64,6 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
 
     setIsSubmitting(true);
     console.log('Saving grid box:', formData);
-    // TODO: Add API call to save grid box
   };
 
   const isFormValid =

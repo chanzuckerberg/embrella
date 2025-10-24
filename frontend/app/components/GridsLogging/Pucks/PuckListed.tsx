@@ -59,7 +59,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
                 <CardActionArea onClick={() => handlePuckCardClick(puck)}>
                   <CardContent className={styles.puckCardContent}>
                     <PuckSVG puck={puck} size={110} isSelected={selectedPuck?.id === puck.id} disableSlotClick={true} />
-                    <Typography color="text.secondary">CZII-{puck.name}</Typography>
+                    <Typography color="text.secondary">{puck.name}</Typography>
                   </CardContent>
                 </CardActionArea>
               </Card>

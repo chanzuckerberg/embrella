@@ -19,13 +19,6 @@ export const useCreatePuck = (): UseCreatePuckResult => {
     setError(null);
 
     try {
-      console.log('Sending data to API:', {
-        user: data.user_id,
-        name: data.puckName,
-        color: data.color,
-        cane: data.cane,
-        position_in_cane: data.position_in_cane,
-      });
       const response = await postResource(getRequestURL(DJANGO_URL, POST_API.CREATE_PUCK), {
         user: data.user_id,
         name: data.puckName,
@@ -44,7 +37,6 @@ export const useCreatePuck = (): UseCreatePuckResult => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while creating puck';
       setError(errorMessage);
-      console.error('Error creating puck:', err);
       return null;
     } finally {
       setIsCreating(false);

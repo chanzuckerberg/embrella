@@ -98,7 +98,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
 
       if (response.ok) {
         const result = await response.json();
-        console.log(result.message);
         // Reload to refresh all data
         window.location.reload();
       } else {
