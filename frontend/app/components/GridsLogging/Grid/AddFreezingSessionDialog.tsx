@@ -34,7 +34,7 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FreezingSessionFormData>({
     user: '',
-    device: '',
+    device: 'Leica GP2',
     name: '',
     temperature: '',
     humidity: '',

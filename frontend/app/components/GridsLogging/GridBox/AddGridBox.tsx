@@ -28,13 +28,13 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
-    gridBoxName: '',
-    color: '',
-    numbering: '',
+    gridBoxName: 'Box-',
+    color: 'CF1E01',
+    numbering: 'ucw',
     puck: puckId || '',
     puckName: puckName || '',
     positionInPuck: positionInPuck || '',
-    maxGrids: '',
+    maxGrids: '4',
   });
 
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
@@ -153,7 +153,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2 }}>
-        <FormControl required sx={{ flex: 1 }}>
+        <FormControl sx={{ flex: 1 }}>
           <InputLabel id="color-label">Color</InputLabel>
           <Select
             labelId="color-label"
@@ -162,6 +162,13 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
             label="Color"
             disabled={!choicesLoaded}
             sx={disabledTextFieldStyles}
+            MenuProps={{
+              PaperProps: {
+                style: {
+                  maxHeight: 180,
+                },
+              },
+            }}
           >
             {choices?.grid_box_colors?.map((color) => (
               <MenuItem key={color.value} value={color.value}>

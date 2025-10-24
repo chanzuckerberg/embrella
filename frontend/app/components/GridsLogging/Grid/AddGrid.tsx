@@ -9,8 +9,9 @@ import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { AddSpecimenDialog } from './AddSpecimenDialog';
-import {AddProjectDialog} from '@app/components/GridsLogging/Grid/AddProjectDialog';
-import {AddFreezingSessionDialog} from '@app/components/GridsLogging/Grid/AddFreezingSessionDialog';
+import { AddProjectDialog } from '@app/components/GridsLogging/Grid/AddProjectDialog';
+import { AddFreezingSessionDialog } from '@app/components/GridsLogging/Grid/AddFreezingSessionDialog';
+import { useProjectsList } from '@app/common/hooks/useGridLogging/useProjectList';
 
 interface AddGridProps {
   open: boolean;
@@ -31,6 +32,8 @@ export const AddGrid: React.FC<AddGridProps> = ({
   gridBoxName,
   positionInBox,
 }) => {
+  // Fetch projects list
+  const { projects, isSuccess: projectsLoaded } = useProjectsList();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [addSpecimenDialogOpen, setAddSpecimenDialogOpen] = useState(false);
   const [addProjectDialogOpen, setAddProjectDialogOpen] = useState(false);
@@ -38,7 +41,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
 
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
-    gridName: '',
+    gridName: 'Grid-',
     freezingSession: '',
     specimen: '',
     project: '',
@@ -55,14 +58,13 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { users, isSuccess: usersLoaded } = useGridLoggingUserList();
 
-  const projectLeaders = users?.users?.map(user => ({
-    id: user.id.toString(),
-    name: user.full_name
-  })) || [];
+  const projectLeaders =
+    users?.users?.map((user) => ({
+      id: user.id.toString(),
+      name: user.full_name,
+    })) || [];
 
-  const confluenceSpaces = [
-    { id: '1', url: 'https://czbiohub.atlassian.net/wiki/spaces/CHOL/overview' },
-  ];
+  const confluenceSpaces = [{ id: '1', url: 'https://czbiohub.atlassian.net/wiki/spaces/CHOL/overview' }];
 
   const googleDriveFolders = [
     { id: '1', name: 'BD01' },
@@ -74,7 +76,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
     { id: '2', name: 'Vitrobot' },
     { id: '3', name: 'Leica EM Ice [High Pressure Freezing]' },
     { id: '4', name: 'CryoCapCell' },
-
   ];
 
   const notesPages = [
@@ -90,7 +91,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
     googleDriveFolder: string;
   }) => {
     console.log('Saving project:', data);
-  
+
     setFormData((prev) => ({
       ...prev,
       project: data.name,
@@ -108,8 +109,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
     console.log('Adding new specimen:', specimenData);
   };
 
- 
-
   const handleAddFreezingSession = async (data: {
     user: string;
     device: string;
@@ -119,7 +118,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
     notesPage: string;
   }) => {
     console.log('Adding new freezing session:', data);
-    
+
     setFormData((prev) => ({
       ...prev,
       freezingSession: data.name,
@@ -190,7 +189,10 @@ export const AddGrid: React.FC<AddGridProps> = ({
             onAdd={() => setAddProjectDialogOpen(true)}
             required
             disabled={!choicesLoaded}
-            // options={choices?.projects || []}
+            options={projects.map((project) => ({
+              value: project.id.toString(),
+              label: project.name,
+            }))}
           />
         </Box>
 
@@ -263,12 +265,10 @@ export const AddGrid: React.FC<AddGridProps> = ({
       <AddFreezingSessionDialog
         open={addFreezingSessionDialogOpen}
         onClose={() => setAddFreezingSessionDialogOpen(false)}
-       
         users={projectLeaders}
         devices={devices}
         notesPages={notesPages}
         onSave={handleAddFreezingSession}
-
       />
     </>
   );

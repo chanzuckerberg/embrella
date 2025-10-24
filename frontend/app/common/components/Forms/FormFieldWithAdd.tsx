@@ -38,6 +38,13 @@ export const FormFieldWithAdd: React.FC<FormFieldWithAddProps> = ({
           label={label}
           disabled={disabled}
           sx={disabledTextFieldStyles}
+          MenuProps={{
+            PaperProps: {
+              style: {
+                maxHeight: 180,
+              },
+            },
+          }}
         >
           <MenuItem value="">Select {label}</MenuItem>
           {options.map((option) => (
