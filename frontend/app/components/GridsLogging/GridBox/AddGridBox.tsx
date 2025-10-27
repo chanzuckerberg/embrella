@@ -72,7 +72,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     formData.color &&
     formData.numbering &&
     formData.puck &&
-    formData.positionInPuck &&
+    (positionInPuck || formData.positionInPuck) &&
     formData.maxGrids;
 
   return (
