@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Box, TextField, MenuItem, FormControl, InputLabel, Select } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment } from '@mui/material';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
@@ -28,7 +28,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
-    gridBoxName: 'Box-',
+    gridBoxName: '',
     color: 'CF1E01',
     numbering: 'ucw',
     puck: puckId || '',
@@ -36,6 +36,22 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     positionInPuck: positionInPuck || '',
     maxGrids: '4',
   });
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        user: selectedUser?.id || '',
+        gridBoxName: '',
+        color: 'CF1E01',
+        numbering: 'ucw',
+        puck: puckId || '',
+        puckName: puckName || '',
+        positionInPuck: positionInPuck || '',
+        maxGrids: '4',
+      });
+    }
+  }, [open, selectedUser?.id, puckId, puckName, positionInPuck]);
 
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
@@ -52,7 +68,6 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     if (
       !formData.user ||
       !formData.gridBoxName ||
-      !formData.color ||
       !formData.numbering ||
       !formData.puck ||
       !formData.positionInPuck ||
@@ -67,9 +82,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
   };
 
   const isFormValid =
-    formData.user &&
     formData.gridBoxName &&
-    formData.color &&
     formData.numbering &&
     formData.puck &&
     (positionInPuck || formData.positionInPuck) &&
@@ -92,7 +105,18 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
           placeholder="Grid Box Name [Ex. Puck5Slot4Pos2]"
           value={formData.gridBoxName}
           onChange={(e) => handleInputChange('gridBoxName', e.target.value)}
-          sx={{ ...disabledTextFieldStyles, flex: 1 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start" sx={{ color: 'rgba(0, 0, 0, 0.87)', mr: -4 }}>
+                Box-
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            ...disabledTextFieldStyles,
+            flex: 1,
+            '& .MuiInputBase-input': {paddingLeft: 0},
+          }}
         />
         <TextField
           required
@@ -183,7 +207,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
             labelId="max-grids-label"
             value={formData.maxGrids}
             onChange={(e) => handleInputChange('maxGrids', e.target.value)}
-            label="Max Number of Grids"
+            label="Max Grids"
             sx={disabledTextFieldStyles}
           >
             <MenuItem value={4}>4</MenuItem>
