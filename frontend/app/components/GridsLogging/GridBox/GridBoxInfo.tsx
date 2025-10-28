@@ -14,6 +14,7 @@ import { disabledTextFieldStyles } from './DisableBoxStyle';
 import { UserContext } from '@app/common/context/UserProvider';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { AddGrid } from '../Grid/AddGrid';
+import { MoveGridBox } from './MoveGridBox';
 
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
@@ -38,6 +39,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
   const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
+  const [moveGridBoxDialogOpen, setMoveGridBoxDialogOpen] = useState(false);
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
@@ -71,9 +73,10 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     setSelectedPositionInBox(positionInBox || null);
   };
 
-  // const handleMoveGridBox = () => {
-  //   console.log('Move grid box');
-  // };
+  const handleMoveGridBox = () => {
+    setMoveGridBoxDialogOpen(true);
+    console.log('Move grid box');
+  };
 
   // const handleSave = () => {
   //   console.log('Save grid box:', formData);
@@ -198,7 +201,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 />
               </Box>
 
-              {/* <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr:3 }}>
                <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -209,10 +212,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               >
                 Move Grid Box
               </Button> 
-              <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
-                Save
-              </Button>
-            </Box> */}
+            </Box>
             </Box>
           </Box>
         </CardContent>
@@ -233,6 +233,15 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
         gridBoxId={gridBoxData?.grid_box?.grid_box_id}
         gridBoxName={gridBoxData?.grid_box?.name}
         positionInBox={selectedPositionInBox || undefined}
+      />
+      
+      <MoveGridBox
+        open={moveGridBoxDialogOpen}
+        onClose={() => setMoveGridBoxDialogOpen(false)}
+        currentPuck={selectedPuck}
+        currentSlot={selectedSlot}
+        gridBoxData={gridBoxData}
+        selectedUser={selectedUser}
       />
     </>
   );
