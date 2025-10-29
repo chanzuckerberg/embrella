@@ -7,7 +7,7 @@ import { Button, Dialog, DialogTitle, DialogContent } from '@czi-sds/components'
 interface BaseFormDialogProps {
   open: boolean;
   onClose: () => void;
-  title: string;
+  title: string | React.ReactNode;
   subtitle?: string;
   children: React.ReactNode;
   onSave: () => void;
