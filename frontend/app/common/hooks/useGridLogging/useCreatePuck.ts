@@ -32,10 +32,15 @@ export const useCreatePuck = (): UseCreatePuckResult => {
         return newPuck;
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create puck');
+        const errorMsg = errorData.message || errorData.error || 'Failed to create puck';
+        const cleanError = errorMsg.replace(/^Error:\s*/i, '').trim();
+        throw new Error(cleanError);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred while creating puck';
+      let errorMessage = 'An error occurred while creating puck';
+      if (err instanceof Error) {
+        errorMessage = err.message.replace(/^Error:\s*/i, '').trim();
+      }
       setError(errorMessage);
       return null;
     } finally {
