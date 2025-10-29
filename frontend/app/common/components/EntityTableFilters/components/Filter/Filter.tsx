@@ -58,6 +58,7 @@ export const Filter = <FilterId, FilterCategory extends string>({
       onChange={onChange}
       options={filterView.options}
       value={filterView.value}
+      style={{ width: '200px' }}
     />
   );
 };

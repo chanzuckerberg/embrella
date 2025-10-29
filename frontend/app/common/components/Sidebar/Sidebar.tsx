@@ -7,7 +7,7 @@ const StyledSidebar = styled.div`
   box-shadow: inset -0.5px 0 ${gray300};
   box-sizing: border-box;
   height: 100vh;
-  width: 240px;
+  width: 210px;
 `;
 
 const StyledSidebarPositioner = styled.div`
