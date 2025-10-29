@@ -10,7 +10,7 @@ from django.db.models.functions import Lower
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from cryo_grids.models import Puck, CryoGridBox, CryoGrid
-from .serializers import UserSerializer, PuckSerializer, GridDetailsSerializer
+from .serializers import UserSerializer, PuckSerializer, GridDetailsSerializer, CryoGridBoxSerializer
 from umbrella.choices import (CANE_COLORS, PUCK_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING)
 
 
@@ -333,83 +333,71 @@ class PuckViewSet(viewsets.ModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later"
             }, status=500)
 
-    # @method_decorator(csrf_exempt)
-    # @action(detail=True, methods=['post'], url_path='grid-box/')
-    # def create_grid_box(self, request, pk=None):
-    #     """
-    #     Create a new grid box within this puck
-    #     URL: POST /api/list/pucks/{puck_id}/grid-box/
-        
-    #     Expected payload:
-    #     {
-    #         "name": "box1",
-    #         "puck_name": "puck1",  // Optional, for validation/display
-    #         "color": "FFFFFF",
-    #         "numbering": "ucw",
-    #         "position_in_puck": 1,
-    #         "max_grids": 4
-    #     }
-        
-    #     Response:
-    #     {
-    #         "message": "Grid box created successfully",
-    #         "grid_box": {
-    #             "id": 1,
-    #             "name": "box1",
-    #             "color": "FFFFFF",
-    #             "color_display": "White",
-    #             "numbering": "ucw",
-    #             "numbering_display": "Up Clockwise",
-    #             "position_in_puck": 1,
-    #             "max_grids": 4,
-    #             "puck": 1,
-    #             "puck_user": "user@example.com"
-    #         }
-    #     }
-    #     """
-    #     try:
-    #         puck = self.get_object()
+    @method_decorator(csrf_exempt)
+    @action(detail=True, methods=['post'], url_path='grid-box')
+    def create_grid_box(self, request, pk=None):
+        """
+        Create a new grid box within this puck
+        URL: POST /api/list/pucks/{puck_id}/grid-box/
+        Response:
+        {
+            "message": "Grid box created successfully",
+            "grid_box": {
+                "id": 1,
+                "name": "box1",
+                "color": "FFFFFF",
+                "color_display": "White",
+                "numbering": "ucw",
+                "numbering_display": "Up Clockwise",
+                "position_in_puck": 1,
+                "max_grids": 4,
+                "puck": 1,
+                "puck_user": "user@example.com"
+            }
+        }
+        """
+        try:
+            puck = self.get_object()
             
-    #         # Extract puck_name from request if provided (for validation)
-    #         puck_name = request.data.get('puck_name', None)
+            # Extract puck_name from request if provided (for validation)
+            puck_name = request.data.get('puck_name', None)
             
-    #         # Optional: Validate puck name matches
-    #         if puck_name and puck.name != puck_name:
-    #             return Response({
-    #                 'error': 'Puck name mismatch',
-    #                 'detail': f'Expected puck "{puck.name}" but got "{puck_name}"'
-    #             }, status=status.HTTP_400_BAD_REQUEST)
+            if puck_name and puck.name != puck_name:
+                return Response({
+                    'error': 'Puck name mismatch',
+                    'detail': f'Expected puck "{puck.name}" but got "{puck_name}"'
+                }, status=status.HTTP_400_BAD_REQUEST)
             
-    #         # Add puck_id to the request data
-    #         data = request.data.copy()
-    #         data['puck'] = puck.id
+            # Add puck_id to the request data
+            data = request.data.copy()
+            data['puck'] = puck.id
             
-    #         # Remove puck_name from data as it's not a model field
-    #         if 'puck_name' in data:
-    #             del data['puck_name']
+            # Remove puck_name from data as it's not a model field
+            if 'puck_name' in data:
+                del data['puck_name']
             
-    #         # Create serializer with the data
-    #         serializer = CryoGridBoxSerializer(data=data)
+            # Create serializer with the data
+            serializer = CryoGridBoxSerializer(data=data)
             
-    #         if serializer.is_valid():
-    #             # Save the grid box
-    #             grid_box = serializer.save()
+            if serializer.is_valid():
+                # Save the grid box
+                grid_box = serializer.save()
                 
-    #             return Response({
-    #                 'message': 'Grid box created successfully',
-    #                 'grid_box': serializer.data
-    #             }, status=status.HTTP_201_CREATED)
-    #         else:
-    #             return Response({
-    #                 'error': 'Validation error',
-    #                 'detail': serializer.errors
-    #             }, status=status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    'message': 'Grid box created successfully',
+                    'grid_box': serializer.data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    'error': 'Validation error',
+                    'detail': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
             
-    #     except Exception as e:
-    #         return Response({
-    #             "error": "Internal server error occurred while creating grid box",
-    #             "detail": str(e) if settings.DEBUG else "Please try again later"
-    #         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while creating grid box",
+                "detail": str(e) if settings.DEBUG else "Please try again later"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class GridLoggingChoicesViewSet(viewsets.ViewSet):
     """
