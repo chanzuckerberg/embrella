@@ -44,7 +44,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
 
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
-  const { createPuck, isCreating } = useCreatePuck();
+  const { createPuck, isCreating, error } = useCreatePuck();
 
   useEffect(() => {
     if (selectedUser?.id) {
@@ -121,6 +121,9 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
         positionInCane: '',
       });
       onClose();
+    }else {
+      const errorMsg = error || 'Failed to create puck. A puck with this name and color may already exist.';
+      alert(errorMsg);
     }
   };
 
@@ -184,7 +187,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2 }}>
-        <FormControl sx={{ flex: 1 }}>
+        <FormControl required sx={{ flex: 1 }}>
           <InputLabel id="cane-label">Cane</InputLabel>
           <Select
             labelId="cane-label"
@@ -201,7 +204,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
           </Select>
         </FormControl>
 
-        <FormControl sx={{ flex: 1 }}>
+        <FormControl required sx={{ flex: 1 }}>
           <InputLabel id="position-label">Position in Cane</InputLabel>
           <Select
             labelId="position-label"
