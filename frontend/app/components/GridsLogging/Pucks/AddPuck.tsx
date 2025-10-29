@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment } from '@mui/material';
+import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
@@ -26,6 +26,12 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
     cane: caneId || '',
     positionInCane: '',
   });
+   // state for tracking filled positions
+   const [filledPositions, setFilledPositions] = useState<number[]>([]);
+   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
+   const { isSuccess: usersLoaded } = useGridLoggingUserList();
+   const { createPuck, isCreating, error, clearError } = useCreatePuck();
+
     // Reset form when dialog opens
     useEffect(() => {
       if (open) {
@@ -36,15 +42,11 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
           cane: caneId || '',
           positionInCane: '',
         });
+        clearError();
       }
     }, [open, selectedUser?.id, caneId]);
 
-  // state for tracking filled positions
-  const [filledPositions, setFilledPositions] = useState<number[]>([]);
-
-  const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
-  const { isSuccess: usersLoaded } = useGridLoggingUserList();
-  const { createPuck, isCreating, error } = useCreatePuck();
+ 
 
   useEffect(() => {
     if (selectedUser?.id) {
@@ -121,14 +123,13 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
         positionInCane: '',
       });
       onClose();
-    }else {
-      const errorMsg = error || 'Failed to create puck. A puck with this name and color may already exist.';
-      alert(errorMsg);
     }
   };
 
   const isFormValid =
-    formData.puckName 
+    formData.puckName&&
+    formData.cane&&
+    formData.positionInCane
 
   return (
     <BaseFormDialog
@@ -140,6 +141,11 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
       isSubmitting={isCreating}
       disabled={!isFormValid || !choicesLoaded || !usersLoaded}
     >
+       {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
       <Box sx={{ display: 'flex', gap: 2 }}>
         <TextField
           required
