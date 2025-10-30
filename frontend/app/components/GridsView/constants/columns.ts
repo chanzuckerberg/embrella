@@ -55,7 +55,10 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
   },
   {
     id: GRID_COLUMN_IDS.FREEZING_SESSION,
-    accessorFn: (rowData: EntityDataTypes): string => formatDate((rowData as GridData).freezingSession.createdAt),
+    accessorFn: (rowData: EntityDataTypes): string => {
+      const { freezingSession } = rowData as GridData;
+      return !freezingSession?.createdAt ? 'No freezing session' : formatDate(freezingSession.createdAt);
+    },
     enableSorting: false,
     header: humanize(GRID_COLUMN_IDS.FREEZING_SESSION),
   },
