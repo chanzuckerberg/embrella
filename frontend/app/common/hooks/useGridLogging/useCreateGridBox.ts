@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { postResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
+import { GridBoxCreateResponse } from '@app/common/types/gridLogging/gridBox';
 
 interface CreateGridBoxData {
   puck_id: number;
@@ -13,21 +14,8 @@ interface CreateGridBoxData {
   max_grids: number;
 }
 
-interface GridBox {
-  id: number;
-  name: string;
-  color: string;
-  color_display: string;
-  numbering: string;
-  numbering_display: string;
-  position_in_puck: number;
-  max_grids: number;
-  puck: number;
-  puck_user?: string;
-}
-
 interface UseCreateGridBoxResult {
-  createGridBox: (data: CreateGridBoxData) => Promise<GridBox | null>;
+  createGridBox: (data: CreateGridBoxData) => Promise<GridBoxCreateResponse | null>;
   isCreating: boolean;
   error: string | null;
   clearError: () => void;
@@ -41,7 +29,7 @@ export const useCreateGridBox = (): UseCreateGridBoxResult => {
     setError(null);
   };
 
-  const createGridBox = async (data: CreateGridBoxData): Promise<GridBox | null> => {
+  const createGridBox = async (data: CreateGridBoxData): Promise<GridBoxCreateResponse | null> => {
     setIsCreating(true);
     setError(null);
 

@@ -1,24 +1,13 @@
+import { GridBoxDetail, Position } from './gridBox';
+
 export interface GridBoxDetailResponse {
   puck_id: number;
   puck_name: string;
   position_in_puck: number;
   status: 'filled' | 'empty';
   max_grids?: number;
-  grid_box?: GridBox;
+  grid_box?: GridBoxDetail;
 }
-export interface GridBox {
-  grid_box_id: number;
-  name: string;
-  color: string;
-  color_display: string;
-  numbering: string;
-  numbering_display: string;
-  max_grids: number;
-  positions: Position[];
-}
-export interface Position {
-  q: number;
-  occupied: boolean;
-  grid_id?: number;
-  grid_name?: string;
-}
+
+// Re-export for backward compatibility
+export type { GridBoxDetail as GridBox, Position } from './gridBox';
