@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
@@ -22,6 +22,7 @@ interface GridBoxInfoProps {
   selectedSlot: number | null;
   onGridSelect: (gridPosition: number, gridId: number) => void;
   selectedUser?: UsersList | null;
+  onGridBoxNameLoaded?: (name: string) => void; 
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -35,7 +36,7 @@ const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
   numbering_display: data.grid_box?.numbering_display || 'U-counter-clockwise',
 });
 
-export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect, selectedUser }) => {
+export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect, selectedUser, onGridBoxNameLoaded }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
@@ -46,6 +47,13 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     selectedSlot || undefined
   );
   const currentUser = useContext(UserContext);
+  useEffect(() => {
+    if (gridBoxData?.grid_box?.name && onGridBoxNameLoaded) {
+      onGridBoxNameLoaded(gridBoxData.grid_box.name);
+    }
+  }, [gridBoxData?.grid_box?.name, onGridBoxNameLoaded]);
+
+ 
 
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {
@@ -136,7 +144,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
           title={
             <Box className={styles.cardHeader}>
               <Typography variant="h6" component="h2">
-                GridBox Name: Puck-{selectedPuck.name}/Slot-{formData.name}
+                GridBox Name: Puck-CZII-0{selectedPuck.name}/Slot-{formData.positionInPuck}/{formData.name}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Button
@@ -235,7 +243,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 />
               </Box>
 
-               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr:3 }}>
+               {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr:3 }}>
                <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -246,7 +254,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               >
                 Move Grid Box
               </Button> 
-            </Box>
+            </Box> */}
             </Box>
           </Box>
         </CardContent>
