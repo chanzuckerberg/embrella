@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=copick_membraneseg
-#SBATCH --time=140:00:00
+#SBATCH --time=72:00:00
 #SBATCH --partition=gpu
 #SBATCH --gpus=4
 #SBATCH --nodes=1
