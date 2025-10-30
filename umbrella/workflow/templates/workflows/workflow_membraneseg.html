@@ -409,6 +409,29 @@
   </div>
 </div>
 
+<!-- Row 2: Optional Threshold -->
+<div class="section-header">
+  <h2>
+    Optional: Threshold
+    <span class="info-icon">i</span>
+    <div class="tooltip">Set a threshold for membrane segmentation.</div>
+  </h2>
+</div>
+
+<div class="form-row-four">
+  <div class="form-group">
+    <label for="thresholdValue">
+      Threshold:
+      <span class="info-icon-small">i
+        <div class="tooltip-small">
+          Default 0. Threshold for segmentation.
+        </div>
+      </span>
+    </label>
+    <input type="number" id="thresholdValue" step="any" placeholder="Default 0" />
+  </div>
+</div>
+
   <button type="button" onclick="runMembraneseg()" id="runMembraneButton" class="secondary">
     Run MembraneSeg
   </button>
