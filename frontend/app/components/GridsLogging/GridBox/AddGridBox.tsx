@@ -8,6 +8,7 @@ import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridL
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
+import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 
 interface AddGridBoxProps {
   open: boolean;
@@ -41,6 +42,9 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
   const { createGridBox, isCreating, error, clearError } = useCreateGridBox();
+
+  // fetch slots data when puckId is available
+  const { slotsData } = useGridLoggingPuckSlots(puckId);
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
@@ -165,11 +169,17 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
               label="Position in Puck"
               sx={disabledTextFieldStyles}
             >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((position) => (
-                <MenuItem key={position} value={position}>
-                  Position {position}
-                </MenuItem>
-              ))}
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((position) => {
+                const slotData = slotsData?.slots.find((slot) => slot.position === position);
+                const status = slotData?.status || 'unknown';
+                const isFilled = status === 'filled';
+
+                return (
+                  <MenuItem key={position} value={position} disabled={isFilled}>
+                    Position {position} {isFilled ? '(Filled)' : '(Available)'}
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
         )}
