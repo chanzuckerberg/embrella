@@ -30,7 +30,7 @@ export enum API {
   // Grid Logging
   GRID_LOGGING_USERS = '/api/list/all/users',
   GRID_LOGGING_PUCKS = '/api/list/pucks',
-  GRID_LOGGING_PUCK_BYUSER = '/api/list/pucks/?user_id',
+  // GRID_LOGGING_PUCK_BYUSER = '/api/list/pucks/?user_id=',
   GRID_LOGGING_PUCK_SLOTINFO = '/api/list/pucks/puck_id/slots/',
   GRID_LOGGING_PUCK_GRIDBOXINFO = '/api/list/pucks/puck_id/grid-box/position_in_puck/',
   GRID_LOGGING_GRID_DETAILS = '/api/list/pucks/puck_id/grid-box/position_in_puck/grid/grid_id/',
@@ -47,6 +47,7 @@ export enum POST_API {
   COMPLETE_REVIEW = '/api/reviews/:reviewId/complete',
   UPDATE_TOMOGRAM_REVIEW = '/api/reviews/:reviewId/tomograms/:tomogramId',
   CREATE_PUCK = '/api/list/pucks/',
+  CREATE_GRID_BOX='/api/list/pucks/puck_id/grid-box/'
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
