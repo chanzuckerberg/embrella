@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
-import { Icon } from '@czi-sds/components';
+// import { Box, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
+// import { Icon } from '@czi-sds/components';
+import { TextField, MenuItem } from '@mui/material';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
 import { UsersList } from '@app/common/types/gridLogging/userList';
@@ -118,37 +119,38 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
   const isFormValid = formData.destinationCane && formData.destinationPuck && formData.destinationPosition;
 
   // Tooltip content showing current location
-  const currentLocationTooltip = (
-    <Box sx={{ p: 1 }}>
-      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-        Current Location:
-      </Typography>
-      <Typography variant="caption" display="block">
-        Grid Box: {gridBoxData?.grid_box?.name || 'N/A'}
-      </Typography>
-      <Typography variant="caption" display="block">
-        Puck: {currentPuck?.name || 'N/A'}
-      </Typography>
-      <Typography variant="caption" display="block">
-        Position: {currentSlot || 'N/A'}
-      </Typography>
-    </Box>
-  );
+  //   const currentLocationTooltip = (
+  //     <Box sx={{ p: 1 }}>
+  //       <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+  //         Current Location:
+  //       </Typography>
+  //       <Typography variant="caption" display="block">
+  //         Grid Box: {gridBoxData?.grid_box?.name || 'N/A'}
+  //       </Typography>
+  //       <Typography variant="caption" display="block">
+  //         Puck: {currentPuck?.name || 'N/A'}
+  //       </Typography>
+  //       <Typography variant="caption" display="block">
+  //         Position: {currentSlot || 'N/A'}
+  //       </Typography>
+  //     </Box>
+  //   );
 
   return (
     <BaseFormDialog
       open={open}
       onClose={onClose}
-      title={
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          Move Grid Box
-          <Tooltip title={currentLocationTooltip} arrow placement="right">
-            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
-              <Icon sdsIcon="InfoCircle" sdsSize="s" />
-            </Box>
-          </Tooltip>
-        </Box>
-      }
+      //   title={
+      //     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      //       Move Grid Box
+      //       <Tooltip title={currentLocationTooltip} arrow placement="right">
+      //         <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
+      //           <Icon sdsIcon="InfoCircle" sdsSize="s" />
+      //         </Box>
+      //       </Tooltip>
+      //     </Box>
+      //   }
+      title="Move Grid Box"
       subtitle={selectedUser?.full_name || ''}
       onSave={handleMove}
       isSubmitting={isSubmitting}
@@ -184,10 +186,12 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         disabled={!formData.destinationCane}
       >
         {!formData.destinationCane && <MenuItem value="">Select a cane first</MenuItem>}
-        {formData.destinationCane && !pucksLoaded && <MenuItem value="">Loading pucks...</MenuItem>}
-        {formData.destinationCane && pucksLoaded && (!pucksInCane?.pucks || pucksInCane.pucks.length === 0) && (
-          <MenuItem value="">No pucks in this cane</MenuItem>
-        )}
+        {Boolean(formData.destinationCane) && !pucksLoaded && <MenuItem value="">Loading pucks...</MenuItem>}
+        {Boolean(formData.destinationCane) &&
+          pucksLoaded &&
+          (!pucksInCane?.pucks || pucksInCane.pucks.length === 0) && (
+            <MenuItem value="">No pucks in this cane</MenuItem>
+          )}
         {pucksInCane?.pucks?.map((puck) => (
           <MenuItem key={puck.id} value={puck.id.toString()}>
             {puck.name} - Pos {puck.position_in_cane} ({puck.color_display})
@@ -205,8 +209,8 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         disabled={!formData.destinationPuck}
       >
         {!formData.destinationPuck && <MenuItem value="">Select a puck first</MenuItem>}
-        {formData.destinationPuck && !slotsLoaded && <MenuItem value="">Loading slots...</MenuItem>}
-        {formData.destinationPuck && slotsLoaded && availablePositions.length === 0 && (
+        {Boolean(formData.destinationPuck) && !slotsLoaded && <MenuItem value="">Loading slots...</MenuItem>}
+        {Boolean(formData.destinationPuck) && slotsLoaded && availablePositions.length === 0 && (
           <MenuItem value="">No empty slots available</MenuItem>
         )}
         {availablePositions.map((slot) => (

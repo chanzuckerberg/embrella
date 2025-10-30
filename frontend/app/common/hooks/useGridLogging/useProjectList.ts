@@ -1,5 +1,5 @@
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
-import { ProjectsListResponse, ProjectData, transformProject } from '@app/common/types/gridLogging/projectList';
+import { ProjectsListResponse, transformProject } from '@app/common/types/gridLogging/projectList';
 import { API } from '@app/common/constants/api';
 import { useMemo } from 'react';
 

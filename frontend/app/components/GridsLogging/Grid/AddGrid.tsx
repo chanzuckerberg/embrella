@@ -33,7 +33,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   positionInBox,
 }) => {
   // Fetch projects list
-  const { projects, isSuccess: projectsLoaded } = useProjectsList();
+  const { projects } = useProjectsList();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [addSpecimenDialogOpen, setAddSpecimenDialogOpen] = useState(false);
   const [addProjectDialogOpen, setAddProjectDialogOpen] = useState(false);
@@ -76,7 +76,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
     }
   }, [open, selectedUser?.id, positionInBox, gridBoxId, gridBoxName]);
 
-  const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
+  const { isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { users, isSuccess: usersLoaded } = useGridLoggingUserList();
 
   const projectLeaders =

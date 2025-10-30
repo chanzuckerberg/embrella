@@ -15,7 +15,6 @@ import {
   Alert,
   Checkbox,
   FormControlLabel,
-  IconButton,
 } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
@@ -99,7 +98,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
       });
 
       if (response.ok) {
-        const result = await response.json();
+        await response.json();
         // Reload to refresh all data
         window.location.reload();
       } else {

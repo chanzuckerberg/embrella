@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { postResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
@@ -15,9 +15,9 @@ export const useCreatePuck = (): UseCreatePuckResult => {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
-  };
+  }, []);
 
   const createPuck = async (data: CreatePuckData): Promise<PucksList | null> => {
     setIsCreating(true);
@@ -33,8 +33,7 @@ export const useCreatePuck = (): UseCreatePuckResult => {
       });
 
       if (response.ok) {
-        const newPuck = await response.json();
-        return newPuck;
+        return await response.json();
       } else {
         const errorData = await response.json();
 
@@ -46,7 +45,7 @@ export const useCreatePuck = (): UseCreatePuckResult => {
           if (typeof errorData.detail === 'object' && !Array.isArray(errorData.detail)) {
             // Extract all field errors and combine them
             const fieldErrors = Object.entries(errorData.detail)
-              .map(([field, messages]) => {
+              .map(([_field, messages]) => {
                 const msgArray = Array.isArray(messages) ? messages : [messages];
                 return msgArray.join(', ');
               })

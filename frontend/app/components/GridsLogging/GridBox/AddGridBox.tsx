@@ -26,7 +26,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
   puckName,
   positionInPuck,
 }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
     gridBoxName: '',
@@ -38,6 +38,9 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     maxGrids: '4',
   });
 
+  const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
+  const { isSuccess: usersLoaded } = useGridLoggingUserList();
+  const { createGridBox, isCreating, error, clearError } = useCreateGridBox();
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
@@ -53,11 +56,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       });
       clearError();
     }
-  }, [open, selectedUser?.id, puckId, puckName, positionInPuck]);
-
-  const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
-  const { isSuccess: usersLoaded } = useGridLoggingUserList();
-  const { createGridBox, isCreating, error, clearError } = useCreateGridBox();
+  }, [open, selectedUser?.id, puckId, puckName, positionInPuck, clearError]);
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
@@ -112,7 +111,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       isSubmitting={isCreating}
       disabled={!isFormValid || !choicesLoaded || !usersLoaded}
     >
-      {error && (
+      {Boolean(error) && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>

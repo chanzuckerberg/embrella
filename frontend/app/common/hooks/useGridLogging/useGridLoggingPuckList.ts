@@ -24,13 +24,5 @@ export const useGridLoggingPucksByUser = (userId?: number) => {
   };
 };
 
-// Hook for fetching pucks filtered by cane ID
-export const useGridLoggingPucksByCane = (caneId?: number) => {
-  const searchParams = caneId ? { cane_id: caneId } : {};
-  const { data, isSuccess } = useFetchData<pucksListResponse>(API.GRID_LOGGING_PUCKS, searchParams);
-
-  return {
-    pucks: data,
-    isSuccess,
-  };
-};
+// Hook for fetching pucks filtered by cane ID (alias for useGridLoggingPucksList)
+export const useGridLoggingPucksByCane = useGridLoggingPucksList;

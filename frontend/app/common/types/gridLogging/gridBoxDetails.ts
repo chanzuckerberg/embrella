@@ -1,4 +1,4 @@
-import { GridBoxDetail, Position } from './gridBox';
+import { GridBoxDetail } from './gridBox';
 
 export interface GridBoxDetailResponse {
   puck_id: number;

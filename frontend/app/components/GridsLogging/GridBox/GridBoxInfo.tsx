@@ -13,9 +13,9 @@ import { DeleteGridBox } from './DeleteGridBox';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
 import { UserContext } from '@app/common/context/UserProvider';
 import { UsersList } from '@app/common/types/gridLogging/userList';
-import { AddGrid } from '../Grid/AddGrid';
+// import { AddGrid } from '../Grid/AddGrid';
 import { DJANGO_URL } from '@app/common/constants/api';
-import { MoveGridBox } from './MoveGridBox';
+// import { MoveGridBox } from './MoveGridBox';
 
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
@@ -45,9 +45,9 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
 }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
-  const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
-  const [moveGridBoxDialogOpen, setMoveGridBoxDialogOpen] = useState(false);
+  // const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
+  // const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
+  // const [moveGridBoxDialogOpen, setMoveGridBoxDialogOpen] = useState(false);
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
@@ -118,10 +118,10 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/?${prefillParams.toString()}`;
     window.location.href = adminUrl;
   };
-  const handleMoveGridBox = () => {
-    setMoveGridBoxDialogOpen(true);
-    console.log('Move grid box');
-  };
+  // const handleMoveGridBox = () => {
+  //   setMoveGridBoxDialogOpen(true);
+  //   console.log('Move grid box');
+  // };
 
   // const handleSave = () => {
   //   console.log('Save grid box:', formData);
@@ -271,7 +271,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         gridBoxData={gridBoxData || null}
       />
 
-      <AddGrid
+      {/* <AddGrid
         open={addGridDialogOpen}
         onClose={() => setAddGridDialogOpen(false)}
         selectedUser={selectedUser}
@@ -287,7 +287,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         currentSlot={selectedSlot}
         gridBoxData={gridBoxData}
         selectedUser={selectedUser}
-      />
+      /> */}
     </>
   );
 };

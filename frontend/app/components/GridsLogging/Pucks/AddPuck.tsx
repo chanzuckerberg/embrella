@@ -9,13 +9,14 @@ import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { useCreatePuck } from '@app/common/hooks/useGridLogging/useCreatePuck';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { DJANGO_URL } from '@app/common/constants/api';
+import { PucksList } from '@app/common/types/gridLogging/puckList';
 
 interface AddPuckProps {
   open: boolean;
   onClose: () => void;
   selectedUser?: UsersList | null;
   caneId?: number;
-  onPuckCreated: (puck: any) => void;
+  onPuckCreated: (puck: PucksList) => void;
 }
 
 export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, caneId, onPuckCreated }) => {
@@ -44,7 +45,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
       });
       clearError();
     }
-  }, [open, selectedUser?.id, caneId]);
+  }, [open, selectedUser?.id, caneId, clearError]);
 
   useEffect(() => {
     if (selectedUser?.id) {
@@ -61,8 +62,8 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
       const data = await response.json();
 
       // Filter pucks by cane
-      const filteredPucks = data.pucks?.filter((puck: any) => puck.cane === caneId) || [];
-      const positions = filteredPucks.map((puck: any) => puck.position_in_cane);
+      const filteredPucks = data.pucks?.filter((puck: PucksList) => puck.cane === caneId) || [];
+      const positions = filteredPucks.map((puck: PucksList) => puck.position_in_cane);
 
       setFilledPositions(positions);
     } catch (error) {
@@ -134,7 +135,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
       isSubmitting={isCreating}
       disabled={!isFormValid || !choicesLoaded || !usersLoaded}
     >
-      {error && (
+      {Boolean(error) && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>

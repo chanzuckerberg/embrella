@@ -25,7 +25,7 @@ export const FormFieldWithAdd: React.FC<FormFieldWithAddProps> = ({
   required = false,
   disabled = false,
   options = [],
-  placeholder,
+  placeholder: _placeholder,
   flex = 1, // Default to flex: 1
 }) => {
   return (

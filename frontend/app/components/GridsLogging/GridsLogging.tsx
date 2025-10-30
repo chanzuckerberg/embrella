@@ -116,7 +116,7 @@ export const GridsLogging: React.FC = () => {
     setSelectedGrid(gridPosition);
     setSelectedGridId(gridId || null);
   };
-  const handlePuckCreated = (newPuck: PucksList) => {
+  const handlePuckCreated = (_newPuck: PucksList) => {
     window.location.reload();
   };
 

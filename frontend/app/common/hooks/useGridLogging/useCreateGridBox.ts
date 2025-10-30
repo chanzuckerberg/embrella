@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { postResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
@@ -25,9 +25,9 @@ export const useCreateGridBox = (): UseCreateGridBoxResult => {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
-  };
+  }, []);
 
   const createGridBox = async (data: CreateGridBoxData): Promise<GridBoxCreateResponse | null> => {
     setIsCreating(true);
