@@ -1,5 +1,5 @@
 from umbrella_logger import logger
-from .utils import jsonify, ssh_connect, ssh_connect_bruno, extract_parameters, hostname, port, username, password, ssh_file_exists, ssh_list_directory
+from .utils import jsonify, ssh_connect, ssh_connect_bruno, ssh_run_bruno, extract_parameters, hostname, port, username, password, ssh_file_exists, ssh_list_directory
 from django.http import JsonResponse
 from django.shortcuts import render
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from .agent import Aretomo3, Denoiset, StatusChecker, RemoteJobSubmitter
 from umbrella.settings import ARETOMO3_SCRIPT_PATH, ARETOMO3_ADVANCED_PATH, DENOISET_SCRIPT_PATH
 import os
+import shlex
 import base64
 import re
 import json
@@ -43,7 +44,6 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 5.0,  # every 5 seconds
     },
 }
-
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DENOISET_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'denoiset_template.sh')
@@ -2641,215 +2641,60 @@ def run_copick_add_object(request):
     finally:
         if "submitter" in locals():
             submitter.close()
+
+
+@api_view(["GET"])
+@require_http_methods(["GET"])
+def get_tomo_combos_json(request):
     """
-    Submit a 'copick add object' job via the remote template.
-
-    Required JSON:
-      - user_id
-      - password (base64)
-      - session_name        (Copick session, e.g. "25sep18a")
-      - copick_run          (e.g., "run003" or "003")
-      - object_name         (e.g., "VLP")
-      - object_diameter     (numeric, Å)
-
-    Optional JSON:
-      - pdb_id              (e.g., "6N4V" or "NA")
-      - object_map_file     (absolute path to a map; leave empty to skip)
-      - object_voxel_size   (numeric; leave empty to skip)
+    GET /api/tomo-combos?session=25oct28b&procrun=run001[&limit=10][&suffix=.zarr]
+    Runs the remote find_combos_from_fs.sh via SSH and returns its JSON.
     """
-    JOBTAG = "CopickAddObject"
+    session = (request.GET.get("session") or "").strip()
+    procrun = (request.GET.get("procrun") or "").strip()
+    limit   = (request.GET.get("limit") or "10").strip()
+    suffix  = request.GET.get("suffix")  # allow empty string
 
-    if request.method != 'POST':
-        store_log(
-            job_name=JOBTAG,
-            request=request,
-            data_sanitized={},
-            error="Invalid request method",
-            advanced_status=False,
-            job_id=None,
-        )
-        return JsonResponse({'error': 'Invalid request method: 400'}, status=400)
+    if not session or not procrun:
+        return JsonResponse({"error": "Missing required params: session, procrun"}, status=400)
 
-    try:
-        data = json.loads(request.body or "{}")
-
-        # -------- inputs --------
-        session_name  = (data.get('session_name') or '').strip()
-        copick_run    = (data.get('copick_run') or '').strip()
-        object_name   = (data.get('object_name') or '').strip()
-        diameter_raw  = (data.get('object_diameter') or '').strip()
-
-        pdb_id            = (data.get('pdb_id') or '').strip()                  # optional
-        object_map_file   = (data.get('object_map_file') or '').strip()         # optional (absolute path expected)
-        voxel_size_raw    = (data.get('object_voxel_size') or '').strip()       # optional
-
-        user_id           = (data.get('user_id') or '').strip()
-        encoded_password  = data.get('password') or ""
-        decoded_password  = base64.b64decode(encoded_password).decode('utf-8') if encoded_password else ""
-
-        # Basic required-field validation
-        missing = [k for k, v in {
-            "user_id": user_id,
-            "password": encoded_password,
-            "session_name": session_name,
-            "copick_run": copick_run,
-            "object_name": object_name,
-            "object_diameter": diameter_raw,
-        }.items() if not v]
-        if missing:
-            return JsonResponse({'error': f'Missing fields: {", ".join(missing)}'}, status=400)
-
-        # Normalize run label: ensure "run###"
-        if not copick_run.lower().startswith("run"):
-            digits = "".join(ch for ch in copick_run if ch.isdigit())
-            copick_run = f"run{digits.zfill(3)}" if digits else "run001"
-
-        # Numeric validations: radius is derived from diameter, but both must be numeric strings
-        try:
-            object_diameter = float(diameter_raw)
-            if object_diameter <= 0:
-                return JsonResponse({'error': 'object_diameter must be > 0'}, status=400)
-        except ValueError:
-            return JsonResponse({'error': 'object_diameter must be numeric'}, status=400)
-
-        if voxel_size_raw:
-            try:
-                object_voxel_size = float(voxel_size_raw)
-                if object_voxel_size <= 0:
-                    return JsonResponse({'error': 'object_voxel_size must be > 0 if provided'}, status=400)
-            except ValueError:
-                return JsonResponse({'error': 'object_voxel_size must be numeric if provided'}, status=400)
-        else:
-            object_voxel_size = ""  # pass empty string to template
-
-        # Persist minimal auth (if you need later)
-        request.session['user_id'] = user_id
-        request.session['decoded_password'] = decoded_password
-
-        # Sanitize copy for log (drop password)
-        data_sanitized = dict(data)
-        data_sanitized.pop('password', None)
-
-        # -------- submit ----------
-        submitter = RemoteJobSubmitter(
-            hostname=HOST_BRUNO,
-            port=PORT,
-            username=user_id,
-            password=decoded_password,
-            remote_script_dir=COPICK_SCRIPT_DIR,
-        )
-        submitter.connect()
-
-        job_name = f"{session_name}_add_object_{copick_run}"
-
-        # Jinja keys must match your template placeholders exactly
-        out, err = submitter.run_script(
-            template_path=COPICK_ADD_OBJECT_TEMPLATE_PATH,
-            job_name=job_name,
-            session=session_name,
-            copickRun=copick_run,
-            objectName=object_name,
-            objectDiameter=str(object_diameter),   # keep numeric string for bash math
-            pdbID=pdb_id,                          # may be empty or "NA"
-            objectMapFile=object_map_file,         # may be empty
-            objectVoxelSize=str(object_voxel_size) if object_voxel_size else "",  # may be empty
-        )
-
-        # Parse Slurm job id(s)
-        ids = re.findall(r"Submitted batch job (\d+)", out or "")
-        job_id_str = ",".join(ids) if ids else None
-
-        store_log(
-            job_name=JOBTAG,
-            request=request,
-            data_sanitized=data_sanitized,
-            error="",
-            advanced_status=True,
-            job_id=job_id_str,
-        )
-
-        return JsonResponse({
-            'message': f'Session {session_name}: copick add object submitted.',
-            'output': out,
-            'error': err,
-            'job_id': job_id_str,
-        })
-
-    except Exception as e:
-        store_log(
-            job_name=JOBTAG,
-            request=request,
-            data_sanitized=data_sanitized if 'data_sanitized' in locals() else {},
-            error=str(e),
-            advanced_status=False,
-            job_id=None,
-        )
-        return JsonResponse({'error': f'{e}: 500'}, status=500)
-    finally:
-        if 'submitter' in locals():
-            submitter.close()
-    """
-    Return a list of available template maps.
-    """
-    json_path = getattr(
+    # Configurable remote script path
+    remote_script = getattr(
         settings,
-        "PYTOM_TEMPLATE_PARAMS_PATH",
-        "https://ondemand.bruno.czbiohub.org/pun/sys/dashboard/files/fs//hpc/projects/group.czii/krios1.processing/pytom/scripts/model_templates/template_params.json",
+        "REMOTE_TOMO_COMBOS_SCRIPT",
+        "/hpc/projects/krios1.processing/copick/scripts/embrella_check_tomo_fs.sh",
     )
 
-    q = (request.GET.get("q") or "").strip().lower()  # optional filter
+    # Build safe command (quote all user inputs)
+    parts = [
+        shlex.quote(remote_script),
+        shlex.quote(session),
+        shlex.quote(procrun),
+        "--limit", shlex.quote(limit),
+    ]
+    if suffix is not None:
+        parts += ["--suffix", shlex.quote(suffix)]
+
+    cmd = " ".join(parts)
+    logger.info(f"[get_tomo_combos_json] Running remote: {cmd}")
 
     try:
-        # Read the raw JSON string from disk
-        with open(json_path, "r") as fh:
-            raw_data = fh.read()
+        raw = ssh_run_bruno(cmd)           # stdout from remote script
+        data = jsonify(raw)                # use your helper to parse/validate JSON
 
-        # Parse it with your jsonify() utility
-        full_data = jsonify(raw_data)
+        # Optional: basic schema guardrails
+        combos = data.get("combinations", {})
+        if not isinstance(combos, dict):
+            raise ValueError("Invalid payload: 'combinations' must be an object")
 
-        base_path = full_data.get("templateFolderPath", "")
-        proteins  = full_data.get("proteins", {})
+        return JsonResponse(data, status=200, safe=False)
 
-        templates = []
-        for name, meta in proteins.items():
-            loc = meta.get("modelLocation", "")
-            absolute = loc if os.path.isabs(loc) else os.path.join(base_path, loc)
-            item = {
-                "name": name,
-                "label": f"{name} — {loc}",
-                "modelLocation": loc,
-                "absolutePath": absolute,
-                "voxelSize": meta.get("modelVoxelSize"),
-                "diameter": meta.get("modelDiameter"),
-                "symmetry": meta.get("symmetry"),
-                "pdbID": meta.get("pdbID"),
-            }
-
-            if q:
-                hay = " ".join([
-                    name.lower(),
-                    str(loc).lower(),
-                    str(meta.get("pdbID") or "").lower(),
-                ])
-                if q not in hay:
-                    continue
-
-            templates.append(item)
-
-        templates.sort(key=lambda x: x["name"].lower())
-
-        return JsonResponse(
-            {"basePath": base_path, "templates": templates},
-            status=200
-        )
-
-    except FileNotFoundError:
-        logger.error("Template JSON not found: %s", json_path)
-        return JsonResponse({"error": "Template JSON not found"}, status=404)
+    except FileNotFoundError as fe:
+        logger.exception(f"Remote script not found? {fe}")
+        return JsonResponse({"error": "Remote script not found or not executable"}, status=404)
     except ValueError as ve:
-        # Raised by jsonify() when input is empty or invalid
-        logger.exception("Invalid JSON content: %s", ve)
-        return JsonResponse({"error": f"Invalid JSON content: {ve}"}, status=500)
+        logger.exception(f"Invalid JSON from remote: {ve}")
+        return JsonResponse({"error": f"Invalid JSON: {ve}"}, status=500)
     except Exception as e:
-        logger.exception("Unexpected error in get_template_map_json: %s", e)
+        logger.exception(f"Unexpected error in get_tomo_combos_json: {e}")
         return JsonResponse({"error": str(e)}, status=500)

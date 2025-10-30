@@ -38,5 +38,5 @@ urlpatterns = [
     path("run-import-tomogram-copick/", views.run_import_tomogram_copick, name="run_import_tomogram_copick"),
     path("template_maps/", views.get_template_map_json, name="template_maps"),
     path("run-copick-add-object/", views.run_copick_add_object, name="run_add_object_copick"),
-
+    path("api/tomo-combos", views.get_tomo_combos_json, name="get_tomo_combos_json"),
 ]

@@ -57,6 +57,32 @@ def ssh_connect_bruno(remote_path, shell=False):
     ssh.close()
     return file_contents.decode('utf-8')
 
+def ssh_run_bruno(command: str, timeout: int = 180) -> str:
+    """
+    Run a shell command on Bruno and return *stdout* only.
+    Raises RuntimeError if exit status != 0 or if REMOTE_PASSWORD not set.
+    """
+    if password is None:
+        raise ValueError("Password not found in environment variables. Please set REMOTE_PASSWORD.")
+
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh.connect(hostname=hostname_bruno, port=port, username=username, password=password)
+        stdin, stdout, stderr = ssh.exec_command(command, timeout=timeout)
+
+        # Make sure command finished and check status
+        exit_status = stdout.channel.recv_exit_status()
+        out = stdout.read().decode("utf-8").strip()
+        err = stderr.read().decode("utf-8").strip()
+
+        if exit_status != 0:
+            raise RuntimeError(f"Remote command failed (status {exit_status}): {err or out}")
+
+        return out
+    finally:
+        ssh.close()
+
 
 def ssh_file_exists(remote_path):
     """
