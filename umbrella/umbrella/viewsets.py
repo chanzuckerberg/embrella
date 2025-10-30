@@ -361,7 +361,7 @@ class PuckViewSet(viewsets.ModelViewSet):
             
             # Extract puck_name from request if provided (for validation)
             puck_name = request.data.get('puck_name', None)
-            
+
             if puck_name and puck.name != puck_name:
                 return Response({
                     'error': 'Puck name mismatch',
@@ -378,21 +378,18 @@ class PuckViewSet(viewsets.ModelViewSet):
             
             # Create serializer with the data
             serializer = CryoGridBoxSerializer(data=data)
-            
-            if serializer.is_valid():
-                # Save the grid box
-                grid_box = serializer.save()
+            serializer.is_valid(raise_exception=True)
+            grid_box = serializer.save()
                 
-                return Response({
-                    'message': 'Grid box created successfully',
-                    'grid_box': serializer.data
-                }, status=status.HTTP_201_CREATED)
-            else:
-                return Response({
-                    'error': 'Validation error',
-                    'detail': serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
+            return Response({
+                'message': 'Grid box created successfully',
+                'grid_box': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({
+                'error': 'Validation error',
+                'detail': e.detail
+            }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({
                 "error": "Internal server error occurred while creating grid box",

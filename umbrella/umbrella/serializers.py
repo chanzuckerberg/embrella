@@ -123,6 +123,10 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
             'puck',
             'puck_user'
         ]
+        validators = [] #disables default validators
+        extra_kwargs = {
+            'name': {'validators': []},  # to disable unique validator on name field
+        }
 
     def validate(self, data):
         """
