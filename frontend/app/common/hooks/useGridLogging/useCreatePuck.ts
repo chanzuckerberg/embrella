@@ -8,11 +8,17 @@ interface UseCreatePuckResult {
   createPuck: (data: CreatePuckData) => Promise<PucksList | null>;
   isCreating: boolean;
   error: string | null;
+  clearError:()=> void
 }
 
 export const useCreatePuck = (): UseCreatePuckResult => {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const clearError = () => {
+    setError(null);
+  };
+
 
   const createPuck = async (data: CreatePuckData): Promise<PucksList | null> => {
     setIsCreating(true);
@@ -32,7 +38,35 @@ export const useCreatePuck = (): UseCreatePuckResult => {
         return newPuck;
       } else {
         const errorData = await response.json();
-        const errorMsg = errorData.message || errorData.error || 'Failed to create puck';
+        
+        // Handle validation errors with detailed messages
+        let errorMsg = 'Failed to create puck';
+        
+        if (errorData.detail) {
+          // If detail is an object with field-specific errors
+          if (typeof errorData.detail === 'object' && !Array.isArray(errorData.detail)) {
+            // Extract all field errors and combine them
+            const fieldErrors = Object.entries(errorData.detail)
+              .map(([field, messages]) => {
+                const msgArray = Array.isArray(messages) ? messages : [messages];
+                return msgArray.join(', ');
+              })
+              .join('. ');
+            errorMsg = fieldErrors;
+          } 
+          // If detail is a string, use it directly
+          else if (typeof errorData.detail === 'string') {
+            errorMsg = errorData.detail;
+          } 
+          // If detail is an array, join the messages
+          else if (Array.isArray(errorData.detail)) {
+            errorMsg = errorData.detail.join(', ');
+          }
+        } else {
+          // Fallback to generic error message
+          errorMsg = errorData.message || errorData.error || 'Failed to create puck';
+        }
+        
         const cleanError = errorMsg.replace(/^Error:\s*/i, '').trim();
         throw new Error(cleanError);
       }
@@ -52,5 +86,6 @@ export const useCreatePuck = (): UseCreatePuckResult => {
     createPuck,
     isCreating,
     error,
+    clearError,
   };
 };
