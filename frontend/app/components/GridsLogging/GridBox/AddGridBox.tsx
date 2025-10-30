@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment } from '@mui/material';
+import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
 import { UsersList } from '@app/common/types/gridLogging/userList';
+import { useCreateGridBox } from '@app/common/hooks/useGridLogging/useCreateGridBox';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
@@ -29,7 +30,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
     gridBoxName: '',
-    color: 'CF1E01',
+    color: 'FFFFFF',
     numbering: 'ucw',
     puck: puckId || '',
     puckName: puckName || '',
@@ -43,18 +44,20 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       setFormData({
         user: selectedUser?.id || '',
         gridBoxName: '',
-        color: 'CF1E01',
+        color: 'FFFFFF',
         numbering: 'ucw',
         puck: puckId || '',
         puckName: puckName || '',
         positionInPuck: positionInPuck || '',
         maxGrids: '4',
       });
+      clearError();
     }
   }, [open, selectedUser?.id, puckId, puckName, positionInPuck]);
 
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
+  const {createGridBox, isCreating, error, clearError} = useCreateGridBox();
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
@@ -63,7 +66,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     }));
   };
 
-  const handleSave = () => {
+  const handleSave =async () => {
     // Validate required fields
     if (
       !formData.user ||
@@ -77,8 +80,19 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       return;
     }
 
-    setIsSubmitting(true);
-    console.log('Saving grid box:', formData);
+    const result = await createGridBox({
+      puck_id: Number(formData.puck),
+      puckName: formData.puckName,
+      gridBoxName: `Box-${formData.gridBoxName}`,
+      color: formData.color,
+      numbering: formData.numbering,
+      position_in_puck: Number(formData.positionInPuck),
+      max_grids: Number(formData.maxGrids),
+    });
+
+    if (result) {
+      window.location.reload();
+    }
   };
 
   const isFormValid =
@@ -95,9 +109,14 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       title="Add a Grid Box"
       subtitle={selectedUser?.full_name || ''}
       onSave={handleSave}
-      isSubmitting={isSubmitting}
+      isSubmitting={isCreating}
       disabled={!isFormValid || !choicesLoaded || !usersLoaded}
     >
+       {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
       <Box sx={{ display: 'flex', gap: 2 }}>
         <TextField
           required
