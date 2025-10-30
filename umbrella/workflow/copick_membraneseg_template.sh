@@ -1,5 +1,3 @@
-
-
 #!/bin/bash
 
 #SBATCH --job-name=copick_membraneseg
