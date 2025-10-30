@@ -37,12 +37,12 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
 
   // Fetch choices (for cane colors)
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
-  
+
   // Fetch pucks for selected cane (dynamically)
   const { pucks: pucksInCane, isSuccess: pucksLoaded } = useGridLoggingPucksByCane(
     formData.destinationCane ? Number(formData.destinationCane) : undefined
   );
-  
+
   // Fetch available positions for selected puck
   const { slotsData, isSuccess: slotsLoaded } = useGridLoggingPuckSlots(
     formData.destinationPuck ? Number(formData.destinationPuck) : undefined
@@ -70,7 +70,7 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
       ...prev,
       [field]: value,
     }));
-    
+
     // Reset downstream selections when parent changes
     if (field === 'destinationCane') {
       setFormData((prev) => ({
@@ -93,9 +93,9 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
     }
 
     setIsSubmitting(true);
-    
-    const selectedPuck = pucksInCane?.pucks?.find(p => p.id.toString() === formData.destinationPuck);
-    
+
+    const selectedPuck = pucksInCane?.pucks?.find((p) => p.id.toString() === formData.destinationPuck);
+
     console.log('Moving grid box:', {
       from: {
         puck: currentPuck?.name,
@@ -113,14 +113,9 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         id: gridBoxData?.grid_box?.grid_box_id,
       },
     });
-
-  
   };
 
-  const isFormValid = 
-    formData.destinationCane && 
-    formData.destinationPuck && 
-    formData.destinationPosition;
+  const isFormValid = formData.destinationCane && formData.destinationPuck && formData.destinationPosition;
 
   // Tooltip content showing current location
   const currentLocationTooltip = (
@@ -149,7 +144,7 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
           Move Grid Box
           <Tooltip title={currentLocationTooltip} arrow placement="right">
             <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
-              <Icon sdsIcon="InfoCircle" sdsSize="s"/>
+              <Icon sdsIcon="InfoCircle" sdsSize="s" />
             </Box>
           </Tooltip>
         </Box>
@@ -189,9 +184,7 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         disabled={!formData.destinationCane}
       >
         {!formData.destinationCane && <MenuItem value="">Select a cane first</MenuItem>}
-        {formData.destinationCane && !pucksLoaded && (
-          <MenuItem value="">Loading pucks...</MenuItem>
-        )}
+        {formData.destinationCane && !pucksLoaded && <MenuItem value="">Loading pucks...</MenuItem>}
         {formData.destinationCane && pucksLoaded && (!pucksInCane?.pucks || pucksInCane.pucks.length === 0) && (
           <MenuItem value="">No pucks in this cane</MenuItem>
         )}
@@ -212,9 +205,7 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         disabled={!formData.destinationPuck}
       >
         {!formData.destinationPuck && <MenuItem value="">Select a puck first</MenuItem>}
-        {formData.destinationPuck && !slotsLoaded && (
-          <MenuItem value="">Loading slots...</MenuItem>
-        )}
+        {formData.destinationPuck && !slotsLoaded && <MenuItem value="">Loading slots...</MenuItem>}
         {formData.destinationPuck && slotsLoaded && availablePositions.length === 0 && (
           <MenuItem value="">No empty slots available</MenuItem>
         )}

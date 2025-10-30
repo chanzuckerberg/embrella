@@ -22,7 +22,7 @@ interface GridBoxInfoProps {
   selectedSlot: number | null;
   onGridSelect: (gridPosition: number, gridId: number) => void;
   selectedUser?: UsersList | null;
-  onGridBoxNameLoaded?: (name: string) => void; 
+  onGridBoxNameLoaded?: (name: string) => void;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -36,7 +36,13 @@ const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
   numbering_display: data.grid_box?.numbering_display || 'U-counter-clockwise',
 });
 
-export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect, selectedUser, onGridBoxNameLoaded }) => {
+export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
+  selectedPuck,
+  selectedSlot,
+  onGridSelect,
+  selectedUser,
+  onGridBoxNameLoaded,
+}) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
@@ -52,8 +58,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
       onGridBoxNameLoaded(gridBoxData.grid_box.name);
     }
   }, [gridBoxData?.grid_box?.name, onGridBoxNameLoaded]);
-
- 
 
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {
@@ -81,7 +85,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   //   setAddGridDialogOpen(true);
   //   setSelectedPositionInBox(positionInBox || null);
   // };
-
 
   const handleAddGrid = (positionInBox?: number) => {
     const prefillParams = new URLSearchParams();
@@ -243,7 +246,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 />
               </Box>
 
-               {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr:3 }}>
+              {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr:3 }}>
                <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -276,7 +279,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
         gridBoxName={gridBoxData?.grid_box?.name}
         positionInBox={selectedPositionInBox || undefined}
       />
-      
+
       <MoveGridBox
         open={moveGridBoxDialogOpen}
         onClose={() => setMoveGridBoxDialogOpen(false)}

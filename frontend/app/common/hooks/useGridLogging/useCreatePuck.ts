@@ -8,7 +8,7 @@ interface UseCreatePuckResult {
   createPuck: (data: CreatePuckData) => Promise<PucksList | null>;
   isCreating: boolean;
   error: string | null;
-  clearError:()=> void
+  clearError: () => void;
 }
 
 export const useCreatePuck = (): UseCreatePuckResult => {
@@ -18,7 +18,6 @@ export const useCreatePuck = (): UseCreatePuckResult => {
   const clearError = () => {
     setError(null);
   };
-
 
   const createPuck = async (data: CreatePuckData): Promise<PucksList | null> => {
     setIsCreating(true);
@@ -38,10 +37,10 @@ export const useCreatePuck = (): UseCreatePuckResult => {
         return newPuck;
       } else {
         const errorData = await response.json();
-        
+
         // Handle validation errors with detailed messages
         let errorMsg = 'Failed to create puck';
-        
+
         if (errorData.detail) {
           // If detail is an object with field-specific errors
           if (typeof errorData.detail === 'object' && !Array.isArray(errorData.detail)) {
@@ -53,11 +52,11 @@ export const useCreatePuck = (): UseCreatePuckResult => {
               })
               .join('. ');
             errorMsg = fieldErrors;
-          } 
+          }
           // If detail is a string, use it directly
           else if (typeof errorData.detail === 'string') {
             errorMsg = errorData.detail;
-          } 
+          }
           // If detail is an array, join the messages
           else if (Array.isArray(errorData.detail)) {
             errorMsg = errorData.detail.join(', ');
@@ -66,7 +65,7 @@ export const useCreatePuck = (): UseCreatePuckResult => {
           // Fallback to generic error message
           errorMsg = errorData.message || errorData.error || 'Failed to create puck';
         }
-        
+
         const cleanError = errorMsg.replace(/^Error:\s*/i, '').trim();
         throw new Error(cleanError);
       }

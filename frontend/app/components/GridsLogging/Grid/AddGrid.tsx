@@ -55,8 +55,8 @@ export const AddGrid: React.FC<AddGridProps> = ({
     blotDistance: '',
   });
 
-   // Reset form when dialog opens
-   useEffect(() => {
+  // Reset form when dialog opens
+  useEffect(() => {
     if (open) {
       setFormData({
         user: selectedUser?.id || '',
@@ -143,12 +143,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   };
 
   const handleSave = () => {
-    if (
-      !formData.gridName ||
-      !formData.specimen ||
-      !formData.project ||
-      !formData.positionInBox 
-    ) {
+    if (!formData.gridName || !formData.specimen || !formData.project || !formData.positionInBox) {
       alert('Please fill in all required fields');
       return;
     }
@@ -157,11 +152,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
     console.log('Saving grid:', formData);
   };
 
-  const isFormValid =
-  formData.gridName &&
-  formData.specimen &&
-  formData.project &&
-  formData.positionInBox;
+  const isFormValid = formData.gridName && formData.specimen && formData.project && formData.positionInBox;
   return (
     <>
       <BaseFormDialog
@@ -190,7 +181,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
             sx={{
               ...disabledTextFieldStyles,
               flex: 1,
-              '& .MuiInputBase-input': {paddingLeft: 0},
+              '& .MuiInputBase-input': { paddingLeft: 0 },
             }}
           />
           <FormFieldWithAdd

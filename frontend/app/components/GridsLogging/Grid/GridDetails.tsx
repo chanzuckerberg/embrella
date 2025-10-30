@@ -197,7 +197,8 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         title={
           <Box className={styles.cardHeader}>
             <Typography variant="h6" component="h2">
-              Grid Name: Puck-CZII-0{selectedPuck.name}/{selectedGridBoxName}/Position-{formData.positionInBox}/Grid-{formData.gridName}
+              Grid Name: Puck-CZII-0{selectedPuck.name}/{selectedGridBoxName}/Position-{formData.positionInBox}/Grid-
+              {formData.gridName}
             </Typography>
             {/* <IconButton
               onClick={handleDeleteGrid}

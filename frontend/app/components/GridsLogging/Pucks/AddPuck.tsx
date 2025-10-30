@@ -26,27 +26,25 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
     cane: caneId || '',
     positionInCane: '',
   });
-   // state for tracking filled positions
-   const [filledPositions, setFilledPositions] = useState<number[]>([]);
-   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
-   const { isSuccess: usersLoaded } = useGridLoggingUserList();
-   const { createPuck, isCreating, error, clearError } = useCreatePuck();
+  // state for tracking filled positions
+  const [filledPositions, setFilledPositions] = useState<number[]>([]);
+  const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
+  const { isSuccess: usersLoaded } = useGridLoggingUserList();
+  const { createPuck, isCreating, error, clearError } = useCreatePuck();
 
-    // Reset form when dialog opens
-    useEffect(() => {
-      if (open) {
-        setFormData({
-          user: selectedUser?.id || 0,
-          puckName: '',
-          color: 'CF1E01',
-          cane: caneId || '',
-          positionInCane: '',
-        });
-        clearError();
-      }
-    }, [open, selectedUser?.id, caneId]);
-
- 
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        user: selectedUser?.id || 0,
+        puckName: '',
+        color: 'CF1E01',
+        cane: caneId || '',
+        positionInCane: '',
+      });
+      clearError();
+    }
+  }, [open, selectedUser?.id, caneId]);
 
   useEffect(() => {
     if (selectedUser?.id) {
@@ -95,9 +93,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
 
   const handleSave = async () => {
     // Validate required fields
-    if (
-      !formData.puckName 
-    ) {
+    if (!formData.puckName) {
       alert('Please fill in all required fields');
       return;
     }
@@ -126,10 +122,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
     }
   };
 
-  const isFormValid =
-    formData.puckName&&
-    formData.cane&&
-    formData.positionInCane
+  const isFormValid = formData.puckName && formData.cane && formData.positionInCane;
 
   return (
     <BaseFormDialog
@@ -141,7 +134,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
       isSubmitting={isCreating}
       disabled={!isFormValid || !choicesLoaded || !usersLoaded}
     >
-       {error && (
+      {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
@@ -163,7 +156,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
           sx={{
             ...disabledTextFieldStyles,
             flex: 1,
-            '& .MuiInputBase-input': {paddingLeft: 0},
+            '& .MuiInputBase-input': { paddingLeft: 0 },
           }}
         />
         <FormControl sx={{ flex: 1 }}>

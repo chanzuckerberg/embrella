@@ -47,7 +47,7 @@ export enum POST_API {
   COMPLETE_REVIEW = '/api/reviews/:reviewId/complete',
   UPDATE_TOMOGRAM_REVIEW = '/api/reviews/:reviewId/tomograms/:tomogramId',
   CREATE_PUCK = '/api/list/pucks/',
-  CREATE_GRID_BOX='/api/list/pucks/puck_id/grid-box/'
+  CREATE_GRID_BOX = '/api/list/pucks/puck_id/grid-box/',
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

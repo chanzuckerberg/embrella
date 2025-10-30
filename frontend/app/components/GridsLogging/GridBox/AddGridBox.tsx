@@ -57,7 +57,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
 
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
-  const {createGridBox, isCreating, error, clearError} = useCreateGridBox();
+  const { createGridBox, isCreating, error, clearError } = useCreateGridBox();
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
@@ -66,7 +66,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     }));
   };
 
-  const handleSave =async () => {
+  const handleSave = async () => {
     // Validate required fields
     if (
       !formData.user ||
@@ -112,7 +112,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       isSubmitting={isCreating}
       disabled={!isFormValid || !choicesLoaded || !usersLoaded}
     >
-       {error && (
+      {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
@@ -134,7 +134,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
           sx={{
             ...disabledTextFieldStyles,
             flex: 1,
-            '& .MuiInputBase-input': {paddingLeft: 0},
+            '& .MuiInputBase-input': { paddingLeft: 0 },
           }}
         />
         <TextField

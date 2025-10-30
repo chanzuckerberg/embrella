@@ -61,7 +61,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
           title={
             <Box className={styles.cardHeader}>
               <Typography variant="h6" component="h2">
-              {`Puck Name: CZII-0${selectedPuck.name}`}
+                {`Puck Name: CZII-0${selectedPuck.name}`}
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <Button

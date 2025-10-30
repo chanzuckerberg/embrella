@@ -30,7 +30,7 @@ interface UseCreateGridBoxResult {
   createGridBox: (data: CreateGridBoxData) => Promise<GridBox | null>;
   isCreating: boolean;
   error: string | null;
-  clearError:()=> void
+  clearError: () => void;
 }
 
 export const useCreateGridBox = (): UseCreateGridBoxResult => {
@@ -44,18 +44,18 @@ export const useCreateGridBox = (): UseCreateGridBoxResult => {
   const createGridBox = async (data: CreateGridBoxData): Promise<GridBox | null> => {
     setIsCreating(true);
     setError(null);
-   
+
     try {
       // Build the URL by replacing puck_id placeholder
       const url = getRequestURL(DJANGO_URL, POST_API.CREATE_GRID_BOX).replace('puck_id', data.puck_id.toString());
-      
+
       const response = await postResource(url, {
         name: data.gridBoxName,
         color: data.color,
         numbering: data.numbering,
         position_in_puck: data.position_in_puck,
         max_grids: data.max_grids,
-        puck_name: data.puckName
+        puck_name: data.puckName,
       });
 
       if (response.ok) {
@@ -64,7 +64,7 @@ export const useCreateGridBox = (): UseCreateGridBoxResult => {
       } else {
         const errorData = await response.json();
         const errorMsg = errorData.detail || errorData.error || 'Failed to create grid box';
-        
+
         // Extract user-friendly error message
         let cleanError = errorMsg;
         if (typeof errorMsg === 'object') {
@@ -79,7 +79,7 @@ export const useCreateGridBox = (): UseCreateGridBoxResult => {
         } else if (typeof errorMsg === 'string') {
           cleanError = errorMsg.replace(/^Error:\s*/i, '').trim();
         }
-        
+
         throw new Error(cleanError);
       }
     } catch (err) {
