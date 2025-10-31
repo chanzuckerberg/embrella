@@ -175,11 +175,10 @@ def get_specific_grids(request):
 
         # Filter by grid box name if provided
         if grid_box_name:
-            try:
-                grid_box = CryoGridBox.objects.get(name=grid_box_name)
-                specific_grids = specific_grids.filter(grid_box=grid_box)
-            except CryoGridBox.DoesNotExist:
+            grid_boxes = CryoGridBox.objects.filter(name=grid_box_name)
+            if not grid_boxes.exists():
                 return JsonResponse({"error": "Grid box not found."}, status=404)
+            specific_grids = specific_grids.filter(grid_box__in=grid_boxes)
 
         # Filter by username if provided
         if username:
