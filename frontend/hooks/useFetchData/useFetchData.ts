@@ -7,7 +7,7 @@ import { Review } from '@app/components/TomogramViewerView/types';
 interface UseFetchData<D> {
   data?: D;
   isSuccess: boolean;
-  refetch: () => void; 
+  refetch: () => void;
 }
 
 export const useFetchData = <D>(relativeURL: string, searchParam: Record<string, unknown> = {}): UseFetchData<D> => {
@@ -18,7 +18,7 @@ export const useFetchData = <D>(relativeURL: string, searchParam: Record<string,
   const requestURL = useMemo(() => getRequestURL(DJANGO_URL, relativeURL, searchParam), [relativeURL, searchParam]);
 
   const refetch = useCallback(() => {
-    setRefetchTrigger(prev => prev + 1);
+    setRefetchTrigger((prev) => prev + 1);
   }, []);
 
   useEffect(() => {
@@ -44,5 +44,5 @@ export const useFetchData = <D>(relativeURL: string, searchParam: Record<string,
       });
   }, [requestURL, relativeURL, refetchTrigger]);
 
-  return {...dataState, refetch};
+  return { ...dataState, refetch };
 };

@@ -175,11 +175,7 @@ export const GridsLogging: React.FC = () => {
 
         {/* Puck Details Component - appears on the right when a puck is selected */}
         {selectedPuck && (
-          <PuckDetails
-            selectedPuck={selectedPuck}
-            onSlotSelect={handleSlotSelect}
-            selectedUser={selectedUser}
-          />
+          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} selectedUser={selectedUser} />
         )}
       </Box>
 

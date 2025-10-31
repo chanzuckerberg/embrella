@@ -17,11 +17,7 @@ interface PuckDetailsProps {
   selectedUser?: UsersList | null;
 }
 
-export const PuckDetails: React.FC<PuckDetailsProps> = ({
-  selectedPuck,
-  onSlotSelect,
-  selectedUser,
-}) => {
+export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser }) => {
   // Fetch puck slots data
   const { slotsData, isSuccess, refetch } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
