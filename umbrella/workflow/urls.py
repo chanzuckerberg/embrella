@@ -25,6 +25,7 @@ urlpatterns = [
     path("denoise_params", views.get_msi_params_list, name='get denoise parameters'),
     path("copick_params", views.get_msi_params_list, name='get copick parameters'),
     path("octopi_params", views.get_msi_params_list, name='get octopi parameters'),
+    path("membraneseg_params", views.get_msi_params_list, name="get_membraneseg_parameters"),
     path("job_logs", views.get_job_logs, name='fetching logs'),
     path("dashboard/", views.dashboard, name='dashboard'),
     path('data/', views.workflow_get_data, name='dashboard_data'),

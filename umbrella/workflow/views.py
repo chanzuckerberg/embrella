@@ -57,7 +57,7 @@ COPICK_SCRIPT_DIR = '/hpc/projects/group.czii/krios1.processing/copick/scripts'
 COPICK_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_create_template.sh')
 COPICK_IMPORT_TOMO_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_import_tomo_template.sh')
 COPICK_ADD_OBJECT_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_add_object_template.sh')
-
+COPICK_MEMBRANE_TEMPLATE_PATH = os.path.join(BASE_DIR, 'workflow', 'copick_membraneseg_template.sh')
 
 KEYS = ('PixSize',
         'SplitSum',
@@ -780,6 +780,7 @@ def get_msi_params_list(request):
             'denoise':  'czii-denoise',
             'copick':   'czii-copick',
             'octopi':   'czii-octopi',
+            'membraneseg': 'membraneseg'
         }
         if plan_type not in plan_map:
             return JsonResponse({'error': f'Unsupported plan_type "{plan_type}"'}, status=400)
@@ -2642,7 +2643,6 @@ def run_copick_add_object(request):
         if "submitter" in locals():
             submitter.close()
 
-
 @api_view(["GET"])
 @require_http_methods(["GET"])
 def get_tomo_combos_json(request):
@@ -2698,3 +2698,138 @@ def get_tomo_combos_json(request):
     except Exception as e:
         logger.exception(f"Unexpected error in get_tomo_combos_json: {e}")
         return JsonResponse({"error": str(e)}, status=500)
+    
+# @api_view(["POST"])
+@require_http_methods(["POST"])
+def run_membraneseg(request):
+    job_label = "MembraneSeg"
+
+    if request.method != "POST":
+        store_log(
+            job_name=job_label,
+            request=request,
+            data_sanitized={},
+            error="Invalid request method",
+            advanced_status=False,
+            job_id=None,
+        )
+        return JsonResponse({"error": "Invalid request method: 400"}, status=400)
+
+    try:
+        data = json.loads(request.body or "{}")
+
+        # --- Required fields from frontend ---
+        session_name   = (data.get("session_name") or "").strip()           # e.g. "25oct28b"
+        copick_run     = (data.get("copick_run") or "").strip()             # e.g. "run001"
+        tomo_type      = (data.get("tomo_type") or "").strip()       # e.g. "dctf"
+        vox_in         = data.get("tomogram_voxel_size")             # e.g. 10 or "10.000"
+        membraneseg_id = (data.get("membraneseg_session_id") or "").strip() # your UI session ID
+
+        # Optional
+        threshold_in   = data.get("threshold", "")
+
+        # Auth
+        user_id          = (data.get("user_id") or "").strip()
+        encoded_password = data.get("password")
+        decoded_password = (
+            base64.b64decode(encoded_password).decode("utf-8").strip()
+            if encoded_password else ""
+        )
+
+        # --- Validation ---
+        missing = [k for k, v in {
+            "session_name": session_name,
+            "copick_run": copick_run,
+            "tomo_type": tomo_type,
+            "tomogram_voxel_size": vox_in,
+            "membraneseg_session_id": membraneseg_id,
+            "user_id": user_id,
+            "password": encoded_password,
+        }.items() if not v and v != 0]
+        if missing:
+            return JsonResponse(
+                {"error": f"Missing required fields: {', '.join(missing)}"},
+                status=400
+            )
+
+        try:
+            tomo_voxelsize = float(vox_in)
+        except (TypeError, ValueError):
+            return JsonResponse({"error": f"Invalid import_tomogram_voxel_size '{vox_in}'"}, status=400)
+
+        if isinstance(threshold_in, (int, float)):
+            threshold = str(threshold_in)
+        else:
+            threshold = (threshold_in or "").strip()
+
+        # Cache auth in session
+        request.session["user_id"] = user_id
+        request.session["decoded_password"] = decoded_password
+
+        # Sanitize for logs
+        data_sanitized = dict(data)
+        data_sanitized.pop("password", None)
+
+        # --- Submit remote job ---
+        submitter = RemoteJobSubmitter(
+            hostname=HOST_BRUNO,
+            port=PORT,
+            username=user_id,
+            password=decoded_password,
+            remote_script_dir=COPICK_SCRIPT_DIR,
+        )
+        submitter.connect()
+
+        job_name = f"{session_name}_membraneseg_{copick_run}"
+
+        # Template args must match Jinja placeholders in
+        # umbrella/workflow/copick_membraneseg_template.sh
+        out, err = submitter.run_script(
+            template_path=COPICK_MEMBRANE_TEMPLATE_PATH,  # already defined globally
+            job_name=job_name,
+            session=session_name,
+            copickRun=copick_run,
+            tomoType=tomo_type,
+            tomoVoxelSize=tomo_voxelsize,
+            sessionID=membraneseg_id,
+            threshold=threshold,
+        )
+
+        # Extract Slurm job IDs
+        ids = re.findall(r"Submitted batch job (\d+)", out or "")
+        job_id_str = ",".join(ids) if ids else None
+
+        store_log(
+            job_name=job_label,
+            request=request,
+            data_sanitized=data_sanitized,
+            error="",
+            advanced_status=True,
+            job_id=job_id_str,
+        )
+
+        return JsonResponse({
+            "message": f"Session {session_name}: membraneseg submitted.",
+            "output": out,
+            "error": err,
+            "job_id": job_id_str
+        }, status=200)
+
+    except Exception as e:
+        logger.exception("Unexpected error in run_submit_membraneseg")
+        store_log(
+            job_name=job_label,
+            request=request,
+            data_sanitized=data_sanitized if "data_sanitized" in locals() else {},
+            error=str(e),
+            advanced_status=False,
+            job_id=None,
+        )
+        return JsonResponse({"error": f"{e}: 500"}, status=500)
+
+    finally:
+        if "submitter" in locals():
+            try:
+                submitter.close()
+            except Exception:
+                pass

@@ -407,6 +407,11 @@
       <option value="">Select voxel size…</option>
     </select>
   </div>
+  <div id="membraneseg_session_id"
+       class="recommendation-msg col-span-4"
+       style="margin-top:8px; font-size:14px; color:#2c3e50;">
+  </div>
+  <input type="hidden" id="membraneseg_session_id_input" name="membraneseg_session_id" />
 </div>
 
 <!-- Row 2: Optional Threshold -->
@@ -562,6 +567,190 @@
       });
     });
 
+    // Fetch and populate tomogram type & voxel selects
+    (() => {
+  const apiBase = "/workflow/api/tomo-combos";
+
+  const elSession = document.getElementById("importCopickSession");
+  const elRun     = document.getElementById("importCopickRun");
+  const elType    = document.getElementById("tomogramType");
+  const elVoxel   = document.getElementById("tomogramVoxelSize");
+
+  let cache = null; // holds last successful payload { combinations: {type: [sizes...]}, ... }
+
+  function setDisabled(el, disabled, placeholderText) {
+    el.disabled = disabled;
+    if (placeholderText !== undefined) {
+      el.innerHTML = `<option value="">${placeholderText}</option>`;
+    }
+  }
+
+  function populateSelect(el, values, { placeholder = "Select…" } = {}) {
+    el.innerHTML = `<option value="">${placeholder}</option>`;
+    for (const v of values) {
+      const val = String(v);
+      const label = typeof v === "number" ? v.toString() : v;
+      el.insertAdjacentHTML("beforeend", `<option value="${val}">${label}</option>`);
+    }
+  }
+
+  function numericSort(a, b) { return Number(a) - Number(b); }
+
+  async function fetchCombos(session, procrun) {
+    const url = `${apiBase}?session=${encodeURIComponent(session)}&procrun=${encodeURIComponent(procrun)}`;
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async function refreshFromApi() {
+    const session = (elSession?.value || "").trim();
+    const procrun = (elRun?.value || "").trim();
+
+    // Reset UI
+    setDisabled(elType, true, "Select tomogram type…");
+    setDisabled(elVoxel, true, "Select voxel size…");
+
+    if (!session || !procrun) return; // wait until both are chosen
+
+    try {
+      setDisabled(elType, true, "Loading tomogram types…");
+      setDisabled(elVoxel, true, "Waiting for type…");
+
+      const data = await fetchCombos(session, procrun);
+      cache = data; // { combinations: { type: [sizes] }, ... }
+
+      const combos = (data && data.combinations) || {};
+      const types = Object.keys(combos).sort((a, b) => a.localeCompare(b));
+      populateSelect(elType, types, { placeholder: "Select tomogram type…" });
+
+      setDisabled(elType, false);
+      // voxel stays disabled until a type is chosen
+    } catch (err) {
+      console.error("[tomo-combos] fetch failed:", err);
+      populateSelect(elType, [], { placeholder: "Failed to load types" });
+      populateSelect(elVoxel, [], { placeholder: "Failed to load sizes" });
+      setDisabled(elType, true);
+      setDisabled(elVoxel, true);
+    }
+  }
+
+  function onTypeChange() {
+    const t = elType.value;
+    if (!cache || !cache.combinations || !t || !cache.combinations[t]) {
+      populateSelect(elVoxel, [], { placeholder: "Select voxel size…" });
+      setDisabled(elVoxel, true);
+      return;
+    }
+    const sizes = [...cache.combinations[t]].sort(numericSort);
+    populateSelect(elVoxel, sizes, { placeholder: "Select voxel size…" });
+    setDisabled(elVoxel, false);
+  }
+
+  // Debounce helper for rapid changes
+  function debounce(fn, ms = 200) {
+    let id; return (...args) => { clearTimeout(id); id = setTimeout(() => fn(...args), ms); };
+  }
+
+  // Wire up listeners
+  if (elSession) elSession.addEventListener("change", debounce(refreshFromApi, 150));
+  if (elRun)     elRun.addEventListener("change", debounce(refreshFromApi, 150));
+  if (elType)    elType.addEventListener("change", onTypeChange);
+
+  // Initial state
+  setDisabled(elType, true, "Select tomogram type…");
+  setDisabled(elVoxel, true, "Select voxel size…");
+
+  // If session & run already have values on load, fetch immediately
+  if ((elSession?.value || "") && (elRun?.value || "")) {
+    refreshFromApi();
+  }
+})();
+
+// Fectch membraneseg procrun
+(() => {
+  function attachMembraneSegNewRunListener({
+    sessionSelector = "#importCopickSession",
+    voxelSelector   = "#tomogramVoxelSize",
+    displaySelector = "#membraneseg_session_id",
+    hiddenSelector  = "#membraneseg_session_id_input",
+  } = {}) {
+    const sessionEl = document.querySelector(sessionSelector);
+    const voxelEl   = document.querySelector(voxelSelector);
+    const displayEl = document.querySelector(displaySelector);
+    const hiddenEl  = document.querySelector(hiddenSelector);
+    if (!sessionEl || !voxelEl || !displayEl) return;
+
+    const nextRun = (runs) => {
+      if (!Array.isArray(runs) || runs.length === 0) return "001";
+      const numeric = runs
+        .map(s => (s ?? "").toString().match(/\d+/)?.[0] ?? "")
+        .filter(Boolean);
+      if (numeric.length === 0) return "001";
+      const width  = Math.max(3, ...numeric.map(s => s.length));
+      const maxVal = Math.max(...numeric.map(s => parseInt(s, 10)));
+      return String(maxVal + 1).padStart(width, "0");
+    };
+
+    const setDisplay = (runNum, state = "ok") => {
+      if (hiddenEl) hiddenEl.value = runNum || "";
+      if (state === "loading") {
+        displayEl.textContent = "Checking Embrella recommendation…";
+      } else if (state === "error") {
+        displayEl.textContent = "Unable to fetch recommended procrun.";
+      } else if (runNum) {
+        displayEl.innerHTML = `Embrella will submit this membrane seg with <strong>membrane procrun run${runNum}</strong>`;
+      } else {
+        displayEl.textContent = "";
+      }
+    };
+
+    const fetchNext = async () => {
+      const sessionName = (sessionEl.value || "").trim();
+      const voxelSize   = (voxelEl.value || "").trim();
+      if (!sessionName || !voxelSize) {
+        // Only trigger after both are chosen
+        setDisplay("", "ok");
+        return;
+      }
+
+      setDisplay("", "loading");
+      try {
+        const url = `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=membraneseg&_ts=${Date.now()}`;
+        const res = await fetch(url, { cache: "no-store", headers: { "Accept": "application/json" } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const runs = data?.sessions?.[0]?.run_numbers || [];
+        const runNum = nextRun(runs);
+        setDisplay(runNum, "ok");
+      } catch (err) {
+        console.error("[membraneseg] fetch failed:", err);
+        setDisplay("", "error");
+      }
+    };
+
+    // Debounce to avoid multiple triggers
+    let t;
+    const debouncedFetch = () => { clearTimeout(t); t = setTimeout(fetchNext, 200); };
+
+    // Run only when voxel size is chosen
+    voxelEl.addEventListener("change", debouncedFetch);
+    voxelEl.addEventListener("input", debouncedFetch);
+
+    // Also re-check if both were preselected on load
+    if ((sessionEl.value || "").trim() && (voxelEl.value || "").trim()) {
+      fetchNext();
+    }
+  }
+
+  // Attach with your current form element IDs
+  attachMembraneSegNewRunListener({
+    sessionSelector: "#importCopickSession",
+    voxelSelector:   "#tomogramVoxelSize",
+    displaySelector: "#membraneseg_session_id",
+    hiddenSelector:  "#membraneseg_session_id_input",
+  });
+})();
 
   </script>
-</body>
+</body> 
