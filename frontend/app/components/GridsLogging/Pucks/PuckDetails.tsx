@@ -15,9 +15,10 @@ interface PuckDetailsProps {
   selectedPuck: PucksList | null;
   onSlotSelect: (slotPosition: number, gridBoxId?: number) => void;
   selectedUser?: UsersList | null;
+  onGridBoxCreated?: (slotPosition: number) => void;
 }
 
-export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser }) => {
+export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser, onGridBoxCreated }) => {
   // Fetch puck slots data
   const { slotsData, isSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -156,6 +157,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
         puckId={selectedPuck?.id}
         puckName={selectedPuck?.name}
         positionInPuck={selectedSlotForGridBox || undefined}
+        onGridBoxCreated={onGridBoxCreated}
       />
     </>
   );

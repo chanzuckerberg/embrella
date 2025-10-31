@@ -17,6 +17,7 @@ interface AddGridBoxProps {
   puckId?: number;
   puckName?: string;
   positionInPuck?: number;
+  onGridBoxCreated?: (slotPosition: number) => void;
 }
 
 export const AddGridBox: React.FC<AddGridBoxProps> = ({
@@ -26,6 +27,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
   puckId,
   puckName,
   positionInPuck,
+  onGridBoxCreated,
 }) => {
   // const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -94,7 +96,11 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     });
 
     if (result) {
-      window.location.reload();
+      onClose();
+      // Navigate to the newly created gridbox
+      if (onGridBoxCreated) {
+        onGridBoxCreated(Number(formData.positionInPuck));
+      }
     }
   };
 
