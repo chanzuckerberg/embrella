@@ -111,13 +111,6 @@ export const GridsLogging: React.FC = () => {
     setSelectedGrid(null);
     setSelectedGridId(null);
   };
-  const handleGridBoxCreated = (slotPosition: number) => {
-    // This will automatically show the GridBoxInfo component
-    setSelectedSlot(slotPosition);
-    // Reset grid selection
-    setSelectedGrid(null);
-    setSelectedGridId(null);
-  };
 
   const handleGridSelect = (gridPosition: number, gridId?: number) => {
     setSelectedGrid(gridPosition);
@@ -186,7 +179,6 @@ export const GridsLogging: React.FC = () => {
             selectedPuck={selectedPuck}
             onSlotSelect={handleSlotSelect}
             selectedUser={selectedUser}
-            onGridBoxCreated={handleGridBoxCreated}
           />
         )}
       </Box>

@@ -15,17 +15,15 @@ interface PuckDetailsProps {
   selectedPuck: PucksList | null;
   onSlotSelect: (slotPosition: number, gridBoxId?: number) => void;
   selectedUser?: UsersList | null;
-  onGridBoxCreated?: (slotPosition: number) => void;
 }
 
 export const PuckDetails: React.FC<PuckDetailsProps> = ({
   selectedPuck,
   onSlotSelect,
   selectedUser,
-  onGridBoxCreated,
 }) => {
   // Fetch puck slots data
-  const { slotsData, isSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
+  const { slotsData, isSuccess, refetch } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isCreateGridBoxOpen, setIsCreateGridBoxOpen] = useState(false);
   const [selectedSlotForGridBox, setSelectedSlotForGridBox] = useState<number | null>(null);
@@ -47,6 +45,12 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
     }
   };
 
+  const handleGridBoxCreated = (slotPosition: number) => {
+    // Refetch slots data to update the graphic
+    refetch();
+    // Select the newly created slot
+    onSlotSelect(slotPosition);
+  };
   const handleAddGridBox = (slotPosition?: number) => {
     setSelectedSlotForGridBox(slotPosition || null);
     setIsCreateGridBoxOpen(true);
@@ -162,7 +166,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
         puckId={selectedPuck?.id}
         puckName={selectedPuck?.name}
         positionInPuck={selectedSlotForGridBox || undefined}
-        onGridBoxCreated={onGridBoxCreated}
+        onGridBoxCreated={handleGridBoxCreated}
       />
     </>
   );

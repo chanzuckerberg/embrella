@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { getRequestURL } from '@app/common/queries/utils';
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { API, DJANGO_URL, MOCKED_APIS } from '@app/common/constants/api';
@@ -7,13 +7,19 @@ import { Review } from '@app/components/TomogramViewerView/types';
 interface UseFetchData<D> {
   data?: D;
   isSuccess: boolean;
+  refetch: () => void; 
 }
 
 export const useFetchData = <D>(relativeURL: string, searchParam: Record<string, unknown> = {}): UseFetchData<D> => {
-  const [dataState, setDataState] = useState<UseFetchData<D>>({
+  const [dataState, setDataState] = useState<{ data?: D; isSuccess: boolean }>({
     isSuccess: false,
   });
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
   const requestURL = useMemo(() => getRequestURL(DJANGO_URL, relativeURL, searchParam), [relativeURL, searchParam]);
+
+  const refetch = useCallback(() => {
+    setRefetchTrigger(prev => prev + 1);
+  }, []);
 
   useEffect(() => {
     (async (): Promise<D> => {
@@ -36,7 +42,7 @@ export const useFetchData = <D>(relativeURL: string, searchParam: Record<string,
       .catch((err) => {
         console.error(err);
       });
-  }, [requestURL, relativeURL]);
+  }, [requestURL, relativeURL, refetchTrigger]);
 
-  return dataState;
+  return {...dataState, refetch};
 };
