@@ -139,12 +139,14 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
         instance = self.instance
             
         if name:
-            name_query = CryoGridBox.objects.filter(name=name)
+            name_query = CryoGridBox.objects.filter( puck=puck,
+            position_in_puck=position_in_puck,
+            name=name)
             if instance:  # If updating, exclude current instance
                 name_query = name_query.exclude(pk=instance.pk)
             if name_query.exists():
                 raise serializers.ValidationError({
-                    'name': f'A grid box with name "{name}" already exists.'
+                    'name': f'A grid box with name "{name}" at position {position_in_puck} in this puck already exists.'
                 })
             
         if puck and position_in_puck:
