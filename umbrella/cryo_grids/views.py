@@ -134,12 +134,28 @@ def get_all_grid_boxes(request):
     if request.GET.get('valid', 'true') != 'true':
         return JsonResponse({'error': 'Invalid request'}, status=400)
     try:
-        # Get all unique names of grid boxes
-        unique_grid_boxes = CryoGridBox.objects.order_by('name').values('name').distinct()
-        # Extract names into a list
-        unique_names = [box['name'] for box in unique_grid_boxes]
+        # Get all grid boxes with puck and position information
+        grid_boxes = CryoGridBox.objects.select_related('puck').order_by('name')
+        
+        # Create unique display names with puck and slot info
+        unique_boxes = []
+        
+        for box in grid_boxes:
+            # Handle None values safely
+            puck_name = f"CZII-0{box.puck.name}" if box.puck and box.puck.name else "No Puck"
+            slot = str(box.position_in_puck) if box.position_in_puck is not None else "?"
+            
+            # Display format: "Box-2 (Puck: CZII-02, Slot: 6)"
+            display_name = f"{box.name} (Puck: {puck_name}, Slot: {slot})"
+            
+            unique_boxes.append({
+                'name': box.name,
+                'display_name': display_name,
+                'puck_name': puck_name,
+                'slot': slot
+            })
 
-        return JsonResponse({"unique_names": unique_names}, safe=False)
+        return JsonResponse({"grid_boxes": unique_boxes}, safe=False)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
@@ -175,11 +191,10 @@ def get_specific_grids(request):
 
         # Filter by grid box name if provided
         if grid_box_name:
-            try:
-                grid_box = CryoGridBox.objects.get(name=grid_box_name)
-                specific_grids = specific_grids.filter(grid_box=grid_box)
-            except CryoGridBox.DoesNotExist:
+            grid_boxes = CryoGridBox.objects.filter(name=grid_box_name)
+            if not grid_boxes.exists():
                 return JsonResponse({"error": "Grid box not found."}, status=404)
+            specific_grids = specific_grids.filter(grid_box__in=grid_boxes)
 
         # Filter by username if provided
         if username:

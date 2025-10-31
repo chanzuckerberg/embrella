@@ -6,10 +6,10 @@ import { PuckSVG } from './PuckSvg';
 import { DeletePuck } from './DeletePuck';
 import { Card, CardContent, CardHeader, Box, IconButton, Typography, CircularProgress, Alert } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import styles from '../GridLogging.module.css';
 import { UsersList } from '@app/common/types/gridLogging/userList';
+import { AddGridBox } from '../GridBox/AddGridBox';
 
 interface PuckDetailsProps {
   selectedPuck: PucksList | null;
@@ -19,8 +19,10 @@ interface PuckDetailsProps {
 
 export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser }) => {
   // Fetch puck slots data
-  const { slotsData, isSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
+  const { slotsData, isSuccess, refetch } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isCreateGridBoxOpen, setIsCreateGridBoxOpen] = useState(false);
+  const [selectedSlotForGridBox, setSelectedSlotForGridBox] = useState<number | null>(null);
 
   const handleSlotClick = (slotPosition: number) => {
     if (!slotsData) return;
@@ -39,31 +41,15 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
     }
   };
 
+  const handleGridBoxCreated = (slotPosition: number) => {
+    // Refetch slots data to update the graphic
+    refetch();
+    // Select the newly created slot
+    onSlotSelect(slotPosition);
+  };
   const handleAddGridBox = (slotPosition?: number) => {
-    const prefillParams = new URLSearchParams();
-    // Prefill puck with current puck ID
-    if (selectedPuck?.id) {
-      prefillParams.append('puck', selectedPuck.id.toString());
-    }
-
-    // Prefill position_in_puck if provided (when called from handleSlotClick)
-    if (slotPosition !== undefined) {
-      prefillParams.append('position_in_puck', slotPosition.toString());
-    }
-
-    // Add return state parameters
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
-    }
-    if (selectedPuck?.id) {
-      prefillParams.append('return_puck_id', selectedPuck.id.toString());
-    }
-    if (slotPosition !== undefined) {
-      prefillParams.append('return_slot_position', slotPosition.toString());
-    }
-
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/add/?${prefillParams.toString()}`;
-    window.location.href = adminUrl;
+    setSelectedSlotForGridBox(slotPosition || null);
+    setIsCreateGridBoxOpen(true);
   };
 
   const handleDeletePuck = () => {
@@ -81,7 +67,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
           title={
             <Box className={styles.cardHeader}>
               <Typography variant="h6" component="h2">
-                Puck Name: {selectedPuck.name}
+                {`Puck Name: CZII-0${selectedPuck.name}`}
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <Button
@@ -158,13 +144,25 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
         </CardContent>
       </Card>
 
-      {/* Delete dialog  */}
       <DeletePuck
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         selectedPuck={selectedPuck}
         slotsData={slotsData || null}
         selectedUser={selectedUser}
+      />
+
+      <AddGridBox
+        open={isCreateGridBoxOpen}
+        onClose={() => {
+          setIsCreateGridBoxOpen(false);
+          setSelectedSlotForGridBox(null);
+        }}
+        selectedUser={selectedUser}
+        puckId={selectedPuck?.id}
+        puckName={selectedPuck?.name}
+        positionInPuck={selectedSlotForGridBox || undefined}
+        onGridBoxCreated={handleGridBoxCreated}
       />
     </>
   );

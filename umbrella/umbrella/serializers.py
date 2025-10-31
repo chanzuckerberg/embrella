@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from cryo_grids.models import Puck, CryoGridBox, Cane, CryoGrid
+from umbrella.choices import PUCK_COLORS
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -51,16 +52,62 @@ class PuckSerializer(serializers.ModelSerializer):
             'color_display',
             'position_in_cane',
             'max_boxes',
-            'user_id',
+            'user',
             'user_name',
             'cane'
         ]
+        validators = []
+
+    def validate(self, data):
+        """
+        Custom validation for puck creation/update
+        """
+        # Check for unique name + color combination
+        name = data.get('name')
+        color = data.get('color')
+        cane = data.get('cane')
+        position_in_cane = data.get('position_in_cane')
+            
+        # Get instance for update operations
+        instance = self.instance
+            
+        # Validate unique name+color
+        if name and color:
+            puck_query = Puck.objects.filter(name=name, color=color)
+            print(puck_query)
+            if instance:
+                puck_query = puck_query.exclude(pk=instance.pk)
+            if puck_query.exists():
+                color_display = dict(PUCK_COLORS).get(color, color)
+                raise serializers.ValidationError({
+                    'name': f'A puck with name "CZII-0{name}" and color "{color_display}" already exists.'
+                })
+             
+        # Validate unique cane+position
+        if cane and position_in_cane:
+            position_query = Puck.objects.filter(cane=cane, position_in_cane=position_in_cane)
+            if instance:
+                position_query = position_query.exclude(pk=instance.pk)
+            if position_query.exists():
+                raise serializers.ValidationError({
+                    'position_in_cane': f'Position {position_in_cane} in this cane is already occupied.'
+                })
+            
+        return data
+
+        def create(self, validated_data):
+            """
+            Create and return a new Puck instance
+            """
+            return Puck.objects.create(**validated_data)
+
 class CryoGridBoxSerializer(serializers.ModelSerializer):
     """
     Serializer for CryoGridBox model
     """
     color_display = serializers.CharField(source='get_color_display', read_only=True)
     numbering_display = serializers.CharField(source='get_numbering_display', read_only=True)
+    puck_user = serializers.CharField(source='puck.user.username', read_only=True)  
     
     class Meta:
         model = CryoGridBox
@@ -73,8 +120,48 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
             'numbering_display',
             'position_in_puck',
             'max_grids',
-            'puck'
+            'puck',
+            'puck_user'
         ]
+        validators = [] #disables default validators
+        extra_kwargs = {
+            'name': {'validators': []},  # to disable unique validator on name field
+        }
+
+    def validate(self, data):
+        """
+        Custom validation for grid box creation/update
+        """
+        name = data.get('name')
+        puck = data.get('puck')
+        position_in_puck = data.get('position_in_puck')
+            
+        instance = self.instance
+            
+        if name:
+            name_query = CryoGridBox.objects.filter( puck=puck,
+            position_in_puck=position_in_puck,
+            name=name)
+            if instance:  # If updating, exclude current instance
+                name_query = name_query.exclude(pk=instance.pk)
+            if name_query.exists():
+                raise serializers.ValidationError({
+                    'name': f'A grid box with name "{name}" at position {position_in_puck} in this puck already exists.'
+                })
+            
+        if puck and position_in_puck:
+            position_query = CryoGridBox.objects.filter(
+                puck=puck, 
+                position_in_puck=position_in_puck
+            )
+            if instance:  # If updating, exclude current instance
+                position_query = position_query.exclude(pk=instance.pk)
+            if position_query.exists():
+                raise serializers.ValidationError({
+                    'position_in_puck': f'Position {position_in_puck} in this puck is already occupied.'
+                })
+            
+        return data
     
 
 class CaneSerializer(serializers.ModelSerializer):

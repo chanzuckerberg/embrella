@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
@@ -14,12 +13,16 @@ import { DeleteGridBox } from './DeleteGridBox';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
 import { UserContext } from '@app/common/context/UserProvider';
 import { UsersList } from '@app/common/types/gridLogging/userList';
+// import { AddGrid } from '../Grid/AddGrid';
+import { DJANGO_URL } from '@app/common/constants/api';
+// import { MoveGridBox } from './MoveGridBox';
 
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
   selectedSlot: number | null;
   onGridSelect: (gridPosition: number, gridId: number) => void;
   selectedUser?: UsersList | null;
+  onGridBoxNameLoaded?: (name: string) => void;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -33,14 +36,28 @@ const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
   numbering_display: data.grid_box?.numbering_display || 'U-counter-clockwise',
 });
 
-export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selectedSlot, onGridSelect, selectedUser }) => {
+export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
+  selectedPuck,
+  selectedSlot,
+  onGridSelect,
+  selectedUser,
+  onGridBoxNameLoaded,
+}) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
+  // const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
+  // const [moveGridBoxDialogOpen, setMoveGridBoxDialogOpen] = useState(false);
   const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
   );
   const currentUser = useContext(UserContext);
+  useEffect(() => {
+    if (gridBoxData?.grid_box?.name && onGridBoxNameLoaded) {
+      onGridBoxNameLoaded(gridBoxData.grid_box.name);
+    }
+  }, [gridBoxData?.grid_box?.name, onGridBoxNameLoaded]);
 
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {
@@ -63,6 +80,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
   const handleDeleteGridBox = () => {
     setDeleteDialogOpen(true);
   };
+
+  // const handleAddGrid = (positionInBox?: number) => {
+  //   setAddGridDialogOpen(true);
+  //   setSelectedPositionInBox(positionInBox || null);
+  // };
 
   const handleAddGrid = (positionInBox?: number) => {
     const prefillParams = new URLSearchParams();
@@ -96,8 +118,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
     const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/?${prefillParams.toString()}`;
     window.location.href = adminUrl;
   };
-
   // const handleMoveGridBox = () => {
+  //   setMoveGridBoxDialogOpen(true);
   //   console.log('Move grid box');
   // };
 
@@ -125,7 +147,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
           title={
             <Box className={styles.cardHeader}>
               <Typography variant="h6" component="h2">
-                GridBox Name: Puck-{selectedPuck.name}/Slot-{formData.name}
+                GridBox Name: Puck-CZII-0{selectedPuck.name}/Slot-{formData.positionInPuck}/{formData.name}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Button
@@ -224,7 +246,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
                 />
               </Box>
 
-              {/* <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr:3 }}>
                <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -235,9 +257,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
               >
                 Move Grid Box
               </Button> 
-              <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
-                Save
-              </Button>
             </Box> */}
             </Box>
           </Box>
@@ -251,6 +270,24 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({ selectedPuck, selected
         selectedUser={selectedUser}
         gridBoxData={gridBoxData || null}
       />
+
+      {/* <AddGrid
+        open={addGridDialogOpen}
+        onClose={() => setAddGridDialogOpen(false)}
+        selectedUser={selectedUser}
+        gridBoxId={gridBoxData?.grid_box?.grid_box_id}
+        gridBoxName={gridBoxData?.grid_box?.name}
+        positionInBox={selectedPositionInBox || undefined}
+      />
+
+      <MoveGridBox
+        open={moveGridBoxDialogOpen}
+        onClose={() => setMoveGridBoxDialogOpen(false)}
+        currentPuck={selectedPuck}
+        currentSlot={selectedSlot}
+        gridBoxData={gridBoxData}
+        selectedUser={selectedUser}
+      /> */}
     </>
   );
 };

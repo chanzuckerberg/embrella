@@ -15,7 +15,6 @@ import {
   Alert,
   Checkbox,
   FormControlLabel,
-  IconButton,
 } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
@@ -31,6 +30,7 @@ interface GridDetailsProps {
   selectedGrid: number | null;
   selectedGridId: number | null;
   selectedUser?: UsersList | null;
+  selectedGridBoxName: string | null;
 }
 
 const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
@@ -55,6 +55,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedGrid,
   selectedGridId,
   selectedUser,
+  selectedGridBoxName,
 }) => {
   // Fetch data
   const { isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
@@ -97,8 +98,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log(result.message);
+        await response.json();
         // Reload to refresh all data
         window.location.reload();
       } else {
@@ -111,22 +111,22 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     }
   };
 
-  const handleDeleteGrid = () => {
-    const prefillParams = new URLSearchParams();
+  // const handleDeleteGrid = () => {
+  //   const prefillParams = new URLSearchParams();
 
-    // Add return state parameters
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
-    }
-    if (selectedPuck?.id) {
-      prefillParams.append('return_puck_id', selectedPuck.id.toString());
-    }
-    if (selectedSlot !== null) {
-      prefillParams.append('return_slot_position', selectedSlot.toString());
-    }
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/?${prefillParams.toString()}`;
-    window.location.href = adminUrl;
-  };
+  //   // Add return state parameters
+  //   if (selectedUser?.id) {
+  //     prefillParams.append('return_user_id', selectedUser.id.toString());
+  //   }
+  //   if (selectedPuck?.id) {
+  //     prefillParams.append('return_puck_id', selectedPuck.id.toString());
+  //   }
+  //   if (selectedSlot !== null) {
+  //     prefillParams.append('return_slot_position', selectedSlot.toString());
+  //   }
+  //   const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/?${prefillParams.toString()}`;
+  //   window.location.href = adminUrl;
+  // };
 
   const handleDuplicateGrid = () => {
     const prefillParams = new URLSearchParams();
@@ -196,9 +196,10 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         title={
           <Box className={styles.cardHeader}>
             <Typography variant="h6" component="h2">
-              Grid Name: Puck-{selectedPuck.name}/Slot-{selectedSlot}/Grid-{formData.gridName}
+              Grid Name: Puck-CZII-0{selectedPuck.name}/{selectedGridBoxName}/Position-{formData.positionInBox}/Grid-
+              {formData.gridName}
             </Typography>
-            <IconButton
+            {/* <IconButton
               onClick={handleDeleteGrid}
               sx={{
                 '&:hover': {
@@ -207,7 +208,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               }}
             >
               <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
-            </IconButton>
+            </IconButton> */}
           </Box>
         }
       />

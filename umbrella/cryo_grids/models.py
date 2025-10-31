@@ -60,7 +60,7 @@ class Puck(models.Model):
         return 'Puck %s in color %s' % (self.name, self.get_color_display())
 
 class CryoGridBox(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100, unique=False)
     color = models.CharField(max_length=40, choices=GRID_BOX_COLORS, default='FFFFFF')
     # numbering format with notch at 12-oclock.
     numbering = models.CharField(max_length=20, choices=GRID_BOX_NUMBERING, default='ucw',help_text="numbering system with notch at 12-o'clock orientation")
@@ -69,7 +69,7 @@ class CryoGridBox(models.Model):
     max_grids = models.PositiveSmallIntegerField(default=4, help_text="Maximum number of grids fit in the box")
 
     class Meta:
-        unique_together = [["puck","position_in_puck"]]
+        unique_together = [["puck","position_in_puck","name"]]
 
     def __str__(self):
         # return 'Cryo grid box %s in color %s and %s numbering' % (self.name, self.get_color_display(), self.get_numbering_display())

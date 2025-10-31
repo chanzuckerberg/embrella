@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
@@ -7,8 +7,10 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from rest_framework.decorators import action
 from django.db.models.functions import Lower 
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from cryo_grids.models import Puck, CryoGridBox, CryoGrid
-from .serializers import UserSerializer, PuckSerializer, GridDetailsSerializer
+from .serializers import UserSerializer, PuckSerializer, GridDetailsSerializer, CryoGridBoxSerializer
 from umbrella.choices import (CANE_COLORS, PUCK_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING)
 
 
@@ -43,20 +45,23 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later"
             }, status=500)
 
-class PuckViewSet(viewsets.ReadOnlyModelViewSet):
+class PuckViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Puck model - ReadOnly with pagination and user filtering
     """
+    permission_classes = []  # Allow unauthenticated access
+    authentication_classes = []  # Disable authentication
     serializer_class = PuckSerializer
     pagination_class = PageNumberPagination
     
     def get_queryset(self):
         """
-        Filter pucks by user_id if provided in query params
+        Filter pucks by user_id or cane_id if provided in query params
         If no user_id, return all pucks
         """
         queryset = Puck.objects.select_related('user', 'cane').order_by('name')
         user_id = self.request.query_params.get('user_id', None)
+        cane_id = self.request.query_params.get('cane_id', None)
         
         if user_id is not None:
             try:
@@ -66,7 +71,14 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
                     raise ValidationError(f"User with ID {user_id} does not exist")
                 queryset = queryset.filter(user_id=user_id)
             except ValueError:
-                raise ValidationError("Invalid user_id format. Must be a number.")
+                 raise ValidationError("Invalid user_id format. Must be a number.")
+
+        if cane_id is not None:
+            try:
+                cane_id = int(cane_id)
+                queryset = queryset.filter(cane_id=cane_id)
+            except ValueError:
+                raise ValidationError("Invalid cane_id format. Must be a number.")
         
         return queryset
     
@@ -99,6 +111,31 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
                 "error": "Internal server error occurred while fetching pucks",
                 "detail": str(e) if settings.DEBUG else "Please try again later"
             }, status=500)
+    
+    @method_decorator(csrf_exempt)
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new puck with validation
+        """
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            
+            return Response({
+                'message': 'Puck created successfully',
+                'puck': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({
+                'error': 'Validation error',
+                'detail': e.detail
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while creating puck",
+                "detail": str(e) if settings.DEBUG else "Please try again later"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         """
         pk stands for primary key - puck_id, None means it's optional
@@ -295,6 +332,69 @@ class PuckViewSet(viewsets.ReadOnlyModelViewSet):
                 "error": "Failed to fetch grid details",
                 "detail": str(e) if settings.DEBUG else "Please try again later"
             }, status=500)
+
+    @method_decorator(csrf_exempt)
+    @action(detail=True, methods=['post'], url_path='grid-box')
+    def create_grid_box(self, request, pk=None):
+        """
+        Create a new grid box within this puck
+        URL: POST /api/list/pucks/{puck_id}/grid-box/
+        Response:
+        {
+            "message": "Grid box created successfully",
+            "grid_box": {
+                "id": 1,
+                "name": "box1",
+                "color": "FFFFFF",
+                "color_display": "White",
+                "numbering": "ucw",
+                "numbering_display": "Up Clockwise",
+                "position_in_puck": 1,
+                "max_grids": 4,
+                "puck": 1,
+                "puck_user": "user@example.com"
+            }
+        }
+        """
+        try:
+            puck = self.get_object()
+            
+            # Extract puck_name from request if provided (for validation)
+            puck_name = request.data.get('puck_name', None)
+
+            if puck_name and puck.name != puck_name:
+                return Response({
+                    'error': 'Puck name mismatch',
+                    'detail': f'Expected puck "{puck.name}" but got "{puck_name}"'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Add puck_id to the request data
+            data = request.data.copy()
+            data['puck'] = puck.id
+            
+            # Remove puck_name from data as it's not a model field
+            if 'puck_name' in data:
+                del data['puck_name']
+            
+            # Create serializer with the data
+            serializer = CryoGridBoxSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            grid_box = serializer.save()
+                
+            return Response({
+                'message': 'Grid box created successfully',
+                'grid_box': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({
+                'error': 'Validation error',
+                'detail': e.detail
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while creating grid box",
+                "detail": str(e) if settings.DEBUG else "Please try again later"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class GridLoggingChoicesViewSet(viewsets.ViewSet):
     """
