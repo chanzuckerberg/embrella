@@ -21,7 +21,12 @@ Note: the conda environment installs its own version of nodejs. It installs `uv`
 
 To update the environment after modifying environment.yml you can use `just condasync`.
 
+## Set up your env
+Next you'll want to set up your [environment variables](./environments.md).
+
 ## Backend/frontend package installation
+You'll need to have `mysql-client` installed (if you're using a mac, `brew install mysql-client`, and set up the LDFLAGS and CFLAGS so mysql.h is accessible for python to compile support for.)
+
 The python and nodejs packages can be installed with these helpers. (Note, these check whether the contents of `requirements.txt` or `package.json` have changed, and only do the slow updates if so.)
 ```bash
 (umbrella) $ just updatebackenddeps
@@ -36,7 +41,6 @@ The python and nodejs packages can be installed with these helpers. (Note, these
 (umbrella) $ just populatedbexamples
 ```
 
-## Environment/Running
-Next you'll want to set up your [environment variables](./environments.md).
+## Running
 
 Then check out the guide to [running/deploying](./deployment.md) the server.
