@@ -265,6 +265,7 @@ mirrorproddbtostaging: initenv
 
     LATEST=$(ssh svc.czii.umbrella@umbrella "cd /srv/dbbackups && ls -t backup_*.sql | head -n 1")
     scp svc.czii.umbrella@umbrella:/srv/dbbackups/$LATEST svc.czii.umbrella@umbrella-dev:/srv/$LATEST
+    cat ./.env.staging | grep MYSQL > ./.scratch/.dbenv
     scp ./.scratch/.dbenv svc.czii.umbrella@umbrella-dev:/srv/dbbackups/.dbenv
 
     echo "Importing database from snapshot $LATEST..."

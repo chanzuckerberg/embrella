@@ -18,7 +18,7 @@ The following `just` helpers are provided to help instantiate/synchronize your `
 ### Creating from empty template
 To create a new `.env` file, you can use:
 ```bash
-(umbrella) $ just initdev
+(umbrella) $ just initenv
 ```
 
 This copies `helpers/.env_template` to `.env` if `.env` is not present. Open up `.env`, and fill in the values for each key.
@@ -35,7 +35,7 @@ Additionally, you'll need to be granted read access to the repo's github variabl
 
 #### Retrieving an env:  
 ```bash
-(umbrella) $ just restoreencryptedenvjust restoreencryptedenv staging
+(umbrella) $ just restoreencryptedenv development
 You are about to overwrite the local file ./.env with contents from remote environment for staging...
 Are you sure? ([y]es or [N]o): y
 Are you *really* sure? ([y]es or [N]o): y
