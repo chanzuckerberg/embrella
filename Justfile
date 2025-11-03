@@ -196,6 +196,7 @@ populatedbexamples: initenv
     uv run ./manage.py runscript 003_init_multigrid
     uv run ./manage.py runscript 004_init_processes
     uv run ./manage.py runscript 005_init_pytom_pick
+    uv run ./manage.py runscript 006_init_copick_octopioctopi
     popd
 
 #############################################
