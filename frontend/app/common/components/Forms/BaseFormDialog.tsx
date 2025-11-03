@@ -2,13 +2,14 @@
 
 import React from 'react';
 import { Box, CircularProgress } from '@mui/material';
-import { Button, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
+import { Button, Dialog, DialogContent, DialogTitle, Icon } from '@czi-sds/components';
+import { DialogTitle as MuiDialogTitle, IconButton, Typography } from '@mui/material';
 
 interface BaseFormDialogProps {
   open: boolean;
   onClose: () => void;
-  // title: string | React.ReactNode;
   title: string;
+  titleExtra?: React.ReactNode;
   subtitle?: string;
   children: React.ReactNode;
   onSave: () => void;
@@ -21,6 +22,7 @@ export const BaseFormDialog: React.FC<BaseFormDialogProps> = ({
   open,
   onClose,
   title,
+  titleExtra,
   subtitle,
   children,
   onSave,
@@ -30,7 +32,36 @@ export const BaseFormDialog: React.FC<BaseFormDialogProps> = ({
 }) => {
   return (
     <Dialog onClose={onClose} open={open} sdsSize="xs">
-      <DialogTitle title={title} subtitle={subtitle} onClose={onClose} />
+      {titleExtra ? (
+        <MuiDialogTitle
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            p: 3,
+            pb: 2,
+          }}
+        >
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h3" component="div" sx={{ fontWeight: 600 }}>
+                {title}
+              </Typography>
+              {titleExtra}
+            </Box>
+            {Boolean(subtitle) && (
+              <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                {subtitle}
+              </Typography>
+            )}
+          </Box>
+          <IconButton onClick={onClose} size="small" sx={{ mt: -0.5, mr: -1 }}>
+            <Icon sdsIcon="XMark" sdsSize="l" color="gray" />
+          </IconButton>
+        </MuiDialogTitle>
+      ) : (
+        <DialogTitle title={title} subtitle={subtitle} onClose={onClose} />
+      )}
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2, pb: 2, mt: 2 }}>
           {children}
