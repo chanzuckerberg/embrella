@@ -785,8 +785,8 @@ def _save_copied_grid(old_grid, box, position, number_of_copies=1):
         new_grid.grid_box = box
         new_grid.position_in_box = position + i  # Increment position for each copy
         new_grid.copy_number = copy_number
-        new_grid.create_on = datetime.date.today()
-        new_grid.updated_on = datetime.date.today()
+        new_grid.create_on = datetime.today()
+        new_grid.updated_on = datetime.today()
         new_grid.save()
         created_grids.append(new_grid)
     
