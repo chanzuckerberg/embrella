@@ -185,9 +185,9 @@ class CaneSerializer(serializers.ModelSerializer):
             'pucks_count',
         ]
     
-        def get_pucks_count(self, obj):
-            """Get count of pucks in this cane"""
-            return obj.puck_set.count()
+    def get_pucks_count(self, obj):
+        """Get count of pucks in this cane"""
+        return obj.puck_set.count()
         
 class PuckDetailSerializer(serializers.ModelSerializer):
     color_display = serializers.CharField(source='get_color_display', read_only=True)

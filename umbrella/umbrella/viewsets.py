@@ -1,4 +1,4 @@
-from cryo_grids.models import CryoGrid, CryoGridBox, Puck
+from cryo_grids.models import CryoGrid, CryoGridBox, Puck, Cane
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models.functions import Lower
@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
 
-from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer
+from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -429,4 +429,19 @@ class GridLoggingChoicesViewSet(viewsets.ViewSet):
                 {'value': code, 'label': name}
                 for code, name in GRID_CASSETTE_NUMBERING
             ],
+        })
+class CaneViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for Cane model - ReadOnly
+    """
+    queryset = Cane.objects.all().order_by('id')
+    serializer_class = CaneSerializer
+    permission_classes = []
+    authentication_classes = []
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'canes': serializer.data,
         })
