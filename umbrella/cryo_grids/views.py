@@ -948,6 +948,30 @@ def update_grid_trashed_status(request, grid_id):
             'error': str(e),
         }, status=500)
 
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def update_grid_clipped_status(request, grid_id):
+    try:
+        grid = CryoGrid.objects.get(id=grid_id)
+        data = json.loads(request.body)
+        clipped_status = data.get('clipped', False)
+        
+        grid.clipped = clipped_status
+        grid.save()
+        
+        grid.refresh_from_db()
+        return JsonResponse({
+            'success': True,
+            'message': f'Grid {"clipped" if clipped_status else "unclipped"} successfully',
+            'clipped': grid.clipped
+        })
+    except CryoGrid.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Grid not found'}, status=404)
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 @require_http_methods(["GET"])
 def get_available_positions(request, object_id):
     """AJAX endpoint to get available positions for a selected box."""
