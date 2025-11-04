@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { GridDetailsResponse } from '@app/common/types/gridLogging/gridDetails';
@@ -66,6 +66,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     gridId: selectedGridId || 0,
   });
   const [trashedValue, setLocalTrashed] = useState<boolean>(false);
+  const [clippedValue, setLocalClipped] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (gridDetails?.clipped !== undefined) {
+      setLocalClipped(gridDetails.clipped);
+    }
+  }, [gridDetails?.clipped]);
   // Early return if no selection
   if (!selectedPuck || !selectedSlot || !selectedGrid) {
     return null;
@@ -78,6 +85,35 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   // const handleSave = () => {
   //   console.log('Save grid details:', formData);
   // };
+  const handleClippedGrid = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedGridId) return;
+  
+    const newClippedStatus = event.target.checked;
+    setLocalClipped(newClippedStatus);
+  
+    try {
+      const response = await fetch(`${DJANGO_URL}/cryo_grids/update-grid-clipped/${selectedGridId}/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          clipped: newClippedStatus,
+        }),
+      });
+  
+      if (response.ok) {
+        const result = await response.json();
+        // window.location.reload();
+        console.log('Clipped status updated successfully:', result);
+      } else {
+        setLocalClipped(!newClippedStatus); 
+      }
+    } catch (error) {
+      setLocalClipped(!newClippedStatus); 
+    }
+  };
 
   const handleTrashedGrid = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedGridId) return;
@@ -265,7 +301,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 rows={1}
                 sx={disabledTextFieldStyles}
               />
-              {/* {/* <FormControlLabel control={<Checkbox checked={formData.clipped} color="primary" />} label="Clipped" /> */}
+              <FormControlLabel control={<Checkbox checked={clippedValue} onChange={handleClippedGrid} color="primary" />} label="Clipped" /> 
               <FormControlLabel
                 control={<Checkbox checked={trashedValue} onChange={handleTrashedGrid} color="primary" />}
                 label="Trashed"
