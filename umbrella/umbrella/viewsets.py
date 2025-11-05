@@ -1,4 +1,4 @@
-from cryo_grids.models import CryoGrid, CryoGridBox, Puck, Cane
+from cryo_grids.models import CryoGrid, CryoGridBox, Puck, Cane, Specimen
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models.functions import Lower
@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
 
-from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer
+from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer, SpecimenSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -445,3 +445,60 @@ class CaneViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({
             'canes': serializer.data,
         })
+
+class SpecimenViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for Specimen model - ReadOnly
+    Provides list and retrieve operations for specimens
+    """
+    queryset = Specimen.objects.prefetch_related('samples').order_by('-id')
+    serializer_class = SpecimenSerializer
+    permission_classes = []
+    authentication_classes = []
+    
+    def list(self, request, *args, **kwargs):
+        """
+        List all specimens with their samples
+        URL: /api/list/specimens/
+        """
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            total_count = queryset.count()
+            
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                response_data = self.get_paginated_response(serializer.data)
+                response_data.data['total_specimens_count'] = total_count
+                return response_data
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'total_specimens_count': total_count,
+                'specimens': serializer.data,
+            })
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching specimens",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=500)
+    
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Get detailed information about a specific specimen
+        URL: /api/list/specimens/{specimen_id}/
+        """
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except Specimen.DoesNotExist:
+            return Response({
+                "error": "Specimen not found",
+            }, status=404)
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching specimen",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=500)
