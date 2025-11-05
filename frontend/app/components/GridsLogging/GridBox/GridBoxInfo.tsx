@@ -20,7 +20,6 @@ interface GridBoxInfoProps {
   selectedSlot: number | null;
   onGridSelect: (gridPosition: number, gridId: number) => void;
   selectedUser?: UsersList | null;
-  onGridBoxNameLoaded?: (name: string) => void;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -39,7 +38,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   selectedSlot,
   onGridSelect,
   selectedUser,
-  onGridBoxNameLoaded,
 }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -50,12 +48,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     selectedPuck?.id,
     selectedSlot || undefined
   );
-  useEffect(() => {
-    if (gridBoxData?.grid_box?.name && onGridBoxNameLoaded) {
-      onGridBoxNameLoaded(gridBoxData.grid_box.name);
-    }
-  }, [gridBoxData?.grid_box?.name, onGridBoxNameLoaded]);
-
+ 
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {
     return null;
@@ -112,7 +105,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
           title={
             <Box className={styles.cardHeader}>
               <Typography variant="h6" component="h2">
-                GridBox Name: Puck-CZII-0{selectedPuck.name}/Slot-{formData.positionInPuck}/{formData.name}
+                GridBox Name: Puck-CZII-0{selectedPuck.name}/Slot-{formData.positionInPuck}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Button

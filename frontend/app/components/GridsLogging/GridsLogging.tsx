@@ -21,7 +21,6 @@ export const GridsLogging: React.FC = () => {
   const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
-  const [selectedGridBoxName, setSelectedGridBoxName] = useState<string | null>(null);
   const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
   const [isAddPuckDialogOpen, setIsAddPuckDialogOpen] = useState(false);
   const { users } = useGridLoggingUserList();
@@ -106,7 +105,6 @@ export const GridsLogging: React.FC = () => {
 
   const handleSlotSelect = (slotPosition: number, _gridBoxId?: number) => {
     setSelectedSlot(slotPosition);
-    setSelectedGridBoxName(null);
     // Reset grid selection when slot changes
     setSelectedGrid(null);
     setSelectedGridId(null);
@@ -186,7 +184,6 @@ export const GridsLogging: React.FC = () => {
             selectedSlot={selectedSlot}
             onGridSelect={handleGridSelect}
             selectedUser={selectedUser}
-            onGridBoxNameLoaded={setSelectedGridBoxName}
           />
           {!!selectedGrid && (
             <GridDetails
@@ -195,7 +192,6 @@ export const GridsLogging: React.FC = () => {
               selectedGrid={selectedGrid}
               selectedGridId={selectedGridId}
               selectedUser={selectedUser}
-              selectedGridBoxName={selectedGridBoxName}
             />
           )}
         </Box>
