@@ -1,4 +1,4 @@
-from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Puck
+from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Puck, Specimen, Sample
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
@@ -312,3 +312,32 @@ class GridDetailsSerializer(serializers.ModelSerializer):
             "blot_distance": obj.blot_distance,
         }
 
+
+class SpecimenSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Specimen model with related samples
+    """
+    samples = SampleSerializer(many=True, read_only=True)
+    notes_page_url = serializers.SerializerMethodField()
+    display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Specimen
+        fields = [
+            'id',
+            'samples',
+            'notes',
+            'notes_page',
+            'notes_page_url',
+            'display_name',
+        ]
+    
+    def get_notes_page_url(self, obj):
+        """Get the URL of the notes page if it exists"""
+        if obj.notes_page:
+            return obj.notes_page.url if hasattr(obj.notes_page, 'url') else None
+        return None
+    
+    def get_display_name(self, obj):
+        """Get human-readable display name"""
+        return str(obj)

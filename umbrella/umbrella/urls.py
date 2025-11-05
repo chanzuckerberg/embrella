@@ -36,7 +36,7 @@ from umbrella.api_internal import (
 )
 from umbrella.ping import ping
 from umbrella.user import get_user_info
-from umbrella.viewsets import GridLoggingChoicesViewSet, PuckViewSet, UserViewSet, CaneViewSet
+from umbrella.viewsets import GridLoggingChoicesViewSet, PuckViewSet, UserViewSet, CaneViewSet, SpecimenViewSet
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
@@ -44,6 +44,7 @@ router.register(r'api/list/all/users', UserViewSet, basename='user')
 router.register(r'api/list/pucks', PuckViewSet, basename='puck')
 router.register(r'api/grid-logging/choices', GridLoggingChoicesViewSet, basename='grid-logging-choices')
 router.register(r'api/list/canes', CaneViewSet, basename='cane')
+router.register(r'api/list/specimens', SpecimenViewSet, basename='specimen')
 
 import mimetypes
 
