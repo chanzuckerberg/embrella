@@ -12,6 +12,7 @@ import { AddSpecimenDialog } from './AddSpecimenDialog';
 import { AddProjectDialog } from '@app/components/GridsLogging/Grid/AddProjectDialog';
 import { AddFreezingSessionDialog } from '@app/components/GridsLogging/Grid/AddFreezingSessionDialog';
 import { useProjectsList } from '@app/common/hooks/useGridLogging/useProjectList';
+import { useSpecimenList } from '@app/common/hooks/useGridLogging/useSpecimenList';
 
 interface AddGridProps {
   open: boolean;
@@ -78,7 +79,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
 
   const { isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { users, isSuccess: usersLoaded } = useGridLoggingUserList();
-
+  const { transformedSpecimens, isSuccess: specimensLoaded } = useSpecimenList();
   const projectLeaders =
     users?.users?.map((user) => ({
       id: user.id.toString(),
@@ -201,7 +202,11 @@ export const AddGrid: React.FC<AddGridProps> = ({
             onChange={(value) => handleInputChange('specimen', value)}
             onAdd={() => setAddSpecimenDialogOpen(true)}
             required
-            disabled={!choicesLoaded}
+            disabled={!choicesLoaded || !specimensLoaded}
+            options={transformedSpecimens.map((specimen) => ({
+              value: specimen.id.toString(),
+              label: specimen.display_name,
+            }))}
             // options={choices?.specimens || []}
           />
           <FormFieldWithAdd
