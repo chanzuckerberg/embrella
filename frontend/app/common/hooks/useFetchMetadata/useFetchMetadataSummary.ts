@@ -34,6 +34,9 @@ export const useFetchMetadataSummary = (
       try {
         const response = await fetch(
           `${DJANGO_URL}${API.METADATA_SUMMARY}?session_name=${sessionName}&run_number=${runNumber}`
+          , {
+                    credentials: 'include',
+                    }
         );
 
         const responseText = await response.text();
