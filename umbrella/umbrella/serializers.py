@@ -312,6 +312,17 @@ class GridDetailsSerializer(serializers.ModelSerializer):
             "blot_distance": obj.blot_distance,
         }
 
+class SampleSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Sample model
+    """
+    class Meta:
+        model = Sample
+        fields = [
+            'id',
+            'name',
+            'ontology',
+        ]
 
 class SpecimenSerializer(serializers.ModelSerializer):
     """

@@ -1,4 +1,4 @@
-from cryo_grids.models import CryoGrid, CryoGridBox, Puck, Cane, Specimen
+from cryo_grids.models import CryoGrid, CryoGridBox, Puck, Cane, Specimen, Sample
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models.functions import Lower
@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
 
-from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer, SpecimenSerializer
+from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer, SpecimenSerializer, SampleSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -445,6 +445,43 @@ class CaneViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({
             'canes': serializer.data,
         })
+
+class SampleViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for Sample model - ReadOnly
+    """
+    queryset = Sample.objects.all().order_by('name')
+    serializer_class = SampleSerializer
+    permission_classes = []
+    authentication_classes = []
+    
+    def list(self, request, *args, **kwargs):
+        """
+        List all samples
+        URL: /api/list/samples/
+        """
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            total_count = queryset.count()
+            
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                response_data = self.get_paginated_response(serializer.data)
+                response_data.data['total_samples_count'] = total_count
+                return response_data
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'total_samples_count': total_count,
+                'samples': serializer.data,
+            })
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching samples",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=500)
 
 class SpecimenViewSet(viewsets.ReadOnlyModelViewSet):
     """
