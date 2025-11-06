@@ -6,6 +6,7 @@ import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { AddSampleDialog } from './AddSampleDialog';
+import { useSampleList } from '@app/common/hooks/useGridLogging/useSampleList';
 
 interface SpecimenFormData {
   sampleName: string;
@@ -27,6 +28,7 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
   });
 
   const [addSampleDialogOpen, setAddSampleDialogOpen] = useState(false);
+  const { transformedSamples, isSuccess: samplesLoaded } = useSampleList();
 
   const handleInputChange = (field: keyof SpecimenFormData, value: string) => {
     setFormData((prev) => ({
@@ -84,7 +86,10 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
             onChange={(value) => handleInputChange('sampleName', value)}
             onAdd={() => setAddSampleDialogOpen(true)}
             required
-            // options={existingSamples}
+            options={transformedSamples.map((sample) => ({
+              value: sample.id.toString(),
+              label: sample.label, 
+            }))}
             placeholder="Select or add sample name"
           />
 
