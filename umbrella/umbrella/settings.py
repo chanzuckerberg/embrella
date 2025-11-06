@@ -56,6 +56,7 @@ LOGIN_REQUIRED_IGNORE_PATHS = [
     r"^/google_sso/*",
     r"^/static/*",
     r"^/login/*",
+    r"^/api/*",
 ]
 # LOGOUT_REDIRECT_URL = '/'
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
