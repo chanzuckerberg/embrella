@@ -1,4 +1,4 @@
-from cryo_grids.models import CryoGrid, CryoGridBox, Puck, Cane, Specimen, Sample
+from cryo_grids.models import CryoGrid, CryoGridBox, Puck, Cane, Specimen, Sample, PlungeFreezingSession
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models.functions import Lower
@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
 
-from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer, SpecimenSerializer, SampleSerializer
+from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer, SpecimenSerializer, SampleSerializer, FreezingSessionSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -537,5 +537,42 @@ class SpecimenViewSet(viewsets.ReadOnlyModelViewSet):
         except Exception as e:
             return Response({
                 "error": "Internal server error occurred while fetching specimen",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=500)
+
+class FreezingSessionViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for PlungeFreezingSession model - ReadOnly
+    """
+    queryset = PlungeFreezingSession.objects.select_related('user', 'device').order_by('-datetime')
+    serializer_class = FreezingSessionSerializer
+    permission_classes = []
+    authentication_classes = []
+    
+    def list(self, request, *args, **kwargs):
+        """
+        List all freezing sessions
+        URL: /api/list/freezing-sessions/
+        """
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            total_count = queryset.count()
+            
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                response_data = self.get_paginated_response(serializer.data)
+                response_data.data['total_freezing_sessions_count'] = total_count
+                return response_data
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'total_freezing_sessions_count': total_count,
+                'freezing_sessions': serializer.data,
+            })
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching freezing sessions",
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)

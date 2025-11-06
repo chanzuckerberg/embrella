@@ -1,4 +1,4 @@
-from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Puck, Specimen, Sample
+from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Puck, Specimen, Sample, PlungeFreezingSession
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
@@ -216,8 +216,6 @@ class PuckDetailSerializer(serializers.ModelSerializer):
             """Get count of grid boxes in this puck"""
             return obj.cryogridbox_set.count()
 
-
-
 class GridDetailsSerializer(serializers.ModelSerializer):
     """
     Serializer for viewing grid details - matches your UI form
@@ -351,4 +349,31 @@ class SpecimenSerializer(serializers.ModelSerializer):
     
     def get_display_name(self, obj):
         """Get human-readable display name"""
+        return str(obj)
+
+class FreezingSessionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for PlungeFreezingSession model
+    """
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    device_name = serializers.CharField(source='device.name', read_only=True)
+    display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = PlungeFreezingSession
+        fields = [
+            'id',
+            'datetime',
+            'user',
+            'user_name',
+            'device',
+            'device_name',
+            'device_temperature',
+            'humidity',
+            'notes_page',
+            'display_name',
+        ]
+    
+    def get_display_name(self, obj):
+        """Get human-readable display name matching the __str__ method"""
         return str(obj)
