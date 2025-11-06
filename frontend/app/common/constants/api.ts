@@ -38,6 +38,8 @@ export enum API {
   GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',
   GRID_LOGGING_CANES = '/api/list/canes/',
   GRID_LOGGING_SPECIMENS = '/api/list/specimens/',
+  GRID_LOGGING_SAMPLES = '/api/list/samples/',
+
 
   // Projects
   PROJECTS_LIST = '/projects/project_list/',
