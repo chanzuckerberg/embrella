@@ -41,7 +41,7 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedP
 
   return (
     <Dialog onClose={onClose} open={open} sdsSize="xs">
-      <DialogTitle title={`Delete Puck ${selectedPuck.name}?`} onClose={onClose} />
+      <DialogTitle title={`Delete Puck CZII-0${selectedPuck.name}?`} onClose={onClose} />
       <DialogContent>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3 }}>
           <Box
@@ -62,7 +62,7 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedP
             {hasFilledGridBoxes ? (
               <>
                 <Typography variant="h6" color="error" sx={{ mb: 1 }}>
-                  Puck {selectedPuck.name} has filled grid boxes!
+                  Puck CZII-0 {selectedPuck.name} has filled grid boxes!
                 </Typography>
                 <Typography variant="caption" sx={{ mb: 2 }}>
                   if proceeding with deleting, all objects in the puck will be trashed
