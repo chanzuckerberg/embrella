@@ -39,6 +39,7 @@ export enum API {
   GRID_LOGGING_CANES = '/api/list/canes/',
   GRID_LOGGING_SPECIMENS = '/api/list/specimens/',
   GRID_LOGGING_SAMPLES = '/api/list/samples/',
+  GRID_LOGGING_FREEZING_SESSIONS = '/api/list/freezing-sessions/',
 
 
   // Projects
