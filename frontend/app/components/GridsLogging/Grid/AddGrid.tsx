@@ -13,6 +13,7 @@ import { AddProjectDialog } from '@app/components/GridsLogging/Grid/AddProjectDi
 import { AddFreezingSessionDialog } from '@app/components/GridsLogging/Grid/AddFreezingSessionDialog';
 import { useProjectsList } from '@app/common/hooks/useGridLogging/useProjectList';
 import { useSpecimenList } from '@app/common/hooks/useGridLogging/useSpecimenList';
+import { useFreezingSessionList } from '@app/common/hooks/useGridLogging/useFreezingSessionList';
 
 interface AddGridProps {
   open: boolean;
@@ -23,6 +24,7 @@ interface AddGridProps {
   positionInBox?: number;
   puckId?: number;
   puckName?: string;
+  onGridCreated?: () => void;
 }
 
 export const AddGrid: React.FC<AddGridProps> = ({
@@ -32,6 +34,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   gridBoxId,
   gridBoxName,
   positionInBox,
+  onGridCreated,
 }) => {
   // Fetch projects list
   const { projects } = useProjectsList();
@@ -80,6 +83,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { users, isSuccess: usersLoaded } = useGridLoggingUserList();
   const { transformedSpecimens, isSuccess: specimensLoaded } = useSpecimenList();
+  const { transformedFreezingSessions } = useFreezingSessionList();
   const projectLeaders =
     users?.users?.map((user) => ({
       id: user.id.toString(),
@@ -191,7 +195,11 @@ export const AddGrid: React.FC<AddGridProps> = ({
             onChange={(value) => handleInputChange('freezingSession', value)}
             onAdd={() => setAddFreezingSessionDialogOpen(true)}
             disabled={!choicesLoaded}
-            // options={choices?.freezing_sessions || []}
+            options={transformedFreezingSessions.map((freezingSession) => ({
+              value: freezingSession.id.toString(),
+              label: freezingSession.display_name,
+            }))}
+          
           />
         </Box>
 
@@ -207,7 +215,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
               value: specimen.id.toString(),
               label: specimen.display_name,
             }))}
-            // options={choices?.specimens || []}
           />
           <FormFieldWithAdd
             label="Project"
