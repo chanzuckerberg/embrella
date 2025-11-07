@@ -164,6 +164,85 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
 
         return data
 
+class CryoGridSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating and updating CryoGrid
+    """
+    grid_box_name = serializers.CharField(source='grid_box.name', read_only=True)
+    
+    class Meta:
+        model = CryoGrid
+        fields = [
+            'id',
+            'name',
+            'user',
+            'freezing_session',
+            'specimen',
+            'intended_project',
+            'grid_box',
+            'grid_box_name',
+            'position_in_box',
+            'notes',
+            'clipped',
+            'blot_time',
+            'blot_force',
+            'blot_distance',
+            'copy_number',
+            'trashed',
+        ]
+        read_only_fields = ['id', 'trashed', 'grid_box_name']
+        validators = []  # Disable default validators to use custom validation
+        
+    def validate(self, data):
+        """
+        Custom validation for grid creation/update
+        """
+        grid_box = data.get('grid_box')
+        position_in_box = data.get('position_in_box')
+        name = data.get('name')
+        freezing_session = data.get('freezing_session')
+        specimen = data.get('specimen')
+        copy_number = data.get('copy_number', 1)
+        
+        instance = self.instance
+        
+        # Validate position is within grid box capacity
+        if grid_box and position_in_box:
+            if position_in_box > grid_box.max_grids:
+                raise serializers.ValidationError({
+                    'position_in_box': f'Position {position_in_box} exceeds maximum grids ({grid_box.max_grids}) for this box.',
+                })
+            
+            # Check if position is already occupied
+            position_query = CryoGrid.objects.filter(
+                grid_box=grid_box,
+                position_in_box=position_in_box,
+                trashed=False,
+            )
+            if instance:
+                position_query = position_query.exclude(pk=instance.pk)
+            if position_query.exists():
+                existing_grid = position_query.first()
+                raise serializers.ValidationError({
+                    'position_in_box': f'Position {position_in_box} is already occupied by grid "{existing_grid.name}".',
+                })
+        
+        # Validate unique constraint on name, freezing_session, specimen, copy_number
+        if name and specimen:
+            unique_query = CryoGrid.objects.filter(
+                name=name,
+                freezing_session=freezing_session,
+                specimen=specimen,
+                copy_number=copy_number,
+            )
+            if instance:
+                unique_query = unique_query.exclude(pk=instance.pk)
+            if unique_query.exists():
+                raise serializers.ValidationError({
+                    'name': f'A grid with name "{name}", this specimen, freezing session, and copy number already exists.',
+                })
+        
+        return data
 
 class CaneSerializer(serializers.ModelSerializer):
     """

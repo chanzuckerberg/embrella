@@ -36,7 +36,7 @@ from umbrella.api_internal import (
 )
 from umbrella.ping import ping
 from umbrella.user import get_user_info
-from umbrella.viewsets import GridLoggingChoicesViewSet, PuckViewSet, UserViewSet, CaneViewSet, SpecimenViewSet, SampleViewSet, FreezingSessionViewSet
+from umbrella.viewsets import GridLoggingChoicesViewSet, PuckViewSet, UserViewSet, CaneViewSet, SpecimenViewSet, SampleViewSet, FreezingSessionViewSet, CryoGridViewSet
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
@@ -47,7 +47,7 @@ router.register(r'api/list/canes', CaneViewSet, basename='cane')
 router.register(r'api/list/specimens', SpecimenViewSet, basename='specimen')
 router.register(r'api/list/samples', SampleViewSet, basename='sample')
 router.register(r'api/list/freezing-sessions', FreezingSessionViewSet, basename='freezing-session')
-
+router.register(r'api/list/grids', CryoGridViewSet, basename='grid')
 import mimetypes
 
 from django.contrib.auth.decorators import login_required

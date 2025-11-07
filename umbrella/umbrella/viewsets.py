@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
 
-from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer, SpecimenSerializer, SampleSerializer, FreezingSessionSerializer
+from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer, SpecimenSerializer, SampleSerializer, FreezingSessionSerializer, CryoGridSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -576,3 +576,83 @@ class FreezingSessionViewSet(viewsets.ReadOnlyModelViewSet):
                 "error": "Internal server error occurred while fetching freezing sessions",
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)
+
+class CryoGridViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for CryoGrid model
+    """
+    queryset = CryoGrid.objects.filter(trashed=False).select_related(
+        'user', 'grid_box', 'specimen', 'freezing_session', 'intended_project'
+    ).order_by('-id')
+    serializer_class = CryoGridSerializer
+    permission_classes = []
+    authentication_classes = []
+    
+    @method_decorator(csrf_exempt)
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new grid
+        URL: POST /api/list/grids/
+        
+        Request Body:
+        {
+            "name": "Grid1",
+            "user": 1,
+            "specimen": 5,
+            "intended_project": 3,
+            "grid_box": 10,  // grid box ID
+            "position_in_box": 1,
+            "freezing_session": 2,  // optional
+            "notes": "Some notes",  // optional
+            "clipped": false,  // optional
+            "blot_time": 6.0,  // optional
+            "blot_force": 0.0,  // optional
+            "blot_distance": 0.0,  // optional
+            "copy_number": 1  // optional
+        }
+        """
+        try:
+            # Validate grid_box exists
+            grid_box_id = request.data.get('grid_box')
+            if not grid_box_id:
+                return Response({
+                    'error': 'grid_box is required',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                grid_box = CryoGridBox.objects.get(id=grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'error': 'Grid box not found',
+                    'detail': f'No grid box found with ID {grid_box_id}',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Prepare data with defaults
+            data = request.data.copy()
+            if 'copy_number' not in data:
+                data['copy_number'] = 1
+            if 'clipped' not in data:
+                data['clipped'] = False
+            if 'trashed' not in data:
+                data['trashed'] = False
+            
+            # Create serializer and validate
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            
+            return Response({
+                'message': 'Grid created successfully',
+                'grid': serializer.data,
+            }, status=status.HTTP_201_CREATED)
+            
+        except ValidationError as e:
+            return Response({
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while creating grid",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
