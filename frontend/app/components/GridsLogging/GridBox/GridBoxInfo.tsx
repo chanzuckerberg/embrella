@@ -44,7 +44,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
   const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
   const [moveGridBoxDialogOpen, setMoveGridBoxDialogOpen] = useState(false);
-  const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
+  const { gridBoxData, isSuccess: gridBoxSuccess, refetch } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
   );
@@ -81,6 +81,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     console.log('Move grid box');
   };
 
+  const handleGridCreated = () => {
+    // Refetch grid box data to update the graphic
+    refetch();
+    setAddGridDialogOpen(false);
+  };
   // const handleSave = () => {
   //   console.log('Save grid box:', formData);
   // };
@@ -236,6 +241,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         gridBoxId={gridBoxData?.grid_box?.grid_box_id}
         gridBoxName={gridBoxData?.grid_box?.name}
         positionInBox={selectedPositionInBox || undefined}
+        onGridCreated={handleGridCreated}
       />
 
       <MoveGridBox

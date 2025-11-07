@@ -12,10 +12,11 @@ export const useGridLoggingGridBoxDetail = (puckId?: number, positionInPuck?: nu
         )
       : '';
 
-  const { data, isSuccess } = useFetchData<GridBoxDetailResponse>(url);
+  const { data, isSuccess , refetch } = useFetchData<GridBoxDetailResponse>(url);
 
   return {
     gridBoxData: data,
     isSuccess,
+    refetch,
   };
 };
