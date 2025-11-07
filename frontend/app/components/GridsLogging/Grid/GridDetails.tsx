@@ -23,6 +23,7 @@ import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/us
 import styles from '../GridLogging.module.css';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { UsersList } from '@app/common/types/gridLogging/userList';
+import { MoveGrid } from '../Grid/MoveGrid';
 
 interface GridDetailsProps {
   selectedPuck: PucksList | null;
@@ -30,7 +31,6 @@ interface GridDetailsProps {
   selectedGrid: number | null;
   selectedGridId: number | null;
   selectedUser?: UsersList | null;
-  selectedGridBoxName: string | null;
 }
 
 const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
@@ -55,10 +55,10 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedGrid,
   selectedGridId,
   selectedUser,
-  selectedGridBoxName,
 }) => {
   // Fetch data
   const { isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
+  const [moveGridDialogOpen, setMoveGridDialogOpen] = useState(false);
 
   const { gridDetails, loading, error } = useGridLoggingGridDetails({
     puckId: selectedPuck?.id || 0,
@@ -78,9 +78,9 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     return null;
   }
 
-  // const handleMoveGrid = () => {
-  //   console.log('Move grid');
-  // };
+  const handleMoveGrid = () => {
+    setMoveGridDialogOpen(true);
+  };
 
   // const handleSave = () => {
   //   console.log('Save grid details:', formData);
@@ -105,7 +105,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   
       if (response.ok) {
         const result = await response.json();
-        // window.location.reload();
         console.log('Clipped status updated successfully:', result);
       } else {
         setLocalClipped(!newClippedStatus); 
@@ -227,13 +226,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   const formData = mapGridDetailsToFormData(gridDetails);
 
   return (
+    <>
     <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
       <CardHeader
         title={
           <Box className={styles.cardHeader}>
             <Typography variant="h6" component="h2">
-              Grid Name: Puck-CZII-0{selectedPuck.name}/{selectedGridBoxName}/Position-{formData.positionInBox}/Grid-
-              {formData.gridName}
+              Grid Name: Puck-CZII-0{selectedPuck.name}/Slot-{selectedSlot}/Position-{formData.positionInBox}
             </Typography>
             {/* <IconButton
               onClick={handleDeleteGrid}
@@ -357,7 +356,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              {/* <Button
+              <Button
                 sdsType="primary"
                 sdsStyle="rounded"
                 variant="contained"
@@ -366,7 +365,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 sx={{ minWidth: 120, fontStyle: 'italic' }}
               >
                 Move Grid
-              </Button> */}
+              </Button>
               <Button
                 sdsType="primary"
                 sdsStyle="rounded"
@@ -384,5 +383,15 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         </Box>
       </CardContent>
     </Card>
+     <MoveGrid
+     open={moveGridDialogOpen}
+     onClose={() => setMoveGridDialogOpen(false)}
+     currentPuck={selectedPuck}
+     currentSlot={selectedSlot}
+     currentPosition={selectedGrid}
+     gridDetails={gridDetails}
+     selectedUser={selectedUser}
+   />
+ </>
   );
 };
