@@ -5,10 +5,11 @@ import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornme
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
+import { useGridLoggingCaneList } from '@app/common/hooks/useGridLogging/useCaneList';
+import { useGridLoggingPucksByCane } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { useCreatePuck } from '@app/common/hooks/useGridLogging/useCreatePuck';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
-import { DJANGO_URL } from '@app/common/constants/api';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 
 interface AddPuckProps {
@@ -27,11 +28,16 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
     cane: caneId || '',
     positionInCane: '',
   });
-  // state for tracking filled positions
-  const [filledPositions, setFilledPositions] = useState<number[]>([]);
+
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
+  const { canes, isSuccess: canesLoaded } = useGridLoggingCaneList();
   const { createPuck, isCreating, error, clearError } = useCreatePuck();
+  
+  // fetch pucks for the selected cane 
+  const { pucks: pucksData } = useGridLoggingPucksByCane(
+    formData.cane ? Number(formData.cane) : undefined
+  );
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -56,32 +62,13 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
     }
   }, [selectedUser?.id]);
 
-  const fetchFilledPositions = async (caneId: number) => {
-    try {
-      const response = await fetch(`${DJANGO_URL}/api/list/pucks/`);
-      const data = await response.json();
-
-      // Filter pucks by cane
-      const filteredPucks = data.pucks?.filter((puck: PucksList) => puck.cane === caneId) || [];
-      const positions = filteredPucks.map((puck: PucksList) => puck.position_in_cane);
-
-      setFilledPositions(positions);
-    } catch (error) {
-      setFilledPositions([]);
-    }
-  };
-
-  // fetch positions when cane changes
+  // Reset position when cane changes
   useEffect(() => {
     if (formData.cane) {
-      fetchFilledPositions(Number(formData.cane));
-      // Reset position selection when cane changes
       setFormData((prev) => ({
         ...prev,
         positionInCane: '',
       }));
-    } else {
-      setFilledPositions([]);
     }
   }, [formData.cane]);
 
@@ -94,7 +81,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
 
   const handleSave = async () => {
     // Validate required fields
-    if (!formData.puckName) {
+    if (!formData.puckName || !formData.cane || !formData.positionInCane) {
       alert('Please fill in all required fields');
       return;
     }
@@ -108,18 +95,10 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
     });
 
     if (newPuck) {
+      onClose();
       if (onPuckCreated) {
         onPuckCreated(newPuck);
       }
-      // Reset form
-      setFormData({
-        user: selectedUser?.id || 0,
-        puckName: '',
-        color: 'red',
-        cane: caneId || '',
-        positionInCane: '',
-      });
-      onClose();
     }
   };
 
@@ -133,13 +112,14 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
       subtitle={selectedUser?.full_name || ''}
       onSave={handleSave}
       isSubmitting={isCreating}
-      disabled={!isFormValid || !choicesLoaded || !usersLoaded}
+      disabled={!isFormValid || !choicesLoaded || !usersLoaded || !canesLoaded}
     >
       {Boolean(error) && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
+      
       <Box sx={{ display: 'flex', gap: 2 }}>
         <TextField
           required
@@ -196,9 +176,13 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
             label="Cane"
             sx={disabledTextFieldStyles}
           >
-            {choices?.cane_colors?.map((cane, index) => (
-              <MenuItem key={cane.value} value={index + 1}>
-                {cane.label} Cane
+            {!canesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
+            {canesLoaded && canes.length === 0 && (
+              <MenuItem value="">No canes available</MenuItem>
+            )}
+            {canes.map((cane) => (
+              <MenuItem key={cane.id} value={cane.id}>
+                {cane.color_code} 
               </MenuItem>
             ))}
           </Select>
@@ -211,6 +195,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
             value={formData.positionInCane}
             onChange={(e) => handleInputChange('positionInCane', e.target.value)}
             label="Position in Cane"
+            disabled={!formData.cane}
             sx={disabledTextFieldStyles}
             MenuProps={{
               PaperProps: {
@@ -220,9 +205,15 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
               },
             }}
           >
-            {/* Positions with status indicators */}
+            {!formData.cane && <MenuItem value="">Select a cane first</MenuItem>}
+            {/* Positions with status indicators - */}
             {Array.from({ length: 10 }, (_, i) => i + 1).map((position) => {
-              const isFilled = filledPositions.includes(position);
+              // Check if this position is filled by finding a puck at this position
+              const puckAtPosition = pucksData?.pucks?.find(
+                (puck) => puck.position_in_cane === position
+              );
+              const isFilled = !!puckAtPosition;
+
               return (
                 <MenuItem key={position} value={position} disabled={isFilled}>
                   Position {position} {isFilled ? '(Filled)' : '(Available)'}
