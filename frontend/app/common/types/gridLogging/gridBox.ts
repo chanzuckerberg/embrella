@@ -6,6 +6,7 @@ export interface Position {
   occupied: boolean;
   grid_id?: number;
   grid_name?: string;
+  clipped?: boolean;
 }
 
 /**

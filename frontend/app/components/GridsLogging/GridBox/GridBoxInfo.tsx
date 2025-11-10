@@ -14,12 +14,15 @@ import { disabledTextFieldStyles } from './DisableBoxStyle';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { AddGrid } from '../Grid/AddGrid';
 import { MoveGridBox } from './MoveGridBox';
+import { ClipAllGridsDialog } from './ClipAllGridsDialog';
+import { useClipAllGrids } from '../../../common/hooks/useGridLogging/useClipAllGrids';
 
 interface GridBoxInfoProps {
   selectedPuck: PucksList | null;
   selectedSlot: number | null;
   onGridSelect: (gridPosition: number, gridId: number) => void;
   selectedUser?: UsersList | null;
+  onGridDetailsRefetch?: (() => void) | null;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -38,16 +41,21 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   selectedSlot,
   onGridSelect,
   selectedUser,
+  onGridDetailsRefetch,
 }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
+  const [clipAllDialogOpen, setClipAllDialogOpen] = useState(false);
+  const [isClipping, setIsClipping] = useState(false);
   const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
   const [moveGridBoxDialogOpen, setMoveGridBoxDialogOpen] = useState(false);
   const { gridBoxData, isSuccess: gridBoxSuccess, refetch } = useGridLoggingGridBoxDetail(
     selectedPuck?.id,
     selectedSlot || undefined
   );
+  const { clipAllGrids, error: clipError, clearError } = useClipAllGrids();
+
  
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {
@@ -80,11 +88,40 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     setMoveGridBoxDialogOpen(true);
     console.log('Move grid box');
   };
+  const handleClipAllGrids = () => {
+    console.log('Clip all grids');
+    clearError(); 
+    setClipAllDialogOpen(true);
+  };
 
-  const handleGridCreated = () => {
+  const handleConfirmClipAll = async () => {
+    if (!gridBoxData?.grid_box?.grid_box_id) {
+      console.error('No grid box ID available');
+      return;
+    }
+
+    const result = await clipAllGrids(gridBoxData.grid_box.grid_box_id);
+    
+    if (result) {
+      console.log('Successfully clipped all grids:', result);
+      setClipAllDialogOpen(false);
+      // Refetch grid box data to update the UI
+      refetch();
+      if (onGridDetailsRefetch) {
+        onGridDetailsRefetch();
+      }
+    }
+  };
+
+  const unclippedCount = gridBoxData?.grid_box?.positions?.filter(
+    (pos) => pos.occupied && !pos.clipped
+  ).length || 0;
+
+  const handleGridCreated = (gridPosition: number, gridId: number) => {
     // Refetch grid box data to update the graphic
     refetch();
-    setAddGridDialogOpen(false);
+    // Select the newly created grid (
+    onGridSelect(gridPosition, gridId);
   };
   // const handleSave = () => {
   //   console.log('Save grid box:', formData);
@@ -122,6 +159,15 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 >
                   Add Grid
                 </Button>
+                <Button
+                  sdsType="primary"
+                  sdsStyle="rounded"
+                  startIcon={<Icon sdsIcon="Grid" sdsSize="l" />}
+                  onClick={handleClipAllGrids}
+                  size="small"
+                >
+                  Clip All Grids
+                </Button> 
                 <IconButton
                   onClick={handleDeleteGridBox}
                   sx={{
@@ -251,6 +297,20 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         currentSlot={selectedSlot}
         gridBoxData={gridBoxData}
         selectedUser={selectedUser}
+      />
+      <ClipAllGridsDialog
+        open={clipAllDialogOpen}
+        onClose={() => {
+          setClipAllDialogOpen(false);
+          clearError();
+        }}
+        onConfirm={handleConfirmClipAll}
+        gridBoxName={formData.name}
+        maxGrids={formData.maxGrids}
+        unclippedCount={unclippedCount}
+        totalGrids={gridBoxData?.grid_box?.positions?.filter((pos) => pos.occupied).length || 0}
+        isProcessing={isClipping}
+        error={clipError}
       />
     </>
   );
