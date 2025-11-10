@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, InputAdornment } from '@mui/material';
+import { Box, TextField, InputAdornment, Alert } from '@mui/material';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
@@ -14,6 +14,7 @@ import { AddFreezingSessionDialog } from '@app/components/GridsLogging/Grid/AddF
 import { useProjectsList } from '@app/common/hooks/useGridLogging/useProjectList';
 import { useSpecimenList } from '@app/common/hooks/useGridLogging/useSpecimenList';
 import { useFreezingSessionList } from '@app/common/hooks/useGridLogging/useFreezingSessionList';
+import { useCreateGrid } from '@app/common/hooks/useGridLogging/useCreateGrid';
 
 interface AddGridProps {
   open: boolean;
@@ -24,7 +25,7 @@ interface AddGridProps {
   positionInBox?: number;
   puckId?: number;
   puckName?: string;
-  onGridCreated?: () => void;
+  onGridCreated?: (gridPosition: number, gridId: number) => void;
 }
 
 export const AddGrid: React.FC<AddGridProps> = ({
@@ -38,10 +39,10 @@ export const AddGrid: React.FC<AddGridProps> = ({
 }) => {
   // Fetch projects list
   const { projects } = useProjectsList();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [addSpecimenDialogOpen, setAddSpecimenDialogOpen] = useState(false);
   const [addProjectDialogOpen, setAddProjectDialogOpen] = useState(false);
   const [addFreezingSessionDialogOpen, setAddFreezingSessionDialogOpen] = useState(false);
+  const { createGrid, isCreating, error, clearError } = useCreateGrid();
 
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
@@ -77,6 +78,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
         blotForce: '',
         blotDistance: '',
       });
+      clearError();
     }
   }, [open, selectedUser?.id, positionInBox, gridBoxId, gridBoxName]);
 
@@ -147,14 +149,33 @@ export const AddGrid: React.FC<AddGridProps> = ({
     }));
   };
 
-  const handleSave = () => {
-    if (!formData.gridName || !formData.specimen || !formData.project || !formData.positionInBox) {
+  const handleSave = async () => {
+    if (!formData.gridName || !formData.specimen || !formData.project || !formData.positionInBox || !gridBoxId) {
       alert('Please fill in all required fields');
       return;
     }
-
-    setIsSubmitting(true);
-    console.log('Saving grid:', formData);
+  
+    const result = await createGrid({
+      name: formData.gridName,
+      user: Number(formData.user),
+      specimen: Number(formData.specimen),
+      intended_project: Number(formData.project),
+      grid_box: Number(gridBoxId),
+      position_in_box: Number(formData.positionInBox),
+      ...(formData.freezingSession && { freezing_session: Number(formData.freezingSession) }),
+      ...(formData.notes && { notes: formData.notes }),
+      clipped: formData.clipped,
+      ...(formData.blotTime && { blot_time: Number(formData.blotTime) }),
+      ...(formData.blotForce && { blot_force: Number(formData.blotForce) }),
+      ...(formData.blotDistance && { blot_distance: Number(formData.blotDistance) }),
+    });
+  
+    if (result) {
+      onClose();
+      if (onGridCreated) {
+        onGridCreated(Number(formData.positionInBox), result.id);
+      }
+    }
   };
 
   const isFormValid = formData.gridName && formData.specimen && formData.project && formData.positionInBox;
@@ -166,9 +187,14 @@ export const AddGrid: React.FC<AddGridProps> = ({
         title="Add a Grid"
         subtitle={selectedUser?.full_name || ''}
         onSave={handleSave}
-        isSubmitting={isSubmitting}
+        isSubmitting={isCreating}
         disabled={!choicesLoaded || !usersLoaded || !isFormValid}
       >
+         {Boolean(error) && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          )}
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           <TextField
             required
@@ -287,7 +313,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
         onSave={handleAddSpecimen}
       />
 
-      <AddProjectDialog
+      {/* <AddProjectDialog
         open={addProjectDialogOpen}
         onClose={() => setAddProjectDialogOpen(false)}
         onSave={handleSaveProject}
@@ -303,7 +329,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
         devices={devices}
         notesPages={notesPages}
         onSave={handleAddFreezingSession}
-      />
+      /> */}
     </>
   );
 };
