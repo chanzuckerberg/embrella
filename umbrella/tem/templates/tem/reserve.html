@@ -128,13 +128,13 @@
           }
           
           // Format the grid name to include ID and date
-          var formattedName = item.name + '. (id=' + item.id + ')';
+          var formattedName = item.display_name || item.name;
           
-          // Add the creation date if available
-          if (item.create_on) {
-            // Format the date if needed or use as is
-            formattedName += ' from ' + item.create_on;
-          }
+          // // Add the creation date if available
+          // if (item.create_on) {
+          //   // Format the date if needed or use as is
+          //   formattedName += ' from ' + item.create_on;
+          // }
           
           $grid.append('<option value="' + item.id + '">' + formattedName + '</option>');
         });
