@@ -43,7 +43,7 @@ def get_grids_by_user(request):
     user_id = request.GET.get('user_id')
 
     # Annotate each grid with an is_default flag based on the grid name.
-    queryset = CryoGrid.objects.select_related('intended_project', 'user').annotate(
+    queryset = CryoGrid.objects.select_related('intended_project', 'user', 'grid_box__puck').annotate(
         project_name=F('intended_project__name'),
         username=F('user__username'),
         is_default=Case(
@@ -58,10 +58,32 @@ def get_grids_by_user(request):
 
     # Order by create_on in descending order (newest first)get_tomoget_tomo
     queryset = queryset.order_by('-create_on')
+      # Build custom display names
+    grids_list = []
+    for grid in queryset:
+        # Build display name: Puck-CZII-08/Slot-9/Position-1/Grid-grid1
+        if grid.grid_box and grid.grid_box.puck:
+            puck_name = f"CZII-0{grid.grid_box.puck.name}" if grid.grid_box.puck.name else "No-Puck"
+            slot = grid.grid_box.position_in_puck if grid.grid_box.position_in_puck else "?"
+            position = grid.position_in_box if grid.position_in_box else "?"
+            display_name = f"Puck-{puck_name}/Slot-{slot}/Position-{position}/Grid-{grid.name}"
+        else:
+            # Fallback if no box/puck info
+            display_name = f"Grid-{grid.name} (No location info)"
+        
+        grids_list.append({
+            'id': grid.id,
+            'name': grid.name,
+            'project_name': grid.project_name,
+            'username': grid.username,
+            'is_default': grid.is_default,
+            'create_on': grid.create_on,
+            'display_name': display_name  
+        })
 
-    # Return the data including the computed is_default field
-    grids = queryset.values('id', 'name', 'project_name', 'username', 'is_default', 'create_on')
-    return JsonResponse(list(grids), safe=False)
+    # # Return the data including the computed is_default field
+    # grids = queryset.values('id', 'name', 'project_name', 'username', 'is_default', 'create_on')
+    return JsonResponse(list(grids_list), safe=False)
 
 @extend_schema(
     methods=["GET"],
