@@ -262,14 +262,14 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             }}
           >
             <Image
-              src="/next/grid.png"
-              alt="Grid"
+              src={clippedValue ? "/next/clippedGrid.png" : "/next/grid.png"}
+              alt={clippedValue ? "Clipped Grid" : "Grid"}
               width={150}
               height={150}
               style={{
                 objectFit: 'contain',
               }}
-            />
+          />
           </Box>
 
           <Box sx={{ flex: 1 }}>
