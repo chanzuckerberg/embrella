@@ -152,10 +152,10 @@ class PuckViewSet(viewsets.ModelViewSet):
             puck = self.get_object()
             
             # Get all grid boxes for this puck
-            grid_boxes = CryoGridBox.objects.filter(puck=puck).values('id', 'position_in_puck')
+            grid_boxes = CryoGridBox.objects.filter(puck=puck).values('id', 'position_in_puck', 'name')
             
             # Create a mapping of position to grid box
-            filled_positions = {box['position_in_puck']: box['id'] for box in grid_boxes}
+            filled_positions = {box['position_in_puck']:{'id': box['id'], 'name': box['name']} for box in grid_boxes}
             
             # Generate slots array for puck positions
             slots = []
@@ -164,7 +164,8 @@ class PuckViewSet(viewsets.ModelViewSet):
                     slots.append({
                         "position": position,
                         "status": "filled",
-                        "grid_box_id": filled_positions[position],
+                        "grid_box_id": filled_positions[position]['id'],
+                        "grid_box_name": filled_positions[position]['name'],
                     })
                 else:
                     slots.append({
