@@ -238,7 +238,7 @@ class PuckViewSet(viewsets.ModelViewSet):
                 grid_box=grid_box,
                 trashed=False,
             ).select_related('specimen').values(
-                'id', 'name', 'position_in_box',
+                'id', 'name', 'position_in_box', 'clipped',
             )
         
             # Create positions array (1-4 quadrants)
@@ -255,6 +255,7 @@ class PuckViewSet(viewsets.ModelViewSet):
                         "occupied": True,
                         "grid_id": f"{grid_at_position['id']}",
                         "grid_name": grid_at_position['name'],
+                        "clipped": grid_at_position['clipped'],
                     })
                 else:
                     positions.append({
@@ -656,4 +657,57 @@ class CryoGridViewSet(viewsets.ModelViewSet):
             return Response({
                 "error": "Internal server error occurred while creating grid",
                 "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        
+    @action(detail=False, methods=['post'], url_path='clip-all-in-box/(?P<grid_box_id>[0-9]+)')
+    @method_decorator(csrf_exempt)
+    def clip_all_in_box(self, request, grid_box_id=None):
+        """
+        Clip all grids in a specific grid box
+        URL: POST /api/list/grids/clip-all-in-box/<grid_box_id>/
+        
+        Example: POST /api/list/grids/clip-all-in-box/42/
+        """
+        try:
+            # Get the grid box
+            try:
+                grid_box = CryoGridBox.objects.get(id=grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid box not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Get all non-trashed grids in this box
+            grids = CryoGrid.objects.filter(
+                grid_box=grid_box,
+                trashed=False,
+                clipped=False
+            )
+            
+            # Count how many grids will be affected
+            grids_count = grids.count()
+            
+            if grids_count == 0:
+                return Response({
+                    'success': False,
+                    'error': 'No grids found in this grid box',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Update all grids to clipped=True
+            updated_count = grids.update(clipped=True)
+            
+            return Response({
+                'success': True,
+                'message': f'Successfully clipped {updated_count} grid(s)',
+                'updated_count': updated_count,
+                'grid_box_id': int(grid_box_id),
+                'grid_box_name': grid_box.name,
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e) if settings.DEBUG else 'Internal server error',
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
