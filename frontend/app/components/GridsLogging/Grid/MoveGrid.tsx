@@ -246,6 +246,7 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
         required
         fullWidth
         label="Slot"
+        helperText="Select a slot that contains a grid box"
         value={formData.destinationSlot}
         onChange={(e) => handleInputChange('destinationSlot', e.target.value)}
         disabled={!formData.destinationPuck}
@@ -256,14 +257,12 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
           <MenuItem value="">No grid boxes available in slots</MenuItem>
         )}
         {slotsData?.slots?.map((slot) => {
-            const gridBoxName = gridBoxData?.grid_box?.name;
-            console.log('gridBoxName', gridBoxName, slot);
-          const isFilled = slot.status === 'filled';
-          return (
-            <MenuItem key={slot.position} value={slot.position.toString()} disabled={!isFilled}>
-              Slot {slot.position} {isFilled ? `(GridBox name: ${gridBoxName || 'N/A'})` : '(Empty)'}
-            </MenuItem>
-          );
+            const isFilled = slot.status === 'filled';
+            return (
+                <MenuItem key={slot.position} value={slot.position.toString()} disabled={!isFilled}>
+                Slot {slot.position} {isFilled ? `(GridBox: ${slot.grid_box_name || 'N/A'})` : '(Empty - No Grid Box)'}
+                </MenuItem>
+            );
         })}
       </TextField>
 
@@ -282,12 +281,14 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
           <MenuItem value="">No empty positions available</MenuItem>
         )}
         {gridBoxData?.grid_box?.positions?.map((position) => {
-          const isOccupied = position.occupied;
-          return (
+        const isOccupied = position.occupied;
+        const gridName = position.grid_name ? ` (${position.grid_name})` : '';
+        return (
             <MenuItem key={position.q} value={position.q.toString()} disabled={isOccupied}>
-              Position {position.q} {isOccupied ? '(Occupied)' : '(Available)'}
+            {/* Position {position.q} {isOccupied ? `- filled with Grid - ${gridName}` : '- Available'} */}
+            Position {position.q} {isOccupied ? `- filled` : '- Available'}
             </MenuItem>
-          );
+        );
         })}
       </TextField>
     </BaseFormDialog>

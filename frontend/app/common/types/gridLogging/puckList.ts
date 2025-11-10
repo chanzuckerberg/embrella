@@ -39,6 +39,7 @@ export interface PuckSlots {
   position: number;
   status: string;
   grid_box_id?: number;
+  grid_box_name?: string;
 }
 
 export type CreatePuckData = Omit<PuckBase, 'name'> & {

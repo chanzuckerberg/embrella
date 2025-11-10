@@ -142,7 +142,7 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
       title="Move Grid Box"
       titleExtra={
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -2 }}>
-          <Tooltip title={currentLocationTooltip} arrow placement="left">
+          <Tooltip title={currentLocationTooltip} arrow placement="right">
             <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
               <Icon sdsIcon="InfoCircle" sdsSize="s" />
             </Box>
