@@ -41,6 +41,9 @@ export enum API {
   GRID_LOGGING_SAMPLES = '/api/list/samples/',
   GRID_LOGGING_FREEZING_SESSIONS = '/api/list/freezing-sessions/',
   GRID_LOGGING_DEVICES = '/api/list/freezing-sessions/devices/',
+  GRID_LOGGING_CONFLUENCE_SPACES = '/api/list/confluence-spaces/',
+  GRID_LOGGING_DRIVE_FOLDERS = '/api/list/drive-folders/',
+  GRID_LOGGING_CONFLUENCE_PAGES = '/api/list/confluence-pages/',
 
 
   // Projects
