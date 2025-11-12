@@ -15,6 +15,7 @@ import { useProjectsList } from '@app/common/hooks/useGridLogging/useProjectList
 import { useSpecimenList } from '@app/common/hooks/useGridLogging/useSpecimenList';
 import { useFreezingSessionList } from '@app/common/hooks/useGridLogging/useFreezingSessionList';
 import { useCreateGrid } from '@app/common/hooks/useGridLogging/useCreateGrid';
+import { useDeviceList } from '@app/common/hooks/useGridLogging/useDeviceList';
 
 interface AddGridProps {
   open: boolean;
@@ -86,6 +87,14 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { users, isSuccess: usersLoaded } = useGridLoggingUserList();
   const { transformedSpecimens, isSuccess: specimensLoaded } = useSpecimenList();
   const { transformedFreezingSessions } = useFreezingSessionList();
+  const { devices: devicesList, isSuccess: devicesLoaded } = useDeviceList();
+
+  // Transform devices to match the expected interface
+  const devices = devicesList.map(device => ({
+    id: device.id.toString(),  // Convert number to string
+    name: device.name,
+  }));
+  
   const projectLeaders =
     users?.users?.map((user) => ({
       id: user.id.toString(),
@@ -97,13 +106,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const googleDriveFolders = [
     { id: '1', name: 'BD01' },
     { id: '2', name: 'Phantom 2' },
-  ];
-
-  const devices = [
-    { id: '1', name: 'GP2' },
-    { id: '2', name: 'Vitrobot' },
-    { id: '3', name: 'Leica EM Ice [High Pressure Freezing]' },
-    { id: '4', name: 'CryoCapCell' },
   ];
 
   const notesPages = [
@@ -138,15 +140,11 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const handleAddFreezingSession = async (data: {
     user: string;
     device: string;
-    name: string;
     temperature: string;
     humidity: string;
     notesPage: string;
   }) => {
-    setFormData((prev) => ({
-      ...prev,
-      freezingSession: data.name,
-    }));
+
   };
 
   const handleSave = async () => {
@@ -313,7 +311,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
         onSave={handleAddSpecimen}
       />
 
-      {/* <AddProjectDialog
+       <AddProjectDialog
         open={addProjectDialogOpen}
         onClose={() => setAddProjectDialogOpen(false)}
         onSave={handleSaveProject}
@@ -329,7 +327,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
         devices={devices}
         notesPages={notesPages}
         onSave={handleAddFreezingSession}
-      /> */}
+      /> 
     </>
   );
 };
