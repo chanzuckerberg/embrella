@@ -9,6 +9,8 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from confluence.models import Space, Page
+from clouddocs.models import DriveFolder
 
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
 
@@ -739,3 +741,66 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 'success': False,
                 'error': str(e) if settings.DEBUG else 'Internal server error',
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ConfluenceSpaceViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for Confluence Spaces"""
+    queryset = Space.objects.all().order_by('name')
+    serializer_class = ConfluenceSpaceSerializer
+    permission_classes = []
+    authentication_classes = []
+    
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'spaces': serializer.data,
+                'total_count': queryset.count(),
+            })
+        except Exception as e:
+            return Response({
+                "error": "Failed to fetch confluence spaces",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=500)
+
+class ConfluencePageViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for Confluence Pages (for notes pages in specimens/freezing sessions)"""
+    queryset = Page.objects.all().order_by('name')
+    serializer_class = ConfluencePageSerializer
+    permission_classes = []
+    authentication_classes = []
+    
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'pages': serializer.data,
+                'total_count': queryset.count(),
+            })
+        except Exception as e:
+            return Response({
+                "error": "Failed to fetch confluence pages",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=500)
+    
+class DriveFolderViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for Google Drive Folders"""
+    queryset = DriveFolder.objects.all().order_by('name')
+    serializer_class = DriveFolderSerializer
+    permission_classes = []
+    authentication_classes = []
+    
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'folders': serializer.data,
+                'total_count': queryset.count(),
+            })
+        except Exception as e:
+            return Response({
+                "error": "Failed to fetch drive folders",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=500)
