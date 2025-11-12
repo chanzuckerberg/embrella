@@ -401,6 +401,113 @@ class PuckViewSet(viewsets.ModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['patch'], url_path='grid-box/(?P<grid_box_id>[0-9]+)/move')
+    def move_grid_box(self, request, grid_box_id=None): 
+        """
+        Move a grid box to a different puck and/or position
+        URL: PATCH /api/list/pucks/grid-box/{grid_box_id}/move/
+        
+        Request Body:
+        {
+            "destination_puck_id": 5,
+            "destination_position": 3
+        }
+        
+        Response:
+        {
+            "success": True,
+            "message": "Grid box moved successfully",
+            "grid_box": {
+                "id": 1,
+                "name": "box1",
+                "puck": 5,
+                "position_in_puck": 3,
+                ...
+            }
+        }
+        """
+        try:
+            # Get the grid box to move
+            try:
+                grid_box = CryoGridBox.objects.get(id=grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid box not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Extract destination from request
+            destination_puck_id = request.data.get('destination_puck_id')
+            destination_position = request.data.get('destination_position')
+            
+            if not destination_puck_id or not destination_position:
+                return Response({
+                    'success': False,
+                    'error': 'Both destination_puck_id and destination_position are required',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate destination puck exists
+            try:
+                destination_puck = Puck.objects.get(id=destination_puck_id)
+            except Puck.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': f'Destination puck with ID {destination_puck_id} not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Validate destination position is within puck's range
+            if destination_position < 1 or destination_position > destination_puck.max_boxes:
+                return Response({
+                    'success': False,
+                    'error': f'Position must be between 1 and {destination_puck.max_boxes}',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if destination position is already occupied
+            existing_box = CryoGridBox.objects.filter(
+                puck=destination_puck,
+                position_in_puck=destination_position
+            ).exclude(id=grid_box_id).first()
+            
+            if existing_box:
+                return Response({
+                    'success': False,
+                    'error': f'Position {destination_position} in puck {destination_puck.name} is already occupied',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Store old location for response message
+            old_puck_name = grid_box.puck.name if grid_box.puck else 'None'
+            old_position = grid_box.position_in_puck
+            
+            # Update grid box location
+            grid_box.puck = destination_puck
+            grid_box.position_in_puck = destination_position
+            grid_box.save()
+            
+            # Serialize updated grid box
+            serializer = CryoGridBoxSerializer(grid_box)
+            
+            return Response({
+                'success': True,
+                'message': f'Grid box "{grid_box.name}" moved from {old_puck_name} position {old_position} to {destination_puck.name} position {destination_position}',
+                'grid_box': serializer.data,
+            }, status=status.HTTP_200_OK)
+            
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Internal server error occurred while moving grid box',
+                'detail': str(e) if settings.DEBUG else 'Please try again later',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class GridLoggingChoicesViewSet(viewsets.ViewSet):
     """
     ViewSet for grid logging choices (colors, numbering patterns...)
@@ -544,7 +651,7 @@ class SpecimenViewSet(viewsets.ReadOnlyModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)
 
-class FreezingSessionViewSet(viewsets.ReadOnlyModelViewSet):
+class FreezingSessionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for PlungeFreezingSession model - ReadOnly
     """
@@ -581,6 +688,105 @@ class FreezingSessionViewSet(viewsets.ReadOnlyModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)
     
+    @method_decorator(csrf_exempt)
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new freezing session
+        URL: POST /api/list/freezing-sessions/
+        
+        Request Body:
+        {
+            "user": 1,
+            "device": 2,
+            "device_temperature": 25.5,
+            "humidity": 60.0,
+            "notes_page": 123  // optional
+        }
+        
+        Response:
+        {
+            "message": "Freezing session created successfully",
+            "freezing_session": {
+                "id": 1,
+                "datetime": "2025-11-12T10:30:00Z",
+                "user": 1,
+                "user_name": "john.doe",
+                "device": 2,
+                "device_name": "Vitrobot Mark IV",
+                "device_temperature": 25.5,
+                "humidity": 60.0,
+                "notes_page": 123,
+                "display_name": "2025-11-12 10:30:00 - john.doe - Vitrobot Mark IV"
+            }
+        }
+        """
+        try:
+            # Validate required fields
+            user_id = request.data.get('user')
+            device_id = request.data.get('device')
+            
+            if not user_id:
+                return Response({
+                    'error': 'User is required',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not device_id:
+                return Response({
+                    'error': 'Device is required',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate user exists
+            try:
+                User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({
+                    'error': 'User not found',
+                    'detail': f'No user found with ID {user_id}',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Validate device exists
+            try:
+                from cryo_grids.models import PlungeFreezingDevice
+                PlungeFreezingDevice.objects.get(id=device_id)
+            except PlungeFreezingDevice.DoesNotExist:
+                return Response({
+                    'error': 'Device not found',
+                    'detail': f'No device found with ID {device_id}',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Validate notes_page if provided
+            notes_page_id = request.data.get('notes_page')
+            if notes_page_id:
+                try:
+                    Page.objects.get(id=notes_page_id)
+                except Page.DoesNotExist:
+                    return Response({
+                        'error': 'Notes page not found',
+                        'detail': f'No confluence page found with ID {notes_page_id}',
+                    }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Create serializer and validate
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            
+            return Response({
+                'message': 'Freezing session created successfully',
+                'freezing_session': serializer.data,
+            }, status=status.HTTP_201_CREATED)
+            
+        except ValidationError as e:
+            return Response({
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while creating freezing session",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
     @action(detail=False, methods=['get'], url_path='devices')
     def get_devices(self, request):
         """
