@@ -12,6 +12,7 @@ interface UseGridDetailsReturn {
   gridDetails: GridDetailsResponse | null;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 export const useGridLoggingGridDetails = ({
@@ -64,11 +65,12 @@ export const useGridLoggingGridDetails = ({
 
   useEffect(() => {
     fetchGridDetails();
-  }, [puckId, positionInPuck, gridId, fetchGridDetails]);
+  }, [fetchGridDetails]);
 
   return {
     gridDetails,
     loading,
     error,
+    refetch: fetchGridDetails,
   };
 };

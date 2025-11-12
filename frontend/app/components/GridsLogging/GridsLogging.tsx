@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
 import { useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
@@ -23,6 +23,7 @@ export const GridsLogging: React.FC = () => {
   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
   const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
   const [isAddPuckDialogOpen, setIsAddPuckDialogOpen] = useState(false);
+  const [gridDetailsRefetch, setGridDetailsRefetch] = useState<() => void>(() => {});
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
   const searchParams = useSearchParams();
@@ -102,6 +103,9 @@ export const GridsLogging: React.FC = () => {
     // Reset selected slot when puck changes
     setSelectedSlot(null);
   };
+  const handleGridDetailsRefetchReady = useCallback((refetch: () => void) => {
+    setGridDetailsRefetch(() => refetch);
+  }, []);
 
   const handleSlotSelect = (slotPosition: number, _gridBoxId?: number) => {
     setSelectedSlot(slotPosition);
@@ -184,6 +188,7 @@ export const GridsLogging: React.FC = () => {
             selectedSlot={selectedSlot}
             onGridSelect={handleGridSelect}
             selectedUser={selectedUser}
+            onGridDetailsRefetch={gridDetailsRefetch}
           />
           {!!selectedGrid && (
             <GridDetails
@@ -192,6 +197,7 @@ export const GridsLogging: React.FC = () => {
               selectedGrid={selectedGrid}
               selectedGridId={selectedGridId}
               selectedUser={selectedUser}
+              onGridDetailsRefetchReady={handleGridDetailsRefetchReady}
             />
           )}
         </Box>

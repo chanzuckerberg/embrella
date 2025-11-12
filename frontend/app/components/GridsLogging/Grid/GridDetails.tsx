@@ -31,6 +31,7 @@ interface GridDetailsProps {
   selectedGrid: number | null;
   selectedGridId: number | null;
   selectedUser?: UsersList | null;
+  onGridDetailsRefetchReady?: (refetch: () => void) => void; 
 }
 
 const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
@@ -55,18 +56,25 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedGrid,
   selectedGridId,
   selectedUser,
+  onGridDetailsRefetchReady,
 }) => {
   // Fetch data
   const { isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
   const [moveGridDialogOpen, setMoveGridDialogOpen] = useState(false);
 
-  const { gridDetails, loading, error } = useGridLoggingGridDetails({
+  const { gridDetails, loading, error, refetch } = useGridLoggingGridDetails({
     puckId: selectedPuck?.id || 0,
     positionInPuck: selectedSlot || 0,
     gridId: selectedGridId || 0,
   });
   const [trashedValue, setLocalTrashed] = useState<boolean>(false);
   const [clippedValue, setLocalClipped] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (onGridDetailsRefetchReady && refetch) {
+      onGridDetailsRefetchReady(refetch);
+    }
+  }, [onGridDetailsRefetchReady, refetch]);
 
   useEffect(() => {
     if (gridDetails?.clipped !== undefined) {
