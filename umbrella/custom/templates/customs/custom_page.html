@@ -572,9 +572,11 @@
     <h2>Post-processing</h2>
     <table class="table" style="table-layout: fixed;">
       <tr>
-        <th style="width:33%;">Copick</th>
-        <th style="width:33%">MembraneSeg</th>
-        <th style="width:34%">Octopi</th>
+        <th style="width:25%;">Copick</th>
+        <th style="width:25%">MembraneSeg</th>
+        <th style="width:25%">Octopi</th>
+        <th style="width:25%">TopCUP</th>
+
       </tr>
       <tr>
         <td>
@@ -588,12 +590,19 @@
           <a href="/workflow/membraneseg_run" class="button">MembraneSeg</a>
           <p>Run MembraneSeg</p>
         </td>
-        <td style="visibility:hidden;">
+        <td style="visibility:visible;">
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
             <img src="{% static 'customs/octopi-logo.png' %}" alt="Octopi Logo" style="width:35px; height:auto;">
             <a href="/workflow/octopi_run" class="button">Octopi</a>
           </div>
           <p>Pick with Octopi</p>
+        </td>
+                <td style="visibility:visible;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <img src="{% static 'customs/topcup-logo.png' %}" alt="TopCUP Logo" style="width:35px; height:auto;">
+            <a href="/workflow/topcup_run" class="button">TopCUP</a>
+          </div>
+          <p>Pick with TopCUP</p>
         </td>
       </tr>
     </table>

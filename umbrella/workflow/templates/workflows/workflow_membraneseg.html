@@ -407,11 +407,11 @@
       <option value="">Select voxel size…</option>
     </select>
   </div>
-  <div id="membraneseg_session_id"
+  <div id="membraneseg_run_id"
        class="recommendation-msg col-span-4"
        style="margin-top:8px; font-size:14px; color:#2c3e50;">
   </div>
-  <input type="hidden" id="membraneseg_session_id_input" name="membraneseg_session_id" />
+  <input type="hidden" id="membraneseg_run_id_input" name="membraneseg_run_id" />
 </div>
 
 <!-- Row 2: Optional Threshold -->
@@ -510,7 +510,6 @@
     document.addEventListener("DOMContentLoaded", () => {
       populateCopickSessionDropdown();
     });
-
 
     // Populate the "Copick ProcRun" dropdown based on selected Copick session
     async function populateCopickRun(sessionName) {
@@ -615,7 +614,7 @@
 
     try {
       setDisabled(elType, true, "Loading tomogram types…");
-      setDisabled(elVoxel, true, "Waiting for type…");
+      setDisabled(elVoxel, true, "Waiting for tomogram type…");
 
       const data = await fetchCombos(session, procrun);
       cache = data; // { combinations: { type: [sizes] }, ... }
@@ -672,8 +671,8 @@
   function attachMembraneSegNewRunListener({
     sessionSelector = "#importCopickSession",
     voxelSelector   = "#tomogramVoxelSize",
-    displaySelector = "#membraneseg_session_id",
-    hiddenSelector  = "#membraneseg_session_id_input",
+    displaySelector = "#membraneseg_run_id",
+    hiddenSelector  = "#membraneseg_run_id_input",
   } = {}) {
     const sessionEl = document.querySelector(sessionSelector);
     const voxelEl   = document.querySelector(voxelSelector);
@@ -747,10 +746,166 @@
   attachMembraneSegNewRunListener({
     sessionSelector: "#importCopickSession",
     voxelSelector:   "#tomogramVoxelSize",
-    displaySelector: "#membraneseg_session_id",
-    hiddenSelector:  "#membraneseg_session_id_input",
+    displaySelector: "#membraneseg_run_id",
+    hiddenSelector:  "#membraneseg_run_id_input",
   });
 })();
+
+
+
+// Run membraneseg script
+async function runMembraneseg() {
+  const userId    = document.getElementById("userId").value;
+  const password  = document.getElementById("password").value;
+
+  // Reuse existing Copick inputs 
+  const session   = document.getElementById("importCopickSession").value;     
+  const runInput  = document.getElementById("importCopickRun").value;        
+  const tomoType  = document.getElementById("tomogramType").value;     
+  const voxelSize = document.getElementById("tomogramVoxelSize").value;  
+
+  // MembraneSeg specific
+  const msRun = document.getElementById("membraneseg_run_id_input").value; 
+  const threshold = document.getElementById("thresholdValue")?.value; 
+
+  const required = {
+  userId, password, session, runInput, tomoType, voxelSize, msRun
+};
+const missing = Object.entries(required)
+  .filter(([, v]) => v === undefined || v === null || String(v).trim() === "")
+  .map(([k]) => k);
+
+if (missing.length) {
+  showStatusMessage(`Please fill in all required fields (${missing.join(", ")}).`, "error");
+  return;
+}
+
+  if (!userId || !password || !session || !runInput || !tomoType || !voxelSize || !msRun) {
+    showStatusMessage("Please fill in all required fields for MembraneSeg.", "error");
+    return;
+  }
+
+  let copickRunNorm = runInput.trim();
+  if (!/^run/i.test(copickRunNorm)) {
+    const bare = copickRunNorm.replace(/\D/g, "");
+    copickRunNorm = `run${bare.padStart(3, "0")}`;
+  }
+
+    let msRunNorm = msRun.trim();
+  if (!/^run/i.test(msRunNorm)) {
+    const bare = msRunNorm.replace(/\D/g, "");
+    msRunNorm = `run${bare.padStart(3, "0")}`;
+  }
+
+  // Validate voxel size is a non-negative number
+  const voxNum = Number(voxelSize);
+  if (!Number.isFinite(voxNum) || voxNum < 0) {
+    showStatusMessage("Tomogram voxel size must be a non-negative number.", "error");
+    return;
+  }
+
+  showLoadingIndicator("Submitting MembraneSeg…");
+  disableForm(true);
+
+  try {
+    const MEMBRANE_PLAN_NAME = "membraneseg";
+
+    const sessionResp = await fetch(`/workflow/get_msisession_id?session_name=${encodeURIComponent(session)}`);
+    const { session_id: sessionId } = await sessionResp.json();
+
+    const planResp = await fetch(`/workflow/get_plan_id?plan_name=${encodeURIComponent(MEMBRANE_PLAN_NAME)}`);
+    const { plan_id: planId } = await planResp.json();
+
+    // Reserve run number
+    const reserveResp = await fetch("/processes/post_generic/reserve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proc_plan: planId, msi_session: sessionId, run_number: msRunNorm }),
+    });
+    if (reserveResp.status === 409) {
+      const msg = (await reserveResp.json()).error || `Run ${msRunNorm} already exists.`;
+      throw new Error(msg);
+    }
+
+    // Build job payload for /workflow/run-membraneseg/
+    const jobPayload = {
+      user_id: userId,
+      password: btoa(password),
+      session_name: session,
+      copick_run: copickRunNorm,          
+      tomo_type: tomoType,
+      tomogram_voxel_size: voxelSize,
+      membraneseg_run_id: msRunNorm,
+    };
+    // add threshold only if non-empty (but keep "0")
+    if (threshold !== undefined && threshold !== null && String(threshold).trim() !== "") {
+      jobPayload.threshold = String(threshold).trim();
+    }
+
+    console.log("Submitting MembraneSeg payload:", jobPayload);
+
+    const jobResp = await fetch("/workflow/run-membraneseg/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(jobPayload),
+    });
+    const jobJson = await jobResp.json();
+    if (!jobResp.ok) throw new Error(jobJson.error || `Job submit failed (${jobResp.status})`);
+
+    // Create DB record
+    const createResp = await fetch("/processes/post_generic/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        proc_plan: planId,
+        msi_session: sessionId,
+        run_number: msRunNorm,
+        pipeline: "membraneseg",
+        notes: `MembraneSeg (tomo_type=${tomoType}, voxel=${voxelSize}${threshold ? `, threshold=${threshold}` : ""}, ms_run=${msRun})`,
+      }),
+    });
+    const createJson = await createResp.json();
+    if (!createResp.ok) throw new Error(createJson.error || `DB create failed (${createResp.status})`);
+
+    const extra = jobJson.job_id ? ` (Job ID: ${jobJson.job_id})` : "";
+    showStatusMessage(`MembraneSeg submitted successfully${extra}`, "success");
+
+  } catch (e) {
+    showStatusMessage(`Failed to submit MembraneSeg: ${e.message}`, "error");
+  } finally {
+    hideLoadingIndicator();
+    disableForm(false);
+  }
+}
+
+  // Utility functions
+  function showLoadingIndicator(message = "Processing...") {
+    const indicator = document.getElementById("loadingIndicator");
+    indicator.textContent = message;
+    indicator.style.display = "block";
+  }
+
+  function hideLoadingIndicator() {
+    document.getElementById("loadingIndicator").style.display = "none";
+  }
+
+  function disableForm(disabled) {
+    const inputs = document.querySelectorAll('input:not([readonly]), select, button:not(.go-back)');
+    inputs.forEach(input => {
+      input.disabled = disabled;
+    });
+  }
+
+function showStatusMessage(msg, level = "info", id = "statusMessage") {
+  const el = document.getElementById(id);
+  if (!el) {
+    console.error(`showStatusMessage: element #${id} not found. Message:`, msg);
+    alert(msg); // fallback so user still sees something
+    return;
+  }
+  el.textContent = msg;
+  el.className = `status ${level}`;
+}
 
   </script>
 </body> 

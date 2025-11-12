@@ -15,9 +15,9 @@ conda activate /hpc/projects/group.czii/conda_environments/pyczii
 session="{{ session }}"
 copick_procrun="{{ copickRun }}"
 
-tomo_alg = "{{ tomoType }}"
-tomo_voxelsize = {{ tomoVoxelSize }}
-membraneseg_session_id = "{{ sessionID }}"
+tomo_alg="{{ tomoType }}"
+tomo_voxelsize={{ tomoVoxelSize }}
+membraneseg_session_id="{{ sessionID }}"
 
 # optional parameters
 threshold="{{ threshold }}"
@@ -42,8 +42,10 @@ fi
 
 # build cmd
 is_number() {
-  [[ "$1" =~ ^[0-9]+([.][0-9]+)?$ ]]
+  # matches optional sign (+/-), digits, and optional decimal part
+  [[ "$1" =~ ^[-+]?[0-9]+([.][0-9]+)?$ ]]
 }
+
 
 # base cmd
 cmd=(copick inference membrain-seg
@@ -53,8 +55,8 @@ cmd=(copick inference membrain-seg
   --session-id "${membraneseg_session_id}"
 )
 
-# Append threshold only if valid numeric float
-if [[ -n "${threshold}" && "${threshold}" != "{{ threshold }}" ]]; then
+# Append threshold only if valid numeric float (positive or negative)
+if [[ -n "${threshold}" ]]; then
   if is_number "${threshold}"; then
     cmd+=("--threshold" "${threshold}")
   else

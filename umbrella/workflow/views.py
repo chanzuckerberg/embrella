@@ -689,6 +689,9 @@ def custom_run_membraneseg_page(request):
 def custom_run_octopi_page(request):
     return render(request, 'workflows/workflow_octopi.html')
 
+def custom_run_topcup_page(request):
+    return render(request, 'workflows/workflow_topcup.html')
+
 def custom_workflow_cancel(request):
     return render(request, 'workflows/workflow_cancel.html')
 
@@ -2700,7 +2703,8 @@ def get_tomo_combos_json(request):
         return JsonResponse({"error": str(e)}, status=500)
     
 # @api_view(["POST"])
-@require_http_methods(["POST"])
+@permission_classes([IsAuthenticated])
+@csrf_exempt
 def run_membraneseg(request):
     job_label = "MembraneSeg"
 
@@ -2723,7 +2727,7 @@ def run_membraneseg(request):
         copick_run     = (data.get("copick_run") or "").strip()             # e.g. "run001"
         tomo_type      = (data.get("tomo_type") or "").strip()       # e.g. "dctf"
         vox_in         = data.get("tomogram_voxel_size")             # e.g. 10 or "10.000"
-        membraneseg_id = (data.get("membraneseg_session_id") or "").strip() # your UI session ID
+        membraneseg_id = (data.get("membraneseg_run_id") or "").strip() # your UI session ID
 
         # Optional
         threshold_in   = data.get("threshold", "")
@@ -2742,7 +2746,7 @@ def run_membraneseg(request):
             "copick_run": copick_run,
             "tomo_type": tomo_type,
             "tomogram_voxel_size": vox_in,
-            "membraneseg_session_id": membraneseg_id,
+            "membraneseg_run_id": membraneseg_id,
             "user_id": user_id,
             "password": encoded_password,
         }.items() if not v and v != 0]
@@ -2780,7 +2784,7 @@ def run_membraneseg(request):
         )
         submitter.connect()
 
-        job_name = f"{session_name}_membraneseg_{copick_run}"
+        job_name = f"{session_name}_membraneseg_copickrun_{copick_run}_membranerun_{membraneseg_id}"
 
         # Template args must match Jinja placeholders in
         # umbrella/workflow/copick_membraneseg_template.sh

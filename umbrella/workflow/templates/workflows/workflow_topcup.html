@@ -4,65 +4,9 @@
   <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pick with Octopi</title>
+  <title>Pick with TopCUP</title>
 
   <style>
-  details.section > summary {
-    list-style: none;
-    cursor: pointer;
-    user-select: none;
-    color: #34495e;
-    border-bottom: 2px solid #3498db;
-    padding: 12px 12px 12px 44px; /* left padding for chevron space */
-    margin-top: 30px;
-    margin-bottom: 20px;
-    position: relative;
-    font-size: 1.5rem;
-    font-weight: 700;
-    background: transparent;
-  }
-
-  details.section > summary::-webkit-details-marker { display: none; }
-  details.section > summary::marker { content: ""; }
-
-  details.section > summary::before {
-    content: "▸";
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%) rotate(0deg);
-    transition: transform 0.2s ease;
-    font-size: 1.6rem; 
-    color: #3498db;
-  }
-
-  details.section[open] > summary::before {
-    transform: translateY(-50%) rotate(90deg);
-  }
-  summary .info-icon {
-    position: absolute;
-    right: 36px; /* leave space for chevron */
-    top: 50%;
-    transform: translateY(-50%);
-  }
-  summary .tooltip {
-    top: calc(100% + 8px);
-    right: 36px;
-  }
-
-    details.section .section-body {
-    overflow: hidden;
-    transition: grid-template-rows 0.25s ease;
-    display: grid;
-    grid-template-rows: 0fr;
-  }
-  details.section[open] .section-body {
-    grid-template-rows: 1fr;
-  }
-  details.section .section-inner {
-    min-height: 0; /* needed for the grid animation hack */
-  }
-
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
@@ -380,11 +324,10 @@
   </div>
 
   <div class="form-container">
-    <h1>Pick with Octopi</h1>
+    <h1>Pick with TopCUP</h1>
     <p class="note">Note: User credentials are SSH credentials for Bruno.</p>
     
     <!-- User Authentication Section -->
-
     <div class="form-group">
       <label for="userId">User ID:</label>
       <input type="text" id="userId" required readonly/>
@@ -397,56 +340,24 @@
       <input type="password" id="password" required placeholder="Enter your password"/>
     </div>
 
-    <!-- Prepare training picks segmentation -->
-    <details class="section">
-      <summary>
-        Prepare training targets for picks
-        <span class="info-icon">i</span>
-        <div class="tooltip">Convert training picks to segmentation, only needed for point picks</div>
-      </summary>
-      <div class="section-body">
-        <div class="section-inner">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="trainDataset">Training dataset</label>
-              <input id="trainDataset" type="text" placeholder="e.g., /path/to/ds" />
-            </div>
-            <div class="form-group">
-              <label for="epochs">Epochs</label>
-              <input id="epochs" type="number" min="1" value="10" />
-            </div>
-          </div>
-          <button id="createTargets">Create Targets</button>
-        </div>
-    </div>
-    </details>
-
     <!-- Train a model -->
     <div class="section-header">
         <h2>
-            Train or finetune an Octopi model
+            Train or finetune a TopCUP model
             <span class="info-icon">i</span>
-            <div class="tooltip">Train from scratch or finetune an Octopi model</div>
+            <div class="tooltip">Train from scratch or finetune a TopCUP model</div>
         </h2>
     </div>
 
-    <!-- Octopi predict -->
+    <!-- TopCUP inference -->
     <div class="section-header">
         <h2>
-            Predict with Octopi
+            Inference with TopCUP
             <span class="info-icon">i</span>
-            <div class="tooltip">Use an Octopi model to make predictions</div>
+            <div class="tooltip">Use a TopCUP model to inference</div>
         </h2>
     </div>
 
-    <!-- Localize octopi predictions -->
-    <div class="section-header">
-        <h2>
-            Localize Octopi predictions
-            <span class="info-icon">i</span>
-            <div class="tooltip">Localize Octopi predictions to picks in Copick</div>
-        </h2>
-    </div>
 
     <script>
     function goBack() {
