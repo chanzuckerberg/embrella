@@ -16,6 +16,9 @@ import { useSpecimenList } from '@app/common/hooks/useGridLogging/useSpecimenLis
 import { useFreezingSessionList } from '@app/common/hooks/useGridLogging/useFreezingSessionList';
 import { useCreateGrid } from '@app/common/hooks/useGridLogging/useCreateGrid';
 import { useDeviceList } from '@app/common/hooks/useGridLogging/useDeviceList';
+import { useConfluenceSpaceList } from '@app/common/hooks/useGridLogging/useConfluenceSpaceList';
+import { useDriveFolderList } from '@app/common/hooks/useGridLogging/useDriveFolderList';
+import { useConfluencePageList } from '@app/common/hooks/useGridLogging/useConfluencePageList';
 
 interface AddGridProps {
   open: boolean;
@@ -88,7 +91,10 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { transformedSpecimens, isSuccess: specimensLoaded } = useSpecimenList();
   const { transformedFreezingSessions } = useFreezingSessionList();
   const { devices: devicesList, isSuccess: devicesLoaded } = useDeviceList();
-
+  const { spaces: confluenceSpacesList, isSuccess: confluenceSpacesLoaded } = useConfluenceSpaceList();
+  const { folders: googleDriveFoldersList, isSuccess: googleDriveFoldersLoaded } = useDriveFolderList();
+  const { pages: notesPagesList, isSuccess: notesPagesLoaded } = useConfluencePageList();
+  
   // Transform devices to match the expected interface
   const devices = devicesList.map(device => ({
     id: device.id.toString(),  // Convert number to string
@@ -101,18 +107,25 @@ export const AddGrid: React.FC<AddGridProps> = ({
       name: user.full_name,
     })) || [];
 
-  const confluenceSpaces = [{ id: '1', url: 'https://czbiohub.atlassian.net/wiki/spaces/CHOL/overview' }];
+  const confluenceSpaces =
+    confluenceSpacesList.map((space) => ({
+      id: space.id.toString(),
+      url: space.url,
+    }));
 
-  const googleDriveFolders = [
-    { id: '1', name: 'BD01' },
-    { id: '2', name: 'Phantom 2' },
-  ];
+  const googleDriveFolders = 
+    googleDriveFoldersList.map((folder) => ({
+      id: folder.id.toString(),
+      name: folder.name,
+    }));
+  
 
-  const notesPages = [
-    { id: '1', url: 'VLP Freezing' },
-    { id: '1', url: 'Sample Prep Notes' },
-  ];
-
+  const notesPages = 
+    notesPagesList.map((page) => ({
+      id: page.id.toString(),
+      url: page.url,
+    }));
+  
   const handleSaveProject = async (data: {
     name: string;
     description: string;

@@ -14,7 +14,7 @@ from clouddocs.models import DriveFolder
 
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
 
-from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer, SpecimenSerializer, SampleSerializer, FreezingSessionSerializer, CryoGridSerializer
+from .serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer, UserSerializer, CaneSerializer, SpecimenSerializer, SampleSerializer, FreezingSessionSerializer, CryoGridSerializer, ConfluenceSpaceSerializer, DriveFolderSerializer, ConfluencePageSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):

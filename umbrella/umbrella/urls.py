@@ -36,8 +36,7 @@ from umbrella.api_internal import (
 )
 from umbrella.ping import ping
 from umbrella.user import get_user_info
-from umbrella.viewsets import GridLoggingChoicesViewSet, PuckViewSet, UserViewSet, CaneViewSet, SpecimenViewSet, SampleViewSet, FreezingSessionViewSet, CryoGridViewSet, ConfluenceSpaceViewSet, 
-    DriveFolderViewSet, ConfluencePageViewSet
+from umbrella.viewsets import GridLoggingChoicesViewSet, PuckViewSet, UserViewSet, CaneViewSet, SpecimenViewSet, SampleViewSet, FreezingSessionViewSet, CryoGridViewSet, ConfluenceSpaceViewSet, DriveFolderViewSet, ConfluencePageViewSet
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
