@@ -1,6 +1,8 @@
 from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Puck, Specimen, Sample, PlungeFreezingSession
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from confluence.models import Page, Space
+from clouddocs.models import DriveFolder
 
 from umbrella.choices import PUCK_COLORS
 
@@ -35,7 +37,6 @@ class UserSerializer(serializers.ModelSerializer):
         if '@' in username:
             return username.split('@')[0]
         return username
-
 
 class PuckSerializer(serializers.ModelSerializer):
     """
@@ -456,3 +457,21 @@ class FreezingSessionSerializer(serializers.ModelSerializer):
     def get_display_name(self, obj):
         """Get human-readable display name matching the __str__ method"""
         return str(obj)
+
+class ConfluenceSpaceSerializer(serializers.ModelSerializer):
+    """Serializer for Confluence Space model"""
+    class Meta:
+        model = Space
+        fields = ['id', 'name', 'space_id', 'url']
+
+class DriveFolderSerializer(serializers.ModelSerializer):
+    """Serializer for Google Drive Folder model"""
+    class Meta:
+        model = DriveFolder
+        fields = ['id', 'name', 'url']
+
+class ConfluencePageSerializer(serializers.ModelSerializer):
+    """Serializer for Confluence Page model (for notes pages)"""
+    class Meta:
+        model = Page
+        fields = ['id', 'name', 'url']
