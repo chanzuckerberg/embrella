@@ -578,6 +578,34 @@ class FreezingSessionViewSet(viewsets.ReadOnlyModelViewSet):
                 "error": "Internal server error occurred while fetching freezing sessions",
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)
+    
+    @action(detail=False, methods=['get'], url_path='devices')
+    def get_devices(self, request):
+        """
+        Get all unique devices used in freezing sessions
+        URL: /api/list/freezing-sessions/devices/
+        """
+        try:
+            from cryo_grids.models import PlungeFreezingDevice
+            
+            devices = PlungeFreezingDevice.objects.all().order_by('name')
+            device_list = [
+                {
+                    'id': device.id,
+                    'name': device.name,
+                    'maker_model': device.maker_model
+                }
+                for device in devices
+            ]
+            return Response({
+                'devices': device_list,
+                'total_devices_count': len(device_list),
+            })
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching devices",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=500)
 
 class CryoGridViewSet(viewsets.ModelViewSet):
     """
