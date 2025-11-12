@@ -8,7 +8,6 @@ import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/Di
 interface FreezingSessionFormData {
   user: string;
   device: string;
-  name: string;
   temperature: string;
   humidity: string;
   notesPage: string;
@@ -35,7 +34,6 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
   const [formData, setFormData] = useState<FreezingSessionFormData>({
     user: '',
     device: 'Leica GP2',
-    name: '',
     temperature: '',
     humidity: '',
     notesPage: '',
@@ -60,7 +58,6 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
       await onSave({
         user: formData.user,
         device: formData.device,
-        name: formData.name.trim(),
         temperature: formData.temperature,
         humidity: formData.humidity,
         notesPage: formData.notesPage,
@@ -69,7 +66,6 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
       setFormData({
         user: '',
         device: '',
-        name: '',
         temperature: '',
         humidity: '',
         notesPage: '',
@@ -88,7 +84,6 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
     setFormData({
       user: '',
       device: '',
-      name: '',
       temperature: '',
       humidity: '',
       notesPage: '',
@@ -96,7 +91,7 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
     onClose();
   };
 
-  const isFormValid = formData.user && formData.device && formData.name.trim();
+  const isFormValid = formData.user && formData.device;
 
   return (
     <BaseFormDialog
@@ -169,15 +164,6 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
             </Select>
           </FormControl>
         </Box>
-
-        <TextField
-          required
-          label="Name"
-          placeholder="Enter freezing session name"
-          value={formData.name}
-          onChange={(e) => handleInputChange('name', e.target.value)}
-          sx={disabledTextFieldStyles}
-        />
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
