@@ -895,7 +895,113 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['patch'], url_path='(?P<grid_id>[0-9]+)/move')
+    def move_grid(self, request, grid_id=None):
+        """
+        Move a grid to a different grid box and/or position
+        URL: PATCH /api/list/grids/{grid_id}/move/
         
+        Request Body:
+        {
+            "destination_grid_box_id": 10,
+            "destination_position": 2
+        }
+        
+        Response:
+        {
+            "success": true,
+            "message": "Grid moved successfully",
+            "grid": {
+                "id": 5,
+                "name": "Grid1",
+                "grid_box": 10,
+                "position_in_box": 2,
+                ...
+            }
+        }
+        """
+        try:
+            # Get the grid to move
+            try:
+                grid = CryoGrid.objects.get(id=grid_id, trashed=False)
+            except CryoGrid.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid not found or has been trashed',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Extract destination from request
+            destination_grid_box_id = request.data.get('destination_grid_box_id')
+            destination_position = request.data.get('destination_position')
+            
+            if not destination_grid_box_id or not destination_position:
+                return Response({
+                    'success': False,
+                    'error': 'Both destination_grid_box_id and destination_position are required',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate destination grid box exists
+            try:
+                destination_grid_box = CryoGridBox.objects.get(id=destination_grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': f'Destination grid box with ID {destination_grid_box_id} not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Validate destination position is within grid box's range
+            if destination_position < 1 or destination_position > destination_grid_box.max_grids:
+                return Response({
+                    'success': False,
+                    'error': f'Position must be between 1 and {destination_grid_box.max_grids}',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Check if destination position is already occupied by another grid
+            existing_grid = CryoGrid.objects.filter(
+                grid_box=destination_grid_box,
+                position_in_box=destination_position,
+                trashed=False
+            ).exclude(id=grid_id).first()
+            
+            if existing_grid:
+                return Response({
+                    'success': False,
+                    'error': f'Position {destination_position} in grid box {destination_grid_box.name} is already occupied by grid "{existing_grid.name}"',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Store old location for response message
+            old_grid_box_name = grid.grid_box.name if grid.grid_box else 'None'
+            old_position = grid.position_in_box
+            
+            # Update grid location
+            grid.grid_box = destination_grid_box
+            grid.position_in_box = destination_position
+            grid.save()
+            
+            # Serialize updated grid
+            serializer = CryoGridSerializer(grid)
+            
+            return Response({
+                'success': True,
+                'message': f'Grid "{grid.name}" moved from {old_grid_box_name} position {old_position} to {destination_grid_box.name} position {destination_position}',
+                'grid': serializer.data,
+            }, status=status.HTTP_200_OK)
+            
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Internal server error occurred while moving grid',
+                'detail': str(e) if settings.DEBUG else 'Please try again later',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
     @action(detail=False, methods=['post'], url_path='clip-all-in-box/(?P<grid_box_id>[0-9]+)')
     @method_decorator(csrf_exempt)
     def clip_all_in_box(self, request, grid_box_id=None):
