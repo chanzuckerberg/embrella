@@ -48,11 +48,17 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
 
   const handleSave = async () => {
     // Validate required fields
-    if (!formData.user || !formData.device || !formData.name.trim()) {
-      alert('Please fill in all required fields (User, Device, and Name)');
+    if (!formData.user || !formData.device || !formData.temperature || !formData.humidity) {
+      alert('Please fill in all required fields (User, Device, Temperature, and Humidity)');
       return;
     }
-
+  
+    // Validate numbers
+    if (isNaN(Number(formData.temperature)) || isNaN(Number(formData.humidity))) {
+      alert('Temperature and Humidity must be valid numbers');
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       await onSave({
@@ -167,7 +173,7 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
-            label="Temperature"
+            label="Device Temperature"
             placeholder="Enter temperature"
             type="number"
             value={formData.temperature}
@@ -197,7 +203,15 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
             value={formData.notesPage}
             onChange={(e) => handleInputChange('notesPage', e.target.value)}
             label="Notes Page"
+            placeholder="Select notes page (optional)"
             sx={disabledTextFieldStyles}
+            MenuProps={{
+              PaperProps: {
+                style: {
+                  maxHeight: 180,
+                },
+              },
+            }}
           >
             {notesPages.length === 0 ? (
               <MenuItem value="" disabled>
