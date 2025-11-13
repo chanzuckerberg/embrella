@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { PuckSVG } from './PuckSvg';
 import { DeletePuck } from './DeletePuck';
@@ -15,14 +15,21 @@ interface PuckDetailsProps {
   selectedPuck: PucksList | null;
   onSlotSelect: (slotPosition: number, gridBoxId?: number) => void;
   selectedUser?: UsersList | null;
+  onRefetchReady?: (refetch: () => void) => void;
 }
 
-export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser }) => {
+export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser, onRefetchReady }) => {
   // Fetch puck slots data
   const { slotsData, isSuccess, refetch } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isCreateGridBoxOpen, setIsCreateGridBoxOpen] = useState(false);
   const [selectedSlotForGridBox, setSelectedSlotForGridBox] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (onRefetchReady) {
+      onRefetchReady(refetch);
+    }
+  }, [onRefetchReady, refetch]);
 
   const handleSlotClick = (slotPosition: number) => {
     if (!slotsData) return;

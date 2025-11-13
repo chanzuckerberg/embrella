@@ -23,6 +23,7 @@ interface GridBoxInfoProps {
   onGridSelect: (gridPosition: number, gridId: number) => void;
   selectedUser?: UsersList | null;
   onGridDetailsRefetch?: (() => void) | null;
+  onMoveGridBoxSuccess?: (newPuckId: number, newSlotPosition: number) => void;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -42,6 +43,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   onGridSelect,
   selectedUser,
   onGridDetailsRefetch,
+  onMoveGridBoxSuccess,
 }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -86,10 +88,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
 
   const handleMoveGridBox = () => {
     setMoveGridBoxDialogOpen(true);
-    console.log('Move grid box');
   };
   const handleClipAllGrids = () => {
-    console.log('Clip all grids');
     clearError(); 
     setClipAllDialogOpen(true);
   };
@@ -103,7 +103,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     const result = await clipAllGrids(gridBoxData.grid_box.grid_box_id);
     
     if (result) {
-      console.log('Successfully clipped all grids:', result);
       setClipAllDialogOpen(false);
       // Refetch grid box data to update the UI
       refetch();
@@ -297,6 +296,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         currentSlot={selectedSlot}
         gridBoxData={gridBoxData}
         selectedUser={selectedUser}
+        onSuccess={(newPuckId: number, newSlotPosition: number) => {
+          if (onMoveGridBoxSuccess) {
+            onMoveGridBoxSuccess(newPuckId, newSlotPosition);
+          }
+        }}
       />
       <ClipAllGridsDialog
         open={clipAllDialogOpen}

@@ -32,6 +32,7 @@ interface GridDetailsProps {
   selectedGridId: number | null;
   selectedUser?: UsersList | null;
   onGridDetailsRefetchReady?: (refetch: () => void) => void; 
+  onMoveGridSuccess?: (newPuckId: number, newSlotPosition: number, newGridBoxId: number, newPositionInBox: number) => void;
 }
 
 const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
@@ -57,6 +58,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedGridId,
   selectedUser,
   onGridDetailsRefetchReady,
+  onMoveGridSuccess
 }) => {
   // Fetch data
   const { isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
@@ -113,7 +115,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   
       if (response.ok) {
         const result = await response.json();
-        console.log('Clipped status updated successfully:', result);
       } else {
         setLocalClipped(!newClippedStatus); 
       }
@@ -398,7 +399,9 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
      currentSlot={selectedSlot}
      currentPosition={selectedGrid}
      gridDetails={gridDetails}
+     gridId={selectedGridId} 
      selectedUser={selectedUser}
+     onSuccess={onMoveGridSuccess}
    />
  </>
   );
