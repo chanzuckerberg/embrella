@@ -39,3 +39,25 @@ export interface GridBoxDetail extends GridBoxBase {
   grid_box_id: number;
   positions: Position[];
 }
+
+export interface MoveGridBoxData {
+  grid_box_id: number;
+  destination_puck_id: number;
+  destination_position: number;
+}
+
+export interface MoveGridBoxResponse {
+  success: boolean;
+  message: string;
+  grid_box: {
+    id: number;
+    name: string;
+    color: string;
+    color_display: string;
+    numbering: string;
+    numbering_display: string;
+    position_in_puck: number;
+    max_grids: number;
+    puck: number;
+  };
+}
