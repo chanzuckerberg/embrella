@@ -59,6 +59,8 @@ export enum POST_API {
   CREATE_GRID_BOX = '/api/list/pucks/puck_id/grid-box/',
   CREATE_GRID = '/api/list/grids/',
   CLIP_ALL_GRIDS = '/api/list/grids/clip-all-in-box/grid_box_id/',
+  MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
+  MOVE_GRID = '/api/list/grids/grid_id/move/',
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
