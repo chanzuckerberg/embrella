@@ -16,9 +16,9 @@ import { useSpecimenList } from '@app/common/hooks/useGridLogging/useSpecimenLis
 import { useFreezingSessionList } from '@app/common/hooks/useGridLogging/useFreezingSessionList';
 import { useCreateGrid } from '@app/common/hooks/useGridLogging/useCreateGrid';
 import { useDeviceList } from '@app/common/hooks/useGridLogging/useDeviceList';
-import { useConfluenceSpaceList } from '@app/common/hooks/useGridLogging/useConfluenceSpaceList';
-import { useDriveFolderList } from '@app/common/hooks/useGridLogging/useDriveFolderList';
 import { useConfluencePageList } from '@app/common/hooks/useGridLogging/useConfluencePageList';
+import { useDriveFolderList } from '@app/common/hooks/useGridLogging/useDriveFolderList';
+import { useConfluenceSpaceList } from '@app/common/hooks/useGridLogging/useConfluenceSpaceList';
 
 interface AddGridProps {
   open: boolean;
@@ -47,6 +47,9 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const [addProjectDialogOpen, setAddProjectDialogOpen] = useState(false);
   const [addFreezingSessionDialogOpen, setAddFreezingSessionDialogOpen] = useState(false);
   const { createGrid, isCreating, error, clearError } = useCreateGrid();
+  const { spaces: confluenceSpacesList } = useConfluenceSpaceList();
+  const { pages: confluencePagesList } = useConfluencePageList();
+  const { folders: driveFoldersList } = useDriveFolderList();
 
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
@@ -89,12 +92,8 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { users, isSuccess: usersLoaded } = useGridLoggingUserList();
   const { transformedSpecimens, isSuccess: specimensLoaded } = useSpecimenList();
-  const { transformedFreezingSessions } = useFreezingSessionList();
+  const { transformedFreezingSessions, refetch: freezingSessionRefetch } = useFreezingSessionList();
   const { devices: devicesList, isSuccess: devicesLoaded } = useDeviceList();
-  const { spaces: confluenceSpacesList, isSuccess: confluenceSpacesLoaded } = useConfluenceSpaceList();
-  const { folders: googleDriveFoldersList, isSuccess: googleDriveFoldersLoaded } = useDriveFolderList();
-  const { pages: notesPagesList, isSuccess: notesPagesLoaded } = useConfluencePageList();
-  
   // Transform devices to match the expected interface
   const devices = devicesList.map(device => ({
     id: device.id.toString(),  // Convert number to string
@@ -107,25 +106,22 @@ export const AddGrid: React.FC<AddGridProps> = ({
       name: user.full_name,
     })) || [];
 
-  const confluenceSpaces =
-    confluenceSpacesList.map((space) => ({
+    const confluenceSpaces = confluenceSpacesList.map(space => ({
       id: space.id.toString(),
       url: space.url,
     }));
 
-  const googleDriveFolders = 
-    googleDriveFoldersList.map((folder) => ({
+    const googleDriveFolders = driveFoldersList.map(folder => ({
       id: folder.id.toString(),
       name: folder.name,
     }));
   
-
-  const notesPages = 
-    notesPagesList.map((page) => ({
+    const notesPages = confluencePagesList.map(page => ({
       id: page.id.toString(),
+      name: page.name,
       url: page.url,
     }));
-  
+
   const handleSaveProject = async (data: {
     name: string;
     description: string;
@@ -157,7 +153,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
     humidity: string;
     notesPage: string;
   }) => {
-
   };
 
   const handleSave = async () => {
