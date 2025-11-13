@@ -2,28 +2,7 @@ import { useState, useCallback } from 'react';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { getRequestURL } from '@app/common/queries/utils';
 import { patchResource } from '@app/common/queries/fetchResource';
-
-export interface MoveGridData {
-  grid_id: number;
-  destination_grid_box_id: number;
-  destination_position: number;
-}
-
-export interface MoveGridResponse {
-  success: boolean;
-  message: string;
-  grid: {
-    id: number;
-    name: string;
-    grid_box: number;
-    position_in_box: number;
-    user: number;
-    specimen: number;
-    freezing_session: number;
-    clipped: boolean;
-    trashed: boolean;
-  };
-}
+import { MoveGridData, MoveGridResponse } from '@app/common/types/gridLogging/grid';
 
 interface UseMoveGridResult {
   moveGrid: (data: MoveGridData) => Promise<MoveGridResponse | null>;

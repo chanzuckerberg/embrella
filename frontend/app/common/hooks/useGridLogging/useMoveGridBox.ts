@@ -2,29 +2,7 @@ import { useState, useCallback } from 'react';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { getRequestURL } from '@app/common/queries/utils';
 import { patchResource } from '@app/common/queries/fetchResource';
-
-
-export interface MoveGridBoxData {
-  grid_box_id: number;
-  destination_puck_id: number;
-  destination_position: number;
-}
-
-export interface MoveGridBoxResponse {
-  success: boolean;
-  message: string;
-  grid_box: {
-    id: number;
-    name: string;
-    color: string;
-    color_display: string;
-    numbering: string;
-    numbering_display: string;
-    position_in_puck: number;
-    max_grids: number;
-    puck: number;
-  };
-}
+import { MoveGridBoxData, MoveGridBoxResponse } from '@app/common/types/gridLogging/gridBox';
 
 interface UseMoveGridBoxResult {
   moveGridBox: (data: MoveGridBoxData) => Promise<MoveGridBoxResponse | null>;
