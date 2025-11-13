@@ -52,3 +52,14 @@ export async function postResource(requestURL: string, body: Record<string, unkn
 
   return response;
 }
+
+export const patchResource = async (url: string, body: object): Promise<Response> => {
+  return fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+};
