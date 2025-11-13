@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
+import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { GridDetailsResponse } from '@app/common/types/gridLogging/gridDetails';
@@ -11,6 +11,7 @@ import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGri
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
+import { useMoveGrid } from '@app/common/hooks/useGridLogging/useMoveGrid';
 
 interface MoveGridProps {
   open: boolean;
@@ -19,7 +20,9 @@ interface MoveGridProps {
   currentSlot: number | null;
   currentPosition: number | null;
   gridDetails: GridDetailsResponse | null;
+  gridId: number | null;
   selectedUser?: UsersList | null;
+  onSuccess?: (newPuckId: number, newSlotPosition: number, newGridBoxId: number, newPositionInBox: number) => void;
 }
 
 export const MoveGrid: React.FC<MoveGridProps> = ({
@@ -29,7 +32,9 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
   currentSlot,
   currentPosition,
   gridDetails,
+  gridId,
   selectedUser,
+  onSuccess,
 }) => {
   const [formData, setFormData] = useState({
     destinationCane: '',
@@ -37,7 +42,9 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
     destinationSlot: '',
     destinationPosition: '',
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Use the hook for moving grid
+  const { moveGrid, isMoving, error, clearError } = useMoveGrid();
 
   // Fetch choices (for cane colors)
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
@@ -67,8 +74,9 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
         destinationSlot: '',
         destinationPosition: '',
       });
+      clearError();
     }
-  }, [open]);
+  }, [open, clearError]);
 
   // Get available slots (filled with grid boxes only) from the puck slots API
   const availableSlots = useMemo(() => {
@@ -110,45 +118,46 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
     }
   };
 
-  const handleMove = () => {
+  const handleMove = async () => {
     if (
       !formData.destinationCane ||
       !formData.destinationPuck ||
       !formData.destinationSlot ||
       !formData.destinationPosition
     ) {
-      alert('Please select cane, puck, slot, and position');
       return;
     }
 
-    setIsSubmitting(true);
+    if (!gridId) {
+      return;
+    }
 
-    const selectedPuck = pucksInCane?.pucks?.find((p) => p.id.toString() === formData.destinationPuck);
+    // Get the grid box ID from the selected slot
+    const selectedSlot = slotsData?.slots?.find(
+      (slot) => slot.position === Number(formData.destinationSlot)
+    );
 
-    console.log('Moving grid:', {
-      from: {
-        puck: currentPuck?.name,
-        puck_id: currentPuck?.id,
-        slot: currentSlot,
-        position: currentPosition,
-        grid_box: gridDetails?.location?.grid_box_name,
-      },
-      to: {
-        cane_id: formData.destinationCane,
-        puck: selectedPuck?.name,
-        puck_id: formData.destinationPuck,
-        slot: formData.destinationSlot,
-        grid_box: gridBoxData?.grid_box?.name,
-        position: formData.destinationPosition,
-      },
-      grid: {
-        name: gridDetails?.grid_name,
-      },
+    if (!selectedSlot?.grid_box_id) {
+      return;
+    }
+
+    const destinationPuckId = Number(formData.destinationPuck);
+    const destinationSlotPosition = Number(formData.destinationSlot);
+    const destinationGridBoxId = selectedSlot.grid_box_id;
+    const destinationPosition = Number(formData.destinationPosition);
+
+    const result = await moveGrid({
+      grid_id: gridId,
+      destination_grid_box_id: destinationGridBoxId,
+      destination_position: destinationPosition,
     });
-    setTimeout(() => {
-      setIsSubmitting(false);
+
+    if (result?.success) {
       onClose();
-    }, 1000);
+      if (onSuccess) {
+        onSuccess(destinationPuckId, destinationSlotPosition, destinationGridBoxId, destinationPosition);
+      }
+    }
   };
 
   const isFormValid =
@@ -187,18 +196,25 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
       onClose={onClose}
       title="Move Grid"
       titleExtra={
-        <Tooltip title={currentLocationTooltip} arrow placement="right">
-          <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
-            <Icon sdsIcon="InfoCircle" sdsSize="s" />
-          </Box>
-        </Tooltip>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -2 }}>
+          <Tooltip title={currentLocationTooltip} arrow placement="right">
+            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
+              <Icon sdsIcon="InfoCircle" sdsSize="s" />
+            </Box>
+          </Tooltip>
+        </Box>
       }
       subtitle={selectedUser?.full_name || ''}
       onSave={handleMove}
-      isSubmitting={isSubmitting}
+      isSubmitting={isMoving}
       saveButtonText="Move"
       disabled={!isFormValid || !choicesLoaded}
     >
+    {Boolean(error) && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
+          {error}
+        </Alert>
+    )}
       <TextField
         select
         required

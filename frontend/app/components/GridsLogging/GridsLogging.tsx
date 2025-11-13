@@ -23,6 +23,7 @@ export const GridsLogging: React.FC = () => {
   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
   const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
   const [isAddPuckDialogOpen, setIsAddPuckDialogOpen] = useState(false);
+  const [puckDetailsRefetch, setPuckDetailsRefetch] = useState<() => void>(() => {});
   const [gridDetailsRefetch, setGridDetailsRefetch] = useState<() => void>(() => {});
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
@@ -122,6 +123,45 @@ export const GridsLogging: React.FC = () => {
     window.location.reload();
   };
 
+  const handleMoveGridBoxSuccess = (newPuckId: number, newSlotPosition: number) => {
+    const newPuck = pucksList?.find(p => p.id === newPuckId);
+    if (newPuck) {
+      setSelectedPuck(newPuck);
+      setSelectedSlot(newSlotPosition);
+      setSelectedGrid(null);
+      setSelectedGridId(null);
+    }
+    if (puckDetailsRefetch) {
+      puckDetailsRefetch();
+    }
+  };
+  const handleMoveGridSuccess = (
+    newPuckId: number, 
+    newSlotPosition: number, 
+    newGridBoxId: number, 
+    newPositionInBox: number
+  ) => {
+    // Find and set the new puck
+    const newPuck = pucksList?.find(p => p.id === newPuckId);
+    if (newPuck) {
+      setSelectedPuck(newPuck);
+      setSelectedSlot(newSlotPosition);
+      setSelectedGrid(newPositionInBox);
+      // Keep the same gridId since the grid itself hasn't changed, just moved
+    }
+    
+    // Refetch all related data to show updated locations
+    if (puckDetailsRefetch) {
+      puckDetailsRefetch();
+    }
+    if (gridDetailsRefetch) {
+      gridDetailsRefetch();
+    }
+  };
+  const handlePuckDetailsRefetchReady = useCallback((refetch: () => void) => {
+    setPuckDetailsRefetch(() => refetch);
+  }, []);
+
   return (
     <Box className={styles.mainContainer}>
       {/* Top Section - Puck List and Puck Details */}
@@ -177,7 +217,7 @@ export const GridsLogging: React.FC = () => {
 
         {/* Puck Details Component - appears on the right when a puck is selected */}
         {selectedPuck && (
-          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} selectedUser={selectedUser} />
+          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} selectedUser={selectedUser} onRefetchReady={handlePuckDetailsRefetchReady} />
         )}
       </Box>
 
@@ -189,6 +229,7 @@ export const GridsLogging: React.FC = () => {
             onGridSelect={handleGridSelect}
             selectedUser={selectedUser}
             onGridDetailsRefetch={gridDetailsRefetch}
+            onMoveGridBoxSuccess={handleMoveGridBoxSuccess}
           />
           {!!selectedGrid && (
             <GridDetails
@@ -198,6 +239,7 @@ export const GridsLogging: React.FC = () => {
               selectedGridId={selectedGridId}
               selectedUser={selectedUser}
               onGridDetailsRefetchReady={handleGridDetailsRefetchReady}
+              onMoveGridSuccess={handleMoveGridSuccess}
             />
           )}
         </Box>

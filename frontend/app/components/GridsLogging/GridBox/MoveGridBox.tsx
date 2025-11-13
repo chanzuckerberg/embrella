@@ -9,6 +9,7 @@ import { UsersList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingPucksByCane } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
+import { useMoveGridBox } from '@app/common/hooks/useGridLogging/useMoveGridBox';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 
 interface MoveGridBoxProps {
@@ -18,6 +19,7 @@ interface MoveGridBoxProps {
   currentSlot: number | null;
   gridBoxData: GridBoxDetailResponse | null;
   selectedUser?: UsersList | null;
+  onSuccess?: (newPuckId: number, newSlotPosition: number) => void;
 }
 
 export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
@@ -27,23 +29,20 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
   currentSlot,
   gridBoxData,
   selectedUser,
+  onSuccess,
 }) => {
   const [formData, setFormData] = useState({
     destinationCane: '',
     destinationPuck: '',
     destinationPosition: '',
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch choices (for cane colors)
+  const { moveGridBox, isMoving, error, clearError } = useMoveGridBox();
+
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
-
-  // Fetch pucks for selected cane (dynamically)
   const { pucks: pucksInCane, isSuccess: pucksLoaded } = useGridLoggingPucksByCane(
     formData.destinationCane ? Number(formData.destinationCane) : undefined
   );
-
-  // Fetch available positions for selected puck
   const { slotsData, isSuccess: slotsLoaded } = useGridLoggingPuckSlots(
     formData.destinationPuck ? Number(formData.destinationPuck) : undefined
   );
@@ -56,8 +55,9 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         destinationPuck: '',
         destinationPosition: '',
       });
+      clearError();
     }
-  }, [open]);
+  }, [open, clearError]);
 
   // Get available positions (empty slots only) from the puck slots API
   const availablePositions = useMemo(() => {
@@ -71,7 +71,6 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
       [field]: value,
     }));
 
-    // Reset downstream selections when parent changes
     if (field === 'destinationCane') {
       setFormData((prev) => ({
         ...prev,
@@ -86,33 +85,32 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
     }
   };
 
-  const handleMove = () => {
+  const handleMove = async () => {
     if (!formData.destinationCane || !formData.destinationPuck || !formData.destinationPosition) {
       alert('Please select cane, puck, and position');
       return;
     }
 
-    setIsSubmitting(true);
+    if (!gridBoxData?.grid_box?.grid_box_id) {
+      alert('Grid box ID not found');
+      return;
+    }
 
-    const selectedPuck = pucksInCane?.pucks?.find((p) => p.id.toString() === formData.destinationPuck);
+    const destinationPuckId = Number(formData.destinationPuck);
+    const destinationPosition = Number(formData.destinationPosition);
 
-    console.log('Moving grid box:', {
-      from: {
-        puck: currentPuck?.name,
-        puck_id: currentPuck?.id,
-        position: currentSlot,
-      },
-      to: {
-        cane_id: formData.destinationCane,
-        puck: selectedPuck?.name,
-        puck_id: formData.destinationPuck,
-        position: formData.destinationPosition,
-      },
-      gridBox: {
-        name: gridBoxData?.grid_box?.name,
-        id: gridBoxData?.grid_box?.grid_box_id,
-      },
+    const result = await moveGridBox({
+      grid_box_id: gridBoxData.grid_box.grid_box_id,
+      destination_puck_id: destinationPuckId,
+      destination_position: destinationPosition,
     });
+
+    if (result?.success) {
+      onClose();
+      if (onSuccess) {
+        onSuccess(destinationPuckId, destinationPosition);
+      }
+    }   
   };
 
   const isFormValid = formData.destinationCane && formData.destinationPuck && formData.destinationPosition;
@@ -151,9 +149,10 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
       }
       subtitle={selectedUser?.full_name || ''}
       onSave={handleMove}
-      isSubmitting={isSubmitting}
+      isSubmitting={isMoving}
       saveButtonText="Move"
       disabled={!isFormValid || !choicesLoaded}
+      error={error || undefined}
     >
       <TextField
         select
