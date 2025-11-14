@@ -42,4 +42,5 @@ urlpatterns = [
     path("run-copick-add-object/", views.run_copick_add_object, name="run_add_object_copick"),
     path("api/tomo-combos", views.get_tomo_combos_json, name="get_tomo_combos_json"),
     path("run-membraneseg/", views.run_membraneseg, name="run_membraneseg"),
+    path("api/annotation-combos", views.get_annotation_combos_json, name="get_annotation_combos_json"),
 ]

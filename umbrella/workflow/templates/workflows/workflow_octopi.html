@@ -331,7 +331,7 @@
   .form-row-four {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
+    /* gap: 20px; */
     align-items: start;
   }
 
@@ -369,7 +369,85 @@
     color: #7f8c8d;
   }
 
-    </style>
+  /* tagglable two-col sections */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;    
+    align-items: start;
+  }
+  .two-col .col {
+    position: relative;
+    padding: 6px;
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    background: #fafafa;
+  }
+  .col-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto; 
+    align-items: center;
+    margin-bottom: 12px;
+    position: relative;
+    padding: 0;
+  }
+
+  .col-header input[type="checkbox"] {
+    justify-self: start;     
+    transform: scale(1.5);        
+    margin: 0;                    
+    accent-color: #3498db;
+  }
+
+  .col-header label {
+    margin: 0;
+    font-weight: 700;
+    font-size: 16px;
+    color: #2c3e50;
+    text-align: center;             
+    justify-self: center;
+    width: 100%;
+  }
+
+  .col:not(:has(.col-toggle:checked)) {
+    opacity: 0.5;
+    filter: grayscale(0.2);
+  }
+  .col:not(:has(.col-toggle:checked)) .col-body {
+    pointer-events: none;
+  }
+  .col:not(:has(.col-toggle:checked))::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background-image: repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0, rgba(0,0,0,0.04) 8px, transparent 8px, transparent 16px);
+    pointer-events: none;
+  }
+
+  /* Responsive: stack columns on small screens */
+  @media (max-width: 768px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+
+.two-col .col-body {
+  font-size: 12px;
+}
+
+
+.two-col input:not([type="radio"]),
+.two-col select {
+  font-size: inherit !important;
+  line-height: 1.3;
+}
+
+.two-col select option {
+  font-size: inherit !important;
+}
+
+      </style>
 </head>
 
 <body>
@@ -397,29 +475,116 @@
       <input type="password" id="password" required placeholder="Enter your password"/>
     </div>
 
-    <!-- Prepare training picks segmentation -->
+<!-- Prepare training picks segmentation -->
     <details class="section">
       <summary>
-        Prepare training targets for picks
+        Prepare training targets
         <span class="info-icon">i</span>
-        <div class="tooltip">Convert training picks to segmentation, only needed for point picks</div>
+        <div class="tooltip">Convert training picks to segmentations, or collect training segmentations.</div>
       </summary>
+
+<!-- Row 1: Session + Copick ProcRun + Tomogram Type + Tomogram Voxel Size (4 columns) -->
+      <div class="form-row-four">
+        <div class="form-group">
+          <label for="importCopickSession">Copick Session:
+              <span class="info-icon-small">i
+                <div class="tooltip-small">
+                  Select a Copick session with training annotations.
+                </div>
+            </span>
+          </label>
+          <select id="importCopickSession">
+            <option value="">Loading sessions…</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="importCopickRun">Copick ProcRun:
+              <span class="info-icon-small">i
+                <div class="tooltip-small">
+                  Select a Copick ProcRun.
+                </div>
+            </span>
+          </label>
+          <select id="importCopickRun">
+            <option value="">Select a copick run…</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="tomogramType">Tomogram Type:
+              <span class="info-icon-small">i
+                <div class="tooltip-small">
+                  Select the type of tomogram.
+                </div>
+            </span>
+          </label>
+          <select id="tomogramType">
+            <option value="">Select tomogram type…</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="tomogramVoxelSize">Tomogram Voxel Size (Å):
+              <span class="info-icon-small">i
+                <div class="tooltip-small">
+                  Select the voxel size of the tomograms. 10Å recommended.
+                </div>
+            </span>
+          </label>
+          <select id="tomogramVoxelSize">
+            <option value="">Select voxel size…</option>
+          </select>
+        </div>
+        <div id="octopi_run_id"
+            class="recommendation-msg col-span-4"
+            style="margin-top:4px; margin-bottom:4px; font-size:14px; color:#2c3e50; ">
+        </div>
+        <input type="hidden" id="octopi_run_id_input" name="octopi_run_id" />
+      </div>
+
+<!-- Row 2: Gather picks or segmentations (4 columns) -->
       <div class="section-body">
-        <div class="section-inner">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="trainDataset">Training dataset</label>
-              <input id="trainDataset" type="text" placeholder="e.g., /path/to/ds" />
+          <div class="section-inner">
+        <p class="help-text">Select to prepare for picks (points) or segmentations.</p>
+          <div class="two-col">
+            <!-- LEFT COLUMN -->
+            <div class="col" id="pick-col">
+              <div class="col-header">
+                <input type="checkbox" id="pick-toggle" class="col-toggle" name="column-toggle" />
+                <label for="pick-toggle">Picks</label>
+              </div>
+              <div class="col-body">
+                <div class="form-group">
+                  <label for="pick-select">Select a set of picks for training:</label>
+                  <div class="form-hint"><code>user-id | session-id | name</code></div>
+                  <select id="pick-select"></select>
+                </div>
+              </div>
             </div>
-            <div class="form-group">
-              <label for="epochs">Epochs</label>
-              <input id="epochs" type="number" min="1" value="10" />
+
+            <!-- RIGHT COLUMN -->
+            <div class="col" id="seg-col">
+              <div class="col-header">
+                <input type="checkbox" id="seg-toggle" class="col-toggle" name="column-toggle" />
+                <label for="seg-toggle">Segmentations</label>
+              </div>
+              <div class="col-body">
+                <div class="form-group">
+                  <label for="seg-select">Select a set of segmentations for training:</label>
+                  <div class="form-hint"><code>user-id | session-id | name | voxelsize</code></div>
+                  <select id="seg-select"></select>
+                </div>
+              </div>
             </div>
           </div>
-          <button id="createTargets">Create Targets</button>
-        </div>
-    </div>
+
+          </div>
+      </div>
+
+      
     </details>
+
 
     <!-- Train a model -->
     <div class="section-header">
@@ -479,6 +644,412 @@
         console.error("[init] fetchUserInfo() threw an error:", err);
       }
     });
+
+        // Populate the CopickSession dropdown
+    async function populateCopickSessionDropdown() {
+      const sel = document.getElementById("importCopickSession");
+      if (!sel) return;
+
+      try {
+        // This uses your existing view: path("copick_params", views.get_msi_params_list, …)
+        const res = await fetch("/workflow/copick_params?plan_type=copick");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // Expected shape: { sessions: [{ name: "25oct01b", run_numbers: ["001","002",...] }, ...] }
+        const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+
+        // Sort newest-looking sessions first (simple lexicographic desc; adjust if needed)
+        sessions.sort((a,b) => (b.name || "").localeCompare(a.name || ""));
+
+        sel.innerHTML = '<option value="">Select a copick session…</option>';
+        for (const s of sessions) {
+          const opt = document.createElement("option");
+          opt.value = s.name;            // value used elsewhere
+          opt.textContent = s.name;      // label shown to user
+          sel.appendChild(opt);
+        }
+      } catch (e) {
+        console.error("Failed to load copick sessions:", e);
+        const sel = document.getElementById("importCopickSession");
+        if (sel) sel.innerHTML = '<option value="">Error loading sessions</option>';
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      populateCopickSessionDropdown();
+    });
+
+    // Populate the "Copick ProcRun" dropdown based on selected Copick session
+    async function populateCopickRun(sessionName) {
+      const runSel = document.getElementById('importCopickRun');
+      if (!runSel) return;
+
+      if (!sessionName) {
+        runSel.innerHTML = '<option value="">Select a Copick run…</option>';
+        return;
+      }
+
+      runSel.innerHTML = '<option value="">Loading runs…</option>';
+
+      try {
+        // Pull Copick runs from DB for the selected session
+        const url = `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=copick&_ts=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const json = await res.json();
+        // Expected response: { sessions: [ { name: "25oct01b", run_numbers: ["001","002",...] } ] }
+        const runs = json?.sessions?.[0]?.run_numbers ?? [];
+
+        // Sort runs descending (newest first)
+        const sorted = [...runs].sort((a, b) => (parseInt(b, 10) || 0) - (parseInt(a, 10) || 0));
+
+        // Populate dropdown
+        runSel.innerHTML = '<option value="">Select a Copick run…</option>';
+        for (const r of sorted) {
+          const val = `run${String(r).padStart(3, '0')}`;
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val;
+          runSel.appendChild(opt);
+        }
+
+        if (sorted.length === 0) {
+          runSel.innerHTML = '<option value="">No Copick runs found</option>';
+        }
+      } catch (e) {
+        console.error('populateCopickRun failed:', e);
+        runSel.innerHTML = '<option value="">Error loading runs</option>';
+      }
+    }
+
+    // Hook: refresh the list whenever the session changes
+    document.addEventListener('DOMContentLoaded', () => {
+      const sessionSel = document.getElementById('importCopickSession');
+      if (!sessionSel) return;
+
+      sessionSel.addEventListener('change', () => {
+        const sessionName = sessionSel.value.trim();
+        populateCopickRun(sessionName);
+      });
+    });
+
+      // Fetch and populate tomogram type & voxel selects
+    (() => {
+  const apiBase = "/workflow/api/tomo-combos";
+
+  const elSession = document.getElementById("importCopickSession");
+  const elRun     = document.getElementById("importCopickRun");
+  const elType    = document.getElementById("tomogramType");
+  const elVoxel   = document.getElementById("tomogramVoxelSize");
+
+  let cache = null; // holds last successful payload { combinations: {type: [sizes...]}, ... }
+
+  function setDisabled(el, disabled, placeholderText) {
+    el.disabled = disabled;
+    if (placeholderText !== undefined) {
+      el.innerHTML = `<option value="">${placeholderText}</option>`;
+    }
+  }
+
+  function populateSelect(el, values, { placeholder = "Select…" } = {}) {
+    el.innerHTML = `<option value="">${placeholder}</option>`;
+    for (const v of values) {
+      const val = String(v);
+      const label = typeof v === "number" ? v.toString() : v;
+      el.insertAdjacentHTML("beforeend", `<option value="${val}">${label}</option>`);
+    }
+  }
+
+  function numericSort(a, b) { return Number(a) - Number(b); }
+
+  async function fetchCombos(session, procrun) {
+    const url = `${apiBase}?session=${encodeURIComponent(session)}&procrun=${encodeURIComponent(procrun)}`;
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async function refreshFromApi() {
+    const session = (elSession?.value || "").trim();
+    const procrun = (elRun?.value || "").trim();
+
+    // Reset UI
+    setDisabled(elType, true, "Select tomogram type…");
+    setDisabled(elVoxel, true, "Select voxel size…");
+
+    if (!session || !procrun) return; // wait until both are chosen
+
+    try {
+      setDisabled(elType, true, "Loading tomogram types…");
+      setDisabled(elVoxel, true, "Waiting for tomogram type…");
+
+      const data = await fetchCombos(session, procrun);
+      cache = data; // { combinations: { type: [sizes] }, ... }
+
+      const combos = (data && data.combinations) || {};
+      const types = Object.keys(combos).sort((a, b) => a.localeCompare(b));
+      populateSelect(elType, types, { placeholder: "Select tomogram type…" });
+
+      setDisabled(elType, false);
+      // voxel stays disabled until a type is chosen
+    } catch (err) {
+      console.error("[tomo-combos] fetch failed:", err);
+      populateSelect(elType, [], { placeholder: "Failed to load types" });
+      populateSelect(elVoxel, [], { placeholder: "Failed to load sizes" });
+      setDisabled(elType, true);
+      setDisabled(elVoxel, true);
+    }
+  }
+
+  function onTypeChange() {
+    const t = elType.value;
+    if (!cache || !cache.combinations || !t || !cache.combinations[t]) {
+      populateSelect(elVoxel, [], { placeholder: "Select voxel size…" });
+      setDisabled(elVoxel, true);
+      return;
+    }
+    const sizes = [...cache.combinations[t]].sort(numericSort);
+    populateSelect(elVoxel, sizes, { placeholder: "Select voxel size…" });
+    setDisabled(elVoxel, false);
+  }
+
+  // Debounce helper for rapid changes
+  function debounce(fn, ms = 200) {
+    let id; return (...args) => { clearTimeout(id); id = setTimeout(() => fn(...args), ms); };
+  }
+
+  // Wire up listeners
+  if (elSession) elSession.addEventListener("change", debounce(refreshFromApi, 150));
+  if (elRun)     elRun.addEventListener("change", debounce(refreshFromApi, 150));
+  if (elType)    elType.addEventListener("change", onTypeChange);
+
+  // Initial state
+  setDisabled(elType, true, "Select tomogram type…");
+  setDisabled(elVoxel, true, "Select voxel size…");
+
+  // If session & run already have values on load, fetch immediately
+  if ((elSession?.value || "") && (elRun?.value || "")) {
+    refreshFromApi();
+  }
+})();
+
+// Fectch octopi procrun
+(() => {
+  function attachMembraneSegNewRunListener({
+    sessionSelector = "#importCopickSession",
+    voxelSelector   = "#tomogramVoxelSize",
+    displaySelector = "#octopi_run_id",
+    hiddenSelector  = "#octopi_run_id_input",
+  } = {}) {
+    const sessionEl = document.querySelector(sessionSelector);
+    const voxelEl   = document.querySelector(voxelSelector);
+    const displayEl = document.querySelector(displaySelector);
+    const hiddenEl  = document.querySelector(hiddenSelector);
+    if (!sessionEl || !voxelEl || !displayEl) return;
+
+    const nextRun = (runs) => {
+      if (!Array.isArray(runs) || runs.length === 0) return "001";
+      const numeric = runs
+        .map(s => (s ?? "").toString().match(/\d+/)?.[0] ?? "")
+        .filter(Boolean);
+      if (numeric.length === 0) return "001";
+      const width  = Math.max(3, ...numeric.map(s => s.length));
+      const maxVal = Math.max(...numeric.map(s => parseInt(s, 10)));
+      return String(maxVal + 1).padStart(width, "0");
+    };
+
+    const setDisplay = (runNum, state = "ok") => {
+      if (hiddenEl) hiddenEl.value = runNum || "";
+      if (state === "loading") {
+        displayEl.textContent = "Checking Embrella recommendation…";
+      } else if (state === "error") {
+        displayEl.textContent = "Unable to fetch recommended procrun.";
+      } else if (runNum) {
+        displayEl.innerHTML = `Embrella will submit Octopi training-related results (e.g. models) with <strong>Octopi procrun run${runNum}</strong>`;
+      } else {
+        displayEl.textContent = "";
+      }
+    };
+
+    const fetchNext = async () => {
+      const sessionName = (sessionEl.value || "").trim();
+      const voxelSize   = (voxelEl.value || "").trim();
+      if (!sessionName || !voxelSize) {
+        // Only trigger after both are chosen
+        setDisplay("", "ok");
+        return;
+      }
+
+      setDisplay("", "loading");
+      try {
+        const url = `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=octopi&_ts=${Date.now()}`;
+        const res = await fetch(url, { cache: "no-store", headers: { "Accept": "application/json" } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const runs = data?.sessions?.[0]?.run_numbers || [];
+        const runNum = nextRun(runs);
+        setDisplay(runNum, "ok");
+      } catch (err) {
+        console.error("[czii-octopi] fetch failed:", err);
+        setDisplay("", "error");
+      }
+    };
+
+    // Debounce to avoid multiple triggers
+    let t;
+    const debouncedFetch = () => { clearTimeout(t); t = setTimeout(fetchNext, 200); };
+
+    // Run only when voxel size is chosen
+    voxelEl.addEventListener("change", debouncedFetch);
+    voxelEl.addEventListener("input", debouncedFetch);
+
+    // Also re-check if both were preselected on load
+    if ((sessionEl.value || "").trim() && (voxelEl.value || "").trim()) {
+      fetchNext();
+    }
+  }
+
+  // Attach with your current form element IDs
+  attachMembraneSegNewRunListener({
+    sessionSelector: "#importCopickSession",
+    voxelSelector:   "#tomogramVoxelSize",
+    displaySelector: "#octopi_run_id",
+    hiddenSelector:  "#octopi_run_id_input",
+  });
+})();
+
+// fetcth annotation combos
+(() => {
+  const apiBase = "/workflow/api/annotation-combos";
+
+  const elSession = document.getElementById("importCopickSession");
+  const elRun     = document.getElementById("importCopickRun");
+  const elPicks   = document.getElementById("pick-select");
+  const elSegs    = document.getElementById("seg-select");
+  const elPickTip = document.getElementById("pick-tip");
+  const elSegTip  = document.getElementById("seg-tip");
+
+  function setDisabled(el, disabled, placeholderText) {
+    el.disabled = disabled;
+    if (placeholderText !== undefined) {
+      el.innerHTML = `<option value="">${placeholderText}</option>`;
+    }
+  }
+
+  function populateSelect(el, items, { placeholder = "Select…", format, value } = {}) {
+    el.innerHTML = `<option value="">${placeholder}</option>`;
+    for (const item of items) {
+      const label = format ? format(item) : String(item);
+      const val   = value ? value(item) : label;
+      el.insertAdjacentHTML("beforeend", `<option value='${val}'>${label}</option>`);
+    }
+  }
+
+  async function fetchCombos(session, procrun) {
+    const url = `${apiBase}?session=${session}&procrun=${procrun}`; // no encoding per your setup
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  function isEmptyPick(p) {
+    return !p || (p.user === "" && p.session === "" && p.object === "");
+  }
+  function isEmptySeg(s) {
+    return !s || (String(s.user) === "" && String(s.session) === "" && String(s.name) === "" && String(s.voxel_size ?? "") === "");
+  }
+
+  async function refreshFromApi() {
+    const session = (elSession?.value || "").trim();
+    const procrun = (elRun?.value || "").trim();
+
+    // show placeholders until both chosen
+    setDisabled(elPicks, true, "Select session & run…");
+    setDisabled(elSegs,  true, "Select session & run…");
+    elPickTip && (elPickTip.style.display = "block");
+    elSegTip  && (elSegTip.style.display  = "block");
+
+    if (!session || !procrun) return;
+
+    try {
+      setDisabled(elPicks, true, "Loading picks…");
+      setDisabled(elSegs,  true, "Loading segmentations…");
+
+      const data = await fetchCombos(session, procrun);
+      const combos = (data && data.combinations) || {};
+
+      // ---- picks ----
+      let picks = Array.isArray(combos.picks) ? combos.picks : [];
+      // filter out "empty row" payloads
+      picks = picks.filter(p => !isEmptyPick(p));
+
+      if (!picks.length) {
+        populateSelect(elPicks, [], { placeholder: "No picks found" });
+        setDisabled(elPicks, true);
+      } else {
+        // stable sort
+        picks.sort((a, b) =>
+          String(a.user).localeCompare(String(b.user)) ||
+          String(a.session).localeCompare(String(b.session)) ||
+          String(a.object).localeCompare(String(b.object))
+        );
+        populateSelect(elPicks, picks, {
+          placeholder: "Select picks…",
+          format: p => `${p.user} | ${p.session} | ${p.object}`,
+          value:  p => JSON.stringify({ user: p.user, session: p.session, object: p.object })
+        });
+        setDisabled(elPicks, false);
+      }
+
+      // ---- segmentations ----
+      let segs = Array.isArray(combos.segmentations) ? combos.segmentations : [];
+      segs = segs.filter(s => !isEmptySeg(s));
+
+      if (!segs.length) {
+        populateSelect(elSegs, [], { placeholder: "No segmentations found" });
+        setDisabled(elSegs, true);
+      } else {
+        // sort by user, session, name, then voxel (numeric)
+        segs.sort((a, b) =>
+          String(a.user).localeCompare(String(b.user)) ||
+          String(a.session).localeCompare(String(b.session)) ||
+          String(a.name).localeCompare(String(b.name)) ||
+          (Number(a.voxel_size) - Number(b.voxel_size))
+        );
+        populateSelect(elSegs, segs, {
+          placeholder: "Select segmentations…",
+          // voxel size last in the label
+          format: s => `${s.user} | ${s.session} | ${s.name} | ${s.voxel_size}`,
+          value:  s => JSON.stringify({
+            user: s.user, session: s.session, name: s.name, voxel_size: s.voxel_size
+          })
+        });
+        setDisabled(elSegs, false);
+      }
+
+    } catch (err) {
+      console.error("[annotation-combos] fetch failed:", err);
+      populateSelect(elPicks, [], { placeholder: "Failed to load picks" });
+      populateSelect(elSegs,  [], { placeholder: "Failed to load segmentations" });
+      setDisabled(elPicks, true);
+      setDisabled(elSegs,  true);
+    }
+  }
+
+  // initial placeholders
+  setDisabled(elPicks, true, "Select session & run…");
+  setDisabled(elSegs,  true, "Select session & run…");
+  elPickTip && (elPickTip.style.display = "block");
+  elSegTip  && (elSegTip.style.display  = "block");
+
+  elSession?.addEventListener("change", refreshFromApi);
+  elRun?.addEventListener("change", refreshFromApi);
+
+  // auto-load if both present
+  refreshFromApi();
+})();
 
       </script>
 </body> 
