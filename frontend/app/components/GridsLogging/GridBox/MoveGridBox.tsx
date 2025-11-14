@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
+import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
 import { PucksList } from '@app/common/types/gridLogging/puckList';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingPucksByCane } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
-import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useMoveGridBox } from '@app/common/hooks/useGridLogging/useMoveGridBox';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
+import { useGridLoggingCaneList } from '@app/common/hooks/useGridLogging/useCaneList';
 
 interface MoveGridBoxProps {
   open: boolean;
@@ -38,8 +38,7 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
   });
 
   const { moveGridBox, isMoving, error, clearError } = useMoveGridBox();
-
-  const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
+  const { canes, isSuccess: canesLoaded } = useGridLoggingCaneList();
   const { pucks: pucksInCane, isSuccess: pucksLoaded } = useGridLoggingPucksByCane(
     formData.destinationCane ? Number(formData.destinationCane) : undefined
   );
@@ -151,9 +150,13 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
       onSave={handleMove}
       isSubmitting={isMoving}
       saveButtonText="Move"
-      disabled={!isFormValid || !choicesLoaded}
-      error={error || undefined}
+      disabled={!isFormValid || !canesLoaded}
     >
+    {Boolean(error) && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
+          {error}
+        </Alert>
+    )}
       <TextField
         select
         required
@@ -162,13 +165,13 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         value={formData.destinationCane}
         onChange={(e) => handleInputChange('destinationCane', e.target.value)}
       >
-        {!choicesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
-        {choicesLoaded && (!choices?.cane_colors || choices.cane_colors.length === 0) && (
+        {!canesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
+        {canesLoaded && canes.length === 0 && (
           <MenuItem value="">No canes available</MenuItem>
         )}
-        {choices?.cane_colors?.map((cane, index) => (
-          <MenuItem key={cane.value} value={(index + 1).toString()}>
-            {cane.label} Cane
+        {canes.map((cane) => (
+          <MenuItem key={cane.id} value={cane.id.toString()}>
+            {cane.color_code} Cane (Pos: {cane.position_in_dewar})
           </MenuItem>
         ))}
       </TextField>
