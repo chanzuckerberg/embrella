@@ -95,7 +95,6 @@
       margin-bottom: 15px;
     }
 
-
     label {
       display: block;
       font-weight: bold;
@@ -261,7 +260,7 @@
 
     .tooltip {
       position: absolute;
-      top: 30px; /* below the icon */
+      top: 30px; 
       right: 0;
       background: #333;
       color: #fff;
@@ -271,7 +270,7 @@
       white-space: nowrap;
       opacity: 0;
       transition: opacity 0.2s;
-      pointer-events: none; /* don't block mouse unless shown */
+      pointer-events: none; 
     }
 
     .info-icon:hover + .tooltip {
@@ -279,26 +278,24 @@
       pointer-events: auto;
     }
 
-    /* Smaller info icon for the new tooltip */
     .info-icon-small {
         display: inline-block;
         width: 16px;
         height: 16px;
         line-height: 16px;
         text-align: center;
-        font-family: 'Hoefler Text', Georgia, serif; /* Apple-like font */
+        font-family: 'Hoefler Text', Georgia, serif; 
         font-weight: bold;
-        font-style: italic;          /* optional, matches Apple i */
-        font-size: 13px;             /* similar to Apple small info button */
-        color: #007aff;              /* Apple standard blue for info icon */
-        background: #f0f0f0;         /* light grey background */
+        font-style: italic;         
+        font-size: 13px;             
+        color: #007aff;             
+        background: #f0f0f0;         
         border-radius: 50%;
         cursor: pointer;
         position: relative;
-        user-select: none;           /* prevents text selection */
+        user-select: none;          
 }   
 
-    /* New tooltip style (small, grey background) */
     .tooltip-small {
         position: absolute;
         top: 50%;
@@ -309,10 +306,10 @@
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 12px;
-        white-space: normal;    /* allows wrapping */
-        max-width: 400px;      /* wider, so lines aren’t too short */
-        min-width: 200px;  /* minimum width for readability */
-        word-wrap: break-word;  /* break long words */
+        white-space: normal;   
+        max-width: 400px;     
+        min-width: 200px; 
+        word-wrap: break-word;  
         text-align: center;
         opacity: 0;
         transition: opacity 0.2s;
@@ -321,7 +318,6 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
 
-    /* Show tooltip on hover */
     .info-icon-small:hover .tooltip-small {
       opacity: 1;
       pointer-events: auto;
@@ -335,41 +331,37 @@
     align-items: start;
   }
 
-  /* Optional column spans (use on .form-group items inside the grid) */
   .col-span-2 { grid-column: span 2; }
   .col-span-3 { grid-column: span 3; }
   .col-span-4 { grid-column: span 4; }
 
-  /* Keep buttons aligned nicely inside grid rows */
   .align-end { align-self: end; }
 
-  /* Responsive behavior */
+
   @media (max-width: 1200px) {
     .form-row-four { grid-template-columns: repeat(3, 1fr); }
   }
   @media (max-width: 992px) {
     .form-row-four { grid-template-columns: repeat(2, 1fr); }
-    .col-span-3 { grid-column: span 2; } /* prevent odd wrapping */
+    .col-span-3 { grid-column: span 2; } 
   }
   @media (max-width: 768px) {
     .form-row-four { grid-template-columns: 1fr; }
     .col-span-2, .col-span-3, .col-span-4 { grid-column: span 1; }
   }
 
-  /* Optional: compact labels for dense layouts */
+
   .form-row-four .form-group label {
     margin-bottom: 6px;
     font-size: 13px;
   }
 
-  /* Optional: small helper text under inputs */
   .help-text {
     margin-top: 6px;
     font-size: 12px;
     color: #7f8c8d;
   }
 
-  /* tagglable two-col sections */
   .two-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -426,11 +418,9 @@
     pointer-events: none;
   }
 
-  /* Responsive: stack columns on small screens */
   @media (max-width: 768px) {
     .two-col { grid-template-columns: 1fr; }
   }
-
 
 .two-col .col-body {
   font-size: 12px;
@@ -458,12 +448,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 6px;       /* ↓ reduce vertical space (was 4px 8px) */
+  padding: 2px 6px;     
   border-radius: 10px;
   background: #f1f3f5;
   border: 1px solid #e0e0e0;
-  font-size: 0.85em;      /* optional: slightly smaller text */
-  line-height: 1.2;       /* tighten vertical rhythm */
+  font-size: 0.85em;     
+  line-height: 1.2;       
 }
 
 .chip button {
@@ -471,46 +461,19 @@
   background: transparent;
   cursor: pointer;
   font-weight: 700;
-  font-size: 1.1em;        /* ↑ make the X bigger */
-  color: #444;             /* dark gray */
+  font-size: 1.1em;       
+  color: #444;        
   opacity: 0.8;
   padding: 0;
-  line-height: 1;          /* ensures it sits nicely centered */
-  display: flex;           /* centers X within its box */
+  line-height: 1;         
+  display: flex;           
   align-items: center;
   justify-content: center;
   margin: 0;
 }
 .chip button:hover { opacity: 1; }
 
-/* search box at top of dropdown */
-.dropdown-search {
-  padding: 8px;
-  border-bottom: 1px solid #eee;
-  position: sticky;
-  top: 0;
-  background: #fff;
-  z-index: 1;
-}
-.dropdown-search input {
-  width: 100%;
-  box-sizing: border-box;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 6px 8px;
-  font-size: 14px;
-}
-
-/* active (keyboard focus) item */
-.dropdown-item.active {
-  background-color: #e9f2ff;
-}
-
-/* (existing from before, repeat if needed) */
-.dropdown-input { border:1px solid #ccc; border-radius:4px; padding:8px 10px; cursor:pointer; font-size:14px; background:#fff; user-select:none; }
-.dropdown-input:after { content:"▾"; float:right; color:#777; }
-.dropdown-input.active { border-color:#999; box-shadow:0 0 4px rgba(0,0,0,0.15); }
-      </style>
+</style>
 </head>
 
 <body>
@@ -546,7 +509,7 @@
         <div class="tooltip">Convert training picks to segmentations, or collect training segmentations.</div>
       </summary>
 
-<!-- Row 1: Session + Copick ProcRun + Tomogram Type + Tomogram Voxel Size (4 columns) -->
+  <!-- Row 1: Session + Copick ProcRun + Tomogram Type + Tomogram Voxel Size (4 columns) -->
       <div class="form-row-four">
         <div class="form-group">
           <label for="importCopickSession">Copick Session:
@@ -606,7 +569,7 @@
         <input type="hidden" id="octopi_run_id_input" name="octopi_run_id" />
       </div>
 
-<!-- Row 3: optional select runs to collect training picks -->
+  <!-- Row 3: optional select runs to collect training picks -->
     <div class="form-group" style="position: relative;">
       <label for="runs-select">
         (Optional) Select runs:
@@ -622,7 +585,7 @@
    
       
 
-<!-- Row 2: Gather picks or segmentations (4 columns) -->
+  <!-- Row 2: Gather picks or segmentations (4 columns) -->
       <div class="section-body">
           <div class="section-inner">
         <p class="help-text">Select to prepare for picks (points) or segmentations.</p>
@@ -666,6 +629,7 @@
     </details>
 
 
+
     <!-- Train a model -->
     <div class="section-header">
         <h2>
@@ -693,6 +657,7 @@
         </h2>
     </div>
 
+    
     <script>
     function goBack() {
       window.location.href = "/umbrella";
@@ -725,7 +690,7 @@
       }
     });
 
-        // Populate the CopickSession dropdown
+    // Populate the CopickSession dropdown
     async function populateCopickSessionDropdown() {
       const sel = document.getElementById("importCopickSession");
       if (!sel) return;
@@ -916,92 +881,92 @@
 })();
 
 // Fectch octopi procrun
-(() => {
-  function attachMembraneSegNewRunListener({
-    sessionSelector = "#importCopickSession",
-    voxelSelector   = "#tomogramVoxelSize",
-    displaySelector = "#octopi_run_id",
-    hiddenSelector  = "#octopi_run_id_input",
-  } = {}) {
-    const sessionEl = document.querySelector(sessionSelector);
-    const voxelEl   = document.querySelector(voxelSelector);
-    const displayEl = document.querySelector(displaySelector);
-    const hiddenEl  = document.querySelector(hiddenSelector);
-    if (!sessionEl || !voxelEl || !displayEl) return;
+    (() => {
+      function attachMembraneSegNewRunListener({
+        sessionSelector = "#importCopickSession",
+        voxelSelector   = "#tomogramVoxelSize",
+        displaySelector = "#octopi_run_id",
+        hiddenSelector  = "#octopi_run_id_input",
+      } = {}) {
+        const sessionEl = document.querySelector(sessionSelector);
+        const voxelEl   = document.querySelector(voxelSelector);
+        const displayEl = document.querySelector(displaySelector);
+        const hiddenEl  = document.querySelector(hiddenSelector);
+        if (!sessionEl || !voxelEl || !displayEl) return;
 
-    const nextRun = (runs) => {
-      if (!Array.isArray(runs) || runs.length === 0) return "001";
-      const numeric = runs
-        .map(s => (s ?? "").toString().match(/\d+/)?.[0] ?? "")
-        .filter(Boolean);
-      if (numeric.length === 0) return "001";
-      const width  = Math.max(3, ...numeric.map(s => s.length));
-      const maxVal = Math.max(...numeric.map(s => parseInt(s, 10)));
-      return String(maxVal + 1).padStart(width, "0");
-    };
+        const nextRun = (runs) => {
+          if (!Array.isArray(runs) || runs.length === 0) return "001";
+          const numeric = runs
+            .map(s => (s ?? "").toString().match(/\d+/)?.[0] ?? "")
+            .filter(Boolean);
+          if (numeric.length === 0) return "001";
+          const width  = Math.max(3, ...numeric.map(s => s.length));
+          const maxVal = Math.max(...numeric.map(s => parseInt(s, 10)));
+          return String(maxVal + 1).padStart(width, "0");
+        };
 
-    const setDisplay = (runNum, state = "ok") => {
-      if (hiddenEl) hiddenEl.value = runNum || "";
-      if (state === "loading") {
-        displayEl.textContent = "Checking Embrella recommendation…";
-      } else if (state === "error") {
-        displayEl.textContent = "Unable to fetch recommended procrun.";
-      } else if (runNum) {
-        displayEl.innerHTML = `Embrella will submit Octopi training-related results (e.g. models) with <strong>Octopi procrun run${runNum}</strong>`;
-      } else {
-        displayEl.textContent = "";
+        const setDisplay = (runNum, state = "ok") => {
+          if (hiddenEl) hiddenEl.value = runNum || "";
+          if (state === "loading") {
+            displayEl.textContent = "Checking Embrella recommendation…";
+          } else if (state === "error") {
+            displayEl.textContent = "Unable to fetch recommended procrun.";
+          } else if (runNum) {
+            displayEl.innerHTML = `Embrella will submit Octopi training-related results (e.g. models) with <strong>Octopi procrun run${runNum}</strong>`;
+          } else {
+            displayEl.textContent = "";
+          }
+        };
+
+        const fetchNext = async () => {
+          const sessionName = (sessionEl.value || "").trim();
+          const voxelSize   = (voxelEl.value || "").trim();
+          if (!sessionName || !voxelSize) {
+            // Only trigger after both are chosen
+            setDisplay("", "ok");
+            return;
+          }
+
+          setDisplay("", "loading");
+          try {
+            const url = `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=octopi&_ts=${Date.now()}`;
+            const res = await fetch(url, { cache: "no-store", headers: { "Accept": "application/json" } });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const runs = data?.sessions?.[0]?.run_numbers || [];
+            const runNum = nextRun(runs);
+            setDisplay(runNum, "ok");
+          } catch (err) {
+            console.error("[czii-octopi] fetch failed:", err);
+            setDisplay("", "error");
+          }
+        };
+
+        // Debounce to avoid multiple triggers
+        let t;
+        const debouncedFetch = () => { clearTimeout(t); t = setTimeout(fetchNext, 200); };
+
+        // Run only when voxel size is chosen
+        voxelEl.addEventListener("change", debouncedFetch);
+        voxelEl.addEventListener("input", debouncedFetch);
+
+        // Also re-check if both were preselected on load
+        if ((sessionEl.value || "").trim() && (voxelEl.value || "").trim()) {
+          fetchNext();
+        }
       }
-    };
 
-    const fetchNext = async () => {
-      const sessionName = (sessionEl.value || "").trim();
-      const voxelSize   = (voxelEl.value || "").trim();
-      if (!sessionName || !voxelSize) {
-        // Only trigger after both are chosen
-        setDisplay("", "ok");
-        return;
-      }
-
-      setDisplay("", "loading");
-      try {
-        const url = `/workflow/copick_params?session_name=${encodeURIComponent(sessionName)}&plan_type=octopi&_ts=${Date.now()}`;
-        const res = await fetch(url, { cache: "no-store", headers: { "Accept": "application/json" } });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const runs = data?.sessions?.[0]?.run_numbers || [];
-        const runNum = nextRun(runs);
-        setDisplay(runNum, "ok");
-      } catch (err) {
-        console.error("[czii-octopi] fetch failed:", err);
-        setDisplay("", "error");
-      }
-    };
-
-    // Debounce to avoid multiple triggers
-    let t;
-    const debouncedFetch = () => { clearTimeout(t); t = setTimeout(fetchNext, 200); };
-
-    // Run only when voxel size is chosen
-    voxelEl.addEventListener("change", debouncedFetch);
-    voxelEl.addEventListener("input", debouncedFetch);
-
-    // Also re-check if both were preselected on load
-    if ((sessionEl.value || "").trim() && (voxelEl.value || "").trim()) {
-      fetchNext();
-    }
-  }
-
-  // Attach with your current form element IDs
-  attachMembraneSegNewRunListener({
-    sessionSelector: "#importCopickSession",
-    voxelSelector:   "#tomogramVoxelSize",
-    displaySelector: "#octopi_run_id",
-    hiddenSelector:  "#octopi_run_id_input",
-  });
-})();
+      // Attach with your current form element IDs
+      attachMembraneSegNewRunListener({
+        sessionSelector: "#importCopickSession",
+        voxelSelector:   "#tomogramVoxelSize",
+        displaySelector: "#octopi_run_id",
+        hiddenSelector:  "#octopi_run_id_input",
+      });
+    })();
 
 // multi selection chips
-class MultiSelectChips {
+    class MultiSelectChips {
   constructor(selectEl, chipsEl, { labelForValue, onChange, hiddenInput } = {}) {
     this.selectEl = selectEl;
     this.chipsEl = chipsEl;
@@ -1084,368 +1049,383 @@ class MultiSelectChips {
 }
 
 // annotation combo multiple selection
-(() => {
-  const apiBase = "/workflow/api/annotation-combos";
+    (() => {
+      const apiBase = "/workflow/api/annotation-combos";
 
-  const elSession = document.getElementById("importCopickSession");
-  const elRun     = document.getElementById("importCopickRun");
+      const elSession = document.getElementById("importCopickSession");
+      const elRun     = document.getElementById("importCopickRun");
 
-  const elPicks   = document.getElementById("pick-select");
-  const elSegs    = document.getElementById("seg-select");
-  const elPickTip = document.getElementById("pick-tip");
-  const elSegTip  = document.getElementById("seg-tip");
+      const elPicks   = document.getElementById("pick-select");
+      const elSegs    = document.getElementById("seg-select");
+      const elPickTip = document.getElementById("pick-tip");
+      const elSegTip  = document.getElementById("seg-tip");
 
-  const pickChips = document.getElementById("pick-chips");
-  const segChips  = document.getElementById("seg-chips");
+      const pickChips = document.getElementById("pick-chips");
+      const segChips  = document.getElementById("seg-chips");
 
-  // Optional: hidden inputs you might already have
-  const pickHidden = document.getElementById("pick-selected-json");
-  const segHidden  = document.getElementById("seg-selected-json");
+      // Optional: hidden inputs you might already have
+      const pickHidden = document.getElementById("pick-selected-json");
+      const segHidden  = document.getElementById("seg-selected-json");
 
-  // ---- helpers ----
-  function setDisabled(el, disabled, placeholderText) {
-    el.disabled = disabled;
-    if (placeholderText !== undefined) {
-      el.innerHTML = `<option value="">${placeholderText}</option>`;
-    }
-  }
+      // ---- helpers ----
+      function setDisabled(el, disabled, placeholderText) {
+        el.disabled = disabled;
+        if (placeholderText !== undefined) {
+          el.innerHTML = `<option value="">${placeholderText}</option>`;
+        }
+      }
 
-  function populateSelect(el, items, { placeholder = "Select…", format, value } = {}) {
-    el.innerHTML = `<option value="">${placeholder}</option>`;
-    for (const item of items) {
-      const label = format ? format(item) : String(item);
-      const val   = value ? value(item) : label;
-      el.insertAdjacentHTML("beforeend", `<option value='${val}'>${label}</option>`);
-    }
-  }
+      function populateSelect(el, items, { placeholder = "Select…", format, value } = {}) {
+        el.innerHTML = `<option value="">${placeholder}</option>`;
+        for (const item of items) {
+          const label = format ? format(item) : String(item);
+          const val   = value ? value(item) : label;
+          el.insertAdjacentHTML("beforeend", `<option value='${val}'>${label}</option>`);
+        }
+      }
 
-  async function fetchCombos(session, procrun) {
-    const url = `${apiBase}?session=${session}&procrun=${procrun}`; // no encoding per your setup
-    const res = await fetch(url, { headers: { "Accept": "application/json" } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-  }
+      async function fetchCombos(session, procrun) {
+        const url = `${apiBase}?session=${session}&procrun=${procrun}`; // no encoding per your setup
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      }
 
-  const isEmptyPick = (p) =>
-    !p || (p.user === "" && p.session === "" && p.object === "");
-  const isEmptySeg = (s) =>
-    !s || (String(s.user) === "" && String(s.session) === "" && String(s.name) === "" && String(s.voxel_size ?? "") === "");
+      const isEmptyPick = (p) =>
+        !p || (p.user === "" && p.session === "" && p.object === "");
+      const isEmptySeg = (s) =>
+        !s || (String(s.user) === "" && String(s.session) === "" && String(s.name) === "" && String(s.voxel_size ?? "") === "");
 
-  // ---- MultiSelectChips (unchanged) ----
-  class MultiSelectChips {
-    constructor(selectEl, chipsEl, { labelForValue, onChange, hiddenInput } = {}) {
-      this.selectEl = selectEl;
-      this.chipsEl  = chipsEl;
-      this.labelForValue = labelForValue || (v => v);
-      this.onChange = onChange || (() => {});
-      this.hiddenInput = hiddenInput || null;
-      this.selected = new Set();
-      this._bind();
-    }
-    _bind() {
-      this.selectEl.addEventListener("change", () => {
-        const val = this.selectEl.value;
-        if (!val) return;
-        if (this.selected.has(val)) { this.selectEl.value = ""; return; }
-        this.add(val);
-        this.selectEl.value = "";
+      
+      class MultiSelectChips {
+        constructor(selectEl, chipsEl, { labelForValue, onChange, hiddenInput } = {}) {
+          this.selectEl = selectEl;
+          this.chipsEl  = chipsEl;
+          this.labelForValue = labelForValue || (v => v);
+          this.onChange = onChange || (() => {});
+          this.hiddenInput = hiddenInput || null;
+          this.selected = new Set();
+          this._bind();
+        }
+        _bind() {
+          this.selectEl.addEventListener("change", () => {
+            const val = this.selectEl.value;
+            if (!val) return;
+            if (this.selected.has(val)) { this.selectEl.value = ""; return; }
+            this.add(val);
+            this.selectEl.value = "";
+          });
+        }
+        resync() {
+          for (const opt of this.selectEl.options) {
+            if (!opt.value) continue;
+            opt.disabled = this.selected.has(opt.value);
+          }
+        }
+        add(value) {
+          this.selected.add(value);
+          const opt = [...this.selectEl.options].find(o => o.value === value);
+          if (opt) opt.disabled = true;
+
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.dataset.value = value;
+          chip.textContent = this.labelForValue(value);
+
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.setAttribute("aria-label", "Remove");
+          btn.textContent = "×";
+          btn.addEventListener("click", () => this.remove(value));
+
+          chip.appendChild(btn);
+          this.chipsEl.appendChild(chip);
+          this._emit();
+        }
+        remove(value) {
+          if (!this.selected.delete(value)) return;
+          const opt = [...this.selectEl.options].find(o => o.value === value);
+          if (opt) opt.disabled = false;
+          const chip = [...this.chipsEl.querySelectorAll(".chip")].find(c => c.dataset.value === value);
+          if (chip) chip.remove();
+          this._emit();
+        }
+        values() { return [...this.selected]; }
+        _emit() {
+          const vals = this.values();
+          if (this.hiddenInput) this.hiddenInput.value = JSON.stringify(vals);
+          this.onChange(vals);
+        }
+      }
+
+      // Format labels from JSON values
+      const pickLabelFromVal = (val) => {
+        try { const p = JSON.parse(val); return `${p.user} | ${p.session} | ${p.object}`; }
+        catch { return val; }
+      };
+      const segLabelFromVal = (val) => {
+        try { const s = JSON.parse(val); return `${s.user} | ${s.session} | ${s.name} | ${s.voxel_size}`; }
+        catch { return val; }
+      };
+
+      // Instantiate controllers
+      const pickMS = new MultiSelectChips(elPicks, pickChips, {
+        labelForValue: pickLabelFromVal,
+        hiddenInput: pickHidden
       });
-    }
-    resync() {
-      for (const opt of this.selectEl.options) {
-        if (!opt.value) continue;
-        opt.disabled = this.selected.has(opt.value);
-      }
-    }
-    add(value) {
-      this.selected.add(value);
-      const opt = [...this.selectEl.options].find(o => o.value === value);
-      if (opt) opt.disabled = true;
+      const segMS = new MultiSelectChips(elSegs, segChips, {
+        labelForValue: segLabelFromVal,
+        hiddenInput: segHidden
+      });
 
-      const chip = document.createElement("span");
-      chip.className = "chip";
-      chip.dataset.value = value;
-      chip.textContent = this.labelForValue(value);
+      // ---- refresh flow (clears chips & selections
+      async function refreshAnnotationCombos() {
+          const session = (elSession?.value || "").trim();
+          const procrun = (elRun?.value || "").trim();
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.setAttribute("aria-label", "Remove");
-      btn.textContent = "×";
-      btn.addEventListener("click", () => this.remove(value));
+          // 1) Clear selections & chips
+          pickMS.selected.clear();
+          segMS.selected.clear();
+          pickChips.innerHTML = "";
+          segChips.innerHTML = "";
+          elPicks.value = "";
+          elSegs.value  = "";
 
-      chip.appendChild(btn);
-      this.chipsEl.appendChild(chip);
-      this._emit();
-    }
-    remove(value) {
-      if (!this.selected.delete(value)) return;
-      const opt = [...this.selectEl.options].find(o => o.value === value);
-      if (opt) opt.disabled = false;
-      const chip = [...this.chipsEl.querySelectorAll(".chip")].find(c => c.dataset.value === value);
-      if (chip) chip.remove();
-      this._emit();
-    }
-    values() { return [...this.selected]; }
-    _emit() {
-      const vals = this.values();
-      if (this.hiddenInput) this.hiddenInput.value = JSON.stringify(vals);
-      this.onChange(vals);
-    }
-  }
+          // 2) Reset UI and resync 
+          setDisabled(elPicks, true, "Select session & run…");
+          setDisabled(elSegs,  true, "Select session & run…");
+          pickMS.resync(); 
+          segMS.resync();    
 
-  // Format labels from JSON values
-  const pickLabelFromVal = (val) => {
-    try { const p = JSON.parse(val); return `${p.user} | ${p.session} | ${p.object}`; }
-    catch { return val; }
-  };
-  const segLabelFromVal = (val) => {
-    try { const s = JSON.parse(val); return `${s.user} | ${s.session} | ${s.name} | ${s.voxel_size}`; }
-    catch { return val; }
-  };
+          elPickTip && (elPickTip.style.display = "block");
+          elSegTip  && (elSegTip.style.display  = "block");
 
-  // Instantiate controllers
-  const pickMS = new MultiSelectChips(elPicks, pickChips, {
-    labelForValue: pickLabelFromVal,
-    hiddenInput: pickHidden
-  });
-  const segMS = new MultiSelectChips(elSegs, segChips, {
-    labelForValue: segLabelFromVal,
-    hiddenInput: segHidden
-  });
+          if (!session || !procrun) return;
 
-  // ---- refresh flow (clears chips & selections like the runs version) ----
-  async function refreshAnnotationCombos() {
-    const session = (elSession?.value || "").trim();
-    const procrun = (elRun?.value || "").trim();
+          try {
+            setDisabled(elPicks, true, "Loading picks…");
+            setDisabled(elSegs,  true, "Loading segmentations…");
 
-    // Clear selections & chips immediately
-    pickMS.selected.clear();
-    segMS.selected.clear();
-    pickChips.innerHTML = "";
-    segChips.innerHTML = "";
-    elPicks.value = "";
-    elSegs.value  = "";
+            const data = await fetchCombos(session, procrun);
+            const combos = (data && data.combinations) || {};
 
-    // Reset UI
-    setDisabled(elPicks, true, "Select session & run…");
-    setDisabled(elSegs,  true, "Select session & run…");
-    elPickTip && (elPickTip.style.display = "block");
-    elSegTip  && (elSegTip.style.display  = "block");
+            // --- Picks ---
+            let picks = Array.isArray(combos.picks) ? combos.picks : [];
+            picks = picks.filter(p => !(p.user === "" && p.session === "" && p.object === ""));
 
-    if (!session || !procrun) return;
+            if (!picks.length) {
+              populateSelect(elPicks, [], { placeholder: "No picks found" });
+              setDisabled(elPicks, true);
+            } else {
+              picks.sort((a, b) =>
+                String(a.user).localeCompare(String(b.user)) ||
+                String(a.session).localeCompare(String(b.session)) ||
+                String(a.object).localeCompare(String(b.object))
+              );
+              populateSelect(elPicks, picks, {
+                placeholder: "Select picks…",
+                format: p => `${p.user} | ${p.session} | ${p.object}`,
+                value:  p => JSON.stringify({ user: p.user, session: p.session, object: p.object })
+              });
+              setDisabled(elPicks, false);
+            }
+            pickMS.resync();  
 
-    try {
-      setDisabled(elPicks, true, "Loading picks…");
-      setDisabled(elSegs,  true, "Loading segmentations…");
+            // --- Segmentations ---
+            let segs = Array.isArray(combos.segmentations) ? combos.segmentations : [];
+            segs = segs.filter(s =>
+              !(String(s.user)==="" && String(s.session)==="" && String(s.name)==="" && String(s.voxel_size ?? "")==="")
+            );
 
-      const data = await fetchCombos(session, procrun);
-      const combos = (data && data.combinations) || {};
+            if (!segs.length) {
+              populateSelect(elSegs, [], { placeholder: "No segmentations found" });
+              setDisabled(elSegs, true);
+            } else {
+              segs.sort((a, b) =>
+                String(a.user).localeCompare(String(b.user)) ||
+                String(a.session).localeCompare(String(b.session)) ||
+                String(a.name).localeCompare(String(b.name)) ||
+                (Number(a.voxel_size) - Number(b.voxel_size))
+              );
+              populateSelect(elSegs, segs, {
+                placeholder: "Select segmentations…",
+                format: s => `${s.user} | ${s.session} | ${s.name} | ${s.voxel_size}`, // voxel last
+                value:  s => JSON.stringify({ user: s.user, session: s.session, name: s.name, voxel_size: s.voxel_size })
+              });
+              setDisabled(elSegs, false);
+            }
+            segMS.resync();  
 
-      // Picks
-      let picks = Array.isArray(combos.picks) ? combos.picks : [];
-      picks = picks.filter(p => !isEmptyPick(p));
-      if (!picks.length) {
-        populateSelect(elPicks, [], { placeholder: "No picks found" });
-        setDisabled(elPicks, true);
-      } else {
-        picks.sort((a, b) =>
-          String(a.user).localeCompare(String(b.user)) ||
-          String(a.session).localeCompare(String(b.session)) ||
-          String(a.object).localeCompare(String(b.object))
-        );
-        populateSelect(elPicks, picks, {
-          placeholder: "Select picks…",
-          format: p => `${p.user} | ${p.session} | ${p.object}`,
-          value:  p => JSON.stringify({ user: p.user, session: p.session, object: p.object })
-        });
-        setDisabled(elPicks, false);
-      }
-      pickMS.resync();
+          } catch (err) {
+            console.error("[annotation-combos] fetch failed:", err);
+            populateSelect(elPicks, [], { placeholder: "Failed to load picks" });
+            populateSelect(elSegs,  [], { placeholder: "Failed to load segmentations" });
+            setDisabled(elPicks, true);
+            setDisabled(elSegs,  true);
+            pickMS.resync();
+            segMS.resync();
+          }
+        }
+      
+        // init placeholders
+      setDisabled(elPicks, true, "Select session & run…");
+      setDisabled(elSegs,  true, "Select session & run…");
+      elPickTip && (elPickTip.style.display = "block");
+      elSegTip  && (elSegTip.style.display  = "block");
 
-      // Segmentations
-      let segs = Array.isArray(combos.segmentations) ? combos.segmentations : [];
-      segs = segs.filter(s => !isEmptySeg(s));
-      if (!segs.length) {
-        populateSelect(elSegs, [], { placeholder: "No segmentations found" });
-        setDisabled(elSegs, true);
-      } else {
-        segs.sort((a, b) =>
-          String(a.user).localeCompare(String(b.user)) ||
-          String(a.session).localeCompare(String(b.session)) ||
-          String(a.name).localeCompare(String(b.name)) ||
-          (Number(a.voxel_size) - Number(b.voxel_size))
-        );
-        populateSelect(elSegs, segs, {
-          placeholder: "Select segmentations…",
-          format: s => `${s.user} | ${s.session} | ${s.name} | ${s.voxel_size}`, // voxel last
-          value:  s => JSON.stringify({ user: s.user, session: s.session, name: s.name, voxel_size: s.voxel_size })
-        });
-        setDisabled(elSegs, false);
-      }
-      segMS.resync();
+      // wire up
+      elSession?.addEventListener("change", refreshAnnotationCombos);
+      elRun?.addEventListener("change", refreshAnnotationCombos);
 
-    } catch (err) {
-      console.error("[annotation-combos] fetch failed:", err);
-      populateSelect(elPicks, [], { placeholder: "Failed to load picks" });
-      populateSelect(elSegs,  [], { placeholder: "Failed to load segmentations" });
-      setDisabled(elPicks, true);
-      setDisabled(elSegs,  true);
-      // chips already cleared above
-    }
-  }
-
-  // init placeholders
-  setDisabled(elPicks, true, "Select session & run…");
-  setDisabled(elSegs,  true, "Select session & run…");
-  elPickTip && (elPickTip.style.display = "block");
-  elSegTip  && (elSegTip.style.display  = "block");
-
-  // wire up
-  elSession?.addEventListener("change", refreshAnnotationCombos);
-  elRun?.addEventListener("change", refreshAnnotationCombos);
-
-  // preload if pre-filled
-  refreshAnnotationCombos();
-})();
+      // preload if pre-filled
+      refreshAnnotationCombos();
+    })();
 
 // copick run multiple selection
-(() => {
-  const apiBase = "/workflow/api/copick-runs";
+    (() => {
+      const apiBase = "/workflow/api/copick-runs";
 
-  const elSession   = document.getElementById("importCopickSession");
-  const elRun       = document.getElementById("importCopickRun");
-  const elSelect    = document.getElementById("runs-select");
-  const elChips     = document.getElementById("runs-chips");
+      const elSession   = document.getElementById("importCopickSession");
+      const elRun       = document.getElementById("importCopickRun");
+      const elSelect    = document.getElementById("runs-select");
+      const elChips     = document.getElementById("runs-chips");
 
-  function setDisabled(el, disabled, placeholderText) {
-    el.disabled = disabled;
-    if (placeholderText !== undefined) {
-      el.innerHTML = `<option value="">${placeholderText}</option>`;
-    }
-  }
+      function setDisabled(el, disabled, placeholderText) {
+        el.disabled = disabled;
+        if (placeholderText !== undefined) {
+          el.innerHTML = `<option value="">${placeholderText}</option>`;
+        }
+      }
 
-  function populateSelect(el, items, { placeholder = "Select…", format, value } = {}) {
-    el.innerHTML = `<option value="">${placeholder}</option>`;
-    for (const item of items) {
-      const label = format ? format(item) : String(item);
-      const val   = value ? value(item) : label;
-      el.insertAdjacentHTML("beforeend", `<option value="${val}">${label}</option>`);
-    }
-  }
+      function populateSelect(el, items, { placeholder = "Select…", format, value } = {}) {
+        el.innerHTML = `<option value="">${placeholder}</option>`;
+        for (const item of items) {
+          const label = format ? format(item) : String(item);
+          const val   = value ? value(item) : label;
+          el.insertAdjacentHTML("beforeend", `<option value="${val}">${label}</option>`);
+        }
+      }
 
-  class MultiSelectChips {
-    constructor(selectEl, chipsEl, { labelForValue, onChange } = {}) {
-      this.selectEl = selectEl;
-      this.chipsEl  = chipsEl;
-      this.labelForValue = labelForValue || (v => v);
-      this.onChange = onChange || (() => {});
-      this.selected = new Set();
-      this._bind();
-    }
-    _bind() {
-      this.selectEl.addEventListener("change", () => {
-        const val = this.selectEl.value;
-        if (!val) return;
-        if (this.selected.has(val)) { this.selectEl.value = ""; return; }
-        this.add(val);
-        this.selectEl.value = "";
+      class MultiSelectChips {
+        constructor(selectEl, chipsEl, { labelForValue, onChange } = {}) {
+          this.selectEl = selectEl;
+          this.chipsEl  = chipsEl;
+          this.labelForValue = labelForValue || (v => v);
+          this.onChange = onChange || (() => {});
+          this.selected = new Set();
+          this._bind();
+        }
+        _bind() {
+          this.selectEl.addEventListener("change", () => {
+            const val = this.selectEl.value;
+            if (!val) return;
+            if (this.selected.has(val)) { this.selectEl.value = ""; return; }
+            this.add(val);
+            this.selectEl.value = "";
+          });
+        }
+        resync() {
+          for (const opt of this.selectEl.options) {
+            if (!opt.value) continue;
+            opt.disabled = this.selected.has(opt.value);
+          }
+        }
+        add(value) {
+          this.selected.add(value);
+          const opt = [...this.selectEl.options].find(o => o.value === value);
+          if (opt) opt.disabled = true;
+
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.dataset.value = value;
+          chip.textContent = this.labelForValue(value);
+
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.setAttribute("aria-label", "Remove");
+          btn.textContent = "×";
+          btn.addEventListener("click", () => this.remove(value));
+
+          chip.appendChild(btn);
+          this.chipsEl.appendChild(chip);
+          this._emit();
+        }
+        remove(value) {
+          if (!this.selected.delete(value)) return;
+          const opt = [...this.selectEl.options].find(o => o.value === value);
+          if (opt) opt.disabled = false;
+          const chip = [...this.chipsEl.querySelectorAll(".chip")].find(c => c.dataset.value === value);
+          if (chip) chip.remove();
+          this._emit();
+        }
+        values() { return [...this.selected]; }
+        _emit() { this.onChange(this.values()); }
+      }
+
+      const runsMS = new MultiSelectChips(elSelect, elChips, {
+        labelForValue: v => v, // value is the run text itself
+        onChange: vals => {
+          // console.debug("selected runs:", vals);
+        }
       });
-    }
-    resync() {
-      for (const opt of this.selectEl.options) {
-        if (!opt.value) continue;
-        opt.disabled = this.selected.has(opt.value);
-      }
-    }
-    add(value) {
-      this.selected.add(value);
-      const opt = [...this.selectEl.options].find(o => o.value === value);
-      if (opt) opt.disabled = true;
 
-      const chip = document.createElement("span");
-      chip.className = "chip";
-      chip.dataset.value = value;
-      chip.textContent = this.labelForValue(value);
-
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.setAttribute("aria-label", "Remove");
-      btn.textContent = "×";
-      btn.addEventListener("click", () => this.remove(value));
-
-      chip.appendChild(btn);
-      this.chipsEl.appendChild(chip);
-      this._emit();
-    }
-    remove(value) {
-      if (!this.selected.delete(value)) return;
-      const opt = [...this.selectEl.options].find(o => o.value === value);
-      if (opt) opt.disabled = false;
-      const chip = [...this.chipsEl.querySelectorAll(".chip")].find(c => c.dataset.value === value);
-      if (chip) chip.remove();
-      this._emit();
-    }
-    values() { return [...this.selected]; }
-    _emit() { this.onChange(this.values()); }
-  }
-
-  const runsMS = new MultiSelectChips(elSelect, elChips, {
-    labelForValue: v => v, // value is the run text itself
-    onChange: vals => {
-      // console.debug("selected runs:", vals);
-    }
-  });
-
-  async function fetchRuns(session, procrun) {
-    const url = `${apiBase}?session=${session}&procrun=${procrun}`;
-    const res = await fetch(url, { headers: { "Accept": "application/json" } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json(); // { base_dir, runs: [...] }
-  }
-
-  async function refreshRuns() {
-    const session = (elSession?.value || "").trim();
-    const procrun = (elRun?.value || "").trim();
-
-    setDisabled(elSelect, true, "Select session & run…");
-    elChips.innerHTML = "";
-
-    if (!session || !procrun) return;
-
-    try {
-      setDisabled(elSelect, true, "Loading runs…");
-      const data = await fetchRuns(session, procrun);
-      const runs = Array.isArray(data?.runs) ? data.runs : [];
-
-      if (!runs.length) {
-        populateSelect(elSelect, [], { placeholder: "No runs found" });
-        setDisabled(elSelect, true);
-        runsMS.resync();
-        return;
+      async function fetchRuns(session, procrun) {
+        const url = `${apiBase}?session=${session}&procrun=${procrun}`;
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json(); // { base_dir, runs: [...] }
       }
 
-      runs.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
-      populateSelect(elSelect, runs, { placeholder: "Select runs…", format: r => r, value: r => r });
-      setDisabled(elSelect, false);
-      runsMS.resync();
-    } catch (err) {
-      console.error("[runs-select] fetch failed:", err);
-      populateSelect(elSelect, [], { placeholder: "Failed to load runs" });
-      setDisabled(elSelect, true);
-      runsMS.resync();
-    }
-  }
+      async function refreshRuns() {
+          const session = (elSession?.value || "").trim();
+          const procrun = (elRun?.value || "").trim();
 
-  // initial placeholders
-  setDisabled(elSelect, true, "Select session & run…");
+          // --- CLEAR SELECTION & UI (chips + disabled options) ---
+          runsMS.selected.clear();    
+          elChips.innerHTML = "";      
+          elSelect.value = "";       
 
-  // wire up
-  elSession?.addEventListener("change", refreshRuns);
-  elRun?.addEventListener("change", refreshRuns);
+          setDisabled(elSelect, true, "Select session & run…");
 
-  // if page is prefilled
-  refreshRuns();
-})();
+          if (!session || !procrun) return;
+
+          try {
+            setDisabled(elSelect, true, "Loading runs…");
+            const data = await fetchRuns(session, procrun);
+            const runs = Array.isArray(data?.runs) ? data.runs : [];
+
+            if (!runs.length) {
+              populateSelect(elSelect, [], { placeholder: "No runs found" });
+              setDisabled(elSelect, true);
+              runsMS.resync();         // ensures all options are enabled (none selected)
+              return;
+            }
+
+            runs.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+            populateSelect(elSelect, runs, { placeholder: "Select runs…", format: r => r, value: r => r });
+            setDisabled(elSelect, false);
+
+            runsMS.resync();           // <-- apply (now-empty) selection state to options
+
+          } catch (err) {
+            console.error("[runs-select] fetch failed:", err);
+            populateSelect(elSelect, [], { placeholder: "Failed to load runs" });
+            setDisabled(elSelect, true);
+            runsMS.resync();
+          }
+        }
+
+
+      // initial placeholders
+      setDisabled(elSelect, true, "Select session & run…");
+
+      // wire up
+      elSession?.addEventListener("change", refreshRuns);
+      elRun?.addEventListener("change", refreshRuns);
+
+      // if page is prefilled
+      refreshRuns();
+    })();
 
       </script>
 </body> 
