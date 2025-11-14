@@ -24,6 +24,7 @@ interface GridBoxInfoProps {
   selectedUser?: UsersList | null;
   onGridDetailsRefetch?: (() => void) | null;
   onMoveGridBoxSuccess?: (newPuckId: number, newSlotPosition: number) => void;
+  onGridBoxInfoRefetchReady?: (refetch: () => void) => void;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -44,6 +45,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   selectedUser,
   onGridDetailsRefetch,
   onMoveGridBoxSuccess,
+  onGridBoxInfoRefetchReady,
 }) => {
   const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -57,6 +59,12 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     selectedSlot || undefined
   );
   const { clipAllGrids, error: clipError, clearError } = useClipAllGrids();
+
+  useEffect(() => {
+    if (onGridBoxInfoRefetchReady) {
+      onGridBoxInfoRefetchReady(refetch);
+    }
+  }, [onGridBoxInfoRefetchReady, refetch]);
 
  
   // Early return if no selection

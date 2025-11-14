@@ -25,6 +25,8 @@ export const GridsLogging: React.FC = () => {
   const [isAddPuckDialogOpen, setIsAddPuckDialogOpen] = useState(false);
   const [puckDetailsRefetch, setPuckDetailsRefetch] = useState<() => void>(() => {});
   const [gridDetailsRefetch, setGridDetailsRefetch] = useState<() => void>(() => {});
+  const [gridBoxInfoRefetch, setGridBoxInfoRefetch] = useState<() => void>(() => {});
+
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
   const searchParams = useSearchParams();
@@ -157,9 +159,16 @@ export const GridsLogging: React.FC = () => {
     if (gridDetailsRefetch) {
       gridDetailsRefetch();
     }
+    if (gridBoxInfoRefetch) {  
+      gridBoxInfoRefetch();
+    }
   };
   const handlePuckDetailsRefetchReady = useCallback((refetch: () => void) => {
     setPuckDetailsRefetch(() => refetch);
+  }, []);
+
+  const handleGridBoxInfoRefetchReady = useCallback((refetch: () => void) => {  
+    setGridBoxInfoRefetch(() => refetch);
   }, []);
 
   return (
@@ -217,7 +226,7 @@ export const GridsLogging: React.FC = () => {
 
         {/* Puck Details Component - appears on the right when a puck is selected */}
         {selectedPuck && (
-          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} selectedUser={selectedUser} onRefetchReady={handlePuckDetailsRefetchReady} />
+          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} selectedUser={selectedUser} onRefetchReady={handlePuckDetailsRefetchReady} onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady} />
         )}
       </Box>
 
@@ -230,6 +239,7 @@ export const GridsLogging: React.FC = () => {
             selectedUser={selectedUser}
             onGridDetailsRefetch={gridDetailsRefetch}
             onMoveGridBoxSuccess={handleMoveGridBoxSuccess}
+            onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady}
           />
           {!!selectedGrid && (
             <GridDetails

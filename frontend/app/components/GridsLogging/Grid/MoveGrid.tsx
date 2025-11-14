@@ -12,6 +12,7 @@ import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/us
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { useMoveGrid } from '@app/common/hooks/useGridLogging/useMoveGrid';
+import { useGridLoggingCaneList } from '@app/common/hooks/useGridLogging/useCaneList';
 
 interface MoveGridProps {
   open: boolean;
@@ -48,6 +49,9 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
 
   // Fetch choices (for cane colors)
   const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
+  const { canes, isSuccess: canesLoaded } = useGridLoggingCaneList();
+
+
 
   // Fetch pucks for selected cane (dynamically)
   const { pucks: pucksInCane, isSuccess: pucksLoaded } = useGridLoggingPucksByCane(
@@ -208,7 +212,7 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
       onSave={handleMove}
       isSubmitting={isMoving}
       saveButtonText="Move"
-      disabled={!isFormValid || !choicesLoaded}
+      disabled={!isFormValid || !canesLoaded}
     >
     {Boolean(error) && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
@@ -222,17 +226,17 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
         label="Destination Cane"
         value={formData.destinationCane}
         onChange={(e) => handleInputChange('destinationCane', e.target.value)}
-      >
-        {!choicesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
-        {choicesLoaded && (!choices?.cane_colors || choices.cane_colors.length === 0) && (
-          <MenuItem value="">No canes available</MenuItem>
+        >
+        {!canesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
+        {canesLoaded && canes.length === 0 && (
+            <MenuItem value="">No canes available</MenuItem>
         )}
-        {choices?.cane_colors?.map((cane, index) => (
-          <MenuItem key={cane.value} value={(index + 1).toString()}>
-            {cane.label} Cane
-          </MenuItem>
+        {canes.map((cane) => (
+            <MenuItem key={cane.id} value={cane.id.toString()}>
+            {cane.color_code} Cane (Pos: {cane.position_in_dewar})
+            </MenuItem>
         ))}
-      </TextField>
+     </TextField>
 
       <TextField
         select
