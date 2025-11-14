@@ -4,32 +4,19 @@ import React, { useState } from 'react';
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
+import { FreezingSessionFormData } from '@app/common/types/gridLogging/freezingSessionList';
+import { Device } from '@app/common/types/gridLogging/deviceList';
+import { ConfluencePage } from '@app/common/types/gridLogging/confluencePageList';
+import { UsersList } from '@app/common/types/gridLogging/userList';
 
-interface FreezingSessionFormData {
-  user: string;
-  device: string;
-  temperature: string;
-  humidity: string;
-  notesPage: string;
-}
-
-interface AddFreezingSessionDialogProps {
+export const AddFreezingSessionDialog: React.FC<{
   open: boolean;
   onClose: () => void;
   onSave: (data: FreezingSessionFormData) => void;
-  users?: Array<{ id: string; name: string }>;
-  devices?: Array<{ id: string; name: string }>;
-  notesPages?: Array<{ id: string; url: string }>;
-}
-
-export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> = ({
-  open,
-  onClose,
-  onSave,
-  users = [],
-  devices = [],
-  notesPages = [],
-}) => {
+  users?: UsersList[];
+  devices?: Device[];
+  notesPages?: ConfluencePage[];
+}> = ({ open, onClose, onSave, users = [], devices = [], notesPages = [] }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FreezingSessionFormData>({
     user: '',
@@ -133,7 +120,7 @@ export const AddFreezingSessionDialog: React.FC<AddFreezingSessionDialogProps> =
               ) : (
                 users.map((user) => (
                   <MenuItem key={user.id} value={user.id}>
-                    {user.name}
+                    {user.full_name}
                   </MenuItem>
                 ))
               )}
