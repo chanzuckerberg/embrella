@@ -296,7 +296,7 @@
         cursor: pointer;
         position: relative;
         user-select: none;           /* prevents text selection */
-}
+}   
 
     /* New tooltip style (small, grey background) */
     .tooltip-small {
@@ -447,6 +447,69 @@
   font-size: inherit !important;
 }
 
+/* chip stylefor multiple selection*/
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;       /* ↓ reduce vertical space (was 4px 8px) */
+  border-radius: 10px;
+  background: #f1f3f5;
+  border: 1px solid #e0e0e0;
+  font-size: 0.85em;      /* optional: slightly smaller text */
+  line-height: 1.2;       /* tighten vertical rhythm */
+}
+
+.chip button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 1.1em;        /* ↑ make the X bigger */
+  color: #444;             /* dark gray */
+  opacity: 0.8;
+  padding: 0;
+  line-height: 1;          /* ensures it sits nicely centered */
+  display: flex;           /* centers X within its box */
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+.chip button:hover { opacity: 1; }
+
+/* search box at top of dropdown */
+.dropdown-search {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+.dropdown-search input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+/* active (keyboard focus) item */
+.dropdown-item.active {
+  background-color: #e9f2ff;
+}
+
+/* (existing from before, repeat if needed) */
+.dropdown-input { border:1px solid #ccc; border-radius:4px; padding:8px 10px; cursor:pointer; font-size:14px; background:#fff; user-select:none; }
+.dropdown-input:after { content:"▾"; float:right; color:#777; }
+.dropdown-input.active { border-color:#999; box-shadow:0 0 4px rgba(0,0,0,0.15); }
       </style>
 </head>
 
@@ -543,6 +606,22 @@
         <input type="hidden" id="octopi_run_id_input" name="octopi_run_id" />
       </div>
 
+<!-- Row 3: optional select runs to collect training picks -->
+    <div class="form-group" style="position: relative;">
+      <label for="runs-select">
+        (Optional) Select runs:
+        <span class="info-icon-small">i
+          <div class="tooltip-small">
+            Select CoPick runs (tomograms) for training (multi-select allowed).
+          </div>
+        </span>
+      </label>
+      <select id="runs-select"></select>
+      <div id="runs-chips" class="chips"></div>
+    </div>
+   
+      
+
 <!-- Row 2: Gather picks or segmentations (4 columns) -->
       <div class="section-body">
           <div class="section-inner">
@@ -551,15 +630,16 @@
             <!-- LEFT COLUMN -->
             <div class="col" id="pick-col">
               <div class="col-header">
-                <input type="checkbox" id="pick-toggle" class="col-toggle" name="column-toggle" />
+                <input type="checkbox" id="pick-toggle" class="col-toggle" name="column-toggle" checked/>
                 <label for="pick-toggle">Picks</label>
               </div>
               <div class="col-body">
                 <div class="form-group">
-                  <label for="pick-select">Select a set of picks for training:</label>
+                  <label for="pick-select">Select a set of picks for training (multi-select allowed):</label>
                   <div class="form-hint"><code>user-id | session-id | name</code></div>
                   <select id="pick-select"></select>
-                </div>
+                  <div id="pick-chips" class="chips"></div>
+                  </div>
               </div>
             </div>
 
@@ -574,6 +654,7 @@
                   <label for="seg-select">Select a set of segmentations for training:</label>
                   <div class="form-hint"><code>user-id | session-id | name | voxelsize</code></div>
                   <select id="seg-select"></select>
+                  <div id="seg-chips" class="chips"></div>
                 </div>
               </div>
             </div>
@@ -582,7 +663,6 @@
           </div>
       </div>
 
-      
     </details>
 
 
@@ -1049,6 +1129,288 @@
 
   // auto-load if both present
   refreshFromApi();
+})();
+
+// multi selection
+class MultiSelectChips {
+  constructor(selectEl, chipsEl, { labelForValue, onChange, hiddenInput } = {}) {
+    this.selectEl = selectEl;
+    this.chipsEl = chipsEl;
+    this.labelForValue = labelForValue || (v => v);
+    this.onChange = onChange || (() => {});
+    this.hiddenInput = hiddenInput || null;
+
+    this.selected = new Set();
+    this._bind();
+  }
+
+  _bind() {
+    this.selectEl.addEventListener("change", () => {
+      const val = this.selectEl.value;
+      if (!val) return;
+      if (this.selected.has(val)) { this.selectEl.value = ""; return; }
+      this.add(val);
+      // reset to placeholder
+      this.selectEl.value = "";
+    });
+  }
+
+  // Call when you repopulate the <select> options to resync disabled states
+  resync() {
+    for (const opt of this.selectEl.options) {
+      if (!opt.value) continue; // placeholder
+      opt.disabled = this.selected.has(opt.value);
+    }
+  }
+
+  add(value) {
+    this.selected.add(value);
+    // disable option in dropdown
+    const opt = [...this.selectEl.options].find(o => o.value === value);
+    if (opt) opt.disabled = true;
+
+    // chip
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.dataset.value = value;
+    chip.textContent = this.labelForValue(value);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Remove");
+    btn.textContent = "×";
+    btn.addEventListener("click", () => this.remove(value));
+
+    chip.appendChild(btn);
+    this.chipsEl.appendChild(chip);
+
+    this._emit();
+  }
+
+  remove(value) {
+    if (!this.selected.delete(value)) return;
+    // re-enable option
+    const opt = [...this.selectEl.options].find(o => o.value === value);
+    if (opt) opt.disabled = false;
+    // remove chip
+    const chip = [...this.chipsEl.querySelectorAll(".chip")]
+      .find(c => c.dataset.value === value);
+    if (chip) chip.remove();
+    this._emit();
+  }
+
+  clear() {
+    for (const v of [...this.selected]) this.remove(v);
+  }
+
+  values() {
+    return [...this.selected];
+  }
+
+  _emit() {
+    const vals = this.values();
+    if (this.hiddenInput) this.hiddenInput.value = JSON.stringify(vals);
+    this.onChange(vals);
+  }
+}
+
+// annotation combos multiple selection
+(() => {
+  const elSession = document.getElementById("importCopickSession");
+  const elRun     = document.getElementById("importCopickRun");
+  const pickSel   = document.getElementById("pick-select");
+  const segSel    = document.getElementById("seg-select");
+  const pickChips = document.getElementById("pick-chips");
+  const segChips  = document.getElementById("seg-chips");
+
+  // Optional: store selections in hidden inputs for form submissions
+  // <input type="hidden" id="pick-selected-json" name="pickSelections">
+  // <input type="hidden" id="seg-selected-json" name="segSelections">
+  const pickHidden = document.getElementById("pick-selected-json");
+  const segHidden  = document.getElementById("seg-selected-json");
+
+  // Label builders parse the JSON value to render the chip text
+  const pickLabelFromVal = (val) => {
+    try { const p = JSON.parse(val); return `${p.user} | ${p.session} | ${p.object}`; }
+    catch { return val; }
+  };
+  const segLabelFromVal = (val) => {
+    try { const s = JSON.parse(val); return `${s.user} | ${s.session} | ${s.name} | ${s.voxel_size}`; }
+    catch { return val; }
+  };
+
+  // Instantiate controllers (reusable elsewhere too)
+  const pickMS = new MultiSelectChips(pickSel, pickChips, {
+    labelForValue: pickLabelFromVal,
+    hiddenInput: pickHidden,
+    onChange: (vals) => {
+      // console.debug("picks:", vals.map(v => JSON.parse(v)));
+    }
+  });
+  const segMS = new MultiSelectChips(segSel, segChips, {
+    labelForValue: segLabelFromVal,
+    hiddenInput: segHidden,
+    onChange: (vals) => {
+      // console.debug("segs:", vals.map(v => JSON.parse(v)));
+    }
+  });
+
+  // When your API repopulates <select> options, call resync() so selected ones stay disabled
+  async function refreshAnnotationCombos() {
+    const session = (elSession?.value || "").trim();
+    const procrun = (elRun?.value || "").trim();
+
+    // Your existing populate flow goes here…
+    // After populating #pick-select and #seg-select options:
+    pickMS.resync();
+    segMS.resync();
+  }
+
+  elSession?.addEventListener("change", refreshAnnotationCombos);
+  elRun?.addEventListener("change", refreshAnnotationCombos);
+  // initial attempt:
+  // refreshAnnotationCombos();
+})();
+
+
+// copick run multiple selection
+(() => {
+  const apiBase = "/workflow/api/copick-runs";
+
+  const elSession   = document.getElementById("importCopickSession");
+  const elRun       = document.getElementById("importCopickRun");
+  const elSelect    = document.getElementById("runs-select");
+  const elChips     = document.getElementById("runs-chips");
+
+  function setDisabled(el, disabled, placeholderText) {
+    el.disabled = disabled;
+    if (placeholderText !== undefined) {
+      el.innerHTML = `<option value="">${placeholderText}</option>`;
+    }
+  }
+
+  function populateSelect(el, items, { placeholder = "Select…", format, value } = {}) {
+    el.innerHTML = `<option value="">${placeholder}</option>`;
+    for (const item of items) {
+      const label = format ? format(item) : String(item);
+      const val   = value ? value(item) : label;
+      el.insertAdjacentHTML("beforeend", `<option value="${val}">${label}</option>`);
+    }
+  }
+
+  // ---- simple multi-select via chips (reuses your existing pattern) ----
+  class MultiSelectChips {
+    constructor(selectEl, chipsEl, { labelForValue, onChange } = {}) {
+      this.selectEl = selectEl;
+      this.chipsEl  = chipsEl;
+      this.labelForValue = labelForValue || (v => v);
+      this.onChange = onChange || (() => {});
+      this.selected = new Set();
+      this._bind();
+    }
+    _bind() {
+      this.selectEl.addEventListener("change", () => {
+        const val = this.selectEl.value;
+        if (!val) return;
+        if (this.selected.has(val)) { this.selectEl.value = ""; return; }
+        this.add(val);
+        this.selectEl.value = "";
+      });
+    }
+    resync() {
+      for (const opt of this.selectEl.options) {
+        if (!opt.value) continue;
+        opt.disabled = this.selected.has(opt.value);
+      }
+    }
+    add(value) {
+      this.selected.add(value);
+      const opt = [...this.selectEl.options].find(o => o.value === value);
+      if (opt) opt.disabled = true;
+
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.dataset.value = value;
+      chip.textContent = this.labelForValue(value);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("aria-label", "Remove");
+      btn.textContent = "×";
+      btn.addEventListener("click", () => this.remove(value));
+
+      chip.appendChild(btn);
+      this.chipsEl.appendChild(chip);
+      this._emit();
+    }
+    remove(value) {
+      if (!this.selected.delete(value)) return;
+      const opt = [...this.selectEl.options].find(o => o.value === value);
+      if (opt) opt.disabled = false;
+      const chip = [...this.chipsEl.querySelectorAll(".chip")].find(c => c.dataset.value === value);
+      if (chip) chip.remove();
+      this._emit();
+    }
+    values() { return [...this.selected]; }
+    _emit() { this.onChange(this.values()); }
+  }
+
+  const runsMS = new MultiSelectChips(elSelect, elChips, {
+    labelForValue: v => v, // value is the run text itself
+    onChange: vals => {
+      // console.debug("selected runs:", vals);
+    }
+  });
+
+  async function fetchRuns(session, procrun) {
+    const url = `${apiBase}?session=${session}&procrun=${procrun}`;
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json(); // { base_dir, runs: [...] }
+  }
+
+  async function refreshRuns() {
+    const session = (elSession?.value || "").trim();
+    const procrun = (elRun?.value || "").trim();
+
+    setDisabled(elSelect, true, "Select session & run…");
+    elChips.innerHTML = "";
+
+    if (!session || !procrun) return;
+
+    try {
+      setDisabled(elSelect, true, "Loading runs…");
+      const data = await fetchRuns(session, procrun);
+      const runs = Array.isArray(data?.runs) ? data.runs : [];
+
+      if (!runs.length) {
+        populateSelect(elSelect, [], { placeholder: "No runs found" });
+        setDisabled(elSelect, true);
+        runsMS.resync();
+        return;
+      }
+
+      runs.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+      populateSelect(elSelect, runs, { placeholder: "Select runs…", format: r => r, value: r => r });
+      setDisabled(elSelect, false);
+      runsMS.resync();
+    } catch (err) {
+      console.error("[runs-select] fetch failed:", err);
+      populateSelect(elSelect, [], { placeholder: "Failed to load runs" });
+      setDisabled(elSelect, true);
+      runsMS.resync();
+    }
+  }
+
+  // initial placeholders
+  setDisabled(elSelect, true, "Select session & run…");
+
+  // wire up
+  elSession?.addEventListener("change", refreshRuns);
+  elRun?.addEventListener("change", refreshRuns);
+
+  // if page is prefilled
+  refreshRuns();
 })();
 
       </script>

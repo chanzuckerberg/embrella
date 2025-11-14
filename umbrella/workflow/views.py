@@ -2888,3 +2888,54 @@ def get_annotation_combos_json(request):
     except Exception as e:
         logger.exception(f"Unexpected error in get_annotation_combos_json: {e}")
         return JsonResponse({"error": str(e)}, status=500)
+    
+
+
+@api_view(["GET"])
+@require_http_methods(["GET"])
+def get_copick_runs_json(request):
+    """
+    GET /api/copick-runs?session=25oct28b&procrun=run001
+    Runs the remote embrella_list_runs_fs.sh via SSH and returns its JSON.
+    """
+    session = (request.GET.get("session") or "").strip()
+    procrun = (request.GET.get("procrun") or "").strip()
+
+    if not session or not procrun:
+        return JsonResponse({"error": "Missing required params: session, procrun"}, status=400)
+
+    # Remote script path (configurable)
+    remote_script = getattr(
+        settings,
+        "REMOTE_ANNOTATION_RUNS_SCRIPT",
+        "/hpc/projects/krios1.processing/copick/scripts/embrella_check_runs_fs.sh",
+    )
+
+    # Build command safely
+    cmd = " ".join([
+        shlex.quote(remote_script),
+        shlex.quote(session),
+        shlex.quote(procrun),
+    ])
+    logger.info(f"[get_annotation_runs_json] Running remote: {cmd}")
+
+    try:
+        raw = ssh_run_bruno(cmd)   # stdout from remote script
+        data = jsonify(raw)        # your helper to parse/validate JSON
+
+        # Basic schema validation
+        runs = data.get("runs", None)
+        if not isinstance(runs, list):
+            raise ValueError("Invalid payload: 'runs' must be a list")
+
+        return JsonResponse(data, status=200, safe=False)
+
+    except FileNotFoundError as fe:
+        logger.exception(f"Remote script not found? {fe}")
+        return JsonResponse({"error": "Remote script not found or not executable"}, status=404)
+    except ValueError as ve:
+        logger.exception(f"Invalid JSON from remote: {ve}")
+        return JsonResponse({"error": f"Invalid JSON: {ve}"}, status=500)
+    except Exception as e:
+        logger.exception(f"Unexpected error in get_annotation_runs_json: {e}")
+        return JsonResponse({"error": str(e)}, status=500)
