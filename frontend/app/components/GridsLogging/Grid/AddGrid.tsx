@@ -16,9 +16,15 @@ import { useSpecimenList } from '@app/common/hooks/useGridLogging/useSpecimenLis
 import { useFreezingSessionList } from '@app/common/hooks/useGridLogging/useFreezingSessionList';
 import { useCreateGrid } from '@app/common/hooks/useGridLogging/useCreateGrid';
 import { useDeviceList } from '@app/common/hooks/useGridLogging/useDeviceList';
+import { useCreateFreezingSession } from '@app/common/hooks/useGridLogging/useCreateFreezingSession';
 import { useConfluencePageList } from '@app/common/hooks/useGridLogging/useConfluencePageList';
 import { useDriveFolderList } from '@app/common/hooks/useGridLogging/useDriveFolderList';
 import { useConfluenceSpaceList } from '@app/common/hooks/useGridLogging/useConfluenceSpaceList';
+import { FreezingSessionFormData } from '@app/common/types/gridLogging/freezingSessionList';
+import { useProjectLeadersList } from '@app/common/hooks/useGridLogging/useProjectLeadersList';
+import { useCreateProject } from '@app/common/hooks/useGridLogging/useCreateProject';
+import { ProjectFormData } from '@app/common/types/gridLogging/projectList';
+
 
 interface AddGridProps {
   open: boolean;
@@ -41,15 +47,17 @@ export const AddGrid: React.FC<AddGridProps> = ({
   positionInBox,
   onGridCreated,
 }) => {
-  // Fetch projects list
-  const { projects } = useProjectsList();
+  const { projects, refetch: refetchProjects } = useProjectsList();
   const [addSpecimenDialogOpen, setAddSpecimenDialogOpen] = useState(false);
   const [addProjectDialogOpen, setAddProjectDialogOpen] = useState(false);
   const [addFreezingSessionDialogOpen, setAddFreezingSessionDialogOpen] = useState(false);
   const { createGrid, isCreating, error, clearError } = useCreateGrid();
+  const { createFreezingSession } = useCreateFreezingSession();
   const { spaces: confluenceSpacesList } = useConfluenceSpaceList();
   const { pages: confluencePagesList } = useConfluencePageList();
   const { folders: driveFoldersList } = useDriveFolderList();
+  const { createProject } = useCreateProject();
+  const { projectLeaders: projectLeadersData, isSuccess: projectLeadersLoaded } = useProjectLeadersList();
 
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
@@ -94,45 +102,46 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { transformedSpecimens, isSuccess: specimensLoaded } = useSpecimenList();
   const { transformedFreezingSessions, refetch: freezingSessionRefetch } = useFreezingSessionList();
   const { devices: devicesList, isSuccess: devicesLoaded } = useDeviceList();
-  // Transform devices to match the expected interface
-  const devices = devicesList.map(device => ({
-    id: device.id.toString(),  // Convert number to string
-    name: device.name,
+  
+  
+  const devices = devicesList;
+  
+ 
+  const projectLeaders = projectLeadersData?.users || [];
+
+  const confluenceSpaces = confluenceSpacesList.map(space => ({
+    id: space.id.toString(),
+    url: space.url,
+  }));
+
+  const googleDriveFolders = driveFoldersList.map(folder => ({
+    id: folder.id.toString(),
+    name: folder.name,
   }));
   
-  const projectLeaders =
-    users?.users?.map((user) => ({
-      id: user.id.toString(),
-      name: user.full_name,
-    })) || [];
+  const notesPages = confluencePagesList
 
-    const confluenceSpaces = confluenceSpacesList.map(space => ({
-      id: space.id.toString(),
-      url: space.url,
-    }));
+  // Handle saving a new project
+  const handleSaveProject = async (data: ProjectFormData) => {
+    const result = await createProject({
+      name: data.name,
+      description: data.description,
+      project_leader: data.projectLeader ? Number(data.projectLeader) : undefined,
+      confluence_space: data.confluenceSpace ? Number(data.confluenceSpace) : undefined,
+      google_drive_folder: data.googleDriveFolder ? Number(data.googleDriveFolder) : undefined,
+    });
 
-    const googleDriveFolders = driveFoldersList.map(folder => ({
-      id: folder.id.toString(),
-      name: folder.name,
-    }));
-  
-    const notesPages = confluencePagesList.map(page => ({
-      id: page.id.toString(),
-      name: page.name,
-      url: page.url,
-    }));
-
-  const handleSaveProject = async (data: {
-    name: string;
-    description: string;
-    projectLeader: string;
-    confluenceSpace: string;
-    googleDriveFolder: string;
-  }) => {
-    setFormData((prev) => ({
-      ...prev,
-      project: data.name,
-    }));
+    if (result) {
+      // Refresh the projects list
+      await refetchProjects();
+      
+      setFormData((prev) => ({
+        ...prev,
+        project: result.project.id.toString(),
+      }));
+      
+      setAddProjectDialogOpen(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string | number | boolean) => {
@@ -146,13 +155,22 @@ export const AddGrid: React.FC<AddGridProps> = ({
     console.log('Adding new specimen:', specimenData);
   };
 
-  const handleAddFreezingSession = async (data: {
-    user: string;
-    device: string;
-    temperature: string;
-    humidity: string;
-    notesPage: string;
-  }) => {
+  const handleAddFreezingSession = async (data: FreezingSessionFormData) => {
+    const result = await createFreezingSession({
+      user: Number(data.user),
+      device: Number(data.device),
+      device_temperature: Number(data.temperature),
+      humidity: Number(data.humidity),
+      notes_page: data.notesPage ? Number(data.notesPage) : null,
+    });
+    
+    if (result) {
+      freezingSessionRefetch();
+      setFormData((prev) => ({
+        ...prev,
+        freezingSession: result.id.toString(),
+      }));
+    }
   };
 
   const handleSave = async () => {
@@ -196,11 +214,11 @@ export const AddGrid: React.FC<AddGridProps> = ({
         isSubmitting={isCreating}
         disabled={!choicesLoaded || !usersLoaded || !isFormValid}
       >
-         {Boolean(error) && (
+        {Boolean(error) && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
-          )}
+        )}
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           <TextField
             required
@@ -319,7 +337,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
         onSave={handleAddSpecimen}
       />
 
-       <AddProjectDialog
+      <AddProjectDialog
         open={addProjectDialogOpen}
         onClose={() => setAddProjectDialogOpen(false)}
         onSave={handleSaveProject}
