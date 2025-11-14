@@ -1000,138 +1000,7 @@
   });
 })();
 
-// fetcth annotation combos
-(() => {
-  const apiBase = "/workflow/api/annotation-combos";
-
-  const elSession = document.getElementById("importCopickSession");
-  const elRun     = document.getElementById("importCopickRun");
-  const elPicks   = document.getElementById("pick-select");
-  const elSegs    = document.getElementById("seg-select");
-  const elPickTip = document.getElementById("pick-tip");
-  const elSegTip  = document.getElementById("seg-tip");
-
-  function setDisabled(el, disabled, placeholderText) {
-    el.disabled = disabled;
-    if (placeholderText !== undefined) {
-      el.innerHTML = `<option value="">${placeholderText}</option>`;
-    }
-  }
-
-  function populateSelect(el, items, { placeholder = "Select…", format, value } = {}) {
-    el.innerHTML = `<option value="">${placeholder}</option>`;
-    for (const item of items) {
-      const label = format ? format(item) : String(item);
-      const val   = value ? value(item) : label;
-      el.insertAdjacentHTML("beforeend", `<option value='${val}'>${label}</option>`);
-    }
-  }
-
-  async function fetchCombos(session, procrun) {
-    const url = `${apiBase}?session=${session}&procrun=${procrun}`; // no encoding per your setup
-    const res = await fetch(url, { headers: { "Accept": "application/json" } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-  }
-
-  function isEmptyPick(p) {
-    return !p || (p.user === "" && p.session === "" && p.object === "");
-  }
-  function isEmptySeg(s) {
-    return !s || (String(s.user) === "" && String(s.session) === "" && String(s.name) === "" && String(s.voxel_size ?? "") === "");
-  }
-
-  async function refreshFromApi() {
-    const session = (elSession?.value || "").trim();
-    const procrun = (elRun?.value || "").trim();
-
-    // show placeholders until both chosen
-    setDisabled(elPicks, true, "Select session & run…");
-    setDisabled(elSegs,  true, "Select session & run…");
-    elPickTip && (elPickTip.style.display = "block");
-    elSegTip  && (elSegTip.style.display  = "block");
-
-    if (!session || !procrun) return;
-
-    try {
-      setDisabled(elPicks, true, "Loading picks…");
-      setDisabled(elSegs,  true, "Loading segmentations…");
-
-      const data = await fetchCombos(session, procrun);
-      const combos = (data && data.combinations) || {};
-
-      // ---- picks ----
-      let picks = Array.isArray(combos.picks) ? combos.picks : [];
-      // filter out "empty row" payloads
-      picks = picks.filter(p => !isEmptyPick(p));
-
-      if (!picks.length) {
-        populateSelect(elPicks, [], { placeholder: "No picks found" });
-        setDisabled(elPicks, true);
-      } else {
-        // stable sort
-        picks.sort((a, b) =>
-          String(a.user).localeCompare(String(b.user)) ||
-          String(a.session).localeCompare(String(b.session)) ||
-          String(a.object).localeCompare(String(b.object))
-        );
-        populateSelect(elPicks, picks, {
-          placeholder: "Select picks…",
-          format: p => `${p.user} | ${p.session} | ${p.object}`,
-          value:  p => JSON.stringify({ user: p.user, session: p.session, object: p.object })
-        });
-        setDisabled(elPicks, false);
-      }
-
-      // ---- segmentations ----
-      let segs = Array.isArray(combos.segmentations) ? combos.segmentations : [];
-      segs = segs.filter(s => !isEmptySeg(s));
-
-      if (!segs.length) {
-        populateSelect(elSegs, [], { placeholder: "No segmentations found" });
-        setDisabled(elSegs, true);
-      } else {
-        // sort by user, session, name, then voxel (numeric)
-        segs.sort((a, b) =>
-          String(a.user).localeCompare(String(b.user)) ||
-          String(a.session).localeCompare(String(b.session)) ||
-          String(a.name).localeCompare(String(b.name)) ||
-          (Number(a.voxel_size) - Number(b.voxel_size))
-        );
-        populateSelect(elSegs, segs, {
-          placeholder: "Select segmentations…",
-          // voxel size last in the label
-          format: s => `${s.user} | ${s.session} | ${s.name} | ${s.voxel_size}`,
-          value:  s => JSON.stringify({
-            user: s.user, session: s.session, name: s.name, voxel_size: s.voxel_size
-          })
-        });
-        setDisabled(elSegs, false);
-      }
-
-    } catch (err) {
-      console.error("[annotation-combos] fetch failed:", err);
-      populateSelect(elPicks, [], { placeholder: "Failed to load picks" });
-      populateSelect(elSegs,  [], { placeholder: "Failed to load segmentations" });
-      setDisabled(elPicks, true);
-      setDisabled(elSegs,  true);
-    }
-  }
-
-  // initial placeholders
-  setDisabled(elPicks, true, "Select session & run…");
-  setDisabled(elSegs,  true, "Select session & run…");
-  elPickTip && (elPickTip.style.display = "block");
-  elSegTip  && (elSegTip.style.display  = "block");
-
-  elSession?.addEventListener("change", refreshFromApi);
-  elRun?.addEventListener("change", refreshFromApi);
-
-  // auto-load if both present
-  refreshFromApi();
-})();
-
-// multi selection
+// multi selection chips
 class MultiSelectChips {
   constructor(selectEl, chipsEl, { labelForValue, onChange, hiddenInput } = {}) {
     this.selectEl = selectEl;
@@ -1214,22 +1083,117 @@ class MultiSelectChips {
   }
 }
 
-// annotation combos multiple selection
+// annotation combo multiple selection
 (() => {
+  const apiBase = "/workflow/api/annotation-combos";
+
   const elSession = document.getElementById("importCopickSession");
   const elRun     = document.getElementById("importCopickRun");
-  const pickSel   = document.getElementById("pick-select");
-  const segSel    = document.getElementById("seg-select");
+
+  const elPicks   = document.getElementById("pick-select");
+  const elSegs    = document.getElementById("seg-select");
+  const elPickTip = document.getElementById("pick-tip");
+  const elSegTip  = document.getElementById("seg-tip");
+
   const pickChips = document.getElementById("pick-chips");
   const segChips  = document.getElementById("seg-chips");
 
-  // Optional: store selections in hidden inputs for form submissions
-  // <input type="hidden" id="pick-selected-json" name="pickSelections">
-  // <input type="hidden" id="seg-selected-json" name="segSelections">
+  // Optional: hidden inputs you might already have
   const pickHidden = document.getElementById("pick-selected-json");
   const segHidden  = document.getElementById("seg-selected-json");
 
-  // Label builders parse the JSON value to render the chip text
+  // ---- helpers ----
+  function setDisabled(el, disabled, placeholderText) {
+    el.disabled = disabled;
+    if (placeholderText !== undefined) {
+      el.innerHTML = `<option value="">${placeholderText}</option>`;
+    }
+  }
+
+  function populateSelect(el, items, { placeholder = "Select…", format, value } = {}) {
+    el.innerHTML = `<option value="">${placeholder}</option>`;
+    for (const item of items) {
+      const label = format ? format(item) : String(item);
+      const val   = value ? value(item) : label;
+      el.insertAdjacentHTML("beforeend", `<option value='${val}'>${label}</option>`);
+    }
+  }
+
+  async function fetchCombos(session, procrun) {
+    const url = `${apiBase}?session=${session}&procrun=${procrun}`; // no encoding per your setup
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  const isEmptyPick = (p) =>
+    !p || (p.user === "" && p.session === "" && p.object === "");
+  const isEmptySeg = (s) =>
+    !s || (String(s.user) === "" && String(s.session) === "" && String(s.name) === "" && String(s.voxel_size ?? "") === "");
+
+  // ---- MultiSelectChips (unchanged) ----
+  class MultiSelectChips {
+    constructor(selectEl, chipsEl, { labelForValue, onChange, hiddenInput } = {}) {
+      this.selectEl = selectEl;
+      this.chipsEl  = chipsEl;
+      this.labelForValue = labelForValue || (v => v);
+      this.onChange = onChange || (() => {});
+      this.hiddenInput = hiddenInput || null;
+      this.selected = new Set();
+      this._bind();
+    }
+    _bind() {
+      this.selectEl.addEventListener("change", () => {
+        const val = this.selectEl.value;
+        if (!val) return;
+        if (this.selected.has(val)) { this.selectEl.value = ""; return; }
+        this.add(val);
+        this.selectEl.value = "";
+      });
+    }
+    resync() {
+      for (const opt of this.selectEl.options) {
+        if (!opt.value) continue;
+        opt.disabled = this.selected.has(opt.value);
+      }
+    }
+    add(value) {
+      this.selected.add(value);
+      const opt = [...this.selectEl.options].find(o => o.value === value);
+      if (opt) opt.disabled = true;
+
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.dataset.value = value;
+      chip.textContent = this.labelForValue(value);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("aria-label", "Remove");
+      btn.textContent = "×";
+      btn.addEventListener("click", () => this.remove(value));
+
+      chip.appendChild(btn);
+      this.chipsEl.appendChild(chip);
+      this._emit();
+    }
+    remove(value) {
+      if (!this.selected.delete(value)) return;
+      const opt = [...this.selectEl.options].find(o => o.value === value);
+      if (opt) opt.disabled = false;
+      const chip = [...this.chipsEl.querySelectorAll(".chip")].find(c => c.dataset.value === value);
+      if (chip) chip.remove();
+      this._emit();
+    }
+    values() { return [...this.selected]; }
+    _emit() {
+      const vals = this.values();
+      if (this.hiddenInput) this.hiddenInput.value = JSON.stringify(vals);
+      this.onChange(vals);
+    }
+  }
+
+  // Format labels from JSON values
   const pickLabelFromVal = (val) => {
     try { const p = JSON.parse(val); return `${p.user} | ${p.session} | ${p.object}`; }
     catch { return val; }
@@ -1239,39 +1203,110 @@ class MultiSelectChips {
     catch { return val; }
   };
 
-  // Instantiate controllers (reusable elsewhere too)
-  const pickMS = new MultiSelectChips(pickSel, pickChips, {
+  // Instantiate controllers
+  const pickMS = new MultiSelectChips(elPicks, pickChips, {
     labelForValue: pickLabelFromVal,
-    hiddenInput: pickHidden,
-    onChange: (vals) => {
-      // console.debug("picks:", vals.map(v => JSON.parse(v)));
-    }
+    hiddenInput: pickHidden
   });
-  const segMS = new MultiSelectChips(segSel, segChips, {
+  const segMS = new MultiSelectChips(elSegs, segChips, {
     labelForValue: segLabelFromVal,
-    hiddenInput: segHidden,
-    onChange: (vals) => {
-      // console.debug("segs:", vals.map(v => JSON.parse(v)));
-    }
+    hiddenInput: segHidden
   });
 
-  // When your API repopulates <select> options, call resync() so selected ones stay disabled
+  // ---- refresh flow (clears chips & selections like the runs version) ----
   async function refreshAnnotationCombos() {
     const session = (elSession?.value || "").trim();
     const procrun = (elRun?.value || "").trim();
 
-    // Your existing populate flow goes here…
-    // After populating #pick-select and #seg-select options:
-    pickMS.resync();
-    segMS.resync();
+    // Clear selections & chips immediately
+    pickMS.selected.clear();
+    segMS.selected.clear();
+    pickChips.innerHTML = "";
+    segChips.innerHTML = "";
+    elPicks.value = "";
+    elSegs.value  = "";
+
+    // Reset UI
+    setDisabled(elPicks, true, "Select session & run…");
+    setDisabled(elSegs,  true, "Select session & run…");
+    elPickTip && (elPickTip.style.display = "block");
+    elSegTip  && (elSegTip.style.display  = "block");
+
+    if (!session || !procrun) return;
+
+    try {
+      setDisabled(elPicks, true, "Loading picks…");
+      setDisabled(elSegs,  true, "Loading segmentations…");
+
+      const data = await fetchCombos(session, procrun);
+      const combos = (data && data.combinations) || {};
+
+      // Picks
+      let picks = Array.isArray(combos.picks) ? combos.picks : [];
+      picks = picks.filter(p => !isEmptyPick(p));
+      if (!picks.length) {
+        populateSelect(elPicks, [], { placeholder: "No picks found" });
+        setDisabled(elPicks, true);
+      } else {
+        picks.sort((a, b) =>
+          String(a.user).localeCompare(String(b.user)) ||
+          String(a.session).localeCompare(String(b.session)) ||
+          String(a.object).localeCompare(String(b.object))
+        );
+        populateSelect(elPicks, picks, {
+          placeholder: "Select picks…",
+          format: p => `${p.user} | ${p.session} | ${p.object}`,
+          value:  p => JSON.stringify({ user: p.user, session: p.session, object: p.object })
+        });
+        setDisabled(elPicks, false);
+      }
+      pickMS.resync();
+
+      // Segmentations
+      let segs = Array.isArray(combos.segmentations) ? combos.segmentations : [];
+      segs = segs.filter(s => !isEmptySeg(s));
+      if (!segs.length) {
+        populateSelect(elSegs, [], { placeholder: "No segmentations found" });
+        setDisabled(elSegs, true);
+      } else {
+        segs.sort((a, b) =>
+          String(a.user).localeCompare(String(b.user)) ||
+          String(a.session).localeCompare(String(b.session)) ||
+          String(a.name).localeCompare(String(b.name)) ||
+          (Number(a.voxel_size) - Number(b.voxel_size))
+        );
+        populateSelect(elSegs, segs, {
+          placeholder: "Select segmentations…",
+          format: s => `${s.user} | ${s.session} | ${s.name} | ${s.voxel_size}`, // voxel last
+          value:  s => JSON.stringify({ user: s.user, session: s.session, name: s.name, voxel_size: s.voxel_size })
+        });
+        setDisabled(elSegs, false);
+      }
+      segMS.resync();
+
+    } catch (err) {
+      console.error("[annotation-combos] fetch failed:", err);
+      populateSelect(elPicks, [], { placeholder: "Failed to load picks" });
+      populateSelect(elSegs,  [], { placeholder: "Failed to load segmentations" });
+      setDisabled(elPicks, true);
+      setDisabled(elSegs,  true);
+      // chips already cleared above
+    }
   }
 
+  // init placeholders
+  setDisabled(elPicks, true, "Select session & run…");
+  setDisabled(elSegs,  true, "Select session & run…");
+  elPickTip && (elPickTip.style.display = "block");
+  elSegTip  && (elSegTip.style.display  = "block");
+
+  // wire up
   elSession?.addEventListener("change", refreshAnnotationCombos);
   elRun?.addEventListener("change", refreshAnnotationCombos);
-  // initial attempt:
-  // refreshAnnotationCombos();
-})();
 
+  // preload if pre-filled
+  refreshAnnotationCombos();
+})();
 
 // copick run multiple selection
 (() => {
@@ -1298,7 +1333,6 @@ class MultiSelectChips {
     }
   }
 
-  // ---- simple multi-select via chips (reuses your existing pattern) ----
   class MultiSelectChips {
     constructor(selectEl, chipsEl, { labelForValue, onChange } = {}) {
       this.selectEl = selectEl;
