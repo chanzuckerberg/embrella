@@ -61,6 +61,7 @@ export enum POST_API {
   CLIP_ALL_GRIDS = '/api/list/grids/clip-all-in-box/grid_box_id/',
   MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
   MOVE_GRID = '/api/list/grids/grid_id/move/',
+  CREATE_FREEZING_SESSION = '/api/list/freezing-sessions/',
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
