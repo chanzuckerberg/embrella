@@ -13,10 +13,11 @@ export interface UseFreezingSessionListReturn {
   totalCount: number;
   transformedFreezingSessions: ReturnType<typeof transformFreezingSession>[];
   rawData?: FreezingSessionListResponse;
+  refetch: () => void;
 }
 
 export const useFreezingSessionList = (): UseFreezingSessionListReturn => {
-  const { data, isSuccess } = useFetchData<FreezingSessionListResponse>(
+  const { data, isSuccess, refetch } = useFetchData<FreezingSessionListResponse>(
     API.GRID_LOGGING_FREEZING_SESSIONS
   );
 
@@ -35,5 +36,6 @@ export const useFreezingSessionList = (): UseFreezingSessionListReturn => {
     totalCount: data?.total_freezing_sessions_count || 0,
     transformedFreezingSessions,
     rawData: data,
+    refetch,
   };
 };
