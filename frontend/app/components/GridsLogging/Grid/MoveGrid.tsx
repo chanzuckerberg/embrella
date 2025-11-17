@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { PuckList } from '@app/common/types/gridLogging/puckList';
 import { GridDetailsResponse } from '@app/common/types/gridLogging/gridDetails';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingPucksByCane } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
@@ -17,12 +17,12 @@ import { useGridLoggingCaneList } from '@app/common/hooks/useGridLogging/useCane
 interface MoveGridProps {
   open: boolean;
   onClose: () => void;
-  currentPuck: PucksList | null;
+  currentPuck: PuckList | null;
   currentSlot: number | null;
   currentPosition: number | null;
   gridDetails: GridDetailsResponse | null;
   gridId: number | null;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
   onSuccess?: (newPuckId: number, newSlotPosition: number, newGridBoxId: number, newPositionInBox: number) => void;
 }
 

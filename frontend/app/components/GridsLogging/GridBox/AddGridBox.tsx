@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 import { useCreateGridBox } from '@app/common/hooks/useGridLogging/useCreateGridBox';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
@@ -13,7 +13,7 @@ import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGri
 interface AddGridBoxProps {
   open: boolean;
   onClose: () => void;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
   puckId?: number;
   puckName?: string;
   positionInPuck?: number;
