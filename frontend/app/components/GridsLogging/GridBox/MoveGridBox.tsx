@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { PuckList } from '@app/common/types/gridLogging/puckList';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingPucksByCane } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import { useMoveGridBox } from '@app/common/hooks/useGridLogging/useMoveGridBox';
@@ -15,10 +15,10 @@ import { useGridLoggingCaneList } from '@app/common/hooks/useGridLogging/useCane
 interface MoveGridBoxProps {
   open: boolean;
   onClose: () => void;
-  currentPuck: PucksList | null;
+  currentPuck: PuckList | null;
   currentSlot: number | null;
   gridBoxData: GridBoxDetailResponse | null;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
   onSuccess?: (newPuckId: number, newSlotPosition: number) => void;
 }
 

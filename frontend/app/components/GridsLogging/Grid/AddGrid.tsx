@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, InputAdornment, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
@@ -30,7 +30,7 @@ import { ProjectFormData } from '@app/common/types/gridLogging/projectList';
 interface AddGridProps {
   open: boolean;
   onClose: () => void;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
   gridBoxId?: number;
   gridBoxName?: string;
   positionInBox?: number;

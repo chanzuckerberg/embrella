@@ -1,20 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { PuckList } from '@app/common/types/gridLogging/puckList';
 import { PuckSVG } from './PuckSvg';
 import { DeletePuck } from './DeletePuck';
 import { Card, CardContent, CardHeader, Box, IconButton, Typography, CircularProgress, Alert } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 import styles from '../GridLogging.module.css';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 import { AddGridBox } from '../GridBox/AddGridBox';
 
 interface PuckDetailsProps {
-  selectedPuck: PucksList | null;
+  selectedPuck: PuckList | null;
   onSlotSelect: (slotPosition: number, gridBoxId?: number) => void;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
   onRefetchReady?: (refetch: () => void) => void;
   onGridBoxInfoRefetchReady?: (refetch: () => void) => void;
 }

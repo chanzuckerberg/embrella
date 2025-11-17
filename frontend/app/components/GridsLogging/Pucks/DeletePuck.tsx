@@ -3,17 +3,17 @@
 import React, { useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { PuckList } from '@app/common/types/gridLogging/puckList';
 import { PuckSlotsResponse } from '@app/common/types/gridLogging/puckList';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 import { DJANGO_URL } from '@app/common/constants/api';
 
 interface DeletePuckProps {
   open: boolean;
   onClose: () => void;
-  selectedPuck: PucksList | null;
+  selectedPuck: PuckList | null;
   slotsData: PuckSlotsResponse | null;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
 }
 
 export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedPuck, slotsData, selectedUser }) => {

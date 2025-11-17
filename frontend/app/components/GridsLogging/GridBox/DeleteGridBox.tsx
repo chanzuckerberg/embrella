@@ -3,18 +3,18 @@
 import React, { useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { PuckList } from '@app/common/types/gridLogging/puckList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
 import { DJANGO_URL } from '@app/common/constants/api';
 
 interface DeleteGridBoxProps {
   open: boolean;
   onClose: () => void;
-  selectedPuck: PucksList | null;
+  selectedPuck: PuckList | null;
   selectedSlot: number | null;
   gridBoxData: GridBoxDetailResponse | null;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
 }
 
 export const DeleteGridBox: React.FC<DeleteGridBoxProps> = ({

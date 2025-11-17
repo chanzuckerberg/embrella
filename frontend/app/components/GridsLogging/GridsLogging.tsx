@@ -5,8 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
 import { useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
 import { UserContext } from '@app/common/context/UserProvider';
-import { UsersList } from '@app/common/types/gridLogging/userList';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { UserList } from '@app/common/types/gridLogging/userList';
+import { PuckList } from '@app/common/types/gridLogging/puckList';
 import styles from './GridLogging.module.css';
 import { PuckListed } from './Pucks/PuckListed';
 import { PuckDetails } from './Pucks/PuckDetails';
@@ -17,8 +17,8 @@ import { Button, Icon } from '@czi-sds/components';
 import { AddPuck } from './Pucks/AddPuck';
 
 export const GridsLogging: React.FC = () => {
-  const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
-  const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserList | null>(null);
+  const [selectedPuck, setSelectedPuck] = useState<PuckList | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
   const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
@@ -90,7 +90,7 @@ export const GridsLogging: React.FC = () => {
   }, [usersList, currentUser, selectedUser, searchParams]);
 
   // Handle user selection - updated for Autocomplete
-  const handleUserChange = (event: React.SyntheticEvent, newValue: UsersList | null) => {
+  const handleUserChange = (event: React.SyntheticEvent, newValue: UserList | null) => {
     setSelectedUser(newValue);
     // Reset selected puck and slot when user changes
     setSelectedPuck(null);
@@ -101,7 +101,7 @@ export const GridsLogging: React.FC = () => {
     setIsAddPuckDialogOpen(true);
   };
 
-  const handlePuckSelect = (puck: PucksList | null) => {
+  const handlePuckSelect = (puck: PuckList | null) => {
     setSelectedPuck(puck);
     // Reset selected slot when puck changes
     setSelectedSlot(null);
@@ -121,7 +121,7 @@ export const GridsLogging: React.FC = () => {
     setSelectedGrid(gridPosition);
     setSelectedGridId(gridId || null);
   };
-  const handlePuckCreated = (_newPuck: PucksList) => {
+  const handlePuckCreated = (_newPuck: PuckList) => {
     window.location.reload();
   };
 
@@ -156,9 +156,9 @@ export const GridsLogging: React.FC = () => {
     if (puckDetailsRefetch) {
       puckDetailsRefetch();
     }
-    if (gridDetailsRefetch) {
-      gridDetailsRefetch();
-    }
+    // if (gridDetailsRefetch) {
+    //   gridDetailsRefetch();
+    // }
     if (gridBoxInfoRefetch) {  
       gridBoxInfoRefetch();
     }

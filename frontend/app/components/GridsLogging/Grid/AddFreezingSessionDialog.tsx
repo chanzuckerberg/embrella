@@ -7,13 +7,13 @@ import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/Di
 import { FreezingSessionFormData } from '@app/common/types/gridLogging/freezingSessionList';
 import { Device } from '@app/common/types/gridLogging/deviceList';
 import { ConfluencePage } from '@app/common/types/gridLogging/confluencePageList';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 
 export const AddFreezingSessionDialog: React.FC<{
   open: boolean;
   onClose: () => void;
   onSave: (data: FreezingSessionFormData) => void;
-  users?: UsersList[];
+  users?: UserList[];
   devices?: Device[];
   notesPages?: ConfluencePage[];
 }> = ({ open, onClose, onSave, users = [], devices = [], notesPages = [] }) => {

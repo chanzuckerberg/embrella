@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { PuckList } from '@app/common/types/gridLogging/puckList';
 import { GridDetailsResponse } from '@app/common/types/gridLogging/gridDetails';
 import {
   Card,
@@ -22,15 +22,15 @@ import { useGridLoggingGridDetails } from '@app/common/hooks/useGridLogging/useG
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import styles from '../GridLogging.module.css';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 import { MoveGrid } from '../Grid/MoveGrid';
 
 interface GridDetailsProps {
-  selectedPuck: PucksList | null;
+  selectedPuck: PuckList | null;
   selectedSlot: number | null;
   selectedGrid: number | null;
   selectedGridId: number | null;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
   onGridDetailsRefetchReady?: (refetch: () => void) => void; 
   onMoveGridSuccess?: (newPuckId: number, newSlotPosition: number, newGridBoxId: number, newPositionInBox: number) => void;
 }
