@@ -9,6 +9,7 @@ export interface UseSpecimenListReturn {
   totalCount: number;
   transformedSpecimens: ReturnType<typeof transformSpecimen>[];
   rawData?: SpecimenListResponse;
+  refetch: () => void;
 }
 
 /**
@@ -16,7 +17,7 @@ export interface UseSpecimenListReturn {
  * @returns {UseSpecimenListReturn} Specimens data and loading state
  */
 export const useSpecimenList = (): UseSpecimenListReturn => {
-  const { data, isSuccess } = useFetchData<SpecimenListResponse>(API.GRID_LOGGING_SPECIMENS);
+  const { data, isSuccess, refetch } = useFetchData<SpecimenListResponse>(API.GRID_LOGGING_SPECIMENS);
 
   const specimens = useMemo(() => {
     if (!data) return [];
@@ -34,5 +35,6 @@ export const useSpecimenList = (): UseSpecimenListReturn => {
     totalCount: data?.total_specimens_count || 0,
     transformedSpecimens,
     rawData: data,
+    refetch,
   };
 };

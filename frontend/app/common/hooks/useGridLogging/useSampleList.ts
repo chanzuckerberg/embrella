@@ -9,10 +9,11 @@ export interface UseSampleListReturn {
   totalCount: number;
   transformedSamples: ReturnType<typeof transformSample>[];
   rawData?: SampleListResponse;
+  refetch: () => void;
 }
 
 export const useSampleList = (): UseSampleListReturn => {
-  const { data, isSuccess } = useFetchData<SampleListResponse>(API.GRID_LOGGING_SAMPLES);
+  const { data, isSuccess, refetch } = useFetchData<SampleListResponse>(API.GRID_LOGGING_SAMPLES);
 
   const samples = useMemo(() => {
     if (!data) return [];
@@ -29,5 +30,6 @@ export const useSampleList = (): UseSampleListReturn => {
     totalCount: data?.total_samples_count || 0,
     transformedSamples,
     rawData: data,
+    refetch,
   };
 };
