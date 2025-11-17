@@ -294,6 +294,8 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         gridBoxId={gridBoxData?.grid_box?.grid_box_id}
         gridBoxName={gridBoxData?.grid_box?.name}
         positionInBox={selectedPositionInBox || undefined}
+        puckId={selectedPuck?.id}
+        gridBoxPositionInPuck={selectedSlot}
         onGridCreated={handleGridCreated}
       />
 
