@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, InputAdornment, Alert } from '@mui/material';
+import { Box, TextField, InputAdornment, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { UsersList } from '@app/common/types/gridLogging/userList';
 import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
 import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
+import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
@@ -35,6 +36,7 @@ interface AddGridProps {
   positionInBox?: number;
   puckId?: number;
   puckName?: string;
+  gridBoxPositionInPuck?: number;
   onGridCreated?: (gridPosition: number, gridId: number) => void;
 }
 
@@ -45,9 +47,12 @@ export const AddGrid: React.FC<AddGridProps> = ({
   gridBoxId,
   gridBoxName,
   positionInBox,
+  puckId,
+  gridBoxPositionInPuck,
   onGridCreated,
 }) => {
   const { projects, refetch: refetchProjects } = useProjectsList();
+  const { transformedSpecimens, isSuccess: specimensLoaded, refetch: refetchSpecimens } = useSpecimenList();
   const [addSpecimenDialogOpen, setAddSpecimenDialogOpen] = useState(false);
   const [addProjectDialogOpen, setAddProjectDialogOpen] = useState(false);
   const [addFreezingSessionDialogOpen, setAddFreezingSessionDialogOpen] = useState(false);
@@ -58,6 +63,10 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { folders: driveFoldersList } = useDriveFolderList();
   const { createProject } = useCreateProject();
   const { projectLeaders: projectLeadersData, isSuccess: projectLeadersLoaded } = useProjectLeadersList();
+  const { isSuccess: choicesLoaded } = useGridLoggingChoices();
+  const { isSuccess: usersLoaded } = useGridLoggingUserList();
+  const { transformedFreezingSessions, refetch: freezingSessionRefetch } = useFreezingSessionList();
+  const { devices: devicesList } = useDeviceList();
 
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
@@ -96,17 +105,8 @@ export const AddGrid: React.FC<AddGridProps> = ({
       clearError();
     }
   }, [open, selectedUser?.id, positionInBox, gridBoxId, gridBoxName]);
-
-  const { isSuccess: choicesLoaded } = useGridLoggingChoices();
-  const { users, isSuccess: usersLoaded } = useGridLoggingUserList();
-  const { transformedSpecimens, isSuccess: specimensLoaded } = useSpecimenList();
-  const { transformedFreezingSessions, refetch: freezingSessionRefetch } = useFreezingSessionList();
-  const { devices: devicesList, isSuccess: devicesLoaded } = useDeviceList();
-  
   
   const devices = devicesList;
-  
- 
   const projectLeaders = projectLeadersData?.users || [];
 
   const confluenceSpaces = confluenceSpacesList.map(space => ({
@@ -151,8 +151,15 @@ export const AddGrid: React.FC<AddGridProps> = ({
     }));
   };
 
-  const handleAddSpecimen = (specimenData: { sampleName: string; notesPage: string; notes: string }) => {
-    console.log('Adding new specimen:', specimenData);
+  const handleAddSpecimen = async (specimenId: number) => {
+    // Refresh the specimens list to include the newly created specimen
+    await refetchSpecimens();  
+    // Auto-select the newly created specimen in the form
+    setFormData((prev) => ({
+      ...prev,
+      specimen: specimenId.toString(),
+    }));
+    setAddSpecimenDialogOpen(false);
   };
 
   const handleAddFreezingSession = async (data: FreezingSessionFormData) => {
@@ -203,6 +210,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   };
 
   const isFormValid = formData.gridName && formData.specimen && formData.project && formData.positionInBox;
+  const  {gridBoxData} = useGridLoggingGridBoxDetail(puckId, gridBoxPositionInPuck);
   return (
     <>
       <BaseFormDialog
@@ -219,7 +227,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
             {error}
           </Alert>
         )}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           <TextField
             required
             label="Grid Name"
@@ -239,7 +246,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
               '& .MuiInputBase-input': { paddingLeft: 0 },
             }}
           />
-          <FormFieldWithAdd
+        <FormFieldWithAdd
             label="Freezing Session"
             value={formData.freezingSession}
             onChange={(value) => handleInputChange('freezingSession', value)}
@@ -249,10 +256,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
               value: freezingSession.id.toString(),
               label: freezingSession.display_name,
             }))}
-          
           />
-        </Box>
-
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           <FormFieldWithAdd
             label="Specimen"
@@ -281,13 +285,37 @@ export const AddGrid: React.FC<AddGridProps> = ({
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField
-            required
-            label="Position in box"
-            value={positionInBox}
-            disabled
-            sx={{ ...disabledTextFieldStyles, flex: 1 }}
-          />
+          {positionInBox !== undefined ? (
+            <TextField
+              required
+              label="Position in Box"
+              value={positionInBox}
+              disabled
+              sx={{ ...disabledTextFieldStyles, flex: 1 }}
+            />
+          ) : (
+            <FormControl required sx={{ flex: 1 }}>
+              <InputLabel id="position-label">Position in Box</InputLabel>
+              <Select
+                labelId="position-label"
+                value={formData.positionInBox}
+                onChange={(e) => handleInputChange('positionInBox', e.target.value)}
+                label="Position in Box"
+                sx={disabledTextFieldStyles}
+              >
+                {gridBoxData?.grid_box?.positions?.map((position) => (
+                <MenuItem 
+                  key={position.q} 
+                  value={position.q} 
+                  disabled={position.occupied}
+                >
+                Position {position.q} {position.occupied ? '(Filled)' : '(Available)'}
+              </MenuItem>
+            ))}
+              </Select>
+            </FormControl>
+          )}
+
           <TextField
             required
             label="Grid Box"
@@ -297,7 +325,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
           />
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             label="Notes"
             placeholder="Add notes..."
@@ -307,7 +334,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
             rows={3}
             sx={{ ...disabledTextFieldStyles, flex: 1 }}
           />
-        </Box>
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
