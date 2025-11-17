@@ -197,21 +197,6 @@ class PuckViewSet(viewsets.ModelViewSet):
                 "error": str(e),
             }, status=500)
 
-    # def retrieve(self, request, *args, **kwargs):
-    #     """
-    #     Retrieve detailed puck information with related data
-    #     """
-    #     instance = self.get_object()
-    #     # Use select_related and prefetch_related for better performance
-    #     instance = Puck.objects.select_related(
-    #         'user', 'cane'
-    #     ).prefetch_related(
-    #         'cryogridbox_set'
-    #     ).get(pk=instance.pk)
-        
-    #     serializer = self.get_serializer(instance)
-    #     return Response(serializer.data)
-
     @action(detail=True, methods=['get'], url_path='grid-box/(?P<position_in_puck>[0-9]+)')
     def grid_box_detail(self, request, pk=None, position_in_puck=None):
         """
@@ -289,7 +274,6 @@ class PuckViewSet(viewsets.ModelViewSet):
             return Response({
             "error": str(e),
             }, status=500)
-
 
     @action(detail=True, methods=['get'], url_path='grid-box/(?P<position_in_puck>[0-9]+)/grid/(?P<grid_id>[0-9]+)')
     def grid_details(self, request, pk=None, position_in_puck=None, grid_id=None):
@@ -400,8 +384,6 @@ class PuckViewSet(viewsets.ModelViewSet):
                 "error": "Internal server error occurred while creating grid box",
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
     @method_decorator(csrf_exempt)
     @action(detail=False, methods=['patch'], url_path='grid-box/(?P<grid_box_id>[0-9]+)/move')
@@ -557,7 +539,7 @@ class CaneViewSet(viewsets.ReadOnlyModelViewSet):
             'canes': serializer.data,
         })
 
-class SampleViewSet(viewsets.ReadOnlyModelViewSet):
+class SampleViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Sample model - ReadOnly
     """
@@ -594,7 +576,34 @@ class SampleViewSet(viewsets.ReadOnlyModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)
 
-class SpecimenViewSet(viewsets.ReadOnlyModelViewSet):
+    @method_decorator(csrf_exempt) 
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new sample
+        URL: POST /api/list/samples/
+        """
+        try:
+            serializer = self.get_serializer(data=request.data)
+            
+            if serializer.is_valid():
+                sample = serializer.save()
+                return Response({
+                    'message': 'Sample created successfully',
+                    'sample': SampleSerializer(sample).data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    'error': 'Validation failed',
+                    'detail': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            return Response({
+                'error': 'Failed to create sample',
+                'detail': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class SpecimenViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Specimen model - ReadOnly
     Provides list and retrieve operations for specimens
@@ -631,6 +640,33 @@ class SpecimenViewSet(viewsets.ReadOnlyModelViewSet):
                 "error": "Internal server error occurred while fetching specimens",
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)
+
+    @method_decorator(csrf_exempt) 
+    def create(self, request, *args, **kwargs):
+        """
+        Create a new specimen
+        URL: POST /api/list/specimens/
+        """
+        try:
+            serializer = self.get_serializer(data=request.data)
+            
+            if serializer.is_valid():
+                specimen = serializer.save()
+                return Response({
+                    'message': 'Specimen created successfully',
+                    'specimen': SpecimenSerializer(specimen).data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    'error': 'Validation failed',
+                    'detail': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Exception as e:
+            return Response({
+                'error': 'Failed to create specimen',
+                'detail': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def retrieve(self, request, *args, **kwargs):
         """
@@ -1114,5 +1150,36 @@ class DriveFolderViewSet(viewsets.ReadOnlyModelViewSet):
         except Exception as e:
             return Response({
                 "error": "Failed to fetch drive folders",
+                "detail": str(e) if settings.DEBUG else "Please try again later",
+            }, status=500)
+
+class ProjectLeaderViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for Project Leaders - Returns only staff users who can be project leaders
+    """
+    queryset = User.objects.filter(is_staff=True).order_by(Lower('username'))
+    serializer_class = UserSerializer
+    
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            total_count = queryset.count()
+            
+            page = self.paginate_queryset(queryset)
+            
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                response_data = self.get_paginated_response(serializer.data)
+                response_data.data['total_count'] = total_count
+                return response_data
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'total_count': total_count,
+                'users': serializer.data,
+            })
+        except Exception as e:
+            return Response({
+                "error": "Internal server error occurred while fetching project leaders",
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=500)

@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from confluence.models import Page, Space
 from clouddocs.models import DriveFolder
+from projects.models import Project
 
 from umbrella.choices import PUCK_COLORS
 
@@ -401,12 +402,37 @@ class SampleSerializer(serializers.ModelSerializer):
             'name',
             'ontology',
         ]
+    def validate_name(self, value):
+        """Validate that sample name is unique and not empty"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Sample name is required.")
+        
+        # Check for uniqueness
+        instance = self.instance
+        name_query = Sample.objects.filter(name=value.strip())
+        if instance:
+            name_query = name_query.exclude(pk=instance.pk)
+        if name_query.exists():
+            raise serializers.ValidationError(f'A sample with name "{value}" already exists.')
+        
+        return value.strip()
+    
+    def create(self, validated_data):
+        """Create a new sample"""
+        return Sample.objects.create(**validated_data)
 
 class SpecimenSerializer(serializers.ModelSerializer):
     """
     Serializer for Specimen model with related samples
     """
     samples = SampleSerializer(many=True, read_only=True)
+    sample_ids = serializers.ListField(  
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        write_only=True,
+        help_text="List of sample IDs to associate with this specimen"
+    )
     notes_page_url = serializers.SerializerMethodField()
     display_name = serializers.SerializerMethodField()
     
@@ -415,6 +441,7 @@ class SpecimenSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'samples',
+            'sample_ids',
             'notes',
             'notes_page',
             'notes_page_url',
@@ -430,6 +457,35 @@ class SpecimenSerializer(serializers.ModelSerializer):
     def get_display_name(self, obj):
         """Get human-readable display name"""
         return str(obj)
+    
+    def validate_sample_ids(self, value):
+        """Validate that all sample IDs exist"""
+        if value:
+            existing_samples = Sample.objects.filter(id__in=value)
+            if existing_samples.count() != len(value):
+                existing_ids = set(existing_samples.values_list('id', flat=True))
+                invalid_ids = set(value) - existing_ids
+                raise serializers.ValidationError(
+                    f"Sample IDs {invalid_ids} do not exist."
+                )
+        return value
+    
+    def create(self, validated_data):
+        """Create a new specimen with associated samples"""
+        sample_ids = validated_data.pop('sample_ids', [])
+        
+        # Create the specimen
+        specimen = Specimen.objects.create(
+            notes=validated_data.get('notes', ''),
+            notes_page=validated_data.get('notes_page', None)
+        )
+        
+        # Associate samples if provided
+        if sample_ids:
+            samples = Sample.objects.filter(id__in=sample_ids)
+            specimen.samples.set(samples)
+        
+        return specimen
 
 class FreezingSessionSerializer(serializers.ModelSerializer):
     """
@@ -475,3 +531,77 @@ class ConfluencePageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Page
         fields = ['id', 'name', 'url']
+
+class ProjectSerializer(serializers.ModelSerializer):
+    """Serializer for Project model"""
+
+    project_leader_name = serializers.SerializerMethodField(read_only=True)
+    confluence_space_name = serializers.CharField(source='confluence_space.space_id', read_only=True)
+    google_drive_folder_name = serializers.CharField(source='google_drive_folder.name', read_only=True)
+    
+    class Meta:
+        model = Project
+        fields = [
+            'id',
+            'name',
+            'description',
+            'project_leader',
+            'project_leader_name',
+            'confluence_space',
+            'confluence_space_name',
+            'google_drive_folder',
+            'google_drive_folder_name',
+        ]
+        read_only_fields = ['id']
+
+    def get_project_leader_name(self, obj):
+        """Get project leader's username"""
+        if obj.project_leader:
+            return obj.project_leader.username
+        return None
+    
+    def validate_name(self, value):
+        """
+        Validate that project name is unique and not empty
+        """
+        if not value or not value.strip():
+            raise serializers.ValidationError("Project name is required.")
+        
+        # Check for uniqueness (excluding current instance during update)
+        instance = self.instance
+        name_query = Project.objects.filter(name=value.strip())
+        if instance:
+            name_query = name_query.exclude(pk=instance.pk)
+        if name_query.exists():
+            raise serializers.ValidationError(f'A project with name "{value}" already exists.')
+        
+        return value.strip()
+
+
+    def validate(self, data):
+        """
+        Custom validation for project creation
+        According to the model, only name is truly required (not null and unique)
+        Other fields can be null/blank based on the model definition
+        """
+        
+        # Validate foreign keys exist if provided
+        if 'project_leader' in data and data['project_leader'] is not None:
+            if not User.objects.filter(id=data['project_leader'].id).exists():
+                raise serializers.ValidationError({
+                    'project_leader': 'Selected user does not exist.'
+                })
+        
+        if 'confluence_space' in data and data['confluence_space'] is not None:
+            if not Space.objects.filter(id=data['confluence_space'].id).exists():
+                raise serializers.ValidationError({
+                    'confluence_space': 'Selected confluence space does not exist.'
+                })
+        
+        if 'google_drive_folder' in data and data['google_drive_folder'] is not None:
+            if not DriveFolder.objects.filter(id=data['google_drive_folder'].id).exists():
+                raise serializers.ValidationError({
+                    'google_drive_folder': 'Selected Google Drive folder does not exist.'
+                })
+        
+        return data
