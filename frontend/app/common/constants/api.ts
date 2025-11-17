@@ -29,6 +29,7 @@ export enum API {
 
   // Grid Logging
   GRID_LOGGING_USERS = '/api/list/all/users',
+  GRID_LOGGING_PROJECT_LEADERS = '/api/list/project-leaders',
   GRID_LOGGING_PUCKS = '/api/list/pucks',
   // GRID_LOGGING_PUCK_BYUSER = '/api/list/pucks/?user_id=',
   GRID_LOGGING_PUCK_SLOTINFO = '/api/list/pucks/puck_id/slots/',
@@ -62,6 +63,9 @@ export enum POST_API {
   MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
   MOVE_GRID = '/api/list/grids/grid_id/move/',
   CREATE_FREEZING_SESSION = '/api/list/freezing-sessions/',
+  CREATE_PROJECT = '/projects/create_project/',
+  CREATE_SAMPLE = '/api/list/samples/',
+  CREATE_SPECIMEN = '/api/list/specimens/',
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
