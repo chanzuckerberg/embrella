@@ -2,10 +2,10 @@ import { useState, useCallback } from 'react';
 import { postResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
-import { PucksList, CreatePuckData } from '@app/common/types/gridLogging/puckList';
+import { PuckList, CreatePuckData } from '@app/common/types/gridLogging/puckList';
 
 interface UseCreatePuckResult {
-  createPuck: (data: CreatePuckData) => Promise<PucksList | null>;
+  createPuck: (data: CreatePuckData) => Promise<PuckList | null>;
   isCreating: boolean;
   error: string | null;
   clearError: () => void;
@@ -19,7 +19,7 @@ export const useCreatePuck = (): UseCreatePuckResult => {
     setError(null);
   }, []);
 
-  const createPuck = async (data: CreatePuckData): Promise<PucksList | null> => {
+  const createPuck = async (data: CreatePuckData): Promise<PuckList | null> => {
     setIsCreating(true);
     setError(null);
 

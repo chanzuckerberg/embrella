@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { PuckList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
@@ -11,17 +11,17 @@ import styles from '../GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
 import { DeleteGridBox } from './DeleteGridBox';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { UserList } from '@app/common/types/gridLogging/userList';
 import { AddGrid } from '../Grid/AddGrid';
 import { MoveGridBox } from './MoveGridBox';
 import { ClipAllGridsDialog } from './ClipAllGridsDialog';
 import { useClipAllGrids } from '../../../common/hooks/useGridLogging/useClipAllGrids';
 
 interface GridBoxInfoProps {
-  selectedPuck: PucksList | null;
+  selectedPuck: PuckList | null;
   selectedSlot: number | null;
   onGridSelect: (gridPosition: number, gridId: number) => void;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
   onGridDetailsRefetch?: (() => void) | null;
   onMoveGridBoxSuccess?: (newPuckId: number, newSlotPosition: number) => void;
   onGridBoxInfoRefetchReady?: (refetch: () => void) => void;

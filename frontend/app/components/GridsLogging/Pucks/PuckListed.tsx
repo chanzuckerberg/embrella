@@ -2,23 +2,23 @@
 
 import React from 'react';
 import { useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
-import { UsersList } from '@app/common/types/gridLogging/userList';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { UserList } from '@app/common/types/gridLogging/userList';
+import { PuckList } from '@app/common/types/gridLogging/puckList';
 import { Box, Typography, Card, CardContent, CardActionArea, Grid } from '@mui/material';
 import { PuckSVG } from './PuckSvg';
 import styles from '../GridLogging.module.css';
 
 interface PuckSelectorProps {
-  selectedUser: UsersList | null;
-  onPuckSelect: (puck: PucksList | null) => void;
-  selectedPuck: PucksList | null;
+  selectedUser: UserList | null;
+  onPuckSelect: (puck: PuckList | null) => void;
+  selectedPuck: PuckList | null;
 }
 
 export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSelect, selectedPuck }) => {
   const { pucks } = useGridLoggingPucksByUser(selectedUser?.id);
-  const pucksList: PucksList[] = pucks?.pucks || [];
+  const pucksList: PuckList[] = pucks?.pucks || [];
 
-  const handlePuckCardClick = (puck: PucksList) => {
+  const handlePuckCardClick = (puck: PuckList) => {
     onPuckSelect(puck);
   };
 

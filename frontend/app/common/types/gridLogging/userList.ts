@@ -1,9 +1,9 @@
-export interface userListResponse {
+export interface UserListResponse {
   total_users_count: number;
-  users: UsersList[];
+  users: UserList[];
 }
 
-export interface UsersList {
+export interface UserList {
   id: number;
   username: string;
   clean_username: string;

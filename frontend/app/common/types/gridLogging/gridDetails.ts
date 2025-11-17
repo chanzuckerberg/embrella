@@ -1,3 +1,7 @@
+import { Specimen } from './specimenList';
+import { FreezingSession } from './freezingSessionList';
+import { Project } from './projectList';
+
 export interface GridDetailsResponse {
   grid_name: string;
   user: string;
@@ -19,35 +23,6 @@ export interface GridLocation {
   grid_box_id: number;
   grid_box_name: string;
   position_in_box: number;
-}
-
-export interface FreezingSession {
-  id: number;
-  name: string;
-  datetime: string;
-  user: string;
-  device: string | null;
-  temperature: number | null;
-  humidity: number | null;
-}
-
-export interface Specimen {
-  id: number;
-  name: string;
-  samples: Sample[];
-  notes: string;
-}
-
-export interface Sample {
-  id: number;
-  name: string;
-  ontology: string;
-}
-
-export interface Project {
-  id: number;
-  name: string;
-  description: string;
 }
 
 export interface GridParameters {
