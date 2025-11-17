@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 
 export const useProjectsList = () => {
   // Note: The API requires valid=true parameter
-  const { data, isSuccess } = useFetchData<ProjectsListResponse>(API.PROJECTS_LIST, { valid: 'true' });
+  const { data, isSuccess, refetch } = useFetchData<ProjectsListResponse>(API.PROJECTS_LIST, { valid: 'true' });
 
   const projects = useMemo(() => {
     if (!data) return [];
@@ -16,5 +16,6 @@ export const useProjectsList = () => {
     projects,
     isSuccess,
     rawData: data,
+    refetch,
   };
 };
