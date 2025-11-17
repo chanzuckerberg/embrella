@@ -126,7 +126,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
           {error}
         </Alert>
       )}
-      <Box sx={{ display: 'flex', gap: 2 }}>
+     
         <TextField
           required
           label="Grid Box Name"
@@ -146,7 +146,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
             '& .MuiInputBase-input': { paddingLeft: 0 },
           }}
         />
-        <TextField
+      <TextField
           required
           label="Puck Name"
           value={formData.puckName}
@@ -154,7 +154,6 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
           disabled
           sx={{ ...disabledTextFieldStyles, flex: 1 }}
         />
-      </Box>
 
       <Box sx={{ display: 'flex', gap: 2 }}>
         {positionInPuck !== undefined ? (
