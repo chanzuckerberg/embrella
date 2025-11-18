@@ -569,10 +569,10 @@
         <input type="hidden" id="octopi_run_id_input" name="octopi_run_id" />
       </div>
 
-  <!-- Row 3: optional select runs to collect training picks -->
+  <!-- Row 2: optional select runs to collect training picks -->
     <div class="form-group" style="position: relative;">
       <label for="runs-select">
-        (Optional) Select runs:
+        (Optional) Select experiment runs:
         <span class="info-icon-small">i
           <div class="tooltip-small">
             Select CoPick runs (tomograms) for training (multi-select allowed).
@@ -582,10 +582,9 @@
       <select id="runs-select"></select>
       <div id="runs-chips" class="chips"></div>
     </div>
-   
-      
+    
 
-  <!-- Row 2: Gather picks or segmentations (4 columns) -->
+  <!-- Row 3: Gather picks or segmentations (4 columns) -->
       <div class="section-body">
           <div class="section-inner">
         <p class="help-text">Select to prepare for picks (points) or segmentations.</p>
@@ -622,13 +621,14 @@
               </div>
             </div>
           </div>
-
           </div>
       </div>
 
+      <!-- button -->
+    <button type="button" onclick="prepareTargets()" id="prepareTargetsButton">Prepare Targets</button>
+    <div id="statusMessage" class="status-message"></div>
+
     </details>
-
-
 
     <!-- Train a model -->
     <div class="section-header">
@@ -657,7 +657,6 @@
         </h2>
     </div>
 
-    
     <script>
     function goBack() {
       window.location.href = "/umbrella";
@@ -1171,11 +1170,17 @@
       // Instantiate controllers
       const pickMS = new MultiSelectChips(elPicks, pickChips, {
         labelForValue: pickLabelFromVal,
-        hiddenInput: pickHidden
+        hiddenInput: pickHidden,
+        // onChange: vals => {
+        //   console.log("Selected picks:", vals);
+        // }
       });
       const segMS = new MultiSelectChips(elSegs, segChips, {
         labelForValue: segLabelFromVal,
-        hiddenInput: segHidden
+        hiddenInput: segHidden,
+        // onChange: vals => {
+        //   console.log("Selected segs:", vals);
+        // }
       });
 
       // ---- refresh flow (clears chips & selections
@@ -1362,11 +1367,13 @@
         _emit() { this.onChange(this.values()); }
       }
 
+      // for debugging; checking copick runs
+
       const runsMS = new MultiSelectChips(elSelect, elChips, {
-        labelForValue: v => v, // value is the run text itself
-        onChange: vals => {
-          // console.debug("selected runs:", vals);
-        }
+        labelForValue: v => v, // 
+        // onChange: vals => {
+        //   console.log("selected runs:", vals);
+        // }
       });
 
       async function fetchRuns(session, procrun) {
