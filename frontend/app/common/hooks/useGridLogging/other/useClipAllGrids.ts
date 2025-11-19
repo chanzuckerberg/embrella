@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { postResource } from '@app/common/queries/fetchResource';
 import { getRequestURL } from '@app/common/queries/utils';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
+import { parseApiError } from '@app/common/utils/api/errorHandling';
 
 export interface ClipAllGridsResponse {
   success: boolean;
@@ -41,20 +42,7 @@ export const useClipAllGrids = (): UseClipAllGridsResult => {
         return result;
       } else {
         const errorData = await response.json();
-        
-        // Handle error responses
-        let errorMsg = 'Failed to clip all grids';
-        
-        if (errorData.error) {
-          errorMsg = errorData.error;
-        } else if (errorData.detail) {
-          errorMsg = typeof errorData.detail === 'string' 
-            ? errorData.detail 
-            : JSON.stringify(errorData.detail);
-        }
-
-        const cleanError = errorMsg.replace(/^Error:\s*/i, '').trim();
-        throw new Error(cleanError);
+        throw new Error(parseApiError(errorData, 'Failed to clip all grids'));
       }
     } catch (err) {
       let errorMessage = 'An error occurred while clipping all grids';

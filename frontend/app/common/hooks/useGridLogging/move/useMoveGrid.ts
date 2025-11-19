@@ -3,6 +3,7 @@ import { DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { getRequestURL } from '@app/common/queries/utils';
 import { patchResource } from '@app/common/queries/fetchResource';
 import { MoveGridData, MoveGridResponse } from '@app/common/types/gridLogging/entities/grid';
+import { parseApiError } from '@app/common/utils/api/errorHandling';
 
 interface UseMoveGridResult {
   moveGrid: (data: MoveGridData) => Promise<MoveGridResponse | null>;
@@ -40,24 +41,7 @@ export const useMoveGrid = (): UseMoveGridResult => {
         return result;
       } else {
         const errorData = await response.json();
-        const errorMsg = errorData.error || errorData.detail || 'Failed to move grid';
-
-        // Extract user-friendly error message
-        let cleanError = errorMsg;
-        if (typeof errorMsg === 'object') {
-          // Handle validation errors
-          const errors = Object.entries(errorMsg).map(([key, value]) => {
-            if (Array.isArray(value)) {
-              return `${key}: ${value.join(', ')}`;
-            }
-            return `${key}: ${value}`;
-          });
-          cleanError = errors.join('; ');
-        } else if (typeof errorMsg === 'string') {
-          cleanError = errorMsg.replace(/^Error:\s*/i, '').trim();
-        }
-
-        throw new Error(cleanError);
+        throw new Error(parseApiError(errorData, 'Failed to move grids'));
       }
     } catch (err) {
       let errorMessage = 'An error occurred while moving grid';
