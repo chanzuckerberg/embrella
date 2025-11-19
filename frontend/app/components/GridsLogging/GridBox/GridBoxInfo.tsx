@@ -1,21 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PuckList } from '@app/common/types/gridLogging/puckList';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
-import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
-import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
+import { useGridLoggingPuckSlots, useClipAllGrids, useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging';
 import styles from '../GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
 import { DeleteGridBox } from './DeleteGridBox';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
-import { UserList } from '@app/common/types/gridLogging/userList';
+import { UserList, GridBoxDetailResponse, PuckList } from '@app/common/types/gridLogging';
 import { AddGrid } from '../Grid/AddGrid';
 import { MoveGridBox } from './MoveGridBox';
 import { ClipAllGridsDialog } from './ClipAllGridsDialog';
-import { useClipAllGrids } from '../../../common/hooks/useGridLogging/useClipAllGrids';
 
 interface GridBoxInfoProps {
   selectedPuck: PuckList | null;

@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { PuckList } from '@app/common/types/gridLogging/puckList';
-import { GridDetailsResponse } from '@app/common/types/gridLogging/gridDetails';
+import { PuckList, GridDetailsResponse, UserList } from '@app/common/types/gridLogging'
 import {
   Card,
   CardContent,
@@ -18,11 +17,9 @@ import {
 } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
-import { useGridLoggingGridDetails } from '@app/common/hooks/useGridLogging/useGridLoggingGridDetails';
-import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
+import { useGridLoggingGridDetails, useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging';
 import styles from '../GridLogging.module.css';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
-import { UserList } from '@app/common/types/gridLogging/userList';
 import { MoveGrid } from '../Grid/MoveGrid';
 
 interface GridDetailsProps {

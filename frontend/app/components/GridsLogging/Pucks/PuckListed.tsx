@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import { useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
-import { UserList } from '@app/common/types/gridLogging/userList';
-import { PuckList } from '@app/common/types/gridLogging/puckList';
+import { useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging';
+import { UserList, PuckList } from '@app/common/types/gridLogging';
 import { Box, Typography, Card, CardContent, CardActionArea, Grid } from '@mui/material';
 import { PuckSVG } from './PuckSvg';
 import styles from '../GridLogging.module.css';

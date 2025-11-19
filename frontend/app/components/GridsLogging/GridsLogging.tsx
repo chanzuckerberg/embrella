@@ -1,19 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
-import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
-import { useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
+import { Button, Icon } from '@czi-sds/components';
+import { useGridLoggingUserList, useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging';
+import { UserList, PuckList } from '@app/common/types/gridLogging';
 import { UserContext } from '@app/common/context/UserProvider';
-import { UserList } from '@app/common/types/gridLogging/userList';
-import { PuckList } from '@app/common/types/gridLogging/puckList';
 import styles from './GridLogging.module.css';
 import { PuckListed } from './Pucks/PuckListed';
 import { PuckDetails } from './Pucks/PuckDetails';
 import { GridBoxInfo } from './GridBox/GridBoxInfo';
 import { GridDetails } from './Grid/GridDetails';
-import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField } from '@mui/material';
-import { Button, Icon } from '@czi-sds/components';
 import { AddPuck } from './Pucks/AddPuck';
 
 export const GridsLogging: React.FC = () => {

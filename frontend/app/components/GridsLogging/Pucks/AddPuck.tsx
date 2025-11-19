@@ -2,15 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
-import { UserList } from '@app/common/types/gridLogging/userList';
-import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
-import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
-import { useGridLoggingCaneList } from '@app/common/hooks/useGridLogging/useCaneList';
-import { useGridLoggingPucksByCane } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
+import { useGridLoggingChoices, useGridLoggingUserList, useGridLoggingCaneList, useGridLoggingPucksByCane, useCreatePuck } from '@app/common/hooks/useGridLogging';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
-import { useCreatePuck } from '@app/common/hooks/useGridLogging/useCreatePuck';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
-import { PuckList } from '@app/common/types/gridLogging/puckList';
+import { PuckList, UserList } from '@app/common/types/gridLogging';
 
 interface AddPuckProps {
   open: boolean;

@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
-import { PuckList } from '@app/common/types/gridLogging/puckList';
-import { PuckSlotsResponse } from '@app/common/types/gridLogging/puckList';
-import { UserList } from '@app/common/types/gridLogging/userList';
+import { PuckList } from '@app/common/types/gridLogging/entities/puckList';
+import { PuckSlotsResponse } from '@app/common/types/gridLogging/entities/puckList';
+import { UserList } from '@app/common/types/gridLogging/entities/userList';
 import { DJANGO_URL } from '@app/common/constants/api';
 
 interface DeletePuckProps {
