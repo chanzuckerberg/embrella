@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { ReactSVG } from 'react-svg';
-import { PuckSlotsResponse } from '@app/common/types/gridLogging/puckList';
-import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
+import { PuckSlotsResponse } from '@app/common/types/gridLogging/entities/puckList';
+import { GridBoxDetailResponse } from '@app/common/types/gridLogging/details/gridBoxDetails';
 
 interface GridBoxSVGProps {
   size?: number;

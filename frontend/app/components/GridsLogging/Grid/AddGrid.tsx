@@ -2,29 +2,34 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, InputAdornment, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { UserList } from '@app/common/types/gridLogging/userList';
-import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
-import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
-import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { AddSpecimenDialog } from './AddSpecimenDialog';
 import { AddProjectDialog } from '@app/components/GridsLogging/Grid/AddProjectDialog';
 import { AddFreezingSessionDialog } from '@app/components/GridsLogging/Grid/AddFreezingSessionDialog';
-import { useProjectsList } from '@app/common/hooks/useGridLogging/useProjectList';
-import { useSpecimenList } from '@app/common/hooks/useGridLogging/useSpecimenList';
-import { useFreezingSessionList } from '@app/common/hooks/useGridLogging/useFreezingSessionList';
-import { useCreateGrid } from '@app/common/hooks/useGridLogging/useCreateGrid';
-import { useDeviceList } from '@app/common/hooks/useGridLogging/useDeviceList';
-import { useCreateFreezingSession } from '@app/common/hooks/useGridLogging/useCreateFreezingSession';
-import { useConfluencePageList } from '@app/common/hooks/useGridLogging/useConfluencePageList';
-import { useDriveFolderList } from '@app/common/hooks/useGridLogging/useDriveFolderList';
-import { useConfluenceSpaceList } from '@app/common/hooks/useGridLogging/useConfluenceSpaceList';
-import { FreezingSessionFormData } from '@app/common/types/gridLogging/freezingSessionList';
-import { useProjectLeadersList } from '@app/common/hooks/useGridLogging/useProjectLeadersList';
-import { useCreateProject } from '@app/common/hooks/useGridLogging/useCreateProject';
-import { ProjectFormData } from '@app/common/types/gridLogging/projectList';
+import {
+  useGridLoggingChoices,
+  useGridLoggingUserList,
+  useProjectsList,
+  useSpecimenList,
+  useFreezingSessionList,
+  useCreateGrid,
+  useDeviceList,
+  useCreateFreezingSession,
+  useConfluencePageList,
+  useDriveFolderList,
+  useConfluenceSpaceList,
+  useProjectLeadersList,
+  useCreateProject,
+  useGridLoggingGridBoxDetail
+} from '@app/common/hooks/useGridLogging';
+
+import {
+  UserList,
+  ProjectFormData,
+  FreezingSessionFormData,
+} from '@app/common/types/gridLogging';
 
 
 interface AddGridProps {

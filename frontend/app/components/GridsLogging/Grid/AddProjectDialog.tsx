@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
-import { ProjectFormData } from '@app/common/types/gridLogging/projectList';
+import { ProjectFormData } from '@app/common/types/gridLogging/entities/projectList';
 
 interface AddProjectDialogProps {
   open: boolean;

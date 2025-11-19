@@ -2,13 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
-import { UserList } from '@app/common/types/gridLogging/userList';
-import { useCreateGridBox } from '@app/common/hooks/useGridLogging/useCreateGridBox';
-import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
-import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
+import { UserList } from '@app/common/types/gridLogging/entities/userList';
+import { useCreateGridBox , useGridLoggingChoices, useGridLoggingPuckSlots, useGridLoggingUserList } from '@app/common/hooks/useGridLogging';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
-import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
 
 interface AddGridBoxProps {
   open: boolean;

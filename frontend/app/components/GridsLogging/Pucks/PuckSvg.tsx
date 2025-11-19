@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ReactSVG } from 'react-svg';
-import { PuckList, PuckSlots } from '@app/common/types/gridLogging/puckList';
+import { PuckList, PuckSlots } from '@app/common/types/gridLogging/entities/puckList';
 
 interface PuckSVGProps {
   puck: PuckList;

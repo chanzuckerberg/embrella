@@ -3,16 +3,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
-import { PuckList } from '@app/common/types/gridLogging/puckList';
-import { GridDetailsResponse } from '@app/common/types/gridLogging/gridDetails';
-import { UserList } from '@app/common/types/gridLogging/userList';
-import { useGridLoggingPucksByCane } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
-import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
-import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
-import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
+import { PuckList, GridDetailsResponse, UserList } from '@app/common/types/gridLogging';
+import { useGridLoggingPucksByCane, useGridLoggingPuckSlots, useGridLoggingGridBoxDetail, useGridLoggingChoices, useMoveGrid, useGridLoggingCaneList } from '@app/common/hooks/useGridLogging';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
-import { useMoveGrid } from '@app/common/hooks/useGridLogging/useMoveGrid';
-import { useGridLoggingCaneList } from '@app/common/hooks/useGridLogging/useCaneList';
 
 interface MoveGridProps {
   open: boolean;
