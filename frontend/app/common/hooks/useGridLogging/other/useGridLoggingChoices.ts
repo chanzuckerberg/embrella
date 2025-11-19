@@ -1,5 +1,5 @@
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
-import { GridLoggingChoicesResponse } from '@app/common/types/gridLogging/choices';
+import { GridLoggingChoicesResponse } from '@app/common/types/gridLogging/config/choices';
 import { API } from '@app/common/constants/api';
 
 export const useGridLoggingChoices = () => {

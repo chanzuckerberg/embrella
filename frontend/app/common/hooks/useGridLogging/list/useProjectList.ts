@@ -1,5 +1,5 @@
 import { API } from '@app/common/constants/api';
-import { ProjectListResponse, transformProject } from '@app/common/types/gridLogging/projectList';
+import { ProjectListResponse, transformProject } from '@app/common/types/gridLogging/entities/projectList';
 import { useListResource } from '../base/useListResource';
 
 export const useProjectsList = () => {

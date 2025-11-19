@@ -1,5 +1,5 @@
 import { API } from '@app/common/constants/api';
-import { UserListResponse } from '@app/common/types/gridLogging/userList';
+import { UserListResponse } from '@app/common/types/gridLogging/entities/userList';
 import { useListResource } from '../base/useListResource';
 
 export const useGridLoggingUserList = () => {

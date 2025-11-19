@@ -1,5 +1,5 @@
 import { API } from '@app/common/constants/api';
-import { DeviceListResponse, transformDevice } from '@app/common/types/gridLogging/deviceList';
+import { DeviceListResponse, transformDevice } from '@app/common/types/gridLogging/entities/deviceList';
 import { useListResource } from '../base/useListResource';
 
 export const useDeviceList = () => {

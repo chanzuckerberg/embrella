@@ -2,16 +2,16 @@ import { useState, useCallback } from 'react';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { getRequestURL } from '@app/common/queries/utils';
 import { patchResource } from '@app/common/queries/fetchResource';
-import { MoveGridBoxData, MoveGridBoxResponse } from '@app/common/types/gridLogging/gridBox';
+import { MoveGridData, MoveGridResponse } from '@app/common/types/gridLogging/entities/grid';
 
-interface UseMoveGridBoxResult {
-  moveGridBox: (data: MoveGridBoxData) => Promise<MoveGridBoxResponse | null>;
+interface UseMoveGridResult {
+  moveGrid: (data: MoveGridData) => Promise<MoveGridResponse | null>;
   isMoving: boolean;
   error: string | null;
   clearError: () => void;
 }
 
-export const useMoveGridBox = (): UseMoveGridBoxResult => {
+export const useMoveGrid = (): UseMoveGridResult => {
   const [isMoving, setIsMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,19 +19,19 @@ export const useMoveGridBox = (): UseMoveGridBoxResult => {
     setError(null);
   }, []);
 
-  const moveGridBox = async (data: MoveGridBoxData): Promise<MoveGridBoxResponse | null> => {
+  const moveGrid = async (data: MoveGridData): Promise<MoveGridResponse | null> => {
     setIsMoving(true);
     setError(null);
 
     try {
-      // Build the URL by replacing grid_box_id placeholder
-      const url = getRequestURL(DJANGO_URL, POST_API.MOVE_GRID_BOX).replace(
-        'grid_box_id',
-        data.grid_box_id.toString()
+      // Build the URL by replacing grid_id placeholder
+      const url = getRequestURL(DJANGO_URL, POST_API.MOVE_GRID).replace(
+        'grid_id',
+        data.grid_id.toString()
       );
 
       const response = await patchResource(url, {
-        destination_puck_id: data.destination_puck_id,
+        destination_grid_box_id: data.destination_grid_box_id,
         destination_position: data.destination_position,
       });
 
@@ -40,7 +40,7 @@ export const useMoveGridBox = (): UseMoveGridBoxResult => {
         return result;
       } else {
         const errorData = await response.json();
-        const errorMsg = errorData.error || errorData.detail || 'Failed to move grid box';
+        const errorMsg = errorData.error || errorData.detail || 'Failed to move grid';
 
         // Extract user-friendly error message
         let cleanError = errorMsg;
@@ -60,7 +60,7 @@ export const useMoveGridBox = (): UseMoveGridBoxResult => {
         throw new Error(cleanError);
       }
     } catch (err) {
-      let errorMessage = 'An error occurred while moving grid box';
+      let errorMessage = 'An error occurred while moving grid';
       if (err instanceof Error) {
         errorMessage = err.message.replace(/^Error:\s*/i, '').trim();
       }
@@ -72,7 +72,7 @@ export const useMoveGridBox = (): UseMoveGridBoxResult => {
   };
 
   return {
-    moveGridBox,
+    moveGrid,
     isMoving,
     error,
     clearError,

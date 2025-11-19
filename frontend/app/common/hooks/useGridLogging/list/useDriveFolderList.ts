@@ -1,5 +1,5 @@
 import { API } from '@app/common/constants/api';
-import { DriveFolderListResponse } from '@app/common/types/gridLogging/driveFolderList';
+import { DriveFolderListResponse } from '@app/common/types/gridLogging/resources/driveFolderList';
 import { useListResource } from '../base/useListResource';
 
 export const useDriveFolderList = () => {

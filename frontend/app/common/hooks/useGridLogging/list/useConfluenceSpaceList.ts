@@ -1,5 +1,5 @@
 import { API } from '@app/common/constants/api';
-import { ConfluenceSpaceListResponse } from '@app/common/types/gridLogging/confluenceSpaceList';
+import { ConfluenceSpaceListResponse } from '@app/common/types/gridLogging/resources/confluenceSpaceList';
 import { useListResource } from '../base/useListResource';
 
 export const useConfluenceSpaceList = () => {

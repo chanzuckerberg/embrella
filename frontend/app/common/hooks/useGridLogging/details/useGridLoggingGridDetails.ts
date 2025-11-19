@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { DJANGO_URL, API } from '../../constants/api';
-import { GridDetailsResponse } from '../../types/gridLogging/gridDetails';
+import { DJANGO_URL, API } from '../../../constants/api';
+import { GridDetailsResponse } from '../../../types/gridLogging/details/gridDetails';
 
 interface UseGridDetailsParams {
   puckId: number;
