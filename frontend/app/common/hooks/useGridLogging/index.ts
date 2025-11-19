@@ -37,5 +37,5 @@ export { useGridLoggingPuckSlots } from './details/useGridLoggingPuckSlots';
 
 // Other hooks
 export { useGridLoggingChoices } from './other/useGridLoggingChoices';
-export { useGridLoggingPucksList, useGridLoggingPucksByUser } from './other/useGridLoggingPuckList';
+export { useGridLoggingPucksList, useGridLoggingPucksByUser, useGridLoggingPucksByCane } from './other/useGridLoggingPuckList';
 export { useClipAllGrids } from './other/useClipAllGrids';
