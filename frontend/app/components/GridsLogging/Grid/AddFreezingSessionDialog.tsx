@@ -4,10 +4,7 @@ import React, { useState } from 'react';
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
-import { FreezingSessionFormData } from '@app/common/types/gridLogging/entities/freezingSessionList';
-import { Device } from '@app/common/types/gridLogging/entities/deviceList';
-import { ConfluencePage } from '@app/common/types/gridLogging/resources/confluencePageList';
-import { UserList } from '@app/common/types/gridLogging/entities/userList';
+import { Device, ConfluencePage, UserList, FreezingSessionFormData } from '@app/common/types/gridLogging';
 
 export const AddFreezingSessionDialog: React.FC<{
   open: boolean;
