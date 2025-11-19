@@ -1,5 +1,5 @@
 import { POST_API } from '@app/common/constants/api';
-import { PuckList, CreatePuckData } from '@app/common/types/gridLogging/puckList';
+import { PuckList, CreatePuckData } from '@app/common/types/gridLogging/entities/puckList';
 import { useCreateResource } from '../base/useCreateResource';
 
 export const useCreatePuck = () => {

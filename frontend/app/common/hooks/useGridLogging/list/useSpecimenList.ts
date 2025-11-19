@@ -1,5 +1,5 @@
 import { API } from '@app/common/constants/api';
-import { SpecimenListResponse, transformSpecimen } from '@app/common/types/gridLogging/specimenList';
+import { SpecimenListResponse, transformSpecimen } from '@app/common/types/gridLogging/entities/specimenList';
 import { useListResource } from '../base/useListResource';
 
 export const useSpecimenList = () => {

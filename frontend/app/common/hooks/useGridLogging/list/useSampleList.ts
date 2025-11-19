@@ -1,5 +1,5 @@
 import { API } from '@app/common/constants/api';
-import { SampleListResponse, Sample, transformSample } from '@app/common/types/gridLogging/sampleList';
+import { SampleListResponse, Sample, transformSample } from '@app/common/types/gridLogging/entities/sampleList';
 import { useListResource } from '../base/useListResource';
 
 

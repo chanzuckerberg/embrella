@@ -1,5 +1,5 @@
 import { POST_API } from '@app/common/constants/api';
-import { CreateGridData, GridCreateResponse } from '@app/common/types/gridLogging/grid';
+import { CreateGridData, GridCreateResponse } from '@app/common/types/gridLogging/entities/grid';
 import { useCreateResource } from '../base/useCreateResource';
 
 export const useCreateGrid = () => {

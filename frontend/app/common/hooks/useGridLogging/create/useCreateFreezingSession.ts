@@ -1,5 +1,5 @@
 import { POST_API } from '@app/common/constants/api';
-import { CreateFreezingSessionData, FreezingSessionCreateResponse } from '@app/common/types/gridLogging/freezingSessionList';
+import { CreateFreezingSessionData, FreezingSessionCreateResponse } from '@app/common/types/gridLogging/entities/freezingSessionList';
 import { useCreateResource } from '../base/useCreateResource';
 
 export const useCreateFreezingSession = () => {

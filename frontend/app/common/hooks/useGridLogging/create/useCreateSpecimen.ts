@@ -1,5 +1,5 @@
 import { POST_API } from '@app/common/constants/api';
-import { CreateSpecimenData, SpecimenCreateResponse } from '@app/common/types/gridLogging/specimenList';
+import { CreateSpecimenData, SpecimenCreateResponse } from '@app/common/types/gridLogging/entities/specimenList';
 import { useCreateResource } from '../base/useCreateResource';
 
 export const useCreateSpecimen = () => {

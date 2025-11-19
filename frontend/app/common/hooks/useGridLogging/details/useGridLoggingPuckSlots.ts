@@ -1,6 +1,6 @@
 // app/common/hooks/useGridLogging/useGridLoggingPuckSlots.ts
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
-import { PuckSlotsResponse } from '@app/common/types/gridLogging/puckList';
+import { PuckSlotsResponse } from '@app/common/types/gridLogging/entities/puckList';
 import { API } from '@app/common/constants/api';
 
 export const useGridLoggingPuckSlots = (puckId?: number) => {

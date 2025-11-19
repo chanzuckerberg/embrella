@@ -1,5 +1,5 @@
 import { POST_API } from '@app/common/constants/api';
-import { GridBoxCreateResponse } from '@app/common/types/gridLogging/gridBox';
+import { GridBoxCreateResponse } from '@app/common/types/gridLogging/entities/gridBox';
 import { useCreateResource } from '../base/useCreateResource';
 
 interface CreateGridBoxData {

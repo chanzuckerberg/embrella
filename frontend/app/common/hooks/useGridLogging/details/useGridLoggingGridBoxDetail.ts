@@ -1,6 +1,6 @@
 // app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail.ts
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
-import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
+import { GridBoxDetailResponse } from '@app/common/types/gridLogging/details/gridBoxDetails';
 import { API } from '@app/common/constants/api';
 
 export const useGridLoggingGridBoxDetail = (puckId?: number, positionInPuck?: number) => {

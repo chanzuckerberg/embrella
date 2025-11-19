@@ -1,5 +1,5 @@
 import { API } from '@app/common/constants/api';
-import { FreezingSessionListResponse,transformFreezingSession } from '@app/common/types/gridLogging/freezingSessionList';
+import { FreezingSessionListResponse,transformFreezingSession } from '@app/common/types/gridLogging/entities/freezingSessionList';
 import { useListResource } from '../base/useListResource';
 
 

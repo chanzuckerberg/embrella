@@ -1,5 +1,5 @@
 import { API } from '@app/common/constants/api';
-import { ConfluencePageListResponse } from '@app/common/types/gridLogging/confluencePageList';
+import { ConfluencePageListResponse } from '@app/common/types/gridLogging/resources/confluencePageList';
 import { useListResource } from '../base/useListResource';
 
 export const useConfluencePageList = () => {

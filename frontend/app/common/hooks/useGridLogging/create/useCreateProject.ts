@@ -1,5 +1,5 @@
 import { POST_API } from '@app/common/constants/api';
-import { CreateProjectData, ProjectCreateResponse } from '@app/common/types/gridLogging/projectList';
+import { CreateProjectData, ProjectCreateResponse } from '@app/common/types/gridLogging/entities/projectList';
 import { useCreateResource } from '../base/useCreateResource';
 
 export const useCreateProject = () => {
