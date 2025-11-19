@@ -3,9 +3,8 @@
 import React, { useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
-import { PuckList } from '@app/common/types/gridLogging/entities/puckList';
-import { UserList } from '@app/common/types/gridLogging/entities/userList';
-import { GridBoxDetailResponse } from '@app/common/types/gridLogging/details/gridBoxDetails';
+import { PuckList, UserList } from '@app/common/types/gridLogging';
+import { GridBoxDetailResponse } from '@app/common/types/gridLogging';
 import { DJANGO_URL } from '@app/common/constants/api';
 
 interface DeleteGridBoxProps {

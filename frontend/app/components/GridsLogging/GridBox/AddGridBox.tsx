@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
-import { UserList } from '@app/common/types/gridLogging/entities/userList';
+import { UserList } from '@app/common/types/gridLogging';
 import { useCreateGridBox , useGridLoggingChoices, useGridLoggingPuckSlots, useGridLoggingUserList } from '@app/common/hooks/useGridLogging';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
