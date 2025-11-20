@@ -108,7 +108,7 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
           )}
 
           <FormFieldWithAdd
-            label="Sample Name"
+            label="Sample Name:Combination of samples on a grid"
             value={formData.sampleIds[0]?.toString() || ''}
             onChange={handleSampleChange}
             onAdd={() => setAddSampleDialogOpen(true)}
