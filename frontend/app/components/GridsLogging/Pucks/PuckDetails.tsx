@@ -18,7 +18,13 @@ interface PuckDetailsProps {
   onGridBoxInfoRefetchReady?: (refetch: () => void) => void;
 }
 
-export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser, onRefetchReady, onGridBoxInfoRefetchReady }) => {
+export const PuckDetails: React.FC<PuckDetailsProps> = ({
+  selectedPuck,
+  onSlotSelect,
+  selectedUser,
+  onRefetchReady,
+  onGridBoxInfoRefetchReady,
+}) => {
   // Fetch puck slots data
   const { slotsData, isSuccess, refetch } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

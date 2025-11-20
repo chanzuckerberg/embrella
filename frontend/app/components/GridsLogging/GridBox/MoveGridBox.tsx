@@ -4,7 +4,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
 import { PuckList, GridBoxDetailResponse, UserList } from '@app/common/types/gridLogging';
-import { useGridLoggingPucksByCane, useGridLoggingPuckSlots , useMoveGridBox, useGridLoggingCaneList} from '@app/common/hooks/useGridLogging';
+import {
+  useGridLoggingPucksByCane,
+  useGridLoggingPuckSlots,
+  useMoveGridBox,
+  useGridLoggingCaneList,
+} from '@app/common/hooks/useGridLogging';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 
 interface MoveGridBoxProps {
@@ -104,7 +109,7 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
       if (onSuccess) {
         onSuccess(destinationPuckId, destinationPosition);
       }
-    }   
+    }
   };
 
   const isFormValid = formData.destinationCane && formData.destinationPuck && formData.destinationPosition;
@@ -147,11 +152,11 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
       saveButtonText="Move"
       disabled={!isFormValid || !canesLoaded}
     >
-    {Boolean(error) && (
+      {Boolean(error) && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
           {error}
         </Alert>
-    )}
+      )}
       <TextField
         select
         required
@@ -161,9 +166,7 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         onChange={(e) => handleInputChange('destinationCane', e.target.value)}
       >
         {!canesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
-        {canesLoaded && canes.length === 0 && (
-          <MenuItem value="">No canes available</MenuItem>
-        )}
+        {canesLoaded && canes.length === 0 && <MenuItem value="">No canes available</MenuItem>}
         {canes.map((cane) => (
           <MenuItem key={cane.id} value={cane.id.toString()}>
             {cane.color_code} Cane (Pos: {cane.position_in_dewar})

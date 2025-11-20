@@ -26,10 +26,7 @@ export const useMoveGrid = (): UseMoveGridResult => {
 
     try {
       // Build the URL by replacing grid_id placeholder
-      const url = getRequestURL(DJANGO_URL, POST_API.MOVE_GRID).replace(
-        'grid_id',
-        data.grid_id.toString()
-      );
+      const url = getRequestURL(DJANGO_URL, POST_API.MOVE_GRID).replace('grid_id', data.grid_id.toString());
 
       const response = await patchResource(url, {
         destination_grid_box_id: data.destination_grid_box_id,
@@ -37,8 +34,7 @@ export const useMoveGrid = (): UseMoveGridResult => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        return result;
+        return await response.json();
       } else {
         const errorData = await response.json();
         throw new Error(parseApiError(errorData, 'Failed to move grids'));

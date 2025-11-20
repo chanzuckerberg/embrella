@@ -21,7 +21,10 @@ export const useCreateGrid = () => {
       ...(data.blot_distance && { blot_distance: data.blot_distance }),
       copy_number: data.copy_number || 1,
     }),
-    transformResponse: (result) => result.grid || result,
+    transformResponse: (result) => {
+      const response = result as { grid?: GridCreateResponse };
+      return response.grid || (result as GridCreateResponse);
+    },
   });
 
   return {

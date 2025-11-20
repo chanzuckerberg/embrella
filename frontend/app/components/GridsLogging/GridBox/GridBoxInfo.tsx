@@ -3,7 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { useGridLoggingPuckSlots, useClipAllGrids, useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging';
+import {
+  useGridLoggingPuckSlots,
+  useClipAllGrids,
+  useGridLoggingGridBoxDetail,
+} from '@app/common/hooks/useGridLogging';
 import styles from '../GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
 import { DeleteGridBox } from './DeleteGridBox';
@@ -47,13 +51,14 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
   const [clipAllDialogOpen, setClipAllDialogOpen] = useState(false);
-  const [isClipping, setIsClipping] = useState(false);
+  const [isClipping] = useState(false);
   const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
   const [moveGridBoxDialogOpen, setMoveGridBoxDialogOpen] = useState(false);
-  const { gridBoxData, isSuccess: gridBoxSuccess, refetch } = useGridLoggingGridBoxDetail(
-    selectedPuck?.id,
-    selectedSlot || undefined
-  );
+  const {
+    gridBoxData,
+    isSuccess: gridBoxSuccess,
+    refetch,
+  } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
   const { clipAllGrids, error: clipError, clearError } = useClipAllGrids();
 
   useEffect(() => {
@@ -62,7 +67,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     }
   }, [onGridBoxInfoRefetchReady, refetch]);
 
- 
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {
     return null;
@@ -94,7 +98,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     setMoveGridBoxDialogOpen(true);
   };
   const handleClipAllGrids = () => {
-    clearError(); 
+    clearError();
     setClipAllDialogOpen(true);
   };
 
@@ -105,7 +109,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     }
 
     const result = await clipAllGrids(gridBoxData.grid_box.grid_box_id);
-    
+
     if (result) {
       setClipAllDialogOpen(false);
       // Refetch grid box data to update the UI
@@ -116,9 +120,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     }
   };
 
-  const unclippedCount = gridBoxData?.grid_box?.positions?.filter(
-    (pos) => pos.occupied && !pos.clipped
-  ).length || 0;
+  const unclippedCount = gridBoxData?.grid_box?.positions?.filter((pos) => pos.occupied && !pos.clipped).length || 0;
 
   const handleGridCreated = (gridPosition: number, gridId: number) => {
     // Refetch grid box data to update the graphic
@@ -170,7 +172,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                   size="small"
                 >
                   Clip All Grids
-                </Button> 
+                </Button>
                 <IconButton
                   onClick={handleDeleteGridBox}
                   sx={{

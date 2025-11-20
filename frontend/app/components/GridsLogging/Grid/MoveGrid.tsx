@@ -4,7 +4,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
 import { PuckList, GridDetailsResponse, UserList } from '@app/common/types/gridLogging';
-import { useGridLoggingPucksByCane, useGridLoggingPuckSlots, useGridLoggingGridBoxDetail, useGridLoggingChoices, useMoveGrid, useGridLoggingCaneList } from '@app/common/hooks/useGridLogging';
+import {
+  useGridLoggingPucksByCane,
+  useGridLoggingPuckSlots,
+  useGridLoggingGridBoxDetail,
+  useMoveGrid,
+  useGridLoggingCaneList,
+} from '@app/common/hooks/useGridLogging';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 
 interface MoveGridProps {
@@ -41,10 +47,7 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
   const { moveGrid, isMoving, error, clearError } = useMoveGrid();
 
   // Fetch choices (for cane colors)
-  const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { canes, isSuccess: canesLoaded } = useGridLoggingCaneList();
-
-
 
   // Fetch pucks for selected cane (dynamically)
   const { pucks: pucksInCane, isSuccess: pucksLoaded } = useGridLoggingPucksByCane(
@@ -130,9 +133,7 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
     }
 
     // Get the grid box ID from the selected slot
-    const selectedSlot = slotsData?.slots?.find(
-      (slot) => slot.position === Number(formData.destinationSlot)
-    );
+    const selectedSlot = slotsData?.slots?.find((slot) => slot.position === Number(formData.destinationSlot));
 
     if (!selectedSlot?.grid_box_id) {
       return;
@@ -158,10 +159,7 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
   };
 
   const isFormValid =
-    formData.destinationCane &&
-    formData.destinationPuck &&
-    formData.destinationSlot &&
-    formData.destinationPosition;
+    formData.destinationCane && formData.destinationPuck && formData.destinationSlot && formData.destinationPosition;
 
   // Tooltip content showing current location
   const currentLocationTooltip = (
@@ -207,11 +205,11 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
       saveButtonText="Move"
       disabled={!isFormValid || !canesLoaded}
     >
-    {Boolean(error) && (
+      {Boolean(error) && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
           {error}
         </Alert>
-    )}
+      )}
       <TextField
         select
         required
@@ -219,17 +217,15 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
         label="Destination Cane"
         value={formData.destinationCane}
         onChange={(e) => handleInputChange('destinationCane', e.target.value)}
-        >
+      >
         {!canesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
-        {canesLoaded && canes.length === 0 && (
-            <MenuItem value="">No canes available</MenuItem>
-        )}
+        {canesLoaded && canes.length === 0 && <MenuItem value="">No canes available</MenuItem>}
         {canes.map((cane) => (
-            <MenuItem key={cane.id} value={cane.id.toString()}>
+          <MenuItem key={cane.id} value={cane.id.toString()}>
             {cane.color_code} Cane (Pos: {cane.position_in_dewar})
-            </MenuItem>
+          </MenuItem>
         ))}
-     </TextField>
+      </TextField>
 
       <TextField
         select
@@ -270,12 +266,12 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
           <MenuItem value="">No grid boxes available in slots</MenuItem>
         )}
         {slotsData?.slots?.map((slot) => {
-            const isFilled = slot.status === 'filled';
-            return (
-                <MenuItem key={slot.position} value={slot.position.toString()} disabled={!isFilled}>
-                Slot {slot.position} {isFilled ? `(GridBox: ${slot.grid_box_name || 'N/A'})` : '(Empty - No Grid Box)'}
-                </MenuItem>
-            );
+          const isFilled = slot.status === 'filled';
+          return (
+            <MenuItem key={slot.position} value={slot.position.toString()} disabled={!isFilled}>
+              Slot {slot.position} {isFilled ? `(GridBox: ${slot.grid_box_name || 'N/A'})` : '(Empty - No Grid Box)'}
+            </MenuItem>
+          );
         })}
       </TextField>
 
@@ -294,14 +290,12 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
           <MenuItem value="">No empty positions available</MenuItem>
         )}
         {gridBoxData?.grid_box?.positions?.map((position) => {
-        const isOccupied = position.occupied;
-        const gridName = position.grid_name ? ` (${position.grid_name})` : '';
-        return (
+          const isOccupied = position.occupied;
+          return (
             <MenuItem key={position.q} value={position.q.toString()} disabled={isOccupied}>
-            {/* Position {position.q} {isOccupied ? `- filled with Grid - ${gridName}` : '- Available'} */}
-            Position {position.q} {isOccupied ? `- filled` : '- Available'}
+              Position {position.q} {isOccupied ? `- filled` : '- Available'}
             </MenuItem>
-        );
+          );
         })}
       </TextField>
     </BaseFormDialog>

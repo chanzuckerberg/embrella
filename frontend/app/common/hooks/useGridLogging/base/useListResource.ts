@@ -17,7 +17,7 @@ export interface UseListResourceConfig<TEntity, TResponse, TTransformed = TEntit
   /** Optional transform function for each item */
   transform?: (item: TEntity) => TTransformed;
   /** Optional search params */
-  searchParams?: Record<string, any>;
+  searchParams?: Record<string, unknown>;
 }
 
 /**
@@ -42,11 +42,7 @@ export function useListResource<TEntity, TResponse, TTransformed = TEntity>({
   getTotalCount,
   transform,
   searchParams,
-}: UseListResourceConfig<TEntity, TResponse, TTransformed>): UseListResourceReturn<
-  TEntity,
-  TResponse,
-  TTransformed
-> {
+}: UseListResourceConfig<TEntity, TResponse, TTransformed>): UseListResourceReturn<TEntity, TResponse, TTransformed> {
   const { data, isSuccess, refetch } = useFetchData<TResponse>(endpoint, searchParams);
 
   const items = useMemo(() => {

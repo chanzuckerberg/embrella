@@ -3,7 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
 import { UserList } from '@app/common/types/gridLogging';
-import { useCreateGridBox , useGridLoggingChoices, useGridLoggingPuckSlots, useGridLoggingUserList } from '@app/common/hooks/useGridLogging';
+import {
+  useCreateGridBox,
+  useGridLoggingChoices,
+  useGridLoggingPuckSlots,
+  useGridLoggingUserList,
+} from '@app/common/hooks/useGridLogging';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 
@@ -123,34 +128,34 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
           {error}
         </Alert>
       )}
-     
-        <TextField
-          required
-          label="Grid Box Name"
-          placeholder="Grid Box Name [Ex. Puck5Slot4Pos2]"
-          value={formData.gridBoxName}
-          onChange={(e) => handleInputChange('gridBoxName', e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start" sx={{ color: 'rgba(0, 0, 0, 0.87)', mr: -4 }}>
-                Box-
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            ...disabledTextFieldStyles,
-            flex: 1,
-            '& .MuiInputBase-input': { paddingLeft: 0 },
-          }}
-        />
+
       <TextField
-          required
-          label="Puck Name"
-          value={formData.puckName}
-          onChange={(e) => handleInputChange('puckName', e.target.value)}
-          disabled
-          sx={{ ...disabledTextFieldStyles, flex: 1 }}
-        />
+        required
+        label="Grid Box Name"
+        placeholder="Grid Box Name [Ex. Puck5Slot4Pos2]"
+        value={formData.gridBoxName}
+        onChange={(e) => handleInputChange('gridBoxName', e.target.value)}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start" sx={{ color: 'rgba(0, 0, 0, 0.87)', mr: -4 }}>
+              Box-
+            </InputAdornment>
+          ),
+        }}
+        sx={{
+          ...disabledTextFieldStyles,
+          flex: 1,
+          '& .MuiInputBase-input': { paddingLeft: 0 },
+        }}
+      />
+      <TextField
+        required
+        label="Puck Name"
+        value={formData.puckName}
+        onChange={(e) => handleInputChange('puckName', e.target.value)}
+        disabled
+        sx={{ ...disabledTextFieldStyles, flex: 1 }}
+      />
 
       <Box sx={{ display: 'flex', gap: 2 }}>
         {positionInPuck !== undefined ? (
