@@ -124,7 +124,7 @@ export const GridsLogging: React.FC = () => {
   };
 
   const handleMoveGridBoxSuccess = (newPuckId: number, newSlotPosition: number) => {
-    const newPuck = pucksList?.find(p => p.id === newPuckId);
+    const newPuck = pucksList?.find((p) => p.id === newPuckId);
     if (newPuck) {
       setSelectedPuck(newPuck);
       setSelectedSlot(newSlotPosition);
@@ -136,20 +136,20 @@ export const GridsLogging: React.FC = () => {
     }
   };
   const handleMoveGridSuccess = (
-    newPuckId: number, 
-    newSlotPosition: number, 
-    newGridBoxId: number, 
+    newPuckId: number,
+    newSlotPosition: number,
+    newGridBoxId: number,
     newPositionInBox: number
   ) => {
     // Find and set the new puck
-    const newPuck = pucksList?.find(p => p.id === newPuckId);
+    const newPuck = pucksList?.find((p) => p.id === newPuckId);
     if (newPuck) {
       setSelectedPuck(newPuck);
       setSelectedSlot(newSlotPosition);
       setSelectedGrid(newPositionInBox);
       // Keep the same gridId since the grid itself hasn't changed, just moved
     }
-    
+
     // Refetch all related data to show updated locations
     if (puckDetailsRefetch) {
       puckDetailsRefetch();
@@ -157,7 +157,7 @@ export const GridsLogging: React.FC = () => {
     // if (gridDetailsRefetch) {
     //   gridDetailsRefetch();
     // }
-    if (gridBoxInfoRefetch) {  
+    if (gridBoxInfoRefetch) {
       gridBoxInfoRefetch();
     }
   };
@@ -165,7 +165,7 @@ export const GridsLogging: React.FC = () => {
     setPuckDetailsRefetch(() => refetch);
   }, []);
 
-  const handleGridBoxInfoRefetchReady = useCallback((refetch: () => void) => {  
+  const handleGridBoxInfoRefetchReady = useCallback((refetch: () => void) => {
     setGridBoxInfoRefetch(() => refetch);
   }, []);
 
@@ -224,7 +224,13 @@ export const GridsLogging: React.FC = () => {
 
         {/* Puck Details Component - appears on the right when a puck is selected */}
         {selectedPuck && (
-          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} selectedUser={selectedUser} onRefetchReady={handlePuckDetailsRefetchReady} onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady} />
+          <PuckDetails
+            selectedPuck={selectedPuck}
+            onSlotSelect={handleSlotSelect}
+            selectedUser={selectedUser}
+            onRefetchReady={handlePuckDetailsRefetchReady}
+            onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady}
+          />
         )}
       </Box>
 

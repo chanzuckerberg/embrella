@@ -17,7 +17,7 @@ interface SpecimenFormData {
 interface AddSpecimenDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave?: (specimenId: number) => void; 
+  onSave?: (specimenId: number) => void;
 }
 
 export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onClose, onSave }) => {
@@ -28,26 +28,26 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
   });
 
   const [addSampleDialogOpen, setAddSampleDialogOpen] = useState(false);
-  const { transformedSamples, isSuccess: samplesLoaded, refetch } = useSampleList();
+  const { transformedSamples, refetch } = useSampleList();
   const { createSpecimen, isCreating, error, clearError } = useCreateSpecimen();
 
   useEffect(() => {
     if (!open) {
       clearError();
     }
-  }, [open, clearError])
+  }, [open, clearError]);
 
   const handleSampleChange = (value: string) => {
     const sampleId = parseInt(value);
     if (!isNaN(sampleId)) {
       setFormData((prev) => ({
         ...prev,
-        sampleIds: [sampleId], 
+        sampleIds: [sampleId],
       }));
     }
   };
 
-  const handleAddSample = (sampleId: number, sampleName: string) => {
+  const handleAddSample = (sampleId: number, _sampleName: string) => {
     // Refresh the samples list to include the newly created sample
     refetch?.();
     // Auto-select the newly created sample
@@ -101,7 +101,7 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
         saveButtonText={isCreating ? 'Creating...' : 'Save'}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {error && (
+          {Boolean(error) && (
             <Alert severity="error" onClose={clearError}>
               {error}
             </Alert>

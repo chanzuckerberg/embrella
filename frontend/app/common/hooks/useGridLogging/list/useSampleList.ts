@@ -1,7 +1,6 @@
 import { API } from '@app/common/constants/api';
-import { SampleListResponse, Sample, transformSample } from '@app/common/types/gridLogging/entities/sampleList';
+import { SampleListResponse, transformSample } from '@app/common/types/gridLogging';
 import { useListResource } from '../base/useListResource';
-
 
 export const useSampleList = () => {
   const { items, isSuccess, totalCount, transformedItems, rawData, refetch } = useListResource({

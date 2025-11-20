@@ -48,8 +48,8 @@ export const useFetchMetadataViz = (
         }
 
         const response = await fetch(url, {
-                   credentials: 'include',
-               });
+          credentials: 'include',
+        });
         const responseText = await response.text();
 
         if (!response.ok) {

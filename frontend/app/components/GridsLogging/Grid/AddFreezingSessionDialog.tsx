@@ -36,13 +36,13 @@ export const AddFreezingSessionDialog: React.FC<{
       alert('Please fill in all required fields (User, Device, Temperature, and Humidity)');
       return;
     }
-  
+
     // Validate numbers
     if (isNaN(Number(formData.temperature)) || isNaN(Number(formData.humidity))) {
       alert('Temperature and Humidity must be valid numbers');
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       await onSave({

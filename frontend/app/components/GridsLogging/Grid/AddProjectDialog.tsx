@@ -40,7 +40,6 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
   };
 
   const handleSave = async () => {
-     
     if (!formData.name.trim()) {
       alert('Please enter a project name');
       return;

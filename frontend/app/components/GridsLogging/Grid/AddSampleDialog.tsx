@@ -14,7 +14,7 @@ interface SampleFormData {
 interface AddSampleDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave?: (sampleId: number, sampleName: string) => void; 
+  onSave?: (sampleId: number, sampleName: string) => void;
 }
 
 export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose, onSave }) => {
@@ -78,7 +78,7 @@ export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose,
       saveButtonText={isCreating ? 'Creating...' : 'Save'}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {error && (
+        {Boolean(error) && (
           <Alert severity="error" onClose={clearError}>
             {error}
           </Alert>
