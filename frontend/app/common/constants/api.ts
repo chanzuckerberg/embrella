@@ -46,7 +46,6 @@ export enum API {
   GRID_LOGGING_DRIVE_FOLDERS = '/api/list/drive-folders/',
   GRID_LOGGING_CONFLUENCE_PAGES = '/api/list/confluence-pages/',
 
-
   // Projects
   PROJECTS_LIST = '/projects/project_list/',
 }

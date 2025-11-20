@@ -22,5 +22,5 @@ export const useGridLoggingCaneList = () => {
   return {
     canes: data?.canes || [],
     isSuccess,
- };
+  };
 };

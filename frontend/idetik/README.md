@@ -31,7 +31,6 @@ A layer-based library for interactive visualization of large datasets.
 
 4. See [package.json](package.json) for other commands available.
 
-
 ## Ultrack active learning prototype
 
 The `ultrack-prototype` workspace contains our first driving example of an active learning application.
@@ -52,7 +51,6 @@ VITE_MOCK_ULTRACK=true npm run ultrack
 ```
 
 (Note: this is likely to change in the future)
-
 
 ### Backend server
 
@@ -96,4 +94,3 @@ access the same running instance by just opening the tunneling SSH session.
 
 `run-full-stack.slurm` is just a bash script, so you can also use it to
 run both front- and back-end servers locally.
-

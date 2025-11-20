@@ -1,7 +1,9 @@
 import { API } from '@app/common/constants/api';
-import { FreezingSessionListResponse,transformFreezingSession } from '@app/common/types/gridLogging/entities/freezingSessionList';
+import {
+  FreezingSessionListResponse,
+  transformFreezingSession,
+} from '@app/common/types/gridLogging/entities/freezingSessionList';
 import { useListResource } from '../base/useListResource';
-
 
 export const useFreezingSessionList = () => {
   const { items, isSuccess, totalCount, transformedItems, rawData, refetch } = useListResource({

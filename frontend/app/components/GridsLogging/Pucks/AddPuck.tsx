@@ -2,7 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
-import { useGridLoggingChoices, useGridLoggingUserList, useGridLoggingCaneList, useGridLoggingPucksByCane, useCreatePuck } from '@app/common/hooks/useGridLogging';
+import {
+  useGridLoggingChoices,
+  useGridLoggingUserList,
+  useGridLoggingCaneList,
+  useGridLoggingPucksByCane,
+  useCreatePuck,
+} from '@app/common/hooks/useGridLogging';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { PuckList, UserList } from '@app/common/types/gridLogging';
@@ -28,11 +34,9 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
   const { canes, isSuccess: canesLoaded } = useGridLoggingCaneList();
   const { createPuck, isCreating, error, clearError } = useCreatePuck();
-  
-  // fetch pucks for the selected cane 
-  const { pucks: pucksData } = useGridLoggingPucksByCane(
-    formData.cane ? Number(formData.cane) : undefined
-  );
+
+  // fetch pucks for the selected cane
+  const { pucks: pucksData } = useGridLoggingPucksByCane(formData.cane ? Number(formData.cane) : undefined);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -114,7 +118,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
           {error}
         </Alert>
       )}
-      
+
       <Box sx={{ display: 'flex', gap: 2 }}>
         <TextField
           required
@@ -172,12 +176,10 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
             sx={disabledTextFieldStyles}
           >
             {!canesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
-            {canesLoaded && canes.length === 0 && (
-              <MenuItem value="">No canes available</MenuItem>
-            )}
+            {canesLoaded && canes.length === 0 && <MenuItem value="">No canes available</MenuItem>}
             {canes.map((cane) => (
               <MenuItem key={cane.id} value={cane.id}>
-                {cane.color_code} 
+                {cane.color_code}
               </MenuItem>
             ))}
           </Select>
@@ -204,9 +206,7 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
             {/* Positions with status indicators - */}
             {Array.from({ length: 10 }, (_, i) => i + 1).map((position) => {
               // Check if this position is filled by finding a puck at this position
-              const puckAtPosition = pucksData?.pucks?.find(
-                (puck) => puck.position_in_cane === position
-              );
+              const puckAtPosition = pucksData?.pucks?.find((puck) => puck.position_in_cane === position);
               const isFilled = !!puckAtPosition;
 
               return (

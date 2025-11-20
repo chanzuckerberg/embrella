@@ -22,15 +22,10 @@ import {
   useConfluenceSpaceList,
   useProjectLeadersList,
   useCreateProject,
-  useGridLoggingGridBoxDetail
+  useGridLoggingGridBoxDetail,
 } from '@app/common/hooks/useGridLogging';
 
-import {
-  UserList,
-  ProjectFormData,
-  FreezingSessionFormData,
-} from '@app/common/types/gridLogging';
-
+import { UserList, ProjectFormData, FreezingSessionFormData } from '@app/common/types/gridLogging';
 
 interface AddGridProps {
   open: boolean;
@@ -67,7 +62,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { pages: confluencePagesList } = useConfluencePageList();
   const { folders: driveFoldersList } = useDriveFolderList();
   const { createProject } = useCreateProject();
-  const { projectLeaders: projectLeadersData, isSuccess: projectLeadersLoaded } = useProjectLeadersList();
+  const { projectLeaders: projectLeadersData } = useProjectLeadersList();
   const { isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
   const { transformedFreezingSessions, refetch: freezingSessionRefetch } = useFreezingSessionList();
@@ -109,22 +104,22 @@ export const AddGrid: React.FC<AddGridProps> = ({
       });
       clearError();
     }
-  }, [open, selectedUser?.id, positionInBox, gridBoxId, gridBoxName]);
-  
+  }, [open, selectedUser?.id, positionInBox, gridBoxId, gridBoxName, clearError]);
+
   const devices = devicesList;
   const projectLeaders = projectLeadersData?.users || [];
 
-  const confluenceSpaces = confluenceSpacesList.map(space => ({
+  const confluenceSpaces = confluenceSpacesList.map((space) => ({
     id: space.id.toString(),
     url: space.url,
   }));
 
-  const googleDriveFolders = driveFoldersList.map(folder => ({
+  const googleDriveFolders = driveFoldersList.map((folder) => ({
     id: folder.id.toString(),
     name: folder.name,
   }));
-  
-  const notesPages = confluencePagesList
+
+  const notesPages = confluencePagesList;
 
   // Handle saving a new project
   const handleSaveProject = async (data: ProjectFormData) => {
@@ -138,13 +133,13 @@ export const AddGrid: React.FC<AddGridProps> = ({
 
     if (result) {
       // Refresh the projects list
-      await refetchProjects();
-      
+      await refetchProjects?.();
+
       setFormData((prev) => ({
         ...prev,
         project: result.project.id.toString(),
       }));
-      
+
       setAddProjectDialogOpen(false);
     }
   };
@@ -158,7 +153,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
 
   const handleAddSpecimen = async (specimenId: number) => {
     // Refresh the specimens list to include the newly created specimen
-    await refetchSpecimens();  
+    await refetchSpecimens?.();
     // Auto-select the newly created specimen in the form
     setFormData((prev) => ({
       ...prev,
@@ -175,9 +170,9 @@ export const AddGrid: React.FC<AddGridProps> = ({
       humidity: Number(data.humidity),
       notes_page: data.notesPage ? Number(data.notesPage) : null,
     });
-    
+
     if (result) {
-      freezingSessionRefetch();
+      freezingSessionRefetch?.();
       setFormData((prev) => ({
         ...prev,
         freezingSession: result.id.toString(),
@@ -190,7 +185,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
       alert('Please fill in all required fields');
       return;
     }
-  
+
     const result = await createGrid({
       name: formData.gridName,
       user: Number(formData.user),
@@ -205,7 +200,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
       ...(formData.blotForce && { blot_force: Number(formData.blotForce) }),
       ...(formData.blotDistance && { blot_distance: Number(formData.blotDistance) }),
     });
-  
+
     if (result) {
       onClose();
       if (onGridCreated) {
@@ -215,7 +210,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   };
 
   const isFormValid = formData.gridName && formData.specimen && formData.project && formData.positionInBox;
-  const  {gridBoxData} = useGridLoggingGridBoxDetail(puckId, gridBoxPositionInPuck);
+  const { gridBoxData } = useGridLoggingGridBoxDetail(puckId, gridBoxPositionInPuck);
   return (
     <>
       <BaseFormDialog
@@ -232,36 +227,36 @@ export const AddGrid: React.FC<AddGridProps> = ({
             {error}
           </Alert>
         )}
-          <TextField
-            required
-            label="Grid Name"
-            placeholder="Grid Name [Ex.Grid1]"
-            value={formData.gridName}
-            onChange={(e) => handleInputChange('gridName', e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start" sx={{ color: 'rgba(0, 0, 0, 0.87)', mr: -4 }}>
-                  Grid-
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              ...disabledTextFieldStyles,
-              flex: 1,
-              '& .MuiInputBase-input': { paddingLeft: 0 },
-            }}
-          />
+        <TextField
+          required
+          label="Grid Name"
+          placeholder="Grid Name [Ex.Grid1]"
+          value={formData.gridName}
+          onChange={(e) => handleInputChange('gridName', e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start" sx={{ color: 'rgba(0, 0, 0, 0.87)', mr: -4 }}>
+                Grid-
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            ...disabledTextFieldStyles,
+            flex: 1,
+            '& .MuiInputBase-input': { paddingLeft: 0 },
+          }}
+        />
         <FormFieldWithAdd
-            label="Freezing Session"
-            value={formData.freezingSession}
-            onChange={(value) => handleInputChange('freezingSession', value)}
-            onAdd={() => setAddFreezingSessionDialogOpen(true)}
-            disabled={!choicesLoaded}
-            options={transformedFreezingSessions.map((freezingSession) => ({
-              value: freezingSession.id.toString(),
-              label: freezingSession.display_name,
-            }))}
-          />
+          label="Freezing Session"
+          value={formData.freezingSession}
+          onChange={(value) => handleInputChange('freezingSession', value)}
+          onAdd={() => setAddFreezingSessionDialogOpen(true)}
+          disabled={!choicesLoaded}
+          options={transformedFreezingSessions.map((freezingSession) => ({
+            value: freezingSession.id.toString(),
+            label: freezingSession.display_name,
+          }))}
+        />
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           <FormFieldWithAdd
             label="Specimen"
@@ -309,14 +304,10 @@ export const AddGrid: React.FC<AddGridProps> = ({
                 sx={disabledTextFieldStyles}
               >
                 {gridBoxData?.grid_box?.positions?.map((position) => (
-                <MenuItem 
-                  key={position.q} 
-                  value={position.q} 
-                  disabled={position.occupied}
-                >
-                Position {position.q} {position.occupied ? '(Filled)' : '(Available)'}
-              </MenuItem>
-            ))}
+                  <MenuItem key={position.q} value={position.q} disabled={position.occupied}>
+                    Position {position.q} {position.occupied ? '(Filled)' : '(Available)'}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           )}
@@ -330,15 +321,15 @@ export const AddGrid: React.FC<AddGridProps> = ({
           />
         </Box>
 
-          <TextField
-            label="Notes"
-            placeholder="Add notes..."
-            value={formData.notes}
-            onChange={(e) => handleInputChange('notes', e.target.value)}
-            multiline
-            rows={3}
-            sx={{ ...disabledTextFieldStyles, flex: 1 }}
-          />
+        <TextField
+          label="Notes"
+          placeholder="Add notes..."
+          value={formData.notes}
+          onChange={(e) => handleInputChange('notes', e.target.value)}
+          multiline
+          rows={3}
+          sx={{ ...disabledTextFieldStyles, flex: 1 }}
+        />
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
@@ -384,7 +375,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
         devices={devices}
         notesPages={notesPages}
         onSave={handleAddFreezingSession}
-      /> 
+      />
     </>
   );
 };
