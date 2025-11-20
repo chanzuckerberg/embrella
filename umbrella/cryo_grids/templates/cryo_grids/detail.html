@@ -112,7 +112,7 @@ $(document).ready(function() {
             var gridBoxSelect = $('#gridBoxSelect');
             response.grid_boxes.forEach(function(box) {
                 var displayName = box.display_name || box.name || 'Unknown';
-                var value = box.name || '';
+                var value = box.id || '';
                 gridBoxSelect.append(new Option(displayName, value));
             });
         } else {
@@ -128,15 +128,15 @@ $(document).ready(function() {
 
     // Handle the grid box selection change
     $('#gridBoxSelect').change(function() {
-        var selectedGridBox = $(this).val();
+        var selectedGridBox = $(this).val();  
         var userSelect = $('#userSelect');
         if (selectedGridBox) {
             $.ajax({
                 url: '/cryo_grids/specific_grids/',  // Update with the correct endpoint
                 method: 'GET',
-                data: { grid_box_name: selectedGridBox },
+                data: { grid_box_id: selectedGridBox },
                 success: function(response) {
-                    console.log('Specific grids fetched:', response);  // Debugging line
+                    console.log('Specific grids fetched:', response);  
                     var gridBoxData = $('#gridBoxData');
                     gridBoxData.empty();
                     userSelect.empty();
@@ -180,7 +180,7 @@ $(document).ready(function() {
 
         var requestData = {};
         if (selectedGridBox) {
-            requestData.grid_box_name = selectedGridBox;
+            requestData.grid_box_id = selectedGridBox;
         }
         if (selectedUser) {
             requestData.username = selectedUser;
