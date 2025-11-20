@@ -157,6 +157,7 @@ def get_all_grid_boxes(request):
             display_name = f"{box.name} (Puck: {puck_name}, Slot: {slot})"
             
             unique_boxes.append({
+                'id': box.id,
                 'name': box.name,
                 'display_name': display_name,
                 'puck_name': puck_name,
@@ -190,19 +191,27 @@ def grid_cassetes_view(request):
 
 
 def get_specific_grids(request):
-    grid_box_name = request.GET.get('grid_box_name')
+    grid_box_id = request.GET.get('grid_box_id')
     username = request.GET.get('username')
 
     try:
         # Initialize the query set
-        specific_grids = CryoGrid.objects.all()
+        specific_grids = CryoGrid.objects.filter(trashed=False)
 
-        # Filter by grid box name if provided
-        if grid_box_name:
-            grid_boxes = CryoGridBox.objects.filter(name=grid_box_name)
-            if not grid_boxes.exists():
-                return JsonResponse({"error": "Grid box not found."}, status=404)
-            specific_grids = specific_grids.filter(grid_box__in=grid_boxes)
+         # Filter by grid box ID if provided 
+        if grid_box_id:
+            try:
+                specific_grids = specific_grids.filter(grid_box_id=grid_box_id)
+            except ValueError:
+                return JsonResponse({"error": "Invalid grid box ID."}, status=400)
+
+
+        # # Filter by grid box name if provided
+        # if grid_box_name:
+        #     grid_boxes = CryoGridBox.objects.filter(name=grid_box_name)
+        #     if not grid_boxes.exists():
+        #         return JsonResponse({"error": "Grid box not found."}, status=404)
+        #     specific_grids = specific_grids.filter(grid_box__in=grid_boxes)
 
         # Filter by username if provided
         if username:
