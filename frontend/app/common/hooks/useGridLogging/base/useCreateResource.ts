@@ -15,9 +15,9 @@ export interface UseCreateResourceConfig<TInput, TOutput> {
   /** Error message to show if creation fails */
   errorMessage: string;
   /** Optional function to transform input data before sending to API */
-  transformPayload?: (data: TInput) => Record<string, any>;
+  transformPayload?: (data: TInput) => Record<string, unknown>;
   /** Optional function to transform API response */
-  transformResponse?: (response: any) => TOutput;
+  transformResponse?: (response: unknown) => TOutput;
   /** Optional function to build URL dynamically (for parameterized endpoints) */
   buildUrl?: (endpoint: string, data: TInput) => string;
 }
@@ -35,7 +35,7 @@ export interface UseCreateResourceReturn<TInput, TOutput> {
 /**
  * Generic hook for creating resources
  * Eliminates duplication across all create hooks
- * 
+ *
  * @example
  * const { create, isCreating, error, clearError } = useCreateResource({
  *   endpoint: POST_API.CREATE_PROJECT,
@@ -63,12 +63,10 @@ export function useCreateResource<TInput, TOutput>({
 
     try {
       // Build URL (use custom builder if provided, otherwise use endpoint directly)
-      const url = buildUrl 
-        ? buildUrl(getRequestURL(DJANGO_URL, endpoint), data)
-        : getRequestURL(DJANGO_URL, endpoint);
+      const url = buildUrl ? buildUrl(getRequestURL(DJANGO_URL, endpoint), data) : getRequestURL(DJANGO_URL, endpoint);
 
       // Transform payload if transformer provided, otherwise use data as-is
-      const payload = transformPayload ? transformPayload(data) : data as Record<string, unknown>;
+      const payload = transformPayload ? transformPayload(data) : (data as Record<string, unknown>);
 
       // Make API request
       const response = await postResource(url, payload);

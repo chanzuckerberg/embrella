@@ -25,7 +25,10 @@ export const useCreateGridBox = () => {
       max_grids: data.max_grids,
       puck_name: data.puckName,
     }),
-    transformResponse: (result) => result.grid_box,
+    transformResponse: (result) => {
+      const response = result as { grid_box: GridBoxCreateResponse };
+      return response.grid_box;
+    },
   });
 
   return {

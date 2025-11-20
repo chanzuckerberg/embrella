@@ -38,8 +38,7 @@ export const useClipAllGrids = (): UseClipAllGridsResult => {
       const response = await postResource(url, {});
 
       if (response.ok) {
-        const result = await response.json();
-        return result;
+        return await response.json();
       } else {
         const errorData = await response.json();
         throw new Error(parseApiError(errorData, 'Failed to clip all grids'));

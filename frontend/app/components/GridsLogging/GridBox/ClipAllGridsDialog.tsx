@@ -1,11 +1,7 @@
 'use client';
 
 import React from 'react';
-import {
-  Typography,
-  Box,
-  Alert,
-} from '@mui/material';
+import { Typography, Box, Alert } from '@mui/material';
 import { Button, Dialog, DialogContent, DialogTitle, Icon } from '@czi-sds/components';
 
 interface ClipAllGridsDialogProps {
@@ -15,7 +11,7 @@ interface ClipAllGridsDialogProps {
   gridBoxName: string;
   maxGrids: number;
   unclippedCount: number;
-  totalGrids: number; 
+  totalGrids: number;
   isProcessing: boolean;
   error?: string | null;
 }
@@ -32,18 +28,18 @@ export const ClipAllGridsDialog: React.FC<ClipAllGridsDialogProps> = ({
   error,
 }) => {
   const alreadyClippedCount = totalGrids - unclippedCount;
-  
+
   return (
     <Dialog open={open} onClose={onClose} sdsSize="xs">
       <DialogTitle title="Clip All Grids" onClose={onClose} />
-      
+
       <DialogContent>
-        {error && (
+        {Boolean(error) && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
-        
+
         {unclippedCount === 0 ? (
           <Alert severity="info" sx={{ mb: 2 }}>
             There are no grids to be clipped in this grid box. All grids are already clipped.
@@ -53,7 +49,7 @@ export const ClipAllGridsDialog: React.FC<ClipAllGridsDialogProps> = ({
             This action will mark all remaining unclipped grids in this grid box as clipped.
           </Alert>
         )}
-        
+
         <Box sx={{ mb: 2 }}>
           <Typography variant="body1" gutterBottom>
             <strong>Grid Box:</strong> {gridBoxName}
@@ -71,20 +67,15 @@ export const ClipAllGridsDialog: React.FC<ClipAllGridsDialogProps> = ({
             <strong>To be Clipped:</strong> {unclippedCount} grid(s)
           </Typography>
         </Box>
-        
+
         {unclippedCount > 0 && (
           <Typography variant="body2" color="text.secondary">
             Are you sure you want to clip {unclippedCount} grid(s) in this grid box?
           </Typography>
         )}
-        
+
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-          <Button 
-            onClick={onClose} 
-            disabled={isProcessing}
-            sdsType="secondary"
-            sdsStyle="rounded"
-          >
+          <Button onClick={onClose} disabled={isProcessing} sdsType="secondary" sdsStyle="rounded">
             {unclippedCount === 0 ? 'Close' : 'Cancel'}
           </Button>
           {unclippedCount > 0 && (

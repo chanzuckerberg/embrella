@@ -26,10 +26,7 @@ export const useMoveGridBox = (): UseMoveGridBoxResult => {
 
     try {
       // Build the URL by replacing grid_box_id placeholder
-      const url = getRequestURL(DJANGO_URL, POST_API.MOVE_GRID_BOX).replace(
-        'grid_box_id',
-        data.grid_box_id.toString()
-      );
+      const url = getRequestURL(DJANGO_URL, POST_API.MOVE_GRID_BOX).replace('grid_box_id', data.grid_box_id.toString());
 
       const response = await patchResource(url, {
         destination_puck_id: data.destination_puck_id,
@@ -37,8 +34,7 @@ export const useMoveGridBox = (): UseMoveGridBoxResult => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        return result;
+        return await response.json();
       } else {
         const errorData = await response.json();
         throw new Error(parseApiError(errorData, 'Failed to move grid boxes'));
