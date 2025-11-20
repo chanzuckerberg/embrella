@@ -1,5 +1,5 @@
 /* Import SDS styles */
-@import '@czi-sds/components/dist/variables.css';
+@import "@czi-sds/components/dist/variables.css";
 
 @tailwind base;
 @tailwind components;

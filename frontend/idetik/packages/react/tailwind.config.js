@@ -2,10 +2,7 @@ import sds from "@czi-sds/components/dist/tailwind.json" assert { type: "json" }
 
 export default {
   mode: "jit",
-  content: [
-    "./index.html",
-    "./src/**/*.{ts,tsx,css}",
-  ],
+  content: ["./index.html", "./src/**/*.{ts,tsx,css}"],
   theme: {
     extend: sds,
   },

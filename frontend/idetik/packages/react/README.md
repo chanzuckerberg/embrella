@@ -13,9 +13,14 @@ npm install @idetik/react @idetik/core
 ### Basic Usage
 
 Here is an example of using the `OmeZarrImageViewer` component:
+
 ```tsx
 "use client";
-import { IdetikProvider, OmeZarrImageViewer, ChannelControlsList } from "@idetik/react";
+import {
+  IdetikProvider,
+  OmeZarrImageViewer,
+  ChannelControlsList,
+} from "@idetik/react";
 import { Region } from "@idetik/core";
 
 // Define the region to view
@@ -84,6 +89,7 @@ No need to host any data locally to start development.
 ### Development with Core Package
 
 If you make changes to the `@idetik/core` package, you'll need to:
+
 1. Rebuild the core package: `npm run build --workspace=@idetik/core`
 2. Rebuild this package: `npm run build --workspace=@idetik/react`
 
@@ -94,7 +100,9 @@ This ensures your React components use the latest version of the core package.
 Pure TypeScript code (has no react dependencies) should go in the `lib/` directory.
 
 #### File Structure
+
 Each component should have its own directory with the following structure:
+
 ```
 ComponentName/
 ├── index.tsx         # Public API exports
@@ -110,6 +118,7 @@ ComponentName/
    - Export components through index.tsx files
    - This keeps our API clean and makes it easier to refactor without introducing breaking changes.
    - Also helps with tree-shaking because bundlers can statically analyze named exports and safely exclude unused code from the final bundle. Default exports, by contrast, are opaque and prevent the bundler from confidently removing unused parts.
+
    ```typescript
    // Avoid
    export default function MyComponent() {}
@@ -117,12 +126,13 @@ ComponentName/
    // Prefer
    export function MyComponent() {}
    // In index.tsx:
-   export { MyComponent } from './MyComponent';
+   export { MyComponent } from "./MyComponent";
    ```
 
 2. **Component Definitions**
    - Use arrow functions for component definitions
    - Include explicit type annotations
+
    ```typescript
    // Avoid
    export function MyComponent(props: Props) {}
@@ -136,6 +146,7 @@ ComponentName/
 3. **Props**
    - Define prop interfaces with explicit types
    - Use descriptive prop names
+
    ```typescript
    interface MyComponentProps {
      sourceUrl: string;
@@ -144,17 +155,18 @@ ComponentName/
    }
    ```
 
-5. **Styling**
+4. **Styling**
    - Use Tailwind CSS with classnames utility
    - Group related classes with cns
+
    ```typescript
-   import cns from 'classnames';
+   import cns from "classnames";
 
    const className = cns(
-     'flex',
-     'flex-col',
-     'gap-4',
-     isActive && 'bg-blue-500'
+     "flex",
+     "flex-col",
+     "gap-4",
+     isActive && "bg-blue-500"
    );
    ```
 
