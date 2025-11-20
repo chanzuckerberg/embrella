@@ -86,7 +86,7 @@ export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose,
 
         <TextField
           required
-          label="Sample Name"
+          label="An individual sample (e.g., apoferritin)"
           placeholder="Enter sample name (e.g., lysosome)"
           value={formData.name}
           onChange={(e) => handleInputChange('name', e.target.value)}
@@ -95,7 +95,7 @@ export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose,
         />
 
         <TextField
-          label="Ontology"
+          label="Ontology: Sample should have an ontology identifier"
           placeholder="Enter ontology (e.g., GO:0005764)"
           value={formData.ontology}
           onChange={(e) => handleInputChange('ontology', e.target.value)}
