@@ -144,6 +144,70 @@ class PuckViewSet(viewsets.ModelViewSet):
         pk stands for primary key - puck_id, None means it's optional
         Works on a specific puck, so it needs the pk to identify which puck
         """
+
+    @method_decorator(csrf_exempt)
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete a puck and handle cascading operations:
+        1. Trash all grids in grid boxes belonging to this puck
+        2. Delete all grid boxes in this puck
+        3. Delete the puck itself
+        
+        URL: DELETE /api/list/pucks/{puck_id}/
+        """
+        try:
+            from django.db import transaction
+            
+            puck = self.get_object()
+            puck_name = puck.name
+            
+            stats = {
+                'grids_trashed': 0,
+                'grid_boxes_deleted': 0,
+                'puck_deleted': False
+            }
+            
+            with transaction.atomic():
+                # Get all grid boxes belonging to this puck
+                grid_boxes = CryoGridBox.objects.filter(puck=puck)
+                grid_box_count = grid_boxes.count()
+                
+                # Get all grids in the grid boxes
+                for grid_box in grid_boxes:
+                    grids = CryoGrid.objects.filter(
+                        grid_box=grid_box,
+                        trashed=False
+                    )
+                    
+                    # Trash all grids 
+                    grids_updated = grids.update(
+                        trashed=True,
+                        grid_box=None,
+                        position_in_box=None
+                    )
+                    stats['grids_trashed'] += grids_updated
+                
+                # Delete all grid boxes
+                grid_boxes.delete()
+                stats['grid_boxes_deleted'] = grid_box_count
+                
+                # Delete the puck itself
+                puck.delete()
+                stats['puck_deleted'] = True
+            
+            return Response({
+                'success': True,
+                'message': f'Puck "{puck_name}" deleted successfully',
+                'stats': stats
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Failed to delete puck',
+                'detail': str(e) if settings.DEBUG else 'Please try again later'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=True, methods=['get'], url_path='slots')
     def slots(self, request, pk=None):
         """
