@@ -16,11 +16,12 @@ export const useGridLoggingPucksList = (caneId?: number) => {
 // Hook for fetching pucks filtered by user ID
 export const useGridLoggingPucksByUser = (userId?: number) => {
   const searchParams = userId ? { user_id: userId } : {};
-  const { data, isSuccess } = useFetchData<PuckListResponse>(API.GRID_LOGGING_PUCKS, searchParams);
+  const { data, isSuccess,refetch } = useFetchData<PuckListResponse>(API.GRID_LOGGING_PUCKS, searchParams);
 
   return {
     pucks: data,
     isSuccess,
+    refetch,
   };
 };
 

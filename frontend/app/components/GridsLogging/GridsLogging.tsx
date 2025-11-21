@@ -30,7 +30,7 @@ export const GridsLogging: React.FC = () => {
   const searchParams = useSearchParams();
 
   // Fetch pucks for the selected user
-  const { pucks: pucksData } = useGridLoggingPucksByUser(selectedUser?.id);
+  const { pucks: pucksData, refetch: refetchPuckList } = useGridLoggingPucksByUser(selectedUser?.id);
 
   // Extract users array from the response object
   const usersList = useMemo(() => users?.users || [], [users]);
@@ -121,6 +121,17 @@ export const GridsLogging: React.FC = () => {
   };
   const handlePuckCreated = (_newPuck: PuckList) => {
     window.location.reload();
+  };
+  const handlePuckDeleted = () => {
+    // Refetch the pucks list to update the UI
+    if (refetchPuckList) {
+      refetchPuckList();
+    }
+    // Clear the selected puck since it was deleted
+    setSelectedPuck(null);
+    setSelectedSlot(null);
+    setSelectedGrid(null);
+    setSelectedGridId(null);
   };
 
   const handleMoveGridBoxSuccess = (newPuckId: number, newSlotPosition: number) => {
@@ -218,7 +229,7 @@ export const GridsLogging: React.FC = () => {
               />
             </Box>
             {/* Puck Selector Component */}
-            <PuckListed selectedUser={selectedUser} onPuckSelect={handlePuckSelect} selectedPuck={selectedPuck} />
+            <PuckListed selectedUser={selectedUser} onPuckSelect={handlePuckSelect} selectedPuck={selectedPuck} puckList={pucksList}/>
           </CardContent>
         </Card>
 
@@ -230,6 +241,7 @@ export const GridsLogging: React.FC = () => {
             selectedUser={selectedUser}
             onRefetchReady={handlePuckDetailsRefetchReady}
             onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady}
+            onPuckDeleted={handlePuckDeleted}
           />
         )}
       </Box>
