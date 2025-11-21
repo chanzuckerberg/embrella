@@ -11,11 +11,10 @@ interface PuckSelectorProps {
   selectedUser: UserList | null;
   onPuckSelect: (puck: PuckList | null) => void;
   selectedPuck: PuckList | null;
+  puckList?: PuckList[];
 }
 
-export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSelect, selectedPuck }) => {
-  const { pucks } = useGridLoggingPucksByUser(selectedUser?.id);
-  const pucksList: PuckList[] = pucks?.pucks || [];
+export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSelect, selectedPuck, puckList }) => {
 
   const handlePuckCardClick = (puck: PuckList) => {
     onPuckSelect(puck);
@@ -36,7 +35,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
       {/* Pucks Grid Display with Interactive SVG */}
       <Box className={styles.pucksScrollContainer}>
         <Grid container spacing={2} justifyContent="flex-start">
-          {pucksList.map((puck) => (
+          {puckList?.map((puck) => (
             <Grid
               key={puck.id}
               sx={{
@@ -66,7 +65,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
           ))}
         </Grid>
 
-        {pucksList.length === 0 && (
+        {puckList?.length === 0 && (
           <Box className={styles.emptyState}>
             <Typography variant="body1" color="text.secondary">
               No pucks available for this user
