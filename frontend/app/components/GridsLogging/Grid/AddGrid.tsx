@@ -259,7 +259,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
         />
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
           <FormFieldWithAdd
-            label="Specimen: Combination of samples on grid"
+            label="Specimen"
             value={formData.specimen}
             onChange={(value) => handleInputChange('specimen', value)}
             onAdd={() => setAddSpecimenDialogOpen(true)}
