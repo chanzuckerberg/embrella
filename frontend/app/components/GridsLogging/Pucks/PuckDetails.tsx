@@ -16,6 +16,7 @@ interface PuckDetailsProps {
   selectedUser?: UserList | null;
   onRefetchReady?: (refetch: () => void) => void;
   onGridBoxInfoRefetchReady?: (refetch: () => void) => void;
+  onPuckDeleted?: () => void;
 }
 
 export const PuckDetails: React.FC<PuckDetailsProps> = ({
@@ -24,6 +25,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
   selectedUser,
   onRefetchReady,
   onGridBoxInfoRefetchReady,
+  onPuckDeleted
 }) => {
   // Fetch puck slots data
   const { slotsData, isSuccess, refetch } = useGridLoggingPuckSlots(selectedPuck?.id);
@@ -169,6 +171,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
         selectedPuck={selectedPuck}
         slotsData={slotsData || null}
         selectedUser={selectedUser}
+        onDeleteSuccess={onPuckDeleted}
       />
 
       <AddGridBox

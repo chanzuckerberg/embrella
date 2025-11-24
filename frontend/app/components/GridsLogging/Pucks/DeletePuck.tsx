@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
 import { PuckSlotsResponse, PuckList, UserList } from '@app/common/types/gridLogging';
 import { DJANGO_URL } from '@app/common/constants/api';
@@ -12,29 +12,56 @@ interface DeletePuckProps {
   selectedPuck: PuckList | null;
   slotsData: PuckSlotsResponse | null;
   selectedUser?: UserList | null;
+  onDeleteSuccess?: () => void; 
 }
 
-export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedPuck, slotsData, selectedUser }) => {
+export const DeletePuck: React.FC<DeletePuckProps> = ({ 
+  open, 
+  onClose, 
+  selectedPuck, 
+  slotsData, 
+  selectedUser,
+  onDeleteSuccess 
+}) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!selectedPuck || !slotsData) return null;
 
   const hasFilledGridBoxes = slotsData.slot_summary.filled_count > 0;
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedPuck) return;
 
     setIsDeleting(true);
-    const prefillParams = new URLSearchParams();
+    setError(null);
 
-    // Add return state parameters
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
+    try {
+      const response = await fetch(`${DJANGO_URL}/api/list/pucks/${selectedPuck.id}/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        if (onDeleteSuccess) {
+          onDeleteSuccess();
+        }
+        // Close the dialog
+        onClose();
+      } else {
+        const errorMessage = data.error || data.detail || 'Failed to delete puck';
+        setError(errorMessage);
+        setIsDeleting(false);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred while deleting the puck. Please try again.');
+      setIsDeleting(false);
     }
-
-    // Redirect to Django admin puck deletion page
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/puck/${selectedPuck.id}/delete/?${prefillParams.toString()}`;
-    window.location.href = adminUrl;
   };
 
   return (
@@ -60,10 +87,10 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedP
             {hasFilledGridBoxes ? (
               <>
                 <Typography variant="h6" color="error" sx={{ mb: 1 }}>
-                  Puck CZII-0 {selectedPuck.name} has filled grid boxes!
+                  Puck CZII-0{selectedPuck.name} has filled grid boxes!
                 </Typography>
                 <Typography variant="caption" sx={{ mb: 2 }}>
-                  if proceeding with deleting, all objects in the puck will be trashed
+                  If proceeding with deleting, all grids in the puck will be trashed
                 </Typography>
               </>
             ) : (
@@ -78,6 +105,12 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedP
             )}
           </Box>
         </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         <Box sx={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
           <Button sdsType="secondary" sdsStyle="rounded" onClick={onClose} disabled={isDeleting}>
