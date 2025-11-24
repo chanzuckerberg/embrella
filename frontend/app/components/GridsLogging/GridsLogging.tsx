@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField } from '@mui/material';
+import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField, InputAdornment, IconButton } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { Button, Icon } from '@czi-sds/components';
 import { useGridLoggingUserList, useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging';
@@ -24,6 +24,7 @@ export const GridsLogging: React.FC = () => {
   const [puckDetailsRefetch, setPuckDetailsRefetch] = useState<() => void>(() => {});
   const [gridDetailsRefetch, setGridDetailsRefetch] = useState<() => void>(() => {});
   const [gridBoxInfoRefetch, setGridBoxInfoRefetch] = useState<() => void>(() => {});
+  const [puckSearchQuery, setPuckSearchQuery] = useState('');
 
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
@@ -37,6 +38,16 @@ export const GridsLogging: React.FC = () => {
 
   // Extract pucks array from the response object
   const pucksList = useMemo(() => pucksData?.pucks || [], [pucksData]);
+
+  // Filter pucks based on search query
+  const filteredPucksList = useMemo(() => {
+    if (!puckSearchQuery.trim()) {
+      return pucksList;
+    }
+    return pucksList.filter((puck) =>
+      `CZII-0${puck.name}`.toLowerCase().includes(puckSearchQuery.toLowerCase())
+    );
+  }, [pucksList, puckSearchQuery]);
 
   // Restore state from URL parameters
   useEffect(() => {
@@ -93,6 +104,8 @@ export const GridsLogging: React.FC = () => {
     // Reset selected puck and slot when user changes
     setSelectedPuck(null);
     setSelectedSlot(null);
+    // Reset search query when user changes
+    setPuckSearchQuery('');
   };
 
   const handleAddPuck = () => {
@@ -228,8 +241,47 @@ export const GridsLogging: React.FC = () => {
                 }}
               />
             </Box>
+            
+            {/* Search box for pucks */}
+            {selectedUser && (
+              <Box sx={{  display: 'flex', alignItems: 'center', gap: 1 , mb:4, mt:-6}}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Search pucks by name..."
+                  value={puckSearchQuery}
+                  onChange={(e) => setPuckSearchQuery(e.target.value)}
+                  variant="outlined"
+                
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                       <Icon sdsIcon="Search" sdsSize="l" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: puckSearchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => setPuckSearchQuery('')}
+                        edge="end"
+                      >
+                        <Icon sdsIcon="XMark" sdsSize="l" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                  }}
+               />
+              </Box>
+            )}
+
             {/* Puck Selector Component */}
-            <PuckListed selectedUser={selectedUser} onPuckSelect={handlePuckSelect} selectedPuck={selectedPuck} puckList={pucksList}/>
+            <PuckListed 
+              selectedUser={selectedUser} 
+              onPuckSelect={handlePuckSelect} 
+              selectedPuck={selectedPuck} 
+              puckList={filteredPucksList}
+            />
           </CardContent>
         </Card>
 
