@@ -5,11 +5,12 @@ import { API } from '@app/common/constants/api';
 
 export const useGridLoggingPucksList = (caneId?: number) => {
   const searchParams = caneId ? { cane_id: caneId } : {};
-  const { data, isSuccess } = useFetchData<PuckListResponse>(API.GRID_LOGGING_PUCKS, searchParams);
+  const { data, isSuccess,refetch } = useFetchData<PuckListResponse>(API.GRID_LOGGING_PUCKS, searchParams);
 
   return {
     pucks: data,
     isSuccess,
+    refetch,
   };
 };
 

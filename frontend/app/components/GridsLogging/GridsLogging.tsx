@@ -4,7 +4,7 @@ import React, { useState, useEffect, useContext, useMemo, useCallback } from 're
 import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField, InputAdornment, IconButton } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { Button, Icon } from '@czi-sds/components';
-import { useGridLoggingUserList, useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging';
+import { useGridLoggingUserList, useGridLoggingPucksList, useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging';
 import { UserList, PuckList } from '@app/common/types/gridLogging';
 import { UserContext } from '@app/common/context/UserProvider';
 import styles from './GridLogging.module.css';
@@ -33,21 +33,25 @@ export const GridsLogging: React.FC = () => {
   // Fetch pucks for the selected user
   const { pucks: pucksData, refetch: refetchPuckList } = useGridLoggingPucksByUser(selectedUser?.id);
 
+  // Also fetch ALL pucks for search purposes
+  const { pucks: allPucksData } = useGridLoggingPucksList();
+
   // Extract users array from the response object
   const usersList = useMemo(() => users?.users || [], [users]);
 
   // Extract pucks array from the response object
   const pucksList = useMemo(() => pucksData?.pucks || [], [pucksData]);
+  const allPucksList = useMemo(() => allPucksData?.pucks || [], [allPucksData]);
 
   // Filter pucks based on search query
   const filteredPucksList = useMemo(() => {
     if (!puckSearchQuery.trim()) {
       return pucksList;
     }
-    return pucksList.filter((puck) =>
+    return allPucksList.filter((puck) =>
       `CZII-0${puck.name}`.toLowerCase().includes(puckSearchQuery.toLowerCase())
     );
-  }, [pucksList, puckSearchQuery]);
+  }, [pucksList, allPucksList,puckSearchQuery]);
 
   // Restore state from URL parameters
   useEffect(() => {
