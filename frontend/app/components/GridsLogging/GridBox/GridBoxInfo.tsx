@@ -25,6 +25,7 @@ interface GridBoxInfoProps {
   onGridDetailsRefetch?: (() => void) | null;
   onMoveGridBoxSuccess?: (newPuckId: number, newSlotPosition: number) => void;
   onGridBoxInfoRefetchReady?: (refetch: () => void) => void;
+  onGridBoxDeleted?: () => void;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -46,8 +47,9 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   onGridDetailsRefetch,
   onMoveGridBoxSuccess,
   onGridBoxInfoRefetchReady,
+  onGridBoxDeleted,
 }) => {
-  const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
+  const { slotsData, isSuccess: slotsSuccess, refetch: refetchSlots } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
   const [clipAllDialogOpen, setClipAllDialogOpen] = useState(false);
@@ -87,6 +89,15 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   // Event handlers
   const handleDeleteGridBox = () => {
     setDeleteDialogOpen(true);
+  };
+
+  const handleGridBoxDeleted = () => {
+    setDeleteDialogOpen(false);
+    // Refetch slots data to update puck visualization
+    refetchSlots();
+    if (onGridBoxDeleted) {
+      onGridBoxDeleted();
+    }
   };
 
   const handleAddGrid = (positionInBox?: number) => {
@@ -283,6 +294,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         selectedSlot={selectedSlot}
         selectedUser={selectedUser}
         gridBoxData={gridBoxData || null}
+        onGridBoxDeleted={handleGridBoxDeleted}
       />
 
       <AddGrid

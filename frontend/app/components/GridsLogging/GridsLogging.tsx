@@ -312,6 +312,15 @@ export const GridsLogging: React.FC = () => {
             onGridDetailsRefetch={gridDetailsRefetch}
             onMoveGridBoxSuccess={handleMoveGridBoxSuccess}
             onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady}
+            onGridBoxDeleted={() => {
+              // Clear selections and refetch puck details
+              setSelectedSlot(null);
+              setSelectedGrid(null);
+              setSelectedGridId(null);
+              if (puckDetailsRefetch) {
+                puckDetailsRefetch();
+              }
+            }}
           />
           {!!selectedGrid && (
             <GridDetails
