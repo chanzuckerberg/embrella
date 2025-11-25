@@ -449,6 +449,84 @@ class PuckViewSet(viewsets.ModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['delete'], url_path='grid-box/(?P<grid_box_id>[0-9]+)')
+    def delete_grid_box(self, request, grid_box_id=None):
+        """
+        Delete a grid box and handle cascading operations:
+        1. Trash all grids in this grid box
+        2. Delete the grid box itself
+        
+        URL: DELETE /api/list/pucks/grid-box/{grid_box_id}/
+        
+        Response:
+        {
+            "success": true,
+            "message": "Grid box 'box1' deleted successfully",
+            "stats": {
+                "grids_trashed": 3,
+                "grid_box_deleted": true,
+                "puck_id": 5,
+                "puck_name": "puck1"
+            }
+        }
+        """
+        try:
+            from django.db import transaction
+            
+            # Get the grid box to delete
+            try:
+                grid_box = CryoGridBox.objects.select_related('puck').get(id=grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid box not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            grid_box_name = grid_box.name
+            puck_id = grid_box.puck.id if grid_box.puck else None
+            puck_name = grid_box.puck.name if grid_box.puck else None
+            
+            stats = {
+                'grids_trashed': 0,
+                'grid_box_deleted': False,
+                'puck_id': puck_id,
+                'puck_name': puck_name
+            }
+            
+            with transaction.atomic():
+                # Get all grids in this grid box that are not already trashed
+                grids = CryoGrid.objects.filter(
+                    grid_box=grid_box,
+                    trashed=False
+                )
+                
+                # Trash all grids and remove them from the grid box
+                grids_updated = grids.update(
+                    trashed=True,
+                    grid_box=None,
+                    position_in_box=None
+                )
+                stats['grids_trashed'] = grids_updated
+                
+                # Delete the grid box itself
+                grid_box.delete()
+                stats['grid_box_deleted'] = True
+            
+            return Response({
+                'success': True,
+                'message': f'Grid box "{grid_box_name}" deleted successfully',
+                'stats': stats
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Failed to delete grid box',
+                'detail': str(e) if settings.DEBUG else 'An error occurred while deleting the grid box',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @method_decorator(csrf_exempt)
     @action(detail=False, methods=['patch'], url_path='grid-box/(?P<grid_box_id>[0-9]+)/move')
     def move_grid_box(self, request, grid_box_id=None): 
