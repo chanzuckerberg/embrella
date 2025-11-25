@@ -14,6 +14,7 @@ interface DeleteGridBoxProps {
   selectedSlot: number | null;
   gridBoxData: GridBoxDetailResponse | null;
   selectedUser?: UserList | null;
+  onGridBoxDeleted: () => void;
 }
 
 export const DeleteGridBox: React.FC<DeleteGridBoxProps> = ({
@@ -23,6 +24,7 @@ export const DeleteGridBox: React.FC<DeleteGridBoxProps> = ({
   selectedSlot,
   gridBoxData,
   selectedUser,
+  onGridBoxDeleted,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const gridBoxId = gridBoxData?.grid_box?.grid_box_id;
@@ -40,50 +42,27 @@ export const DeleteGridBox: React.FC<DeleteGridBoxProps> = ({
     setIsDeleting(true);
 
     try {
-      // Get all occupied grids from the grid box
-      const occupiedGrids =
-        gridBoxData?.grid_box?.positions?.filter((position) => position.occupied && position.grid_id) || [];
+      const response = await fetch(`${DJANGO_URL}/api/list/pucks/grid-box/${gridBoxId}/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
 
-      // Trash all grids in the grid box
-      if (occupiedGrids.length > 0) {
-        const trashPromises = occupiedGrids.map((position) => {
-          return fetch(`${DJANGO_URL}/cryo_grids/update-grid-trashed/${position.grid_id}/`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-              trashed: true,
-            }),
-          });
-        });
+      const data = await response.json();
 
-        // Wait for all grids to be trashed
-        const responses = await Promise.all(trashPromises);
-
-        // Check if all requests were successful
-        const allSuccessful = responses.every((response) => response.ok);
-
-        if (!allSuccessful) {
-          console.error('Failed to trash some grids');
-          setIsDeleting(false);
-          return;
+      if (response.ok && data.success) {
+        if (onGridBoxDeleted) {
+          onGridBoxDeleted();
         }
+        // Close the dialog
+        onClose();
+      } else {
+        const errorMessage = data.error || data.detail || 'Failed to delete grid box';
+        console.error('Failed to delete grid box:', errorMessage);
+        setIsDeleting(false);
       }
-
-      // After all grids are trashed, proceed to delete the grid box
-      const prefillParams = new URLSearchParams();
-
-      if (selectedUser?.id) {
-        prefillParams.append('return_user_id', selectedUser.id.toString());
-      }
-      if (selectedPuck?.id) {
-        prefillParams.append('return_puck_id', selectedPuck.id.toString());
-      }
-
-      const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogridbox/${gridBoxId}/delete/?${prefillParams.toString()}`;
-      window.location.href = adminUrl;
     } catch (error) {
       console.error('Error deleting grid box:', error);
       setIsDeleting(false);
