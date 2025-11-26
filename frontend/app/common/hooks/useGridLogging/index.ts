@@ -30,6 +30,8 @@ export { useCreateFreezingSession } from './create/useCreateFreezingSession';
 export { useMoveGrid } from './move/useMoveGrid';
 export { useMoveGridBox } from './move/useMoveGridBox';
 
+// Update hooks
+export { useUpdateGridBox } from './update/useUpdateGridBox';
 // Detail hooks
 export { useGridLoggingGridDetails } from './details/useGridLoggingGridDetails';
 export { useGridLoggingGridBoxDetail } from './details/useGridLoggingGridBoxDetail';
