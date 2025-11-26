@@ -449,6 +449,76 @@ class PuckViewSet(viewsets.ModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['patch'], url_path='grid-box/(?P<grid_box_id>[0-9]+)/update')
+    def update_grid_box(self, request, grid_box_id=None):
+        """
+        Update a grid box's information
+        URL: PATCH /api/list/pucks/grid-box/{grid_box_id}/
+        
+        Request Body:
+        {
+            "name": "NewBoxName",
+            "color": "FF5733",
+            "numbering": "ucw"
+        }
+        
+        Response:
+        {
+            "success": True,
+            "message": "Grid box updated successfully",
+            "grid_box": {...}
+        }
+        """
+        try:
+            from cryo_grids.models import CryoGridBox
+            
+            # Get the grid box
+            try:
+                grid_box = CryoGridBox.objects.get(id=grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid box not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Get the update data from request
+            name = request.data.get('name')
+            color = request.data.get('color')
+            numbering = request.data.get('numbering')
+            
+            # Update fields if provided
+            if name is not None:
+                grid_box.name = name
+            if color is not None:
+                grid_box.color = color
+            if numbering is not None:
+                grid_box.numbering = numbering
+            
+            grid_box.save()
+            
+            # Prepare response
+            return Response({
+                'success': True,
+                'message': 'Grid box updated successfully',
+                'grid_box': {
+                    'id': grid_box.id,
+                    'name': grid_box.name,
+                    'color': grid_box.color,
+                    'color_display': grid_box.get_color_display(),
+                    'numbering': grid_box.numbering,
+                    'numbering_display': grid_box.get_numbering_display(),
+                    'position_in_puck': grid_box.position_in_puck,
+                    'max_grids': grid_box.max_grids,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Failed to update grid box',
+                'detail': str(e) if settings.DEBUG else 'An error occurred while updating the grid box',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @method_decorator(csrf_exempt)
     @action(detail=False, methods=['delete'], url_path='grid-box/(?P<grid_box_id>[0-9]+)')
