@@ -2,7 +2,6 @@ import { FreezingSessionDetail } from '../entities/freezingSessionList';
 import { Specimen } from '../entities/specimenList';
 import { ProjectData } from '../entities/projectList';
 
-
 export interface GridDetailsResponse {
   grid_name: string;
   user: string;

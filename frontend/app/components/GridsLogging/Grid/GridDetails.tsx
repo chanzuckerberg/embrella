@@ -50,7 +50,7 @@ const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
   specimen: data.specimen?.name || '',
   specimenId: data.specimen?.id || null,
   project: data.project?.name || '',
-  projectId: data.project?.id || null, 
+  projectId: data.project?.id || null,
   blotTime: data.parameters?.blot_time || 0,
   blotForce: data.parameters?.blot_force || 0,
   blotDistance: data.parameters?.blot_distance || 0,
