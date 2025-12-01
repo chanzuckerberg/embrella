@@ -1,6 +1,7 @@
+import { FreezingSessionDetail } from '../entities/freezingSessionList';
 import { Specimen } from '../entities/specimenList';
-import { FreezingSession } from '../entities/freezingSessionList';
-import { Project } from '../entities/projectList';
+import { ProjectData } from '../entities/projectList';
+
 
 export interface GridDetailsResponse {
   grid_name: string;
@@ -9,9 +10,9 @@ export interface GridDetailsResponse {
   clipped: boolean;
   trashed: boolean;
   location: GridLocation;
-  freezing_session: FreezingSession | null;
+  freezing_session: FreezingSessionDetail | null;
   specimen: Specimen | null;
-  project: Project | null;
+  project: ProjectData | null;
   position_in_box: number;
   copy_number: number;
   parameters: GridParameters;

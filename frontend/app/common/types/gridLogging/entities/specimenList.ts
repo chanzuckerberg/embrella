@@ -5,8 +5,9 @@ export interface Specimen {
   samples: Sample[];
   notes: string;
   notes_page: number | null;
-  notes_page_url: string | null;
-  display_name: string;
+  notes_page_url?: string | null;
+  display_name?: string;
+  name?: string;
 }
 
 export interface CreateSampleData {
