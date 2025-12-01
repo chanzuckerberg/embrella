@@ -267,7 +267,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
             disabled={!choicesLoaded || !specimensLoaded}
             options={transformedSpecimens.map((specimen) => ({
               value: specimen.id.toString(),
-              label: specimen.display_name,
+              label: specimen.display_name || `Specimen #${specimen.id}`,
             }))}
           />
           <FormFieldWithAdd
