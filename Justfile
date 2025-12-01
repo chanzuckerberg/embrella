@@ -32,11 +32,13 @@ info:
 #############################################
 
 # Update conda environment from yml file
-condasync:
+# condasync:
+#     #!/bin/bash
+#     # if [ ! conda env list | grep -q "umbrella" ]; then conda env create -f environment.yml fi
+#     mamba env update --name umbrella --file environment.yml --prune
+ condasync:
     #!/bin/bash
-    # if [ ! conda env list | grep -q "umbrella" ]; then conda env create -f environment.yml fi
-    mamba env update --name umbrella --file environment.yml --prune
-
+    echo "TEMP: skipping mamba env update (condasync is a no-op)"
 #############################################
 # Environment Variable Helpers
 #############################################
