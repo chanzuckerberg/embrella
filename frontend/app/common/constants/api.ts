@@ -62,6 +62,7 @@ export enum POST_API {
   MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
   MOVE_GRID = '/api/list/grids/grid_id/move/',
   UPDATE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/update/',
+  UPDATE_GRID = '/api/list/grids/grid_id/update/',
   CREATE_FREEZING_SESSION = '/api/list/freezing-sessions/',
   CREATE_PROJECT = '/projects/create_project/',
   CREATE_SAMPLE = '/api/list/samples/',
