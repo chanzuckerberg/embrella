@@ -374,7 +374,8 @@ deploy stage envfile branch:
     ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && if conda info --envs | grep -q "^umbrella"; then echo "Conda env umbrella already exists"; else conda env create -f environment.yml; fi'
 
     echocolor $GREEN "Syncing conda env"
-    ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && conda activate umbrella && time just condasync'
+    ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && export MAMBA_NO_LOW_SPEED_LIMIT=1 && conda activate umbrella && time just condasync'
+
 
     echocolor $GREEN "Updating backend dependencies"
     ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && conda activate umbrella && time just updatebackenddeps'
