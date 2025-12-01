@@ -36,7 +36,7 @@ info:
 #     #!/bin/bash
 #     # if [ ! conda env list | grep -q "umbrella" ]; then conda env create -f environment.yml fi
 #     mamba env update --name umbrella --file environment.yml --prune
- condasync:
+condasync:
     #!/bin/bash
     echo "TEMP: skipping mamba env update (condasync is a no-op)"
 #############################################
