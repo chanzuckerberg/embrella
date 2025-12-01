@@ -1,4 +1,4 @@
-import { Region } from '../../../idetik/packages/core/src/data/region';
+import type { Region } from '@idetik/core';
 
 const DEFAULT_REGION: Region = [
   { dimension: 'z', index: { type: 'full' } },

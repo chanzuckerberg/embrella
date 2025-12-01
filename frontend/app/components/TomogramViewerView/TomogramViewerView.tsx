@@ -4,9 +4,9 @@ import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
-import { OmeZarrImageViewer } from '../../../idetik/packages/react/src/components/viewers/OmeZarrImageViewer';
+import { OmeZarrImageViewer, useIdetik } from '@idetik/react';
 import { getRegionFromZattrs } from './utils';
-import { Region } from '../../../idetik/packages/core/src/data/region';
+import type { Region, Layer, ImageSeriesLayer, ChannelProps } from '@idetik/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
@@ -15,7 +15,6 @@ import { DJANGO_URL } from '@app/common/constants/api';
 // import { UserContext } from '@app/common/context/UserProvider';
 // import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
-import { useIdetik } from '../../../idetik/packages/react/src/components/hooks/useIdetik';
 
 // Types
 interface TomogramViewerProps {
@@ -93,8 +92,8 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
 export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerProps) => {
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
   const [region, setRegion] = useState<Region | null>(null);
+  const { runtime } = useIdetik();
   // const currentUser = useContext(UserContext);
-  const { isInitialized, imageSeriesLayer, channels } = useIdetik();
   // Commented out to allow everyone write access
   // const userCanReview = currentUser?.id === review.owner.id;
   const userCanReview = true; // Everyone can review now
@@ -112,16 +111,24 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
 
       // Update the image layer's contrast limits if available
-      if (isInitialized && imageSeriesLayer && channels.length > 0) {
-        const updatedChannels = [...channels];
-        updatedChannels[0] = {
-          ...updatedChannels[0],
-          contrastLimits: newLimits,
-        };
-        imageSeriesLayer.setChannelProps(updatedChannels);
+      if (runtime?.viewports?.[0]?.layerManager) {
+        const layerManager = runtime.viewports[0].layerManager;
+        // Find the ImageSeriesLayer in the layers
+        const imageLayer = layerManager.layers.find(
+          (layer: Layer): layer is ImageSeriesLayer => layer.type === 'ImageSeriesLayer'
+        );
+
+        if (imageLayer && imageLayer.channelProps && imageLayer.channelProps.length > 0) {
+          const updatedChannels: ChannelProps[] = [...imageLayer.channelProps];
+          updatedChannels[0] = {
+            ...updatedChannels[0],
+            contrastLimits: newLimits,
+          };
+          imageLayer.setChannelProps(updatedChannels);
+        }
       }
     },
-    [isInitialized, imageSeriesLayer, channels]
+    [runtime]
   );
 
   const saveTomogram = async () => {
