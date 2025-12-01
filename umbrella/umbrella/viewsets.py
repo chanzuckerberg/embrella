@@ -1250,6 +1250,191 @@ class CryoGridViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+    @action(detail=False, methods=['patch'], url_path='(?P<grid_id>[0-9]+)/update')
+    @method_decorator(csrf_exempt)
+    def update_grid(self, request, grid_id=None):
+        """
+        Update a grid's information
+        URL: PATCH /api/list/grids/{grid_id}/update/
+        
+        Request Body:
+        {
+            "name": "Grid1",
+            "copy_number": 1,
+            "notes": "Updated notes",
+            "freezing_session": 2,  // ID
+            "specimen": 5,  // ID
+            "intended_project": 3,  // ID
+            "position_in_box": 2,
+            "blot_time": 6.5,
+            "blot_force": 1.0,
+            "blot_distance": 2.0
+        }
+        
+        Response:
+        {
+            "success": True,
+            "message": "Grid updated successfully",
+            "grid": {...}
+        }
+        """
+        try:
+            # Get the grid
+            try:
+                grid = CryoGrid.objects.get(id=grid_id, trashed=False)
+            except CryoGrid.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid not found or has been trashed',
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Get the update data from request
+            name = request.data.get('name')
+            copy_number = request.data.get('copy_number')
+            notes = request.data.get('notes')
+            freezing_session_id = request.data.get('freezing_session')
+            specimen_id = request.data.get('specimen')
+            intended_project_id = request.data.get('intended_project')
+            position_in_box = request.data.get('position_in_box')
+            blot_time = request.data.get('blot_time')
+            blot_force = request.data.get('blot_force')
+            blot_distance = request.data.get('blot_distance')
+            
+            # Update fields if provided
+            if name is not None:
+                grid.name = name
+                
+            if copy_number is not None:
+                try:
+                    grid.copy_number = int(copy_number)
+                except (ValueError, TypeError):
+                    return Response({
+                        'success': False,
+                        'error': 'Invalid copy_number value',
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+            if notes is not None:
+                grid.notes = notes
+                
+            if freezing_session_id is not None:
+                if freezing_session_id == '':
+                    grid.freezing_session = None
+                else:
+                    try:
+                        freezing_session = PlungeFreezingSession.objects.get(id=freezing_session_id)
+                        grid.freezing_session = freezing_session
+                    except PlungeFreezingSession.DoesNotExist:
+                        return Response({
+                            'success': False,
+                            'error': 'Freezing session not found',
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                        
+            if specimen_id is not None:
+                if specimen_id == '':
+                    grid.specimen = None
+                else:
+                    try:
+                        specimen = Specimen.objects.get(id=specimen_id)
+                        grid.specimen = specimen
+                    except Specimen.DoesNotExist:
+                        return Response({
+                            'success': False,
+                            'error': 'Specimen not found',
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                        
+            if intended_project_id is not None:
+                if intended_project_id == '':
+                    grid.intended_project = None
+                else:
+                    try:
+                        project = Project.objects.get(id=intended_project_id)
+                        grid.intended_project = project
+                    except Project.DoesNotExist:
+                        return Response({
+                            'success': False,
+                            'error': 'Project not found',
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                        
+            if position_in_box is not None:
+                try:
+                    new_position = int(position_in_box)
+                    # Check if position is already occupied in the same grid box
+                    if grid.grid_box:
+                        existing_grid = CryoGrid.objects.filter(
+                            grid_box=grid.grid_box,
+                            position_in_box=new_position,
+                            trashed=False
+                        ).exclude(id=grid_id).first()
+                        
+                        if existing_grid:
+                            return Response({
+                                'success': False,
+                                'error': f'Position {new_position} is already occupied in this grid box',
+                            }, status=status.HTTP_400_BAD_REQUEST)
+                            
+                    grid.position_in_box = new_position
+                except (ValueError, TypeError):
+                    return Response({
+                        'success': False,
+                        'error': 'Invalid position_in_box value',
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+            if blot_time is not None:
+                try:
+                    grid.blot_time = float(blot_time)
+                except (ValueError, TypeError):
+                    return Response({
+                        'success': False,
+                        'error': 'Invalid blot_time value',
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+            if blot_force is not None:
+                try:
+                    grid.blot_force = float(blot_force)
+                except (ValueError, TypeError):
+                    return Response({
+                        'success': False,
+                        'error': 'Invalid blot_force value',
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+            if blot_distance is not None:
+                try:
+                    grid.blot_distance = float(blot_distance)
+                except (ValueError, TypeError):
+                    return Response({
+                        'success': False,
+                        'error': 'Invalid blot_distance value',
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            
+            grid.save()
+            
+            # Prepare response with updated grid data
+            return Response({
+                'success': True,
+                'message': 'Grid updated successfully',
+                'grid': {
+                    'id': grid.id,
+                    'name': grid.name,
+                    'copy_number': grid.copy_number,
+                    'notes': grid.notes,
+                    'freezing_session': grid.freezing_session.id if grid.freezing_session else None,
+                    'specimen': grid.specimen.id if grid.specimen else None,
+                    'intended_project': grid.intended_project.id if grid.intended_project else None,
+                    'position_in_box': grid.position_in_box,
+                    'blot_time': grid.blot_time,
+                    'blot_force': grid.blot_force,
+                    'blot_distance': grid.blot_distance,
+                    'user': grid.user.username if grid.user else None,
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Failed to update grid',
+                'detail': str(e) if settings.DEBUG else 'An error occurred while updating the grid',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=['post'], url_path='clip-all-in-box/(?P<grid_box_id>[0-9]+)')
     @method_decorator(csrf_exempt)
     def clip_all_in_box(self, request, grid_box_id=None):
