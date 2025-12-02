@@ -146,7 +146,6 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
     }
   }, [currentZIndex, zAxisMetadata]);
 
-
   // Handle z-slice navigation - update state, which triggers updateZSlice via useEffect
   const handleZIndexChange = useCallback(
     (newZIndex: number) => {
