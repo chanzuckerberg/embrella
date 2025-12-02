@@ -135,16 +135,26 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
         """
         Custom validation for grid box creation/update
         """
-        name = data.get('name')
-        puck = data.get('puck')
-        position_in_puck = data.get('position_in_puck')
-
         instance = self.instance
+        
+        # For updates, use existing values if not provided in data (partial update support)
+        if instance:
+            name = data.get('name', instance.name)
+            puck = data.get('puck', instance.puck)
+            position_in_puck = data.get('position_in_puck', instance.position_in_puck)
+        else:
+            # For creation, get from data only
+            name = data.get('name')
+            puck = data.get('puck')
+            position_in_puck = data.get('position_in_puck')
 
-        if name:
-            name_query = CryoGridBox.objects.filter( puck=puck,
-            position_in_puck=position_in_puck,
-            name=name)
+        # Validate unique constraint on name + puck + position_in_puck
+        if name and puck and position_in_puck:
+            name_query = CryoGridBox.objects.filter(
+                puck=puck,
+                position_in_puck=position_in_puck,
+                name=name
+            )
             if instance:  # If updating, exclude current instance
                 name_query = name_query.exclude(pk=instance.pk)
             if name_query.exists():
@@ -152,6 +162,7 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
                     'name': f'A grid box with name "{name}" at position {position_in_puck} in this puck already exists.',
                 })
 
+        # Validate unique constraint on puck + position_in_puck
         if puck and position_in_puck:
             position_query = CryoGridBox.objects.filter(
                 puck=puck,

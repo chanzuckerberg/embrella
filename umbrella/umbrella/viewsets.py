@@ -482,21 +482,11 @@ class PuckViewSet(viewsets.ModelViewSet):
                     'error': 'Grid box not found',
                 }, status=status.HTTP_404_NOT_FOUND)
             
-            # Get the update data from request
-            name = request.data.get('name')
-            color = request.data.get('color')
-            numbering = request.data.get('numbering')
-            
-            # Update fields if provided
-            if name is not None:
-                grid_box.name = name
-            if color is not None:
-                grid_box.color = color
-            if numbering is not None:
-                grid_box.numbering = numbering
-            
-            grid_box.save()
-            
+            # Use serializer for validation and update
+            serializer = CryoGridBoxSerializer(grid_box, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+                
             # Prepare response
             return Response({
                 'success': True,
@@ -512,6 +502,13 @@ class PuckViewSet(viewsets.ModelViewSet):
                     'max_grids': grid_box.max_grids,
                 }
             }, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
             
         except Exception as e:
             return Response({
