@@ -5,7 +5,7 @@ import '@app/globals.css';
 import { NavbarWrapper } from '@app/common/components/NavBarWrapper';
 import { CustomThemeProvider } from './common/CustomThemeProvider';
 import { UserProvider } from './common/context/UserProvider';
-import { ClientIdetikProvider } from './common/ClientProviders';
+import { IdetikProviderWrapper } from './common/components/IdetikProviderWrapper';
 import { FeatureFlagsProvider } from './common/context/FeatureFlagsProvider';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME } from './common/types/cookies';
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ClientIdetikProvider>
+        <IdetikProviderWrapper>
           <AppRouterCacheProvider options={CACHE_PROVIDER_OPTIONS}>
             <CustomThemeProvider>
               <UserProvider>
@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </UserProvider>
             </CustomThemeProvider>
           </AppRouterCacheProvider>
-        </ClientIdetikProvider>
+        </IdetikProviderWrapper>
       </body>
     </html>
   );

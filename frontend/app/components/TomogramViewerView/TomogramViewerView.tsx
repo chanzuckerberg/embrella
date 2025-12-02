@@ -1,12 +1,14 @@
-import { useReducer, useEffect, useCallback, useState } from 'react';
+'use client';
+
+import { useReducer, useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
-import { OmeZarrImageViewer, useIdetik } from '@idetik/react';
-import { getRegionFromZattrs } from './utils';
-import type { Region, Layer, ImageSeriesLayer, ChannelProps } from '@idetik/core';
+import { OmeZarrChunkedImageViewer } from './components/OmeZarrChunkedImageViewer/OmeZarrChunkedImageViewer';
+import { getRegionFromZattrs, getZAxisMetadata } from './utils';
+import { ChunkedImageLayer } from '@idetik/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
@@ -15,8 +17,18 @@ import { DJANGO_URL } from '@app/common/constants/api';
 // import { UserContext } from '@app/common/context/UserProvider';
 // import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
+import { useIdetik } from '@idetik/react';
 
 // Types
+interface ChannelProps {
+  contrastLimits: [number, number];
+}
+
+interface LayerWithChannelMethods {
+  channelProps: ChannelProps[];
+  setChannelProps: (channels: ChannelProps[]) => void;
+}
+
 interface TomogramViewerProps {
   review: Review;
   onReviewUpdate: (review: Review) => void;
@@ -91,14 +103,61 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
 
 export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerProps) => {
   const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
-  const [region, setRegion] = useState<Region | null>(null);
-  const { runtime } = useIdetik();
+  const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
+  const [zAxisMetadata, setZAxisMetadata] = useState<{ min: number; max: number; count: number } | null>(null);
+  const [, setZMaxIndex] = useState<number | undefined>(undefined);
+  const updateZSliceRef = useRef<((zValue: number) => void) | null>(null);
   // const currentUser = useContext(UserContext);
+  // const { isInitialized, imageSeriesLayer, channels } = useIdetik();
+  const { runtime } = useIdetik();
   // Commented out to allow everyone write access
   // const userCanReview = currentUser?.id === review.owner.id;
   const userCanReview = true; // Everyone can review now
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
   const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
+
+  // Memoize z prop object - keep index stable to prevent re-renders
+  // Use updateZSlice callback for z-index changes to preserve zoom/camera state
+  const zProp = useMemo(() => {
+    if (!zAxisMetadata) return undefined;
+    const initIndex = Math.floor(zAxisMetadata.count / 2);
+    return {
+      initIndex,
+      index: initIndex, // Keep stable, use updateZSlice callback for changes
+      setMaxIndex: setZMaxIndex,
+    };
+  }, [zAxisMetadata]);
+
+  // Use runtime when it's ready
+  useEffect(() => {
+    if (!runtime) {
+      return; // Runtime not ready yet
+    }
+
+    // Additional runtime setup can go here
+  }, [runtime]);
+
+  // Update z index when currentZIndex changes using the updateZSlice callback
+  // This avoids re-rendering the component and preserves zoom/camera state
+  useEffect(() => {
+    if (updateZSliceRef.current && zAxisMetadata) {
+      const clampedZIndex = Math.max(0, Math.min(currentZIndex, zAxisMetadata.count - 1));
+      updateZSliceRef.current(clampedZIndex);
+    }
+  }, [currentZIndex, zAxisMetadata]);
+
+  // Handle z-slice navigation - update state, which triggers updateZSlice via useEffect
+  const handleZIndexChange = useCallback(
+    (newZIndex: number) => {
+      if (newZIndex !== currentZIndex && zAxisMetadata) {
+        setCurrentZIndex(newZIndex);
+      }
+    },
+    [currentZIndex, zAxisMetadata]
+  );
+
+  // For now, use React state for UI updates (hybrid approach)
+  // The layer will still be updated directly, but UI uses React state
 
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
@@ -108,23 +167,23 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         return;
       }
 
+      // Update React state for UI synchronization
       dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
 
-      // Update the image layer's contrast limits if available
-      if (runtime?.viewports?.[0]?.layerManager) {
-        const layerManager = runtime.viewports[0].layerManager;
-        // Find the ImageSeriesLayer in the layers
-        const imageLayer = layerManager.layers.find(
-          (layer: Layer): layer is ImageSeriesLayer => layer.type === 'ImageSeriesLayer'
-        );
-
-        if (imageLayer && imageLayer.channelProps && imageLayer.channelProps.length > 0) {
-          const updatedChannels: ChannelProps[] = [...imageLayer.channelProps];
-          updatedChannels[0] = {
-            ...updatedChannels[0],
-            contrastLimits: newLimits,
-          };
-          imageLayer.setChannelProps(updatedChannels);
+      // Also update the layer directly for actual contrast changes
+      if (runtime && runtime.viewports[0].layerManager.layers.length > 0) {
+        const layer = runtime.viewports[0].layerManager.layers[0]; // Get the first (should be only) layer
+        // Type guard to ensure layer has channel properties
+        if ('channelProps' in layer && 'setChannelProps' in layer) {
+          const channels = (layer as LayerWithChannelMethods).channelProps; // Cast to access channelProps
+          if (channels && channels.length > 0) {
+            const updatedChannels = [...channels];
+            updatedChannels[0] = {
+              ...channels[0],
+              contrastLimits: newLimits,
+            };
+            (layer as LayerWithChannelMethods).setChannelProps(updatedChannels);
+          }
         }
       }
     },
@@ -236,8 +295,16 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       }
 
       if (detail.zarrPath) {
-        const region = await getRegionFromZattrs(detail.zarrPath);
-        setRegion(region);
+        // Get z-axis metadata and start with middle z-slice
+        // z axis metadata specifies the valid range of z indices
+        const zMeta = await getZAxisMetadata(detail.zarrPath);
+        setZAxisMetadata(zMeta);
+
+        const initialZIndex = Math.floor(zMeta.count / 2); // Start at middle slice
+        setCurrentZIndex(initialZIndex);
+        setZMaxIndex(zMeta.count - 1);
+
+        await getRegionFromZattrs(detail.zarrPath, initialZIndex);
       }
     };
     loadDetail();
@@ -280,18 +347,22 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           contrastLimits={state.contrastLimits}
           onContrastLimitsChange={handleContrastLimitsChange}
           contrastRange={state.contrastRange}
+          currentZIndex={currentZIndex}
+          zAxisMetadata={zAxisMetadata || undefined}
+          onZIndexChange={handleZIndexChange}
         />
         <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
-          {state.detail?.zarrPath !== undefined && region !== null && (
-            <OmeZarrImageViewer
+          {state.detail?.zarrPath !== undefined && zAxisMetadata !== null && zProp !== undefined && (
+            <OmeZarrChunkedImageViewer
+              key={`${state.detail.zarrPath}-${state.selectedTomogramId}`}
               sourceUrl={state.detail.zarrPath}
-              region={region}
-              fallbackContrastLimits={state.contrastLimits}
-              resolutionLevel={state.detail.reconstructionType?.toLowerCase() === 'sart' ? 0 : 1}
-              seriesDimensionName="z"
-              shouldLoadMiddleZ
-              shouldAutoLoadAllSlices
+              z={zProp}
+              fallbackContrastLimits={state.detail?.contrastLimits || [-0.05, 0.05]}
               classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
+              onLayerCreated={(layer: ChunkedImageLayer, updateZSlice?: (zValue: number) => void) => {
+                updateZSliceRef.current = updateZSlice || null;
+                // The useEffect will handle setting the initial z index when updateZSliceRef is set
+              }}
             />
           )}
         </div>

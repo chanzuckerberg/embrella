@@ -1,5 +1,4 @@
 import json
-from math import ceil
 import os
 import os.path
 import random
@@ -7,6 +6,7 @@ import socket
 import traceback
 import uuid
 from datetime import datetime, timezone
+from math import ceil
 from urllib.parse import urljoin
 
 import paramiko
@@ -20,6 +20,7 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from processes.models import (
     Annotation,
     Pipe,
@@ -35,11 +36,10 @@ from processes.utils import SortMetadataModel
 from processes.views import get_base_url
 from projects.models import Project
 from rapidfuzz import fuzz, process
-from tem.models import MsiSession, Project
-from .contrast_limits import compute_optimal_contrast_limits
-from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework.decorators import api_view
+from tem.models import MsiSession, Project
 
+from .contrast_limits import compute_optimal_contrast_limits
 
 HOST = "10.50.120.90"
 PORT = 22
@@ -280,7 +280,7 @@ class ReviewView(View):
         """
         if review_id:
             return self.get_review_metadata(request, review_id)
-        
+
         search = ''
         sort_field = 'updatedAt'
         sort_order = 'desc'
@@ -328,7 +328,7 @@ class ReviewView(View):
                 filtered_reviews = []
 
                 for review in all_reviews:
-                    if (fuzz.ratio(search, review.review_name) >= SIMILARITY_THRESHOLD or 
+                    if (fuzz.ratio(search, review.review_name) >= SIMILARITY_THRESHOLD or
                         fuzz.ratio(search, review.requestor.username) >= SIMILARITY_THRESHOLD or
                         fuzz.ratio(search, review.msi_session.name) >= SIMILARITY_THRESHOLD or
                         fuzz.ratio(search, review.reconstruction_type) >= SIMILARITY_THRESHOLD or
@@ -376,7 +376,7 @@ class ReviewView(View):
                         "name": review.review_name,
                         "type": review.review_type,
                         "url": f"{get_base_url()}/admin/processes/review/{review.review_id}",
-                        "annotationObjects": review.objects_of_interest.split(',') 
+                        "annotationObjects": review.objects_of_interest.split(',')
                             if review.objects_of_interest is not None else []
                     },
                     "session": {
@@ -463,7 +463,7 @@ class ReviewView(View):
                 }
                 for tomo in tomograms
             ]
-            
+
             # Sort tomograms by position (handle compound position numbers like position_1_2, position_100_1)
             def extract_position_number(position_str):
                 if position_str == "None":
@@ -485,9 +485,9 @@ class ReviewView(View):
                         return float('inf')  # Invalid format
                 except (ValueError, IndexError):
                     return float('inf')  # Put invalid positions at the end
-            
+
             tomograms_list.sort(key=lambda x: extract_position_number(x['position']))
-            
+
             # Debug: Print positions after sorting
             print(f"Positions after sorting: {[tomo['position'] for tomo in tomograms_list]}")
 
@@ -498,7 +498,7 @@ class ReviewView(View):
                     "id": str(review.requestor.id) if review.requestor else None,
                     "name": review.requestor.username if review.requestor else None
                 },
-                "availableAnnotationObjects": review.objects_of_interest.split(',') 
+                "availableAnnotationObjects": review.objects_of_interest.split(',')
                     if review.objects_of_interest is not None else [],
                 "tomograms": tomograms_list
             }
@@ -983,7 +983,7 @@ class ReviewTomogramView(View):
               # Extract sessionid and runid from tomogram
             session_id = tomogram.session.name if tomogram.session else None
             run_id = tomogram.run_id if tomogram.run_id else None
-            
+
 
             # Construct zarr path based on reconstruction type
             if review.reconstruction_type.lower() == "sart":
@@ -997,9 +997,9 @@ class ReviewTomogramView(View):
                 job_name = "denoise"
 
             # Updated zarr path construction - migrated to new location
-            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_id}/{run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+            # response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_id}/{run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
 # response_data["zarrPath"] = "https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/"
-            # response_data["zarrPath"] = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25jun02a/run001/vol003/Position_114_8_Vol.zarr/"
+            response_data["zarrPath"] = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25aug25a/run001/vol001/Position_1_Vol.zarr/"
             print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
             try:
                 contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
@@ -1013,7 +1013,7 @@ class ReviewTomogramView(View):
                 response_data["contrastMethod"] = "default"
                 response_data["contrastComputed"] = False
             # print(f"SART reconstruction - computed contrast limits: {response_data['contrastLimits']}")
-            
+
             # Adjust contrast limits based on reconstruction type
             # if review.reconstruction_type.lower() == "sart":
             #     # Compute contrast limits for SART using contrast_limits.py
