@@ -6,7 +6,7 @@ import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
-import { OmeZarrChunkedImageViewer } from './components/OmeZarrChunkedImageViewer/OmeZarrChunkedImageViewer';
+import { OmeZarrChunkedImageViewer } from '@idetik/react';
 import { getRegionFromZattrs, getZAxisMetadata } from './utils';
 import { ChunkedImageLayer } from '@idetik/core';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -145,6 +145,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       updateZSliceRef.current(clampedZIndex);
     }
   }, [currentZIndex, zAxisMetadata]);
+
 
   // Handle z-slice navigation - update state, which triggers updateZSlice via useEffect
   const handleZIndexChange = useCallback(
@@ -361,7 +362,11 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
               onLayerCreated={(layer: ChunkedImageLayer, updateZSlice?: (zValue: number) => void) => {
                 updateZSliceRef.current = updateZSlice || null;
-                // The useEffect will handle setting the initial z index when updateZSliceRef is set
+                // Set initial z index
+                if (updateZSlice && zAxisMetadata) {
+                  const clampedZIndex = Math.max(0, Math.min(currentZIndex, zAxisMetadata.count - 1));
+                  updateZSlice(clampedZIndex);
+                }
               }}
             />
           )}
