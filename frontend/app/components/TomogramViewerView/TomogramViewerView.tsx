@@ -8,7 +8,6 @@ import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
 import { OmeZarrChunkedImageViewer } from '@idetik/react';
 import { getRegionFromZattrs, getZAxisMetadata } from './utils';
-import { ChunkedImageLayer } from '@idetik/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
@@ -118,10 +117,11 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   // Memoize z prop object - update index when currentZIndex changes
   // The component's slice update effect will handle this without re-initialization
   const zProp = useMemo(() => {
-    if (!zAxisMetadata) return undefined;
-    const initIndex = Math.floor(zAxisMetadata.count / 2);
-    // Ensure currentZIndex is within valid bounds
-    const clampedZIndex = Math.max(0, Math.min(currentZIndex, zAxisMetadata.count - 1));
+    if (!zAxisMetadata || zAxisMetadata.count === 0) return undefined;
+    // Ensure both initIndex and index are within valid bounds
+    const maxIndex = zAxisMetadata.count - 1;
+    const initIndex = Math.max(0, Math.min(Math.floor(zAxisMetadata.count / 2), maxIndex));
+    const clampedZIndex = Math.max(0, Math.min(currentZIndex, maxIndex));
     return {
       initIndex,
       index: clampedZIndex,
@@ -134,23 +134,8 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
     return state.detail?.contrastLimits || [-0.05, 0.05];
   }, [state.detail?.contrastLimits]);
 
-  // Memoize onLayerCreated callback to prevent re-initialization
-  const handleLayerCreated = useCallback((_layer: ChunkedImageLayer) => {
-    // Layer created - component handles z updates via prop changes
-    // The slice update effect will handle z.index changes without re-initialization
-  }, []);
-
   // Memoize classNames object to prevent re-initialization
   const viewerClassNames = useMemo(() => ({ root: 'bg-dark-sds-color-primitive-gray-100' }), []);
-
-  // Use runtime when it's ready
-  useEffect(() => {
-    if (!runtime) {
-      return; // Runtime not ready yet
-    }
-
-    // Additional runtime setup can go here
-  }, [runtime]);
 
   // Handle z-slice navigation - just update state
   // The component's slice update effect will handle z.index prop changes without re-initialization
@@ -162,9 +147,6 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
     },
     [currentZIndex, zAxisMetadata]
   );
-
-  // For now, use React state for UI updates (hybrid approach)
-  // The layer will still be updated directly, but UI uses React state
 
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
@@ -271,6 +253,10 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
 
   useEffect(() => {
     const loadDetail = async () => {
+      // Reset z-index state when switching tomograms to prevent out-of-bounds errors
+      setZAxisMetadata(null);
+      setCurrentZIndex(0);
+
       const url = getRequestURLWithPathParams(DJANGO_URL, '/api/reviews/:reviewId/tomograms/:tomogramId', {
         reviewId: review.reviewId,
         tomogramId: state.selectedTomogramId,
@@ -307,7 +293,8 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
         const zMeta = await getZAxisMetadata(detail.zarrPath);
         setZAxisMetadata(zMeta);
 
-        const initialZIndex = Math.floor(zMeta.count / 2); // Start at middle slice
+        // Ensure initial index is within valid bounds
+        const initialZIndex = Math.max(0, Math.min(Math.floor(zMeta.count / 2), zMeta.count - 1));
         setCurrentZIndex(initialZIndex);
         setZMaxIndex(zMeta.count - 1);
 
@@ -366,7 +353,6 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               z={zProp}
               fallbackContrastLimits={fallbackContrastLimits}
               classNames={viewerClassNames}
-              onLayerCreated={handleLayerCreated}
             />
           )}
         </div>
