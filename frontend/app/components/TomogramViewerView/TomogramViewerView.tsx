@@ -106,7 +106,6 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
   const [zAxisMetadata, setZAxisMetadata] = useState<{ min: number; max: number; count: number } | null>(null);
   const [, setZMaxIndex] = useState<number | undefined>(undefined);
-  const updateZSliceRef = useRef<((zValue: number) => void) | null>(null);
   // const currentUser = useContext(UserContext);
   // const { isInitialized, imageSeriesLayer, channels } = useIdetik();
   const { runtime } = useIdetik();
@@ -116,17 +115,33 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
   const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
 
-  // Memoize z prop object - keep index stable to prevent re-renders
-  // Use updateZSlice callback for z-index changes to preserve zoom/camera state
+  // Memoize z prop object - update index when currentZIndex changes
+  // The component's slice update effect will handle this without re-initialization
   const zProp = useMemo(() => {
     if (!zAxisMetadata) return undefined;
     const initIndex = Math.floor(zAxisMetadata.count / 2);
+    // Ensure currentZIndex is within valid bounds
+    const clampedZIndex = Math.max(0, Math.min(currentZIndex, zAxisMetadata.count - 1));
     return {
       initIndex,
-      index: initIndex, // Keep stable, use updateZSlice callback for changes
+      index: clampedZIndex,
       setMaxIndex: setZMaxIndex,
     };
-  }, [zAxisMetadata]);
+  }, [zAxisMetadata, currentZIndex]);
+
+  // Memoize fallbackContrastLimits to prevent re-initialization
+  const fallbackContrastLimits = useMemo((): [number, number] => {
+    return state.detail?.contrastLimits || [-0.05, 0.05];
+  }, [state.detail?.contrastLimits]);
+
+  // Memoize onLayerCreated callback to prevent re-initialization
+  const handleLayerCreated = useCallback((layer: ChunkedImageLayer) => {
+    // Layer created - component handles z updates via prop changes
+    // The slice update effect will handle z.index changes without re-initialization
+  }, []);
+
+  // Memoize classNames object to prevent re-initialization
+  const viewerClassNames = useMemo(() => ({ root: 'bg-dark-sds-color-primitive-gray-100' }), []);
 
   // Use runtime when it's ready
   useEffect(() => {
@@ -137,16 +152,8 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
     // Additional runtime setup can go here
   }, [runtime]);
 
-  // Update z index when currentZIndex changes using the updateZSlice callback
-  // This avoids re-rendering the component and preserves zoom/camera state
-  useEffect(() => {
-    if (updateZSliceRef.current && zAxisMetadata) {
-      const clampedZIndex = Math.max(0, Math.min(currentZIndex, zAxisMetadata.count - 1));
-      updateZSliceRef.current(clampedZIndex);
-    }
-  }, [currentZIndex, zAxisMetadata]);
-
-  // Handle z-slice navigation - update state, which triggers updateZSlice via useEffect
+  // Handle z-slice navigation - just update state
+  // The component's slice update effect will handle z.index prop changes without re-initialization
   const handleZIndexChange = useCallback(
     (newZIndex: number) => {
       if (newZIndex !== currentZIndex && zAxisMetadata) {
@@ -357,16 +364,9 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
               key={`${state.detail.zarrPath}-${state.selectedTomogramId}`}
               sourceUrl={state.detail.zarrPath}
               z={zProp}
-              fallbackContrastLimits={state.detail?.contrastLimits || [-0.05, 0.05]}
-              classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
-              onLayerCreated={(layer: ChunkedImageLayer, updateZSlice?: (zValue: number) => void) => {
-                updateZSliceRef.current = updateZSlice || null;
-                // Set initial z index
-                if (updateZSlice && zAxisMetadata) {
-                  const clampedZIndex = Math.max(0, Math.min(currentZIndex, zAxisMetadata.count - 1));
-                  updateZSlice(clampedZIndex);
-                }
-              }}
+              fallbackContrastLimits={fallbackContrastLimits}
+              classNames={viewerClassNames}
+              onLayerCreated={handleLayerCreated}
             />
           )}
         </div>
