@@ -1,4 +1,4 @@
-from cryo_grids.models import CryoGrid, CryoGridBox, Puck, Cane, Specimen, Sample, PlungeFreezingSession
+from cryo_grids.models import CryoGrid, CryoGridBox, Puck, Cane, Specimen, Sample, PlungeFreezingSession, Project
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models.functions import Lower
@@ -1288,127 +1288,11 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                     'error': 'Grid not found or has been trashed',
                 }, status=status.HTTP_404_NOT_FOUND)
             
-            # Get the update data from request
-            name = request.data.get('name')
-            copy_number = request.data.get('copy_number')
-            notes = request.data.get('notes')
-            freezing_session_id = request.data.get('freezing_session')
-            specimen_id = request.data.get('specimen')
-            intended_project_id = request.data.get('intended_project')
-            position_in_box = request.data.get('position_in_box')
-            blot_time = request.data.get('blot_time')
-            blot_force = request.data.get('blot_force')
-            blot_distance = request.data.get('blot_distance')
+            # Use serializer for validation and update
+            serializer = CryoGridSerializer(grid, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
             
-            # Update fields if provided
-            if name is not None:
-                grid.name = name
-                
-            if copy_number is not None:
-                try:
-                    grid.copy_number = int(copy_number)
-                except (ValueError, TypeError):
-                    return Response({
-                        'success': False,
-                        'error': 'Invalid copy_number value',
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                    
-            if notes is not None:
-                grid.notes = notes
-                
-            if freezing_session_id is not None:
-                if freezing_session_id == '':
-                    grid.freezing_session = None
-                else:
-                    try:
-                        freezing_session = PlungeFreezingSession.objects.get(id=freezing_session_id)
-                        grid.freezing_session = freezing_session
-                    except PlungeFreezingSession.DoesNotExist:
-                        return Response({
-                            'success': False,
-                            'error': 'Freezing session not found',
-                        }, status=status.HTTP_400_BAD_REQUEST)
-                        
-            if specimen_id is not None:
-                if specimen_id == '':
-                    grid.specimen = None
-                else:
-                    try:
-                        specimen = Specimen.objects.get(id=specimen_id)
-                        grid.specimen = specimen
-                    except Specimen.DoesNotExist:
-                        return Response({
-                            'success': False,
-                            'error': 'Specimen not found',
-                        }, status=status.HTTP_400_BAD_REQUEST)
-                        
-            if intended_project_id is not None:
-                if intended_project_id == '':
-                    grid.intended_project = None
-                else:
-                    try:
-                        project = Project.objects.get(id=intended_project_id)
-                        grid.intended_project = project
-                    except Project.DoesNotExist:
-                        return Response({
-                            'success': False,
-                            'error': 'Project not found',
-                        }, status=status.HTTP_400_BAD_REQUEST)
-                        
-            if position_in_box is not None:
-                try:
-                    new_position = int(position_in_box)
-                    # Check if position is already occupied in the same grid box
-                    if grid.grid_box:
-                        existing_grid = CryoGrid.objects.filter(
-                            grid_box=grid.grid_box,
-                            position_in_box=new_position,
-                            trashed=False
-                        ).exclude(id=grid_id).first()
-                        
-                        if existing_grid:
-                            return Response({
-                                'success': False,
-                                'error': f'Position {new_position} is already occupied in this grid box',
-                            }, status=status.HTTP_400_BAD_REQUEST)
-                            
-                    grid.position_in_box = new_position
-                except (ValueError, TypeError):
-                    return Response({
-                        'success': False,
-                        'error': 'Invalid position_in_box value',
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                    
-            if blot_time is not None:
-                try:
-                    grid.blot_time = float(blot_time)
-                except (ValueError, TypeError):
-                    return Response({
-                        'success': False,
-                        'error': 'Invalid blot_time value',
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                    
-            if blot_force is not None:
-                try:
-                    grid.blot_force = float(blot_force)
-                except (ValueError, TypeError):
-                    return Response({
-                        'success': False,
-                        'error': 'Invalid blot_force value',
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                    
-            if blot_distance is not None:
-                try:
-                    grid.blot_distance = float(blot_distance)
-                except (ValueError, TypeError):
-                    return Response({
-                        'success': False,
-                        'error': 'Invalid blot_distance value',
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            
-            grid.save()
-            
-            # Prepare response with updated grid data
             return Response({
                 'success': True,
                 'message': 'Grid updated successfully',
@@ -1427,6 +1311,12 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                     'user': grid.user.username if grid.user else None,
                 }
             }, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
             
         except Exception as e:
             return Response({

@@ -199,14 +199,25 @@ class CryoGridSerializer(serializers.ModelSerializer):
         """
         Custom validation for grid creation/update
         """
-        grid_box = data.get('grid_box')
-        position_in_box = data.get('position_in_box')
-        name = data.get('name')
-        freezing_session = data.get('freezing_session')
-        specimen = data.get('specimen')
-        copy_number = data.get('copy_number', 1)
-        
         instance = self.instance
+        
+        # For updates, use existing values if not provided in data (partial update support)
+        if instance:
+            grid_box = data.get('grid_box', instance.grid_box)
+            position_in_box = data.get('position_in_box', instance.position_in_box)
+            name = data.get('name', instance.name)
+            freezing_session = data.get('freezing_session', instance.freezing_session)
+            specimen = data.get('specimen', instance.specimen)
+            copy_number = data.get('copy_number', instance.copy_number)
+        else:
+            # For creation, get from data only
+            grid_box = data.get('grid_box')
+            position_in_box = data.get('position_in_box')
+            name = data.get('name')
+            freezing_session = data.get('freezing_session')
+            specimen = data.get('specimen')
+            copy_number = data.get('copy_number', 1)
+        
         
         # Validate position is within grid box capacity
         if grid_box and position_in_box:
