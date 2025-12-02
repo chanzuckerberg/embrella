@@ -7,6 +7,7 @@ import { QualityControls } from './components/QualityControls';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
 import { OmeZarrChunkedImageViewer } from '@idetik/react';
+import { ChunkedImageLayer } from '@idetik/core';
 import { getRegionFromZattrs, getZAxisMetadata } from './utils';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
@@ -21,11 +22,6 @@ import { useIdetik } from '@idetik/react';
 // Types
 interface ChannelProps {
   contrastLimits: [number, number];
-}
-
-interface LayerWithChannelMethods {
-  channelProps: ChannelProps[];
-  setChannelProps: (channels: ChannelProps[]) => void;
 }
 
 interface TomogramViewerProps {
@@ -162,16 +158,17 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       // Also update the layer directly for actual contrast changes
       if (runtime && runtime.viewports[0].layerManager.layers.length > 0) {
         const layer = runtime.viewports[0].layerManager.layers[0]; // Get the first (should be only) layer
-        // Type guard to ensure layer has channel properties
-        if ('channelProps' in layer && 'setChannelProps' in layer) {
-          const channels = (layer as LayerWithChannelMethods).channelProps; // Cast to access channelProps
+        // Type guard to ensure layer is a ChunkedImageLayer with channel properties
+        if (layer instanceof ChunkedImageLayer || ('channelProps' in layer && 'setChannelProps' in layer)) {
+          const chunkedLayer = layer as ChunkedImageLayer;
+          const channels = chunkedLayer.channelProps;
           if (channels && channels.length > 0) {
             const updatedChannels = [...channels];
             updatedChannels[0] = {
               ...channels[0],
               contrastLimits: newLimits,
             };
-            (layer as LayerWithChannelMethods).setChannelProps(updatedChannels);
+            chunkedLayer.setChannelProps(updatedChannels);
           }
         }
       }
