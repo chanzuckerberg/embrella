@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useCallback, useState, useRef, useMemo } from 'react';
+import { useReducer, useEffect, useCallback, useState, useMemo } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
@@ -135,7 +135,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   }, [state.detail?.contrastLimits]);
 
   // Memoize onLayerCreated callback to prevent re-initialization
-  const handleLayerCreated = useCallback((layer: ChunkedImageLayer) => {
+  const handleLayerCreated = useCallback((_layer: ChunkedImageLayer) => {
     // Layer created - component handles z updates via prop changes
     // The slice update effect will handle z.index changes without re-initialization
   }, []);
