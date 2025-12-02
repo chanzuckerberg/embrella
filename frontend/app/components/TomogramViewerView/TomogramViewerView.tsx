@@ -20,9 +20,6 @@ import { Review, ReviewTomogramDetail } from './types';
 import { useIdetik } from '@idetik/react';
 
 // Types
-interface ChannelProps {
-  contrastLimits: [number, number];
-}
 
 interface TomogramViewerProps {
   review: Review;
