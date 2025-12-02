@@ -998,8 +998,8 @@ class ReviewTomogramView(View):
 
             # Updated zarr path construction - migrated to new location
             # response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_id}/{run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
-# response_data["zarrPath"] = "https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/"
-            response_data["zarrPath"] = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25aug25a/run001/vol001/Position_1_Vol.zarr/"
+            # uncomment if you want a stub!
+# response_data["zarrPath"] = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25aug25a/run001/vol001/Position_1_Vol.zarr/"
             print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
             try:
                 contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
