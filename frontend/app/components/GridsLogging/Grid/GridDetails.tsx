@@ -14,10 +14,19 @@ import {
   Alert,
   Checkbox,
   FormControlLabel,
+  IconButton,
+  MenuItem,
 } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
-import { useGridLoggingGridDetails, useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging';
+import {
+  useGridLoggingGridDetails,
+  useGridLoggingGridBoxDetail,
+  useUpdateGrid,
+  useFreezingSessionList,
+  useSpecimenList,
+  useProjectsList,
+} from '@app/common/hooks/useGridLogging';
 import styles from '../GridLogging.module.css';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { MoveGrid } from '../Grid/MoveGrid';
@@ -69,6 +78,26 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   const { isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
   const [moveGridDialogOpen, setMoveGridDialogOpen] = useState(false);
 
+  // Fetch list data for dropdowns 
+  const { freezingSessions } = useFreezingSessionList();
+  const { specimens } = useSpecimenList();
+  const { projects } = useProjectsList();
+
+  // Add edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedData, setEditedData] = useState({
+    gridName: '',
+    copyNumber: 1,
+    notes: '',
+    freezingSessionId: null as number | null,
+    specimenId: null as number | null,
+    projectId: null as number | null,
+    positionInBox: 1,
+    blotTime: 0,
+    blotForce: 0,
+    blotDistance: 0,
+  });
+
   const { gridDetails, loading, error, refetch } = useGridLoggingGridDetails({
     puckId: selectedPuck?.id || 0,
     positionInPuck: selectedSlot || 0,
@@ -76,6 +105,9 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   });
   const [trashedValue, setLocalTrashed] = useState<boolean>(false);
   const [clippedValue, setLocalClipped] = useState<boolean>(false);
+
+  // Add update hook
+  const { updateGrid, isUpdating, error: updateError, clearError: clearUpdateError } = useUpdateGrid();
 
   useEffect(() => {
     if (onGridDetailsRefetchReady && refetch) {
@@ -88,6 +120,30 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
       setLocalClipped(gridDetails.clipped);
     }
   }, [gridDetails?.clipped]);
+
+  // Update edited data when gridDetails changes
+  useEffect(() => {
+    if (gridDetails) {
+      const formData = mapGridDetailsToFormData(gridDetails);
+
+      console.log('Grid Details formData:', formData);
+      console.log('Freezing Session:', formData.freezingSession);
+      console.log('Specimen:', formData.specimen);
+      setEditedData({
+        gridName: formData.gridName,
+        copyNumber: formData.copyNumber,
+        notes: formData.notes,
+        freezingSessionId: formData.freezingSessionId,
+        specimenId: formData.specimenId,
+        projectId: formData.projectId,
+        positionInBox: formData.positionInBox,
+        blotTime: formData.blotTime,
+        blotForce: formData.blotForce,
+        blotDistance: formData.blotDistance,
+      });
+    }
+  }, [gridDetails]);
+
   // Early return if no selection
   if (!selectedPuck || !selectedSlot || !selectedGrid) {
     return null;
@@ -97,9 +153,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     setMoveGridDialogOpen(true);
   };
 
-  // const handleSave = () => {
-  //   console.log('Save grid details:', formData);
-  // };
   const handleClippedGrid = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedGridId) return;
 
@@ -160,23 +213,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     }
   };
 
-  // const handleDeleteGrid = () => {
-  //   const prefillParams = new URLSearchParams();
-
-  //   // Add return state parameters
-  //   if (selectedUser?.id) {
-  //     prefillParams.append('return_user_id', selectedUser.id.toString());
-  //   }
-  //   if (selectedPuck?.id) {
-  //     prefillParams.append('return_puck_id', selectedPuck.id.toString());
-  //   }
-  //   if (selectedSlot !== null) {
-  //     prefillParams.append('return_slot_position', selectedSlot.toString());
-  //   }
-  //   const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/${selectedGridId}/delete/?${prefillParams.toString()}`;
-  //   window.location.href = adminUrl;
-  // };
-
   const handleDuplicateGrid = () => {
     const prefillParams = new URLSearchParams();
 
@@ -200,6 +236,68 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     // Use the prefillParams in the URL
     const adminUrl = `${DJANGO_URL}/cryo_grids/grid_detail/${selectedGridId}/?${prefillParams.toString()}`;
     window.location.href = adminUrl;
+  };
+
+  // Add edit mode handlers
+  const handleEditClick = () => {
+    setIsEditMode(true);
+    clearUpdateError();
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    // Reset edited data to original values
+    if (gridDetails) {
+      const formData = mapGridDetailsToFormData(gridDetails);
+      setEditedData({
+        gridName: formData.gridName,
+        copyNumber: formData.copyNumber,
+        notes: formData.notes,
+        freezingSessionId: formData.freezingSessionId,
+        specimenId: formData.specimenId,
+        projectId: formData.projectId,
+        positionInBox: formData.positionInBox,
+        blotTime: formData.blotTime,
+        blotForce: formData.blotForce,
+        blotDistance: formData.blotDistance,
+      });
+    }
+    clearUpdateError();
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedGridId) {
+      return;
+    }
+
+    const result = await updateGrid({
+      grid_id: selectedGridId,
+      name: editedData.gridName,
+      copy_number: editedData.copyNumber,
+      notes: editedData.notes,
+      freezing_session: editedData.freezingSessionId === null ? undefined : editedData.freezingSessionId,
+      specimen: editedData.specimenId === null ? undefined : editedData.specimenId,
+      intended_project: editedData.projectId === null ? undefined : editedData.projectId,
+      position_in_box: editedData.positionInBox,
+      blot_time: editedData.blotTime,
+      blot_force: editedData.blotForce,
+      blot_distance: editedData.blotDistance,
+    });
+    if (result && result.success) {
+      setIsEditMode(false);
+      // Refetch to get updated data
+      refetch();
+    }
+  };
+
+  const handleFieldChange = (
+    field: keyof typeof editedData,
+    value: string | number | null
+  ) => {
+    setEditedData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   // Show loading state
@@ -248,16 +346,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               <Typography variant="h6" component="h2">
                 Grid Name: Puck-CZII-0{selectedPuck.name}/Slot-{selectedSlot}/Position-{formData.positionInBox}
               </Typography>
-              {/* <IconButton
-              onClick={handleDeleteGrid}
-              sx={{
-                '&:hover': {
-                  backgroundColor: '#ffebee',
-                },
-              }}
-            >
-              <Icon sdsIcon="TrashCan" sdsSize="xl" color="red" />
-            </IconButton> */}
             </Box>
           }
         />
@@ -287,25 +375,72 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
             </Box>
 
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-                Grid Details
-              </Typography>
+              {/* Add Edit/Save/Cancel Icons header */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: 'primary.main' }}>
+                  Grid Details
+                </Typography>
+                {/* Edit/Save Icons */}
+                {!isEditMode ? (
+                  <IconButton
+                    onClick={handleEditClick}
+                    sx={{
+                      '&:hover': { backgroundColor: '#e3f2fd' },
+                    }}
+                  >
+                    <Icon sdsIcon="Edit" sdsSize="l" />
+                  </IconButton>
+                ) : (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton
+                      onClick={handleSaveEdit}
+                      disabled={isUpdating}
+                      sx={{
+                        '&:hover': { backgroundColor: '#e8f5e9' },
+                        color: 'green',
+                      }}
+                    >
+                      <Icon sdsIcon="CheckCircle" sdsSize="l" color="green" />
+                    </IconButton>
+                    <IconButton
+                      onClick={handleCancelEdit}
+                      disabled={isUpdating}
+                      sx={{
+                        '&:hover': { backgroundColor: '#ffebee' },
+                      }}
+                    >
+                      <Icon sdsIcon="XMark" sdsSize="l" color="red" />
+                    </IconButton>
+                  </Box>
+                )}
+              </Box>
+
+              {/* Show error message if update fails */}
+              {updateError && (
+                <Box sx={{ mb: 2, p: 1, bgcolor: '#ffebee', borderRadius: 1 }}>
+                  <Typography variant="body2" color="error">
+                    {updateError}
+                  </Typography>
+                </Box>
+              )}
 
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
                   fullWidth
                   label="Grid Name"
-                  disabled
-                  value={formData.gridName}
-                  sx={disabledTextFieldStyles}
+                  disabled={!isEditMode}
+                  value={isEditMode ? editedData.gridName : formData.gridName}
+                  onChange={(e) => handleFieldChange('gridName', e.target.value)}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
                 <TextField
                   fullWidth
                   label="Copy Number"
-                  disabled
-                  value={formData.copyNumber}
+                  disabled={!isEditMode}
+                  value={isEditMode ? editedData.copyNumber : formData.copyNumber}
+                  onChange={(e) => handleFieldChange('copyNumber', parseInt(e.target.value) || 1)}
                   type="number"
-                  sx={disabledTextFieldStyles}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
                 <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
               </Box>
@@ -314,11 +449,12 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 <TextField
                   fullWidth
                   label="Notes"
-                  disabled
-                  value={formData.notes}
+                  disabled={!isEditMode}
+                  value={isEditMode ? editedData.notes : formData.notes}
+                  onChange={(e) => handleFieldChange('notes', e.target.value)}
                   multiline
                   rows={1}
-                  sx={disabledTextFieldStyles}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
                 <FormControlLabel
                   control={<Checkbox checked={clippedValue} onChange={handleClippedGrid} color="primary" />}
@@ -333,48 +469,97 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
                   fullWidth
+                  select={isEditMode}
                   label="Freezing Session"
-                  disabled
-                  value={formData.freezingSession}
-                  sx={disabledTextFieldStyles}
-                />
-                <TextField fullWidth label="Specimen" disabled value={formData.specimen} sx={disabledTextFieldStyles} />
+                  disabled={!isEditMode}
+                  value={isEditMode ? (editedData.freezingSessionId || '') : formData.freezingSession}
+                  onChange={(e) => handleFieldChange('freezingSessionId', e.target.value ? parseInt(e.target.value) : null)}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                >
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                      {freezingSessions?.map((session) => (
+                        <MenuItem key={session.id} value={session.id}>
+                          {session.display_name}
+                        </MenuItem>
+                      ))}
+                </TextField>
+                <TextField
+                  fullWidth
+                  select={isEditMode}
+                  label="Specimen"
+                  disabled={!isEditMode}
+                  value={isEditMode ? (editedData.specimenId || '') : formData.specimen}
+                  onChange={(e) => handleFieldChange('specimenId', e.target.value ? parseInt(e.target.value) : null)}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                >
+                      <MenuItem value="">
+                        <em>None</em>
+                      </MenuItem>
+                      {specimens?.map((specimen) => (
+                        <MenuItem key={specimen.id} value={specimen.id}>
+                          {specimen.display_name}
+                        </MenuItem>
+                      ))}
+                </TextField>
               </Box>
               <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField fullWidth label="Project" disabled value={formData.project} sx={disabledTextFieldStyles} />
+                <TextField
+                  fullWidth
+                  select={isEditMode}
+                  label="Project"
+                  disabled={!isEditMode}
+                  value={isEditMode ? (editedData.projectId || '') : formData.project}
+                  onChange={(e) => handleFieldChange('projectId', e.target.value ? parseInt(e.target.value) : null)}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                >
+                      <MenuItem value="">
+                        <em>None</em>
+                      </MenuItem>
+                      {projects?.map((project) => (
+                        <MenuItem key={project.id} value={project.id}>
+                          {project.name}
+                        </MenuItem>
+                      ))}
+                </TextField>
                 <TextField
                   fullWidth
                   label="Position in Box"
-                  disabled
-                  value={formData.positionInBox}
+                  disabled={!isEditMode}
+                  value={isEditMode ? editedData.positionInBox : formData.positionInBox}
+                  onChange={(e) => handleFieldChange('positionInBox', parseInt(e.target.value) || 1)}
                   type="number"
-                  sx={disabledTextFieldStyles}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
               </Box>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
                   fullWidth
                   label="Blot Time"
-                  disabled
-                  value={formData.blotTime}
+                  disabled={!isEditMode}
+                  value={isEditMode ? editedData.blotTime : formData.blotTime}
+                  onChange={(e) => handleFieldChange('blotTime', parseFloat(e.target.value) || 0)}
                   type="number"
-                  sx={disabledTextFieldStyles}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
                 <TextField
                   fullWidth
                   label="Blot Force"
-                  disabled
-                  value={formData.blotForce}
+                  disabled={!isEditMode}
+                  value={isEditMode ? editedData.blotForce : formData.blotForce}
+                  onChange={(e) => handleFieldChange('blotForce', parseFloat(e.target.value) || 0)}
                   type="number"
-                  sx={disabledTextFieldStyles}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
                 <TextField
                   fullWidth
                   label="Blot Distance"
-                  disabled
-                  value={formData.blotDistance}
+                  disabled={!isEditMode}
+                  value={isEditMode ? editedData.blotDistance : formData.blotDistance}
+                  onChange={(e) => handleFieldChange('blotDistance', parseFloat(e.target.value) || 0)}
                   type="number"
-                  sx={disabledTextFieldStyles}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
               </Box>
 
@@ -398,9 +583,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 >
                   Duplicate Grid
                 </Button>
-                {/* <Button sdsType="primary" sdsStyle="rounded" variant="contained" onClick={handleSave}>
-                Save
-              </Button> */}
               </Box>
             </Box>
           </Box>
