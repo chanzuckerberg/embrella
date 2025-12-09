@@ -5,7 +5,7 @@ import { API } from '@app/common/constants/api';
 
 export const useGridLoggingPucksList = (caneId?: number) => {
   const searchParams = caneId ? { cane_id: caneId } : {};
-  const { data, isSuccess,refetch } = useFetchData<PuckListResponse>(API.GRID_LOGGING_PUCKS, searchParams);
+  const { data, isSuccess, refetch } = useFetchData<PuckListResponse>(API.GRID_LOGGING_PUCKS, searchParams);
 
   return {
     pucks: data,
@@ -17,7 +17,7 @@ export const useGridLoggingPucksList = (caneId?: number) => {
 // Hook for fetching pucks filtered by user ID
 export const useGridLoggingPucksByUser = (userId?: number) => {
   const searchParams = userId ? { user_id: userId } : {};
-  const { data, isSuccess,refetch } = useFetchData<PuckListResponse>(API.GRID_LOGGING_PUCKS, searchParams);
+  const { data, isSuccess, refetch } = useFetchData<PuckListResponse>(API.GRID_LOGGING_PUCKS, searchParams);
 
   return {
     pucks: data,

@@ -1,10 +1,24 @@
 'use client';
 
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField, InputAdornment, IconButton } from '@mui/material';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Box,
+  Typography,
+  Autocomplete,
+  TextField,
+  InputAdornment,
+  IconButton,
+} from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { Button, Icon } from '@czi-sds/components';
-import { useGridLoggingUserList, useGridLoggingPucksList, useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging';
+import {
+  useGridLoggingUserList,
+  useGridLoggingPucksList,
+  useGridLoggingPucksByUser,
+} from '@app/common/hooks/useGridLogging';
 import { UserList, PuckList } from '@app/common/types/gridLogging';
 import { UserContext } from '@app/common/context/UserProvider';
 import styles from './GridLogging.module.css';
@@ -48,10 +62,8 @@ export const GridsLogging: React.FC = () => {
     if (!puckSearchQuery.trim()) {
       return pucksList;
     }
-    return allPucksList.filter((puck) =>
-      `CZII-0${puck.name}`.toLowerCase().includes(puckSearchQuery.toLowerCase())
-    );
-  }, [pucksList, allPucksList,puckSearchQuery]);
+    return allPucksList.filter((puck) => `CZII-0${puck.name}`.toLowerCase().includes(puckSearchQuery.toLowerCase()));
+  }, [pucksList, allPucksList, puckSearchQuery]);
 
   // Restore state from URL parameters
   useEffect(() => {
@@ -245,10 +257,10 @@ export const GridsLogging: React.FC = () => {
                 }}
               />
             </Box>
-            
+
             {/* Search box for pucks */}
             {selectedUser && (
-              <Box sx={{  display: 'flex', alignItems: 'center', gap: 1 , mb:4, mt:-6}}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 4, mt: -6 }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -256,34 +268,29 @@ export const GridsLogging: React.FC = () => {
                   value={puckSearchQuery}
                   onChange={(e) => setPuckSearchQuery(e.target.value)}
                   variant="outlined"
-                
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                       <Icon sdsIcon="Search" sdsSize="l" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: puckSearchQuery && (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => setPuckSearchQuery('')}
-                        edge="end"
-                      >
-                        <Icon sdsIcon="XMark" sdsSize="l" />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Icon sdsIcon="Search" sdsSize="l" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: puckSearchQuery && (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={() => setPuckSearchQuery('')} edge="end">
+                          <Icon sdsIcon="XMark" sdsSize="l" />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
                   }}
-               />
+                />
               </Box>
             )}
 
             {/* Puck Selector Component */}
-            <PuckListed 
-              selectedUser={selectedUser} 
-              onPuckSelect={handlePuckSelect} 
-              selectedPuck={selectedPuck} 
+            <PuckListed
+              selectedUser={selectedUser}
+              onPuckSelect={handlePuckSelect}
+              selectedPuck={selectedPuck}
               puckList={filteredPucksList}
             />
           </CardContent>

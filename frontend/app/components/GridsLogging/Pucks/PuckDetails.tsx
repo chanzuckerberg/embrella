@@ -25,7 +25,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
   selectedUser,
   onRefetchReady,
   onGridBoxInfoRefetchReady,
-  onPuckDeleted
+  onPuckDeleted,
 }) => {
   // Fetch puck slots data
   const { slotsData, isSuccess, refetch } = useGridLoggingPuckSlots(selectedPuck?.id);

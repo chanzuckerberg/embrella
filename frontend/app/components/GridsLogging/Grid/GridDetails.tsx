@@ -78,7 +78,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   const { isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
   const [moveGridDialogOpen, setMoveGridDialogOpen] = useState(false);
 
-  // Fetch list data for dropdowns 
+  // Fetch list data for dropdowns
   const { freezingSessions } = useFreezingSessionList();
   const { specimens } = useSpecimenList();
   const { projects } = useProjectsList();
@@ -290,10 +290,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     }
   };
 
-  const handleFieldChange = (
-    field: keyof typeof editedData,
-    value: string | number | null
-  ) => {
+  const handleFieldChange = (field: keyof typeof editedData, value: string | number | null) => {
     setEditedData((prev) => ({
       ...prev,
       [field]: value,
@@ -472,36 +469,38 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   select={isEditMode}
                   label="Freezing Session"
                   disabled={!isEditMode}
-                  value={isEditMode ? (editedData.freezingSessionId || '') : formData.freezingSession}
-                  onChange={(e) => handleFieldChange('freezingSessionId', e.target.value ? parseInt(e.target.value) : null)}
+                  value={isEditMode ? editedData.freezingSessionId || '' : formData.freezingSession}
+                  onChange={(e) =>
+                    handleFieldChange('freezingSessionId', e.target.value ? parseInt(e.target.value) : null)
+                  }
                   sx={!isEditMode ? disabledTextFieldStyles : {}}
                 >
-                    <MenuItem value="">
-                      <em>None</em>
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  {freezingSessions?.map((session) => (
+                    <MenuItem key={session.id} value={session.id}>
+                      {session.display_name}
                     </MenuItem>
-                      {freezingSessions?.map((session) => (
-                        <MenuItem key={session.id} value={session.id}>
-                          {session.display_name}
-                        </MenuItem>
-                      ))}
+                  ))}
                 </TextField>
                 <TextField
                   fullWidth
                   select={isEditMode}
                   label="Specimen"
                   disabled={!isEditMode}
-                  value={isEditMode ? (editedData.specimenId || '') : formData.specimen}
+                  value={isEditMode ? editedData.specimenId || '' : formData.specimen}
                   onChange={(e) => handleFieldChange('specimenId', e.target.value ? parseInt(e.target.value) : null)}
                   sx={!isEditMode ? disabledTextFieldStyles : {}}
                 >
-                      <MenuItem value="">
-                        <em>None</em>
-                      </MenuItem>
-                      {specimens?.map((specimen) => (
-                        <MenuItem key={specimen.id} value={specimen.id}>
-                          {specimen.display_name}
-                        </MenuItem>
-                      ))}
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  {specimens?.map((specimen) => (
+                    <MenuItem key={specimen.id} value={specimen.id}>
+                      {specimen.display_name}
+                    </MenuItem>
+                  ))}
                 </TextField>
               </Box>
               <Box sx={{ display: 'flex', gap: 2 }}>
@@ -510,18 +509,18 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   select={isEditMode}
                   label="Project"
                   disabled={!isEditMode}
-                  value={isEditMode ? (editedData.projectId || '') : formData.project}
+                  value={isEditMode ? editedData.projectId || '' : formData.project}
                   onChange={(e) => handleFieldChange('projectId', e.target.value ? parseInt(e.target.value) : null)}
                   sx={!isEditMode ? disabledTextFieldStyles : {}}
                 >
-                      <MenuItem value="">
-                        <em>None</em>
-                      </MenuItem>
-                      {projects?.map((project) => (
-                        <MenuItem key={project.id} value={project.id}>
-                          {project.name}
-                        </MenuItem>
-                      ))}
+                  <MenuItem value="">
+                    <em>None</em>
+                  </MenuItem>
+                  {projects?.map((project) => (
+                    <MenuItem key={project.id} value={project.id}>
+                      {project.name}
+                    </MenuItem>
+                  ))}
                 </TextField>
                 <TextField
                   fullWidth

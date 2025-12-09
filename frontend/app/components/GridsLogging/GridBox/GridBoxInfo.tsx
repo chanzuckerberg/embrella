@@ -7,7 +7,7 @@ import {
   useGridLoggingPuckSlots,
   useClipAllGrids,
   useGridLoggingGridBoxDetail,
-  useUpdateGridBox, 
+  useUpdateGridBox,
   useGridLoggingChoices,
 } from '@app/common/hooks/useGridLogging';
 import styles from '../GridLogging.module.css';
@@ -64,17 +64,17 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     color: '',
     numbering: '',
   });
-  
+
   const {
     gridBoxData,
     isSuccess: gridBoxSuccess,
     refetch,
   } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
   const { clipAllGrids, error: clipError, clearError } = useClipAllGrids();
-  
+
   // Add update hook
   const { updateGridBox, isUpdating, error: updateError, clearError: clearUpdateError } = useUpdateGridBox();
-  
+
   // Add choices hook for dropdowns
   const { choices } = useGridLoggingChoices();
 
@@ -202,14 +202,14 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     if (!gridBoxData?.grid_box?.grid_box_id) {
       return;
     }
-  
+
     const result = await updateGridBox({
       grid_box_id: gridBoxData.grid_box.grid_box_id,
       name: editedData.name,
       color: editedData.color,
       numbering: editedData.numbering,
     });
-  
+
     if (result && result.success) {
       setIsEditMode(false);
       // Refetch to get updated data
@@ -295,10 +295,10 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 </Typography>
                 {/* Edit/Save Icons */}
                 {!isEditMode ? (
-                  <IconButton 
-                    onClick={handleEditClick} 
-                    sx={{ 
-                      '&:hover': { backgroundColor: '#e3f2fd' } 
+                  <IconButton
+                    onClick={handleEditClick}
+                    sx={{
+                      '&:hover': { backgroundColor: '#e3f2fd' },
                     }}
                   >
                     <Icon sdsIcon="Edit" sdsSize="l" />
@@ -346,17 +346,11 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                   onChange={(e) => handleFieldChange('name', e.target.value)}
                   sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
-                <TextField 
-                  fullWidth 
-                  label="Puck" 
-                  value={formData.puckName} 
-                  disabled 
-                  sx={disabledTextFieldStyles}
-                />
+                <TextField fullWidth label="Puck" value={formData.puckName} disabled sx={disabledTextFieldStyles} />
               </Box>
 
               <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
+                <TextField
                   fullWidth
                   select={isEditMode}
                   label="Color"
@@ -365,11 +359,12 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                   disabled={!isEditMode}
                   sx={!isEditMode ? disabledTextFieldStyles : {}}
                 >
-                  {isEditMode && choices?.grid_box_colors?.map((option: { value: string; label: string }) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
+                  {isEditMode &&
+                    choices?.grid_box_colors?.map((option: { value: string; label: string }) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
                 </TextField>
                 <TextField
                   fullWidth
@@ -380,11 +375,12 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                   disabled={!isEditMode}
                   sx={!isEditMode ? disabledTextFieldStyles : {}}
                 >
-                  {isEditMode && choices?.grid_box_numbering?.map((option: { value: string; label: string }) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
+                  {isEditMode &&
+                    choices?.grid_box_numbering?.map((option: { value: string; label: string }) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
                 </TextField>
               </Box>
 

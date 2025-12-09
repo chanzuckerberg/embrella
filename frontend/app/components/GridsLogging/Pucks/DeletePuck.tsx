@@ -12,16 +12,16 @@ interface DeletePuckProps {
   selectedPuck: PuckList | null;
   slotsData: PuckSlotsResponse | null;
   selectedUser?: UserList | null;
-  onDeleteSuccess?: () => void; 
+  onDeleteSuccess?: () => void;
 }
 
-export const DeletePuck: React.FC<DeletePuckProps> = ({ 
-  open, 
-  onClose, 
-  selectedPuck, 
-  slotsData, 
+export const DeletePuck: React.FC<DeletePuckProps> = ({
+  open,
+  onClose,
+  selectedPuck,
+  slotsData,
   selectedUser,
-  onDeleteSuccess 
+  onDeleteSuccess,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);

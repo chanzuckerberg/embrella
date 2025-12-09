@@ -15,7 +15,6 @@ interface PuckSelectorProps {
 }
 
 export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSelect, selectedPuck, puckList }) => {
-
   const handlePuckCardClick = (puck: PuckList) => {
     onPuckSelect(puck);
   };
