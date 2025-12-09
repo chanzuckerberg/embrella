@@ -413,7 +413,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               </Box>
 
               {/* Show error message if update fails */}
-              {updateError && (
+              {!!updateError && (
                 <Box sx={{ mb: 2, p: 1, bgcolor: '#ffebee', borderRadius: 1 }}>
                   <Typography variant="body2" color="error">
                     {updateError}

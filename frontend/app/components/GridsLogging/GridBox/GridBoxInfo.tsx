@@ -329,7 +329,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               </Box>
 
               {/* Show error message if update fails */}
-              {updateError && (
+              {!!updateError && (
                 <Box sx={{ mb: 2, p: 1, bgcolor: '#ffebee', borderRadius: 1 }}>
                   <Typography variant="body2" color="error">
                     {updateError}
@@ -423,7 +423,6 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         onClose={() => setDeleteDialogOpen(false)}
         selectedPuck={selectedPuck}
         selectedSlot={selectedSlot}
-        selectedUser={selectedUser}
         gridBoxData={gridBoxData || null}
         onGridBoxDeleted={handleGridBoxDeleted}
       />

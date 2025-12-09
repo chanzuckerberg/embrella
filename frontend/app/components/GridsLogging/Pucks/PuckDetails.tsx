@@ -170,7 +170,6 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
         onClose={() => setDeleteDialogOpen(false)}
         selectedPuck={selectedPuck}
         slotsData={slotsData || null}
-        selectedUser={selectedUser}
         onDeleteSuccess={onPuckDeleted}
       />
 

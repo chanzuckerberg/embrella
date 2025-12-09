@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
-import { PuckList, UserList } from '@app/common/types/gridLogging';
+import { PuckList } from '@app/common/types/gridLogging';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging';
 import { DJANGO_URL } from '@app/common/constants/api';
 
@@ -13,7 +13,6 @@ interface DeleteGridBoxProps {
   selectedPuck: PuckList | null;
   selectedSlot: number | null;
   gridBoxData: GridBoxDetailResponse | null;
-  selectedUser?: UserList | null;
   onGridBoxDeleted: () => void;
 }
 
@@ -23,7 +22,6 @@ export const DeleteGridBox: React.FC<DeleteGridBoxProps> = ({
   selectedPuck,
   selectedSlot,
   gridBoxData,
-  selectedUser,
   onGridBoxDeleted,
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);

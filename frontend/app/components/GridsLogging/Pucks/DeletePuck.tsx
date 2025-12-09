@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
-import { PuckSlotsResponse, PuckList, UserList } from '@app/common/types/gridLogging';
+import { PuckSlotsResponse, PuckList } from '@app/common/types/gridLogging';
 import { DJANGO_URL } from '@app/common/constants/api';
 
 interface DeletePuckProps {
@@ -11,18 +11,10 @@ interface DeletePuckProps {
   onClose: () => void;
   selectedPuck: PuckList | null;
   slotsData: PuckSlotsResponse | null;
-  selectedUser?: UserList | null;
   onDeleteSuccess?: () => void;
 }
 
-export const DeletePuck: React.FC<DeletePuckProps> = ({
-  open,
-  onClose,
-  selectedPuck,
-  slotsData,
-  selectedUser,
-  onDeleteSuccess,
-}) => {
+export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedPuck, slotsData, onDeleteSuccess }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +98,7 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({
           </Box>
         </Box>
 
-        {error && (
+        {!!error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
