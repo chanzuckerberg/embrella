@@ -80,17 +80,6 @@ initenv:
       echo -e "${GREEN}Using environment variable file:${NC} ./.env"
     fi
 
-# Uses github cli to fetch the environment file .env cached in encrypted form as a github variable, for a particular deployment environment: development, staging, production. Asks for password.
-restoreencryptedenv +args="development":
-    #!/bin/bash
-    source ./helpers/shell_common.sh
-
-    echocolor $RED "You are about to overwrite the local file ./.env with contents from remote environment for {{args}}..."
-    if [[ "yes" == $(ask_if_really_sure) ]]
-    then
-      gh variable get ENV --repo czimaginginstitute/czii-umbrella-django --env {{args}} | just decrypt > ./.env
-    fi
-
 # Uses the github cli to fetch the service user credential. Asks for password.
 getserviceuserkey +kf="~/.ssh/svc_czii_umbrella":
     #!/bin/bash
@@ -109,6 +98,18 @@ storeserviceuserkey +kf="~/.ssh/svc_czii_umbrella":
     echo $k | gh variable set SVCUSR --repo czimaginginstitute/czii-umbrella-django --env production
     echo "Stored."
 
+# Uses github cli to fetch the environment file .env cached in encrypted form as a github variable, for a particular deployment environment: development, staging, production. Asks for password.
+restoreencryptedenv +args="development":
+    #!/bin/bash
+    source ./helpers/shell_common.sh
+
+    echocolor $RED "You are about to overwrite the local file ./.env with contents from remote environment for {{args}}..."
+    if [[ "yes" == $(ask_if_really_sure) ]]
+    then
+      k=$(gh variable get ENV --repo czimaginginstitute/czii-umbrella-django --env {{args}})
+      echo $k | just decrypt > ./.env
+    fi
+
 # Uses github cli to store encrypted file .env to github variable for particular deployment environment. Asks for password.
 backupencryptedenv +args="development":
     #!/bin/bash
@@ -117,7 +118,8 @@ backupencryptedenv +args="development":
     echocolor $RED "You are about to overwrite the remote environment for {{args}} with the contents of ./.env..."
     if [[ "yes" == $(ask_if_really_sure) ]]
     then
-      just encrypt ./.env | gh variable set ENV --repo czimaginginstitute/czii-umbrella-django --env {{args}}
+      k=$(just encrypt ./.env)
+      echo $k | gh variable set ENV --repo czimaginginstitute/czii-umbrella-django --env {{args}}
     fi
 
 # Get/install backend development lib dependencies
