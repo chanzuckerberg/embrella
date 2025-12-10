@@ -276,6 +276,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 gridBoxData={gridBoxData}
                 slotsData={slotsData}
                 selectedSlot={selectedSlot}
+                maxGrids={formData.maxGrids as 4 | 6 | 8}
               />
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
