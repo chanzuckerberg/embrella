@@ -4,6 +4,7 @@ from rest_framework import serializers
 from confluence.models import Page, Space
 from clouddocs.models import DriveFolder
 from projects.models import Project
+from django.utils import timezone as django_timezone
 
 from umbrella.choices import PUCK_COLORS
 
@@ -516,6 +517,7 @@ class FreezingSessionSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.username', read_only=True)
     device_name = serializers.CharField(source='device.name', read_only=True)
     display_name = serializers.SerializerMethodField()
+    datetime = serializers.SerializerMethodField() 
     
     class Meta:
         model = PlungeFreezingSession
@@ -531,7 +533,13 @@ class FreezingSessionSerializer(serializers.ModelSerializer):
             'notes_page',
             'display_name',
         ]
-    
+    def get_datetime(self, obj):
+        """Return datetime in local timezone"""
+        if obj.datetime:
+            local_dt = django_timezone.localtime(obj.datetime)
+            return local_dt.isoformat()
+        return None
+        
     def get_display_name(self, obj):
         """Get human-readable display name matching the __str__ method"""
         return str(obj)

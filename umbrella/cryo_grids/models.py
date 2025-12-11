@@ -1,6 +1,7 @@
 from confluence.models import Page
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
 from projects.models import Project
 
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
@@ -92,7 +93,7 @@ class PlungeFreezingDevice(models.Model):
         return self.name
 
 class PlungeFreezingSession(models.Model):
-    datetime = models.DateTimeField(auto_now_add=True)
+    datetime = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True)
     device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE)
     device_temperature = models.FloatField(default=4.0, help_text='Temperature of the freezing chamber in degree Celsius')
