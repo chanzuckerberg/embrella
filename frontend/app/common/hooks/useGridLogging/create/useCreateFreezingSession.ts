@@ -15,6 +15,9 @@ export const useCreateFreezingSession = () => {
       device_temperature: data.device_temperature,
       humidity: data.humidity,
       ...(data.notes_page && { notes_page: data.notes_page }),
+      ...(data.freezingSessionDate && { 
+        datetime: data.freezingSessionDate.toISOString()
+      })
     }),
     transformResponse: (result) => {
       const response = result as { freezing_session?: FreezingSessionCreateResponse };

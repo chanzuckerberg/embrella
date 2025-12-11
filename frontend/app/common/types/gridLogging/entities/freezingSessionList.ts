@@ -28,6 +28,7 @@ export interface CreateFreezingSessionData {
   device_temperature: number;
   humidity: number;
   notes_page?: number | null;
+  freezingSessionDate?: Date | null;
 }
 
 export interface FreezingSessionCreateResponse {
@@ -48,6 +49,7 @@ export interface FreezingSessionFormData {
   temperature: string;
   humidity: string;
   notesPage: string;
+  freezingSessionDate: Date|null;
 }
 
 export interface FreezingSessionListResponse {

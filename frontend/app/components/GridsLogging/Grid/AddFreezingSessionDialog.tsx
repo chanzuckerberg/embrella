@@ -5,6 +5,9 @@ import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
 import { Device, ConfluencePage, UserList, FreezingSessionFormData } from '@app/common/types/gridLogging';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'; 
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 export const AddFreezingSessionDialog: React.FC<{
   open: boolean;
@@ -13,7 +16,8 @@ export const AddFreezingSessionDialog: React.FC<{
   users?: UserList[];
   devices?: Device[];
   notesPages?: ConfluencePage[];
-}> = ({ open, onClose, onSave, users = [], devices = [], notesPages = [] }) => {
+  freezingSessionDate?: Date | null;
+}> = ({ open, onClose, onSave, users = [], devices = [], notesPages = [], freezingSessionDate = null }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FreezingSessionFormData>({
     user: '',
@@ -21,6 +25,7 @@ export const AddFreezingSessionDialog: React.FC<{
     temperature: '',
     humidity: '',
     notesPage: '',
+    freezingSessionDate: null,
   });
 
   const handleInputChange = (field: keyof FreezingSessionFormData, value: string) => {
@@ -32,8 +37,8 @@ export const AddFreezingSessionDialog: React.FC<{
 
   const handleSave = async () => {
     // Validate required fields
-    if (!formData.user || !formData.device || !formData.temperature || !formData.humidity) {
-      alert('Please fill in all required fields (User, Device, Temperature, and Humidity)');
+    if (!formData.user || !formData.device ) {
+      alert('Please fill in all required fields (User andDevice)');
       return;
     }
 
@@ -51,6 +56,7 @@ export const AddFreezingSessionDialog: React.FC<{
         temperature: formData.temperature,
         humidity: formData.humidity,
         notesPage: formData.notesPage,
+        freezingSessionDate: formData.freezingSessionDate,
       });
       // Reset form
       setFormData({
@@ -59,6 +65,7 @@ export const AddFreezingSessionDialog: React.FC<{
         temperature: '',
         humidity: '',
         notesPage: '',
+        freezingSessionDate: null,
       });
       onClose();
     } catch (error) {
@@ -77,13 +84,21 @@ export const AddFreezingSessionDialog: React.FC<{
       temperature: '',
       humidity: '',
       notesPage: '',
+      freezingSessionDate: null,
     });
     onClose();
+  };
+  const handleDateChange = (date: Date | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      freezingSessionDate: date,
+    }));
   };
 
   const isFormValid = formData.user && formData.device;
 
   return (
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
     <BaseFormDialog
       open={open}
       onClose={handleClose}
@@ -179,6 +194,18 @@ export const AddFreezingSessionDialog: React.FC<{
             }}
           />
         </Box>
+        <DateTimePicker
+            label="Freezing Session Date"
+            value={formData.freezingSessionDate || null}
+            onChange={handleDateChange}
+            slotProps={{
+              textField: {
+                required: false,
+                sx: disabledTextFieldStyles,
+                helperText: "Leave empty for today's date",
+              },
+            }}
+          />
 
         <FormControl sx={{ flex: 1 }}>
           <InputLabel id="notes-page-label">Notes Page</InputLabel>
@@ -212,5 +239,6 @@ export const AddFreezingSessionDialog: React.FC<{
         </FormControl>
       </Box>
     </BaseFormDialog>
+    </LocalizationProvider>
   );
 };

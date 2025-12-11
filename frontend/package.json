@@ -36,6 +36,7 @@
     "@mui/lab": "5.0.0-alpha.173",
     "@mui/material": "5.16.7",
     "@mui/material-nextjs": "^5.15.11",
+    "@mui/x-date-pickers": "^8.22.0",
     "@tailwindcss/postcss": "^4.1.4",
     "@tanstack/react-table": "^8.20.5",
     "date-fns": "^3.6.0",
