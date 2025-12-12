@@ -14,7 +14,7 @@ interface GridBoxSVGProps {
   selectedGrid?: number | null;
   slotsData?: PuckSlotsResponse;
   selectedSlot?: number | null;
-  maxGrids?: 4 | 6 | 8; 
+  maxGrids?: 4 | 6 | 8;
 }
 
 export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({

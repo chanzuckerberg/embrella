@@ -169,7 +169,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
       device_temperature: Number(data.temperature),
       humidity: Number(data.humidity),
       notes_page: data.notesPage ? Number(data.notesPage) : null,
-      freezingSessionDate: data.freezingSessionDate
+      freezingSessionDate: data.freezingSessionDate,
     });
 
     if (result) {

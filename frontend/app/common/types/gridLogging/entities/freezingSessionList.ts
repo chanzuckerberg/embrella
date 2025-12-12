@@ -49,7 +49,7 @@ export interface FreezingSessionFormData {
   temperature: string;
   humidity: string;
   notesPage: string;
-  freezingSessionDate: Date|null;
+  freezingSessionDate: Date | null;
 }
 
 export interface FreezingSessionListResponse {
