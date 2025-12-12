@@ -124,8 +124,8 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
           },
           data: Array.from({ length: bins }, (_, i) => {
             const binStart = min + i * binWidth;
-            return isBadPatch 
-              ? `${(binStart * 100).toFixed(Math.max(1, decimals - 2))}` 
+            return isBadPatch
+              ? `${(binStart * 100).toFixed(Math.max(1, decimals - 2))}`
               : `${binStart.toFixed(decimals)}`;
           }),
           axisLabel: {
