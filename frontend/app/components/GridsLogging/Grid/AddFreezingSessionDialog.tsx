@@ -177,7 +177,18 @@ export const AddFreezingSessionDialog: React.FC<{
               </Select>
             </FormControl>
           </Box>
-
+          <DateTimePicker
+            label="Freezing Session Date"
+            value={formData.freezingSessionDate || null}
+            onChange={handleDateChange}
+            slotProps={{
+              textField: {
+                required: false,
+                sx: disabledTextFieldStyles,
+                helperText: "Leave empty for today's date",
+              },
+            }}
+          />
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField
               label="Device Temperature"
@@ -202,18 +213,6 @@ export const AddFreezingSessionDialog: React.FC<{
               }}
             />
           </Box>
-          <DateTimePicker
-            label="Freezing Session Date"
-            value={formData.freezingSessionDate || null}
-            onChange={handleDateChange}
-            slotProps={{
-              textField: {
-                required: false,
-                sx: disabledTextFieldStyles,
-                helperText: "Leave empty for today's date",
-              },
-            }}
-          />
 
           <FormControl sx={{ flex: 1 }}>
             <InputLabel id="notes-page-label">Notes Page</InputLabel>
