@@ -794,12 +794,12 @@ __metadata:
 
 "@idetik/core@file:./idetik/packages/core::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=43830f&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/core@file:./idetik/packages/core#./idetik/packages/core::hash=820bec&locator=create-sds-app%40workspace%3A."
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/532e1b2a6dbc52093269af7d1cb57e1f0018d1d66c479861d98d46c5717d4a8c8110a9c48fde18768e866f1dab3f784ff1166cc7e3984fc9fb24be4fde349204
+  checksum: 10c0/6c6856334cf99083d12100cd7cc111134d5d7aa0045226b4967580a46abbc6117fdcda86687d3fb35570ce6556bd94c500e820f308cf0bbf4a9ad8d4bdd7a43d
   languageName: node
   linkType: hard
 
@@ -815,7 +815,7 @@ __metadata:
 
 "@idetik/react@file:./idetik/packages/react::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=c0dd7b&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=77753c&locator=create-sds-app%40workspace%3A."
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
@@ -833,7 +833,7 @@ __metadata:
     "@czi-sds/components": ^22.3.0
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/b1db6cb511385eb4a2e134148235b0f7ddc03f1c8c5fd766aa31469d04dc44b546388aa9dad3828b8f7d802774336981fd1e490b4d1abb47ea590309cd3312e7
+  checksum: 10c0/4dcacdaee613a66fb9ccdaf13b61cba482b26fe1e99bc890a7c1972ce71b242342c22ce4cbcd5ccdc654892986f73f395419918659ce8c17b413137c238cbb5d
   languageName: node
   linkType: hard
 
@@ -7034,14 +7034,14 @@ __metadata:
   linkType: hard
 
 "js-yaml@npm:^3.13.1":
-  version: 3.14.1
-  resolution: "js-yaml@npm:3.14.1"
+  version: 3.14.2
+  resolution: "js-yaml@npm:3.14.2"
   dependencies:
     argparse: "npm:^1.0.7"
     esprima: "npm:^4.0.0"
   bin:
     js-yaml: bin/js-yaml.js
-  checksum: 10c0/6746baaaeac312c4db8e75fa22331d9a04cccb7792d126ed8ce6a0bbcfef0cedaddd0c5098fade53db067c09fe00aa1c957674b4765610a8b06a5a189e46433b
+  checksum: 10c0/3261f25912f5dd76605e5993d0a126c2b6c346311885d3c483706cd722efe34f697ea0331f654ce27c00a42b426e524518ec89d65ed02ea47df8ad26dcc8ce69
   languageName: node
   linkType: hard
 
