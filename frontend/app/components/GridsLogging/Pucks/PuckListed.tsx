@@ -1,24 +1,20 @@
 'use client';
 
 import React from 'react';
-import { useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
-import { UsersList } from '@app/common/types/gridLogging/userList';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import { UserList, PuckList } from '@app/common/types/gridLogging';
 import { Box, Typography, Card, CardContent, CardActionArea, Grid } from '@mui/material';
 import { PuckSVG } from './PuckSvg';
 import styles from '../GridLogging.module.css';
 
 interface PuckSelectorProps {
-  selectedUser: UsersList | null;
-  onPuckSelect: (puck: PucksList | null) => void;
-  selectedPuck: PucksList | null;
+  selectedUser: UserList | null;
+  onPuckSelect: (puck: PuckList | null) => void;
+  selectedPuck: PuckList | null;
+  puckList?: PuckList[];
 }
 
-export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSelect, selectedPuck }) => {
-  const { pucks } = useGridLoggingPucksByUser(selectedUser?.id);
-  const pucksList: PucksList[] = pucks?.pucks || [];
-
-  const handlePuckCardClick = (puck: PucksList) => {
+export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSelect, selectedPuck, puckList }) => {
+  const handlePuckCardClick = (puck: PuckList) => {
     onPuckSelect(puck);
   };
 
@@ -37,7 +33,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
       {/* Pucks Grid Display with Interactive SVG */}
       <Box className={styles.pucksScrollContainer}>
         <Grid container spacing={2} justifyContent="flex-start">
-          {pucksList.map((puck) => (
+          {puckList?.map((puck) => (
             <Grid
               key={puck.id}
               sx={{
@@ -67,7 +63,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
           ))}
         </Grid>
 
-        {pucksList.length === 0 && (
+        {puckList?.length === 0 && (
           <Box className={styles.emptyState}>
             <Typography variant="body1" color="text.secondary">
               No pucks available for this user

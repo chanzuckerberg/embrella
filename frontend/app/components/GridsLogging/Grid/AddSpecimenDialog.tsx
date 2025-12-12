@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Box, TextField } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, TextField, Alert } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { AddSampleDialog } from './AddSampleDialog';
+import { useSampleList, useCreateSpecimen } from '@app/common/hooks/useGridLogging';
 
 interface SpecimenFormData {
-  sampleName: string;
+  sampleIds: number[];
   notesPage: string;
   notes: string;
 }
@@ -16,55 +17,76 @@ interface SpecimenFormData {
 interface AddSpecimenDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (data: SpecimenFormData) => void;
+  onSave?: (specimenId: number) => void;
 }
 
 export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onClose, onSave }) => {
   const [formData, setFormData] = useState<SpecimenFormData>({
-    sampleName: '',
+    sampleIds: [],
     notesPage: '',
     notes: '',
   });
 
   const [addSampleDialogOpen, setAddSampleDialogOpen] = useState(false);
+  const { transformedSamples, refetch } = useSampleList();
+  const { createSpecimen, isCreating, error, clearError } = useCreateSpecimen();
 
-  const handleInputChange = (field: keyof SpecimenFormData, value: string) => {
+  useEffect(() => {
+    if (!open) {
+      clearError();
+    }
+  }, [open, clearError]);
+
+  const handleSampleChange = (value: string) => {
+    const sampleId = parseInt(value);
+    if (!isNaN(sampleId)) {
+      setFormData((prev) => ({
+        ...prev,
+        sampleIds: [sampleId],
+      }));
+    }
+  };
+
+  const handleAddSample = (sampleId: number, _sampleName: string) => {
+    // Refresh the samples list to include the newly created sample
+    refetch?.();
+    // Auto-select the newly created sample
     setFormData((prev) => ({
       ...prev,
-      [field]: value,
+      sampleIds: [sampleId],
     }));
   };
 
-  const handleAddSample = (sampleData: { name: string; ontology: string }) => {
-    setFormData((prev) => ({
-      ...prev,
-      sampleName: sampleData.name, // or the ID returned from API
-    }));
-  };
-  const handleSave = () => {
-    if (formData.sampleName.trim()) {
-      onSave({
-        sampleName: formData.sampleName.trim(),
-        notesPage: formData.notesPage.trim(),
-        notes: formData.notes.trim(),
+  const handleSave = async () => {
+    if (formData.sampleIds.length > 0) {
+      const result = await createSpecimen({
+        sample_ids: formData.sampleIds,
+        notes: formData.notes.trim() || undefined,
+        notes_page: formData.notesPage.trim() ? parseInt(formData.notesPage) : undefined,
       });
-      // Reset form
-      setFormData({
-        sampleName: '',
-        notesPage: '',
-        notes: '',
-      });
-      onClose();
+
+      if (result) {
+        if (onSave) {
+          onSave(result.specimen.id);
+        }
+        setFormData({
+          sampleIds: [],
+          notesPage: '',
+          notes: '',
+        });
+        onClose();
+      }
     }
   };
 
   const handleClose = () => {
     // Reset form on close
     setFormData({
-      sampleName: '',
+      sampleIds: [],
       notesPage: '',
       notes: '',
     });
+    clearError();
     onClose();
   };
 
@@ -75,35 +97,49 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
         onClose={handleClose}
         title="Add New Specimen"
         onSave={handleSave}
-        disabled={!formData.sampleName.trim()}
+        disabled={formData.sampleIds.length === 0 || isCreating}
+        saveButtonText={isCreating ? 'Creating...' : 'Save'}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {Boolean(error) && (
+            <Alert severity="error" onClose={clearError}>
+              {error}
+            </Alert>
+          )}
+          <label style={{ fontSize: '12px', color: 'grey' }}>Sample Name:Combination of samples on a grid</label>
           <FormFieldWithAdd
             label="Sample Name"
-            value={formData.sampleName}
-            onChange={(value) => handleInputChange('sampleName', value)}
+            value={formData.sampleIds[0]?.toString() || ''}
+            onChange={handleSampleChange}
             onAdd={() => setAddSampleDialogOpen(true)}
             required
-            // options={existingSamples}
+            options={transformedSamples.map((sample) => ({
+              value: sample.id.toString(),
+              label: sample.label,
+            }))}
             placeholder="Select or add sample name"
+            disabled={isCreating}
           />
 
           <TextField
-            label="Notes Page"
-            placeholder="Enter notes page (e.g., https://confluence.example.com/display/GRID/Sample+Prep)"
+            label="Notes Page ID"
+            placeholder="Enter Confluence page ID (optional)"
             value={formData.notesPage}
-            onChange={(e) => handleInputChange('notesPage', e.target.value)}
+            onChange={(e) => setFormData((prev) => ({ ...prev, notesPage: e.target.value }))}
             sx={disabledTextFieldStyles}
+            disabled={isCreating}
+            type="number"
           />
 
           <TextField
             label="Notes"
             placeholder="Add notes about specimen preparation..."
             value={formData.notes}
-            onChange={(e) => handleInputChange('notes', e.target.value)}
+            onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
             multiline
             rows={3}
             sx={disabledTextFieldStyles}
+            disabled={isCreating}
           />
         </Box>
       </BaseFormDialog>

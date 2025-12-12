@@ -29,6 +29,7 @@ export enum API {
 
   // Grid Logging
   GRID_LOGGING_USERS = '/api/list/all/users',
+  GRID_LOGGING_PROJECT_LEADERS = '/api/list/project-leaders',
   GRID_LOGGING_PUCKS = '/api/list/pucks',
   // GRID_LOGGING_PUCK_BYUSER = '/api/list/pucks/?user_id=',
   GRID_LOGGING_PUCK_SLOTINFO = '/api/list/pucks/puck_id/slots/',
@@ -36,6 +37,14 @@ export enum API {
   GRID_LOGGING_GRID_DETAILS = '/api/list/pucks/puck_id/grid-box/position_in_puck/grid/grid_id/',
   //http://127.0.0.1:8000/api/list/pucks/22/grid-box/2/grid/36/
   GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',
+  GRID_LOGGING_CANES = '/api/list/canes/',
+  GRID_LOGGING_SPECIMENS = '/api/list/specimens/',
+  GRID_LOGGING_SAMPLES = '/api/list/samples/',
+  GRID_LOGGING_FREEZING_SESSIONS = '/api/list/freezing-sessions/',
+  GRID_LOGGING_DEVICES = '/api/list/freezing-sessions/devices/',
+  GRID_LOGGING_CONFLUENCE_SPACES = '/api/list/confluence-spaces/',
+  GRID_LOGGING_DRIVE_FOLDERS = '/api/list/drive-folders/',
+  GRID_LOGGING_CONFLUENCE_PAGES = '/api/list/confluence-pages/',
 
   // Projects
   PROJECTS_LIST = '/projects/project_list/',
@@ -48,6 +57,16 @@ export enum POST_API {
   UPDATE_TOMOGRAM_REVIEW = '/api/reviews/:reviewId/tomograms/:tomogramId',
   CREATE_PUCK = '/api/list/pucks/',
   CREATE_GRID_BOX = '/api/list/pucks/puck_id/grid-box/',
+  CREATE_GRID = '/api/list/grids/',
+  CLIP_ALL_GRIDS = '/api/list/grids/clip-all-in-box/grid_box_id/',
+  MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
+  MOVE_GRID = '/api/list/grids/grid_id/move/',
+  UPDATE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/update/',
+  UPDATE_GRID = '/api/list/grids/grid_id/update/',
+  CREATE_FREEZING_SESSION = '/api/list/freezing-sessions/',
+  CREATE_PROJECT = '/projects/create_project/',
+  CREATE_SAMPLE = '/api/list/samples/',
+  CREATE_SPECIMEN = '/api/list/specimens/',
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,28 +1,49 @@
 'use client';
 
-import React, { useState } from 'react';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
+import React, { useState, useEffect } from 'react';
+import { PuckList, UserList } from '@app/common/types/gridLogging';
 import { PuckSVG } from './PuckSvg';
 import { DeletePuck } from './DeletePuck';
 import { Card, CardContent, CardHeader, Box, IconButton, Typography, CircularProgress, Alert } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
-import styles from '../GridLogging.module.css';
-import { UsersList } from '@app/common/types/gridLogging/userList';
+import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging';
 import { AddGridBox } from '../GridBox/AddGridBox';
+import styles from '../GridLogging.module.css';
 
 interface PuckDetailsProps {
-  selectedPuck: PucksList | null;
+  selectedPuck: PuckList | null;
   onSlotSelect: (slotPosition: number, gridBoxId?: number) => void;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
+  onRefetchReady?: (refetch: () => void) => void;
+  onGridBoxInfoRefetchReady?: (refetch: () => void) => void;
+  onPuckDeleted?: () => void;
 }
 
-export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSelect, selectedUser }) => {
+export const PuckDetails: React.FC<PuckDetailsProps> = ({
+  selectedPuck,
+  onSlotSelect,
+  selectedUser,
+  onRefetchReady,
+  onGridBoxInfoRefetchReady,
+  onPuckDeleted,
+}) => {
   // Fetch puck slots data
   const { slotsData, isSuccess, refetch } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isCreateGridBoxOpen, setIsCreateGridBoxOpen] = useState(false);
   const [selectedSlotForGridBox, setSelectedSlotForGridBox] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (onRefetchReady) {
+      onRefetchReady(refetch);
+    }
+  }, [onRefetchReady, refetch]);
+
+  useEffect(() => {
+    if (onGridBoxInfoRefetchReady) {
+      onGridBoxInfoRefetchReady(refetch);
+    }
+  }, [onGridBoxInfoRefetchReady, refetch]);
 
   const handleSlotClick = (slotPosition: number) => {
     if (!slotsData) return;
@@ -149,7 +170,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({ selectedPuck, onSlotSe
         onClose={() => setDeleteDialogOpen(false)}
         selectedPuck={selectedPuck}
         slotsData={slotsData || null}
-        selectedUser={selectedUser}
+        onDeleteSuccess={onPuckDeleted}
       />
 
       <AddGridBox

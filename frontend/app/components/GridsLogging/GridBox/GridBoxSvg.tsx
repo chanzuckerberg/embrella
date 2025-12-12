@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { ReactSVG } from 'react-svg';
-import { PuckSlotsResponse } from '@app/common/types/gridLogging/puckList';
-import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
+import { PuckSlotsResponse, GridBoxDetailResponse } from '@app/common/types/gridLogging';
 
 interface GridBoxSVGProps {
   size?: number;
@@ -15,6 +14,7 @@ interface GridBoxSVGProps {
   selectedGrid?: number | null;
   slotsData?: PuckSlotsResponse;
   selectedSlot?: number | null;
+  maxGrids?: 4 | 6 | 8;
 }
 
 export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
@@ -27,7 +27,20 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   selectedGrid: _selectedGrid = null,
   slotsData,
   selectedSlot = null,
+  maxGrids = 4, // Default to 4
 }) => {
+  // Choose SVG based on maxGrids
+  const getSvgPath = () => {
+    switch (maxGrids) {
+      case 6:
+        return '/next/GridBox6.svg';
+      case 8:
+        return '/next/GridBox8.svg';
+      case 4:
+      default:
+        return '/next/GridBox.svg';
+    }
+  };
   // Get grid status for a given position
   const getGridStatus = (position: number): 'occupied' | 'empty' | 'unknown' => {
     // First check if we have grid box data for the selected slot
@@ -84,7 +97,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
       onClick={onClick}
     >
       <ReactSVG
-        src="/next/GridBox.svg"
+        src={getSvgPath()}
         beforeInjection={(svg) => {
           svg.setAttribute('width', '100%');
           svg.setAttribute('height', '100%');
@@ -99,10 +112,8 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
             // Check if this is a grid area by looking for data-position attribute
             if (dataPosition) {
               const gridNumber = parseInt(dataPosition, 10);
-              const maxGrids = gridBoxData?.grid_box?.max_grids || 4;
 
               if (gridNumber >= 1 && gridNumber <= maxGrids) {
-                // 4 grids max
                 const gridStyle = getGridStyle(gridNumber);
 
                 // Apply visual styling based on grid status

@@ -1,4 +1,4 @@
-import { GridBoxDetail } from './gridBox';
+import { GridBoxDetail } from '../entities/gridBox';
 
 export interface GridBoxDetailResponse {
   puck_id: number;
@@ -10,4 +10,4 @@ export interface GridBoxDetailResponse {
 }
 
 // Re-export for backward compatibility
-export type { GridBoxDetail as GridBox, Position } from './gridBox';
+export type { GridBoxDetail as GridBox, Position } from '../entities/gridBox';

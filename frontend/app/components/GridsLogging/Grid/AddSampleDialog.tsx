@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Box, TextField } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, TextField, Alert } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
+import { useCreateSample } from '@app/common/hooks/useGridLogging';
 
 interface SampleFormData {
   name: string;
@@ -13,7 +14,7 @@ interface SampleFormData {
 interface AddSampleDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (data: SampleFormData) => void;
+  onSave?: (sampleId: number, sampleName: string) => void;
 }
 
 export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose, onSave }) => {
@@ -22,6 +23,14 @@ export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose,
     ontology: '',
   });
 
+  const { createSample, isCreating, error, clearError } = useCreateSample();
+
+  useEffect(() => {
+    if (!open) {
+      clearError();
+    }
+  }, [open, clearError]);
+
   const handleInputChange = (field: keyof SampleFormData, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -29,18 +38,23 @@ export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose,
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (formData.name.trim()) {
-      onSave({
+      const result = await createSample({
         name: formData.name.trim(),
         ontology: formData.ontology.trim(),
       });
-      // Reset form
-      setFormData({
-        name: '',
-        ontology: '',
-      });
-      onClose();
+
+      if (result) {
+        if (onSave) {
+          onSave(result.sample.id, result.sample.name);
+        }
+        setFormData({
+          name: '',
+          ontology: '',
+        });
+        onClose();
+      }
     }
   };
 
@@ -50,6 +64,7 @@ export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose,
       name: '',
       ontology: '',
     });
+    clearError();
     onClose();
   };
 
@@ -59,24 +74,33 @@ export const AddSampleDialog: React.FC<AddSampleDialogProps> = ({ open, onClose,
       onClose={handleClose}
       title="Add New Sample"
       onSave={handleSave}
-      disabled={!formData.name.trim()}
+      disabled={!formData.name.trim() || isCreating}
+      saveButtonText={isCreating ? 'Creating...' : 'Save'}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {Boolean(error) && (
+          <Alert severity="error" onClose={clearError}>
+            {error}
+          </Alert>
+        )}
+
         <TextField
           required
-          label="Sample Name"
+          label="An individual sample (e.g., apoferritin)"
           placeholder="Enter sample name (e.g., lysosome)"
           value={formData.name}
           onChange={(e) => handleInputChange('name', e.target.value)}
           sx={disabledTextFieldStyles}
+          disabled={isCreating}
         />
 
         <TextField
-          label="Ontology"
+          label="Ontology: Sample should have an ontology identifier"
           placeholder="Enter ontology (e.g., GO:0005764)"
           value={formData.ontology}
           onChange={(e) => handleInputChange('ontology', e.target.value)}
           sx={disabledTextFieldStyles}
+          disabled={isCreating}
         />
       </Box>
     </BaseFormDialog>

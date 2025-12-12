@@ -1,6 +1,10 @@
-from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Puck
+from cryo_grids.models import Cane, CryoGrid, CryoGridBox, Puck, Specimen, Sample, PlungeFreezingSession
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from confluence.models import Page, Space
+from clouddocs.models import DriveFolder
+from projects.models import Project
+from django.utils import timezone as django_timezone
 
 from umbrella.choices import PUCK_COLORS
 
@@ -35,7 +39,6 @@ class UserSerializer(serializers.ModelSerializer):
         if '@' in username:
             return username.split('@')[0]
         return username
-
 
 class PuckSerializer(serializers.ModelSerializer):
     """
@@ -133,16 +136,26 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
         """
         Custom validation for grid box creation/update
         """
-        name = data.get('name')
-        puck = data.get('puck')
-        position_in_puck = data.get('position_in_puck')
-
         instance = self.instance
+        
+        # For updates, use existing values if not provided in data (partial update support)
+        if instance:
+            name = data.get('name', instance.name)
+            puck = data.get('puck', instance.puck)
+            position_in_puck = data.get('position_in_puck', instance.position_in_puck)
+        else:
+            # For creation, get from data only
+            name = data.get('name')
+            puck = data.get('puck')
+            position_in_puck = data.get('position_in_puck')
 
-        if name:
-            name_query = CryoGridBox.objects.filter( puck=puck,
-            position_in_puck=position_in_puck,
-            name=name)
+        # Validate unique constraint on name + puck + position_in_puck
+        if name and puck and position_in_puck:
+            name_query = CryoGridBox.objects.filter(
+                puck=puck,
+                position_in_puck=position_in_puck,
+                name=name
+            )
             if instance:  # If updating, exclude current instance
                 name_query = name_query.exclude(pk=instance.pk)
             if name_query.exists():
@@ -150,6 +163,7 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
                     'name': f'A grid box with name "{name}" at position {position_in_puck} in this puck already exists.',
                 })
 
+        # Validate unique constraint on puck + position_in_puck
         if puck and position_in_puck:
             position_query = CryoGridBox.objects.filter(
                 puck=puck,
@@ -164,6 +178,96 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
 
         return data
 
+class CryoGridSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating and updating CryoGrid
+    """
+    grid_box_name = serializers.CharField(source='grid_box.name', read_only=True)
+    
+    class Meta:
+        model = CryoGrid
+        fields = [
+            'id',
+            'name',
+            'user',
+            'freezing_session',
+            'specimen',
+            'intended_project',
+            'grid_box',
+            'grid_box_name',
+            'position_in_box',
+            'notes',
+            'clipped',
+            'blot_time',
+            'blot_force',
+            'blot_distance',
+            'copy_number',
+            'trashed',
+        ]
+        read_only_fields = ['id', 'trashed', 'grid_box_name']
+        validators = []  # Disable default validators to use custom validation
+        
+    def validate(self, data):
+        """
+        Custom validation for grid creation/update
+        """
+        instance = self.instance
+        
+        # For updates, use existing values if not provided in data (partial update support)
+        if instance:
+            grid_box = data.get('grid_box', instance.grid_box)
+            position_in_box = data.get('position_in_box', instance.position_in_box)
+            name = data.get('name', instance.name)
+            freezing_session = data.get('freezing_session', instance.freezing_session)
+            specimen = data.get('specimen', instance.specimen)
+            copy_number = data.get('copy_number', instance.copy_number)
+        else:
+            # For creation, get from data only
+            grid_box = data.get('grid_box')
+            position_in_box = data.get('position_in_box')
+            name = data.get('name')
+            freezing_session = data.get('freezing_session')
+            specimen = data.get('specimen')
+            copy_number = data.get('copy_number', 1)
+        
+        
+        # Validate position is within grid box capacity
+        if grid_box and position_in_box:
+            if position_in_box > grid_box.max_grids:
+                raise serializers.ValidationError({
+                    'position_in_box': f'Position {position_in_box} exceeds maximum grids ({grid_box.max_grids}) for this box.',
+                })
+            
+            # Check if position is already occupied
+            position_query = CryoGrid.objects.filter(
+                grid_box=grid_box,
+                position_in_box=position_in_box,
+                trashed=False,
+            )
+            if instance:
+                position_query = position_query.exclude(pk=instance.pk)
+            if position_query.exists():
+                existing_grid = position_query.first()
+                raise serializers.ValidationError({
+                    'position_in_box': f'Position {position_in_box} is already occupied by grid "{existing_grid.name}".',
+                })
+        
+        # Validate unique constraint on name, freezing_session, specimen, copy_number
+        if name and specimen:
+            unique_query = CryoGrid.objects.filter(
+                name=name,
+                freezing_session=freezing_session,
+                specimen=specimen,
+                copy_number=copy_number,
+            )
+            if instance:
+                unique_query = unique_query.exclude(pk=instance.pk)
+            if unique_query.exists():
+                raise serializers.ValidationError({
+                    'name': f'A grid with name "{name}", this specimen, freezing session, and copy number already exists.',
+                })
+        
+        return data
 
 class CaneSerializer(serializers.ModelSerializer):
     """
@@ -185,9 +289,9 @@ class CaneSerializer(serializers.ModelSerializer):
             'pucks_count',
         ]
     
-        def get_pucks_count(self, obj):
-            """Get count of pucks in this cane"""
-            return obj.puck_set.count()
+    def get_pucks_count(self, obj):
+        """Get count of pucks in this cane"""
+        return obj.puck_set.count()
         
 class PuckDetailSerializer(serializers.ModelSerializer):
     color_display = serializers.CharField(source='get_color_display', read_only=True)
@@ -215,8 +319,6 @@ class PuckDetailSerializer(serializers.ModelSerializer):
         def get_grid_boxes_count(self, obj):
             """Get count of grid boxes in this puck"""
             return obj.cryogridbox_set.count()
-
-
 
 class GridDetailsSerializer(serializers.ModelSerializer):
     """
@@ -312,3 +414,224 @@ class GridDetailsSerializer(serializers.ModelSerializer):
             "blot_distance": obj.blot_distance,
         }
 
+class SampleSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Sample model
+    """
+    class Meta:
+        model = Sample
+        fields = [
+            'id',
+            'name',
+            'ontology',
+        ]
+    def validate_name(self, value):
+        """Validate that sample name is unique and not empty"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Sample name is required.")
+        
+        # Check for uniqueness
+        instance = self.instance
+        name_query = Sample.objects.filter(name=value.strip())
+        if instance:
+            name_query = name_query.exclude(pk=instance.pk)
+        if name_query.exists():
+            raise serializers.ValidationError(f'A sample with name "{value}" already exists.')
+        
+        return value.strip()
+    
+    def create(self, validated_data):
+        """Create a new sample"""
+        return Sample.objects.create(**validated_data)
+
+class SpecimenSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Specimen model with related samples
+    """
+    samples = SampleSerializer(many=True, read_only=True)
+    sample_ids = serializers.ListField(  
+        child=serializers.IntegerField(),
+        required=False,
+        allow_empty=True,
+        write_only=True,
+        help_text="List of sample IDs to associate with this specimen"
+    )
+    notes_page_url = serializers.SerializerMethodField()
+    display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Specimen
+        fields = [
+            'id',
+            'samples',
+            'sample_ids',
+            'notes',
+            'notes_page',
+            'notes_page_url',
+            'display_name',
+        ]
+    
+    def get_notes_page_url(self, obj):
+        """Get the URL of the notes page if it exists"""
+        if obj.notes_page:
+            return obj.notes_page.url if hasattr(obj.notes_page, 'url') else None
+        return None
+    
+    def get_display_name(self, obj):
+        """Get human-readable display name"""
+        return str(obj)
+    
+    def validate_sample_ids(self, value):
+        """Validate that all sample IDs exist"""
+        if value:
+            existing_samples = Sample.objects.filter(id__in=value)
+            if existing_samples.count() != len(value):
+                existing_ids = set(existing_samples.values_list('id', flat=True))
+                invalid_ids = set(value) - existing_ids
+                raise serializers.ValidationError(
+                    f"Sample IDs {invalid_ids} do not exist."
+                )
+        return value
+    
+    def create(self, validated_data):
+        """Create a new specimen with associated samples"""
+        sample_ids = validated_data.pop('sample_ids', [])
+        
+        # Create the specimen
+        specimen = Specimen.objects.create(
+            notes=validated_data.get('notes', ''),
+            notes_page=validated_data.get('notes_page', None)
+        )
+        
+        # Associate samples if provided
+        if sample_ids:
+            samples = Sample.objects.filter(id__in=sample_ids)
+            specimen.samples.set(samples)
+        
+        return specimen
+
+class FreezingSessionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for PlungeFreezingSession model
+    """
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    device_name = serializers.CharField(source='device.name', read_only=True)
+    display_name = serializers.SerializerMethodField()
+    datetime = serializers.SerializerMethodField() 
+    
+    class Meta:
+        model = PlungeFreezingSession
+        fields = [
+            'id',
+            'datetime',
+            'user',
+            'user_name',
+            'device',
+            'device_name',
+            'device_temperature',
+            'humidity',
+            'notes_page',
+            'display_name',
+        ]
+    def get_datetime(self, obj):
+        """Return datetime in local timezone"""
+        if obj.datetime:
+            local_dt = django_timezone.localtime(obj.datetime)
+            return local_dt.isoformat()
+        return None
+        
+    def get_display_name(self, obj):
+        """Get human-readable display name matching the __str__ method"""
+        return str(obj)
+
+class ConfluenceSpaceSerializer(serializers.ModelSerializer):
+    """Serializer for Confluence Space model"""
+    class Meta:
+        model = Space
+        fields = ['id', 'name', 'space_id', 'url']
+
+class DriveFolderSerializer(serializers.ModelSerializer):
+    """Serializer for Google Drive Folder model"""
+    class Meta:
+        model = DriveFolder
+        fields = ['id', 'name', 'url']
+
+class ConfluencePageSerializer(serializers.ModelSerializer):
+    """Serializer for Confluence Page model (for notes pages)"""
+    class Meta:
+        model = Page
+        fields = ['id', 'name', 'url']
+
+class ProjectSerializer(serializers.ModelSerializer):
+    """Serializer for Project model"""
+
+    project_leader_name = serializers.SerializerMethodField(read_only=True)
+    confluence_space_name = serializers.CharField(source='confluence_space.space_id', read_only=True)
+    google_drive_folder_name = serializers.CharField(source='google_drive_folder.name', read_only=True)
+    
+    class Meta:
+        model = Project
+        fields = [
+            'id',
+            'name',
+            'description',
+            'project_leader',
+            'project_leader_name',
+            'confluence_space',
+            'confluence_space_name',
+            'google_drive_folder',
+            'google_drive_folder_name',
+        ]
+        read_only_fields = ['id']
+
+    def get_project_leader_name(self, obj):
+        """Get project leader's username"""
+        if obj.project_leader:
+            return obj.project_leader.username
+        return None
+    
+    def validate_name(self, value):
+        """
+        Validate that project name is unique and not empty
+        """
+        if not value or not value.strip():
+            raise serializers.ValidationError("Project name is required.")
+        
+        # Check for uniqueness (excluding current instance during update)
+        instance = self.instance
+        name_query = Project.objects.filter(name=value.strip())
+        if instance:
+            name_query = name_query.exclude(pk=instance.pk)
+        if name_query.exists():
+            raise serializers.ValidationError(f'A project with name "{value}" already exists.')
+        
+        return value.strip()
+
+
+    def validate(self, data):
+        """
+        Custom validation for project creation
+        According to the model, only name is truly required (not null and unique)
+        Other fields can be null/blank based on the model definition
+        """
+        
+        # Validate foreign keys exist if provided
+        if 'project_leader' in data and data['project_leader'] is not None:
+            if not User.objects.filter(id=data['project_leader'].id).exists():
+                raise serializers.ValidationError({
+                    'project_leader': 'Selected user does not exist.'
+                })
+        
+        if 'confluence_space' in data and data['confluence_space'] is not None:
+            if not Space.objects.filter(id=data['confluence_space'].id).exists():
+                raise serializers.ValidationError({
+                    'confluence_space': 'Selected confluence space does not exist.'
+                })
+        
+        if 'google_drive_folder' in data and data['google_drive_folder'] is not None:
+            if not DriveFolder.objects.filter(id=data['google_drive_folder'].id).exists():
+                raise serializers.ValidationError({
+                    'google_drive_folder': 'Selected Google Drive folder does not exist.'
+                })
+        
+        return data

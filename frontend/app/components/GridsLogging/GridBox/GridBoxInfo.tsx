@@ -1,28 +1,33 @@
 'use client';
 
-import React, { useContext, useState, useEffect } from 'react';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
-import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, Typography, Box, IconButton, TextField, MenuItem } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
-import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/useGridLoggingGridBoxDetail';
-import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
+import {
+  useGridLoggingPuckSlots,
+  useClipAllGrids,
+  useGridLoggingGridBoxDetail,
+  useUpdateGridBox,
+  useGridLoggingChoices,
+} from '@app/common/hooks/useGridLogging';
 import styles from '../GridLogging.module.css';
 import { GridBoxSVG } from './GridBoxSvg';
 import { DeleteGridBox } from './DeleteGridBox';
 import { disabledTextFieldStyles } from './DisableBoxStyle';
-import { UserContext } from '@app/common/context/UserProvider';
-import { UsersList } from '@app/common/types/gridLogging/userList';
-// import { AddGrid } from '../Grid/AddGrid';
-import { DJANGO_URL } from '@app/common/constants/api';
-// import { MoveGridBox } from './MoveGridBox';
+import { UserList, GridBoxDetailResponse, PuckList } from '@app/common/types/gridLogging';
+import { AddGrid } from '../Grid/AddGrid';
+import { MoveGridBox } from './MoveGridBox';
+import { ClipAllGridsDialog } from './ClipAllGridsDialog';
 
 interface GridBoxInfoProps {
-  selectedPuck: PucksList | null;
+  selectedPuck: PuckList | null;
   selectedSlot: number | null;
   onGridSelect: (gridPosition: number, gridId: number) => void;
-  selectedUser?: UsersList | null;
-  onGridBoxNameLoaded?: (name: string) => void;
+  selectedUser?: UserList | null;
+  onGridDetailsRefetch?: (() => void) | null;
+  onMoveGridBoxSuccess?: (newPuckId: number, newSlotPosition: number) => void;
+  onGridBoxInfoRefetchReady?: (refetch: () => void) => void;
+  onGridBoxDeleted?: () => void;
 }
 
 const mapGridBoxDetailToFormData = (data: GridBoxDetailResponse) => ({
@@ -41,23 +46,55 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
   selectedSlot,
   onGridSelect,
   selectedUser,
-  onGridBoxNameLoaded,
+  onGridDetailsRefetch,
+  onMoveGridBoxSuccess,
+  onGridBoxInfoRefetchReady,
+  onGridBoxDeleted,
 }) => {
-  const { slotsData, isSuccess: slotsSuccess } = useGridLoggingPuckSlots(selectedPuck?.id);
+  const { slotsData, isSuccess: slotsSuccess, refetch: refetchSlots } = useGridLoggingPuckSlots(selectedPuck?.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  // const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
-  // const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
-  // const [moveGridBoxDialogOpen, setMoveGridBoxDialogOpen] = useState(false);
-  const { gridBoxData, isSuccess: gridBoxSuccess } = useGridLoggingGridBoxDetail(
-    selectedPuck?.id,
-    selectedSlot || undefined
-  );
-  const currentUser = useContext(UserContext);
+  const [addGridDialogOpen, setAddGridDialogOpen] = useState(false);
+  const [clipAllDialogOpen, setClipAllDialogOpen] = useState(false);
+  const [isClipping] = useState(false);
+  const [selectedPositionInBox, setSelectedPositionInBox] = useState<number | null>(null);
+  const [moveGridBoxDialogOpen, setMoveGridBoxDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedData, setEditedData] = useState({
+    name: '',
+    color: '',
+    numbering: '',
+  });
+
+  const {
+    gridBoxData,
+    isSuccess: gridBoxSuccess,
+    refetch,
+  } = useGridLoggingGridBoxDetail(selectedPuck?.id, selectedSlot || undefined);
+  const { clipAllGrids, error: clipError, clearError } = useClipAllGrids();
+
+  // Add update hook
+  const { updateGridBox, isUpdating, error: updateError, clearError: clearUpdateError } = useUpdateGridBox();
+
+  // Add choices hook for dropdowns
+  const { choices } = useGridLoggingChoices();
+
   useEffect(() => {
-    if (gridBoxData?.grid_box?.name && onGridBoxNameLoaded) {
-      onGridBoxNameLoaded(gridBoxData.grid_box.name);
+    if (onGridBoxInfoRefetchReady) {
+      onGridBoxInfoRefetchReady(refetch);
     }
-  }, [gridBoxData?.grid_box?.name, onGridBoxNameLoaded]);
+  }, [onGridBoxInfoRefetchReady, refetch]);
+
+  // Update edited data when gridBoxData changes
+  useEffect(() => {
+    if (gridBoxData) {
+      const formData = mapGridBoxDetailToFormData(gridBoxData);
+      setEditedData({
+        name: formData.name,
+        color: formData.color,
+        numbering: formData.numbering,
+      });
+    }
+  }, [gridBoxData]);
 
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {
@@ -81,51 +118,54 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     setDeleteDialogOpen(true);
   };
 
-  // const handleAddGrid = (positionInBox?: number) => {
-  //   setAddGridDialogOpen(true);
-  //   setSelectedPositionInBox(positionInBox || null);
-  // };
+  const handleGridBoxDeleted = () => {
+    setDeleteDialogOpen(false);
+    // Refetch slots data to update puck visualization
+    refetchSlots();
+    if (onGridBoxDeleted) {
+      onGridBoxDeleted();
+    }
+  };
 
   const handleAddGrid = (positionInBox?: number) => {
-    const prefillParams = new URLSearchParams();
-
-    // Prefill grid_box with current grid box ID
-    if (gridBoxData?.grid_box?.grid_box_id) {
-      prefillParams.append('grid_box', gridBoxData.grid_box.grid_box_id.toString());
-    }
-
-    // Prefill position if provided (when called from handleGridClick)
-    if (positionInBox !== undefined) {
-      prefillParams.append('position_in_box', positionInBox.toString());
-    }
-
-    // Get current user from context
-    if (currentUser?.id) {
-      prefillParams.append('user', currentUser.id);
-    }
-
-    // Add return state parameters
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
-    }
-    if (selectedPuck?.id) {
-      prefillParams.append('return_puck_id', selectedPuck.id.toString());
-    }
-    if (selectedSlot !== null) {
-      prefillParams.append('return_slot_position', selectedSlot.toString());
-    }
-
-    const adminUrl = `${DJANGO_URL}/admin/cryo_grids/cryogrid/add/?${prefillParams.toString()}`;
-    window.location.href = adminUrl;
+    setAddGridDialogOpen(true);
+    setSelectedPositionInBox(positionInBox || null);
   };
-  // const handleMoveGridBox = () => {
-  //   setMoveGridBoxDialogOpen(true);
-  //   console.log('Move grid box');
-  // };
 
-  // const handleSave = () => {
-  //   console.log('Save grid box:', formData);
-  // };
+  const handleMoveGridBox = () => {
+    setMoveGridBoxDialogOpen(true);
+  };
+  const handleClipAllGrids = () => {
+    clearError();
+    setClipAllDialogOpen(true);
+  };
+
+  const handleConfirmClipAll = async () => {
+    if (!gridBoxData?.grid_box?.grid_box_id) {
+      console.error('No grid box ID available');
+      return;
+    }
+
+    const result = await clipAllGrids(gridBoxData.grid_box.grid_box_id);
+
+    if (result) {
+      setClipAllDialogOpen(false);
+      // Refetch grid box data to update the UI
+      refetch();
+      if (onGridDetailsRefetch) {
+        onGridDetailsRefetch();
+      }
+    }
+  };
+
+  const unclippedCount = gridBoxData?.grid_box?.positions?.filter((pos) => pos.occupied && !pos.clipped).length || 0;
+
+  const handleGridCreated = (gridPosition: number, gridId: number) => {
+    // Refetch grid box data to update the graphic
+    refetch();
+    // Select the newly created grid (
+    onGridSelect(gridPosition, gridId);
+  };
 
   const handleGridClick = (gridPosition: number) => {
     if (gridBoxData?.grid_box?.positions) {
@@ -140,6 +180,50 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     }
   };
 
+  // Add edit mode handlers
+  const handleEditClick = () => {
+    setIsEditMode(true);
+    clearUpdateError();
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    // Reset edited data to original values
+    const formData = mapGridBoxDetailToFormData(gridBoxData);
+    setEditedData({
+      name: formData.name,
+      color: formData.color,
+      numbering: formData.numbering,
+    });
+    clearUpdateError();
+  };
+
+  const handleSaveEdit = async () => {
+    if (!gridBoxData?.grid_box?.grid_box_id) {
+      return;
+    }
+
+    const result = await updateGridBox({
+      grid_box_id: gridBoxData.grid_box.grid_box_id,
+      name: editedData.name,
+      color: editedData.color,
+      numbering: editedData.numbering,
+    });
+
+    if (result && result.success) {
+      setIsEditMode(false);
+      // Refetch to get updated data
+      refetch();
+    }
+  };
+
+  const handleFieldChange = (field: 'name' | 'color' | 'numbering', value: string) => {
+    setEditedData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
   return (
     <>
       <Card elevation={2} sx={{ maxWidth: 800, width: '100%' }}>
@@ -147,7 +231,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
           title={
             <Box className={styles.cardHeader}>
               <Typography variant="h6" component="h2">
-                GridBox Name: Puck-CZII-0{selectedPuck.name}/Slot-{formData.positionInPuck}/{formData.name}
+                GridBox Name: Puck-CZII-0{selectedPuck.name}/Slot-{formData.positionInPuck}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Button
@@ -158,6 +242,15 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                   size="small"
                 >
                   Add Grid
+                </Button>
+                <Button
+                  sdsType="primary"
+                  sdsStyle="rounded"
+                  startIcon={<Icon sdsIcon="Grid" sdsSize="l" />}
+                  onClick={handleClipAllGrids}
+                  size="small"
+                >
+                  Clip All Grids
                 </Button>
                 <IconButton
                   onClick={handleDeleteGridBox}
@@ -183,6 +276,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 gridBoxData={gridBoxData}
                 slotsData={slotsData}
                 selectedSlot={selectedSlot}
+                maxGrids={formData.maxGrids as 4 | 6 | 8}
               />
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" component="div" sx={{ marginLeft: '8px' }}>
@@ -196,17 +290,62 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
             </Box>
 
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-                GridBox Information
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: 'primary.main' }}>
+                  GridBox Information
+                </Typography>
+                {/* Edit/Save Icons */}
+                {!isEditMode ? (
+                  <IconButton
+                    onClick={handleEditClick}
+                    sx={{
+                      '&:hover': { backgroundColor: '#e3f2fd' },
+                    }}
+                  >
+                    <Icon sdsIcon="Edit" sdsSize="l" />
+                  </IconButton>
+                ) : (
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton
+                      onClick={handleSaveEdit}
+                      disabled={isUpdating}
+                      sx={{
+                        '&:hover': { backgroundColor: '#e8f5e9' },
+                        color: 'green',
+                      }}
+                    >
+                      <Icon sdsIcon="CheckCircle" sdsSize="l" color="green" />
+                    </IconButton>
+                    <IconButton
+                      onClick={handleCancelEdit}
+                      disabled={isUpdating}
+                      sx={{
+                        '&:hover': { backgroundColor: '#ffebee' },
+                      }}
+                    >
+                      <Icon sdsIcon="XMark" sdsSize="l" color="red" />
+                    </IconButton>
+                  </Box>
+                )}
+              </Box>
+
+              {/* Show error message if update fails */}
+              {!!updateError && (
+                <Box sx={{ mb: 2, p: 1, bgcolor: '#ffebee', borderRadius: 1 }}>
+                  <Typography variant="body2" color="error">
+                    {updateError}
+                  </Typography>
+                </Box>
+              )}
 
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
                   fullWidth
                   label="Grid box name"
-                  disabled
-                  value={formData.name}
-                  sx={disabledTextFieldStyles}
+                  disabled={!isEditMode}
+                  value={isEditMode ? editedData.name : formData.name}
+                  onChange={(e) => handleFieldChange('name', e.target.value)}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
                 <TextField fullWidth label="Puck" value={formData.puckName} disabled sx={disabledTextFieldStyles} />
               </Box>
@@ -214,18 +353,36 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
                   fullWidth
+                  select={isEditMode}
                   label="Color"
-                  value={formData.color_display}
-                  disabled
-                  sx={disabledTextFieldStyles}
-                />
+                  value={isEditMode ? editedData.color : formData.color_display}
+                  onChange={(e) => handleFieldChange('color', e.target.value)}
+                  disabled={!isEditMode}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                >
+                  {isEditMode &&
+                    choices?.grid_box_colors?.map((option: { value: string; label: string }) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                </TextField>
                 <TextField
                   fullWidth
+                  select={isEditMode}
                   label="Numbering"
-                  value={formData.numbering_display}
-                  disabled
-                  sx={disabledTextFieldStyles}
-                />
+                  value={isEditMode ? editedData.numbering : formData.numbering_display}
+                  onChange={(e) => handleFieldChange('numbering', e.target.value)}
+                  disabled={!isEditMode}
+                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                >
+                  {isEditMode &&
+                    choices?.grid_box_numbering?.map((option: { value: string; label: string }) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                </TextField>
               </Box>
 
               <Box sx={{ display: 'flex', gap: 2 }}>
@@ -246,18 +403,18 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 />
               </Box>
 
-              {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr:3 }}>
-               <Button
-                sdsType="primary"
-                sdsStyle="rounded"
-                variant="contained"
-                startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
-                onClick={handleMoveGridBox}
-                sx={{ minWidth: 120, fontStyle: 'italic' }}
-              >
-                Move Grid Box
-              </Button> 
-            </Box> */}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr: 3 }}>
+                <Button
+                  sdsType="primary"
+                  sdsStyle="rounded"
+                  variant="contained"
+                  startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
+                  onClick={handleMoveGridBox}
+                  sx={{ minWidth: 120, fontStyle: 'italic' }}
+                >
+                  Move Grid Box
+                </Button>
+              </Box>
             </Box>
           </Box>
         </CardContent>
@@ -267,17 +424,20 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         onClose={() => setDeleteDialogOpen(false)}
         selectedPuck={selectedPuck}
         selectedSlot={selectedSlot}
-        selectedUser={selectedUser}
         gridBoxData={gridBoxData || null}
+        onGridBoxDeleted={handleGridBoxDeleted}
       />
 
-      {/* <AddGrid
+      <AddGrid
         open={addGridDialogOpen}
         onClose={() => setAddGridDialogOpen(false)}
         selectedUser={selectedUser}
         gridBoxId={gridBoxData?.grid_box?.grid_box_id}
         gridBoxName={gridBoxData?.grid_box?.name}
         positionInBox={selectedPositionInBox || undefined}
+        puckId={selectedPuck?.id}
+        gridBoxPositionInPuck={selectedSlot}
+        onGridCreated={handleGridCreated}
       />
 
       <MoveGridBox
@@ -287,7 +447,26 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
         currentSlot={selectedSlot}
         gridBoxData={gridBoxData}
         selectedUser={selectedUser}
-      /> */}
+        onSuccess={(newPuckId: number, newSlotPosition: number) => {
+          if (onMoveGridBoxSuccess) {
+            onMoveGridBoxSuccess(newPuckId, newSlotPosition);
+          }
+        }}
+      />
+      <ClipAllGridsDialog
+        open={clipAllDialogOpen}
+        onClose={() => {
+          setClipAllDialogOpen(false);
+          clearError();
+        }}
+        onConfirm={handleConfirmClipAll}
+        gridBoxName={formData.name}
+        maxGrids={formData.maxGrids}
+        unclippedCount={unclippedCount}
+        totalGrids={gridBoxData?.grid_box?.positions?.filter((pos) => pos.occupied).length || 0}
+        isProcessing={isClipping}
+        error={clipError}
+      />
     </>
   );
 };

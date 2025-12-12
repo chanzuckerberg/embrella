@@ -6,12 +6,12 @@ export interface PuckBase {
   position_in_cane: number;
 }
 
-export interface pucksListResponse {
+export interface PuckListResponse {
   total_pucks_count: number;
-  pucks: PucksList[];
+  pucks: PuckList[];
 }
 
-export interface PucksList extends PuckBase {
+export interface PuckList extends PuckBase {
   id: number;
   name: string;
   color: string;
@@ -39,6 +39,7 @@ export interface PuckSlots {
   position: number;
   status: string;
   grid_box_id?: number;
+  grid_box_name?: string;
 }
 
 export type CreatePuckData = Omit<PuckBase, 'name'> & {

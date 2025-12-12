@@ -4,20 +4,13 @@ import React, { useState } from 'react';
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
-
-interface ProjectFormData {
-  name: string;
-  description: string;
-  projectLeader: string;
-  confluenceSpace: string;
-  googleDriveFolder: string;
-}
+import { ProjectFormData } from '@app/common/types/gridLogging';
 
 interface AddProjectDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (data: ProjectFormData) => void;
-  projectLeaders?: Array<{ id: string; name: string }>;
+  onSave: (data: ProjectFormData) => Promise<void>;
+  projectLeaders?: Array<{ id: number; username: string; full_name: string }>;
   confluenceSpaces?: Array<{ id: string; url: string }>;
   googleDriveFolders?: Array<{ id: string; name: string }>;
 }
@@ -47,9 +40,8 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
   };
 
   const handleSave = async () => {
-    // Validate required fields
-    if (!formData.name.trim() || !formData.projectLeader || !formData.confluenceSpace || !formData.googleDriveFolder) {
-      alert('Please fill in all required fields');
+    if (!formData.name.trim()) {
+      alert('Please enter a project name');
       return;
     }
 
@@ -91,8 +83,7 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
     onClose();
   };
 
-  const isFormValid =
-    formData.name.trim() && formData.projectLeader && formData.confluenceSpace && formData.googleDriveFolder;
+  const isFormValid = formData.name.trim();
 
   return (
     <BaseFormDialog
@@ -108,13 +99,13 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
           <TextField
             required
             label="Project Name"
-            placeholder="Enter project name"
+            placeholder="Enter project name (e.g., TRD06)"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             sx={{ ...disabledTextFieldStyles, flex: 1 }}
           />
 
-          <FormControl required sx={{ flex: 1 }}>
+          <FormControl sx={{ flex: 1 }}>
             <InputLabel id="project-leader-label">Project Leader</InputLabel>
             <Select
               labelId="project-leader-label"
@@ -130,14 +121,17 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
                 },
               }}
             >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
               {projectLeaders.length === 0 ? (
                 <MenuItem value="" disabled>
                   No project leaders available
                 </MenuItem>
               ) : (
                 projectLeaders.map((leader) => (
-                  <MenuItem key={leader.id} value={leader.id}>
-                    {leader.name}
+                  <MenuItem key={leader.id} value={leader.id.toString()}>
+                    {leader.full_name || leader.username}
                   </MenuItem>
                 ))
               )}
@@ -147,7 +141,7 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
 
         <TextField
           label="Description"
-          placeholder="Enter project description"
+          placeholder="Enter project description (optional)"
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
           multiline
@@ -156,7 +150,7 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
         />
 
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl required sx={{ flex: 1 }}>
+          <FormControl sx={{ flex: 1 }}>
             <InputLabel id="confluence-space-label">Confluence Space</InputLabel>
             <Select
               labelId="confluence-space-label"
@@ -165,6 +159,9 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
               label="Confluence Space"
               sx={disabledTextFieldStyles}
             >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
               {confluenceSpaces.length === 0 ? (
                 <MenuItem value="" disabled>
                   No confluence spaces available
@@ -179,7 +176,7 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
             </Select>
           </FormControl>
 
-          <FormControl required sx={{ flex: 1 }}>
+          <FormControl sx={{ flex: 1 }}>
             <InputLabel id="google-drive-folder-label">Google Drive Folder</InputLabel>
             <Select
               labelId="google-drive-folder-label"
@@ -188,6 +185,9 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
               label="Google Drive Folder"
               sx={disabledTextFieldStyles}
             >
+              <MenuItem value="">
+                <em>None</em>
+              </MenuItem>
               {googleDriveFolders.length === 0 ? (
                 <MenuItem value="" disabled>
                   No google drive folders available

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { DJANGO_URL, API } from '../../constants/api';
-import { GridDetailsResponse } from '../../types/gridLogging/gridDetails';
+import { DJANGO_URL, API } from '../../../constants/api';
+import { GridDetailsResponse } from '../../../types/gridLogging/details/gridDetails';
 
 interface UseGridDetailsParams {
   puckId: number;
@@ -12,6 +12,7 @@ interface UseGridDetailsReturn {
   gridDetails: GridDetailsResponse | null;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 export const useGridLoggingGridDetails = ({
@@ -64,11 +65,12 @@ export const useGridLoggingGridDetails = ({
 
   useEffect(() => {
     fetchGridDetails();
-  }, [puckId, positionInPuck, gridId, fetchGridDetails]);
+  }, [fetchGridDetails]);
 
   return {
     gridDetails,
     loading,
     error,
+    refetch: fetchGridDetails,
   };
 };

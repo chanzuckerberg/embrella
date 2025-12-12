@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { ReactSVG } from 'react-svg';
-import { PucksList, PuckSlots } from '@app/common/types/gridLogging/puckList';
+import { PuckList, PuckSlots } from '@app/common/types/gridLogging';
 
 interface PuckSVGProps {
-  puck: PucksList;
+  puck: PuckList;
   slots?: PuckSlots[];
   size?: number;
   onClick?: () => void;

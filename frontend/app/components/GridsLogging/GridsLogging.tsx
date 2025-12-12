@@ -1,41 +1,69 @@
 'use client';
 
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Box,
+  Typography,
+  Autocomplete,
+  TextField,
+  InputAdornment,
+  IconButton,
+} from '@mui/material';
 import { useSearchParams } from 'next/navigation';
-import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/useGridLoggingUserList';
-import { useGridLoggingPucksByUser } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
+import { Button, Icon } from '@czi-sds/components';
+import {
+  useGridLoggingUserList,
+  useGridLoggingPucksList,
+  useGridLoggingPucksByUser,
+} from '@app/common/hooks/useGridLogging';
+import { UserList, PuckList } from '@app/common/types/gridLogging';
 import { UserContext } from '@app/common/context/UserProvider';
-import { UsersList } from '@app/common/types/gridLogging/userList';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
 import styles from './GridLogging.module.css';
 import { PuckListed } from './Pucks/PuckListed';
 import { PuckDetails } from './Pucks/PuckDetails';
 import { GridBoxInfo } from './GridBox/GridBoxInfo';
 import { GridDetails } from './Grid/GridDetails';
-import { Card, CardContent, CardHeader, Box, Typography, Autocomplete, TextField } from '@mui/material';
-import { Button, Icon } from '@czi-sds/components';
 import { AddPuck } from './Pucks/AddPuck';
 
 export const GridsLogging: React.FC = () => {
-  const [selectedUser, setSelectedUser] = useState<UsersList | null>(null);
-  const [selectedPuck, setSelectedPuck] = useState<PucksList | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserList | null>(null);
+  const [selectedPuck, setSelectedPuck] = useState<PuckList | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
-  const [selectedGridBoxName, setSelectedGridBoxName] = useState<string | null>(null);
   const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
   const [isAddPuckDialogOpen, setIsAddPuckDialogOpen] = useState(false);
+  const [puckDetailsRefetch, setPuckDetailsRefetch] = useState<() => void>(() => {});
+  const [gridDetailsRefetch, setGridDetailsRefetch] = useState<() => void>(() => {});
+  const [gridBoxInfoRefetch, setGridBoxInfoRefetch] = useState<() => void>(() => {});
+  const [puckSearchQuery, setPuckSearchQuery] = useState('');
+
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
   const searchParams = useSearchParams();
 
   // Fetch pucks for the selected user
-  const { pucks: pucksData } = useGridLoggingPucksByUser(selectedUser?.id);
+  const { pucks: pucksData, refetch: refetchPuckList } = useGridLoggingPucksByUser(selectedUser?.id);
+
+  // Also fetch ALL pucks for search purposes
+  const { pucks: allPucksData } = useGridLoggingPucksList();
 
   // Extract users array from the response object
   const usersList = useMemo(() => users?.users || [], [users]);
 
   // Extract pucks array from the response object
   const pucksList = useMemo(() => pucksData?.pucks || [], [pucksData]);
+  const allPucksList = useMemo(() => allPucksData?.pucks || [], [allPucksData]);
+
+  // Filter pucks based on search query
+  const filteredPucksList = useMemo(() => {
+    if (!puckSearchQuery.trim()) {
+      return pucksList;
+    }
+    return allPucksList.filter((puck) => `CZII-0${puck.name}`.toLowerCase().includes(puckSearchQuery.toLowerCase()));
+  }, [pucksList, allPucksList, puckSearchQuery]);
 
   // Restore state from URL parameters
   useEffect(() => {
@@ -87,26 +115,30 @@ export const GridsLogging: React.FC = () => {
   }, [usersList, currentUser, selectedUser, searchParams]);
 
   // Handle user selection - updated for Autocomplete
-  const handleUserChange = (event: React.SyntheticEvent, newValue: UsersList | null) => {
+  const handleUserChange = (event: React.SyntheticEvent, newValue: UserList | null) => {
     setSelectedUser(newValue);
     // Reset selected puck and slot when user changes
     setSelectedPuck(null);
     setSelectedSlot(null);
+    // Reset search query when user changes
+    setPuckSearchQuery('');
   };
 
   const handleAddPuck = () => {
     setIsAddPuckDialogOpen(true);
   };
 
-  const handlePuckSelect = (puck: PucksList | null) => {
+  const handlePuckSelect = (puck: PuckList | null) => {
     setSelectedPuck(puck);
     // Reset selected slot when puck changes
     setSelectedSlot(null);
   };
+  const handleGridDetailsRefetchReady = useCallback((refetch: () => void) => {
+    setGridDetailsRefetch(() => refetch);
+  }, []);
 
   const handleSlotSelect = (slotPosition: number, _gridBoxId?: number) => {
     setSelectedSlot(slotPosition);
-    setSelectedGridBoxName(null);
     // Reset grid selection when slot changes
     setSelectedGrid(null);
     setSelectedGridId(null);
@@ -116,9 +148,66 @@ export const GridsLogging: React.FC = () => {
     setSelectedGrid(gridPosition);
     setSelectedGridId(gridId || null);
   };
-  const handlePuckCreated = (_newPuck: PucksList) => {
+  const handlePuckCreated = (_newPuck: PuckList) => {
     window.location.reload();
   };
+  const handlePuckDeleted = () => {
+    // Refetch the pucks list to update the UI
+    if (refetchPuckList) {
+      refetchPuckList();
+    }
+    // Clear the selected puck since it was deleted
+    setSelectedPuck(null);
+    setSelectedSlot(null);
+    setSelectedGrid(null);
+    setSelectedGridId(null);
+  };
+
+  const handleMoveGridBoxSuccess = (newPuckId: number, newSlotPosition: number) => {
+    const newPuck = pucksList?.find((p) => p.id === newPuckId);
+    if (newPuck) {
+      setSelectedPuck(newPuck);
+      setSelectedSlot(newSlotPosition);
+      setSelectedGrid(null);
+      setSelectedGridId(null);
+    }
+    if (puckDetailsRefetch) {
+      puckDetailsRefetch();
+    }
+  };
+  const handleMoveGridSuccess = (
+    newPuckId: number,
+    newSlotPosition: number,
+    newGridBoxId: number,
+    newPositionInBox: number
+  ) => {
+    // Find and set the new puck
+    const newPuck = pucksList?.find((p) => p.id === newPuckId);
+    if (newPuck) {
+      setSelectedPuck(newPuck);
+      setSelectedSlot(newSlotPosition);
+      setSelectedGrid(newPositionInBox);
+      // Keep the same gridId since the grid itself hasn't changed, just moved
+    }
+
+    // Refetch all related data to show updated locations
+    if (puckDetailsRefetch) {
+      puckDetailsRefetch();
+    }
+    // if (gridDetailsRefetch) {
+    //   gridDetailsRefetch();
+    // }
+    if (gridBoxInfoRefetch) {
+      gridBoxInfoRefetch();
+    }
+  };
+  const handlePuckDetailsRefetchReady = useCallback((refetch: () => void) => {
+    setPuckDetailsRefetch(() => refetch);
+  }, []);
+
+  const handleGridBoxInfoRefetchReady = useCallback((refetch: () => void) => {
+    setGridBoxInfoRefetch(() => refetch);
+  }, []);
 
   return (
     <Box className={styles.mainContainer}>
@@ -168,14 +257,55 @@ export const GridsLogging: React.FC = () => {
                 }}
               />
             </Box>
+
+            {/* Search box for pucks */}
+            {selectedUser && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 4, mt: -6 }}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Search pucks by name..."
+                  value={puckSearchQuery}
+                  onChange={(e) => setPuckSearchQuery(e.target.value)}
+                  variant="outlined"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Icon sdsIcon="Search" sdsSize="l" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: puckSearchQuery && (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={() => setPuckSearchQuery('')} edge="end">
+                          <Icon sdsIcon="XMark" sdsSize="l" />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
+            )}
+
             {/* Puck Selector Component */}
-            <PuckListed selectedUser={selectedUser} onPuckSelect={handlePuckSelect} selectedPuck={selectedPuck} />
+            <PuckListed
+              selectedUser={selectedUser}
+              onPuckSelect={handlePuckSelect}
+              selectedPuck={selectedPuck}
+              puckList={filteredPucksList}
+            />
           </CardContent>
         </Card>
 
         {/* Puck Details Component - appears on the right when a puck is selected */}
         {selectedPuck && (
-          <PuckDetails selectedPuck={selectedPuck} onSlotSelect={handleSlotSelect} selectedUser={selectedUser} />
+          <PuckDetails
+            selectedPuck={selectedPuck}
+            onSlotSelect={handleSlotSelect}
+            selectedUser={selectedUser}
+            onRefetchReady={handlePuckDetailsRefetchReady}
+            onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady}
+            onPuckDeleted={handlePuckDeleted}
+          />
         )}
       </Box>
 
@@ -186,7 +316,18 @@ export const GridsLogging: React.FC = () => {
             selectedSlot={selectedSlot}
             onGridSelect={handleGridSelect}
             selectedUser={selectedUser}
-            onGridBoxNameLoaded={setSelectedGridBoxName}
+            onGridDetailsRefetch={gridDetailsRefetch}
+            onMoveGridBoxSuccess={handleMoveGridBoxSuccess}
+            onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady}
+            onGridBoxDeleted={() => {
+              // Clear selections and refetch puck details
+              setSelectedSlot(null);
+              setSelectedGrid(null);
+              setSelectedGridId(null);
+              if (puckDetailsRefetch) {
+                puckDetailsRefetch();
+              }
+            }}
           />
           {!!selectedGrid && (
             <GridDetails
@@ -195,7 +336,8 @@ export const GridsLogging: React.FC = () => {
               selectedGrid={selectedGrid}
               selectedGridId={selectedGridId}
               selectedUser={selectedUser}
-              selectedGridBoxName={selectedGridBoxName}
+              onGridDetailsRefetchReady={handleGridDetailsRefetchReady}
+              onMoveGridSuccess={handleMoveGridSuccess}
             />
           )}
         </Box>

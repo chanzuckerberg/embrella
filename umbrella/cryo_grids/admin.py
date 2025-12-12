@@ -133,15 +133,15 @@ class CopyGridForm(forms.Form):
         return cleaned_data
 # Custom admin classes for models that need redirect
 class PuckAdmin(admin.ModelAdmin):
-    def response_add(self, request, obj, post_url_continue=None):
-        if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = build_frontend_url_with_state(request)
-            return HttpResponseRedirect(frontend_url)
+    # def response_add(self, request, obj, post_url_continue=None):
+    #     if "_addanother" not in request.POST and "_continue" not in request.POST:
+    #         frontend_url = build_frontend_url_with_state(request)
+    #         return HttpResponseRedirect(frontend_url)
     
-    def response_change(self, request, obj):
-        if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = build_frontend_url_with_state(request)
-            return HttpResponseRedirect(frontend_url)
+    # def response_change(self, request, obj):
+    #     if "_addanother" not in request.POST and "_continue" not in request.POST:
+    #         frontend_url = build_frontend_url_with_state(request)
+    #         return HttpResponseRedirect(frontend_url)
     
     def response_delete(self, request, obj_display, obj_id):
         frontend_url = build_frontend_url_with_state(request)
@@ -156,15 +156,15 @@ class PuckAdmin(admin.ModelAdmin):
         return super().changeform_view(request, object_id, form_url, extra_context=extra_context)
 
 class CryoGridBoxAdmin(admin.ModelAdmin):
-    def response_add(self, request, obj, post_url_continue=None):
-        if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = build_frontend_url_with_state(request)
-            return HttpResponseRedirect(frontend_url)
+    # def response_add(self, request, obj, post_url_continue=None):
+    #     if "_addanother" not in request.POST and "_continue" not in request.POST:
+    #         frontend_url = build_frontend_url_with_state(request)
+    #         return HttpResponseRedirect(frontend_url)
     
-    def response_change(self, request, obj):
-        if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = build_frontend_url_with_state(request)
-            return HttpResponseRedirect(frontend_url)
+    # def response_change(self, request, obj):
+    #     if "_addanother" not in request.POST and "_continue" not in request.POST:
+    #         frontend_url = build_frontend_url_with_state(request)
+    #         return HttpResponseRedirect(frontend_url)
     
     def response_delete(self, request, obj_display, obj_id):
         frontend_url = build_frontend_url_with_state(request)
@@ -181,15 +181,15 @@ class CryoGridBoxAdmin(admin.ModelAdmin):
 class CryoGridAdmin(admin.ModelAdmin):
     change_form_template = "cryo_grids/change_form.html"
     
-    def response_add(self, request, obj, post_url_continue=None):
-        if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = build_frontend_url_with_state(request)
-            return HttpResponseRedirect(frontend_url)
+    # def response_add(self, request, obj, post_url_continue=None):
+    #     if "_addanother" not in request.POST and "_continue" not in request.POST:
+    #         frontend_url = build_frontend_url_with_state(request)
+    #         return HttpResponseRedirect(frontend_url)
     
-    def response_change(self, request, obj):
-        if "_addanother" not in request.POST and "_continue" not in request.POST:
-            frontend_url = build_frontend_url_with_state(request)
-            return HttpResponseRedirect(frontend_url)
+    # def response_change(self, request, obj):
+    #     if "_addanother" not in request.POST and "_continue" not in request.POST:
+    #         frontend_url = build_frontend_url_with_state(request)
+    #         return HttpResponseRedirect(frontend_url)
     
     def response_delete(self, request, obj_display, obj_id):
         frontend_url = build_frontend_url_with_state(request)

@@ -1,24 +1,25 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-// import { Box, TextField, MenuItem, Tooltip, Typography } from '@mui/material';
-// import { Icon } from '@czi-sds/components';
-import { TextField, MenuItem } from '@mui/material';
-import { PucksList } from '@app/common/types/gridLogging/puckList';
-import { GridBoxDetailResponse } from '@app/common/types/gridLogging/gridBoxDetails';
-import { UsersList } from '@app/common/types/gridLogging/userList';
-import { useGridLoggingPucksByCane } from '@app/common/hooks/useGridLogging/useGridLoggingPuckList';
-import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/useGridLoggingPuckSlots';
-import { useGridLoggingChoices } from '@app/common/hooks/useGridLogging/useGridLoggingChoices';
+import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
+import { Icon } from '@czi-sds/components';
+import { PuckList, GridBoxDetailResponse, UserList } from '@app/common/types/gridLogging';
+import {
+  useGridLoggingPucksByCane,
+  useGridLoggingPuckSlots,
+  useMoveGridBox,
+  useGridLoggingCaneList,
+} from '@app/common/hooks/useGridLogging';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 
 interface MoveGridBoxProps {
   open: boolean;
   onClose: () => void;
-  currentPuck: PucksList | null;
+  currentPuck: PuckList | null;
   currentSlot: number | null;
   gridBoxData: GridBoxDetailResponse | null;
-  selectedUser?: UsersList | null;
+  selectedUser?: UserList | null;
+  onSuccess?: (newPuckId: number, newSlotPosition: number) => void;
 }
 
 export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
@@ -28,23 +29,19 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
   currentSlot,
   gridBoxData,
   selectedUser,
+  onSuccess,
 }) => {
   const [formData, setFormData] = useState({
     destinationCane: '',
     destinationPuck: '',
     destinationPosition: '',
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch choices (for cane colors)
-  const { choices, isSuccess: choicesLoaded } = useGridLoggingChoices();
-
-  // Fetch pucks for selected cane (dynamically)
+  const { moveGridBox, isMoving, error, clearError } = useMoveGridBox();
+  const { canes, isSuccess: canesLoaded } = useGridLoggingCaneList();
   const { pucks: pucksInCane, isSuccess: pucksLoaded } = useGridLoggingPucksByCane(
     formData.destinationCane ? Number(formData.destinationCane) : undefined
   );
-
-  // Fetch available positions for selected puck
   const { slotsData, isSuccess: slotsLoaded } = useGridLoggingPuckSlots(
     formData.destinationPuck ? Number(formData.destinationPuck) : undefined
   );
@@ -57,8 +54,9 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         destinationPuck: '',
         destinationPosition: '',
       });
+      clearError();
     }
-  }, [open]);
+  }, [open, clearError]);
 
   // Get available positions (empty slots only) from the puck slots API
   const availablePositions = useMemo(() => {
@@ -72,7 +70,6 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
       [field]: value,
     }));
 
-    // Reset downstream selections when parent changes
     if (field === 'destinationCane') {
       setFormData((prev) => ({
         ...prev,
@@ -87,76 +84,79 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
     }
   };
 
-  const handleMove = () => {
+  const handleMove = async () => {
     if (!formData.destinationCane || !formData.destinationPuck || !formData.destinationPosition) {
       alert('Please select cane, puck, and position');
       return;
     }
 
-    setIsSubmitting(true);
+    if (!gridBoxData?.grid_box?.grid_box_id) {
+      alert('Grid box ID not found');
+      return;
+    }
 
-    const selectedPuck = pucksInCane?.pucks?.find((p) => p.id.toString() === formData.destinationPuck);
+    const destinationPuckId = Number(formData.destinationPuck);
+    const destinationPosition = Number(formData.destinationPosition);
 
-    console.log('Moving grid box:', {
-      from: {
-        puck: currentPuck?.name,
-        puck_id: currentPuck?.id,
-        position: currentSlot,
-      },
-      to: {
-        cane_id: formData.destinationCane,
-        puck: selectedPuck?.name,
-        puck_id: formData.destinationPuck,
-        position: formData.destinationPosition,
-      },
-      gridBox: {
-        name: gridBoxData?.grid_box?.name,
-        id: gridBoxData?.grid_box?.grid_box_id,
-      },
+    const result = await moveGridBox({
+      grid_box_id: gridBoxData.grid_box.grid_box_id,
+      destination_puck_id: destinationPuckId,
+      destination_position: destinationPosition,
     });
+
+    if (result?.success) {
+      onClose();
+      if (onSuccess) {
+        onSuccess(destinationPuckId, destinationPosition);
+      }
+    }
   };
 
   const isFormValid = formData.destinationCane && formData.destinationPuck && formData.destinationPosition;
 
   // Tooltip content showing current location
-  //   const currentLocationTooltip = (
-  //     <Box sx={{ p: 1 }}>
-  //       <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-  //         Current Location:
-  //       </Typography>
-  //       <Typography variant="caption" display="block">
-  //         Grid Box: {gridBoxData?.grid_box?.name || 'N/A'}
-  //       </Typography>
-  //       <Typography variant="caption" display="block">
-  //         Puck: {currentPuck?.name || 'N/A'}
-  //       </Typography>
-  //       <Typography variant="caption" display="block">
-  //         Position: {currentSlot || 'N/A'}
-  //       </Typography>
-  //     </Box>
-  //   );
+  const currentLocationTooltip = (
+    <Box sx={{ p: 1 }}>
+      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+        Current Location:
+      </Typography>
+      <Typography variant="caption" display="block">
+        Grid Box: {gridBoxData?.grid_box?.name || 'N/A'}
+      </Typography>
+      <Typography variant="caption" display="block">
+        Puck: {currentPuck?.name || 'N/A'}
+      </Typography>
+      <Typography variant="caption" display="block">
+        Position: {currentSlot || 'N/A'}
+      </Typography>
+    </Box>
+  );
 
   return (
     <BaseFormDialog
       open={open}
       onClose={onClose}
-      //   title={
-      //     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-      //       Move Grid Box
-      //       <Tooltip title={currentLocationTooltip} arrow placement="right">
-      //         <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
-      //           <Icon sdsIcon="InfoCircle" sdsSize="s" />
-      //         </Box>
-      //       </Tooltip>
-      //     </Box>
-      //   }
       title="Move Grid Box"
+      titleExtra={
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -2 }}>
+          <Tooltip title={currentLocationTooltip} arrow placement="right">
+            <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'help' }}>
+              <Icon sdsIcon="InfoCircle" sdsSize="s" />
+            </Box>
+          </Tooltip>
+        </Box>
+      }
       subtitle={selectedUser?.full_name || ''}
       onSave={handleMove}
-      isSubmitting={isSubmitting}
+      isSubmitting={isMoving}
       saveButtonText="Move"
-      disabled={!isFormValid || !choicesLoaded}
+      disabled={!isFormValid || !canesLoaded}
     >
+      {Boolean(error) && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={clearError}>
+          {error}
+        </Alert>
+      )}
       <TextField
         select
         required
@@ -165,13 +165,11 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         value={formData.destinationCane}
         onChange={(e) => handleInputChange('destinationCane', e.target.value)}
       >
-        {!choicesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
-        {choicesLoaded && (!choices?.cane_colors || choices.cane_colors.length === 0) && (
-          <MenuItem value="">No canes available</MenuItem>
-        )}
-        {choices?.cane_colors?.map((cane, index) => (
-          <MenuItem key={cane.value} value={(index + 1).toString()}>
-            {cane.label} Cane
+        {!canesLoaded && <MenuItem value="">Loading canes...</MenuItem>}
+        {canesLoaded && canes.length === 0 && <MenuItem value="">No canes available</MenuItem>}
+        {canes.map((cane) => (
+          <MenuItem key={cane.id} value={cane.id.toString()}>
+            {cane.color_code} Cane (Pos: {cane.position_in_dewar})
           </MenuItem>
         ))}
       </TextField>
@@ -213,11 +211,14 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
         {Boolean(formData.destinationPuck) && slotsLoaded && availablePositions.length === 0 && (
           <MenuItem value="">No empty slots available</MenuItem>
         )}
-        {availablePositions.map((slot) => (
-          <MenuItem key={slot.position} value={slot.position.toString()}>
-            Slot {slot.position}
-          </MenuItem>
-        ))}
+        {slotsData?.slots?.map((slot) => {
+          const isFilled = slot.status === 'filled';
+          return (
+            <MenuItem key={slot.position} value={slot.position.toString()} disabled={isFilled}>
+              Slot {slot.position} {isFilled ? '(Filled)' : '(Available)'}
+            </MenuItem>
+          );
+        })}
       </TextField>
     </BaseFormDialog>
   );
