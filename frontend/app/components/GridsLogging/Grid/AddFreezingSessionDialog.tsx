@@ -17,7 +17,15 @@ export const AddFreezingSessionDialog: React.FC<{
   devices?: Device[];
   notesPages?: ConfluencePage[];
   freezingSessionDate?: Date | null;
-}> = ({ open, onClose, onSave, users = [], devices = [], notesPages = [], freezingSessionDate = null }) => {
+}> = ({
+  open,
+  onClose,
+  onSave,
+  users = [],
+  devices = [],
+  notesPages = [],
+  freezingSessionDate: _freezingSessionDate = null,
+}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FreezingSessionFormData>({
     user: '',
