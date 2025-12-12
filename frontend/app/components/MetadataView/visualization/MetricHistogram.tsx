@@ -25,6 +25,14 @@ const calculateBins = (n: number): number => {
   return Math.ceil(1 + 3.322 * Math.log10(n));
 };
 
+const getDecimalPlaces = (binWidth: number): number => {
+  if (binWidth === 0) return 1;
+  // Calculate how many decimal places are needed to distinguish bins
+  const magnitude = Math.floor(Math.log10(Math.abs(binWidth)));
+  // For very small numbers, show more decimals; for large numbers, show fewer
+  return Math.max(0, -magnitude + 1);
+};
+
 export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processedData }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts>();
@@ -101,6 +109,7 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
         const bins = calculateBins(metric.values.length);
         const binWidth = (max - min) / bins;
         const isBadPatch = metric.key.includes('bad_patch');
+        const decimals = getDecimalPlaces(binWidth);
 
         return {
           gridId: index.toString(),
@@ -115,7 +124,9 @@ export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processe
           },
           data: Array.from({ length: bins }, (_, i) => {
             const binStart = min + i * binWidth;
-            return isBadPatch ? `${(binStart * 100).toFixed(1)}` : `${binStart.toFixed(1)}`;
+            return isBadPatch 
+              ? `${(binStart * 100).toFixed(Math.max(1, decimals - 2))}` 
+              : `${binStart.toFixed(decimals)}`;
           }),
           axisLabel: {
             interval: Math.floor(bins / 4),
