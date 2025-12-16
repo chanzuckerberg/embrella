@@ -55,6 +55,7 @@ from rest_framework.decorators import api_view
 from tem.models import MsiSession
 
 from common import clusterio
+from processes.syncers import check_zarr_exists
 
 from .forms import ReserveFrameProcRunForm, UpdateNotesForm
 
@@ -1700,8 +1701,24 @@ def get_tomogram_stats(request):
         # Get zarr files for the selected configuration
         session = MsiSession.objects.get(id=session_id)
         print(f"Found session: {session.name}")
-        
-        zarr_files = clusterio.get_zarr_files_processes(session.name, run_id, recon_type)
+
+        # Construct path based on reconstruction type
+        recon_type_lower = recon_type.lower()
+        if recon_type_lower == 'sart':
+            vol_dir = 'vol003'
+            base_path = '/hpc/projects/krios1.processing/aretomo3'
+        elif recon_type_lower == 'dctf':
+            vol_dir = 'vol001'
+            base_path = '/hpc/projects/krios1.processing/aretomo3'
+        else:  # denoised
+            vol_dir = ''
+            base_path = '/hpc/projects/krios1.processing/denoise'
+
+        session_path = f"{base_path}/{session.name}/{run_id}"
+        full_path = f"{session_path}/{vol_dir}" if vol_dir else session_path
+
+        # Use existing check_zarr_exists function from syncers
+        zarr_files = check_zarr_exists(full_path)
         print(f"Found {len(zarr_files)} zarr files")
         
         # Simplified query directly on ReviewTomogram
@@ -1802,7 +1819,7 @@ async def start_sync(request):
                     base_path="/hpc/projects/krios1.processing/aretomo3",
                     log_dir=os.path.join(os.path.dirname(__file__), "logs"),
                 )
-                syncer.setup(run_id=run_id, session_name=session.name)
+                await sync_to_async(syncer.setup)(run_id=run_id, session_name=session.name)
                 await sync_to_async(syncer.sync_results)()
             elif recon_type.lower() == 'denoised':
                 print(f"Starting Denoise sync for session {session.name}, run {run_id}")
@@ -1810,7 +1827,7 @@ async def start_sync(request):
                     base_path="/hpc/projects/krios1.processing/denoise",
                     log_dir=os.path.join(os.path.dirname(__file__), "logs"),
                 )
-                syncer.setup(run_id=run_id, session_name=session.name)
+                await sync_to_async(syncer.setup)(run_id=run_id, session_name=session.name)
                 await sync_to_async(syncer.sync_results)()
             else:
                 raise ValueError(f"Unsupported reconstruction type: {recon_type}")
@@ -1824,11 +1841,13 @@ async def start_sync(request):
         if review_id:
             try:
                 review = await sync_to_async(Review.objects.get)(review_id=review_id)
-                tomogram_count = await sync_to_async(ReviewTomogram.objects.filter)(
-                    session=session,
-                    run_id=run_id,
-                    reconstruction_type__iexact=recon_type,
-                ).count()
+                tomogram_count = await sync_to_async(
+                    ReviewTomogram.objects.filter(
+                        session=session,
+                        run_id=run_id,
+                        reconstruction_type__iexact=recon_type,
+                    ).count
+                )()
                 
                 old_count = review.total_count
                 review.total_count = tomogram_count
