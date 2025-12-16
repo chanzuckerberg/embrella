@@ -322,7 +322,7 @@ def run_aretomo3_advanced(request):
             aretomo = Aretomo3(cluster_id='czii',
                                auth={ 'username': user_id, 'password': decoded_password},
                                remote_script_dir=ARETOMO3_SCRIPT_PATH,
-                               local_template_path=ARETOMO3_BASIC_TEMPLATE_PATH)
+                               local_template_path=ARETOMO3_TEMPLATE_PATH)
             aretomo.connect()
 
             # Now you can safely call the script, because the variables
