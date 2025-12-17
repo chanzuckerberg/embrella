@@ -95,15 +95,15 @@ def create_pipeline_plan():
     output_path_types = []
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('pick'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.txt',
+                overlay_path='/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.txt',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('galr'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc',
+                overlay_path='/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('seg'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc',
+                overlay_path='/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc',
     ))
     for t in tasks[0:1]:
         # picking ribosome

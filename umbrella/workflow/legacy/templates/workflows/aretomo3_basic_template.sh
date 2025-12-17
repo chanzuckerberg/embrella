@@ -39,7 +39,7 @@ echo "Frame dose is: $frame_dose"
 cat > "$out_path/slurm_script_run_AT.sh" << EOF
 #!/bin/bash -l
 
-#SBATCH --job-name=aretomo
+#SBATCH --job-name={{ job_name }}
 #SBATCH --gpus=8
 #SBATCH --partition=gpu
 #SBATCH --cpus-per-task=16
