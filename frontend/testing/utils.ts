@@ -14,8 +14,11 @@ export function initFetch(getBlocker: () => Promise<void> | undefined = () => un
     const responseInfo = Object.hasOwn(FETCH_RESPONSES, relativeURL) && FETCH_RESPONSES[relativeURL];
     if (!responseInfo) throw new TypeError('Failed to fetch');
     const body = typeof responseInfo.body === 'function' ? responseInfo.body(urlObj) : responseInfo.body;
+    const status = responseInfo.status ?? 200;
     return {
-      status: responseInfo.status ?? 200,
+      status,
+      ok: status >= 200 && status < 300,
+      statusText: status >= 200 && status < 300 ? 'OK' : 'Error',
       text: async () => body ?? '',
       json: async () => JSON.parse(body ?? ''),
       url: url.toString(),

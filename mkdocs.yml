@@ -9,7 +9,11 @@ theme:
   name: material
   palette:
     # Palette toggle for light mode
-    - scheme: default
+#    - scheme: default
+#      toggle:
+#        icon: material/brightness-4
+#        name: Switch to light mode
+    - scheme: biohub
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -19,11 +23,12 @@ theme:
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-
   #logo: assets/umbrella.svg
-  logo: assets/logo.png
+  #logo: assets/logo.png
   features:
     - content.code.copy
+extra_css:
+  - stylesheets/extras.css
 nav:
   - Home: index.md
   - Tutorials:
@@ -90,5 +95,3 @@ markdown_extensions:
       check_paths: true
       base_path: [ docs/snippets, docs/templates, "." ]
 
-extra_css:
-  - stylesheets/extra.css

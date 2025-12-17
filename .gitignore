@@ -171,3 +171,5 @@ cython_debug/
 
 .scratch/
 docs_build/
+.claude/
+CLAUDE.md
