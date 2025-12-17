@@ -1,9 +1,17 @@
 import { AnnotationData } from '@app/components/AnnotationsView/types';
+import { DirectorySummary } from '@app/components/DirectoryExplorerView/types';
 import { GridData } from '@app/components/GridsView/types';
 import { ReviewData } from '@app/components/ReviewsView/types';
 import { TomogramData } from '@app/components/TomogramsView/types';
+import { Job } from '@app/processing/monitor/types';
 
-export type EntityDataTypes = AnnotationData | GridData | TomogramData | ReviewData;
+export type EntityDataTypes =
+  | AnnotationData
+  | DirectorySummary
+  | GridData
+  | TomogramData
+  | ReviewData
+  | Job;
 
 /*
  * Type for a formatted API response

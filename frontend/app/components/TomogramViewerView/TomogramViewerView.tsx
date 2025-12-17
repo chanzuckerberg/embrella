@@ -91,15 +91,17 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
 }
 
 export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerProps) => {
-  const [state, dispatch] = useReducer(reducer, initialState(review.tomograms[0].tomogramId));
+  // Initialize hooks at the top level (before any conditional returns)
+  const firstTomogramId = review.tomograms?.[0]?.tomogramId || '';
+  const [state, dispatch] = useReducer(reducer, initialState(firstTomogramId));
   const [region, setRegion] = useState<Region | null>(null);
   // const currentUser = useContext(UserContext);
   const { isInitialized, imageSeriesLayer, channels } = useIdetik();
   // Commented out to allow everyone write access
   // const userCanReview = currentUser?.id === review.owner.id;
   const userCanReview = true; // Everyone can review now
-  const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
-  const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
+  const currentIndex = review.tomograms?.findIndex((t) => t.tomogramId === state.selectedTomogramId) ?? -1;
+  const reviewedTomograms = review.tomograms?.filter((tomo) => tomo.status !== 'pending').length ?? 0;
 
   const handleContrastLimitsChange = useCallback(
     (newLimits: [number, number]) => {
@@ -154,7 +156,7 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   const changeTomogram = async (indexDelta: number) => {
     await saveTomogram();
     const nextIndex = currentIndex + indexDelta;
-    if (nextIndex < 0 || nextIndex >= review.tomograms.length) return;
+    if (!review.tomograms || nextIndex < 0 || nextIndex >= review.tomograms.length) return;
     dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: review.tomograms[nextIndex].tomogramId });
   };
 

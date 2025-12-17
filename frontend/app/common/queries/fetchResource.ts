@@ -15,10 +15,10 @@ export async function fetchResource(requestURL: string): Promise<Response> {
     credentials: 'include', // Include cookies in the request
   });
 
-  // Check if the response status is 302 (redirect) or if the URL includes the login page
-  if (response.status === 302 || response.url.includes('/admin/login')) {
-    window.location.href = `${DJANGO_URL}/admin/login`;
-    return Promise.reject(new Error('User is not authenticated, redirecting to login.'));
+  // Check for authentication errors - redirect to login
+  if (response.status === 401 || response.status === 302 || response.url.includes('/admin/login')) {
+    window.location.href = `${DJANGO_URL}/admin/login/?next=${encodeURI(window.location.href)}`;
+    return Promise.reject(new Error('Authentication required'));
   }
 
   return response;
@@ -44,10 +44,10 @@ export async function postResource(requestURL: string, body: Record<string, unkn
     body: JSON.stringify(body),
   });
 
-  // Check if the response status is 302 (redirect) or if the URL includes the login page
-  if (response.status === 302 || response.url.includes('/admin/login')) {
-    window.location.href = `${DJANGO_URL}/admin/login`;
-    return Promise.reject(new Error('User is not authenticated, redirecting to login.'));
+  // Check for authentication errors - redirect to login
+  if (response.status === 401 || response.status === 302 || response.url.includes('/admin/login')) {
+    window.location.href = `${DJANGO_URL}/admin/login/?next=${encodeURI(window.location.href)}`;
+    return Promise.reject(new Error('Authentication required'));
   }
 
   return response;

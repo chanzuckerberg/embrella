@@ -39,7 +39,7 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
         // Handle null or undefined values
         if (value === null || value === undefined) {
           return (
-            <Typography key={key} sx={{ mb: 0.5 }}>
+            <Typography key={key} sx={{ mb: 1 }}>
               {label}: N/A {unit}
             </Typography>
           );
@@ -50,7 +50,7 @@ const ThumbnailTooltip = ({ item }: { item: TiltSeries }) => {
         const displayUnit = key.includes('bad_patch') ? '%' : unit;
 
         return (
-          <Typography key={key} sx={{ mb: 0.5 }}>
+          <Typography key={key} sx={{ mb: 1 }}>
             {label}: {formattedValue} {displayUnit}
           </Typography>
         );

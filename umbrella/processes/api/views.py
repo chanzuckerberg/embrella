@@ -1,12 +1,19 @@
+"""
+API views for process and review management.
+
+Contains API endpoints for:
+- Tomogram queries by MSI session
+- Review CRUD operations (list, create, get, save, complete)
+- Review export functionality
+- Tomogram review management
+"""
 import json
-import traceback
+import logging
 import uuid
 from datetime import datetime, timezone
 from math import ceil
 
-from cryo_grids.models import CryoGrid
 from django.contrib.auth.models import User
-from django.db.models import BooleanField, Case, Count, F, Q, Value, When
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -21,162 +28,46 @@ from processes.models import (
     ReviewTomogram,
     Tomograms,
 )
-from processes.utils import SortMetadataModel
+from processes.validation import SortMetadataModel
 from processes.views import get_base_url
 from rapidfuzz import fuzz
 from rest_framework.decorators import api_view
-from tem.models import MsiSession, Project
+from tem.models import MsiSession
+from umbrella.contrast_limits import compute_optimal_contrast_limits
 
-from .contrast_limits import compute_optimal_contrast_limits
+logger = logging.getLogger(__name__)
 
-
-@extend_schema(
-    methods=["GET"],
-    description="Returns cryo grids for a specific user with metadata and is_default flag.",
-    parameters=[
-        OpenApiParameter(name='user_id', required=False, type=str, description='User ID to filter cryo grids'),
-    ],
-    responses={200: 'List of cryo grids'},
-)
-@api_view(["GET"])
-def get_grids_by_user(request):
-    user_id = request.GET.get('user_id')
-
-    # Annotate each grid with an is_default flag based on the grid name.
-    queryset = CryoGrid.objects.select_related('intended_project', 'user', 'grid_box__puck').annotate(
-        project_name=F('intended_project__name'),
-        username=F('user__username'),
-        is_default=Case(
-            When(name__icontains="default grid", then=Value(True)),
-            default=Value(False),
-            output_field=BooleanField(),
-        ),
-    )
-
-    if user_id:
-        queryset = queryset.filter(user_id=user_id)
-
-    # Order by create_on in descending order (newest first)get_tomoget_tomo
-    queryset = queryset.order_by('-create_on')
-      # Build custom display names
-    grids_list = []
-    for grid in queryset:
-        # Build display name: Puck-CZII-08/Slot-9/Position-1/Grid-grid1
-        if grid.grid_box and grid.grid_box.puck:
-            puck_name = f"CZII-0{grid.grid_box.puck.name}" if grid.grid_box.puck.name else "No-Puck"
-            slot = grid.grid_box.position_in_puck if grid.grid_box.position_in_puck else "?"
-            position = grid.position_in_box if grid.position_in_box else "?"
-            display_name = f"Puck-{puck_name}/Slot-{slot}/Position-{position}/Grid-{grid.name}"
-        else:
-            # Fallback if no box/puck info
-            display_name = f"Grid-{grid.name} (No location info)"
-        
-        grids_list.append({
-            'id': grid.id,
-            'name': grid.name,
-            'project_name': grid.project_name,
-            'username': grid.username,
-            'is_default': grid.is_default,
-            'create_on': grid.create_on,
-            'display_name': display_name  
-        })
-
-    # # Return the data including the computed is_default field
-    # grids = queryset.values('id', 'name', 'project_name', 'username', 'is_default', 'create_on')
-    return JsonResponse(list(grids_list), safe=False)
-
-@extend_schema(
-    methods=["GET"],
-    description="Returns a list of available cryo grids for a given project ID.",
-    parameters=[
-        OpenApiParameter(name='project_id', required=True, type=str, description='ID of the project'),
-    ],
-    responses={
-        200: 'List of available cryo grids',
-        400: 'Missing project_id',
-        404: 'Project not found',
-    },
-)
-@api_view(["GET"])
-def get_available_grids(request):
-    project_id = request.GET.get('project_id')
-
-    if project_id:
-        # Ensure project_id is valid
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            return JsonResponse({"error": "Project not found."}, status=404)
-
-        # Get the available grids for the given project
-        available_grids = CryoGrid.objects.filter(
-            trashed=False,
-            msisession__project=project,
-        ).select_related('grid_box').distinct()
-
-        # Format the data
-        grids_data = []
-        for grid in available_grids:
-            grids_data.append({
-                "grid_id": grid.id,
-                "grid_name": grid.name,
-                "grid_box_id": grid.grid_box.id,
-                "grid_box_name": grid.grid_box.name,
-            })
-
-        return JsonResponse(grids_data, safe=False)
-    else:
-        return JsonResponse({"error": "Project ID not provided."}, status=400)
-
-@extend_schema(
-    methods=["GET"],
-    description="Returns grids associated with a given cassette ID.",
-    parameters=[
-        OpenApiParameter(name='cassette_id', required=True, type=str, description='ID of the grid cassette'),
-    ],
-    responses={
-        200: 'List of grids by cassette',
-        400: 'Missing cassette_id',
-    },
-)
-@api_view(["GET"])
-def get_grids_by_cassette(request):
-    cassette_id = request.GET.get('cassette_id')
-    if cassette_id:
-        grids = CryoGrid.objects.filter(grid_cassette__id=cassette_id)
-        # Format the data
-        print(grids)
-        grids_data = []
-        for grid in grids:
-            grids_data.append({
-                "grid_id": grid.id,
-                "grid_user": grid.user.username,
-                "grid_name": grid.name,
-                "grid_specimen": grid.specimen.__str__(),
-                "grid_slot_number": grid.slot_number_in_cassette,
-                "grid_project_name": grid.intended_project.name,
-            })
-
-        return JsonResponse(grids_data, safe=False)
-    else:
-        return JsonResponse({"error": "Cassette ID not provided."}, status=400)
 
 def _get_data_by_msi_session_data_type(plan, session, data_types=[]):
-        # Find the first pipe in the plan
-        valid_pipes_in_plan = PipeInPlan.objects.filter(plan=plan, step=1).distinct()
-        if len(valid_pipes_in_plan) > 1:
-            raise ValueError("Plan can only have one first pipe.")
-        # Get the available tomogram for the given session and plan input pipe
-        valid_pipes = []
-        for vpp in valid_pipes_in_plan:
-            my_pipe = vpp.pipe
-            # filter data_types as the right input_pipe
-            input_joints = PipeJoint.objects.filter(pipe_in_plan__pipe=my_pipe,input_pathtype__static_path__data_type__in=data_types)
-            if not input_joints:
-                continue
-            # there should always be only one
-            valid_pipes.append(input_joints[0].input_pipe_in_plan.pipe)
-        return valid_pipes
+    """
+    Helper function to get valid pipes for a given plan and session based on data types.
+
+    Args:
+        plan: ProcPlan instance
+        session: MsiSession instance
+        data_types: List of data type strings to filter by
+
+    Returns:
+        List of valid pipes
+    """
+    # Find the first pipe in the plan
+    valid_pipes_in_plan = PipeInPlan.objects.filter(plan=plan, step=1).distinct()
+    if len(valid_pipes_in_plan) > 1:
+        raise ValueError("Plan can only have one first pipe.")
+    # Get the available tomogram for the given session and plan input pipe
+    valid_pipes = []
+    for vpp in valid_pipes_in_plan:
+        my_pipe = vpp.pipe
+        # filter data_types as the right input_pipe
+        input_joints = PipeJoint.objects.filter(
+            pipe_in_plan__pipe=my_pipe,
+            input_pathtype__static_path__data_type__in=data_types
+        )
+        if not input_joints:
+            continue
+        # there should always be only one
+        valid_pipes.append(input_joints[0].input_pipe_in_plan.pipe)
+    return valid_pipes
 
 
 @extend_schema(
@@ -225,9 +116,9 @@ def get_tomo_by_msi_session(request):
             return JsonResponse({"error": "MsiSession not found."}, status=404)
     # tomo
     try:
-        valid_pipes = _get_data_by_msi_session_data_type(plan, session, data_types=['rec','deno'])
+        valid_pipes = _get_data_by_msi_session_data_type(plan, session, data_types=['rec', 'deno'])
     except Exception as e:
-        return JsonResponse({"error": e }, status=404)
+        return JsonResponse({"error": e}, status=404)
 
     input_tomos = []
     for valid_pipe in valid_pipes:
@@ -248,7 +139,7 @@ def get_tomo_by_msi_session(request):
     try:
         valid_pipes = _get_data_by_msi_session_data_type(plan, session, data_types=['pick'])
     except Exception as e:
-        return JsonResponse({"error": e }, status=404)
+        return JsonResponse({"error": e}, status=404)
     if not valid_pipes:
         return JsonResponse([tomo_data, []], safe=False)
     input_picks = []
@@ -269,8 +160,13 @@ def get_tomo_by_msi_session(request):
 
     return JsonResponse([tomo_data, pick_data], safe=False)
 
+
 @method_decorator(csrf_exempt, name='dispatch')
 class ReviewView(View):
+    """
+    View for managing reviews - handles list, create, get, save, and complete operations.
+    """
+
     def get(self, request, review_id=None):
         """
         Handle GET requests for both endpoints:
@@ -285,7 +181,7 @@ class ReviewView(View):
         """
         if review_id:
             return self.get_review_metadata(request, review_id)
-        
+
         search = ''
         sort_field = 'updatedAt'
         sort_order = 'desc'
@@ -416,8 +312,7 @@ class ReviewView(View):
             }, safe=False)
 
         except Exception as e:
-            print(f"Error in get reviews: {str(e)}")  # Add logging
-            traceback.print_exc()
+            logger.error(f"Error in get reviews: {str(e)}", exc_info=True)
             return JsonResponse({"error": str(e)}, status=500)
 
     def get_review_metadata(self, request, review_id):
@@ -429,21 +324,7 @@ class ReviewView(View):
             review_id: UUID of the review
 
         Returns:
-            JSON object with review metadata:
-            {
-                "reviewId": UUID,
-                "reviewName": string,
-                "owner": {
-                    "id": UUID,
-                    "name": string
-                },
-                "tomograms": [
-                    {
-                        "tomogramId": string,
-                        "status": "pending" | "accepted" | "rejected" | "uncertain"
-                    }
-                ]
-            }
+            JSON object with review metadata including tomograms list
         """
         try:
             # Convert string to UUID if needed
@@ -468,7 +349,7 @@ class ReviewView(View):
                 }
                 for tomo in tomograms
             ]
-            
+
             # Sort tomograms by position (handle compound position numbers like position_1_2, position_100_1)
             def extract_position_number(position_str):
                 if position_str == "None":
@@ -490,11 +371,10 @@ class ReviewView(View):
                         return float('inf')  # Invalid format
                 except (ValueError, IndexError):
                     return float('inf')  # Put invalid positions at the end
-            
+
             tomograms_list.sort(key=lambda x: extract_position_number(x['position']))
-            
-            # Debug: Print positions after sorting
-            print(f"Positions after sorting: {[tomo['position'] for tomo in tomograms_list]}")
+
+            logger.debug(f"Sorted tomogram positions for review {review_id}: {[tomo['position'] for tomo in tomograms_list]}")
 
             response_data = {
                 "reviewId": str(review.review_id),
@@ -627,7 +507,7 @@ class ReviewView(View):
             # Parse request body
             try:
                 data = json.loads(request.body)
-                print(f"Received data: {data}")  # Debug log
+                logger.debug(f"Received review save data for review {review_id}")
             except json.JSONDecodeError:
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
 
@@ -640,9 +520,9 @@ class ReviewView(View):
             # Get the review
             try:
                 review = Review.objects.get(review_id=review_id)
-                print(f"Found review: {review.review_id}")  # Debug log
+                logger.debug(f"Found review: {review.review_id}")
             except Review.DoesNotExist:
-                print(f"Review not found with ID: {review_id}")  # Debug log
+                logger.warning(f"Review not found with ID: {review_id}")
                 return JsonResponse({"error": "Review not found"}, status=404)
 
             # Validate quality values
@@ -664,7 +544,7 @@ class ReviewView(View):
                         review=review,
                         tomogram_id=annotation['tomogramId'],
                     )
-                    print(f"Updating tomogram: {tomogram.tomogram_id}")  # Debug log
+                    logger.debug(f"Updating tomogram: {tomogram.tomogram_id}")
 
                     # Update tomogram review data
                     tomogram.quality = annotation['quality']
@@ -684,7 +564,7 @@ class ReviewView(View):
                     tomogram.save()
 
                 except ReviewTomogram.DoesNotExist:
-                    print(f"Tomogram not found: {annotation['tomogramId']}")  # Debug log
+                    logger.warning(f"Tomogram not found: {annotation['tomogramId']}")
                     return JsonResponse({"error": f"Tomogram not found: {annotation['tomogramId']}"}, status=404)
 
             # Calculate counts
@@ -709,30 +589,12 @@ class ReviewView(View):
             })
 
         except Exception as e:
-            print(f"Unexpected error in save_review: {str(e)}")  # Debug log
-            import traceback
-            print(traceback.format_exc())  # Print full traceback
+            logger.error(f"Unexpected error in save_review: {str(e)}", exc_info=True)
             return JsonResponse({"error": str(e)}, status=500)
 
     def complete_review(self, request, review_id):
         """
         Mark a review as completed.
-
-        Args:
-            request: HTTP request
-            review_id: UUID of the review
-
-        Request Body:
-        {
-            "reviewId": UUID
-        }
-
-        Returns:
-        {
-            "ok": true,
-            "finishedAt": string (ISO timestamp),
-            "savePath": string
-        }
         """
         try:
             # Parse request body
@@ -778,17 +640,10 @@ class ReviewView(View):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
+
 def export_review_results(request, review_id):
     """
-    Export review annotations.
-
-    Args:
-        request: HTTP request
-        review_id: UUID of the review to export
-        reviewedOnly: Query parameter to export only reviewed tomograms (default: false)
-
-    Returns:
-        JSON file containing the review annotations
+    Export review annotations as JSON file.
     """
     try:
         # Convert string to UUID if needed
@@ -850,7 +705,7 @@ def export_review_results(request, review_id):
 
         # Create the response with the JSON data
         response = JsonResponse(export_data)
-        print(response)
+        logger.debug(f"Exporting review {review_id} with {len(export_data['tomograms'])} tomograms")
         # Set headers for file download
         export_type = "reviewed_only" if reviewed_only else "complete"
         filename = f"review_{review_id}_{export_type}_export.json"
@@ -865,23 +720,12 @@ def export_review_results(request, review_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+
 def get_review_tomograms(request, review_id):
     """
     Get all tomograms for a specific review.
-
-    Args:
-        request: HTTP request
-        review_id: String ID of the review
-
-    Returns:
-        JSON array of tomograms with their status
-        [
-            { "tomogramId": "tomo_001", "status": "pending" },
-            { "tomogramId": "tomo_002", "status": "rejected" }
-        ]
     """
-    print(f"Getting tomograms for review_id: {review_id}")
-    print(f"Type of review_id: {type(review_id)}")
+    logger.debug(f"Getting tomograms for review_id: {review_id} (type: {type(review_id).__name__})")
 
     try:
         # First check if the review exists
@@ -894,14 +738,13 @@ def get_review_tomograms(request, review_id):
                 # If not a valid UUID, try to find by string ID
                 review = Review.objects.get(review_id=review_id)
 
-            print(f"Found review: {review.review_id}")
+            logger.debug(f"Found review: {review.review_id}")
         except Review.DoesNotExist:
-            print(f"Review not found with ID: {review_id}")
+            logger.warning(f"Review not found with ID: {review_id}")
             # List all available review IDs for debugging
             all_reviews = Review.objects.all()
-            print("Available review IDs:")
-            for r in all_reviews:
-                print(f"- {r.review_id} (Name: {r.review_name})")
+            available_ids = [(r.review_id, r.review_name) for r in all_reviews]
+            logger.debug(f"Available review IDs: {available_ids}")
             return JsonResponse({"error": "Review not found"}, status=404)
 
         # Get tomograms for the review
@@ -909,7 +752,7 @@ def get_review_tomograms(request, review_id):
             review=review,
         ).values('tomogram_id', 'quality')
 
-        print(f"Found {tomograms.count()} tomograms")
+        logger.debug(f"Found {tomograms.count()} tomograms for review {review_id}")
 
         # Format the response
         tomograms_data = [
@@ -923,42 +766,29 @@ def get_review_tomograms(request, review_id):
         return JsonResponse(tomograms_data, safe=False)
 
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+        logger.error(f"Unexpected error in get_review_tomograms: {str(e)}", exc_info=True)
         return JsonResponse({"error": str(e)}, status=500)
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ReviewTomogramView(View):
+    """
+    View for managing individual tomogram reviews.
+    """
+
     def get(self, request, review_id, tomogram_id):
         """
         Get detailed information about a specific tomogram in a review.
-
-        Args:
-            request: HTTP request
-            review_id: String ID of the review
-            tomogram_id: ID of the tomogram
-
-        Returns:
-            JSON object with tomogram details:
-            {
-                "tomogramId": string,
-                "displayName": string,
-                "zarrPath": string,
-                "existingReview": {
-                    "quality": "accepted" | "rejected" | "uncertain",
-                    "rejectionReasons": string[],
-                    "objectLabels": string[]
-                }
-            }
         """
-        print(f"Getting tomogram details for review_id: {review_id}, tomogram_id: {tomogram_id}")
+        logger.debug(f"Getting tomogram details for review_id: {review_id}, tomogram_id: {tomogram_id}")
 
         try:
             # First check if the review exists
             try:
                 review = Review.objects.get(review_id=review_id)
-                print(f"Found review: {review.review_id}")
+                logger.debug(f"Found review: {review.review_id}")
             except Review.DoesNotExist:
-                print(f"Review not found with ID: {review_id}")
+                logger.warning(f"Review not found with ID: {review_id}")
                 return JsonResponse({"error": "Review not found"}, status=404)
 
             # Get the specific tomogram
@@ -967,9 +797,9 @@ class ReviewTomogramView(View):
                     review__review_id=review_id,
                     tomogram_id=tomogram_id,
                 )
-                print(f"Found tomogram: {tomogram.tomogram_id}")
+                logger.debug(f"Found tomogram: {tomogram.tomogram_id}")
             except ReviewTomogram.DoesNotExist:
-                print(f"Tomogram not found with ID: {tomogram_id}")
+                logger.warning(f"Tomogram not found with ID: {tomogram_id}")
                 return JsonResponse({"error": "Tomogram not found"}, status=404)
 
             # Format the response
@@ -984,10 +814,9 @@ class ReviewTomogramView(View):
                     "objectLabels": [],
                 },
             }
-              # Extract sessionid and runid from tomogram
+            # Extract sessionid and runid from tomogram
             session_id = tomogram.session.name if tomogram.session else None
             run_id = tomogram.run_id if tomogram.run_id else None
-            
 
             # Construct zarr path based on reconstruction type
             if review.reconstruction_type.lower() == "sart":
@@ -1002,43 +831,19 @@ class ReviewTomogramView(View):
 
             # Updated zarr path construction - migrated to new location
             response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_id}/{run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
-# response_data["zarrPath"] = "https://onsite.czbiohub.org/group.czii/ashley.anderson/hitl-samples/Position_6_Vol_rechunked.zarr/"
-            # response_data["zarrPath"] = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/25jun02a/run001/vol003/Position_114_8_Vol.zarr/"
-            print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
+
+            logger.debug(f"Computing contrast limits for {review.reconstruction_type} reconstruction: {response_data['zarrPath']}")
             try:
                 contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
                 response_data["contrastLimits"] = contrast_limits
                 response_data["contrastMethod"] = "gmm"
                 response_data["contrastComputed"] = True
             except Exception as e:
-                print(f"Failed to compute contrast limits: {e}")
+                logger.warning(f"Failed to compute contrast limits: {e}")
                 # Use default contrast limits if computation fails
                 response_data["contrastLimits"] = [-0.05, 0.05]
                 response_data["contrastMethod"] = "default"
                 response_data["contrastComputed"] = False
-            # print(f"SART reconstruction - computed contrast limits: {response_data['contrastLimits']}")
-            
-            # Adjust contrast limits based on reconstruction type
-            # if review.reconstruction_type.lower() == "sart":
-            #     # Compute contrast limits for SART using contrast_limits.py
-
-            #     print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
-            #     contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
-            #     response_data["contrastLimits"] = contrast_limits
-            #     response_data["contrastMethod"] = "gmm"
-            #     response_data["contrastComputed"] = True
-            #     print(f"SART reconstruction - computed contrast limits: {response_data['contrastLimits']}")
-
-            # elif review.reconstruction_type.lower() == "dctf":
-            #     print(f"Computing contrast limits for SART reconstruction: {response_data['zarrPath']}")
-            #     contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
-            #     response_data["contrastLimits"] = contrast_limits
-            #     response_data["contrastMethod"] = "gmm"
-            #     response_data["contrastComputed"] = True
-            #     print(f"SART reconstruction - computed contrast limits: {response_data['contrastLimits']}")
-
-            # else:
-            #     response_data["contrastLimits"] = [-0.05, 0.05]  # Standard for denoised
 
             # Add review details if they exist
             if tomogram.quality:
@@ -1063,30 +868,14 @@ class ReviewTomogramView(View):
             return JsonResponse(response_data)
 
         except Exception as e:
-            print(f"Unexpected error in GET: {str(e)}")
+            logger.error(f"Unexpected error in GET tomogram: {str(e)}", exc_info=True)
             return JsonResponse({"error": str(e)}, status=500)
 
     def post(self, request, review_id, tomogram_id):
         """
         Submit a review result for a specific tomogram.
-
-        Args:
-            request: HTTP request
-            review_id: String ID of the review
-            tomogram_id: ID of the tomogram
-
-        Request Body:
-        {
-            "tomogramId": string,
-            "quality": "accepted" | "rejected" | "uncertain",
-            "rejectionReasons": string[],    // only if rejected
-            "objectLabels": string[]         // optional
-        }
-
-        Returns:
-        { "ok": true }
         """
-        print(f"Submitting review result for review_id: {review_id}, tomogram_id: {tomogram_id}")
+        logger.debug(f"Submitting review result for review_id: {review_id}, tomogram_id: {tomogram_id}")
 
         try:
             # Parse request body
@@ -1110,9 +899,9 @@ class ReviewTomogramView(View):
                     review__review_id=review_id,
                     tomogram_id=tomogram_id,
                 )
-                print(f"Found tomogram: {tomogram.tomogram_id}")
+                logger.debug(f"Found tomogram: {tomogram.tomogram_id}")
             except ReviewTomogram.DoesNotExist:
-                print(f"Tomogram not found with ID: {tomogram_id}")
+                logger.warning(f"Tomogram not found with ID: {tomogram_id}")
                 return JsonResponse({"error": "Tomogram not found"}, status=404)
 
             # Update tomogram review data
@@ -1142,122 +931,5 @@ class ReviewTomogramView(View):
             return JsonResponse({"ok": True})
 
         except Exception as e:
-            print(f"Unexpected error in POST: {str(e)}")
+            logger.error(f"Unexpected error in POST tomogram review: {str(e)}", exc_info=True)
             return JsonResponse({"error": str(e)}, status=500)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class SessionView(View):
-    """View to handle both /api/sessions and /api/sessions/{session_id} endpoints"""
-
-    def get_session_data(self, session):
-        runs_data = []
-        seen_runs = set()
-
-        # only runs that belong to plans we want to expose here
-        proc_runs = session.procrun_set.filter(
-            proc_plan__name__in=['czii-live', 'czii-denoise'],
-        ).select_related('proc_plan')
-
-        for proc_run in proc_runs:
-            # Count tomograms grouped by reconstruction_type
-            review_data = ReviewTomogram.objects.filter(
-                run_id=proc_run.name, session=session,
-            ).values('reconstruction_type').annotate(
-                tomogram_count=Count('tomogram_id', distinct=True),
-            )
-            tomogram_counts = {
-                d['reconstruction_type']: d['tomogram_count'] for d in review_data
-            }
-
-            # choose recon types based on plan
-            if proc_run.proc_plan.name == 'czii-live':
-                reconstruction_types = [
-                    {'type': 'DCTF',   'job_name': 'aretomo3', 'vol_number': 'vol001'},
-                    {'type': 'SART',   'job_name': 'aretomo3', 'vol_number': 'vol003'},
-                ]
-            elif proc_run.proc_plan.name == 'czii-denoise':
-                reconstruction_types = [
-                    {'type': 'Denoised','job_name': 'denoise', 'vol_number': 'vol001'},
-                ]
-            else:
-                # skip other plans (e.g., czii-copick)
-                continue
-
-            for recon_info in reconstruction_types:
-                recon_type = recon_info['type']
-                run_key = f"{proc_run.name}_{recon_type}"
-                if run_key in seen_runs:
-                    continue
-                seen_runs.add(run_key)
-
-                save_path = (
-                    f"/hpc/group.czii/krios1.processing/project/"
-                    f"{recon_info['job_name']}/{session.name}/{proc_run.name}/{recon_info['vol_number']}"
-                )
-                runs_data.append({
-                    "runId": proc_run.name,
-                    "numTomograms": tomogram_counts.get(recon_type, 0),
-                    "reconstructionType": recon_type,
-                    "savePath": save_path,
-                })
-
-        return {
-            "sessionId": session.id,
-            "sessionName": session.name,
-            "createdAt": session.created_at.isoformat() if session.created_at else None,
-            "projectName": session.project.name if session.project else None,
-            "runs": runs_data,
-        }
-
-    def get(self, request, session_id=None):
-        """
-        Handle GET requests for both endpoints:
-        - /api/sessions/ (list all sessions)
-        - /api/sessions/{session_id} (get specific session)
-        """
-        try:
-            if session_id:
-                # Get specific session
-                try:
-                    session = MsiSession.objects.select_related('project').get(name=session_id)
-                except MsiSession.DoesNotExist:
-                    return JsonResponse({"error": "Session not found"}, status=404)
-
-                session_data = self.get_session_data(session)
-                return JsonResponse(session_data, safe=False)
-
-            else:
-                # List all sessions
-                search = request.GET.get('search', '').strip()
-
-                # Start with base queryset
-                sessions_qs = MsiSession.objects.select_related(
-                    'project',
-                ).prefetch_related(
-                    'procrun_set',
-                )
-
-                # Apply search filter if provided
-                if search:
-                    sessions_qs = sessions_qs.filter(
-                        Q(name__icontains=search) |
-                        Q(project__name__icontains=search),
-                    )
-
-                # Get all sessions
-                sessions = sessions_qs.order_by('-created_at')
-
-                # Get data for each session
-                sessions_data = []
-                for session in sessions:
-                    session_data = self.get_session_data(session)
-                    # Include session if it has any runs (regardless of tomogram count)
-                    if session_data["runs"]:
-                        sessions_data.append(session_data)
-
-                return JsonResponse(sessions_data, safe=False)
-
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-
-

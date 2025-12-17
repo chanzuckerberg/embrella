@@ -5,12 +5,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import AllowAny
-from rest_framework import status
-from rest_framework.response import Response
-from django.views.decorators.csrf import csrf_exempt
-from umbrella.serializers import ProjectSerializer
+from rest_framework.decorators import api_view
 
 from .models import Project
 
@@ -18,7 +13,7 @@ from .models import Project
 def index(request):
     project_list = Project.objects.all()
     context = {
-        'projects': project_list,
+                'projects':project_list,
     }
     return render(request, "projects/index.html", context)
 
@@ -46,52 +41,3 @@ def getproject(request):
     serialized_projects = serialize('json', project_list)
     projects_data = json.loads(serialized_projects)
     return JsonResponse(projects_data, safe=False)
-
-@extend_schema(
-    methods=["POST"],
-    description="Create a new project with name, description, leader, confluence space, and drive folder.",
-    request=ProjectSerializer,
-    responses={
-        201: ProjectSerializer,
-        400: OpenApiTypes.OBJECT,
-        500: OpenApiTypes.OBJECT,
-    },
-)
-
-@csrf_exempt
-@api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
-def create_project(request):
-    """
-    Create a new project
-    
-    Request Body:
-    {
-        "name": "TRD06",
-        "description": "Project description",  // optional
-        "project_leader": 1,  // optional
-        "confluence_space": 2,  // optional
-        "google_drive_folder": 3  // optional
-    }
-    """
-    try:
-        serializer = ProjectSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            project = serializer.save()
-            return Response({
-                'message': 'Project created successfully',
-                'project': ProjectSerializer(project).data
-            }, status=status.HTTP_201_CREATED)
-        else:
-            return Response({
-                'error': 'Validation failed',
-                'detail': serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-            
-    except Exception as e:
-        return Response({
-            'error': 'Failed to create project',
-            'detail': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

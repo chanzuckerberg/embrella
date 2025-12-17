@@ -63,11 +63,11 @@ export const FilterItem: React.FC<FilterItemProps> = memo(
     const sliderStyles = {
       // Style for the mark label
       '& .MuiSlider-markLabel': {
-        color: '#1976d2',
+        color: '#6E4FF9',
         fontWeight: 'bold',
         padding: '4px 8px',
         borderRadius: '4px',
-        border: '1px solid #1976d2',
+        border: '1px solid #6E4FF9',
         left: '43% !important',
         transform: 'translateX(-50%) !important',
         whiteSpace: 'nowrap',
@@ -75,7 +75,7 @@ export const FilterItem: React.FC<FilterItemProps> = memo(
       },
       // Style for the mark dot
       '& .MuiSlider-mark': {
-        backgroundColor: '#1976d2',
+        backgroundColor: '#6E4FF9',
         height: '25px',
         width: '3px',
         marginTop: '-9px',
