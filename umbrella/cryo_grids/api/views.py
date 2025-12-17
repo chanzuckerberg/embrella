@@ -1,0 +1,156 @@
+"""
+API views for cryo-grid management.
+
+Contains API endpoints for querying and managing cryo grids by user, project,
+and cassette.
+"""
+import logging
+
+from django.db.models import BooleanField, Case, F, Value, When
+from django.http import JsonResponse
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework.decorators import api_view
+
+from cryo_grids.models import CryoGrid
+from tem.models import MsiSession, Project
+
+logger = logging.getLogger(__name__)
+
+
+@extend_schema(
+    methods=["GET"],
+    description="Returns cryo grids for a specific user with metadata and is_default flag.",
+    parameters=[
+        OpenApiParameter(name='user_id', required=False, type=str, description='User ID to filter cryo grids'),
+    ],
+    responses={200: 'List of cryo grids'},
+)
+@api_view(["GET"])
+def get_grids_by_user(request):
+    """
+    Get cryo grids filtered by user ID with metadata.
+
+    Query Parameters:
+        user_id (optional): Filter grids by user ID
+
+    Returns:
+        JSON list of grids with project_name, username, is_default flag, and timestamps
+    """
+    user_id = request.GET.get('user_id')
+
+    # Annotate each grid with an is_default flag based on the grid name.
+    queryset = CryoGrid.objects.select_related('intended_project', 'user').annotate(
+        project_name=F('intended_project__name'),
+        username=F('user__username'),
+        is_default=Case(
+            When(name__icontains="default grid", then=Value(True)),
+            default=Value(False),
+            output_field=BooleanField(),
+        ),
+    )
+
+    if user_id:
+        queryset = queryset.filter(user_id=user_id)
+
+    # Order by create_on in descending order (newest first)
+    queryset = queryset.order_by('-create_on')
+
+    # Return the data including the computed is_default field
+    grids = queryset.values('id', 'name', 'project_name', 'username', 'is_default', 'create_on')
+    return JsonResponse(list(grids), safe=False)
+
+
+@extend_schema(
+    methods=["GET"],
+    description="Returns a list of available cryo grids for a given project ID.",
+    parameters=[
+        OpenApiParameter(name='project_id', required=True, type=str, description='ID of the project'),
+    ],
+    responses={
+        200: 'List of available cryo grids',
+        400: 'Missing project_id',
+        404: 'Project not found',
+    },
+)
+@api_view(["GET"])
+def get_available_grids(request):
+    """
+    Get available cryo grids for a given project.
+
+    Query Parameters:
+        project_id (required): Project ID to filter grids
+
+    Returns:
+        JSON list of available grids with grid_box information
+    """
+    project_id = request.GET.get('project_id')
+
+    if project_id:
+        # Ensure project_id is valid
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found."}, status=404)
+
+        # Get the available grids for the given project
+        available_grids = CryoGrid.objects.filter(
+            trashed=False,
+            msisession__project=project,
+        ).select_related('grid_box').distinct()
+
+        # Format the data
+        grids_data = []
+        for grid in available_grids:
+            grids_data.append({
+                "grid_id": grid.id,
+                "grid_name": grid.name,
+                "grid_box_id": grid.grid_box.id,
+                "grid_box_name": grid.grid_box.name,
+            })
+
+        return JsonResponse(grids_data, safe=False)
+    else:
+        return JsonResponse({"error": "Project ID not provided."}, status=400)
+
+
+@extend_schema(
+    methods=["GET"],
+    description="Returns grids associated with a given cassette ID.",
+    parameters=[
+        OpenApiParameter(name='cassette_id', required=True, type=str, description='ID of the grid cassette'),
+    ],
+    responses={
+        200: 'List of grids by cassette',
+        400: 'Missing cassette_id',
+    },
+)
+@api_view(["GET"])
+def get_grids_by_cassette(request):
+    """
+    Get grids associated with a specific cassette.
+
+    Query Parameters:
+        cassette_id (required): Cassette ID to filter grids
+
+    Returns:
+        JSON list of grids with user, specimen, slot, and project information
+    """
+    cassette_id = request.GET.get('cassette_id')
+    if cassette_id:
+        grids = CryoGrid.objects.filter(grid_cassette__id=cassette_id)
+        # Format the data
+        logger.debug(f"Found {grids.count()} grids for cassette {cassette_id}")
+        grids_data = []
+        for grid in grids:
+            grids_data.append({
+                "grid_id": grid.id,
+                "grid_user": grid.user.username,
+                "grid_name": grid.name,
+                "grid_specimen": grid.specimen.__str__(),
+                "grid_slot_number": grid.slot_number_in_cassette,
+                "grid_project_name": grid.intended_project.name,
+            })
+
+        return JsonResponse(grids_data, safe=False)
+    else:
+        return JsonResponse({"error": "Cassette ID not provided."}, status=400)

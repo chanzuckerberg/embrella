@@ -8,6 +8,7 @@ import { COOKIE_NAME } from '../types/cookies';
 export enum FEATURE_FLAG {
   EXAMPLE = 'example',
   REVIEW = 'review',
+  MANAGE_DATA = 'manage_data',
 }
 
 const LAUNCHED_FEATURE_FLAGS: FEATURE_FLAG[] = [FEATURE_FLAG.EXAMPLE, FEATURE_FLAG.REVIEW];

@@ -15,7 +15,7 @@ import django
 
 django.setup()
 from processes.models import ProcRun, Review, ReviewTomogram
-from processes.syncers import check_zarr_exists, generate_uuid
+from workflow.syncers import check_zarr_exists, generate_uuid
 from tem.models import MsiSession
 
 BASE_PATH = "/hpc/projects/krios1.processing"

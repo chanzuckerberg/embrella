@@ -28,6 +28,7 @@ export const useFetchData = <D>(relativeURL: string, searchParam: Record<string,
         isSuccess: false,
       }));
       const res = await fetchResource(requestURL);
+      // fetchResource handles 401 redirects automatically
       if (res.status === 200) {
         return await res.json();
       }

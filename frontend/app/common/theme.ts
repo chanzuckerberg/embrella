@@ -625,12 +625,12 @@ const shadows = {
  */
 const SDSLightThemeColors: Colors = {
   blue: {
-    '100': '#e2eeff',
+    '100': '#f5f0ff',
     '200': '#cce1ff',
     '300': '#9dc6ff',
-    '400': '#6ca6ff',
-    '500': '#1a6cef',
-    '600': '#0041b9',
+    '400': '#9b51e0',
+    '500': '#6E4FF9',
+    '600': '#5a3ab8',
     '700': '#002d90',
     '800': '#00114a',
   },

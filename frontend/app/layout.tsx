@@ -13,7 +13,23 @@ import { COOKIE_NAME } from './common/types/cookies';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Embrella',
+  title: {
+    template: '%s | Embrella',
+    default: 'Embrella',
+  },
+  icons: {
+    icon: [
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    other: [
+      {
+        rel: 'msapplication-TileImage',
+        url: '/ms-icon-270x270.png',
+      },
+    ],
+  },
 };
 
 const CACHE_PROVIDER_OPTIONS = {
@@ -33,7 +49,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <UserProvider>
                 <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
                   <NavbarWrapper />
-                  {children}
+                  <div
+                    style={{
+                      maxWidth: '95rem',
+                      marginLeft: 'auto',
+                      marginRight: 'auto',
+                      paddingTop: '130px',
+                    }}
+                  >
+                    {children}
+                  </div>
                 </FeatureFlagsProvider>
               </UserProvider>
             </CustomThemeProvider>

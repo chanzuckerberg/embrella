@@ -156,9 +156,7 @@ export const useSortedData = (
         // Add sorting parameters
         url += `&sort_by=${encodeURIComponent(sortBy)}&sort_direction=${encodeURIComponent(sortDirection)}`;
 
-        const response = await fetch(url, {
-          credentials: 'include',
-        });
+        const response = await fetch(url, { credentials: 'include' });
 
         if (!response.ok) {
           throw new Error('Failed to fetch sorted data');

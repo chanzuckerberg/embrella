@@ -18,18 +18,12 @@ from pathlib import Path
 import pytz
 from corsheaders.defaults import default_headers as default_cors_headers
 
-#from umbrella.middleware import SetNextParameterMiddleware
-
 BASE_DIR = Path(__file__).resolve().parent.parent  # Build paths inside the project like this: BASE_DIR / 'subdir'.
 ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
-DEBUG = True #if ENVIRONMENT == "development" else False
+DEBUG = ENVIRONMENT == "development"
 
 def run_with_args(args):
     return subprocess.check_output(args, cwd=BASE_DIR).decode("utf-8")
-    # try:
-    #     subprocess.check_output(args, cwd=BASE_DIR).decode("utf-8")
-    # except Exception:
-    #     return None
 
 GIT_HASH = None
 GIT_BRANCH = None
@@ -49,16 +43,19 @@ USE_TZ = True
 
 WSGI_APPLICATION = "umbrella.wsgi.application"
 ROOT_URLCONF = "umbrella.urls"
-LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "umbrella"
+LOGIN_URL = "/admin/login/"
+LOGIN_REDIRECT_URL = "/"
 LOGIN_REQUIRED_IGNORE_PATHS = [
     r"^/admin/login/*",
+    r"^/admin/logout/*",
     r"^/google_sso/*",
     r"^/static/*",
     r"^/login/*",
-    r"^/api/*",
 ]
-# LOGOUT_REDIRECT_URL = '/'
+# Exempt user info endpoint - frontend should handle 401 and redirect
+LOGIN_REQUIRED_IGNORE_VIEW_NAMES = [
+    'user_info',
+]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
@@ -111,6 +108,7 @@ INSTALLED_APPS = [
     "django_google_sso",
     "corsheaders",
     "drf_spectacular",
+    "django_q",
 ]
 
 MIDDLEWARE = [
@@ -120,8 +118,10 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "umbrella.middleware.APIAuthenticationMiddleware",  # Return 401 for API requests - MUST come before LoginRequiredMiddleware
     #"django.contrib.auth.middleware.LoginRequiredMiddleware",
     "login_required.middleware.LoginRequiredMiddleware",
+    "umbrella.middleware.FixLoginRedirectMiddleware",  # Fix login redirects to use HTTP_REFERER
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     #"umbrella.middleware.SetNextParameterMiddleware",
@@ -174,12 +174,12 @@ JAZZMIN_SETTINGS = {
     "show_version": False,
     "show_view_site": True,
     "show_sidebar": True,
-    "site_logo": "jazzmin/img/logo.png",
-    "login_logo": "jazzmin/img/logo.png",
-    "topmenu_links": [
-        # Url that gets reversed (Permissions can be added)
-        {"name": "Go back to the startup page", "url": "/umbrella", "permissions": ["auth.view_user"]},
-    ],
+    "site_logo": "jazzmin/img/biohub-logo.svg",
+    "login_logo": "jazzmin/img/biohub-logo.svg",
+    # "topmenu_links": [
+    #     # Url that gets reversed (Permissions can be added)
+    #     {"name": "Go back to the startup page", "url": "/umbrella", "permissions": ["auth.view_user"]},
+    # ],
 }
 
 GOOGLE_SSO_CLIENT_ID = os.environ.get("GOOGLE_SSO_CLIENT_ID")
@@ -188,6 +188,8 @@ GOOGLE_SSO_CLIENT_SECRET = os.environ.get("GOOGLE_SSO_CLIENT_SECRET")
 GOOGLE_SSO_ALLOWABLE_DOMAINS = ["umbrella.czbiohub.org", "127.0.0.1:8000", "127.0.0.1", "czii.org"]
 GOOGLE_SSO_PRE_LOGIN_CALLBACK = "umbrella.hooks.pre_login_callback"
 GOOGLE_SSO_ALLOWED_DOMAINS = ["czii.org", "czbiohub.org"]
+# Configure Google SSO to respect the 'next' parameter for redirects
+GOOGLE_SSO_SAVE_BASIC_GOOGLE_INFO = False
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*")
@@ -203,7 +205,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://umbrella.czbiohub.org",
     "https://umbrella-dev.czbiohub.org",
 ]
-CORS_ORIGIN_ALLOW_ALL = True
+# IMPORTANT: Do not enable CORS_ORIGIN_ALLOW_ALL in production!
+# CORS_ORIGIN_ALLOW_ALL = True  # REMOVED: This overrides CORS_ALLOWED_ORIGINS
 CORS_ALLOW_METHODS = [
     "DELETE",
     "GET",
@@ -224,9 +227,12 @@ CORS_ALLOW_METHODS = [
 #     'x-requested-with',
 # ]
 CORS_ALLOW_HEADERS = default_cors_headers + ("Access-Control-Allow-Origin",)
-CORS_EXPOSE_HEADERS = ["Access-Control-Allow-Origin", "Content-Type"]
+CORS_EXPOSE_HEADERS = ["Access-Control-Allow-Origin", "Content-Type", "Location"]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://umbrella.czbiohub.org",
+    "https://umbrella-dev.czbiohub.org",
 ]
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
@@ -254,7 +260,15 @@ SESSION_COOKIE_AGE = 1209600
 # SESSION_COOKIE_SAMESITE = None
 
 
-# Script Paths
-ARETOMO3_SCRIPT_PATH = "/hpc/projects/krios1.processing/aretomo3/scripts/run_aretomo_sta_pipeline_basic_v2.sh"
-DENOISET_SCRIPT_PATH = "/hpc/projects/group.czii/krios1.processing/denoise/scripts"
-ARETOMO3_ADVANCED_PATH = "/hpc/projects/krios1.processing/aretomo3/scripts/run_aretomo3_advanced_v2.sh"
+# Django-Q2 Configuration
+Q_CLUSTER = {
+    'name': 'umbrella',
+    'workers': 4,
+    'recycle': 500,
+    'timeout': 300,  # 5 minutes for SSH operations
+    'retry': 360,  # Retry failed tasks after 6 minutes
+    'queue_limit': 50,
+    'bulk': 10,
+    'orm': 'default',  # Use Django ORM as broker
+    'catch_up': False,  # Don't run missed scheduled tasks
+}
