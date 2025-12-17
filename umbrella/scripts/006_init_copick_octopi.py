@@ -86,11 +86,11 @@ def create_pipeline_plan():
     output_path_types = []
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('cpck'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/',
+                overlay_path='/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/',
     ))
     output_path_types.append(PathType.objects.create(
                 static_path=get_static_path('ocpi'),
-                overlay_path='/hpc/processing/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/',
+                overlay_path='/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/',
     ))
     for t in tasks[0:1]:
         # copick project creation

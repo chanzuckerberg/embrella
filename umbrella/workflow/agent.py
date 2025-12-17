@@ -309,6 +309,7 @@ class StatusChecker(object):
         """
         Establish an SSH connection to the remote server.
         """
+        self.auth["username"] = os.getenv("SLURM_USER") # force to be service user
         self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
         logger.info(f"Connected to {self.cluster_id}")
 
@@ -376,12 +377,19 @@ class StatusChecker(object):
     def track_jobs(self, job_name, all=False):
         if self.ssh is None:
             raise Exception("SSH connection not established. Call connect() first.")
-        format_mod = "--Format=jobid,partition,name,username:30,state,TimeUsed,TimeLeft,numnodes,reasonlist"
+        # Use pipe delimiter for reliable parsing, even when fields contain spaces
+        # Use %T (extended state) instead of %t (compact state) to get full state names like "PENDING" instead of "PD"
+        # This ensures proper mapping in SLURM_STATE_TO_LABEL
+
+        # Build squeue command with format options
+        # %i=jobid, %P=partition, %j=name, %u=user, %T=state (extended), %M=time, %L=timeleft, %D=nodes, %R=reason
         if all and job_name is None:
-            stdin, stdout, stderr = self.ssh.exec_command(f'squeue {format_mod}')
+            squeue_cmd = 'echo "JOBID|PARTITION|NAME|USER|ST|TIME|TIMELEFT|NODES|NODELIST(REASON)"; squeue --noheader -o "%i|%P|%j|%u|%T|%M|%L|%D|%R"'
         else:
-            # Execute the squeue command
-            stdin, stdout, stderr = self.ssh.exec_command(f'squeue -n {job_name} -{format_mod}')
+            # Execute the squeue command with job name filter
+            squeue_cmd = f'echo "JOBID|PARTITION|NAME|USER|ST|TIME|TIMELEFT|NODES|NODELIST(REASON)"; squeue --noheader -o "%i|%P|%j|%u|%T|%M|%L|%D|%R" -n {job_name}'
+
+        stdin, stdout, stderr = self.ssh.exec_command(squeue_cmd)
 
         # Read the output and error streams
         output = stdout.read().decode('utf-8')
@@ -414,22 +422,44 @@ class RemoteJobSubmitter:
         self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
 
     def run_script(self, template_path: str, job_name: str, **kwargs):
-        # Render any Jinja template with arbitrary parameters
-        env = Environment(loader=FileSystemLoader(os.path.dirname(template_path)))
-        template = env.get_template(os.path.basename(template_path))
-        rendered = template.render(**kwargs)
+        if template_path is None and 'script_content' in kwargs:
+            rendered = kwargs['script_content']
+        else:
+            # Render any Jinja template with arbitrary parameters
+            env = Environment(loader=FileSystemLoader(os.path.dirname(template_path)))
+            template = env.get_template(os.path.basename(template_path))
+            rendered = template.render(**kwargs)
 
         # Upload to remote
         remote_script = os.path.join(self.remote_script_dir, f"{job_name}.sh")
         sftp = self.ssh.open_sftp()
         try:
+            # Ensure remote directory exists
+            try:
+                sftp.stat(self.remote_script_dir)
+            except FileNotFoundError:
+                # Directory doesn't exist, create it (and any parent directories)
+                parent_dirs = []
+                current_path = self.remote_script_dir
+                while current_path and current_path != '/':
+                    try:
+                        sftp.stat(current_path)
+                        break  # This directory exists, stop
+                    except FileNotFoundError:
+                        parent_dirs.insert(0, current_path)
+                        current_path = os.path.dirname(current_path)
+
+                # Create all missing directories
+                for dir_path in parent_dirs:
+                    sftp.mkdir(dir_path)
+
             with sftp.file(remote_script, "w") as f:
                 f.write(rendered)
             sftp.chmod(remote_script, 0o755)
         finally:
             sftp.close()
 
-        # Submit via sbatch
+        # Submit via sbatch (for scripts with #SBATCH directives)
         cmd = f"cd {self.remote_script_dir} && sbatch {job_name}.sh"
         stdin, stdout, stderr = self.ssh.exec_command(cmd)
         return stdout.read().decode(), stderr.read().decode()
@@ -448,7 +478,7 @@ class RemoteJobSubmitter:
         if error:
             logger.error(f"Cancel Error: {error}")
 
-        return output, error
+        return output == '' and error == '', error
 
     def close(self):
         if self.ssh:
