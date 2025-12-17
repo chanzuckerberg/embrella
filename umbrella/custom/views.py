@@ -16,7 +16,3 @@ def custom_page(request):
 
 def user_guide_view(request):
     return render(request, "customs/user_guide.html")
-
-
-def chatbot_view(request):
-    return render(request, "customs/chatbot.html")
