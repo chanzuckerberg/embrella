@@ -1,0 +1,287 @@
+#!/bin/bash -l
+
+# Filesystem Survey Job
+# Discovers all files/directories in a given path and outputs to Parquet
+#SBATCH --job-name=fs_survey_{{ survey_id }}
+#SBATCH --partition={{ partition | default('cpu') }}
+#SBATCH --time={{ time_limit | default('48:00:00') }}
+#SBATCH --cpus-per-task={{ cpus | default(4) }}
+#SBATCH --mem={{ memory | default('32G') }}
+#SBATCH --mail-type=ALL
+{% if mail_user %}
+#SBATCH --mail-user={{ mail_user }}
+{% endif %}
+#SBATCH -o {{ output_dir }}/survey_{{ survey_id }}.out
+#SBATCH -e {{ output_dir }}/survey_{{ survey_id }}.err
+
+set -e
+
+# Survey parameters
+SURVEY_ID="{{ survey_id }}"
+BASE_PATH="{{ base_path }}"
+OUTPUT_DIR="{{ output_dir }}"
+JSONL_FILE="${OUTPUT_DIR}/survey_${SURVEY_ID}_raw.jsonl"
+PARQUET_FILE="${OUTPUT_DIR}/survey_${SURVEY_ID}.parquet"
+
+echo "Starting filesystem survey ${SURVEY_ID}"
+echo "Base path: ${BASE_PATH}"
+echo "Output directory: ${OUTPUT_DIR}"
+echo "Start time: $(date)"
+
+# Create output directory
+mkdir -p "${OUTPUT_DIR}"
+
+# Phase 1: Run find, output JSONL
+# - For .zarr directories: record as 'zarr' type, then prune (don't descend)
+# - For regular files: record as 'file' type
+# - For directories: record as 'directory' type
+echo "Phase 1: Running find to discover files..."
+
+find "${BASE_PATH}" \
+    -name "*.zarr" -printf '{"path":"%p","size":0,"mtime":%T@,"uid":%U,"username":"%u","mode":"%m","type":"zarr"}\n' -prune \
+    -o -type f -printf '{"path":"%p","size":%s,"mtime":%T@,"uid":%U,"username":"%u","mode":"%m","type":"file"}\n' \
+    -o -type d -printf '{"path":"%p","size":0,"mtime":%T@,"uid":%U,"username":"%u","mode":"%m","type":"directory"}\n' \
+    > "${JSONL_FILE}" 2>/dev/null || true
+
+echo "Find complete. Line count: $(wc -l < "${JSONL_FILE}")"
+
+# Phase 2: Compute zarr sizes (with caching from previous survey)
+echo "Phase 2: Computing zarr directory sizes..."
+
+# Create temporary files
+ZARR_SIZES_FILE="${OUTPUT_DIR}/zarr_sizes_${SURVEY_ID}.jsonl"
+ZARR_LIST_FILE="${OUTPUT_DIR}/zarr_list_${SURVEY_ID}.txt"
+
+# Extract zarr directories from Phase 1 output (more efficient than another find)
+grep '"type":"zarr"' "${JSONL_FILE}" | sed 's/.*"path":"\([^"]*\)".*/\1/' > "${ZARR_LIST_FILE}"
+ZARR_COUNT=$(wc -l < "${ZARR_LIST_FILE}")
+echo "Found ${ZARR_COUNT} zarr directories"
+
+{% if zarr_cache_path %}
+# Use Python to process zarrs with cache
+ZARR_CACHE="{{ zarr_cache_path }}"
+echo "Using zarr cache: ${ZARR_CACHE}"
+
+python3 << 'PYEOF'
+import json
+import os
+import pwd
+import subprocess
+
+zarr_list_file = "{{ output_dir }}/zarr_list_{{ survey_id }}.txt"
+zarr_sizes_file = "{{ output_dir }}/zarr_sizes_{{ survey_id }}.jsonl"
+cache_file = "{{ zarr_cache_path }}"
+
+# Load cache
+cache = {}
+try:
+    with open(cache_file) as f:
+        cache = json.load(f)
+    print(f"Loaded cache with {len(cache)} zarr entries")
+except Exception as e:
+    print(f"Warning: Could not load cache: {e}")
+
+# Process zarrs
+cache_hits = 0
+cache_misses = 0
+
+with open(zarr_list_file) as f_list, open(zarr_sizes_file, 'w') as f_out:
+    for line in f_list:
+        zarr_dir = line.strip()
+        if not zarr_dir:
+            continue
+
+        # Get current mtime
+        try:
+            stat_info = os.stat(zarr_dir)
+            current_mtime = stat_info.st_mtime
+            current_uid = stat_info.st_uid
+            current_mode = oct(stat_info.st_mode)[-3:]
+            # Resolve UID to username
+            try:
+                current_username = pwd.getpwuid(current_uid).pw_name
+            except KeyError:
+                current_username = str(current_uid)
+        except OSError:
+            current_mtime = 0
+            current_uid = 0
+            current_username = "0"
+            current_mode = "755"
+
+        # Check cache
+        cached = cache.get(zarr_dir)
+        if cached and abs(float(cached['mtime']) - current_mtime) < 1.0:
+            # Cache hit
+            size = cached['size']
+            uid = cached['uid']
+            username = cached.get('username', current_username)
+            mode = cached['mode']
+            cache_hits += 1
+        else:
+            # Cache miss - run du
+            try:
+                result = subprocess.run(
+                    ['du', '-sb', zarr_dir],
+                    capture_output=True, text=True, timeout=300
+                )
+                size = int(result.stdout.split()[0]) if result.returncode == 0 else 0
+            except Exception:
+                size = 0
+            uid = current_uid
+            username = current_username
+            mode = current_mode
+            cache_misses += 1
+
+        entry = {
+            'path': zarr_dir,
+            'size': size,
+            'mtime': current_mtime,
+            'uid': uid,
+            'username': username,
+            'mode': mode,
+            'type': 'zarr'
+        }
+        f_out.write(json.dumps(entry) + '\n')
+
+        # Progress every 100 zarrs
+        total = cache_hits + cache_misses
+        if total % 100 == 0:
+            print(f"Processed {total} zarrs (hits: {cache_hits}, misses: {cache_misses})")
+
+print(f"Zarr processing complete: {cache_hits} cache hits, {cache_misses} cache misses")
+PYEOF
+
+{% else %}
+# No cache - compute all zarr sizes with du (this is slow!)
+echo "WARNING: No zarr cache available. Computing all zarr sizes from scratch."
+echo "         This may take several hours for large datasets."
+> "${ZARR_SIZES_FILE}"
+ZARR_PROCESSED=0
+ZARR_START_TIME=$(date +%s)
+while read -r zarr_dir; do
+    size=$(du -sb "${zarr_dir}" 2>/dev/null | cut -f1 || echo 0)
+    mtime=$(stat -c %Y "${zarr_dir}" 2>/dev/null || echo 0)
+    uid=$(stat -c %u "${zarr_dir}" 2>/dev/null || echo 0)
+    username=$(stat -c %U "${zarr_dir}" 2>/dev/null || echo "${uid}")
+    mode=$(stat -c %a "${zarr_dir}" 2>/dev/null || echo "0755")
+    echo "{\"path\":\"${zarr_dir}\",\"size\":${size},\"mtime\":${mtime},\"uid\":${uid},\"username\":\"${username}\",\"mode\":\"${mode}\",\"type\":\"zarr\"}" >> "${ZARR_SIZES_FILE}"
+
+    ZARR_PROCESSED=$((ZARR_PROCESSED + 1))
+    # Progress every 10 zarrs
+    if [ $((ZARR_PROCESSED % 10)) -eq 0 ]; then
+        ELAPSED=$(($(date +%s) - ZARR_START_TIME))
+        if [ $ELAPSED -gt 0 ]; then
+            RATE=$(echo "scale=2; $ZARR_PROCESSED / $ELAPSED" | bc)
+            REMAINING=$((ZARR_COUNT - ZARR_PROCESSED))
+            ETA=$(echo "scale=0; $REMAINING / $RATE" | bc 2>/dev/null || echo "?")
+            echo "  Processed ${ZARR_PROCESSED}/${ZARR_COUNT} zarrs (${RATE}/sec, ETA: ${ETA}s)"
+        else
+            echo "  Processed ${ZARR_PROCESSED}/${ZARR_COUNT} zarrs"
+        fi
+    fi
+done < "${ZARR_LIST_FILE}"
+echo "Zarr processing complete: ${ZARR_PROCESSED} zarrs processed"
+{% endif %}
+
+echo "Zarr size computation complete. Zarr count: $(wc -l < "${ZARR_SIZES_FILE}")"
+rm -f "${ZARR_LIST_FILE}"
+
+# Phase 3: Convert JSONL to Parquet using Python + pyarrow
+echo "Phase 3: Converting JSONL to Parquet..."
+
+{% if conda_env %}
+ml anaconda
+conda activate {{ conda_env }}
+{% else %}
+# Activate a Python environment with pyarrow
+ml anaconda
+conda activate /hpc/projects/group.czii/krios1.processing/software/broom
+source $PYVENV/bin/activate
+{% endif %}
+
+python3 << 'PYEOF'
+import json
+import os
+import sys
+
+try:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+except ImportError:
+    print("ERROR: pyarrow not installed in this environment")
+    sys.exit(1)
+
+survey_id = os.environ.get('SLURM_JOB_NAME', '').replace('fs_survey_', '') or '{{ survey_id }}'
+output_dir = "{{ output_dir }}"
+jsonl_file = f"{output_dir}/survey_{{ survey_id }}_raw.jsonl"
+zarr_sizes_file = f"{output_dir}/zarr_sizes_{{ survey_id }}.jsonl"
+parquet_file = f"{output_dir}/survey_{{ survey_id }}.parquet"
+
+# Define schema
+schema = pa.schema([
+    ('path', pa.string()),
+    ('size', pa.int64()),
+    ('mtime', pa.float64()),
+    ('uid', pa.int32()),
+    ('username', pa.string()),
+    ('mode', pa.string()),
+    ('type', pa.string()),
+])
+
+# Read main JSONL file and zarr sizes
+rows = []
+zarr_sizes = {}
+
+# Read zarr sizes first
+if os.path.exists(zarr_sizes_file):
+    with open(zarr_sizes_file) as f:
+        for line in f:
+            if line.strip():
+                try:
+                    entry = json.loads(line)
+                    zarr_sizes[entry['path']] = entry
+                except json.JSONDecodeError:
+                    continue
+
+# Read main JSONL file
+with open(jsonl_file) as f:
+    for line in f:
+        if line.strip():
+            try:
+                entry = json.loads(line)
+                # Replace zarr entries with computed sizes
+                if entry.get('type') == 'zarr' and entry['path'] in zarr_sizes:
+                    entry = zarr_sizes[entry['path']]
+                rows.append(entry)
+            except json.JSONDecodeError:
+                continue
+
+print(f"Loaded {len(rows)} entries")
+
+# Convert to Arrow table
+table = pa.Table.from_pylist(rows, schema=schema)
+
+# Write to Parquet with snappy compression
+pq.write_table(table, parquet_file, compression='snappy')
+print(f"Wrote {len(rows)} rows to {parquet_file}")
+
+# Print statistics
+total_size = sum(r.get('size', 0) for r in rows)
+file_count = sum(1 for r in rows if r.get('type') == 'file')
+dir_count = sum(1 for r in rows if r.get('type') == 'directory')
+zarr_count = sum(1 for r in rows if r.get('type') == 'zarr')
+
+print(f"Statistics:")
+print(f"  Total files: {file_count}")
+print(f"  Total directories: {dir_count}")
+print(f"  Total zarr bundles: {zarr_count}")
+print(f"  Total size: {total_size / (1024**4):.2f} TB")
+PYEOF
+
+# Phase 4: Cleanup intermediate files
+echo "Phase 4: Cleaning up intermediate files..."
+rm -f "${JSONL_FILE}" "${ZARR_SIZES_FILE}"
+
+echo "Survey complete!"
+echo "Parquet file: ${PARQUET_FILE}"
+echo "End time: $(date)"
