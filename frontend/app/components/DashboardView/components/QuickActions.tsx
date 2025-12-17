@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import { Button } from '@czi-sds/components';
 import { useRouter } from 'next/navigation';
 import {

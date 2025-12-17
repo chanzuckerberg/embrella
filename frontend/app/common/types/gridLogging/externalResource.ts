@@ -11,7 +11,7 @@ export interface ExternalResource {
   system_name: string;
   name: string;
   url: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ExternalResourceListResponse {
@@ -39,7 +39,7 @@ export interface CreateExternalResourceRequest {
   system_name: string;
   name: string;
   url: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CreateExternalResourceResponse {

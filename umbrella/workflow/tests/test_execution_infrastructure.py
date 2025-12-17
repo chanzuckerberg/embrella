@@ -474,7 +474,9 @@ class TestExecutionAPI:
         assert data['success'] is True
         assert data['processor'] == 'test_processor'
         assert 'schema' in data
-        assert 'slurm_options' in data
+        assert 'display_name' in data
+        assert 'default_cluster' in data
+        assert 'allowed_clusters' in data
 
     def test_get_processor_schema_not_found(self, client, test_user):
         """Test getting schema for non-existent processor."""
@@ -759,7 +761,7 @@ class TestSyncerIntegration:
         test_pipe_in_plan,
         test_user,
     ):
-        """Test that AreTomo3 processor spawns syncer via helper method."""
+        """Test that AreTomo3 processor starts syncer task via helper method."""
         from workflow.execution import RunContext
         from workflow.processors.aretomo3 import AreTomo3Processor
 
@@ -776,18 +778,17 @@ class TestSyncerIntegration:
 
         processor = AreTomo3Processor()
 
-        # Mock _spawn_syncer_subprocess
-        with patch.object(processor, '_spawn_syncer_subprocess') as mock_spawn:
+        # Mock _start_syncer_task (the new method used by AreTomo3)
+        with patch.object(processor, '_start_syncer_task') as mock_start:
             processor.on_job_submit(run_context, 'job123')
 
             # Verify helper was called with correct arguments
-            assert mock_spawn.called
-            call_args = mock_spawn.call_args[0]
-            # Check syncer path is absolute and ends with syncer.py
-            assert call_args[0].endswith('syncer.py')
-            assert 'aretomo3' in call_args[0]
-            assert call_args[1] == run_context
-            assert call_args[2] == 'job123'
+            assert mock_start.called
+            call_kwargs = mock_start.call_args[1]
+            # Check syncer class path includes aretomo3
+            assert 'aretomo3' in call_kwargs['syncer_class_path']
+            assert call_kwargs['run_context'] == run_context
+            assert call_kwargs['job_id'] == 'job123'
 
     def test_denoiset_processor_spawns_syncer(
         self,
@@ -796,7 +797,7 @@ class TestSyncerIntegration:
         test_pipe_in_plan,
         test_user,
     ):
-        """Test that DenoisET processor spawns syncer via helper method."""
+        """Test that DenoisET processor starts syncer task via helper method."""
         from workflow.execution import RunContext
         from workflow.processors.denoiset import DenoisETProcessor
 
@@ -813,18 +814,17 @@ class TestSyncerIntegration:
 
         processor = DenoisETProcessor()
 
-        # Mock _spawn_syncer_subprocess
-        with patch.object(processor, '_spawn_syncer_subprocess') as mock_spawn:
+        # Mock _start_syncer_task (the new method used by DenoisET)
+        with patch.object(processor, '_start_syncer_task') as mock_start:
             processor.on_job_submit(run_context, 'job456')
 
             # Verify helper was called with correct arguments
-            assert mock_spawn.called
-            call_args = mock_spawn.call_args[0]
-            # Check syncer path is absolute and ends with syncer.py
-            assert call_args[0].endswith('syncer.py')
-            assert 'denoiset' in call_args[0]
-            assert call_args[1] == run_context
-            assert call_args[2] == 'job456'
+            assert mock_start.called
+            call_kwargs = mock_start.call_args[1]
+            # Check syncer class path includes denoiset
+            assert 'denoiset' in call_kwargs['syncer_class_path']
+            assert call_kwargs['run_context'] == run_context
+            assert call_kwargs['job_id'] == 'job456'
 
     def test_copick_processor_no_syncer(
         self,

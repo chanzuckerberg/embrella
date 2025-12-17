@@ -120,7 +120,7 @@ export async function fetchProcessorOptions(
  */
 export async function validateProcessorParams(
   processorName: string,
-  parameters: Record<string, any>
+  parameters: Record<string, unknown>
 ): Promise<ValidationResult> {
   const url = replaceUrlParams(POST_API.PROCESSOR_VALIDATE, { processorName });
   const response = await postResource(`${DJANGO_URL}${url}`, parameters);
@@ -185,7 +185,10 @@ export async function fetchProcessorMetadata(processorName: string): Promise<Pro
  * Execute a processing pipeline
  */
 export async function executeWorkflow(params: ExecutionParams): Promise<ExecutionResult> {
-  const response = await postResource(`${DJANGO_URL}${API.PIPELINE_EXECUTE}`, params);
+  const response = await postResource(
+    `${DJANGO_URL}${API.PIPELINE_EXECUTE}`,
+    params as unknown as Record<string, unknown>
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
@@ -193,7 +196,9 @@ export async function executeWorkflow(params: ExecutionParams): Promise<Executio
     // Check for SSH setup requirement (403 with ssh_setup_required flag)
     if (response.status === 403 && errorData.ssh_setup_required) {
       // Create a structured error that includes response data for SSH modal
-      const error: any = new Error(errorData.error || 'SSH key not set up');
+      const error = new Error(errorData.error || 'SSH key not set up') as Error & {
+        response: { status: number; data: typeof errorData };
+      };
       error.response = {
         status: 403,
         data: errorData,
@@ -202,7 +207,9 @@ export async function executeWorkflow(params: ExecutionParams): Promise<Executio
     }
 
     // Create a structured error that includes validation errors if present
-    const error: any = new Error(errorData.error || `Failed to execute workflow: ${response.statusText}`);
+    const error = new Error(errorData.error || `Failed to execute workflow: ${response.statusText}`) as Error & {
+      validation_errors?: string[];
+    };
     if (errorData.validation_errors) {
       error.validation_errors = errorData.validation_errors;
     }
@@ -212,7 +219,9 @@ export async function executeWorkflow(params: ExecutionParams): Promise<Executio
   const data = await response.json();
   if (!data.success) {
     // Create a structured error that includes validation errors if present
-    const error: any = new Error(data.error || 'Failed to execute workflow');
+    const error = new Error(data.error || 'Failed to execute workflow') as Error & {
+      validation_errors?: string[];
+    };
     if (data.validation_errors) {
       error.validation_errors = data.validation_errors;
     }
@@ -226,13 +235,18 @@ export async function executeWorkflow(params: ExecutionParams): Promise<Executio
  * Preview rendered SLURM script without submitting
  */
 export async function previewWorkflowScript(params: ExecutionParams): Promise<{ script_content: string }> {
-  const response = await postResource(`${DJANGO_URL}${API.PIPELINE_PREVIEW}`, params);
+  const response = await postResource(
+    `${DJANGO_URL}${API.PIPELINE_PREVIEW}`,
+    params as unknown as Record<string, unknown>
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
 
     // Create a structured error that includes validation errors if present
-    const error: any = new Error(errorData.error || `Failed to preview script: ${response.statusText}`);
+    const error = new Error(errorData.error || `Failed to preview script: ${response.statusText}`) as Error & {
+      validation_errors?: string[];
+    };
     if (errorData.validation_errors) {
       error.validation_errors = errorData.validation_errors;
     }
@@ -242,7 +256,9 @@ export async function previewWorkflowScript(params: ExecutionParams): Promise<{ 
   const data = await response.json();
   if (!data.success) {
     // Create a structured error that includes validation errors if present
-    const error: any = new Error(data.error || 'Failed to preview script');
+    const error = new Error(data.error || 'Failed to preview script') as Error & {
+      validation_errors?: string[];
+    };
     if (data.validation_errors) {
       error.validation_errors = data.validation_errors;
     }

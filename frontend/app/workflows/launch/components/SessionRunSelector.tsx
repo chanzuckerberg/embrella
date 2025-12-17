@@ -93,13 +93,14 @@ export const SessionRunSelector = ({ onChange, disabled = false }: SessionRunSel
           if (sessionData?.run_numbers) {
             // Format existing runs as "run001", "run002", etc.
             const sortedRunNumbers = sessionData.run_numbers.sort(
-              (a, b) => parseInt(a.match('[0-9]+$') || 0) - parseInt(b.match('[0-9]+$') || 0)
+              (a: string, b: string) =>
+                parseInt(a.match('[0-9]+$')?.[0] || '0') - parseInt(b.match('[0-9]+$')?.[0] || '0')
             );
             const formattedRuns = sortedRunNumbers.map((num: string) => `run${num}`);
             setExistingRuns(formattedRuns);
             const newRunNum = String(parseInt(sortedRunNumbers[sortedRunNumbers.length - 1]) + 1).padStart(3, '0');
             // Fake a run name change event:
-            handleRunNameChange({ target: { value: `run${newRunNum}` } });
+            handleRunNameChange({ target: { value: `run${newRunNum}` } } as React.ChangeEvent<HTMLInputElement>);
           }
         }
       } catch (err) {
@@ -108,6 +109,7 @@ export const SessionRunSelector = ({ onChange, disabled = false }: SessionRunSel
     };
 
     fetchExistingRuns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSession]);
 
   // Validate run name

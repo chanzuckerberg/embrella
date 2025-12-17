@@ -18,8 +18,35 @@
 
 import { Alert, Box, Tab, Tabs, Typography } from '@mui/material';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { SessionSelectionConfig, ValidationError, WorkflowLaunchFormProps } from '@app/common/types/workflow';
+import type {
+  FormFieldConfig,
+  SessionSelectionConfig,
+  ValidationError,
+  WorkflowLaunchFormProps,
+} from '@app/common/types/workflow';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
+
+/**
+ * Hidden field component that syncs operation mode to form parameters.
+ * Defined outside the parent component to comply with React hooks rules.
+ */
+interface OperationFieldProps {
+  operationMode: string;
+  lastSyncedValueRef: React.MutableRefObject<string>;
+  onChange?: (value: unknown) => void;
+}
+
+function OperationField({ operationMode, lastSyncedValueRef, onChange }: OperationFieldProps) {
+  useEffect(() => {
+    if (onChange && operationMode !== lastSyncedValueRef.current) {
+      lastSyncedValueRef.current = operationMode;
+      onChange(operationMode);
+    }
+  }, [onChange, operationMode, lastSyncedValueRef]);
+
+  // Don't render anything (tabs are in additionalSections)
+  return null;
+}
 
 interface CopickLaunchFormProps
   extends Omit<WorkflowLaunchFormProps, 'customFields' | 'additionalSections' | 'customValidation'> {
@@ -81,27 +108,23 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
   /**
    * Custom field components for Copick-specific fields
    * Operation field is hidden but maintains sync with form parameters
-   * Using useMemo to create stable component references and prevent infinite loops
    */
-  const customFields: Record<string, React.ComponentType<any>> = useMemo(
+  // Create a wrapper component that passes the current operationMode to OperationField
+  const OperationFieldWrapper = useMemo(() => {
+    const Wrapper = (props: FormFieldConfig) => (
+      <OperationField operationMode={operationMode} lastSyncedValueRef={lastSyncedValueRef} onChange={props.onChange} />
+    );
+    Wrapper.displayName = 'OperationFieldWrapper';
+    return Wrapper;
+  }, [operationMode]);
+
+  const customFields: Record<string, React.ComponentType<FormFieldConfig>> = useMemo(
     () => ({
       // Hide operation field from rendering (tabs handle the UI)
       // but keep it synced with form parameters for conditional visibility
-      operation: ({ onChange }: any) => {
-        // One-way sync: operationMode state -> form parameter
-        // Only call onChange if the value actually changed (prevents infinite loops)
-        useEffect(() => {
-          if (onChange && operationMode !== lastSyncedValueRef.current) {
-            lastSyncedValueRef.current = operationMode;
-            onChange(operationMode);
-          }
-        }, [operationMode, onChange]);
-
-        // Don't render anything (tabs are in additionalSections)
-        return null;
-      },
+      operation: OperationFieldWrapper,
     }),
-    [operationMode]
+    [OperationFieldWrapper]
   );
 
   /**
@@ -120,7 +143,7 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
       return {
         requiresSessionSelection: false,
         alwaysShowParameters: true, // Show parameters section to allow mode switching via tabs
-        generateSessionName: (params) => params.copick_session || null,
+        generateSessionName: (params) => (params.copick_session as string) || null,
         generateRunName: (params) => {
           if (params.copick_session && params.copick_run) {
             return `${params.copick_session}_add_object_${params.copick_run}`;
@@ -133,7 +156,7 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
       return {
         requiresSessionSelection: false,
         alwaysShowParameters: true, // Show parameters section to allow mode switching via tabs
-        generateSessionName: (params) => params.copick_session || null,
+        generateSessionName: (params) => (params.copick_session as string) || null,
         generateRunName: (params) => {
           if (params.copick_session && params.copick_run) {
             return `${params.copick_session}_import_tomograms_${params.copick_run}`;
@@ -149,7 +172,7 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
   /**
    * Custom validation for Copick parameters
    */
-  const customValidation = async (parameters: Record<string, any>): Promise<ValidationError[]> => {
+  const customValidation = async (parameters: Record<string, unknown>): Promise<ValidationError[]> => {
     const errors: ValidationError[] = [];
 
     const operation = parameters.operation || 'create';

@@ -47,7 +47,7 @@ export default function MembranesegLaunchForm(props: MembranesegLaunchFormProps)
     () => ({
       requiresSessionSelection: false,
       alwaysShowParameters: true,
-      generateSessionName: (params) => params.copick_session || null,
+      generateSessionName: (params) => (params.copick_session as string) || null,
       generateRunName: (params) => {
         if (params.copick_session && params.copick_procrun) {
           // Generate a unique run name based on copick session and run

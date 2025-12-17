@@ -3,48 +3,7 @@ import { Chip } from '@mui/material';
 import { Job } from '../../monitor/types';
 import { JobStatusBadge } from '../../monitor/components/JobStatusBadge';
 
-/**
- * Parse SLURM time format (D-HH:MM:SS or HH:MM:SS or MM:SS) to human-readable string
- */
-const formatSlurmTime = (timeStr: string | null | undefined): string => {
-  if (!timeStr || timeStr === 'N/A' || timeStr === 'INVALID' || timeStr.toLowerCase() === 'invalid') return 'N/A';
-
-  let days = 0;
-  let hours = 0;
-  let minutes = 0;
-  let seconds = 0;
-
-  try {
-    // Handle "D-HH:MM:SS" format
-    if (timeStr.includes('-')) {
-      const [dayPart, timePart] = timeStr.split('-');
-      days = parseInt(dayPart, 10);
-      const timeParts = timePart.split(':').map((p) => parseInt(p, 10));
-      if (timeParts.length === 3) {
-        [hours, minutes, seconds] = timeParts;
-      }
-    } else {
-      // Handle "HH:MM:SS" or "MM:SS" format
-      const parts = timeStr.split(':').map((p) => parseInt(p, 10));
-      if (parts.length === 3) {
-        [hours, minutes, seconds] = parts;
-      } else if (parts.length === 2) {
-        [minutes, seconds] = parts;
-      }
-    }
-
-    // Build human-readable string
-    const components: string[] = [];
-    if (days > 0) components.push(`${days}d`);
-    if (hours > 0) components.push(`${hours}h`);
-    if (minutes > 0) components.push(`${minutes}m`);
-    if (seconds > 0 && days === 0) components.push(`${seconds}s`); // Skip seconds if showing days
-
-    return components.length > 0 ? components.join(' ') : '0s';
-  } catch {
-    return 'N/A';
-  }
-};
+// Note: formatSlurmTime was removed - duration column commented out until sacct integration
 
 export const HISTORICAL_JOB_COLUMN_IDS = {
   JOB_ID: 'jobId',

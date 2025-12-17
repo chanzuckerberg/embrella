@@ -5,13 +5,7 @@ import { ReviewData } from '@app/components/ReviewsView/types';
 import { TomogramData } from '@app/components/TomogramsView/types';
 import { Job } from '@app/processing/monitor/types';
 
-export type EntityDataTypes =
-  | AnnotationData
-  | DirectorySummary
-  | GridData
-  | TomogramData
-  | ReviewData
-  | Job;
+export type EntityDataTypes = AnnotationData | DirectorySummary | GridData | TomogramData | ReviewData | Job;
 
 /*
  * Type for a formatted API response

@@ -822,7 +822,7 @@ __metadata:
 
 "@idetik/react@file:./idetik/packages/react::locator=create-sds-app%40workspace%3A.":
   version: 0.0.1
-  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=48a57e&locator=create-sds-app%40workspace%3A."
+  resolution: "@idetik/react@file:./idetik/packages/react#./idetik/packages/react::hash=c0dd7b&locator=create-sds-app%40workspace%3A."
   dependencies:
     "@emotion/css": "npm:^11.13.0"
     "@emotion/react": "npm:^11.13.3"
@@ -840,7 +840,7 @@ __metadata:
     "@czi-sds/components": ^22.3.0
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/e8f4910da23f069ce6141da8176a8078886c18960b05c71934fd9fb8b4769d1f684d02caf43176c4983b9d60475d4b961867470bf573f44623d0719e055e21f3
+  checksum: 10c0/b1db6cb511385eb4a2e134148235b0f7ddc03f1c8c5fd766aa31469d04dc44b546388aa9dad3828b8f7d802774336981fd1e490b4d1abb47ea590309cd3312e7
   languageName: node
   linkType: hard
 
@@ -2087,6 +2087,24 @@ __metadata:
     content-type: "npm:^1.0.5"
     tslib: "npm:^2.6.2"
   checksum: 10c0/ce94ccf666a2e1706c96ca174c53cd4bec34ade75b7f05f7193be73c1057062217c97a0b8afbd28d2a882c443b842742d51ee43f69f462425219589ad1f7c2f8
+  languageName: node
+  linkType: hard
+
+"@tanstack/query-core@npm:5.90.12":
+  version: 5.90.12
+  resolution: "@tanstack/query-core@npm:5.90.12"
+  checksum: 10c0/60d5dd23d7801118d6ef84a3d76e798aaf6eb851ee5227629a1dc798fa01ac9560580553413208fcc8a003fb12a89e83d6dd1f38ebc3bd9b6e8838cfaaa45fef
+  languageName: node
+  linkType: hard
+
+"@tanstack/react-query@npm:^5.90.12":
+  version: 5.90.12
+  resolution: "@tanstack/react-query@npm:5.90.12"
+  dependencies:
+    "@tanstack/query-core": "npm:5.90.12"
+  peerDependencies:
+    react: ^18 || ^19
+  checksum: 10c0/da01ec2819d301e4be89731e82d3f091fa4f1ab2745be324e5166f9df77e2aaf1c362b0fa61aab226bb01634873f1a00562f7d7f405867fe23bdd47fe4d00fda
   languageName: node
   linkType: hard
 
@@ -4049,6 +4067,7 @@ __metadata:
     "@mui/x-date-pickers": "npm:^8.22.0"
     "@playwright/test": "npm:^1.47.1"
     "@tailwindcss/postcss": "npm:^4.1.4"
+    "@tanstack/react-query": "npm:^5.90.12"
     "@tanstack/react-table": "npm:^8.20.5"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^6.9.1"

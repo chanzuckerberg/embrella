@@ -2,7 +2,6 @@
 
 import { useState, useContext, useEffect, useCallback } from 'react';
 import { FormControl, InputLabel, Select, MenuItem, SelectChangeEvent, Box, Alert, Link } from '@mui/material';
-import { VpnKey as KeyIcon } from '@mui/icons-material';
 import { UserContext } from '@app/common/context/UserProvider';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { postResource } from '@app/common/queries/fetchResource';

@@ -23,7 +23,18 @@ import CopickLaunchForm from '../components/CopickLaunchForm';
 import MembranesegLaunchForm from '../components/MembranesegLaunchForm';
 
 // Import processor-specific components
-const PROCESSOR_COMPONENTS: Record<string, React.ComponentType<any>> = {
+interface ProcessorFormComponentProps {
+  processor: {
+    name: string;
+    display_name: string;
+    version: string;
+    default_cluster: string;
+    allowed_clusters: string[];
+  };
+  schema: ProcessorSchema;
+  cluster: 'czii' | 'bruno';
+}
+const PROCESSOR_COMPONENTS: Record<string, React.ComponentType<ProcessorFormComponentProps>> = {
   aretomo3: AreTomo3LaunchForm,
   denoiset: DenoisETLaunchForm,
   copick: CopickLaunchForm,

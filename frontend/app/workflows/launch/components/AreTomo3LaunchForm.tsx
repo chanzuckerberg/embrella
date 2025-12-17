@@ -9,7 +9,7 @@
  * - Custom help text and documentation
  */
 
-import { Alert, Box, Typography } from '@mui/material';
+import { Alert, Box } from '@mui/material';
 import { useState } from 'react';
 import type { ValidationError, WorkflowLaunchFormProps } from '@app/common/types/workflow';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
@@ -39,13 +39,13 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
    *     message: 'Error message shown to user',
    *   });
    */
-  const customValidation = async (parameters: Record<string, any>): Promise<ValidationError[]> => {
+  const customValidation = async (parameters: Record<string, unknown>): Promise<ValidationError[]> => {
     const errors: ValidationError[] = [];
 
     // Validate dose calculations if tilt metadata is available
     if (parameters.pixel_size && parameters.dose_per_tilt) {
-      const pixelSize = parseFloat(parameters.pixel_size);
-      const dosePerTilt = parseFloat(parameters.dose_per_tilt);
+      const pixelSize = parseFloat(String(parameters.pixel_size));
+      const dosePerTilt = parseFloat(String(parameters.dose_per_tilt));
 
       if (pixelSize <= 0) {
         errors.push({
@@ -75,7 +75,7 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
 
     // Validate alignment parameters
     if (parameters.tilt_axis_angle !== undefined) {
-      const angle = parseFloat(parameters.tilt_axis_angle);
+      const angle = parseFloat(String(parameters.tilt_axis_angle));
       if (angle < -180 || angle > 180) {
         errors.push({
           field: 'tilt_axis_angle',
@@ -86,7 +86,7 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
 
     // Validate binning factor
     if (parameters.binning) {
-      const binning = parseInt(parameters.binning);
+      const binning = parseInt(String(parameters.binning));
       if (binning < 1 || binning > 8) {
         errors.push({
           field: 'binning',

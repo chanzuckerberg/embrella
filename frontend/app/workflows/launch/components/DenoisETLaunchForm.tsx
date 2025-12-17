@@ -9,7 +9,7 @@
  * - Patch size and stride validation
  */
 
-import { Alert, Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import type { ValidationError, WorkflowLaunchFormProps } from '@app/common/types/workflow';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
 
@@ -35,7 +35,7 @@ export default function DenoisETLaunchForm(props: DenoisETLaunchFormProps) {
    *     message: 'Error message shown to user',
    *   });
    */
-  const customValidation = async (parameters: Record<string, any>): Promise<ValidationError[]> => {
+  const customValidation = async (parameters: Record<string, unknown>): Promise<ValidationError[]> => {
     const errors: ValidationError[] = [];
 
     // Validate aretomo_run selection
@@ -48,7 +48,7 @@ export default function DenoisETLaunchForm(props: DenoisETLaunchFormProps) {
 
     // Validate patch size if provided
     if (parameters.patch_size) {
-      const patchSize = parseInt(parameters.patch_size);
+      const patchSize = parseInt(String(parameters.patch_size));
       if (patchSize < 32 || patchSize > 512) {
         errors.push({
           field: 'patch_size',
@@ -66,8 +66,8 @@ export default function DenoisETLaunchForm(props: DenoisETLaunchFormProps) {
 
     // Validate stride if provided
     if (parameters.stride && parameters.patch_size) {
-      const stride = parseInt(parameters.stride);
-      const patchSize = parseInt(parameters.patch_size);
+      const stride = parseInt(String(parameters.stride));
+      const patchSize = parseInt(String(parameters.patch_size));
 
       if (stride <= 0) {
         errors.push({

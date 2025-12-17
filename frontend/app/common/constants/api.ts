@@ -73,6 +73,15 @@ export enum API {
   GRID_LOGGING_PUCK_GRIDBOXINFO = '/api/list/pucks/puck_id/grid-box/position_in_puck/',
   GRID_LOGGING_GRID_DETAILS = '/api/list/pucks/puck_id/grid-box/position_in_puck/grid/grid_id/',
   //http://127.0.0.1:8000/api/list/pucks/22/grid-box/2/grid/36/
+  GRID_LOGGING_CANES = '/api/canes/',
+  GRID_LOGGING_PROJECT_LEADERS = '/api/project-leaders/',
+  GRID_LOGGING_CONFLUENCE_PAGES = '/api/confluence-pages/',
+  GRID_LOGGING_FREEZING_SESSIONS = '/api/freezing-sessions/',
+  GRID_LOGGING_SPECIMENS = '/api/specimens/',
+  GRID_LOGGING_CONFLUENCE_SPACES = '/api/confluence-spaces/',
+  GRID_LOGGING_DRIVE_FOLDERS = '/api/drive-folders/',
+  GRID_LOGGING_DEVICES = '/api/devices/',
+  GRID_LOGGING_SAMPLES = '/api/samples/',
   GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',
 
   // Projects
@@ -92,6 +101,16 @@ export enum POST_API {
   UPDATE_TOMOGRAM_REVIEW = '/api/reviews/:reviewId/tomograms/:tomogramId',
   CREATE_PUCK = '/api/list/pucks/',
   CREATE_GRID_BOX = '/api/list/pucks/puck_id/grid-box/',
+  CREATE_FREEZING_SESSION = '/api/freezing-sessions/',
+  CREATE_GRID = '/api/grids/',
+  CREATE_SAMPLE = '/api/samples/',
+  CREATE_SPECIMEN = '/api/specimens/',
+  CREATE_PROJECT = '/api/projects/',
+  UPDATE_GRID_BOX = '/api/grid-boxes/:grid_box_id/',
+  MOVE_GRID_BOX = '/api/grid-boxes/grid_box_id/move/',
+  MOVE_GRID = '/api/grids/grid_id/move/',
+  UPDATE_GRID = '/api/grids/grid_id/',
+  CLIP_ALL_GRIDS = '/api/grid-boxes/grid_box_id/clip-all/',
 
   // Storage Explorer (Directories)
   BULK_UPDATE_DIRECTORY_STATUS = '/processes/v1/directories/bulk_update_status',
@@ -109,7 +128,7 @@ export enum POST_API {
   // External Resources
   CREATE_EXTERNAL_RESOURCE = '/api/external-resources/',
   UPDATE_EXTERNAL_RESOURCE = '/api/external-resources/:resourceId/',
-  DELETE_EXTERNAL_RESOURCE = '/api/external-resources/:resourceId/',
+  // Note: DELETE uses same URL as UPDATE but with DELETE method - see postResource usage
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
