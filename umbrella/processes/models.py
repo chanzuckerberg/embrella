@@ -2,10 +2,12 @@ import sys
 import uuid
 
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
 from django.utils.timezone import now
-from stores.models import Path, PathType, StaticPath, fill_place_holders
+from stores.models import Path, PathType, StaticPath
 from tem.models import MsiSession, SessionPlan
 
 '''
@@ -56,13 +58,50 @@ class Task(models.Model):
 class ProcSoftware(models.Model):
     """
     A software program started with the same command with different options.
+
+    New fields for generic pipeline execution:
+    - processor_class: Python class name for execution (e.g., 'aretomo3')
+    - default_cluster: Default cluster for job submission ('czii' or 'bruno')
+    - allowed_clusters: List of clusters this software can run on
+    - script_directory: Remote directory for script uploads
     """
     name = models.CharField(max_length=32, default='aretomo3')
     version = models.CharField(max_length=32, default='2024-03-10')
     capable_tasks = models.ManyToManyField(Task)
-    callback_function = models.CharField(max_length=32, default='run_aretomo3')
+
+    # Legacy field - deprecated in favor of processor_class
+    callback_function = models.CharField(max_length=32, default='run_aretomo3', help_text='Deprecated: use processor_class')
+
+    # New generic execution fields
+    processor_class = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text='Processor class name (e.g., "aretomo3" maps to AreTomo3Processor)',
+    )
+    default_cluster = models.CharField(
+        max_length=16,
+        choices=[('czii', 'CZII'), ('bruno', 'Bruno')],
+        default='czii',
+        help_text='Default cluster for job submission',
+    )
+    allowed_clusters = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of cluster IDs this software can run on (e.g., ["czii", "bruno"]). Empty means all clusters allowed.',
+    )
+    script_directory = models.CharField(
+        max_length=256,
+        null=True,
+        blank=True,
+        help_text='Remote script directory (e.g., /hpc/projects/.../scripts)',
+    )
+    active = models.BooleanField(
+        default=True,
+        help_text='Whether this processor is currently active in the codebase',
+    )
+
     logger = models.CharField(max_length=32, default='my_log')
-    #diagnosis
 
     def __str__(self):
         return '%s @ (%s)' % (self.name, self.version)
@@ -163,319 +202,60 @@ class ProcRun(models.Model):
         """
         Creation of ProcRun instance triggers saving of pipe_run_data which are
         output data of the run.
+
+        Delegates to PipelineDataService for actual implementation.
         """
-        self.pipes_in_plan = PipeInPlan.objects.filter(plan=self.proc_plan)
-        for pp in self.pipes_in_plan:
-            p = pp.pipe
-            for p_out in p.output.all():
-                # create pipe_run_data for each of the output.
-                out_static = fill_place_holders(
-                        p_out.static_path.static_path,pp.get_replacement_map(proc_run=self,msi_session=self.msi_session))
-                out_overlay = fill_place_holders(
-                        p_out.overlay_path,pp.get_replacement_map(proc_run=self,msi_session=self.msi_session))
-                out_path = Path.objects.create(static_path=out_static,overlay_path=out_overlay)
-                data_instance = RunPipeData.objects.create(
-                    run=self,
-                    pipe=p,
-                    pathtype=p_out,
-                    path=out_path,
-                )
+        from processes.services import PipelineDataService
+        return PipelineDataService.save_pipe_run_data(self)
 
     def create_frames_runpipedata(self, msi_session):
-        """
-        Frames are input of the first processing. This method creates its record.
-        """
-        # frames are done in a different mechanism from others
-        s = self.msi_session
-        frames_fd = Frames.objects.create(
-                session_plan = s.session_plan,
-                msi_session = s,
-                frame_path = s.frames,
-        )
-        frames_fd.save()
-        return frames_fd
+        """Delegates to RunCreationService."""
+        from processes.services import RunCreationService
+        return RunCreationService.create_frames_runpipedata(self, msi_session)
 
     def _get_pipe_joints(self, pipe):
-        joints = PipeJoint.objects.filter(pipe_in_plan__pipe=pipe)
-        return joints
+        """Delegates to RunCreationService."""
+        from processes.services import RunCreationService
+        return RunCreationService.get_pipe_joints(pipe)
 
     def _get_input_pipe_pks(self, pipe):
-        joints = self._get_pipe_joints(pipe)
-        input_pipes = list(set(map((lambda x: x.input_pipe_in_plan.pipe),joints)))
-        print(input_pipes)
-        pks = list(set(map((lambda x:x.pk), input_pipes)))
-        if not pks:
-            return [0] # from msi_session acquisition
-        return pks
+        """Delegates to RunCreationService."""
+        from processes.services import RunCreationService
+        return RunCreationService.get_input_pipe_pks(self, pipe)
 
     def create_tomogram_collection(self, input_objects={}):
         """
         Save data-portal schema-like record. Return True if the run adds data to these records.
+
+        Delegates to RunCreationService for actual implementation.
         """
-        tomogram_path_type_order = ['tangl','rawst','aln','ctf','rec','deno','seg','pick','galr']
-        run_pipe_datas = RunPipeData.objects.filter(run=self)
-        pipes_input_from = []
-        frames_fd = None
-        for pipl in self.pipes_in_plan:
-            if not self._get_pipe_joints(pipl.pipe):
-                # handle frames
-                # TODO: consider doing this at the time of msi_session creation
-                frames_fd = self.create_frames_runpipedata(self.msi_session)
-            pipes_input_from.extend(self._get_input_pipe_pks(pipl.pipe))
-        path_types = list(map((lambda x: x.pathtype.static_path.data_type), run_pipe_datas))
-        # TODO: this makes it necessary to enter pipes in strict order.
-        input_pipe_pks = pipes_input_from
-        print('all input pipe pks', input_pipe_pks)
-        if input_objects:
-            tomo_input = input_objects['tomo']
-            pick_input = input_objects['pick']
-        else:
-            tomo_input = False
-            pick_input = False
-        if not tomo_input:
-            if frames_fd:
-                # processing run starts from frames
-                self.created_objects = {0:[('frames',frames_fd)]} #by pipe pk
-        else:
-            # processing run starts from tomogram
-            pipe_pk = tomo_input.pipe_data.pipe.pk
-            ptype = tomo_input.pipe_data.pathtype.static_path.data_type
-            self.created_objects = {pipe_pk:[(ptype,tomo_input)]}
-            input_pipe_pks = [tomo_input.pipe_data.pipe.pk]
-            if pick_input:
-                # processing run needing pick_input such as 2d gallery making
-                pipe_pk = pick_input.pipe_data.pipe.pk
-                ptype = pick_input.pipe_data.pathtype.static_path.data_type
-                self.created_objects[pipe_pk] = [(ptype,pick_input)]
-                input_pipe_pks.append(pick_input.pipe_data.pipe.pk)
-            
-        input_objects = {}
-        # accumulate created_objects
-        for ptype in tomogram_path_type_order:
-            results = list(filter((lambda x: x.pathtype.static_path.data_type ==ptype), run_pipe_datas))
-            if tomo_input and ptype in ('rec'):
-                # only allow the tomo_input result to be considered
-                results = [tomo_input.pipe_data]
-                input_objects['tomo']=tomo_input
-            if pick_input and ptype in ('pick'):
-                # add pick as an input object
-                results.append(pick_input.pipe_data)
-                input_objects['pick']=pick_input
-            for r in results:
-                    # create instance of each relavent output and accumulate
-                    # them for the next tomogram_path_type_order to provide reference.
-                    my_pipe_pk = r.pipe.pk
-                    print('ptype', ptype, r, my_pipe_pk)
-                    print('before', self.created_objects)
-                    try:
-                        saved = self._save_instance(r,input_pipe_pks, input_objects)
-                        if my_pipe_pk not in self.created_objects.keys():
-                            self.created_objects[my_pipe_pk]=[]
-                        self.created_objects[my_pipe_pk].append((ptype,saved))
-                        print(self.created_objects)
-                    except Exception:
-                        print("ERROR: not able to save pipe_id=%d" % my_pipe_pk)
-                        raise
-        return True
+        from processes.services import RunCreationService
+        return RunCreationService.create_tomogram_collection(self, input_objects)
 
     def _add_other_objects(self, class_name, my_rpdata, input_pipe_pks):
-        """ TODO: These need to be reworked into adding real values
-        """
-        my_pipe = my_rpdata.pipe
-        my_plan_by_run = my_rpdata.run.proc_plan
-        # validate
-        results = PipeInPlan.objects.filter(plan=my_plan_by_run,pipe=my_pipe)
-        if not results:
-            raise ValueError('pipe %s not in plan %s' % (my_pipe, my_plan_by_run.name))
-        if len(results) > 1:
-            # pipe in the plan should be unique
-            raise ValueError('%d copies of pipe %s in plan %s' % (len(results), my_pipe, my_plan_by_run.name))
-        my_pipe_step = results[0].step
-        my_pipe_pk = my_pipe.pk
-        self.created_objects[my_pipe_pk].append(('msi',self.msi_session))
-        if class_name == 'Tomograms':
-            ### TODO Really determine voxel and pixel spacings###
-            if my_pipe.software.name == 'aretomo3' and my_pipe_step == 1:
-                voxels = TomogramVoxelSpacing.objects.filter(spacing=5.0)
-                voxel = voxels[0]
-            else:
-                voxels = TomogramVoxelSpacing.objects.filter(spacing=10.0)
-                voxel = voxels[0]
-            self.created_objects[my_pipe_pk].append(('vox',voxel))
-            ### TODO Define recon method in pipe
-            recon_methods = ReconMethod.objects.all()
-            if not recon_methods:
-                # Create default recon method
-                recon_method = ReconMethod.objects.create()
-            else:
-                recon_method = recon_methods[0]
-            self.created_objects[my_pipe_pk].append(('recmethod',recon_method))
-        if class_name == 'Annotation':
-            meth_map = {'pick':'template matching','seg':'ml semantic segamentation'}
-            dtype = my_rpdata.pathtype.static_path.data_type
-            anno_methods = AnnotationMethod.objects.filter(name=meth_map[dtype])
-            if not anno_methods:
-                # Create default recon method
-                anno_method = AnnotationMethod.objects.create(name=meth_map[dtype])
-            else:
-                anno_method = anno_methods[0]
-            self.created_objects[my_pipe_pk].append(('pickmethod',anno_method))
+        """Delegates to RunCreationService."""
+        from processes.services import RunCreationService
+        return RunCreationService.add_other_objects(self, class_name, my_rpdata, input_pipe_pks)
 
     def is_recon_ctf_deconvolved(self, pipe):
-        '''
-        Determine if ctf deconvolution is done in this pipe.
-        '''
-        if pipe is None:
-            return False
-        task_names = list(map((lambda x: x.name),pipe.tasks_performed.all()))
-        output_types = list(map((lambda x: x.static_path.data_type),pipe.output.all()))
-        input_types = list(map((lambda x: x.data_type),pipe.input.all()))
-        pipe_joints = self._get_pipe_joints(pipe)
-        if 'ctf deconvolution' in task_names:
-            return True
-        if set(['rec','deno','evn','odd']).intersection(output_types):
-            if 'aln' in input_types and 'ctf' not in input_types:
-                # alignment is an input but not ctf
-                return False
-            parent_tomo_pipe = self._get_tomo_pipe(pipe_joints)
-            if not parent_tomo_pipe:
-                return False
-            else:
-                # determined by input_pipes
-                return self.is_recon_ctf_deconvolved(parent_tomo_pipe)
-        return False
+        """Delegates to RunCreationService."""
+        from processes.services import RunCreationService
+        return RunCreationService.is_recon_ctf_deconvolved(self, pipe)
 
     def _get_tomo_pipe(self, pipe_joints):
-        tomogram_making_data_type = ['tangl','rawst','aln','ctf','rec','evn','odd','deno']
-        if pipe_joints:
-            parent_tomo_pipe = None
-            for pr in pipe_joints:
-                if pr.input_pathtype.static_path.data_type in tomogram_making_data_type:
-                    parent_tomo_pipe = pr.input_pipe_in_plan.pipe
-                    return parent_tomo_pipe
-        return None
-    
+        """Delegates to RunCreationService."""
+        from processes.services import RunCreationService
+        return RunCreationService.get_tomo_pipe(pipe_joints)
+
     def _save_instance(self, pdata, input_pipe_pks, input_objects={}):
-        """
-        Save instances of various cryo-ET models
-        """
-        model_map = {
-                        # PathType.static_name: (class name, attribute name in other classes)
-                        'frames':('Frames', 'frames'),
-                        'rawst':('RawTiltSeries','tiltseries'),
-                        'tangl':('TiltAngles','angles'),
-                        'aln':('Alignment','alignment'),
-                        'ctf':('Ctf','ctf'),
-                        'recmethod':('ReconMethod','recon_method'),
-                        'vox':('TomogramVoxelSpacing','voxel_spacing'),
-                        'rec':('Tomograms','tomograms'),
-                        'deno':('Tomograms','tomograms'),
-                        'msi':('MsiSession','msi_session'),
-                        'pickmethod':('AnnotationMethod','annotation_method'),
-                        'pick':('Annotation','pick'),
-                        'seg':('Annotation','segmentation'),
-                        'galr':('ParticleGallery','gallery'),
-                    }
-        all_input_pipe_pks = list(input_pipe_pks)
-        #
-        # get my_instance from class in this python module
-        ptype = pdata.pathtype.static_path.data_type
-        class_name = model_map[ptype][0]
-        my_attr = getattr_from_globals(class_name)
-        my_instance = my_attr(pipe_data=pdata)
-        #
-        my_field_names = list(map((lambda x:x.name),my_instance._meta.fields))
-        my_pipe = pdata.pipe
-        my_pipe_pk = my_pipe.pk
-        if my_pipe_pk not in self.created_objects.keys():
-            # initiate created_object
-            all_input_pipe_pks.append(my_pipe_pk)
-            self.created_objects[my_pipe_pk]=[]
-        created_in_my_pipe = self.created_objects[my_pipe_pk]
-        pytype_created_in_my_pipe = list(map((lambda x:x[0]),created_in_my_pipe))
-        if ptype in pytype_created_in_my_pipe:
-            # no need to save instance
-            return self.created_objects[my_pipe_pk][pytype_created_in_my_pipe.index(ptype)][1]
-        # add the required objects that is not the main data pipeline
-        self._add_other_objects(class_name, pdata, input_pipe_pks)
-
-
-        # Use the index of the input_pipe to find the item to map the model fields to
-        pipe_range = self._get_pipe_range(all_input_pipe_pks, my_pipe, input_objects)
-        print('pipe_range', pipe_range)
-        print('my_instance', my_instance)
-        for i in pipe_range:
-            pk = all_input_pipe_pks[i]
-            for item in self.created_objects[pk]:
-                k, obj = item
-                attr_name = model_map[k][1]
-                print('item', k, obj)
-                print('checking against', my_field_names)
-                # map the model fields to the previously created objects
-                if attr_name in my_field_names:
-                    if attr_name=='ctf':
-                        # Without ctf input means the output tomogram is not ctf deconvoluted..
-                        if not self.is_recon_ctf_deconvolved(my_pipe):
-                            continue
-                    setattr(my_instance, attr_name, obj)
-                # denoised tomogram is derived from a parent
-                if ptype == 'deno' and k == 'rec':
-                    # tomogram is derived from others
-                    my_instance.parent_tomo = obj
-                    for attr_name in my_field_names:
-                        if attr_name in ('id','pipe_data','parent_tomo'):
-                            continue
-                        setattr(my_instance, attr_name, getattr(obj, attr_name))
-                # when tomograms are the input, it is referred as tomograms in model fields.
-                if 'tomo_input' in input_objects.keys() and attr_name == 'tomograms':
-                    my_instance.tomograms = obj
-
-        # add everything created in my_pipe
-        for item in self.created_objects[my_pipe_pk]:
-            k, obj = item
-            if model_map[k][1] in my_field_names:
-                 setattr(my_instance, model_map[k][1], obj)
-        # specific to denoised tomogram
-        if ptype == 'deno':
-            deno_methods = TomoPostProcessMethod.objects.filter(software=pdata.pipe.software)
-            if not deno_methods:
-                # Create default method. TODO: should specify names
-                deno_method = TomoPostProcessMethod.objects.create(software=pdata.pipe.software)
-            else:
-                deno_method = deno_methods[0]
-            my_instance.post_process = deno_method
-        # specific to annotation
-        atype_map = {'pick':'point','seg':'volume mask'}
-        if ptype in ['pick','seg']:
-            my_instance.name = my_pipe.name
-            my_instance.annotation_type = atype_map[ptype]
-        my_instance.save()
-        return my_instance
+        """Delegates to RunCreationService."""
+        from processes.services import RunCreationService
+        return RunCreationService.save_instance(self, pdata, input_pipe_pks, input_objects)
 
     def _get_pipe_range(self, all_input_pipe_pks, my_pipe, input_objects):
-        if input_objects:
-            starts = []
-            ends = []
-            for k in input_objects.keys():
-                input_obj = input_objects[k]
-                my_input_pipe_pk = input_obj.pipe_data.pipe.pk
-                starts.append(all_input_pipe_pks.index(input_obj.pipe_data.pipe.pk))
-                ends.append(all_input_pipe_pks.index(my_input_pipe_pk)+1)
-            start = min(starts)
-            end = max(ends)
-        else:
-            my_pipe_joints = self._get_pipe_joints(my_pipe)
-            if my_pipe_joints:
-                my_input_pipe = self._get_tomo_pipe(my_pipe_joints)
-                print('ptype input_pipe in all', my_input_pipe, all_input_pipe_pks)
-                if not my_input_pipe:
-                    end = 1
-                else:
-                    end = all_input_pipe_pks.index(my_input_pipe.pk)+1
-            else:
-                end = 1
-            start = 0
-        return range(start,end)
+        """Delegates to RunCreationService."""
+        from processes.services import RunCreationService
+        return RunCreationService.get_pipe_range(self, all_input_pipe_pks, my_pipe, input_objects)
 
 class RunGlobalValue(models.Model):
     run = models.ForeignKey(ProcRun, on_delete=models.CASCADE)
@@ -511,6 +291,218 @@ class RunPipeData(models.Model):
 
     def __str__(self):
         return '%s %s: %s' % (self.run, self.pipe.name, self.path)
+
+
+class PipeExecution(models.Model):
+    """
+    Tracks execution of a single pipe within a processing run.
+
+    This model records the lifecycle of a pipeline step execution:
+    - When it was submitted to SLURM
+    - What job ID was assigned
+    - What parameters were used
+    - Current status (pending, submitted, running, completed, failed)
+    - When it started and completed
+
+    Enables:
+    - Per-step execution tracking
+    - Manual step-by-step pipeline execution
+    - Retry of failed steps
+    - Parameter history
+    """
+    proc_run = models.ForeignKey(ProcRun, on_delete=models.CASCADE, related_name='pipe_executions')
+    pipe_in_plan = models.ForeignKey(PipeInPlan, on_delete=models.CASCADE)
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('submitted', 'Submitted'),
+            ('running', 'Running'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='pending',
+        db_index=True,
+    )
+
+    # SLURM job information
+    job_id = models.CharField(max_length=32, null=True, blank=True, db_index=True)
+    script_path = models.CharField(max_length=512, null=True, blank=True)
+    script_content = models.TextField(null=True, blank=True)  # Full rendered SLURM script
+
+    # Parameters used for this execution (JSON)
+    parameters = models.JSONField(default=dict)
+
+    # Timestamps
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Error tracking
+    error_message = models.TextField(null=True, blank=True)
+
+    # Syncer tracking
+    syncer_active = models.BooleanField(default=False, help_text='Whether a JobStatusSyncer is actively monitoring this job')
+
+    # Job execution logs (stdout/stderr from SLURM)
+    stdout_log = models.TextField(null=True, blank=True, help_text='Standard output log content from SLURM job (max ~1MB)')
+    stderr_log = models.TextField(null=True, blank=True, help_text='Standard error log content from SLURM job (max ~1MB)')
+    logs_fetched_at = models.DateTimeField(null=True, blank=True, help_text='Timestamp when logs were fetched from cluster')
+    log_fetch_error = models.TextField(null=True, blank=True, help_text='Error message if log fetching failed')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['pipe_in_plan__step']
+        unique_together = [['proc_run', 'pipe_in_plan']]
+
+    def __str__(self):
+        return f'{self.proc_run} - {self.pipe_in_plan.pipe.name} ({self.status})'
+
+
+class SyncerLog(models.Model):
+    """
+    Log entries for syncer actions.
+
+    Tracks syncer activity including initialization, file discoveries,
+    tomogram creation/deletion, and errors. Used to display syncer progress
+    in the job logs modal.
+    """
+    ACTION_TYPE_CHOICES = [
+        ('init', 'Initialization'),
+        ('sync_start', 'Sync Started'),
+        ('sync_complete', 'Sync Completed'),
+        ('file_found', 'File Found'),
+        ('tomogram_created', 'Tomogram Created'),
+        ('tomogram_deleted', 'Tomogram Deleted'),
+        ('review_updated', 'Review Updated'),
+        ('job_check', 'Job Status Check'),
+        ('error', 'Error'),
+        ('warning', 'Warning'),
+        ('stopped', 'Syncer Stopped'),
+    ]
+
+    # Link to the job execution
+    pipe_execution = models.ForeignKey(
+        PipeExecution,
+        on_delete=models.CASCADE,
+        related_name='syncer_logs',
+        null=True,
+        blank=True,
+        help_text='PipeExecution this log belongs to',
+    )
+
+    # Alternative: link by job_id for legacy syncers
+    job_id = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='SLURM job ID (for legacy syncers without PipeExecution)',
+    )
+
+    # Log details
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPE_CHOICES, db_index=True)
+    message = models.TextField(help_text='Human-readable log message')
+
+    # Structured metadata (JSON) for additional context
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Additional structured data (e.g., file paths, counts, error details)',
+    )
+
+    # Syncer identification
+    syncer_type = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text='Syncer class name (e.g., AretomoSyncer, DenoiseSyncer)',
+    )
+    session_name = models.CharField(max_length=100, null=True, blank=True)
+    run_id = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['pipe_execution', '-timestamp']),
+            models.Index(fields=['job_id', '-timestamp']),
+            models.Index(fields=['session_name', 'run_id', '-timestamp']),
+        ]
+
+    def __str__(self):
+        return f'{self.action_type}: {self.message[:50]}...'
+
+
+class SyncerProcess(models.Model):
+    """
+    Tracks the status of running syncer processes.
+
+    Used to determine if a syncer needs to be re-run (stopped unexpectedly).
+    When a syncer starts, a SyncerProcess record is created. The syncer updates
+    the last_heartbeat field periodically. If the job is still running but the
+    syncer has stopped (no recent heartbeat), the syncer can be re-run.
+    """
+    STATUS_CHOICES = [
+        ('running', 'Running'),
+        ('stopped', 'Stopped'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    # Link to job
+    pipe_execution = models.OneToOneField(
+        PipeExecution,
+        on_delete=models.CASCADE,
+        related_name='syncer_process',
+        null=True,
+        blank=True,
+    )
+    job_id = models.CharField(max_length=32, null=True, blank=True, db_index=True)
+
+    # Syncer identification
+    syncer_type = models.CharField(max_length=50)
+
+    # Session/run info for re-running
+    session_name = models.CharField(max_length=100)
+    run_id = models.CharField(max_length=50)
+
+    # Status tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='running')
+    started_at = models.DateTimeField(auto_now_add=True)
+    last_heartbeat = models.DateTimeField(auto_now=True)
+    stopped_at = models.DateTimeField(null=True, blank=True)
+
+    # Django-Q task tracking
+    task_id = models.CharField(max_length=100, null=True, blank=True)
+
+    # Error info
+    error_message = models.TextField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['job_id']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f'{self.syncer_type} for job {self.job_id} ({self.status})'
+
+    def is_unexpectedly_stopped(self) -> bool:
+        """
+        Check if syncer stopped unexpectedly (job still running but syncer is not).
+        """
+        if self.status != 'stopped':
+            return False
+
+        # Check if the associated job is still running
+        if self.pipe_execution:
+            return self.pipe_execution.status in ['submitted', 'running']
+        return False
+
 
 # models to record the final relationship. Path should have everything except tomo_run
 class TiltAngles(models.Model):
@@ -728,3 +720,190 @@ class ReviewTomogram(models.Model):
 
     def __str__(self):
         return f'Tomogram Review {self.tomogram_id} in {self.review}'
+
+
+class FilesystemSurvey(models.Model):
+    """
+    Tracks a SLURM-submitted filesystem survey job that discovers all files on a cluster.
+
+    Surveys produce a Parquet file on the cluster containing file-level details
+    (path, size, mtime, uid, mode, type). The Django DB stores only survey metadata
+    and directory-level aggregates (via DirectorySummary) to avoid bloating the database.
+    """
+
+    CLUSTER_CHOICES = [
+        ('czii', 'CZII'),
+        ('bruno', 'Bruno'),
+    ]
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('submitted', 'Submitted'),
+        ('running', 'Running'),
+        ('processing', 'Processing Results'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    # Survey identification
+    cluster = models.CharField(max_length=16, choices=CLUSTER_CHOICES, db_index=True)
+    base_path = models.CharField(max_length=500, help_text='Root path that was surveyed')
+
+    # SLURM job tracking
+    job_id = models.CharField(max_length=32, null=True, blank=True, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+
+    # External file storage (Parquet file on cluster)
+    results_parquet_path = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text='Path to Parquet file on cluster containing file-level details',
+    )
+
+    # Aggregate statistics (computed during post-processing)
+    total_files = models.BigIntegerField(default=0)
+    total_directories = models.BigIntegerField(default=0)
+    total_size_bytes = models.BigIntegerField(default=0)
+
+    # By-user aggregates (stored as JSON to avoid many rows)
+    size_by_user = models.JSONField(default=dict, blank=True, help_text='{"username": bytes, ...}')
+    count_by_user = models.JSONField(default=dict, blank=True, help_text='{"username": file_count, ...}')
+
+    # By-origin aggregates
+    size_by_origin = models.JSONField(default=dict, blank=True, help_text='{"app_generated": bytes, ...}')
+    count_by_origin = models.JSONField(default=dict, blank=True, help_text='{"app_generated": file_count, ...}')
+
+    # Timestamps
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Error tracking
+    error_message = models.TextField(null=True, blank=True)
+
+    # Created by
+    submitted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='submitted_surveys',
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['cluster', 'status']),
+            models.Index(fields=['cluster', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'Survey {self.id} on {self.cluster} ({self.status})'
+
+    def get_size_display(self):
+        """Return human-readable total size"""
+        size = self.total_size_bytes
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024.0:
+                return f'{size:.2f} {unit}'
+            size /= 1024.0
+        return f'{size:.2f} PB'
+
+
+class DirectorySummary(models.Model):
+    """
+    Directory-level aggregates stored in DB for fast querying.
+
+    One row per directory path per survey. This allows the UI to browse directories
+    without reading the full Parquet file. File-level details can be fetched
+    on-demand by querying the Parquet file via DuckDB.
+    """
+
+    ORIGIN_CHOICES = [
+        ('app_generated', 'App Generated'),
+        ('synced_from_czii', 'Synced from CZII'),
+        ('user_created', 'User Created'),
+        ('unknown', 'Unknown'),
+    ]
+
+    PRESERVE_STATUS_CHOICES = [
+        ('unset', 'Unset'),
+        ('preserve', 'Preserve'),
+        ('delete', 'Delete'),
+        ('review', 'Needs Review'),
+    ]
+
+    # Link to survey
+    survey = models.ForeignKey(
+        FilesystemSurvey,
+        on_delete=models.CASCADE,
+        related_name='directory_summaries',
+    )
+    cluster = models.CharField(max_length=16, db_index=True)
+    path = models.CharField(max_length=500, help_text='Directory path')
+
+    # Aggregates
+    file_count = models.IntegerField(default=0)
+    total_size_bytes = models.BigIntegerField(default=0)
+    owner_username = models.CharField(max_length=64, null=True, blank=True, help_text='Most common owner')
+    owner_uid = models.IntegerField(null=True, blank=True)
+
+    # Origin (computed from path matching domain entities or survey comparison)
+    origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default='unknown', db_index=True)
+
+    # Linked content (if this directory matches a known domain entity path)
+    content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    # Preservation status (user decisions)
+    preserve_status = models.CharField(
+        max_length=20,
+        choices=PRESERVE_STATUS_CHOICES,
+        default='unset',
+        db_index=True,
+    )
+    status_updated_at = models.DateTimeField(null=True, blank=True)
+    status_updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='directory_status_updates',
+    )
+    status_notes = models.TextField(null=True, blank=True)
+
+    # Depth (for hierarchical queries)
+    depth = models.IntegerField(default=0, help_text='Directory depth from base_path')
+
+    # Timestamps from filesystem
+    newest_file_mtime = models.DateTimeField(null=True, blank=True)
+    oldest_file_mtime = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['survey', 'path']
+        indexes = [
+            models.Index(fields=['cluster', 'origin', 'preserve_status']),
+            models.Index(fields=['survey', 'depth']),
+            models.Index(fields=['cluster', 'path']),
+            models.Index(fields=['owner_username']),
+        ]
+        ordering = ['path']
+
+    def __str__(self):
+        return f'{self.path} ({self.file_count} files, {self.get_size_display()})'
+
+    def get_size_display(self):
+        """Return human-readable total size"""
+        size = self.total_size_bytes
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024.0:
+                return f'{size:.2f} {unit}'
+            size /= 1024.0
+        return f'{size:.2f} PB'
