@@ -1,0 +1,126 @@
+#!/bin/bash -l
+
+# Component 0: AreTomo3 GPU Processing
+#SBATCH --job-name={{ job_name }}
+{% for directive in slurm_directives_component_0 -%}
+{% if directive.directive.endswith(':') -%}
+#SBATCH {{ directive.directive }}{{ directive.value }}
+{% elif directive.directive.startswith('-') and not directive.directive.startswith('--') -%}
+#SBATCH {{ directive.directive }} {{ directive.value }}
+{% else -%}
+#SBATCH {{ directive.directive }}={{ directive.value }}
+{% endif -%}
+{% endfor -%}
+#SBATCH --mail-type=ALL
+#SBATCH -o /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_aretomo3.out
+#SBATCH -e /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_aretomo3.err
+
+#SBATCH hetjob
+
+# Component 1: Reformat and Metrics CPU Processing
+#SBATCH --job-name={{ job_name }}_reformat
+{% for directive in slurm_directives_component_1 -%}
+{% if directive.directive.startswith('-') and not directive.directive.startswith('--') -%}
+#SBATCH {{ directive.directive }} {{ directive.value }}
+{% else -%}
+#SBATCH {{ directive.directive }}={{ directive.value }}
+{% endif -%}
+{% endfor -%}
+#SBATCH -o /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_reformat.out
+#SBATCH -e /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_reformat.err
+
+# Context variables
+{% for var_name, var_value in context_vars.items() -%}
+{{ var_name }}="{{ var_value }}"
+{% endfor -%}
+
+# Calculated variables
+{% for var_name, var_value in calculated_vars.items() -%}
+{{ var_name }}={{ var_value }}
+{% endfor -%}
+
+# Schema-driven bash variables (from parameter schema)
+{% for var_name, var_info in schema_vars.items() -%}
+{% if var_info.format == "quoted" -%}
+{{ var_name }}="{{ var_info.value }}"
+{% elif var_info.format == "unquoted" -%}
+{{ var_name }}={{ var_info.value }}
+{% elif var_info.format == "exported" -%}
+export {{ var_name }}="{{ var_info.value }}"
+{% endif -%}
+{% endfor -%}
+
+# Input paths
+in_mdoc_dir="/hpc/instruments/czii.krios1/OffloadData/${project_name}"
+gain_fn="{{ gain_file_path }}"
+
+# Output path
+out_path="/hpc/projects/group.czii/krios1.processing/aretomo3/${project_name}/${run_number}"
+mkdir -p "${out_path}/vol001" "${out_path}/vol002" "${out_path}/vol003"
+chmod 775 "${out_path}"
+
+# Create temp directory if needed for thickness measurement
+# (temp variable is set by schema-driven generation)
+if [[ "${temp:-0}" != "0" ]] && [[ -n "${temp}" ]]; then
+    mkdir -p "${temp}"
+fi
+
+# Print the collected inputs
+echo "Project Name: ${project_name}"
+echo "Gain Path: ${gain_fn}"
+echo "Output Path: ${out_path}"
+echo "Pixel Size: ${pix_size}"
+echo "At binning for 5A vol: ${tomo_bin_5A}"
+echo "At binning for 10A vol: ${tomo_bin_10A}"
+{% if frame_dose %}
+echo "Frame dose is: ${frame_dose}"
+{% else %}
+echo "Frame dose: using MDOC ExposureDose"
+{% endif %}
+{% if denoise_training %}
+echo "DenoisET training option is: enabled"
+{% endif %}
+
+# Define bash functions for heterogeneous job components
+run_aretomo3_gpu() {
+    set -e
+    ml cuda
+
+    # AreTomo3 command with fixed flags and schema-generated variable flags
+    /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.2_07-11-2025 \
+        -InPrefix ${in_mdoc_dir}/${in_prefix} \
+        -InSuffix ${in_suffix} \
+        -Gain ${gain_fn} \
+        -OutDir ${out_path} \
+        -AtBin ${tomo_bin_5A} ${tomo_bin_10A} ${tomo_bin_10A} \
+        -Gpu {% for i in range(slurm_component_0_gpus) -%}{{ i }}{% if not loop.last %},{% endif %}{% endfor %} \
+        {% for arg in cli_args %}{{ arg.flag }} {{ arg.value }} \
+        {% endfor -%}
+        2>&1
+}
+
+run_reformat_cpu() {
+    set -e
+    ml anaconda
+    conda activate /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/pyConvert
+    bash /hpc/projects/krios1.processing/aretomo3/scripts/reformat_thumbnail_rechunk.sh ${out_path} 960 180
+
+    conda activate /hpc/projects/group.czii/krios1.processing/software/slabpick/pySlabPick
+    python /hpc/projects/group.czii/krios1.processing/software/diagnostics/scripts/plot_aretomo3_metrics.py --session ${project_name} --run ${run_number}
+    python /hpc/projects/group.czii/krios1.processing/software/diagnostics/scripts/summary_aretomo3_metrics.py
+}
+
+# Export functions so they're available to srun subshells
+export -f run_aretomo3_gpu
+export -f run_reformat_cpu
+
+# Launch Component 0 (GPU processing) in parallel
+srun --het-group=0 bash -c 'run_aretomo3_gpu' &
+
+# Launch Component 1 (CPU processing) in parallel
+srun --het-group=1 bash -c 'run_reformat_cpu' &
+
+# Wait for both components to complete
+wait
+
+echo "AreTomo3 hetjob completed!"

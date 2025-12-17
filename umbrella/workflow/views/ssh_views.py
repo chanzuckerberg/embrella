@@ -1,0 +1,168 @@
+"""
+SSH key setup and verification views.
+
+These views handle one-time SSH key setup for users to enable
+passwordless authentication from the service user to user accounts
+on the compute clusters.
+"""
+
+import base64
+import json
+
+from django.http import JsonResponse
+from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from umbrella_logger import logger
+
+from common import clusterio
+
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    """
+    SessionAuthentication subclass that doesn't enforce CSRF checks.
+    Use this for API endpoints that handle CSRF validation separately or don't require it.
+    """
+
+    def enforce_csrf(self, request):
+        return  # Skip CSRF check
+
+
+@api_view(["POST"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
+@extend_schema(
+    summary="Check SSH setup status",
+    description="Check if SSH setup is required for the user on the specified cluster",
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "cluster_id": {"type": "string", "description": "Cluster ID (czii or bruno)"},
+                "username": {"type": "string", "description": "Username to check (defaults to current user)"},
+            },
+            "required": ["cluster_id"],
+        },
+    },
+    responses={
+        200: OpenApiResponse(description="SSH setup status"),
+        400: OpenApiResponse(description="Invalid request data"),
+        500: OpenApiResponse(description="Server error"),
+    },
+)
+def check_ssh_setup(request):
+    """
+    Check if SSH setup is required for the user on the specified cluster.
+
+    This endpoint tests if the service user can SSH as the specified user
+    using the service user's SSH key. If the connection fails, setup is required.
+    """
+    try:
+        cluster_id = request.data.get("cluster_id")
+        username = request.data.get("username", request.user.username)
+
+        if not cluster_id:
+            return JsonResponse({"error": "cluster_id is required"}, status=400)
+
+        if cluster_id not in ["czii", "bruno"]:
+            return JsonResponse({"error": 'cluster_id must be "czii" or "bruno"'}, status=400)
+
+        # Test SSH connection
+        result = clusterio.test_ssh_as_user(username, cluster_id)
+
+        return JsonResponse(
+            {
+                "setup_required": not result["can_connect"],
+                "cluster_id": result["cluster_id"],
+                "username": result["username"],
+                "error": result.get("error"),
+            },
+        )
+
+    except Exception as e:
+        logger.exception(f"Error in check_ssh_setup: {str(e)}")
+        return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
+
+
+@api_view(["POST"])
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
+@extend_schema(
+    summary="Setup SSH key for user",
+    description="Add service user's SSH public key to user's authorized_keys on the specified cluster",
+    request={
+        "application/json": {
+            "type": "object",
+            "properties": {
+                "cluster_id": {"type": "string", "description": "Cluster ID (czii or bruno)"},
+                "username": {"type": "string", "description": "Username to setup SSH for"},
+                "password": {"type": "string", "description": "User password (base64 encoded)"},
+            },
+            "required": ["cluster_id", "username", "password"],
+        },
+    },
+    responses={
+        200: OpenApiResponse(
+            description="SSH setup result",
+            response={
+                "type": "object",
+                "properties": {
+                    "success": {"type": "boolean"},
+                    "message": {"type": "string"},
+                    "can_connect": {"type": "boolean"},
+                    "error": {"type": "string", "nullable": True},
+                },
+            },
+        ),
+        400: OpenApiResponse(description="Invalid request data"),
+        500: OpenApiResponse(description="Server error"),
+    },
+)
+def setup_ssh_key(request):
+    """
+    Setup SSH key access for a user on the specified cluster.
+
+    This endpoint:
+    1. Decodes the user's password from base64
+    2. Connects to the cluster using the password
+    3. Adds the service user's public key to ~/.ssh/authorized_keys
+    4. Sets proper permissions
+    5. Tests the connection to verify setup
+    """
+    try:
+        data = request.data
+
+        cluster_id = data.get("cluster_id")
+        username = data.get("username")
+        encoded_password = data.get("password")
+
+        if not all([cluster_id, username, encoded_password]):
+            return JsonResponse({"error": "cluster_id, username, and password are required"}, status=400)
+
+        if cluster_id not in ["czii", "bruno"]:
+            return JsonResponse({"error": 'cluster_id must be "czii" or "bruno"'}, status=400)
+
+        # Decode password
+        try:
+            password = base64.b64decode(encoded_password).decode("utf-8")
+        except Exception as e:
+            return JsonResponse({"error": f"Failed to decode password: {str(e)}"}, status=400)
+
+        # Setup SSH key
+        result = clusterio.setup_ssh_key_for_user(username, password, cluster_id)
+
+        return JsonResponse(
+            {
+                "success": result["success"],
+                "message": result["message"],
+                "can_connect": result["can_connect"],
+                "error": result.get("error"),
+            },
+        )
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON in request body"}, status=400)
+    except Exception as e:
+        logger.exception(f"Error in setup_ssh_key: {str(e)}")
+        return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
