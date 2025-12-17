@@ -13,6 +13,7 @@ Module Structure:
 - tomogram_views.py: Tomogram syncing and listing
 - annotation_views.py: Annotation data management
 - session_views.py: MSI session queries
+- directory_views.py: Filesystem survey and directory management
 
 All view functions are re-exported at this level to maintain backward
 compatibility with existing URL configurations.
@@ -22,6 +23,17 @@ compatibility with existing URL configurations.
 # Annotation views
 from .annotation_views import get_annotation_details
 from .constants import ENVIRONMENT, base_url, get_base_url
+
+# Directory/Survey views
+from .directory_views import (
+    bulk_update_directory_status,
+    get_directories,
+    get_directory_files,
+    get_directory_filterlist,
+    get_directory_stats,
+    get_survey_files,
+    get_surveys,
+)
 
 # Filter views
 from .filter_views import available_annotation_filter, available_filters
@@ -86,4 +98,13 @@ __all__ = [
 
     # Session views
     'get_session_id',
+
+    # Directory/Survey views
+    'get_surveys',
+    'get_directories',
+    'get_directory_stats',
+    'bulk_update_directory_status',
+    'get_directory_filterlist',
+    'get_directory_files',
+    'get_survey_files',
 ]
