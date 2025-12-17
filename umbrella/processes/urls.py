@@ -25,4 +25,12 @@ urlpatterns = [
     path('start_sync/', views.start_sync, name='start_sync'),
     path("post_generic/reserve", views.reserve_generic_run, name="pg_reserve"),
     path("post_generic/create", views.create_generic_run, name="pg_create"),
+    # Filesystem Survey and Directory endpoints
+    path('v1/surveys/', views.get_surveys, name='get_surveys'),
+    path('v1/surveys/<int:survey_id>/files/', views.get_survey_files, name='get_survey_files'),
+    path('v1/directories/', views.get_directories, name='get_directories'),
+    path('v1/directories/stats/', views.get_directory_stats, name='get_directory_stats'),
+    path('v1/directories/filterlist/', views.get_directory_filterlist, name='get_directory_filterlist'),
+    path('v1/directories/bulk_update_status/', views.bulk_update_directory_status, name='bulk_update_directory_status'),
+    path('v1/directories/<int:directory_id>/files/', views.get_directory_files, name='get_directory_files'),
 ]
