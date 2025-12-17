@@ -90,9 +90,8 @@ DATABASES = {
 }
 
 INSTALLED_APPS = [
-    "confluence",
+    "external_links",
     "django_object_actions",
-    "clouddocs",
     "jazzmin",
     "cryo_grids",
     "projects",

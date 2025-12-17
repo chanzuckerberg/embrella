@@ -36,7 +36,7 @@ from umbrella.api_internal import (
 )
 from umbrella.ping import ping
 from umbrella.user import get_user_info
-from umbrella.viewsets import GridLoggingChoicesViewSet, PuckViewSet, UserViewSet, CaneViewSet, SpecimenViewSet, SampleViewSet, FreezingSessionViewSet, CryoGridViewSet, ConfluenceSpaceViewSet, DriveFolderViewSet, ConfluencePageViewSet, ProjectLeaderViewSet
+from umbrella.viewsets import GridLoggingChoicesViewSet, PuckViewSet, UserViewSet, CaneViewSet, SpecimenViewSet, SampleViewSet, FreezingSessionViewSet, CryoGridViewSet, ProjectLeaderViewSet
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
@@ -48,9 +48,6 @@ router.register(r'api/list/specimens', SpecimenViewSet, basename='specimen')
 router.register(r'api/list/samples', SampleViewSet, basename='sample')
 router.register(r'api/list/freezing-sessions', FreezingSessionViewSet, basename='freezing-session')
 router.register(r'api/list/grids', CryoGridViewSet, basename='grid')
-router.register(r'api/list/confluence-spaces', ConfluenceSpaceViewSet, basename='confluence-space')
-router.register(r'api/list/drive-folders', DriveFolderViewSet, basename='drive-folder')
-router.register(r'api/list/confluence-pages', ConfluencePageViewSet, basename='confluence-page')
 router.register(r'api/list/project-leaders', ProjectLeaderViewSet, basename='project-leader')
 
 import mimetypes
@@ -103,7 +100,6 @@ urlpatterns = ([
     path('available_grids', get_available_grids, name='get_available_grids'),
     path('cryo_grids/', include('cryo_grids.urls'), name='cryo_grids'),
     path('workflow/', include('workflow.urls'), name='workflow pipeline'),
-    path('agent/', include('agent.urls'), name='AI Agent'),
     path('annotations/v1/filterlist/', available_annotation_filter, name='get filter list for annotations'),
     path('api/sessions/', SessionView.as_view(), name='session-list'),
     path('api/sessions/<str:session_id>/', SessionView.as_view(), name='session-detail'),
@@ -118,6 +114,8 @@ urlpatterns = ([
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'), #Swagger UI
     path('api/redocs/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     re_path(r'^docs/(?P<path>.*)$', documentation_view, name="docs"),
+    # External resources (documentation links)
+    path('api/external-resources/', include('external_links.urls')),
 ])
 
 
@@ -128,5 +126,3 @@ urlpatterns += router.urls
 admin.site.site_header = 'Embrella'
 admin.site.site_title = 'Embrella'
 admin.site.site_url = '/umbrella'
-
-

@@ -1,7 +1,6 @@
-from confluence.models import Page
 from django.contrib.auth.models import User
 from django.db import models
-from django.utils import timezone
+from external_links.models import ExternalResource
 from projects.models import Project
 
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
@@ -93,13 +92,23 @@ class PlungeFreezingDevice(models.Model):
         return self.name
 
 class PlungeFreezingSession(models.Model):
-    datetime = models.DateTimeField(default=timezone.now)
+    datetime = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True)
     device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE)
     device_temperature = models.FloatField(default=4.0, help_text='Temperature of the freezing chamber in degree Celsius')
     humidity = models.PositiveSmallIntegerField(default=95)
     # number_of_grids = models.PositiveSmallIntegerField(default=1)
-    notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for freezing session')
+
+    # Unified documentation field
+    documentation_page = models.ForeignKey(
+        ExternalResource,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='freezing_session_docs',
+        limit_choices_to={'resource_type': 'doc_page'},
+        help_text='Documentation page for freezing session (Confluence, Benchling, etc.)'
+    )
 
     def __str__(self):
         date_str = self.datetime.date().isoformat()
@@ -114,15 +123,26 @@ class Sample(models.Model):
         return self.name
     
 class Specimen(models.Model):
-    
+
     samples = models.ManyToManyField(
         Sample,
         blank=True,
         help_text='Associated samples from the Sample',
     )
-    notes_page = models.ForeignKey(Page, null=True, blank=True, on_delete=models.SET_NULL,help_text='Confluence link for sample prep')
+
+    # Unified documentation field
+    documentation_page = models.ForeignKey(
+        ExternalResource,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='specimen_docs',
+        limit_choices_to={'resource_type': 'doc_page'},
+        help_text='Documentation page for sample prep (Confluence, Benchling, etc.)'
+    )
+
     notes = models.TextField(max_length=255, blank=True)
-    
+
 
     def __str__(self):
         sample_names = ", ".join(sample.name for sample in self.samples.all())

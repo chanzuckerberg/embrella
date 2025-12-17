@@ -7,7 +7,6 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('confluence', '0003_alter_space_name_page'),
         ('cryo_grids', '0003_moleculartag_remove_plungefreezingplan_tag_and_more'),
     ]
 
@@ -26,16 +25,9 @@ class Migration(migrations.Migration):
             name='position_in_cassette',
             field=models.PositiveSmallIntegerField(blank=True, default=1, null=True),
         ),
-        migrations.AddField(
-            model_name='plungefreezingsession',
-            name='notes_page',
-            field=models.ForeignKey(blank=True, help_text='Confluence link for freezing session', null=True, on_delete=django.db.models.deletion.SET_NULL, to='confluence.page'),
-        ),
-        migrations.AddField(
-            model_name='sample',
-            name='notes_page',
-            field=models.ForeignKey(blank=True, help_text='Confluence link for sample prep', null=True, on_delete=django.db.models.deletion.SET_NULL, to='confluence.page'),
-        ),
+        # Note: Original migration added FKs to confluence.page, but that app has been removed
+        # These fields were later replaced by documentation_page FK to external_links.ExternalResource
+        # Keeping this as a no-op since the fields were subsequently migrated in later migrations
         migrations.AddField(
             model_name='sample',
             name='ontology',

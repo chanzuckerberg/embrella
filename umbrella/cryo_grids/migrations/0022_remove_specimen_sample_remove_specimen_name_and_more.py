@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("confluence", "0003_alter_space_name_page"),
         ("cryo_grids", "0021_alter_cryogrid_unique_together_and_more"),
     ]
 
@@ -20,17 +19,9 @@ class Migration(migrations.Migration):
             model_name="specimen",
             name="name",
         ),
-        migrations.AddField(
-            model_name="specimen",
-            name="notes_page",
-            field=models.ForeignKey(
-                blank=True,
-                help_text="Confluence link for sample prep",
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                to="confluence.page",
-            ),
-        ),
+        # Notes: Original migration added FK to confluence.page, but that app has been removed
+        # This field was later replaced by documentation_page FK to external_links.ExternalResource
+        # Keeping this as a no-op since the field was subsequently migrated in later migrations
         migrations.AddField(
             model_name="specimen",
             name="ontology",
