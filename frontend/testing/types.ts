@@ -7,4 +7,4 @@ export interface FetchResponseInfo {
 
 export type TestFilterCategory = GridFilterCategory;
 
-export type TestResponse = Pick<Response, 'json' | 'text' | 'status' | 'url'>;
+export type TestResponse = Pick<Response, 'json' | 'text' | 'status' | 'url' | 'ok' | 'statusText'>;

@@ -1,3 +1,10 @@
+"""
+Contrast limits computation for tomogram visualization.
+
+This module provides utilities for computing optimal contrast limits for cryo-EM
+tomogram data stored in Zarr format. Supports multiple methods including Gaussian
+Mixture Models (GMM) and percentile-based approaches.
+"""
 import logging
 from abc import abstractmethod
 from typing import Literal, Optional, Tuple
