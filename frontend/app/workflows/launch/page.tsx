@@ -18,7 +18,7 @@ import {
 import { PageContainer } from '@app/common/components/PageContainer';
 import { useEffect, useState } from 'react';
 import { listProcessors, fetchProcessorSchema } from '@app/common/services/workflowApi';
-import type { Processor, ProcessorSchema } from '@app/common/types/workflow';
+import type { ExecutionParams, Processor, ProcessorSchema } from '@app/common/types/workflow';
 import AreTomo3LaunchForm from './components/AreTomo3LaunchForm';
 import DenoisETLaunchForm from './components/DenoisETLaunchForm';
 import CopickLaunchForm from './components/CopickLaunchForm';
@@ -115,7 +115,8 @@ export default function WorkflowLaunchPage() {
       processor: selectedProcessorData,
       schema,
       cluster: selectedCluster as 'czii' | 'bruno',
-      onSubmit: () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      onSubmit: async (_params: ExecutionParams) => {
         // Success handled by individual forms
       },
     };

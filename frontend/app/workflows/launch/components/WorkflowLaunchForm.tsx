@@ -24,7 +24,6 @@ import {
   FormControl,
   FormControlLabel,
   FormHelperText,
-  Grid,
   InputLabel,
   MenuItem,
   Select,
@@ -40,7 +39,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import type {
   ExecutionParams,
   FieldOption,
-  ProcessorSchema,
+  JSONSchemaProperty,
   ValidationError,
   WorkflowLaunchFormProps,
 } from '@app/common/types/workflow';
@@ -63,7 +62,6 @@ export default function WorkflowLaunchForm({
   processor,
   schema,
   cluster,
-  sessionId: initialSessionId,
   onSubmit,
   sessionSelectionConfig = { requiresSessionSelection: true }, // Default: requires session selection
   customFields,
@@ -77,16 +75,17 @@ export default function WorkflowLaunchForm({
     runName: null,
     isValid: !sessionSelectionConfig.requiresSessionSelection, // Valid by default if session selection not required
   });
-  const [parameters, setParameters] = useState<Record<string, any>>({});
-  const [slurmOptions, setSlurmOptions] = useState<Record<string, any>>(() => {
+  const [parameters, setParameters] = useState<Record<string, unknown>>({});
+  const [slurmOptions, setSlurmOptions] = useState<Record<string, unknown>>(() => {
     // Initialize SLURM options from schema field defaults
-    const defaults: Record<string, any> = {};
+    const defaults: Record<string, unknown> = {};
     for (const [fieldName, fieldSchema] of Object.entries(schema.schema.properties)) {
-      // Only include fields with x-slurm-directive or x-compute-resource
-      if (fieldSchema['x-slurm-directive'] || fieldSchema['x-compute-resource']) {
-        if (fieldSchema.default !== undefined) {
-          defaults[fieldName] = fieldSchema.default;
-        }
+      // Only include fields with x-slurm-directive or x-compute-resource that have defaults
+      if (
+        (fieldSchema['x-slurm-directive'] || fieldSchema['x-compute-resource']) &&
+        fieldSchema.default !== undefined
+      ) {
+        defaults[fieldName] = fieldSchema.default;
       }
     }
     return defaults;
@@ -99,7 +98,6 @@ export default function WorkflowLaunchForm({
 
   // Data states
   const [dynamicOptions, setDynamicOptions] = useState<Record<string, FieldOption[]>>({});
-  const [metadata, setMetadata] = useState<any>(null);
   const [lookedUpIds, setLookedUpIds] = useState<{ pipe_in_plan_id: number; proc_run_id: number } | null>(null);
   const [dependenciesMet, setDependenciesMet] = useState<boolean>(true);
 
@@ -107,7 +105,10 @@ export default function WorkflowLaunchForm({
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [executionResult, setExecutionResult] = useState<any>(null);
+  const [executionResult, setExecutionResult] = useState<{
+    job_id?: string;
+    pipe_execution_id?: number;
+  } | null>(null);
 
   // SSH setup
   const [sshModalOpen, setSshModalOpen] = useState(false);
@@ -154,12 +155,12 @@ export default function WorkflowLaunchForm({
     fetchUser();
   }, []);
 
-  // Load processor metadata on mount
+  // Load processor metadata on mount (currently unused but kept for future use)
   useEffect(() => {
     const loadMetadata = async () => {
       try {
-        const result = await fetchProcessorMetadata(processor.name);
-        setMetadata(result.metadata);
+        await fetchProcessorMetadata(processor.name);
+        // Metadata is available for future use but not currently displayed
       } catch (error) {
         console.error('Failed to load processor metadata:', error);
       }
@@ -241,13 +242,14 @@ export default function WorkflowLaunchForm({
 
   // Load defaults and options when session changes
   useEffect(() => {
-    if (!sessionRunSelection.sessionName) return;
+    const sessionName = sessionRunSelection.sessionName;
+    if (!sessionName) return;
 
     const loadSessionData = async () => {
       try {
         // Load defaults
         setIsLoadingDefaults(true);
-        const defaultsResult = await fetchProcessorDefaults(processor.name, sessionRunSelection.sessionName);
+        const defaultsResult = await fetchProcessorDefaults(processor.name, sessionName);
         setParameters((prev) => ({
           ...defaultsResult.defaults,
           ...prev, // Keep any user changes
@@ -259,11 +261,11 @@ export default function WorkflowLaunchForm({
         // Pass current parameter values that affect dynamic options (e.g., import_tomo_type for Copick)
         const additionalParams: Record<string, string | number> = {};
         if (parameters.import_tomo_type) {
-          additionalParams.import_tomo_type = parameters.import_tomo_type;
+          additionalParams.import_tomo_type = parameters.import_tomo_type as string | number;
         }
         const optionsResult = await fetchProcessorOptions(
           processor.name,
-          sessionRunSelection.sessionName,
+          sessionName,
           Object.keys(additionalParams).length > 0 ? additionalParams : undefined
         );
         setDynamicOptions(optionsResult.options);
@@ -292,6 +294,7 @@ export default function WorkflowLaunchForm({
     };
 
     loadSessionData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parameters is intentionally omitted to prevent infinite loops
   }, [sessionRunSelection.sessionName, processor.name]);
 
   // Refetch dynamic options when import_tomo_type changes (Copick processor)
@@ -305,9 +308,11 @@ export default function WorkflowLaunchForm({
     const refetchOptions = async () => {
       try {
         setIsLoadingOptions(true);
-        const optionsResult = await fetchProcessorOptions(processor.name, sessionRunSelection.sessionName, {
-          import_tomo_type: parameters.import_tomo_type,
-        });
+        const optionsResult = await fetchProcessorOptions(
+          processor.name,
+          sessionRunSelection.sessionName ?? undefined,
+          { import_tomo_type: parameters.import_tomo_type as string | number }
+        );
         setDynamicOptions(optionsResult.options);
         setIsLoadingOptions(false);
       } catch (error) {
@@ -331,7 +336,7 @@ export default function WorkflowLaunchForm({
         const optionsResult = await fetchProcessorOptions(
           processor.name,
           undefined, // No session_id for add_object operation
-          { copick_session: parameters.copick_session }
+          { copick_session: parameters.copick_session as string }
         );
         // Merge with existing options (don't overwrite copick_session)
         setDynamicOptions((prev) => ({
@@ -375,6 +380,7 @@ export default function WorkflowLaunchForm({
     };
 
     loadInitialOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parameters is intentionally omitted to prevent infinite loops
   }, [processor.name]);
 
   // Refetch membraneseg options when copick_session changes
@@ -386,7 +392,7 @@ export default function WorkflowLaunchForm({
       try {
         setIsLoadingOptions(true);
         const optionsResult = await fetchProcessorOptions(processor.name, undefined, {
-          copick_session: parameters.copick_session,
+          copick_session: parameters.copick_session as string,
         });
         // Merge with existing options
         setDynamicOptions((prev) => ({
@@ -410,6 +416,7 @@ export default function WorkflowLaunchForm({
     };
 
     refetchOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parameters.copick_procrun is intentionally omitted
   }, [parameters.copick_session, processor.name]);
 
   // Refetch membraneseg tomo options when copick_procrun changes
@@ -421,8 +428,8 @@ export default function WorkflowLaunchForm({
       try {
         setIsLoadingOptions(true);
         const optionsResult = await fetchProcessorOptions(processor.name, undefined, {
-          copick_session: parameters.copick_session,
-          copick_procrun: parameters.copick_procrun,
+          copick_session: parameters.copick_session as string,
+          copick_procrun: parameters.copick_procrun as string,
         });
         // Merge with existing options
         setDynamicOptions((prev) => ({
@@ -446,6 +453,7 @@ export default function WorkflowLaunchForm({
     };
 
     refetchTomoOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parameters.tomo_type is intentionally omitted
   }, [parameters.copick_session, parameters.copick_procrun, processor.name]);
 
   // Refetch membraneseg voxel size options when tomo_type changes
@@ -457,9 +465,9 @@ export default function WorkflowLaunchForm({
       try {
         setIsLoadingOptions(true);
         const optionsResult = await fetchProcessorOptions(processor.name, undefined, {
-          copick_session: parameters.copick_session,
-          copick_procrun: parameters.copick_procrun,
-          tomo_type: parameters.tomo_type,
+          copick_session: parameters.copick_session as string,
+          copick_procrun: parameters.copick_procrun as string,
+          tomo_type: parameters.tomo_type as string,
         });
         // Merge with existing options
         setDynamicOptions((prev) => ({
@@ -483,6 +491,7 @@ export default function WorkflowLaunchForm({
     };
 
     refetchVoxelOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parameters.tomo_voxel_size is intentionally omitted
   }, [parameters.copick_session, parameters.copick_procrun, parameters.tomo_type, processor.name]);
 
   // Check if all required parameters are filled
@@ -495,13 +504,13 @@ export default function WorkflowLaunchForm({
   };
 
   // Handle parameter change
-  const handleParameterChange = (name: string, value: any) => {
+  const handleParameterChange = (name: string, value: unknown) => {
     setParameters((prev) => ({ ...prev, [name]: value }));
     // Clear validation error for this field
     setValidationErrors((prev) => prev.filter((e) => e.field !== name));
   };
 
-  const handleSlurmOptionChange = (name: string, value: any) => {
+  const handleSlurmOptionChange = (name: string, value: unknown) => {
     setSlurmOptions((prev) => ({ ...prev, [name]: value }));
     // Clear validation error for this field
     setValidationErrors((prev) => prev.filter((e) => e.field !== name));
@@ -511,7 +520,9 @@ export default function WorkflowLaunchForm({
   // Supports two formats:
   // 1. String format: "slurm_partition == 'gpu'"
   // 2. Object format (x-conditional-visibility): { field: 'operation', operator: 'eq', value: 'create' }
-  const evaluateConditional = (conditional: string | { field: string; operator: string; value: any }): boolean => {
+  const evaluateConditional = (
+    conditional: string | { field: string; operator: string; value: string | number | boolean }
+  ): boolean => {
     if (!conditional) return true;
 
     // Handle structured object format (x-conditional-visibility)
@@ -528,16 +539,16 @@ export default function WorkflowLaunchForm({
           return fieldValue !== value;
         case 'gt':
         case '>':
-          return fieldValue > value;
+          return (fieldValue as number) > (value as number);
         case 'lt':
         case '<':
-          return fieldValue < value;
+          return (fieldValue as number) < (value as number);
         case 'gte':
         case '>=':
-          return fieldValue >= value;
+          return (fieldValue as number) >= (value as number);
         case 'lte':
         case '<=':
-          return fieldValue <= value;
+          return (fieldValue as number) <= (value as number);
         default:
           console.warn(`Unknown conditional operator: ${operator}`);
           return true;
@@ -660,13 +671,14 @@ export default function WorkflowLaunchForm({
       // Get script preview
       const result = await previewWorkflowScript(executionParams);
       setPreviewScript(result.script_content);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error previewing script:', error);
 
       // Build error message including validation errors if present
-      let errorMessage = error.message || 'Failed to preview script';
-      if (error.validation_errors && error.validation_errors.length > 0) {
-        errorMessage += '\n\n' + error.validation_errors.join('\n\n');
+      const err = error as Error & { validation_errors?: string[] };
+      let errorMessage = err.message || 'Failed to preview script';
+      if (err.validation_errors && err.validation_errors.length > 0) {
+        errorMessage += '\n\n' + err.validation_errors.join('\n\n');
       }
       setPreviewError(errorMessage);
     } finally {
@@ -771,25 +783,29 @@ export default function WorkflowLaunchForm({
       }
 
       setIsSubmitting(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to submit workflow:', error);
 
       // Check for SSH setup requirement
-      if (error.response?.status === 403 && error.response?.data?.ssh_setup_required) {
+      const err = error as Error & {
+        response?: { status: number; data?: { ssh_setup_required?: boolean; cluster?: string } };
+        validation_errors?: string[];
+      };
+      if (err.response?.status === 403 && err.response?.data?.ssh_setup_required) {
         console.log('SSH setup required, opening modal:', {
-          cluster: error.response.data.cluster || cluster,
+          cluster: err.response.data.cluster || cluster,
           username: currentUser?.username,
         });
-        setSshCluster(error.response.data.cluster || (cluster as 'czii' | 'bruno'));
+        setSshCluster((err.response.data.cluster as 'czii' | 'bruno') || cluster);
         setSshModalOpen(true);
         setIsSubmitting(false);
         return;
       }
 
       // Build error message including validation errors if present
-      let errorMessage = error instanceof Error ? error.message : 'Failed to submit workflow';
-      if (error.validation_errors && error.validation_errors.length > 0) {
-        errorMessage += '\n\n' + error.validation_errors.join('\n\n');
+      let errorMessage = err.message || 'Failed to submit workflow';
+      if (err.validation_errors && err.validation_errors.length > 0) {
+        errorMessage += '\n\n' + err.validation_errors.join('\n\n');
       }
       setSubmitError(errorMessage);
       setIsSubmitting(false);
@@ -797,7 +813,7 @@ export default function WorkflowLaunchForm({
   };
 
   // Render form field based on schema property
-  const renderField = (name: string, prop: any) => {
+  const renderField = (name: string, prop: JSONSchemaProperty) => {
     // Check if custom field component is provided
     if (customFields && customFields[name]) {
       const CustomField = customFields[name];
@@ -816,10 +832,8 @@ export default function WorkflowLaunchForm({
 
     // Check if field is conditional and should be hidden
     const conditional = prop['x-conditional-visibility'] || prop['x-conditional'];
-    if (conditional) {
-      if (!evaluateConditional(conditional)) {
-        return null;
-      }
+    if (conditional && !evaluateConditional(conditional)) {
+      return null;
     }
 
     // Get error for this field
@@ -908,7 +922,8 @@ export default function WorkflowLaunchForm({
 
     if (prop.enum || dynamicOptions[name]) {
       // Dropdown/select field
-      const options = dynamicOptions[name] || prop.enum?.map((v: any) => ({ value: v, label: v })) || [];
+      const options =
+        dynamicOptions[name] || prop.enum?.map((v: string | number) => ({ value: v, label: String(v) })) || [];
 
       return (
         <TextField
@@ -1079,13 +1094,7 @@ export default function WorkflowLaunchForm({
 
                   // Skip conditional parameters if their condition is not met
                   const conditional = prop['x-conditional-visibility'] || prop['x-conditional'];
-                  if (conditional) {
-                    if (!evaluateConditional(conditional)) {
-                      return false;
-                    }
-                  }
-
-                  return true;
+                  return !conditional || evaluateConditional(conditional);
                 })
                 .map(([name, prop]) => renderField(name, prop))}
             </Box>
@@ -1093,7 +1102,7 @@ export default function WorkflowLaunchForm({
             {/* Parameter Group Accordions */}
             {(() => {
               // Group parameters by x-parameter-group
-              const parameterGroups: Record<string, Array<[string, any]>> = {};
+              const parameterGroups: Record<string, Array<[string, JSONSchemaProperty]>> = {};
               Object.entries(schema.schema.properties).forEach(([name, prop]) => {
                 const group = prop['x-parameter-group'];
                 if (group && !prop['x-compute-resource']) {
@@ -1180,7 +1189,7 @@ export default function WorkflowLaunchForm({
 
                 if (hasHetjobComponents) {
                   // Group parameters by component number
-                  const componentGroups: Record<number, Array<[string, any]>> = {};
+                  const componentGroups: Record<number, Array<[string, JSONSchemaProperty]>> = {};
                   Object.entries(schema.schema.properties).forEach(([name, prop]) => {
                     if (!prop['x-compute-resource']) return;
 
@@ -1221,11 +1230,17 @@ export default function WorkflowLaunchForm({
                           Adjust SLURM resource allocation for this heterogeneous job. Each component has separate
                           resource requirements.
                         </Typography>
-                        <Grid container spacing={3}>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
                           {Object.entries(componentGroups)
                             .sort(([a], [b]) => Number(a) - Number(b))
                             .map(([componentNum, params]) => (
-                              <Grid item xs={12} md={6} key={componentNum}>
+                              <Box
+                                key={componentNum}
+                                sx={{
+                                  flex: { xs: '1 1 100%', md: '1 1 calc(50% - 12px)' },
+                                  minWidth: 0,
+                                }}
+                              >
                                 <Box
                                   sx={{
                                     p: 2,
@@ -1249,9 +1264,9 @@ export default function WorkflowLaunchForm({
                                     })
                                     .map(([name, prop]) => renderField(name, prop))}
                                 </Box>
-                              </Grid>
+                              </Box>
                             ))}
-                        </Grid>
+                        </Box>
                       </AccordionDetails>
                     </Accordion>
                   );
@@ -1293,13 +1308,7 @@ export default function WorkflowLaunchForm({
 
                               // Still respect conditional visibility within compute resources
                               const conditional = prop['x-conditional-visibility'] || prop['x-conditional'];
-                              if (conditional) {
-                                if (!evaluateConditional(conditional)) {
-                                  return false;
-                                }
-                              }
-
-                              return true;
+                              return !conditional || evaluateConditional(conditional);
                             })
                             .map(([name, prop]) => renderField(name, prop))}
                         </Box>
@@ -1379,12 +1388,12 @@ export default function WorkflowLaunchForm({
                 </Typography>
                 {executionResult && (
                   <>
-                    {executionResult.job_id && (
+                    {Boolean(executionResult.job_id) && (
                       <Typography variant="body2">
                         SLURM Job ID: <strong>{executionResult.job_id}</strong>
                       </Typography>
                     )}
-                    {executionResult.pipe_execution_id && (
+                    {Boolean(executionResult.pipe_execution_id) && (
                       <Typography variant="body2">
                         Execution ID: <strong>{executionResult.pipe_execution_id}</strong>
                       </Typography>

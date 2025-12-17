@@ -37,7 +37,7 @@ export interface JSONSchema {
   type: string;
   properties: Record<string, JSONSchemaProperty>;
   required?: string[];
-  dependencies?: Record<string, any>;
+  dependencies?: Record<string, string[] | Record<string, unknown>>;
 }
 
 /**
@@ -52,7 +52,7 @@ export interface JSONSchemaProperty {
   minLength?: number;
   maxLength?: number;
   enum?: (string | number)[];
-  default?: any;
+  default?: string | number | boolean;
   // Custom extensions for processor behavior
   'x-bash-var'?: string | string[];
   'x-bash-format'?: string;
@@ -64,10 +64,18 @@ export interface JSONSchemaProperty {
   'x-control-flow'?: boolean;
   'x-advanced'?: boolean;
   'x-conditional'?: string;
-  'x-dynamic-options'?: {
-    source: string;
-    depends_on_session?: boolean;
-  };
+  'x-conditional-visibility'?: string | { field: string; operator: string; value: string | number | boolean };
+  'x-dynamic-options'?:
+    | boolean
+    | {
+        source: string;
+        depends_on_session?: boolean;
+      };
+  // SLURM/compute resource extensions
+  'x-slurm-directive'?: string;
+  'x-compute-resource'?: boolean;
+  'x-parameter-group'?: string;
+  'x-hetjob-component'?: number;
 }
 
 /**
@@ -93,7 +101,7 @@ export interface FieldOption {
   value: string;
   label: string;
   description?: string;
-  [key: string]: any; // Allow additional metadata
+  [key: string]: unknown; // Allow additional metadata
 }
 
 /**
@@ -109,7 +117,7 @@ export interface ProcessorDynamicOptions {
  */
 export interface ProcessorDefaults {
   success: boolean;
-  defaults: Record<string, any>;
+  defaults: Record<string, unknown>;
 }
 
 /**
@@ -134,7 +142,7 @@ export interface ValidationResult {
 export interface ParameterExample {
   title: string;
   description?: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
 }
 
 /**
@@ -148,7 +156,7 @@ export interface ProcessorMetadata {
     examples?: ParameterExample[];
     docs_url?: string | null;
     parameter_notes?: Record<string, string>;
-    [key: string]: any; // Allow processor-specific metadata
+    [key: string]: unknown; // Allow processor-specific metadata
   };
 }
 
@@ -164,7 +172,7 @@ export interface ExecutionParams {
   session_id: string;
   run_name: string;
   cluster: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   auth?: {
     username: string;
     password: string;
@@ -213,7 +221,7 @@ export interface ExecutionStatus {
 export interface WorkflowFormState {
   sessionId: string;
   cluster: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   slurmOptions: Partial<SlurmOptions>;
   isSubmitting: boolean;
   validationErrors: ValidationError[];
@@ -225,8 +233,8 @@ export interface WorkflowFormState {
 export interface FormFieldConfig {
   name: string;
   schema: JSONSchemaProperty;
-  value: any;
-  onChange: (value: any) => void;
+  value: unknown;
+  onChange: (value: unknown) => void;
   error?: string;
   disabled?: boolean;
   options?: FieldOption[]; // For dropdown/select fields
@@ -252,13 +260,13 @@ export interface SessionSelectionConfig {
    * Used for processors that derive run name from other parameters
    * (e.g., Copick Add Object derives from copick_session + copick_run)
    */
-  generateRunName?: (parameters: Record<string, any>) => string | null;
+  generateRunName?: (parameters: Record<string, unknown>) => string | null;
 
   /**
    * Custom function to generate session name when session selection is skipped
    * Used for processors that operate on existing projects/sessions
    */
-  generateSessionName?: (parameters: Record<string, any>) => string | null;
+  generateSessionName?: (parameters: Record<string, unknown>) => string | null;
 
   /**
    * Informational message to show users when SessionRunSelector is hidden
@@ -288,8 +296,8 @@ export interface WorkflowLaunchFormProps {
   // Extensibility hooks
   customFields?: Record<string, React.ComponentType<FormFieldConfig>>;
   additionalSections?: React.ReactNode[];
-  onBeforeSubmit?: (params: Record<string, any>) => Promise<Record<string, any>>;
-  customValidation?: (params: Record<string, any>) => Promise<ValidationError[]>;
+  onBeforeSubmit?: (params: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  customValidation?: (params: Record<string, unknown>) => Promise<ValidationError[]>;
 }
 
 /**

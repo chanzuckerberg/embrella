@@ -17,6 +17,7 @@ export * from './details/gridBoxDetails';
 export * from './resources/confluenceSpaceList';
 export * from './resources/confluencePageList';
 export * from './resources/driveFolderList';
+export * from './externalResource';
 
 // Config types
 export * from './config/choices';
