@@ -1,0 +1,169 @@
+# DenoisET Processor Parameter Schema
+# JSON Schema with custom x-* extensions for template generation and CLI mapping
+#
+# Custom extensions:
+#   x-bash-var: Bash variable name - string
+#   x-bash-format: Quoting style - "quoted" or "unquoted"
+#   x-bash-type: Data type - "number", "string", etc.
+#   x-bash-skip: Skip in bash variable section - boolean
+#   x-cli-flag: Command-line flag - string or null
+#   x-cli-format: Value formatter - "direct" or custom formatter method name
+#   x-control-flow: Controls template conditionals - boolean
+#   x-conditional: Shows only if another param is true - string
+#   x-dynamic-options: Frontend dropdown source - dict with source and depends_on_session
+#   x-compute-resource: Groups parameter in "Compute Resources" section - boolean
+#   x-slurm-directive: SLURM directive flag (e.g., "--partition") - string
+
+type: object
+
+properties:
+  aretomo_run:
+    type: string
+    title: AreTomo3 Run Number
+    description: Run number from AreTomo3 step (source of input volumes)
+    minLength: 1
+    x-dynamic-options:
+      source: aretomo3_runs
+      depends_on_session: true
+    x-bash-var: aretomo_run
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: null
+    x-cli-format: null
+    x-control-flow: false
+
+  model_name:
+    type: string
+    title: DenoisET Model
+    description: Name of the trained DenoisET model to use
+    enum:
+      - lysosome.pth
+      - minicell.pth
+      - synaptosome.pth
+      - cilia.pth
+    default: lysosome.pth
+    x-bash-var: model_name
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: null
+    x-cli-format: null
+    x-control-flow: false
+
+  live_denoising:
+    type: boolean
+    title: Live Denoising
+    description: Enable live denoising mode (monitors input directory for new volumes)
+    default: false
+    x-bash-var: live_denoising
+    x-bash-skip: true
+    x-cli-flag: null
+    x-cli-format: null
+    x-control-flow: true
+
+  use_custom_params:
+    type: boolean
+    title: Use Custom Command Line Parameters
+    description: Add arbitrary command line parameters to DenoisET
+    default: false
+    x-bash-var: use_custom_params
+    x-bash-skip: true
+    x-cli-flag: null
+    x-cli-format: null
+    x-control-flow: true
+
+  custom_command_line:
+    type: string
+    title: Custom Command Line Parameters
+    description: Additional command line parameters (e.g., '--batch-size 4 --patch-size 96')
+    x-conditional: use_custom_params
+    x-bash-var: custom_command_line
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: null
+    x-cli-format: null
+    x-control-flow: false
+
+  # SLURM Resource Options (Compute Resources section)
+  slurm_partition:
+    type: string
+    title: "Partition"
+    description: SLURM partition to submit job to
+    enum:
+      - gpu
+      - cpu
+    default: gpu
+    x-slurm-directive: "--partition"
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_gpus:
+    type: integer
+    title: "Number of GPUs"
+    description: GPUs to allocate (only for GPU partition)
+    minimum: 1
+    maximum: 8
+    default: 1
+    x-slurm-directive: "--gpus"
+    x-compute-resource: true
+    x-bash-skip: true
+    x-conditional: slurm_partition == 'gpu'
+
+  slurm_nodes:
+    type: integer
+    title: "Number of Nodes"
+    description: Number of nodes to allocate
+    minimum: 1
+    maximum: 10
+    default: 1
+    x-slurm-directive: "-N"
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_cpus_per_task:
+    type: integer
+    title: "CPUs per Task"
+    description: Number of CPU cores per task
+    minimum: 1
+    maximum: 64
+    default: 1
+    x-slurm-directive: "--cpus-per-task"
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_mem_per_gpu:
+    type: string
+    title: "Memory per GPU"
+    description: Memory per GPU (e.g., 32G, 64G, 96G). Leave blank for SLURM default.
+    default: ""
+    pattern: "^([0-9]+[KMGT]){0,1}$"
+    x-slurm-directive: "--mem-per-gpu"
+    x-compute-resource: true
+    x-bash-skip: true
+    x-conditional: slurm_partition == 'gpu'
+
+  slurm_mem_per_cpu:
+    type: string
+    title: "Memory per CPU"
+    description: Memory per CPU (e.g., 4G, 8G, 16G). Leave blank for SLURM default.
+    default: "196G"
+    pattern: "^([0-9]+[KMGT]){0,1}$"
+    x-slurm-directive: "--mem-per-cpu"
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_time:
+    type: string
+    title: "Time Limit"
+    description: Maximum job runtime (HH:MM:SS format, e.g., 12:00:00)
+    default: "140:00:00"
+    pattern: "^[0-9]{1,3}:[0-5][0-9]:[0-5][0-9]$"
+    x-slurm-directive: "--time"
+    x-compute-resource: true
+    x-bash-skip: true
+
+required:
+  - aretomo_run
+  - model_name
