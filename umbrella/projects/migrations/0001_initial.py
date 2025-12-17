@@ -9,8 +9,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('confluence', '0001_initial'),
-        ('clouddocs', '0001_initial'),
     ]
 
     operations = [
@@ -19,8 +17,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(choices=[('BD01', 'BD01 Human Organelle Library'), ('TRD05', 'TRD05 Data Integration')], default='TRD05', max_length=6, unique=True)),
-                ('confluence_space', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='confluence.space')),
-                ('google_drive_folder', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='clouddocs.drivefolder')),
+                # Note: Original FKs to confluence.space and clouddocs.drivefolder removed
+                # These were later replaced by documentation_space FK to external_links.ExternalResource
             ],
         ),
     ]

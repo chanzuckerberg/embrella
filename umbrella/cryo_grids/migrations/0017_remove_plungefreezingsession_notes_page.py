@@ -9,8 +9,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name="plungefreezingsession",
-            name="notes_page",
-        ),
+        # Note: Original migration removed notes_page from plungefreezingsession
+        # However, since migration 0004 no longer adds this field (confluence app removed),
+        # this removal is now a no-op
     ]

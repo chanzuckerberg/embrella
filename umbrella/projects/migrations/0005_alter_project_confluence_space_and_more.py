@@ -7,20 +7,11 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('confluence', '0003_alter_space_name_page'),
-        ('clouddocs', '0003_alter_drivefolder_name'),
         ('projects', '0004_alter_project_confluence_space_and_more'),
     ]
 
     operations = [
-        migrations.AlterField(
-            model_name='project',
-            name='confluence_space',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='confluence.space'),
-        ),
-        migrations.AlterField(
-            model_name='project',
-            name='google_drive_folder',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='clouddocs.drivefolder'),
-        ),
+        # Note: Original migration altered FKs to confluence.space and clouddocs.drivefolder
+        # These apps have been removed and fields were later replaced by documentation_space
+        # FK to external_links.ExternalResource. Keeping this as a no-op.
     ]
