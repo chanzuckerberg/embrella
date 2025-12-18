@@ -18,7 +18,7 @@ export default function NewTEMSessionPage() {
         <Button
           sdsType="primary"
           sdsStyle="rounded"
-          onClick={() => (window.location.href = `${DJANGO_URL}/tem/reserve`)}
+          onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/reserve`)}
         >
           Start Single-Grid Session
         </Button>
