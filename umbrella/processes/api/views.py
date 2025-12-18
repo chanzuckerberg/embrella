@@ -819,6 +819,7 @@ class ReviewTomogramView(View):
             run_id = tomogram.run_id if tomogram.run_id else None
 
             # Construct zarr path based on reconstruction type
+            review = tomogram.review
             if review.reconstruction_type.lower() == "sart":
                 vol_suffix = "vol003"
                 job_name = "aretomo3"

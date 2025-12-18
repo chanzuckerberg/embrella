@@ -4,6 +4,8 @@ import { NavigationButtons } from './components/NavigationButtons';
 import { TomogramTable } from './components/TomogramTable';
 import { TomogramInfo } from './components/TomogramInfo';
 import { SliderControls } from './components/SliderControls';
+import { ChannelControlsList } from '@idetik/react';
+import { ChannelsEnabled } from '@idetik/core';
 import { ReviewTomogramSummary, TomogramDetail } from '../../types';
 
 interface SideBarProps {
@@ -15,9 +17,13 @@ interface SideBarProps {
   onPrevious: () => void;
   onNext: () => void;
   onSelectTomogram: (tomogramId: string) => void;
-  contrastLimits: [number, number];
-  onContrastLimitsChange: (value: [number, number]) => void;
-  contrastRange?: [number, number]; // Dynamic range for the slider
+  // Z-navigation props
+  currentZIndex?: number;
+  zAxisMetadata?: { min: number; max: number; count: number };
+  onZIndexChange?: (zIndex: number) => void;
+  // Channel controls props
+  channelLayer?: ChannelsEnabled | null;
+  extraControlProps?: Array<{ label: string; contrastRange: [number, number] }>;
 }
 
 export const SideBar = ({
@@ -29,9 +35,11 @@ export const SideBar = ({
   onPrevious,
   onNext,
   onSelectTomogram,
-  contrastLimits: contrast,
-  onContrastLimitsChange: onContrastChange,
-  contrastRange,
+  currentZIndex,
+  zAxisMetadata,
+  onZIndexChange,
+  channelLayer,
+  extraControlProps,
 }: SideBarProps) => {
   const reviewedCount = tomograms.filter((t) => t.status !== 'pending').length;
 
@@ -66,12 +74,25 @@ export const SideBar = ({
       </SideBarSection>
       <SideBarSection>
         <SliderControls
-          contrast={contrast}
-          onContrastChange={onContrastChange}
           open={sliderOpen}
           setOpen={setSliderOpen}
-          contrastRange={contrastRange}
+          currentZIndex={currentZIndex}
+          zAxisMetadata={zAxisMetadata}
+          onZIndexChange={onZIndexChange}
         />
+      </SideBarSection>
+      <SideBarSection className="overflow-visible [&_#channel-controls]:w-full [&_.MuiAccordionSummary-content]:!m-0 [&_.MuiAccordionSummary-root]:!p-0 [&_.MuiAccordionSummary-root]:!min-h-0 [&_.MuiAccordionDetails-root]:!p-0 [&_.MuiAccordionDetails-root]:!pt-4 [&_.MuiAccordion-root]:!bg-transparent [&_.MuiAccordion-root]:before:!hidden [&_.MuiAccordionSummary-expandIconWrapper]:!hidden [&_.MuiCollapse-root]:!block [&_.MuiCollapse-root]:!h-auto [&_.MuiCollapse-root]:!visible [&_.MuiCollapse-wrapper]:!block">
+        {channelLayer && extraControlProps && extraControlProps.length > 0 ? (
+          <ChannelControlsList
+            layer={channelLayer}
+            extraControlProps={extraControlProps}
+            classNames={{
+              root: '!bg-transparent !shadow-none !m-0 !p-0 !rounded-none !w-full !flex-col [&_div.flex.items-center.text-white]:!text-black [&_div.flex.items-center.text-white]:!font-bold [&_div.flex.items-center.text-white]:!text-lg',
+            }}
+          />
+        ) : (
+          <div className="text-gray-500 text-sm">Loading channel controls...</div>
+        )}
       </SideBarSection>
     </div>
   );
