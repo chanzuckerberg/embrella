@@ -41,75 +41,102 @@ def populate_documentation_pages(apps, schema_editor):
         print("(This is expected if columns were already dropped)")
         return
 
+
     # Migrate PlungeFreezingSession.notes_page -> documentation_page
     session_migrated = 0
     session_skipped = 0
+    session_no_notes = 0
+    session_no_url = 0
+    session_no_external = 0
 
     if has_session_notes_col:
-        for session in PlungeFreezingSession.objects.all():
+        # Use raw SQL to get notes_page_id values since historical model may not have the field
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, notes_page_id, documentation_page_id FROM cryo_grids_plungefreezingsession"
+            )
+            session_rows = cursor.fetchall()
+
+
+        for session_id, notes_page_id, documentation_page_id in session_rows:
             # Skip if already migrated (idempotent check)
-            if session.documentation_page_id is not None:
+            if documentation_page_id is not None:
                 session_skipped += 1
                 continue
 
             # Try to migrate from notes_page
-            if hasattr(session, 'notes_page_id') and session.notes_page_id:
+            if notes_page_id:
                 try:
-                    with schema_editor.connection.cursor() as cursor:
+                    with connection.cursor() as cursor:
                         cursor.execute(
                             "SELECT url FROM confluence_page WHERE id = %s",
-                            [session.notes_page_id]
+                            [notes_page_id]
                         )
                         row = cursor.fetchone()
                         if row:
                             page_url = row[0]
-                            external = ExternalResource.objects.filter(
-                                resource_type='doc_page',
-                                system_name='Confluence',
-                                url=page_url
-                            ).first()
+                            # Search by URL only - the URL might exist with different resource_type
+                            # if it was in multiple legacy tables
+                            external = ExternalResource.objects.filter(url=page_url).first()
                             if external:
-                                session.documentation_page = external
-                                session.save()
+                                PlungeFreezingSession.objects.filter(id=session_id).update(
+                                    documentation_page=external
+                                )
                                 session_migrated += 1
+                            else:
+                                session_no_external += 1
+                        else:
+                            session_no_url += 1
                 except Exception as e:
-                    print(f"Warning: Could not migrate notes_page for session {session.id}: {e}")
+                    print(f"Warning: Could not migrate notes_page for session {session_id}: {e}")
+            else:
+                session_no_notes += 1
 
     # Migrate Specimen.notes_page -> documentation_page
     specimen_migrated = 0
     specimen_skipped = 0
+    specimen_no_notes = 0
 
     if has_specimen_notes_col:
-        for specimen in Specimen.objects.all():
+        # Use raw SQL to get notes_page_id values since historical model may not have the field
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, notes_page_id, documentation_page_id FROM cryo_grids_specimen"
+            )
+            specimen_rows = cursor.fetchall()
+
+        for specimen_id, notes_page_id, documentation_page_id in specimen_rows:
             # Skip if already migrated (idempotent check)
-            if specimen.documentation_page_id is not None:
+            if documentation_page_id is not None:
                 specimen_skipped += 1
                 continue
 
             # Try to migrate from notes_page
-            if hasattr(specimen, 'notes_page_id') and specimen.notes_page_id:
+            if notes_page_id:
                 try:
-                    with schema_editor.connection.cursor() as cursor:
+                    with connection.cursor() as cursor:
                         cursor.execute(
                             "SELECT url FROM confluence_page WHERE id = %s",
-                            [specimen.notes_page_id]
+                            [notes_page_id]
                         )
                         row = cursor.fetchone()
                         if row:
                             page_url = row[0]
-                            external = ExternalResource.objects.filter(
-                                resource_type='doc_page',
-                                system_name='Confluence',
-                                url=page_url
-                            ).first()
+                            # Search by URL only - the URL might exist with different resource_type
+                            # if it was in multiple legacy tables
+                            external = ExternalResource.objects.filter(url=page_url).first()
                             if external:
-                                specimen.documentation_page = external
-                                specimen.save()
+                                Specimen.objects.filter(id=specimen_id).update(
+                                    documentation_page=external
+                                )
                                 specimen_migrated += 1
                 except Exception as e:
-                    print(f"Warning: Could not migrate notes_page for specimen {specimen.id}: {e}")
+                    print(f"Warning: Could not migrate notes_page for specimen {specimen_id}: {e}")
+            else:
+                specimen_no_notes += 1
 
-    print(f"Cryo grids: Migrated {session_migrated} freezing session docs (skipped {session_skipped}), {specimen_migrated} specimen docs (skipped {specimen_skipped})")
+    print(f"Cryo grids: Migrated {session_migrated} freezing session docs (skipped {session_skipped}, no_notes={session_no_notes}, no_url={session_no_url}, no_external={session_no_external})")
+    print(f"Cryo grids: Migrated {specimen_migrated} specimen docs (skipped {specimen_skipped})")
 
 
 def reverse_migration(apps, schema_editor):

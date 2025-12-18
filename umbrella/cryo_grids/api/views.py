@@ -10,9 +10,9 @@ from django.db.models import BooleanField, Case, F, Value, When
 from django.http import JsonResponse
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.decorators import api_view
+from tem.models import Project
 
 from cryo_grids.models import CryoGrid
-from tem.models import MsiSession, Project
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +34,15 @@ def get_grids_by_user(request):
         user_id (optional): Filter grids by user ID
 
     Returns:
-        JSON list of grids with project_name, username, is_default flag, and timestamps
+        JSON list of grids with project_name, username, is_default flag, timestamps,
+        and display_name including location info (puck, slot, position)
     """
     user_id = request.GET.get('user_id')
 
     # Annotate each grid with an is_default flag based on the grid name.
-    queryset = CryoGrid.objects.select_related('intended_project', 'user').annotate(
+    queryset = CryoGrid.objects.select_related(
+        'intended_project', 'user', 'grid_box', 'grid_box__puck',
+    ).annotate(
         project_name=F('intended_project__name'),
         username=F('user__username'),
         is_default=Case(
@@ -55,9 +58,34 @@ def get_grids_by_user(request):
     # Order by create_on in descending order (newest first)
     queryset = queryset.order_by('-create_on')
 
-    # Return the data including the computed is_default field
-    grids = queryset.values('id', 'name', 'project_name', 'username', 'is_default', 'create_on')
-    return JsonResponse(list(grids), safe=False)
+    # Build response with display_name including location info
+    grids_data = []
+    for grid in queryset:
+        # Build display_name with location info
+        location_parts = []
+        if grid.grid_box and grid.grid_box.puck:
+            location_parts.append(f"Puck: CZII-0{grid.grid_box.puck.name}")
+        if grid.grid_box:
+            location_parts.append(f"Slot: {grid.grid_box.position_in_puck or '?'}")
+        if grid.position_in_box:
+            location_parts.append(f"Position: {grid.position_in_box}")
+
+        if location_parts:
+            display_name = f"{grid.name} ({', '.join(location_parts)})"
+        else:
+            display_name = grid.name
+
+        grids_data.append({
+            'id': grid.id,
+            'name': grid.name,
+            'display_name': display_name,
+            'project_name': grid.intended_project.name if grid.intended_project else None,
+            'username': grid.user.username if grid.user else None,
+            'is_default': 'default grid' in grid.name.lower() if grid.name else False,
+            'create_on': grid.create_on.isoformat() if grid.create_on else None,
+        })
+
+    return JsonResponse(grids_data, safe=False)
 
 
 @extend_schema(

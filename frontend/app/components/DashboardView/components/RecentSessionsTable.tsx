@@ -102,7 +102,7 @@ export const RecentSessionsTable = ({ isLoading: parentLoading }: RecentSessions
               {sessions.map((session) => (
                 <TableRow
                   key={session.id}
-                  onClick={() => window.location.href = `${DJANGO_URL}/admin/tem/msisession/${session.id}/`}
+                  onClick={() => (window.location.href = `${DJANGO_URL}/admin/tem/msisession/${session.id}/`)}
                   style={{ cursor: 'pointer' }}
                 >
                   <CellComponent>

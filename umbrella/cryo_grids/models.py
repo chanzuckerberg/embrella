@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
 from external_links.models import ExternalResource
 from projects.models import Project
 
@@ -92,7 +93,7 @@ class PlungeFreezingDevice(models.Model):
         return self.name
 
 class PlungeFreezingSession(models.Model):
-    datetime = models.DateTimeField(auto_now_add=True)
+    datetime = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey(User, on_delete=models.SET_NULL,null=True)
     device = models.ForeignKey(PlungeFreezingDevice, on_delete=models.CASCADE)
     device_temperature = models.FloatField(default=4.0, help_text='Temperature of the freezing chamber in degree Celsius')
