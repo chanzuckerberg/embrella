@@ -1,4 +1,4 @@
-## Umbrella development helpers
+# Umbrella development helpers
 
 # Use .env file
 set dotenv-load
@@ -383,7 +383,8 @@ updatefrontenddeps: initenv
       pushd ./frontend
       set -x
       yarn install
-      npm run bootstrap:submodule
+      # npm run bootstrap:submodule
+      yarn build
       popd
       set +x
       set_filechanged ./frontend/package.json

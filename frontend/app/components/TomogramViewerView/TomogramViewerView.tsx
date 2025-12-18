@@ -1,12 +1,14 @@
-import { useReducer, useEffect, useCallback, useState } from 'react';
+'use client';
+
+import { useReducer, useEffect, useCallback, useState, useMemo, useRef, startTransition } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { QualityControls } from './components/QualityControls';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
-import { OmeZarrImageViewer } from '../../../idetik/packages/react/src/components/viewers/OmeZarrImageViewer';
-import { getRegionFromZattrs } from './utils';
-import { Region } from '../../../idetik/packages/core/src/data/region';
+import { OmeZarrChunkedImageViewer, IdetikProvider } from '@idetik/react';
+import { ChunkedImageLayer, ChannelsEnabled } from '@idetik/core';
+import { getRegionFromZattrs, getZAxisMetadata } from './utils';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
@@ -15,9 +17,14 @@ import { DJANGO_URL } from '@app/common/constants/api';
 // import { UserContext } from '@app/common/context/UserProvider';
 // import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
-import { useIdetik } from '../../../idetik/packages/react/src/components/hooks/useIdetik';
+
+// Wrapper component - provider is now inside the inner component to allow remounting
+export const TomogramViewerView = (props: TomogramViewerProps) => {
+  return <TomogramViewerViewInner {...props} />;
+};
 
 // Types
+
 interface TomogramViewerProps {
   review: Review;
   onReviewUpdate: (review: Review) => void;
@@ -90,41 +97,103 @@ function reducer(state: TomogramState, action: TomogramAction): TomogramState {
   }
 }
 
-export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerProps) => {
-  // Initialize hooks at the top level (before any conditional returns)
-  const firstTomogramId = review.tomograms?.[0]?.tomogramId || '';
+const TomogramViewerViewInner = ({ review, onReviewUpdate }: TomogramViewerProps) => {
+  const firstTomogramId = review.tomograms?.[0]?.tomogramId ?? '';
   const [state, dispatch] = useReducer(reducer, initialState(firstTomogramId));
-  const [region, setRegion] = useState<Region | null>(null);
+
+  // Key the provider to the selected tomogram ID so it remounts when switching
+  // This resets the provider's isReady state, allowing the new canvas to initialize
+  const providerKey = state.selectedTomogramId;
+
+  return (
+    <IdetikProvider key={providerKey}>
+      <TomogramViewerContent review={review} onReviewUpdate={onReviewUpdate} state={state} dispatch={dispatch} />
+    </IdetikProvider>
+  );
+};
+
+// Inner component that uses the IdetikProvider context
+const TomogramViewerContent = ({
+  review,
+  onReviewUpdate,
+  state,
+  dispatch,
+}: TomogramViewerProps & { state: TomogramState; dispatch: React.Dispatch<TomogramAction> }) => {
+  const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
+  const [zAxisMetadata, setZAxisMetadata] = useState<{ min: number; max: number; count: number } | null>(null);
+  const [, setZMaxIndex] = useState<number | undefined>(undefined);
+  const [isLoadingTomogram, setIsLoadingTomogram] = useState<boolean>(false); // Track loading state to prevent double mounting
+  const [shouldRenderViewer, setShouldRenderViewer] = useState<boolean>(true); // Control when viewer is in the DOM (start true for initial load)
+  const viewerMountKey = useRef<number>(0); // Unique key counter to force remounts
+  const [channelLayer, setChannelLayer] = useState<ChannelsEnabled | null>(null);
+  const [extraControlProps, setExtraControlProps] = useState<Array<{ label: string; contrastRange: [number, number] }>>(
+    []
+  );
+  const previousTomogramId = useRef<string>(state.selectedTomogramId); // Track previous tomogram to detect changes
   // const currentUser = useContext(UserContext);
-  const { isInitialized, imageSeriesLayer, channels } = useIdetik();
   // Commented out to allow everyone write access
   // const userCanReview = currentUser?.id === review.owner.id;
   const userCanReview = true; // Everyone can review now
-  const currentIndex = review.tomograms?.findIndex((t) => t.tomogramId === state.selectedTomogramId) ?? -1;
-  const reviewedTomograms = review.tomograms?.filter((tomo) => tomo.status !== 'pending').length ?? 0;
+  const currentIndex = review.tomograms.findIndex((t) => t.tomogramId === state.selectedTomogramId);
+  const reviewedTomograms = review.tomograms.filter((tomo) => tomo.status !== 'pending').length;
 
-  const handleContrastLimitsChange = useCallback(
-    (newLimits: [number, number]) => {
-      // Validate that contrast limits are strictly increasing
-      if (newLimits[0] >= newLimits[1]) {
-        console.warn('Contrast limits must be strictly increasing, ignoring update:', newLimits);
-        return;
-      }
+  // Calculate z prop object - will be recalculated when switching tomograms
+  // This ensures a fresh remount when selectedTomogramId changes
+  const zProp = useMemo(() => {
+    if (!zAxisMetadata || zAxisMetadata.count === 0) return undefined;
+    // Ensure both initIndex and index are within valid bounds
+    const maxIndex = zAxisMetadata.count - 1;
+    const initIndex = Math.max(0, Math.min(Math.floor(zAxisMetadata.count / 2), maxIndex));
+    const clampedZIndex = Math.max(0, Math.min(currentZIndex, maxIndex));
+    return {
+      initIndex,
+      index: clampedZIndex,
+      setMaxIndex: setZMaxIndex,
+    };
+  }, [zAxisMetadata, currentZIndex]); // zAxisMetadata and currentZIndex already change when tomogram changes
 
-      dispatch({ type: 'SET_CONTRAST_LIMITS', payload: newLimits });
+  // Calculate fallbackContrastLimits - will be recalculated when switching tomograms
+  const fallbackContrastLimits = useMemo((): [number, number] => {
+    return state.detail?.contrastLimits || [-0.05, 0.05];
+  }, [state.detail?.contrastLimits]); // state.detail already changes when tomogram changes
 
-      // Update the image layer's contrast limits if available
-      if (isInitialized && imageSeriesLayer && channels.length > 0) {
-        const updatedChannels = [...channels];
-        updatedChannels[0] = {
-          ...updatedChannels[0],
-          contrastLimits: newLimits,
-        };
-        imageSeriesLayer.setChannelProps(updatedChannels);
+  // Static classNames - safe to memoize
+  // Include h-full to ensure the canvas takes full height
+  // Hide the built-in Channel Controls overlay (we render it in the sidebar instead)
+  const viewerClassNames = useMemo(
+    () => ({
+      root: 'bg-dark-sds-color-primitive-gray-100 h-full w-full [&_.absolute.top-0.left-0.z-10]:hidden',
+    }),
+    []
+  );
+
+  // Handle z-slice navigation - just update state
+  // The component's slice update effect will handle z.index prop changes without re-initialization
+  const handleZIndexChange = useCallback(
+    (newZIndex: number) => {
+      if (newZIndex !== currentZIndex && zAxisMetadata) {
+        setCurrentZIndex(newZIndex);
       }
     },
-    [isInitialized, imageSeriesLayer, channels]
+    [currentZIndex, zAxisMetadata]
   );
+
+  // Handle layer creation - store reference for ChannelControlsList
+  const handleLayerCreated = useCallback((layer: ChunkedImageLayer) => {
+    setChannelLayer(layer);
+    // Set extraControlProps for the channel controls
+    const channels = layer.channelProps;
+    if (channels && channels.length > 0) {
+      const contrastLimits = channels[0].contrastLimits || [-0.05, 0.05];
+      const padding = (contrastLimits[1] - contrastLimits[0]) * 2;
+      setExtraControlProps([
+        {
+          label: 'Tomogram',
+          contrastRange: [contrastLimits[0] - padding, contrastLimits[1] + padding],
+        },
+      ]);
+    }
+  }, []);
 
   const saveTomogram = async () => {
     if (!userCanReview) return;
@@ -199,14 +268,61 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
   };
 
   useEffect(() => {
+    // Detect when tomogram changes
+    const tomogramChanged = previousTomogramId.current !== state.selectedTomogramId;
+    previousTomogramId.current = state.selectedTomogramId;
+
     const loadDetail = async () => {
+      // If tomogram changed, completely remove viewer from DOM first
+      if (tomogramChanged) {
+        setIsLoadingTomogram(true);
+        setShouldRenderViewer(false); // Remove viewer from DOM immediately
+        dispatch({ type: 'SET_DETAIL', payload: null });
+
+        // Reset z-index state when switching tomograms to prevent out-of-bounds errors
+        setZAxisMetadata(null);
+        setCurrentZIndex(0);
+
+        // Reset channel layer state
+        setChannelLayer(null);
+        setExtraControlProps([]);
+
+        // Wait for React to fully unmount the old viewer
+        // Use multiple animation frames to ensure cleanup completes
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                resolve();
+              });
+            });
+          });
+        });
+      }
+
       const url = getRequestURLWithPathParams(DJANGO_URL, '/api/reviews/:reviewId/tomograms/:tomogramId', {
         reviewId: review.reviewId,
         tomogramId: state.selectedTomogramId,
       });
       const res = await fetchResource(url);
       const detail = await res.json();
+
+      // Increment mount key to ensure a fresh remount
+      if (tomogramChanged) {
+        viewerMountKey.current += 1;
+      }
+
       dispatch({ type: 'SET_DETAIL', payload: detail });
+
+      // Use startTransition to ensure state updates happen after unmount
+      if (tomogramChanged) {
+        startTransition(() => {
+          setShouldRenderViewer(true); // Add viewer back to DOM
+          setIsLoadingTomogram(false);
+        });
+      } else {
+        setIsLoadingTomogram(false);
+      }
       dispatch({ type: 'SET_QUALITY', payload: detail.existingReview?.quality || 'pending' });
       dispatch({ type: 'SET_OBJECT_LABELS', payload: detail.existingReview?.objectLabels || [] });
       dispatch({ type: 'SET_REJECTION_REASONS', payload: detail.existingReview?.rejectionReasons || [] });
@@ -231,8 +347,17 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
       }
 
       if (detail.zarrPath) {
-        const region = await getRegionFromZattrs(detail.zarrPath);
-        setRegion(region);
+        // Get z-axis metadata and start with middle z-slice
+        // z axis metadata specifies the valid range of z indices
+        const zMeta = await getZAxisMetadata(detail.zarrPath);
+        setZAxisMetadata(zMeta);
+
+        // Ensure initial index is within valid bounds
+        const initialZIndex = Math.max(0, Math.min(Math.floor(zMeta.count / 2), zMeta.count - 1));
+        setCurrentZIndex(initialZIndex);
+        setZMaxIndex(zMeta.count - 1);
+
+        await getRegionFromZattrs(detail.zarrPath, initialZIndex);
       }
     };
     loadDetail();
@@ -272,22 +397,31 @@ export const TomogramViewerView = ({ review, onReviewUpdate }: TomogramViewerPro
           onPrevious={() => changeTomogram(-1)}
           onNext={() => changeTomogram(1)}
           onSelectTomogram={(id) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: id })}
-          contrastLimits={state.contrastLimits}
-          onContrastLimitsChange={handleContrastLimitsChange}
-          contrastRange={state.contrastRange}
+          currentZIndex={currentZIndex}
+          zAxisMetadata={zAxisMetadata || undefined}
+          onZIndexChange={handleZIndexChange}
+          channelLayer={channelLayer}
+          extraControlProps={extraControlProps}
         />
-        <div className="flex-auto flex flex-col p-6 items-center justify-center border-x-[2px] border-gray-300 bg-gray-200">
-          {state.detail?.zarrPath !== undefined && region !== null && (
-            <OmeZarrImageViewer
-              sourceUrl={state.detail.zarrPath}
-              region={region}
-              fallbackContrastLimits={state.contrastLimits}
-              resolutionLevel={state.detail.reconstructionType?.toLowerCase() === 'sart' ? 0 : 1}
-              seriesDimensionName="z"
-              shouldLoadMiddleZ
-              shouldAutoLoadAllSlices
-              classNames={{ root: 'bg-dark-sds-color-primitive-gray-100' }}
-            />
+        <div className="flex-auto flex flex-col p-6 border-x-[2px] border-gray-300 bg-gray-200 h-full">
+          {shouldRenderViewer &&
+            !isLoadingTomogram &&
+            state.detail?.zarrPath !== undefined &&
+            zAxisMetadata !== null &&
+            zProp !== undefined && (
+              <OmeZarrChunkedImageViewer
+                key={`${state.detail.zarrPath}-${state.selectedTomogramId}-${viewerMountKey.current}`}
+                sourceUrl={state.detail.zarrPath}
+                z={zProp}
+                fallbackContrastLimits={fallbackContrastLimits}
+                classNames={viewerClassNames}
+                onLayerCreated={handleLayerCreated}
+              />
+            )}
+          {(!shouldRenderViewer || isLoadingTomogram) && (
+            <div className="text-center">
+              <p className="text-gray-600">Loading tomogram...</p>
+            </div>
           )}
         </div>
         <div className="flex flex-col gap-3">
