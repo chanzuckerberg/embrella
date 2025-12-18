@@ -15,6 +15,7 @@ interface RecentJob {
   submittedAt: string | null;
   duration: string | null;
   cluster: string;
+  user: string;
 }
 
 interface RecentJobsTableProps {
@@ -55,7 +56,9 @@ export const RecentJobsTable = ({ jobs, isLoading }: RecentJobsTableProps) => {
         ) : (
           <Table>
             <TableHeader>
+              <CellHeader>Job ID</CellHeader>
               <CellHeader>Job Name</CellHeader>
+              <CellHeader>User</CellHeader>
               <CellHeader>Status</CellHeader>
               <CellHeader>Submitted</CellHeader>
               <CellHeader>Duration</CellHeader>
@@ -65,8 +68,12 @@ export const RecentJobsTable = ({ jobs, isLoading }: RecentJobsTableProps) => {
               {jobs.map((job) => (
                 <TableRow key={job.jobId}>
                   <CellComponent>
+                    <span style={{ fontFamily: 'monospace' }}>{job.jobId}</span>
+                  </CellComponent>
+                  <CellComponent>
                     <span style={{ fontWeight: 500 }}>{job.jobName}</span>
                   </CellComponent>
+                  <CellComponent>{job.user}</CellComponent>
                   <CellComponent>
                     <JobStatusBadge status={job.status as JobStatus} />
                   </CellComponent>

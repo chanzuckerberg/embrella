@@ -73,7 +73,7 @@ export const RecentSessionsTable = ({ isLoading: parentLoading }: RecentSessions
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
-          Your Most Recent Sessions
+          Most Recent Sessions
         </Typography>
         <Button sdsType="secondary" sdsStyle="square" size="small" onClick={() => router.push('/sessions/browse')}>
           View All
@@ -100,9 +100,13 @@ export const RecentSessionsTable = ({ isLoading: parentLoading }: RecentSessions
             </TableHeader>
             <TableBody>
               {sessions.map((session) => (
-                <TableRow key={session.id}>
+                <TableRow
+                  key={session.id}
+                  onClick={() => window.location.href = `${DJANGO_URL}/admin/tem/msisession/${session.id}/`}
+                  style={{ cursor: 'pointer' }}
+                >
                   <CellComponent>
-                    <span style={{ fontWeight: 500 }}>{session.name}</span>
+                    <span style={{ fontWeight: 500, color: '#6E4FF9' }}>{session.name}</span>
                   </CellComponent>
                   <CellComponent>{session.projectName}</CellComponent>
                   <CellComponent>{formatDate(session.createdAt)}</CellComponent>
