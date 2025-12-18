@@ -180,6 +180,18 @@ info:
 
     echocolor $GREEN "▸ Running Services:"
 
+    # Check if qcluster is running
+    if [ -f "./logs/qcluster.pid" ]; then
+        QCLUSTER_PID=$(<./logs/qcluster.pid)
+        if kill -0 "$QCLUSTER_PID" 2>/dev/null; then
+            echo "  😀 qcluster (task processor): running (PID: $QCLUSTER_PID)"
+        else
+            echo "  🤮 qcluster (task processor): not running (stale PID file)"
+        fi
+    else
+        echo "  • qcluster (task processor): not running"
+    fi
+
     # Check if gunicorn is running
     if [ -f "./logs/gunicorn_instance.pid" ]; then
         GUNICORN_PID=$(<./logs/gunicorn_instance.pid)
@@ -469,7 +481,7 @@ backupdb +host="umbrella":
     scp ./.scratch/.dbenv svc.czii.umbrella@{{host}}:/srv/dbbackups/.dbenv
     ssh svc.czii.umbrella@{{host}} "chmod 600 /srv/dbbackups/.dbenv"
     echo "Backup up all databases on {{host}}... to /srv/dbbackups/..."
-    ssh svc.czii.umbrella@{{host}} 'export $(cat /srv/dbbackups/.dbenv | xargs) && mysqldump -u $MYSQL_USER --all-databases --verbose > /srv/dbbackups/backup_$(date +%F.%H%M%S).sql'
+    ssh svc.czii.umbrella@{{host}} 'export $(cat /srv/dbbackups/.dbenv | xargs) && mysqldump -u $MYSQL_USER --all-databases --add-drop-database --verbose > /srv/dbbackups/backup_$(date +%F.%H%M%S).sql'
     echo "Done. Backups:"
     ssh svc.czii.umbrella@{{host}} "rm /srv/dbbackups/.dbenv && ls -alh /srv/dbbackups/backup_*.sql"
 
@@ -478,12 +490,13 @@ mirrorproddbtostaging: initenv
     source ./helpers/shell_common.sh
 
     LATEST=$(ssh svc.czii.umbrella@umbrella "cd /srv/dbbackups && ls -t backup_*.sql | head -n 1")
-    scp svc.czii.umbrella@umbrella:/srv/dbbackups/$LATEST svc.czii.umbrella@umbrella-dev:/srv/$LATEST
+    # echo $LATEST
+    scp svc.czii.umbrella@umbrella:/srv/dbbackups/$LATEST svc.czii.umbrella@umbrella-dev:/srv/dbbackups/$LATEST
     scp ./.scratch/.dbenv svc.czii.umbrella@umbrella-dev:/srv/dbbackups/.dbenv
 
     echo "Importing database from snapshot $LATEST..."
     mysql_cli='export $(cat /srv/dbbackups/.dbenv | xargs) && mysql -u umbrella'
-    ssh svc.czii.umbrella@umbrella-dev "$mysql_cli < /srv/$LATEST"
+    ssh svc.czii.umbrella@umbrella-dev "$mysql_cli < /srv/dbbackups/$LATEST"
 
 mirrorproddbtolocal: initenv
     #!/bin/bash
@@ -499,6 +512,23 @@ mirrorproddbtolocal: initenv
 stopprodserve: initenv
     #!/bin/bash
     set -euo pipefail
+
+    # Stop qcluster if it's running
+    if [ -f ./logs/qcluster.pid ]; then
+      pidtokill=$(<./logs/qcluster.pid)
+      if kill -0 "$pidtokill" &> /dev/null; then
+        echo "Killing running instance of qcluster (pid $pidtokill)..."
+        kill -15 $pidtokill
+      else
+        echo "Process $pidtokill from qcluster.pid no longer running"
+      fi
+      rm ./logs/qcluster.pid
+    fi
+    # If there are zombie qcluster processes, kill them
+    if ps aux | grep -v grep | grep "manage.py qcluster" > /dev/null; then
+      echo "Killing zombie qcluster processes..."
+      kill $(ps aux | grep "manage.py qcluster" | grep -v grep | awk '{print $2}') 2>/dev/null || true
+    fi
 
     # Stop backend gunicorn if it's running
     if [ -f ./logs/gunicorn_instance.pid ]; then
@@ -533,8 +563,13 @@ startprodserve: initenv
     # Stop running servers if they're running
     just stopprodserve
 
-    echo "Starting background thread processor"
-    just manage qcluster &
+    echo "Starting background task processor (qcluster)..."
+    mkdir -p ./logs
+    # Daemonize qcluster properly for SSH sessions
+    export_env && nohup setsid uv run ./umbrella/manage.py qcluster >> ./logs/qcluster.log 2>&1 &
+    sleep 1
+    pgrep -f "manage.py qcluster" > ./logs/qcluster.pid || true
+    echo "qcluster started with PID $(cat ./logs/qcluster.pid 2>/dev/null || echo 'unknown')"
 
     echo "Starting gunicorn..."
     export_env && uv run gunicorn --bind 127.0.0.1 --name umbrella umbrella.wsgi:application --chdir ./umbrella --access-logfile ../logs/access.log --error-logfile ../logs/error.log --pid ../logs/gunicorn_instance.pid --daemon

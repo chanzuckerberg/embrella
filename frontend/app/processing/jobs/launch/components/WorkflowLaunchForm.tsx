@@ -778,7 +778,7 @@ export default function WorkflowLaunchForm({
 
         // Auto-redirect to monitoring page after success
         setTimeout(() => {
-          window.location.href = '/processing/monitor';
+          window.location.href = '/processing/jobs/monitor';
         }, 2000);
       }
 

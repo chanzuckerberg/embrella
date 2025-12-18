@@ -204,6 +204,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
     "https://umbrella.czbiohub.org",
     "https://umbrella-dev.czbiohub.org",
+    # HTTP versions for staging (if not behind HTTPS termination)
+    "http://umbrella.czbiohub.org",
+    "http://umbrella-dev.czbiohub.org",
 ]
 # IMPORTANT: Do not enable CORS_ORIGIN_ALLOW_ALL in production!
 # CORS_ORIGIN_ALLOW_ALL = True  # REMOVED: This overrides CORS_ALLOWED_ORIGINS
@@ -233,6 +236,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3000",
     "https://umbrella.czbiohub.org",
     "https://umbrella-dev.czbiohub.org",
+    # HTTP versions for staging (if not behind HTTPS termination)
+    "http://umbrella.czbiohub.org",
+    "http://umbrella-dev.czbiohub.org",
 ]
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",

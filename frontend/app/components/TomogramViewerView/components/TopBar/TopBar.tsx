@@ -15,7 +15,7 @@ export const TopBar = ({ saveState }: TopBarProps) => {
         sdsType="secondary"
         className="!text-[14px]"
         startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="xs" />}
-        onClick={() => router.push('/reviews')}
+        onClick={() => router.push('/processing/tomograms/reviews')}
       >
         Exit review session
       </Button>

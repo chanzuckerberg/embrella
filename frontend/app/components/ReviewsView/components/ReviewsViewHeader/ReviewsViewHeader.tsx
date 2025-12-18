@@ -33,7 +33,7 @@ export const ReviewsViewHeader = () => {
         label="Search Reviews"
         id="search-reviews"
       />
-      <Link href="/reviews/create" className="!mt-auto !mb-auto">
+      <Link href="/processing/tomograms/reviews/create" className="!mt-auto !mb-auto">
         <Button
           sdsStyle="square"
           variant="contained"

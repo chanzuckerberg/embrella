@@ -11,7 +11,7 @@ import {
   DirectoryFilterId,
 } from '@app/components/DirectoryExplorerView/types';
 import { ReviewFilterCategory } from '@app/components/ReviewsView/types';
-import { JobFilterCategory, JobFilterConfig, JobFilterId } from '@app/processing/monitor/types';
+import { JobFilterCategory, JobFilterConfig, JobFilterId } from '@app/processing/jobs/monitor/types';
 // EntityFilterCategory extends EntityFilterCategories
 export interface FiltersList<FilterCategory extends EntityFilterCategories> {
   filters: Record<FilterCategory, FilterOption[]>;

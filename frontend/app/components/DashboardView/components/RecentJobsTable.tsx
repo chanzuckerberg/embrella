@@ -5,8 +5,8 @@ import { Table, TableHeader, TableRow, CellHeader, CellComponent } from '@czi-sd
 import { TableBody } from '@mui/material';
 import { Button } from '@czi-sds/components';
 import { useRouter } from 'next/navigation';
-import { JobStatusBadge } from '@app/processing/monitor/components/JobStatusBadge';
-import type { JobStatus } from '@app/processing/monitor/types';
+import { JobStatusBadge } from '@app/processing/jobs/monitor/components/JobStatusBadge';
+import type { JobStatus } from '@app/processing/jobs/monitor/types';
 
 interface RecentJob {
   jobId: string;
@@ -36,7 +36,7 @@ export const RecentJobsTable = ({ jobs, isLoading }: RecentJobsTableProps) => {
         <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
           Your Most Recent Jobs
         </Typography>
-        <Button sdsType="secondary" sdsStyle="square" size="small" onClick={() => router.push('/processing/logs')}>
+        <Button sdsType="secondary" sdsStyle="square" size="small" onClick={() => router.push('/processing/jobs/logs')}>
           View All
         </Button>
       </Box>

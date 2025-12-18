@@ -6,5 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function ResultsAnnotationsPage() {
-  redirect('/annotations');
+  redirect('/processing/tomograms/annotations');
 }

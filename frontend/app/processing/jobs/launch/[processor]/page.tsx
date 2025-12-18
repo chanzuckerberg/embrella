@@ -3,11 +3,11 @@
 /**
  * Dynamic processor launch page
  *
- * Route: /workflows/launch/[processor]
+ * Route: /processing/jobs/launch/[processor]
  * Examples:
- *   /workflows/launch/aretomo3
- *   /workflows/launch/denoiset
- *   /workflows/launch/copick
+ *   /processing/jobs/launch/aretomo3
+ *   /processing/jobs/launch/denoiset
+ *   /processing/jobs/launch/copick
  */
 
 import { Alert, CircularProgress } from '@mui/material';

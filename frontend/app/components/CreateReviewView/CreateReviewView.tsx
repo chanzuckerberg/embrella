@@ -379,7 +379,7 @@ export const CreateReviewView = () => {
                   requestor: currentUser?.id,
                 });
                 if (submitResponse.status === 201) {
-                  router.push(`/reviews/`);
+                  router.push(`/processing/tomograms/reviews/`);
                 } else {
                   const responseData = await submitResponse.json();
                   if (responseData.error) {

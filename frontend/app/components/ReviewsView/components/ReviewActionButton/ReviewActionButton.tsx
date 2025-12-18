@@ -31,7 +31,7 @@ export const ReviewActionButton = ({
   // Check if all tomograms have been reviewed
   const allTomogramsReviewed = reviewedCount > 0 && reviewedCount === totalCount;
 
-  const reviewUrl = `/reviews/${reviewId}`;
+  const reviewUrl = `/processing/tomograms/reviews/${reviewId}`;
 
   // Download handler for export
   const handleExportResults = async () => {
