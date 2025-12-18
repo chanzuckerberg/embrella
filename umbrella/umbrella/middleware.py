@@ -51,8 +51,9 @@ class APIAuthenticationMiddleware(MiddlewareMixin):
 
                 # Check if this is a fetch/AJAX request using the Fetch API or XMLHttpRequest
                 # The key indicator is the 'Sec-Fetch-Mode' header
-                # 'cors' = fetch API, 'navigate' = browser navigation
-                is_fetch_request = fetch_mode == 'cors'
+                # 'cors' = cross-origin fetch, 'same-origin' = same-origin fetch, 'navigate' = browser navigation
+                # We want to intercept both cors AND same-origin fetch requests
+                is_fetch_request = fetch_mode in ('cors', 'same-origin')
 
                 # Also check for XMLHttpRequest
                 is_ajax = x_requested_with == 'XMLHttpRequest'

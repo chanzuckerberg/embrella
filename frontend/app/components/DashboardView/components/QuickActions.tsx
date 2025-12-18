@@ -17,9 +17,9 @@ interface QuickAction {
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { label: 'Launch Job', href: '/workflows/launch', icon: <LaunchIcon /> },
+  { label: 'Launch Job', href: '/processing/jobs/launch', icon: <LaunchIcon /> },
   { label: 'New Session', href: '/sessions/new', icon: <SessionIcon /> },
-  { label: 'Grid Logging', href: '/grid_logging', icon: <GridIcon /> },
+  { label: 'Grid Logging', href: '/samples/grid_logging', icon: <GridIcon /> },
   { label: 'Browse Sessions', href: '/sessions/browse', icon: <ListIcon /> },
 ];
 

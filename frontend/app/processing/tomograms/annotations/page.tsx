@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: 'Embrella Annotations',
 };
 
-const AnntationsPage = () => {
+const AnnotationsPage = () => {
   return <AnnotationsView />;
 };
 
-export default AnntationsPage;
+export default AnnotationsPage;

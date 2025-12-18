@@ -6,5 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function SamplesGridsPage() {
-  redirect('/cryo_grids');
+  redirect('/samples/cryo_grids');
 }

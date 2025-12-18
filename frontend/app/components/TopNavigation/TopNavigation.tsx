@@ -27,41 +27,41 @@ interface SubNavItem {
 const MAIN_NAV_ITEMS: NavItem[] = [
   { label: 'Samples', href: '/samples/grids', section: 'samples' },
   { label: 'Sessions', href: '/sessions/new', section: 'sessions' },
-  { label: 'Processing', href: '/processing/monitor', section: 'processing' },
+  { label: 'Processing', href: '/processing/jobs/monitor', section: 'processing' },
 ];
 
 // Processing section uses dropdowns instead of flat sub-nav items
 // Jobs dropdown items
 const JOBS_DROPDOWN_ITEMS = [
-  { name: 'launch', label: 'Launch new job', href: '/workflows/launch' },
-  { name: 'current', label: 'View running jobs', href: '/processing/monitor' },
-  { name: 'logs', label: 'View past jobs', href: '/processing/logs' },
+  { name: 'launch', label: 'Launch new job', href: '/processing/jobs/launch' },
+  { name: 'current', label: 'View running jobs', href: '/processing/jobs/monitor' },
+  { name: 'logs', label: 'View past jobs', href: '/processing/jobs/logs' },
 ];
 
 // Tomograms dropdown items (Reviews is conditional on feature flag)
 const getTomogramsDropdownItems = (isReviewEnabled: boolean) => {
   const items = [];
   if (isReviewEnabled) {
-    items.push({ name: 'reviews', label: 'Reviews', href: '/reviews' });
+    items.push({ name: 'reviews', label: 'Reviews', href: '/processing/tomograms/reviews' });
   }
   items.push(
-    { name: 'metadata', label: 'Metadata', href: '/tomograms' },
-    { name: 'annotations', label: 'Annotations', href: '/annotations' }
+    { name: 'metadata', label: 'Metadata', href: '/processing/tomograms/metadata' },
+    { name: 'annotations', label: 'Annotations', href: '/processing/tomograms/annotations' }
   );
   return items;
 };
 
 // Data dropdown items
 const DATA_DROPDOWN_ITEMS = [
-  { name: 'storage', label: 'Storage Explorer', href: '/processing/storage' },
-  { name: 'export', label: 'Export', href: '/processing/export' },
+  { name: 'storage', label: 'Storage Explorer', href: '/processing/data/storage' },
+  { name: 'export', label: 'Export', href: '/processing/data/export' },
 ];
 
 const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
   home: [],
   samples: [
-    { label: 'Grid Logging', href: '/grid_logging' },
-    { label: 'Grid Inventory', href: '/cryo_grids' },
+    { label: 'Grid Logging', href: '/samples/grid_logging' },
+    { label: 'Grid Inventory', href: '/samples/cryo_grids' },
     { label: 'Grid Boxes', href: '/samples/boxes' },
     { label: 'Clear Cassette', href: '/samples/clear-cassette' },
   ],
@@ -210,14 +210,13 @@ export const TopNavigation = () => {
   const [isDataDropdownOpen, setIsDataDropdownOpen] = useState(false);
 
   // Check if any Jobs route is active
-  const isJobsActive =
-    pathname === '/workflows/launch' || pathname === '/processing/monitor' || pathname === '/processing/logs';
+  const isJobsActive = pathname.startsWith('/processing/jobs');
 
   // Check if any Tomograms route is active
-  const isTomogramsActive = pathname === '/reviews' || pathname === '/tomograms' || pathname === '/annotations';
+  const isTomogramsActive = pathname.startsWith('/processing/tomograms');
 
   // Check if any Data route is active
-  const isDataActive = pathname === '/processing/storage' || pathname === '/processing/export';
+  const isDataActive = pathname.startsWith('/processing/data');
 
   const handleLogout = () => {
     // Redirect to logout and then back to frontend home page
@@ -228,17 +227,9 @@ export const TopNavigation = () => {
   // Determine active section based on pathname
   const getActiveSection = (): NavSection => {
     if (pathname === '/') return 'home';
-    if (pathname.startsWith('/samples') || pathname === '/grid_logging' || pathname === '/cryo_grids') return 'samples';
+    if (pathname.startsWith('/samples')) return 'samples';
     if (pathname.startsWith('/sessions')) return 'sessions';
-    if (
-      pathname.startsWith('/processing') ||
-      pathname.startsWith('/workflows') ||
-      pathname.startsWith('/data') ||
-      pathname.startsWith('/tomograms') ||
-      pathname.startsWith('/annotations') ||
-      pathname.startsWith('/reviews')
-    )
-      return 'processing';
+    if (pathname.startsWith('/processing')) return 'processing';
     return 'home';
   };
 

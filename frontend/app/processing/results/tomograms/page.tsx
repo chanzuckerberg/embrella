@@ -6,5 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function ResultsTomogramsPage() {
-  redirect('/tomograms');
+  redirect('/processing/tomograms/metadata');
 }

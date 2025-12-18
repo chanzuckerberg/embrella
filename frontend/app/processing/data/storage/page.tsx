@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { DirectoryExplorerView } from '../../components/DirectoryExplorerView';
+import { DirectoryExplorerView } from '@app/components/DirectoryExplorerView';
 
 export const metadata: Metadata = {
   title: 'Embrella Storage Explorer',

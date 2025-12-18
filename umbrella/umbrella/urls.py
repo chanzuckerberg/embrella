@@ -125,11 +125,9 @@ legacy_patterns = [
 ]
 
 urlpatterns = ([
-    # Root redirect
-    # NOTE: In development, Django (port 8000) redirects to /umbrella/ (legacy)
-    # In production, nginx should route root (/) to Next.js (port 3000) instead
-    # Users should access the new dashboard at http://localhost:3000/
-    path('', RedirectView.as_view(url='/umbrella/', permanent=False)),
+    # Root redirect to legacy umbrella (for direct Django access)
+    # In production, nginx routes root (/) to Next.js frontend
+    path('', RedirectView.as_view(url='/legacy/umbrella/', permanent=False)),
 
     # Django admin and authentication
     # Note: Specific paths must come BEFORE the admin catchall
@@ -143,11 +141,16 @@ urlpatterns = ([
     # Documentation
     re_path(r'^docs/(?P<path>.*)$', documentation_view, name="docs"),
 
-    # Legacy template-based views (temporary - being migrated to Next.js)
-    # These are available at both /legacy/* and root level during migration
+    # Legacy template-based views (all under /legacy/ prefix)
     path('legacy/', include(legacy_patterns)),
+
+    # API routes for Next.js frontend (these apps have v1/ API endpoints)
+    # Note: These also include legacy template routes which should eventually move to /legacy/
+    path('workflow/', include('workflow.urls'), name='workflow'),
+    path('cryo_grids/', include('cryo_grids.urls'), name='cryo_grids'),
+    path('processes/', include('processes.urls'), name='processes'),
+    path('projects/', include('projects.urls'), name='projects'),
 ]
-+ legacy_patterns  # Keep at root level during transition
 + api_patterns     # API endpoints
 )
 
@@ -158,6 +161,6 @@ urlpatterns += router.urls
 # change header name
 admin.site.site_header = 'Embrella'
 admin.site.site_title = 'Embrella'
-admin.site.site_url = '/umbrella'
+admin.site.site_url = '/legacy/umbrella'
 
 
