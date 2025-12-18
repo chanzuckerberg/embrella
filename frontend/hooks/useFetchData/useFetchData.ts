@@ -10,7 +10,11 @@ interface UseFetchData<D> {
   refetch: () => void;
 }
 
-export const useFetchData = <D>(relativeURL: string, searchParam: Record<string, unknown> = {}): UseFetchData<D> => {
+export const useFetchData = <D>(
+  relativeURL: string,
+  searchParam: Record<string, unknown> = {},
+  shouldFetch: boolean = true
+): UseFetchData<D> => {
   const [dataState, setDataState] = useState<{ data?: D; isSuccess: boolean }>({
     isSuccess: false,
   });
@@ -22,6 +26,8 @@ export const useFetchData = <D>(relativeURL: string, searchParam: Record<string,
   }, []);
 
   useEffect(() => {
+    if (!shouldFetch) return;
+
     (async (): Promise<D> => {
       setDataState((d) => ({
         ...d,
@@ -43,7 +49,7 @@ export const useFetchData = <D>(relativeURL: string, searchParam: Record<string,
       .catch((err) => {
         console.error(err);
       });
-  }, [requestURL, relativeURL, refetchTrigger]);
+  }, [requestURL, relativeURL, refetchTrigger, shouldFetch]);
 
   return { ...dataState, refetch };
 };

@@ -5,20 +5,42 @@ Contains ViewSets for managing Pucks, CryoGridBoxes, and grid logging choices.
 """
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db import transaction
+from django.db.models.functions import Lower
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-
-from cryo_grids.models import CryoGrid, CryoGridBox, Puck
-from cryo_grids.serializers import CryoGridBoxSerializer, GridDetailsSerializer, PuckSerializer
 from umbrella.choices import (
     CANE_COLORS,
     GRID_BOX_COLORS,
     GRID_BOX_NUMBERING,
     GRID_CASSETTE_NUMBERING,
     PUCK_COLORS,
+)
+
+from cryo_grids.models import (
+    Cane,
+    CryoGrid,
+    CryoGridBox,
+    PlungeFreezingDevice,
+    PlungeFreezingSession,
+    Puck,
+    Sample,
+    Specimen,
+)
+from cryo_grids.serializers import (
+    CaneSerializer,
+    CryoGridBoxSerializer,
+    CryoGridSerializer,
+    FreezingSessionSerializer,
+    GridDetailsSerializer,
+    PuckSerializer,
+    SampleSerializer,
+    SpecimenSerializer,
 )
 
 
@@ -123,10 +145,13 @@ class PuckViewSet(viewsets.ModelViewSet):
             puck = self.get_object()
 
             # Get all grid boxes for this puck
-            grid_boxes = CryoGridBox.objects.filter(puck=puck).values('id', 'position_in_puck')
+            grid_boxes = CryoGridBox.objects.filter(puck=puck).values('id', 'position_in_puck', 'name')
 
-            # Create a mapping of position to grid box
-            filled_positions = {box['position_in_puck']: box['id'] for box in grid_boxes}
+            # Create a mapping of position to grid box info
+            filled_positions = {
+                box['position_in_puck']: {'id': box['id'], 'name': box['name']}
+                for box in grid_boxes
+            }
 
             # Generate slots array for puck positions
             slots = []
@@ -135,7 +160,8 @@ class PuckViewSet(viewsets.ModelViewSet):
                     slots.append({
                         "position": position,
                         "status": "filled",
-                        "grid_box_id": filled_positions[position],
+                        "grid_box_id": filled_positions[position]['id'],
+                        "grid_box_name": filled_positions[position]['name'],
                     })
                 else:
                     slots.append({
@@ -193,7 +219,7 @@ class PuckViewSet(viewsets.ModelViewSet):
                 grid_box=grid_box,
                 trashed=False,
             ).select_related('specimen').values(
-                'id', 'name', 'position_in_box',
+                'id', 'name', 'position_in_box', 'clipped',
             )
 
             # Create positions array (1-4 quadrants)
@@ -210,6 +236,7 @@ class PuckViewSet(viewsets.ModelViewSet):
                         "occupied": True,
                         "grid_id": f"{grid_at_position['id']}",
                         "grid_name": grid_at_position['name'],
+                        "clipped": grid_at_position['clipped'],
                     })
                 else:
                     positions.append({
@@ -335,6 +362,244 @@ class PuckViewSet(viewsets.ModelViewSet):
                 "detail": str(e) if settings.DEBUG else "Please try again later",
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @method_decorator(csrf_exempt)
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete a puck and handle cascading operations:
+        1. Trash all grids in grid boxes belonging to this puck
+        2. Delete all grid boxes in this puck
+        3. Delete the puck itself
+
+        URL: DELETE /api/list/pucks/{puck_id}/
+        """
+        try:
+            puck = self.get_object()
+            puck_name = puck.name
+
+            stats = {
+                'grids_trashed': 0,
+                'grid_boxes_deleted': 0,
+                'puck_deleted': False,
+            }
+
+            with transaction.atomic():
+                # Get all grid boxes belonging to this puck
+                grid_boxes = CryoGridBox.objects.filter(puck=puck)
+                grid_box_count = grid_boxes.count()
+
+                # Get all grids in the grid boxes
+                for grid_box in grid_boxes:
+                    grids = CryoGrid.objects.filter(
+                        grid_box=grid_box,
+                        trashed=False,
+                    )
+
+                    # Trash all grids
+                    grids_updated = grids.update(
+                        trashed=True,
+                        grid_box=None,
+                        position_in_box=None,
+                    )
+                    stats['grids_trashed'] += grids_updated
+
+                # Delete all grid boxes
+                grid_boxes.delete()
+                stats['grid_boxes_deleted'] = grid_box_count
+
+                # Delete the puck itself
+                puck.delete()
+                stats['puck_deleted'] = True
+
+            return Response({
+                'success': True,
+                'message': f'Puck "{puck_name}" deleted successfully',
+                'stats': stats,
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Failed to delete puck',
+                'detail': str(e) if settings.DEBUG else 'Please try again later',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['patch'], url_path='grid-box/(?P<grid_box_id>[0-9]+)/update')
+    def update_grid_box(self, request, grid_box_id=None):
+        """
+        Update a grid box's information
+        URL: PATCH /api/list/pucks/grid-box/{grid_box_id}/update/
+        """
+        try:
+            try:
+                grid_box = CryoGridBox.objects.get(id=grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid box not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # Use serializer for validation and update
+            serializer = CryoGridBoxSerializer(grid_box, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            return Response({
+                'success': True,
+                'message': 'Grid box updated successfully',
+                'grid_box': {
+                    'id': grid_box.id,
+                    'name': grid_box.name,
+                    'color': grid_box.color,
+                    'color_display': grid_box.get_color_display(),
+                    'numbering': grid_box.numbering,
+                    'numbering_display': grid_box.get_numbering_display(),
+                    'position_in_puck': grid_box.position_in_puck,
+                    'max_grids': grid_box.max_grids,
+                },
+            }, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Failed to update grid box',
+                'detail': str(e) if settings.DEBUG else 'An error occurred while updating the grid box',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['delete'], url_path='grid-box/(?P<grid_box_id>[0-9]+)')
+    def delete_grid_box(self, request, grid_box_id=None):
+        """
+        Delete a grid box and trash all grids inside it
+        URL: DELETE /api/list/pucks/grid-box/{grid_box_id}/
+        """
+        try:
+            try:
+                grid_box = CryoGridBox.objects.get(id=grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid box not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            grid_box_name = grid_box.name
+            stats = {'grids_trashed': 0}
+
+            with transaction.atomic():
+                # Trash all grids in the grid box
+                grids = CryoGrid.objects.filter(grid_box=grid_box, trashed=False)
+                stats['grids_trashed'] = grids.update(
+                    trashed=True,
+                    grid_box=None,
+                    position_in_box=None,
+                )
+
+                # Delete the grid box
+                grid_box.delete()
+
+            return Response({
+                'success': True,
+                'message': f'Grid box "{grid_box_name}" deleted successfully',
+                'stats': stats,
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Failed to delete grid box',
+                'detail': str(e) if settings.DEBUG else 'Please try again later',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['patch'], url_path='grid-box/(?P<grid_box_id>[0-9]+)/move')
+    def move_grid_box(self, request, grid_box_id=None):
+        """
+        Move a grid box to a different puck and/or position
+        URL: PATCH /api/list/pucks/grid-box/{grid_box_id}/move/
+        """
+        try:
+            try:
+                grid_box = CryoGridBox.objects.get(id=grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid box not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            new_puck_id = request.data.get('puck_id')
+            new_position = request.data.get('position_in_puck')
+
+            if not new_puck_id or not new_position:
+                return Response({
+                    'success': False,
+                    'error': 'Both puck_id and position_in_puck are required',
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                new_puck = Puck.objects.get(id=new_puck_id)
+            except Puck.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': f'Puck with ID {new_puck_id} not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            new_position = int(new_position)
+
+            # Check if position is valid for the puck
+            if new_position < 1 or new_position > new_puck.max_boxes:
+                return Response({
+                    'success': False,
+                    'error': f'Position must be between 1 and {new_puck.max_boxes}',
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if position is already occupied (excluding current grid box)
+            existing = CryoGridBox.objects.filter(
+                puck=new_puck,
+                position_in_puck=new_position,
+            ).exclude(id=grid_box_id).first()
+
+            if existing:
+                return Response({
+                    'success': False,
+                    'error': f'Position {new_position} in puck is already occupied by "{existing.name}"',
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Update the grid box
+            old_puck_name = grid_box.puck.name if grid_box.puck else 'None'
+            old_position = grid_box.position_in_puck
+
+            grid_box.puck = new_puck
+            grid_box.position_in_puck = new_position
+            grid_box.save()
+
+            return Response({
+                'success': True,
+                'message': 'Grid box moved successfully',
+                'grid_box': {
+                    'id': grid_box.id,
+                    'name': grid_box.name,
+                    'old_puck': old_puck_name,
+                    'old_position': old_position,
+                    'new_puck': new_puck.name,
+                    'new_position': new_position,
+                },
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Failed to move grid box',
+                'detail': str(e) if settings.DEBUG else 'Please try again later',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
 class GridLoggingChoicesViewSet(viewsets.ViewSet):
     """
@@ -368,4 +633,450 @@ class GridLoggingChoicesViewSet(viewsets.ViewSet):
                 {'value': code, 'label': name}
                 for code, name in GRID_CASSETTE_NUMBERING
             ],
+        })
+
+
+class CaneViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for listing Canes
+    READ-ONLY - supports list and retrieve
+    URL: /api/canes/
+    """
+    permission_classes = []
+    authentication_classes = []
+    serializer_class = CaneSerializer
+    queryset = Cane.objects.select_related('dewar').order_by('name')
+
+    def list(self, request, *args, **kwargs):
+        """
+        List all canes with pagination support
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Optional filtering by dewar_id
+        dewar_id = request.query_params.get('dewar_id')
+        if dewar_id:
+            queryset = queryset.filter(dewar_id=dewar_id)
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response({
+            'canes': serializer.data,
+            'total_count': queryset.count(),
+        })
+
+
+class SpecimenViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Specimen model with full CRUD operations
+    URL: /api/specimens/
+    """
+    permission_classes = []
+    authentication_classes = []
+    serializer_class = SpecimenSerializer
+    queryset = Specimen.objects.prefetch_related('samples').select_related('documentation_page')
+
+    def list(self, request, *args, **kwargs):
+        """List all specimens"""
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response({
+            'specimens': serializer.data,
+            'total_count': queryset.count(),
+        })
+
+    def create(self, request, *args, **kwargs):
+        """Create a new specimen"""
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            specimen = serializer.save()
+
+            return Response({
+                'success': True,
+                'message': 'Specimen created successfully',
+                'specimen': SpecimenSerializer(specimen).data,
+            }, status=status.HTTP_201_CREATED)
+
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Get detailed information about a specific specimen.
+        URL: GET /api/list/specimens/{specimen_id}/
+        """
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except Specimen.DoesNotExist:
+            return Response({
+                'error': 'Specimen not found',
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                'error': 'Internal server error occurred while fetching specimen',
+                'detail': str(e) if settings.DEBUG else 'Please try again later',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class SampleViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Sample model with full CRUD operations
+    URL: /api/samples/
+    """
+    permission_classes = []
+    authentication_classes = []
+    serializer_class = SampleSerializer
+    queryset = Sample.objects.all().order_by(Lower('name'))
+
+    def list(self, request, *args, **kwargs):
+        """List all samples"""
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response({
+            'samples': serializer.data,
+            'total_count': queryset.count(),
+        })
+
+    def create(self, request, *args, **kwargs):
+        """Create a new sample"""
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            sample = serializer.save()
+
+            return Response({
+                'success': True,
+                'message': 'Sample created successfully',
+                'sample': SampleSerializer(sample).data,
+            }, status=status.HTTP_201_CREATED)
+
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class FreezingSessionViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for PlungeFreezingSession model with full CRUD operations
+    URL: /api/freezing-sessions/
+    """
+    permission_classes = []
+    authentication_classes = []
+    serializer_class = FreezingSessionSerializer
+    queryset = PlungeFreezingSession.objects.select_related(
+        'user', 'device', 'documentation_page',
+    ).order_by('-datetime')
+
+    def list(self, request, *args, **kwargs):
+        """List all freezing sessions"""
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Optional filtering by user_id
+        user_id = request.query_params.get('user_id')
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response({
+            'freezing_sessions': serializer.data,
+            'total_count': queryset.count(),
+        })
+
+    def create(self, request, *args, **kwargs):
+        """Create a new freezing session"""
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            session = serializer.save()
+
+            return Response({
+                'success': True,
+                'message': 'Freezing session created successfully',
+                'freezing_session': FreezingSessionSerializer(session).data,
+            }, status=status.HTTP_201_CREATED)
+
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'], url_path='devices')
+    def get_devices(self, request):
+        """
+        Get all plunge freezing devices.
+        URL: /api/list/freezing-sessions/devices/
+        """
+        try:
+            devices = PlungeFreezingDevice.objects.all().order_by('name')
+            device_list = [
+                {
+                    'id': device.id,
+                    'name': device.name,
+                    'maker_model': device.maker_model,
+                }
+                for device in devices
+            ]
+            return Response({
+                'devices': device_list,
+                'total_devices_count': len(device_list),
+            })
+        except Exception as e:
+            return Response({
+                'error': 'Internal server error occurred while fetching devices',
+                'detail': str(e) if settings.DEBUG else 'Please try again later',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CryoGridViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for CryoGrid model
+    URL: /api/list/grids/
+    """
+    queryset = CryoGrid.objects.filter(trashed=False).select_related(
+        'user', 'grid_box', 'specimen', 'freezing_session', 'intended_project',
+    ).order_by('-id')
+    serializer_class = CryoGridSerializer
+    permission_classes = []
+    authentication_classes = []
+
+    @method_decorator(csrf_exempt)
+    def create(self, request, *args, **kwargs):
+        """Create a new grid"""
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            grid = serializer.save()
+
+            return Response({
+                'success': True,
+                'message': 'Grid created successfully',
+                'grid': CryoGridSerializer(grid).data,
+            }, status=status.HTTP_201_CREATED)
+
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['patch'], url_path=r'(?P<grid_id>[0-9]+)/move')
+    def move_grid(self, request, grid_id=None):
+        """
+        Move a grid to a different grid box and/or position.
+        URL: PATCH /api/list/grids/{grid_id}/move/
+        """
+        try:
+            try:
+                grid = CryoGrid.objects.get(id=grid_id, trashed=False)
+            except CryoGrid.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid not found or has been trashed',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            destination_grid_box_id = request.data.get('destination_grid_box_id')
+            destination_position = request.data.get('destination_position')
+
+            if not destination_grid_box_id or not destination_position:
+                return Response({
+                    'success': False,
+                    'error': 'Both destination_grid_box_id and destination_position are required',
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                destination_grid_box = CryoGridBox.objects.get(id=destination_grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': f'Destination grid box with ID {destination_grid_box_id} not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            destination_position = int(destination_position)
+
+            # Validate position is within grid box's range
+            if destination_position < 1 or destination_position > destination_grid_box.max_grids:
+                return Response({
+                    'success': False,
+                    'error': f'Position must be between 1 and {destination_grid_box.max_grids}',
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if destination position is already occupied
+            existing_grid = CryoGrid.objects.filter(
+                grid_box=destination_grid_box,
+                position_in_box=destination_position,
+                trashed=False,
+            ).exclude(id=grid_id).first()
+
+            if existing_grid:
+                return Response({
+                    'success': False,
+                    'error': f'Position {destination_position} in grid box {destination_grid_box.name} is already occupied by grid "{existing_grid.name}"',
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Store old location for response
+            old_grid_box_name = grid.grid_box.name if grid.grid_box else 'None'
+            old_position = grid.position_in_box
+
+            # Update grid location
+            grid.grid_box = destination_grid_box
+            grid.position_in_box = destination_position
+            grid.save()
+
+            return Response({
+                'success': True,
+                'message': f'Grid "{grid.name}" moved from {old_grid_box_name} position {old_position} to {destination_grid_box.name} position {destination_position}',
+                'grid': CryoGridSerializer(grid).data,
+            }, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Internal server error occurred while moving grid',
+                'detail': str(e) if settings.DEBUG else 'Please try again later',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['patch'], url_path=r'(?P<grid_id>[0-9]+)/update')
+    def update_grid(self, request, grid_id=None):
+        """
+        Update a grid's information.
+        URL: PATCH /api/list/grids/{grid_id}/update/
+        """
+        try:
+            try:
+                grid = CryoGrid.objects.get(id=grid_id, trashed=False)
+            except CryoGrid.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid not found or has been trashed',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            serializer = CryoGridSerializer(grid, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            return Response({
+                'success': True,
+                'message': 'Grid updated successfully',
+                'grid': CryoGridSerializer(grid).data,
+            }, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'error': 'Validation error',
+                'detail': e.detail,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Failed to update grid',
+                'detail': str(e) if settings.DEBUG else 'An error occurred while updating the grid',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=['post'], url_path=r'clip-all-in-box/(?P<grid_box_id>[0-9]+)')
+    def clip_all_in_box(self, request, grid_box_id=None):
+        """
+        Clip all grids in a specific grid box.
+        URL: POST /api/list/grids/clip-all-in-box/{grid_box_id}/
+        """
+        try:
+            try:
+                grid_box = CryoGridBox.objects.get(id=grid_box_id)
+            except CryoGridBox.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Grid box not found',
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # Get all non-trashed, unclipped grids in this box
+            grids = CryoGrid.objects.filter(
+                grid_box=grid_box,
+                trashed=False,
+                clipped=False,
+            )
+
+            grids_count = grids.count()
+
+            if grids_count == 0:
+                return Response({
+                    'success': True,
+                    'message': 'No unclipped grids found in this grid box',
+                    'updated_count': 0,
+                }, status=status.HTTP_200_OK)
+
+            # Update all grids to clipped=True
+            updated_count = grids.update(clipped=True)
+
+            return Response({
+                'success': True,
+                'message': f'Successfully clipped {updated_count} grid(s)',
+                'updated_count': updated_count,
+                'grid_box_id': int(grid_box_id),
+                'grid_box_name': grid_box.name,
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': str(e) if settings.DEBUG else 'Internal server error',
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProjectLeaderViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for listing users who can be project leaders
+    READ-ONLY - supports list and retrieve
+    URL: /api/project-leaders/
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def get_queryset(self):
+        """Get all active users who could be project leaders"""
+        return User.objects.filter(is_active=True).order_by('username')
+
+    def list(self, request, *args, **kwargs):
+        """List all potential project leaders"""
+        queryset = self.get_queryset()
+
+        leaders = [
+            {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
+            }
+            for user in queryset
+        ]
+
+        return Response({
+            'project_leaders': leaders,
+            'total_count': len(leaders),
         })

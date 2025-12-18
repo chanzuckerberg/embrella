@@ -14,25 +14,28 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.conf import settings
-from django.contrib import admin
-from django.contrib.auth import views as auth_views
-from django.urls import include, path, re_path
-from django.views.generic import RedirectView
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-from processes.views import available_annotation_filter
-from rest_framework.routers import DefaultRouter
-
-from custom.views import version_info
-from umbrella.views import custom_login_view, custom_logout_view, custom_google_sso_callback
-
 # Import API views from their respective app-level modules
 from cryo_grids.api.views import (
     get_available_grids,
     get_grids_by_cassette,
     get_grids_by_user,
 )
-from cryo_grids.viewsets import GridLoggingChoicesViewSet, PuckViewSet
+from cryo_grids.viewsets import (
+    CaneViewSet,
+    CryoGridViewSet,
+    FreezingSessionViewSet,
+    GridLoggingChoicesViewSet,
+    ProjectLeaderViewSet,
+    PuckViewSet,
+    SampleViewSet,
+    SpecimenViewSet,
+)
+from custom.views import version_info
+from django.conf import settings
+from django.contrib import admin
+from django.urls import include, path, re_path
+from django.views.generic import RedirectView
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from processes.api.views import (
     ReviewTomogramView,
     ReviewView,
@@ -40,10 +43,13 @@ from processes.api.views import (
     get_review_tomograms,
     get_tomo_by_msi_session,
 )
+from processes.views import available_annotation_filter
+from rest_framework.routers import DefaultRouter
 from tem.api.views import SessionView
 
 from umbrella.ping import ping
 from umbrella.user import get_user_info
+from umbrella.views import custom_google_sso_callback, custom_login_view, custom_logout_view
 from umbrella.viewsets import UserViewSet
 
 # Create a router and register our viewsets with it
@@ -51,6 +57,14 @@ router = DefaultRouter()
 router.register(r'api/list/all/users', UserViewSet, basename='user')
 router.register(r'api/list/pucks', PuckViewSet, basename='puck')
 router.register(r'api/grid-logging/choices', GridLoggingChoicesViewSet, basename='grid-logging-choices')
+
+# Grid Logging ViewSets
+router.register(r'api/list/canes', CaneViewSet, basename='cane')
+router.register(r'api/list/specimens', SpecimenViewSet, basename='specimen')
+router.register(r'api/list/samples', SampleViewSet, basename='sample')
+router.register(r'api/list/freezing-sessions', FreezingSessionViewSet, basename='freezing-session')
+router.register(r'api/list/grids', CryoGridViewSet, basename='grid')
+router.register(r'api/list/project-leaders', ProjectLeaderViewSet, basename='project-leader')
 
 import mimetypes
 
