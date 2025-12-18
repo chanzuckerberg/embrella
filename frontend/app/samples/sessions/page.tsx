@@ -19,14 +19,14 @@ export default function TEMSessionsPage() {
           <Button
             variant="contained"
             color="primary"
-            onClick={() => (window.location.href = `${DJANGO_URL}/tem/reserve`)}
+            onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/reserve`)}
           >
             New Single-Grid TEM Session
           </Button>
           <Button
             variant="contained"
             color="primary"
-            onClick={() => (window.location.href = `${DJANGO_URL}/tem/scrnreserve`)}
+            onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/scrnreserve`)}
           >
             Screen Multiple Grids
           </Button>

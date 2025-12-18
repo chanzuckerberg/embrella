@@ -18,7 +18,7 @@ export default function ScreenMultipleGridsPage() {
         <Button
           sdsType="primary"
           sdsStyle="rounded"
-          onClick={() => (window.location.href = `${DJANGO_URL}/tem/detail/`)}
+          onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/detail/`)}
         >
           Start Screening Session
         </Button>

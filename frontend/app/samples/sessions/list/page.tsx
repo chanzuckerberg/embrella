@@ -26,7 +26,7 @@ export default function TEMSessionsListPage() {
           <Button
             variant="contained"
             color="primary"
-            onClick={() => (window.location.href = `${DJANGO_URL}/tem/render_screening_form`)}
+            onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/render_screening_form`)}
           >
             View Multi-Grid Screens
           </Button>
