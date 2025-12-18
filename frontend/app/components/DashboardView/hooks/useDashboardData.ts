@@ -12,6 +12,7 @@ interface RecentJob {
   submittedAt: string | null;
   duration: string | null;
   cluster: string;
+  user: string;
 }
 
 interface DashboardData {
@@ -61,6 +62,7 @@ export const useDashboardData = (): DashboardData => {
               submittedAt: string | null;
               duration: string | null;
               cluster: string;
+              user: string;
             }) => ({
               jobId: job.job.id,
               jobName: job.jobName,
@@ -68,6 +70,7 @@ export const useDashboardData = (): DashboardData => {
               submittedAt: job.submittedAt,
               duration: job.duration,
               cluster: job.cluster,
+              user: job.user,
             })
           );
 
