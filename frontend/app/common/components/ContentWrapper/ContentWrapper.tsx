@@ -8,8 +8,9 @@ interface ContentWrapperProps {
 
 export function ContentWrapper({ children }: ContentWrapperProps) {
   const pathname = usePathname();
-  // Full-width pages without navbar offset (e.g., tomogram viewer)
-  const isFullWidthPage = /^\/processing\/tomograms\/reviews\/[^/]+$/.test(pathname);
+  // Full-width pages without navbar offset (e.g., tomogram viewer, metadata view)
+  const isFullWidthPage =
+    /^\/processing\/tomograms\/reviews\/[^/]+$/.test(pathname) || /^\/metadata\/view\/[^/]+\/[^/]+$/.test(pathname);
 
   if (isFullWidthPage) {
     return <>{children}</>;

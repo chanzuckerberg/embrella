@@ -68,7 +68,7 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
       runNumber = runNumber.replace(/\s*\(id=\d+\)/g, '').trim();
       return {
         children: 'View Metadata',
-        href: `metadata/view/${encodeURIComponent(sessionName)}/${encodeURIComponent(runNumber)}`,
+        href: `/metadata/view/${encodeURIComponent(sessionName)}/${encodeURIComponent(runNumber)}`,
       };
     },
     cell: getLinkCellFromCellContext,
