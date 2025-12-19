@@ -7,15 +7,13 @@ import { QualityControls } from './components/QualityControls';
 import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
 import { OmeZarrChunkedImageViewer, IdetikProvider } from '@idetik/react';
-import { ChunkedImageLayer, ChannelsEnabled } from '@idetik/core';
+import { ChunkedImageLayer, ChannelsEnabled, createImageSourcePolicy } from '@idetik/core';
 import { getRegionFromZattrs, getZAxisMetadata } from './utils';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURLWithPathParams, getRequestURL } from '@app/common/queries/utils';
 import { DJANGO_URL } from '@app/common/constants/api';
-// import { UserContext } from '@app/common/context/UserProvider';
-// import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
 
 // Wrapper component - provider is now inside the inner component to allow remounting
@@ -167,6 +165,21 @@ const TomogramViewerContent = ({
     []
   );
 
+  // Custom policy to prefetch as much as possible
+  const customPolicy = useMemo(
+    () =>
+      createImageSourcePolicy({
+        prefetch: { x: 0, y: 0, z: 200 },
+        priorityOrder: ['fallbackVisible', 'visibleCurrent', 'fallbackBackground', 'prefetchSpace', 'prefetchTime'],
+        lod: {
+          min: 0,
+          max: 1,
+          bias: 1.0,
+        },
+      }),
+    []
+  );
+
   // Handle z-slice navigation - just update state
   // The component's slice update effect will handle z.index prop changes without re-initialization
   const handleZIndexChange = useCallback(
@@ -179,7 +192,11 @@ const TomogramViewerContent = ({
   );
 
   // Handle layer creation - store reference for ChannelControlsList
-  const handleLayerCreated = useCallback((layer: ChunkedImageLayer) => {
+  const handleLayerCreated = useCallback((layers: ChunkedImageLayer[]) => {
+    // Use the first layer if multiple layers are created
+    const layer = layers[0];
+    if (!layer) return;
+
     setChannelLayer(layer);
     // Set extraControlProps for the channel controls
     const channels = layer.channelProps;
@@ -415,7 +432,8 @@ const TomogramViewerContent = ({
                 z={zProp}
                 fallbackContrastLimits={fallbackContrastLimits}
                 classNames={viewerClassNames}
-                onLayerCreated={handleLayerCreated}
+                onLayersCreated={handleLayerCreated}
+                policy={customPolicy}
               />
             )}
           {(!shouldRenderViewer || isLoadingTomogram) && (

@@ -481,8 +481,8 @@ async def start_sync(request):
             review_id = None
 
         # Import the sync functions
-        from processes.scripts.aretomo3_syncer import AretomoSyncer
-        from processes.scripts.denoise_syncer import DenoiseSyncer
+        from workflow.processors.aretomo3.syncer import AretomoSyncer
+        from workflow.processors.denoiset.syncer import DenoiseSyncer
 
         # Capture stdout to get progress information
         output = io.StringIO()

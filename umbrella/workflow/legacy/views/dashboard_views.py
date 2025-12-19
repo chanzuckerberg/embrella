@@ -8,6 +8,7 @@ and related data fetching for workflow management UI.
 import json
 import os
 import subprocess
+from pathlib import Path
 
 from django.db.models import F
 from django.http import JsonResponse
@@ -403,19 +404,18 @@ def trigger_syncer(request):
 
             # Determine which syncer script to use
             if syncer_type == "denoise":
-                syncer_script = "denoise_syncer.py"
+                syncer_script = "denoiset/syncer.py"
             else:
-                syncer_script = "aretomo3_syncer.py"
+                syncer_script = "aretomo3/syncer.py"
 
-            syncer_script_path = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)), "processes", "scripts", syncer_script,
-            )
+            workflow_dir = Path(__file__).parent.parent.parent
+            syncer_script_path = workflow_dir / "processors" / syncer_script
 
             # Run the syncer with job tracking and continuous mode
             subprocess.Popen(
                 [
                     "python",
-                    syncer_script_path,
+                    str(syncer_script_path),
                     "--session",
                     session_name,
                     "--run",
@@ -424,7 +424,7 @@ def trigger_syncer(request):
                     job_id if job_id else "",
                     "--continuous",
                 ],  # Add continuous mode
-                env=dict(os.environ, PYTHONPATH=os.path.dirname(os.path.dirname(__file__))),
+                env=dict(os.environ, PYTHONPATH=workflow_dir.resolve()),
             )
 
             logger.info(f"Started {syncer_type} syncer for session {session_name}, run {run_number}, tracking job {job_id}")

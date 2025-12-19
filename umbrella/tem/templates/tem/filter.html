@@ -90,7 +90,7 @@
 $(document).ready(function() {
     // Fetch the unique screen names
     $.ajax({
-        url: '/tem/scrn_filter/',  // Update with the correct endpoint
+        url: '/legacy/tem/scrn_filter/',  // Update with the correct endpoint
         method: 'GET',
         success: function(response) {
             if (response.unique_names) {
@@ -113,7 +113,7 @@ $(document).ready(function() {
         var selectedScreen = $(this).val();
         if (selectedScreen) {
             $.ajax({
-                url: `/tem/specific_scrn`,  // Update with the correct endpoint
+                url: `/legacy/tem/specific_scrn`,
                 method: 'GET',
                 data: { session_name: selectedScreen },
                 success: function(response) {

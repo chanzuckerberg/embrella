@@ -823,20 +823,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@idetik/core@npm:^0.1.0":
-  version: 0.1.1
-  resolution: "@idetik/core@npm:0.1.1"
+"@idetik/core@npm:^0.6.2":
+  version: 0.6.2
+  resolution: "@idetik/core@npm:0.6.2"
   dependencies:
     gl-matrix: "npm:^3.4.3"
     zarrita: "npm:^0.4.0-next.16"
     zod: "npm:^3.24.1"
-  checksum: 10c0/721ba77772608c324a87bade540c63f9e7a1b2165f4bb9dde1db938bafa4a571f32abeeb84572b9cf63ffde4b410c36b0ddb8920c5b12f787decd527464e4ea9
+  checksum: 10c0/b2a1731f74ab95602680c75756c6f271a4cf44dd2b9fdf572dcf2c2213fd430a332b40896736c473ee0725b3844d23b327aec95834363070ff5ec72ffae1c038
   languageName: node
   linkType: hard
 
-"@idetik/react@npm:^0.0.4":
-  version: 0.0.4
-  resolution: "@idetik/react@npm:0.0.4"
+"@idetik/react@npm:^0.2.3":
+  version: 0.2.3
+  resolution: "@idetik/react@npm:0.2.3"
   dependencies:
     "@base-ui-components/react": "npm:^1.0.0-beta.2"
     "@emotion/css": "npm:^11.13.0"
@@ -851,10 +851,10 @@ __metadata:
     react-dom: "npm:^18.3.1"
   peerDependencies:
     "@czi-sds/components": ^22.11.4
-    "@idetik/core": ^0.1.0
+    "@idetik/core": ^0.6.0
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/6c8981b6471aeb175fa05af7d53e1ed4c79980339979b1ef88b06773ec77c40f3f0c3fbb45c8be19d7d09f218b0c0516fb5057d923259a3755692bf34c54ff5c
+  checksum: 10c0/f943bc043d9088029cd050554973e0d7732c551b8f8c9f865dd2bc06e32d2681a2623ec421b53ffc2e738a5e9fbc6e17113c4e131a1d858e6b580e437bb95e85
   languageName: node
   linkType: hard
 
@@ -3955,8 +3955,8 @@ __metadata:
     "@emotion/css": "npm:^11.11.2"
     "@emotion/react": "npm:^11.11.3"
     "@emotion/styled": "npm:^11.11.0"
-    "@idetik/core": "npm:^0.1.0"
-    "@idetik/react": "npm:^0.0.4"
+    "@idetik/core": "npm:^0.6.2"
+    "@idetik/react": "npm:^0.2.3"
     "@mui/base": "npm:5.0.0-beta.58"
     "@mui/icons-material": "npm:5.16.7"
     "@mui/lab": "npm:5.0.0-alpha.173"
