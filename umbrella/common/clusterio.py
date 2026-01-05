@@ -91,6 +91,8 @@ def get_cluster_ssh_connection(cluster_id, auth=None):
         "compress": True,
         "banner_timeout": 10,
     }
+    if auth['username'] == 'david.dong':
+        auth['username'] = 'ddong'
     ssh_config = {**ssh_config, **auth}
     ssh.connect(**ssh_config)
     return ssh
