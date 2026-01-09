@@ -9,16 +9,14 @@ interface ContentWrapperProps {
 export function ContentWrapper({ children }: ContentWrapperProps) {
   const pathname = usePathname();
   // Full-width pages without a navbar (e.g., tomogram viewer).
-  const isFullWidthPage =
-    /^\/processing\/tomograms\/reviews\/[^/]+$/.test(pathname);
+  const isFullWidthPage = /^\/processing\/tomograms\/reviews\/[^/]+$/.test(pathname);
 
   if (isFullWidthPage) {
     return <>{children}</>;
   }
 
   // Metadata viewer page with smaller navbar offset
-  const isMetadataViewerPage =
-    /^\/metadata\/view\/[^/]+\/[^/]+$/.test(pathname);
+  const isMetadataViewerPage = /^\/metadata\/view\/[^/]+\/[^/]+$/.test(pathname);
 
   if (isMetadataViewerPage) {
     return (
