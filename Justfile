@@ -474,10 +474,10 @@ builddocs:
 #############################################
 
 # Backs up mysql db to /srv/dbbackups on passed host (default: umbrella). Assumes ssh access as svc.czii.umbrella to host, and that MYSQL_USER and MYSQL_PASSWORD are in .env.
-backupdb +host="umbrella":
+backupdb envfile +host="umbrella" :
     #!/bin/bash
     set -euo pipefail
-    cat ./.env | grep MYSQL > ./.scratch/.dbenv
+    cat {{envfile}} | grep MYSQL > ./.scratch/.dbenv
     ssh svc.czii.umbrella@{{host}} "mkdir -p /srv/dbbackups"
     scp ./.scratch/.dbenv svc.czii.umbrella@{{host}}:/srv/dbbackups/.dbenv
     ssh svc.czii.umbrella@{{host}} "chmod 600 /srv/dbbackups/.dbenv"
@@ -617,7 +617,7 @@ deploy stage envfile branch:
 
     # Backup db
     if [[ "{{stage}}" == "production" ]]; then
-      just backupdb
+      just backupdb {{envfile}}
     else
       just mirrorproddbtostaging
     fi
