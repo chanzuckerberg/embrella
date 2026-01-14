@@ -20,7 +20,7 @@ export default function ScreenMultipleGridsPage() {
           sdsStyle="rounded"
           onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/scrn/`)}
         >
-          Start Screening Session
+          Create Screening Groups
         </Button>
       </Box>
 
@@ -37,7 +37,7 @@ export default function ScreenMultipleGridsPage() {
           sdsStyle="rounded"
           onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/detail/`)}
         >
-          Start Screening Session
+          View Screens
         </Button>
       </Box>
     </Container>
