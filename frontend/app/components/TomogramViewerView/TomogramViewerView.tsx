@@ -14,8 +14,6 @@ import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURLWithPathParams, getRequestURL } from '@app/common/queries/utils';
 import { DJANGO_URL } from '@app/common/constants/api';
-// import { UserContext } from '@app/common/context/UserProvider';
-// import { PermissionBanner } from './components/PermissionBanner';
 import { Review, ReviewTomogramDetail } from './types';
 
 // Wrapper component - provider is now inside the inner component to allow remounting
@@ -167,12 +165,12 @@ const TomogramViewerContent = ({
     []
   );
 
-  // Custom policy with LOD min set to 1 (skip highest resolution level 0)
+  // Custom policy to prefetch as much as possible
   const customPolicy = useMemo(
     () =>
       createImageSourcePolicy({
         prefetch: { x: 0, y: 0, z: 200 },
-        priorityOrder: ['fallbackVisible', 'visibleCurrent', 'fallbackBackground', 'prefetchSpace',  'prefetchTime'],
+        priorityOrder: ['fallbackVisible', 'visibleCurrent', 'fallbackBackground', 'prefetchSpace', 'prefetchTime'],
         lod: {
           min: 0,
           max: 1,
@@ -294,17 +292,17 @@ const TomogramViewerContent = ({
     const loadDetail = async () => {
       // If tomogram changed, completely remove viewer from DOM first
       if (tomogramChanged) {
-      setIsLoadingTomogram(true);
+        setIsLoadingTomogram(true);
         setShouldRenderViewer(false); // Remove viewer from DOM immediately
-      dispatch({ type: 'SET_DETAIL', payload: null });
+        dispatch({ type: 'SET_DETAIL', payload: null });
 
         // Reset z-index state when switching tomograms to prevent out-of-bounds errors
-      setZAxisMetadata(null);
-      setCurrentZIndex(0);
+        setZAxisMetadata(null);
+        setCurrentZIndex(0);
 
         // Reset channel layer state
-      setChannelLayer(null);
-      setExtraControlProps([]);
+        setChannelLayer(null);
+        setExtraControlProps([]);
 
         // Wait for React to fully unmount the old viewer
         // Use multiple animation frames to ensure cleanup completes
@@ -337,7 +335,7 @@ const TomogramViewerContent = ({
       if (tomogramChanged) {
         startTransition(() => {
           setShouldRenderViewer(true); // Add viewer back to DOM
-      setIsLoadingTomogram(false);
+          setIsLoadingTomogram(false);
         });
       } else {
         setIsLoadingTomogram(false);
