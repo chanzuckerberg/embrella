@@ -18,6 +18,23 @@ export default function ScreenMultipleGridsPage() {
         <Button
           sdsType="primary"
           sdsStyle="rounded"
+          onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/scrn/`)}
+        >
+          Start Screening Session
+        </Button>
+      </Box>
+
+      <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, mt: 6 }}>
+        View Screens
+      </Typography>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+        View Screening Details
+      </Typography>
+
+      <Box sx={{ display: 'flex', gap: 2 }}>
+        <Button
+          sdsType="primary"
+          sdsStyle="rounded"
           onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/detail/`)}
         >
           Start Screening Session
