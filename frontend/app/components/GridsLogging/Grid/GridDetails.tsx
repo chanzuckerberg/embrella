@@ -361,7 +361,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               }}
             >
               <Image
-                src={clippedValue ? '/next/clippedGrid.png' : '/next/grid.png'}
+                src={clippedValue ? '/clippedGrid.png' : '/grid.png'}
                 alt={clippedValue ? 'Clipped Grid' : 'Grid'}
                 width={150}
                 height={150}
