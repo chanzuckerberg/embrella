@@ -744,7 +744,7 @@ def add_msi_session(msi_session_list, item):
     msi_session_entry = MSISessionModel(
         id=item['msisession_id'],
         name=item['msisession_name'],
-        url=f"{base_url}/tem/{item['msisession_id']}",
+        url=f"{base_url}/legacy/tem/{item['msisession_id']}",
     ).model_dump()
     if msi_session_entry not in msi_session_list:
         msi_session_list.append(msi_session_entry)

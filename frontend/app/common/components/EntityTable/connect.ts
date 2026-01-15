@@ -3,6 +3,7 @@ import {
   ColumnDef,
   getCoreRowModel,
   PaginationState,
+  RowSelectionState,
   TableState as ReactTableTableState,
   SortingState,
   TableOptions,
@@ -68,12 +69,20 @@ const getPaginationStateForPayload = (pagination: Pagination): PaginationState =
 const getSortingStateForPayload = (sortBy: SortBy): SortingState =>
   !sortBy ? [] : [{ id: sortBy.sort, desc: !sortBy.asc }];
 
+interface UseConnectOptions {
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: (updater: Updater<RowSelectionState>) => void;
+  enableRowSelection?: boolean;
+}
+
 export const useConnect = <T extends EntityDataTypes>(
   entityApi: API,
   entityApiResponseField: ApiPrimaryEntityAttribute,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- This is the Tanstack Table type
-  columnDefs: ColumnDef<T, any>[]
+  columnDefs: ColumnDef<T, any>[],
+  options?: UseConnectOptions
 ) => {
+  const { rowSelection, onRowSelectionChange, enableRowSelection = false } = options || {};
   const state = useContext<TableState>(TableStateContext);
   const dispatch = useContext(TableDispatchContext);
 
@@ -91,8 +100,9 @@ export const useConnect = <T extends EntityDataTypes>(
     () => ({
       pagination: getPaginationStateForPayload(entityPagination),
       sorting: getSortingStateForPayload(entitySortBy),
+      ...(enableRowSelection && rowSelection !== undefined ? { rowSelection } : {}),
     }),
-    [entityPagination, entitySortBy]
+    [entityPagination, entitySortBy, enableRowSelection, rowSelection]
   );
 
   const onPaginationChange = useCallback(
@@ -135,6 +145,12 @@ export const useConnect = <T extends EntityDataTypes>(
     onSortingChange,
     rowCount: entityList?.pagination?.totalResults || 0,
     state: reactTableState,
+    ...(enableRowSelection && onRowSelectionChange
+      ? {
+          enableRowSelection: true,
+          onRowSelectionChange,
+        }
+      : {}),
   });
 
   return { table };

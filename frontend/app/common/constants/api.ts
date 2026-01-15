@@ -2,8 +2,8 @@
 
 export const DJANGO_URL =
   typeof window !== 'undefined'
-    ? window.location.hostname === 'localhost'
-      ? 'http://localhost:8000' // Local Django server.
+    ? window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? `http://${window.location.hostname}:8000` // Local Django server - use same hostname as frontend for cookie sharing.
       : window.location.origin // Deployed envs use same origin for both Django and Next.
     : (process.env.DJANGO_URL ?? 'http://localhost:8000');
 
@@ -19,6 +19,44 @@ export enum API {
   METADATA_VIZ = '/workflow/metadata/api/v1/data',
   REVIEWS = '/api/reviews/',
 
+  // Storage Explorer (Filesystem Surveys & Directories)
+  SURVEYS = '/processes/v1/surveys',
+  SURVEY_FILES = '/processes/v1/surveys/:surveyId/files',
+  DIRECTORIES = '/processes/v1/directories',
+  DIRECTORIES_STATS = '/processes/v1/directories/stats',
+  DIRECTORIES_FILTERLIST = '/processes/v1/directories/filterlist',
+  DIRECTORY_FILES = '/processes/v1/directories/:directoryId/files',
+
+  // Job Management
+  JOBS = '/workflow/v1/jobs/',
+  JOBS_FILTERLIST = '/workflow/v1/jobs/filterlist/',
+  JOB_LOGS = '/workflow/job_logs',
+  SYNCER_LOGS = '/workflow/v1/jobs/:jobId/syncer_logs/',
+
+  // SSH Setup
+  SSH_CHECK_SETUP = '/workflow/v1/ssh/check_setup/',
+
+  // Pipeline Execution
+  PROCESSORS = '/workflow/v1/processors/',
+  PROCESSOR_SCHEMA = '/workflow/v1/processors/:processorName/schema/',
+  PROCESSOR_OPTIONS = '/workflow/v1/processors/:processorName/options/',
+  PROCESSOR_DEFAULTS = '/workflow/v1/processors/:processorName/defaults/',
+  PROCESSOR_METADATA = '/workflow/v1/processors/:processorName/metadata/',
+  PIPELINE_EXECUTE = '/workflow/v1/execution/execute/',
+  PIPELINE_PREVIEW = '/workflow/v1/execution/preview/',
+  PIPELINE_EXECUTION_STATUS = '/workflow/v1/execution/:executionId/status/',
+  PIPELINE_EXECUTION_RUN = '/workflow/v1/execution/run/:runId/',
+  PIPELINE_CHECK_DEPENDENCIES = '/workflow/v1/execution/check_dependencies/',
+  PIPELINE_LOOKUP_IDS = '/workflow/v1/execution/lookup_ids/',
+  PIPELINE_EXECUTION_BY_JOB_ID = '/workflow/v1/execution/by_job_id/:jobId/',
+
+  // Processor-specific endpoints
+  COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
+  COPICK_RUNS = '/workflow/v1/processors/copick/runs/',
+
+  // Session/Run Selection
+  MSI_SESSIONS_LIST = '/workflow/get_msi_session_list',
+
   // Mocked out:
   TEM_SESSIONS = '/api/sessions',
   TEM_SESSION = '/api/sessions/:sessionId',
@@ -29,25 +67,28 @@ export enum API {
 
   // Grid Logging
   GRID_LOGGING_USERS = '/api/list/all/users',
-  GRID_LOGGING_PROJECT_LEADERS = '/api/list/project-leaders',
   GRID_LOGGING_PUCKS = '/api/list/pucks',
   // GRID_LOGGING_PUCK_BYUSER = '/api/list/pucks/?user_id=',
   GRID_LOGGING_PUCK_SLOTINFO = '/api/list/pucks/puck_id/slots/',
   GRID_LOGGING_PUCK_GRIDBOXINFO = '/api/list/pucks/puck_id/grid-box/position_in_puck/',
   GRID_LOGGING_GRID_DETAILS = '/api/list/pucks/puck_id/grid-box/position_in_puck/grid/grid_id/',
   //http://127.0.0.1:8000/api/list/pucks/22/grid-box/2/grid/36/
-  GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',
   GRID_LOGGING_CANES = '/api/list/canes/',
-  GRID_LOGGING_SPECIMENS = '/api/list/specimens/',
-  GRID_LOGGING_SAMPLES = '/api/list/samples/',
+  GRID_LOGGING_PROJECT_LEADERS = '/api/list/project-leaders/',
   GRID_LOGGING_FREEZING_SESSIONS = '/api/list/freezing-sessions/',
+  GRID_LOGGING_SPECIMENS = '/api/list/specimens/',
   GRID_LOGGING_DEVICES = '/api/list/freezing-sessions/devices/',
-  GRID_LOGGING_CONFLUENCE_SPACES = '/api/list/confluence-spaces/',
-  GRID_LOGGING_DRIVE_FOLDERS = '/api/list/drive-folders/',
-  GRID_LOGGING_CONFLUENCE_PAGES = '/api/list/confluence-pages/',
+  GRID_LOGGING_SAMPLES = '/api/list/samples/',
+  GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',
 
   // Projects
   PROJECTS_LIST = '/projects/project_list/',
+
+  // External Resources (Documentation Links)
+  EXTERNAL_RESOURCES = '/api/external-resources/',
+  EXTERNAL_RESOURCES_DOC_SPACES = '/api/external-resources/doc_spaces/',
+  EXTERNAL_RESOURCES_DOC_PAGES = '/api/external-resources/doc_pages/',
+  EXTERNAL_RESOURCES_SYSTEMS = '/api/external-resources/systems/',
 }
 
 export enum POST_API {
@@ -57,16 +98,34 @@ export enum POST_API {
   UPDATE_TOMOGRAM_REVIEW = '/api/reviews/:reviewId/tomograms/:tomogramId',
   CREATE_PUCK = '/api/list/pucks/',
   CREATE_GRID_BOX = '/api/list/pucks/puck_id/grid-box/',
-  CREATE_GRID = '/api/list/grids/',
-  CLIP_ALL_GRIDS = '/api/list/grids/clip-all-in-box/grid_box_id/',
-  MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
-  MOVE_GRID = '/api/list/grids/grid_id/move/',
-  UPDATE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/update/',
-  UPDATE_GRID = '/api/list/grids/grid_id/update/',
   CREATE_FREEZING_SESSION = '/api/list/freezing-sessions/',
-  CREATE_PROJECT = '/projects/create_project/',
+  CREATE_GRID = '/api/list/grids/',
   CREATE_SAMPLE = '/api/list/samples/',
   CREATE_SPECIMEN = '/api/list/specimens/',
+  CREATE_PROJECT = '/projects/create_project/',
+  UPDATE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/update/',
+  MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
+  MOVE_GRID = '/api/list/grids/grid_id/move/',
+  UPDATE_GRID = '/api/list/grids/grid_id/update/',
+  CLIP_ALL_GRIDS = '/api/list/grids/clip-all-in-box/grid_box_id/',
+
+  // Storage Explorer (Directories)
+  BULK_UPDATE_DIRECTORY_STATUS = '/processes/v1/directories/bulk_update_status',
+
+  // Job Management
+  BULK_CANCEL_JOBS = '/workflow/v1/jobs/bulk_cancel/',
+  RERUN_SYNCER = '/workflow/v1/jobs/:jobId/rerun_syncer/',
+
+  // SSH Setup
+  SSH_SETUP_KEY = '/workflow/v1/ssh/setup_key/',
+
+  // Processor Parameter Validation
+  PROCESSOR_VALIDATE = '/workflow/v1/processors/:processorName/validate/',
+
+  // External Resources
+  CREATE_EXTERNAL_RESOURCE = '/api/external-resources/',
+  UPDATE_EXTERNAL_RESOURCE = '/api/external-resources/:resourceId/',
+  // Note: DELETE uses same URL as UPDATE but with DELETE method - see postResource usage
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

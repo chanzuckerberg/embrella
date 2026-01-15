@@ -1,0 +1,39 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+{% for directive in slurm_directives -%}
+{% if directive.directive.startswith('-') and not directive.directive.startswith('--') -%}
+#SBATCH {{ directive.directive }} {{ directive.value }}
+{% else -%}
+#SBATCH {{ directive.directive }}={{ directive.value }}
+{% endif -%}
+{% endfor %}
+ml anaconda
+conda activate /hpc/projects/group.czii/krios1.processing/software/denoiset/pyDenoiset
+
+# Context variables (framework-provided)
+{% for var_name, var_value in context_vars.items() -%}
+{{ var_name }}="{{ var_value }}"
+{% endfor %}
+# Calculated variables (processor-specific)
+{% for var_name, var_value in calculated_vars.items() -%}
+{{ var_name }}={{ var_value }}
+{% endfor %}
+# Schema-driven bash variables (from parameter schema)
+{% for var_name, var_info in schema_vars.items() -%}
+{% if var_info.format == "quoted" -%}
+{{ var_name }}="{{ var_info.value }}"
+{% elif var_info.format == "unquoted" -%}
+{{ var_name }}={{ var_info.value }}
+{% elif var_info.format == "exported" -%}
+export {{ var_name }}="{{ var_info.value }}"
+{% endif -%}
+{% endfor %}
+in_dir="/hpc/projects/group.czii/krios1.processing/aretomo3/${session}/${aretomo_run}/vol001"
+out_dir="/hpc/projects/group.czii/krios1.processing/denoise/${session}/${denoise_run}"
+model="/hpc/projects/group.czii/krios1.processing/software/denoiset/denoiset/models/${model_name}"
+
+predict3d --model ${model} --input ${in_dir} --output ${out_dir}{% if live_denoising %} --live --t_exit 180000{% endif %}{% if use_custom_params and custom_command_line %} {{ custom_command_line }}{% endif %}
+
+# --- Rechunk denoised volumes (5 checks, wait 10s between)
+bash /hpc/projects/krios1.processing/denoise/scripts/rechunk.sh "${out_dir}" 5 10

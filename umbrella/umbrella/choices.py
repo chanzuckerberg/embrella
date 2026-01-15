@@ -1,4 +1,9 @@
-# All the choices to be used cross-applications
+"""
+Cross-application choices for the Umbrella project.
+
+Defines color and numbering choices used across multiple Django apps for
+cryo-EM grid storage hardware (canes, pucks, grid boxes, cassettes).
+"""
 
 CANE_COLORS = [
     ('CF1E01','Red'), # Hex=#CF1E01 RGB=(207,30,1)

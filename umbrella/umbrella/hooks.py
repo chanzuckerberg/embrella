@@ -1,4 +1,9 @@
-# my_app/hooks.py
+"""
+Authentication hooks for the Umbrella project.
+
+Contains callback functions for Google SSO authentication flow, including
+pre-login callbacks for user permission management.
+"""
 from django.contrib import messages
 from loguru import logger
 

@@ -1,5 +1,10 @@
 import React from 'react';
+import { Metadata } from 'next';
 import { MetadataView } from '@app/components/MetadataView/MetadataView';
+
+export const metadata: Metadata = {
+  title: 'Metadata View',
+};
 
 interface MetadataPageProps {
   params: {

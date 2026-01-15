@@ -5,8 +5,14 @@ import { EntityFilterCategories } from '@app/common/types/filter';
 // TODO: Determine if this can be deleted.
 export const DEFAULT_PAGE_SIZE = 10;
 
-export const getInitialTableState = (sortState: SortingState = []): TableState => ({
-  filterState: {},
+type FilterValue = boolean | string | null;
+
+type FilterState = Partial<{
+  [K in EntityFilterCategories]: FilterValue | FilterValue[];
+}>;
+
+export const getInitialTableState = (sortState: SortingState = [], filterState: FilterState = {}): TableState => ({
+  filterState,
   paginationState: {
     pageIndex: 0,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -17,13 +23,8 @@ export const getInitialTableState = (sortState: SortingState = []): TableState =
 interface TableStateProviderProps {
   children: ReactNode;
   initialSortState?: SortingState;
+  initialFilterState?: FilterState;
 }
-
-type FilterValue = boolean | string | null;
-
-type FilterState = Partial<{
-  [K in EntityFilterCategories]: FilterValue | FilterValue[];
-}>;
 
 export interface TableState {
   filterState: FilterState;
@@ -115,9 +116,14 @@ export const tableStateReducer = (state: TableState, action: TableStateAction): 
 export const TableDispatchContext = createContext<Dispatch<TableStateAction>>(noop);
 export const TableStateContext = createContext<TableState>(getInitialTableState());
 
-export const TableStateProvider = ({ children, initialSortState }: TableStateProviderProps): JSX.Element => {
+export const TableStateProvider = ({
+  children,
+  initialSortState,
+  initialFilterState,
+}: TableStateProviderProps): JSX.Element => {
   const sortState = initialSortState || [];
-  const [state, dispatch] = useReducer(tableStateReducer, getInitialTableState(sortState));
+  const filterState = initialFilterState || {};
+  const [state, dispatch] = useReducer(tableStateReducer, getInitialTableState(sortState, filterState));
 
   return (
     <TableStateContext.Provider value={state}>

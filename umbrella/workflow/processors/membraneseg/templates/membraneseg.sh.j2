@@ -1,0 +1,71 @@
+#!/bin/bash
+
+#SBATCH --job-name={{ job_name }}
+{% for directive in slurm_directives -%}
+{% if directive.directive.startswith('-') and not directive.directive.startswith('--') -%}
+#SBATCH {{ directive.directive }} {{ directive.value }}
+{% else -%}
+#SBATCH {{ directive.directive }}={{ directive.value }}
+{% endif -%}
+{% endfor %}
+ml anaconda
+conda activate /hpc/projects/group.czii/conda_environments/pyczii
+
+# Context variables (framework-provided)
+{% for var_name, var_value in context_vars.items() -%}
+{{ var_name }}="{{ var_value }}"
+{% endfor %}
+# Required parameters
+session="{{ session }}"
+copick_procrun="{{ copick_procrun }}"
+tomo_alg="{{ tomo_type }}"
+tomo_voxelsize={{ tomo_voxel_size }}
+membraneseg_session_id="{{ membraneseg_session_id }}"
+
+# Optional parameters
+threshold="{{ threshold }}"
+
+# Dynamic parameters
+copick_dir="/hpc/projects/group.czii/krios1.processing/copick/${session}/${copick_procrun}"
+
+mkdir -p "${copick_dir}"
+
+# --- dynamically set log paths for this job ---
+JOBTAG="${session}_${membraneseg_session_id}_${SLURM_JOB_ID:-$$}"
+LOG_OUT="${copick_dir}/copick_run_membrane_${JOBTAG}.out"
+LOG_ERR="${copick_dir}/copick_run_membrane_${JOBTAG}.err"
+exec >"${LOG_OUT}" 2>"${LOG_ERR}"
+
+# --- dynamically send email notifications ---
+EMAIL_DOMAIN="czii.org"
+MAIL_TO="${SLURM_JOB_USER:-$USER}@${EMAIL_DOMAIN}"
+
+if [[ -n "${SLURM_JOB_ID:-}" ]]; then
+  scontrol update JobId=${SLURM_JOB_ID} MailUser=${MAIL_TO} MailType=BEGIN,END,FAIL
+fi
+
+# Helper function to validate numeric threshold
+is_number() {
+  # matches optional sign (+/-), digits, and optional decimal part
+  [[ "$1" =~ ^[-+]?[0-9]+([.][0-9]+)?$ ]]
+}
+
+# Build command
+cmd=(copick inference membrain-seg
+  --config "${copick_dir}/config.json"
+  --tomo-alg "${tomo_alg}"
+  --voxel-size "${tomo_voxelsize}"
+  --session-id "${membraneseg_session_id}"
+)
+
+# Append threshold only if valid numeric float (positive or negative)
+if [[ -n "${threshold}" ]]; then
+  if is_number "${threshold}"; then
+    cmd+=("--threshold" "${threshold}")
+  else
+    echo "Warning: threshold '${threshold}' is not numeric; skipping." >&2
+  fi
+fi
+
+echo "Running:" "${cmd[@]}"
+"${cmd[@]}"

@@ -33,12 +33,12 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   const getSvgPath = () => {
     switch (maxGrids) {
       case 6:
-        return '/next/GridBox6.svg';
+        return '/GridBox6.svg';
       case 8:
-        return '/next/GridBox8.svg';
+        return '/GridBox8.svg';
       case 4:
       default:
-        return '/next/GridBox.svg';
+        return '/GridBox.svg';
     }
   };
   // Get grid status for a given position

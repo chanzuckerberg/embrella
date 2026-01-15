@@ -1,0 +1,1 @@
+"""Copick processor tests."""

@@ -1,4 +1,15 @@
+"""
+Contrast limits computation for tomogram visualization.
+
+This module provides utilities for computing optimal contrast limits for cryo-EM
+tomogram data stored in Zarr format. Supports multiple methods including Gaussian
+Mixture Models (GMM) and percentile-based approaches.
+"""
+import json
 import logging
+import os
+import subprocess
+import sys
 from abc import abstractmethod
 from typing import Literal, Optional, Tuple
 
@@ -11,10 +22,13 @@ from sklearn.mixture import GaussianMixture
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+# Path to this module's directory for subprocess calls
+_MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def load_zarr_data(zarr_url: str, max_samples: int = 100_000) -> np.ndarray:
+
+def _load_zarr_data_sync(zarr_url: str, max_samples: int = 100_000) -> np.ndarray:
     """
-    Load data from a Zarr store (HTTP or local) and return a 1D sample array.
+    Synchronous implementation: Load data from a Zarr store and return a 1D sample array.
     """
     # Try HTTP(S) via fsspec first
     if zarr_url.startswith(("http://", "https://")):
@@ -39,6 +53,8 @@ def load_zarr_data(zarr_url: str, max_samples: int = 100_000) -> np.ndarray:
         LOGGER.warning(f"Direct zarr.open failed: {e}")
 
     raise RuntimeError(f"Could not load Zarr data from {zarr_url}")
+
+
 
 
 def _extract_data_from_store(store_obj, max_samples: int) -> Optional[np.ndarray]:
@@ -201,11 +217,51 @@ class CDFContrastLimitCalculator(ContrastLimitCalculator):
         return float(max(lo, np.min(self.volume))), float(min(hi, np.max(self.volume)))
 
 
+def _compute_in_subprocess(zarr_url: str, method: str) -> Tuple[float, float]:
+    """
+    Internal: compute contrast limits directly (called from subprocess).
+    """
+    data = _load_zarr_data_sync(zarr_url)
+    return compute_contrast_limits(data, method=method)
+
+
 def compute_optimal_contrast_limits(zarr_url: str, method: str = "gmm") -> Tuple[float, float]:
-    """High-level entry: load the data then dispatch to the calculator."""
+    """
+    High-level entry point: compute optimal contrast limits for a zarr URL.
+
+    Runs computation in a subprocess to avoid event loop conflicts between
+    zarr v3's async internals and Django's request handling.
+    """
     try:
-        data = load_zarr_data(zarr_url)
-        return compute_contrast_limits(data, method=method)
+        # Get the umbrella package directory (parent of this file's directory)
+        umbrella_dir = os.path.dirname(_MODULE_DIR)
+
+        script = f'''
+import sys
+import json
+sys.path.insert(0, "{umbrella_dir}")
+from umbrella.contrast_limits import _compute_in_subprocess
+result = _compute_in_subprocess("{zarr_url}", "{method}")
+print(json.dumps(result))
+'''
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=umbrella_dir,
+        )
+
+        if result.returncode == 0 and result.stdout.strip():
+            limits = json.loads(result.stdout.strip())
+            return tuple(limits)
+        else:
+            LOGGER.error(f"Subprocess failed (exit {result.returncode}): {result.stderr}")
+            return -0.05, 0.05
+
+    except subprocess.TimeoutExpired:
+        LOGGER.error("Contrast limits computation timed out after 120s")
+        return -0.05, 0.05
     except Exception as e:
         LOGGER.error(f"Failed overall: {e}")
         return -0.05, 0.05

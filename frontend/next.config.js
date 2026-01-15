@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: '/next',
   compiler: {
     emotion: {
       autoLabel: 'never',

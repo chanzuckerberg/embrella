@@ -31,7 +31,7 @@ export const ReviewActionButton = ({
   // Check if all tomograms have been reviewed
   const allTomogramsReviewed = reviewedCount > 0 && reviewedCount === totalCount;
 
-  const reviewUrl = `/reviews/${reviewId}`;
+  const reviewUrl = `/processing/tomograms/reviews/${reviewId}`;
 
   // Download handler for export
   const handleExportResults = async () => {
@@ -39,7 +39,7 @@ export const ReviewActionButton = ({
       // Remove dashes from review ID
       const reviewIdNoDashes = reviewId.replace(/-/g, '');
       const url = `${DJANGO_URL}${API.REVIEW_EXPORT.replace(':reviewId', reviewIdNoDashes)}`;
-      const response = await fetch(url);
+      const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.details || errorData.error || 'Failed to export review results');

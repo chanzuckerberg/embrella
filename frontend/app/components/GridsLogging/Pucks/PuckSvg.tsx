@@ -127,7 +127,7 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
     >
       {/* SVG Background */}
       <ReactSVG
-        src="/next/puck.svg"
+        src="/puck.svg"
         beforeInjection={(svg) => {
           svg.setAttribute('width', '100%');
           svg.setAttribute('height', '100%');

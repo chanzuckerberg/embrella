@@ -1,0 +1,875 @@
+# AreTomo3 Processor Parameter Schema
+# JSON Schema with custom x-* extensions for template generation and CLI mapping
+#
+# Custom extensions:
+#   x-bash-var: Bash variable name(s) - string or list
+#   x-bash-format: Quoting style - "quoted" or "unquoted"
+#   x-bash-type: Data type - "number", "string", etc.
+#   x-bash-skip: Skip in bash variable section - boolean
+#   x-cli-flag: Command-line flag - string
+#   x-cli-format: Value formatter - "direct" or custom formatter method name
+#   x-cli-composite: Part of composite flag - boolean or list
+#   x-control-flow: Controls template conditionals - boolean
+#   x-advanced: Advanced/optional parameter - boolean
+#   x-conditional: Shows only if another param is true - string
+#   x-compute-resource: Groups parameter in "Compute Resources" section - boolean
+#   x-slurm-directive: SLURM directive flag (e.g., "--partition") - string
+#   x-hetjob-component: Hetjob component number for SLURM directives - integer
+#   x-cli-default: CLI tool's internal default (when different from form default)
+#   x-cli-always-include: Always include this flag in CLI output - boolean
+
+type: object
+
+properties:
+  # Basic parameters (required)
+  pixel_size:
+    type: number
+    title: Pixel Size (Å)
+    description: Calibrated pixel size in Angstroms
+    minimum: 0.5
+    maximum: 20.0
+    x-bash-var: pix_size
+    x-bash-format: quoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-PixSize"
+    x-cli-format: direct
+
+  frame_dose:
+    type: number
+    title: Frame Dose (e⁻/Ų)
+    description: |
+      Note: -TotalDose is disabled in AreTomo3. Instead, you input electron dose per raw frame (not accumulated dose). For EER movies, this is dose per EER frame. For TIFF movies, dose per TIFF frame. Example: 200-frame EER movie with 3 e⁻/Ų total → use 0.015. If not provided, AreTomo3 uses MDOC ExposureDose (post-specimen, less than actual specimen dose).
+    minimum: 0.001
+    maximum: 10
+    x-bash-var: frame_dose
+    x-bash-format: quoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-FmDose"
+    x-cli-format: direct
+
+  gain_file_name:
+    type: string
+    title: Gain File Name
+    description: |
+      Name of the gain reference file to use. If left blank, the most recent gain file will be used automatically.
+    x-bash-skip: true
+    x-cli-flag: null
+    x-cli-format: null
+    x-dynamic-options: true
+
+  high_tension_kv:
+    type: integer
+    title: High Tension (kV)
+    description: Accelerating voltage for dose weighting
+    minimum: 80
+    maximum: 400
+    default: 300
+    x-parameter-group: ctf
+    x-bash-var: kv
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-kV"
+    x-cli-format: direct
+
+  spherical_aberration:
+    type: number
+    title: Spherical Aberration (mm)
+    description: Cs for CTF estimation in millimeters
+    minimum: 0.01
+    maximum: 10.0
+    default: 2.7
+    x-parameter-group: ctf
+    x-bash-var: cs
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-Cs"
+    x-cli-format: direct
+    # CLI default is 2.7, matches our form default
+
+  tilt_axis:
+    type: number
+    title: Tilt Axis Angle (°)
+    description: Initial tilt axis angle in degrees
+    minimum: -180
+    maximum: 180
+    x-parameter-group: alignment
+    x-bash-var: tilt_axis
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-TiltAxis"
+    x-cli-format: tilt_axis_with_refine
+    x-cli-composite:
+      - tilt_axis
+      - tilt_axis_refine
+
+  tilt_axis_refine:
+    type: integer
+    title: Tilt Axis Refinement
+    description: Enable tilt axis refinement (0=off, 1=on)
+    enum: [0, 1]
+    default: 1
+    x-parameter-group: alignment
+    x-bash-var: tilt_axis_refine
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: null
+    x-cli-format: null
+    x-cli-composite: true
+
+  align_z:
+    type: integer
+    title: Alignment Z Height
+    description: Z height for alignment in pixels
+    minimum: 100
+    maximum: 2000
+    default: 800
+    x-parameter-group: alignment
+    x-bash-var: AlignZ
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-AlignZ"
+    x-cli-format: direct
+    x-cli-default: 256  # CLI default is 256, our form default is 800
+
+  vol_z:
+    type: integer
+    title: Volume Z Height
+    description: Z height of reconstruction volume in pixels
+    minimum: 100
+    maximum: 3000
+    default: 1600
+    x-parameter-group: reconstruction
+    x-bash-var: VolZ
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-VolZ"
+    x-cli-format: direct
+    x-cli-default: 0  # CLI default is 0, our form default is 1600
+
+  imod_option:
+    type: integer
+    title: IMOD Output Option
+    description: Generate IMOD-compatible output (0=off, 1=Relion4, 2=WARP, 3=aligned input)
+    enum: [0, 1, 2, 3]
+    default: 1
+    x-parameter-group: reconstruction
+    x-bash-var: imod_option
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-OutImod"
+    x-cli-format: direct
+    x-cli-default: 0  # CLI default is 0 (disabled), our form default is 1 (Relion4)
+
+  local_shift:
+    type: integer
+    title: Local Shift
+    description: Local alignment shift parameter
+    minimum: 0
+    maximum: 100
+    x-parameter-group: alignment
+    x-bash-var:
+      - local_aln_1
+      - local_aln_2
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-AtPatch"
+    x-cli-format: local_shift_values
+
+  tilt_offset:
+    type: number
+    title: Tilt Offset (°)
+    description: Tilt angle offset in degrees
+    minimum: -10
+    maximum: 10
+    x-parameter-group: alignment
+    x-bash-var: tilt_cor
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-TiltCor"
+    x-cli-format: boolean_to_int
+
+  thickness_measure:
+    type: integer
+    title: Thickness Measurement
+    description: Enable thickness measurement (0=off, 1=on)
+    enum: [0, 1]
+    default: 0
+    x-parameter-group: reconstruction
+    x-bash-var: temp
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-TmpDir"
+    x-cli-format: thickness_to_temp_dir
+
+  # Denoise training
+  denoise_training:
+    type: boolean
+    title: Denoise Training
+    description: Include this data in denoise training set
+    default: false
+    x-parameter-group: reconstruction
+    x-bash-var: return_value
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-SplitSum"
+    x-cli-format: boolean_to_int
+    x-cli-default: 1  # CLI default is 1 (enabled), our form default is 0 (disabled)
+
+  # Custom command line parameters
+  use_custom_params:
+    type: boolean
+    title: Use Custom Command Line Parameters
+    description: Add arbitrary command line parameters to AreTomo3
+    default: false
+    x-parameter-group: custom
+    x-control-flow: true
+    x-bash-skip: true
+    x-cli-flag: null
+    x-cli-format: null
+
+  custom_command_line:
+    type: string
+    title: Custom Command Line Parameters
+    description: Additional command line parameters (e.g., '-OutBin 2 -Gpu 0')
+    x-conditional: use_custom_params
+    x-parameter-group: custom
+    x-bash-var: custom_command_line
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: null
+    x-cli-format: null
+
+  # Input Processing Options
+  in_prefix:
+    type: string
+    title: Input File Prefix
+    description: "Prefix of input file name(s). Together with InSuffix and InSkips, forms file name pattern for processing. Can be: (1) Prefix string like 'Position_' to match files starting with that prefix, (2) Path to folder containing movie files (tiff/eer) or tilt series (mrc). If suffix is .mdoc, matches mdoc files with this prefix. If suffix is .mrc, matches mrc files with this prefix. Note: movie files must be in same directory as mdoc files."
+    default: "Position_"
+    x-parameter-group: input_processing
+    x-bash-var: in_prefix
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: null
+    x-cli-format: null
+
+  in_suffix:
+    type: string
+    title: Input File Suffix
+    description: "File extension for input files. Use .mdoc for MDOC files, .mrc for MRC tilt series, or other extensions as appropriate. Must include the leading dot."
+    default: ".mdoc"
+    x-parameter-group: input_processing
+    x-bash-var: in_suffix
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: null
+    x-cli-format: null
+
+  in_skips:
+    type: string
+    title: Skip MDOC Files Containing
+    description: Skip MDOC files containing this string (comma-separated for multiple)
+    default: ""
+    x-parameter-group: input_processing
+    x-bash-var: in_skips
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-InSkips"
+    x-cli-format: direct
+
+  cmd_mode:
+    type: integer
+    title: Processing Start Mode
+    description: "0: Start from motion correction, 1: Start from alignment, 2: Start from CTF correction"
+    enum: [0, 1, 2]
+    default: 0
+    x-parameter-group: input_processing
+    x-bash-var: cmd_mode
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-Cmd"
+    x-cli-format: direct
+
+  resume_processing:
+    type: boolean
+    title: Resume Processing
+    description: Skip previously processed MDOC files listed in MdocDone.txt
+    default: false
+    x-parameter-group: input_processing
+    x-bash-var: resume_processing
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-Resume"
+    x-cli-format: boolean_to_int
+
+  skip_alignment:
+    type: boolean
+    title: Skip Alignment
+    description: Set to false when input MRC is already aligned. Default true (perform alignment)
+    default: true
+    x-parameter-group: input_processing
+    x-bash-var: skip_alignment
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-Align"
+    x-cli-format: boolean_to_int
+
+  serial:
+    type: integer
+    title: Live Processing Timeout (seconds)
+    description: "Maximum seconds to wait for next tilt series in live processing mode. When a new tilt series becomes available, AreTomo3 resets the timer. After this timeout with no new data, AreTomo3 quits after finishing ongoing processing. Set to 0 to disable live mode."
+    minimum: 0
+    maximum: 200000
+    default: 43000
+    x-parameter-group: input_processing
+    x-bash-var: serial
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-Serial"
+    x-cli-format: direct
+
+  # Motion Correction Options
+  mc_patch:
+    type: string
+    title: Motion Correction Patches
+    description: Number of patches for motion correction (x y), e.g., "5 5". Default "1 1" (full-frame only)
+    default: "1 1"
+    pattern: "^[0-9]+ [0-9]+$"
+    x-parameter-group: motion_correction
+    x-bash-var: mc_patch
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-McPatch"
+    x-cli-format: direct
+
+  mc_iter:
+    type: integer
+    title: Motion Correction Iterations
+    description: Maximum iterations for iterative alignment
+    minimum: 1
+    maximum: 20
+    default: 7
+    x-parameter-group: motion_correction
+    x-bash-var: mc_iter
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-McIter"
+    x-cli-format: direct
+
+  mc_tol:
+    type: number
+    title: Motion Correction Tolerance
+    description: Tolerance for iterative alignment in pixels
+    minimum: 0.1
+    maximum: 5.0
+    default: 0.5
+    x-parameter-group: motion_correction
+    x-bash-var: mc_tol
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-McTol"
+    x-cli-format: direct
+
+  mc_bin:
+    type: integer
+    title: Motion Correction Binning
+    description: Binning performed in Fourier space
+    minimum: 1
+    maximum: 8
+    default: 2
+    x-parameter-group: motion_correction
+    x-bash-var: mc_bin
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-McBin"
+    x-cli-format: direct
+    x-cli-default: 1  # CLI default is 1, our form default is 2
+
+  eer_sampling:
+    type: integer
+    title: EER Sampling Factor
+    description: "EER upsampling factor. Must match McBin: use EerSampling=2 with McBin=2, or EerSampling=1 with McBin=1. EerSampling=2 extracts super-res from EER frames, upsamples 2x, then downsamples via Fourier cropping. EerSampling=1 uses Fourier zero-padding for upsampling."
+    enum: [1, 2]
+    default: 2
+    x-parameter-group: motion_correction
+    x-bash-var: eer_sampling
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-EerSampling"
+    x-cli-format: direct
+    x-cli-always-include: true  # No documented CLI default, always include for EER data
+
+  group_frames:
+    type: string
+    title: Frame Grouping
+    description: "Group frames for alignment (global local), e.g., '1 1'. First for global, second for patch alignment"
+    default: "1 1"
+    pattern: "^[0-9]+ [0-9]+$"
+    x-parameter-group: motion_correction
+    x-bash-var: group_frames
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-Group"
+    x-cli-format: direct
+
+  fm_ref:
+    type: integer
+    title: Reference Frame
+    description: 1-based index of reference frame for alignment (0 = central frame)
+    minimum: 0
+    maximum: 100
+    default: 0
+    x-parameter-group: motion_correction
+    x-bash-var: fm_ref
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-FmRef"
+    x-cli-format: direct
+
+  in_fm_motion:
+    type: boolean
+    title: Account for In-Frame Motion
+    description: Enable in-frame motion correction
+    default: true
+    x-parameter-group: motion_correction
+    x-bash-var: in_fm_motion
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-InFmMotion"
+    x-cli-format: boolean_to_int
+
+  mag_correction:
+    type: string
+    title: Anisotropic Magnification Correction
+    description: "Three values: major_mag minor_mag angle (degrees), e.g., '1.02 1.0 45'. Leave empty to disable"
+    default: ""
+    pattern: "^(|[0-9.]+ [0-9.]+ [0-9.]+)$"
+    x-parameter-group: motion_correction
+    x-bash-var: mag_correction
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-Mag"
+    x-cli-format: direct
+
+  # Gain/Dark Reference Options
+  defect_file:
+    type: string
+    title: Defect File
+    description: Path to defect file (filename or full path). Rectangular defect regions will be replaced
+    default: ""
+    x-parameter-group: gain_dark
+    x-bash-var: defect_file
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-DefectFile"
+    x-cli-format: path_resolver
+
+  dark_reference:
+    type: string
+    title: Dark Reference File
+    description: Path to dark reference MRC file (filename or full path)
+    default: ""
+    x-parameter-group: gain_dark
+    x-bash-var: dark_reference
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-Dark"
+    x-cli-format: path_resolver
+
+  rot_gain:
+    type: integer
+    title: Rotate Gain Reference
+    description: "Rotate gain counter-clockwise: 0=none, 1=90°, 2=180°, 3=270°"
+    enum: [0, 1, 2, 3]
+    default: 0
+    x-parameter-group: gain_dark
+    x-bash-var: rot_gain
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-RotGain"
+    x-cli-format: direct
+
+  flip_gain:
+    type: integer
+    title: Flip Gain Reference
+    description: "Flip gain after rotation: 0=none, 1=upside down, 2=left right"
+    enum: [0, 1, 2]
+    default: 0
+    x-parameter-group: gain_dark
+    x-bash-var: flip_gain
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-FlipGain"
+    x-cli-format: direct
+
+  inv_gain:
+    type: boolean
+    title: Inverse Gain Values
+    description: Apply 1/f transformation to gain values (zeros remain zero)
+    default: false
+    x-parameter-group: gain_dark
+    x-bash-var: inv_gain
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-InvGain"
+    x-cli-format: boolean_to_int
+
+  # Alignment Options
+  dark_tol:
+    type: number
+    title: Dark Image Tolerance
+    description: Tolerance for removing dark images (0-1). Higher is more restrictive
+    minimum: 0.1
+    maximum: 1.0
+    default: 0.7
+    x-parameter-group: alignment
+    x-bash-var: dark_tol
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-DarkTol"
+    x-cli-format: direct
+
+  # Reconstruction Options
+  ext_z:
+    type: integer
+    title: Extra Volume Z Height
+    description: Extra space added to estimated sample thickness. Only relevant when VolZ=-1 (auto-thickness)
+    minimum: 0
+    maximum: 1000
+    default: 0
+    x-parameter-group: reconstruction
+    x-bash-var: ext_z
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-ExtZ"
+    x-cli-format: direct
+
+  at_bin:
+    type: string
+    title: Tomogram Binning Factors
+    description: "Binning for tomograms relative to motion-corrected series. One or two floats (e.g., '1.0' or '1.0 2.0')"
+    default: "1.0"
+    pattern: "^[0-9.]+(?: [0-9.]+)?$"
+    x-parameter-group: reconstruction
+    x-bash-var: at_bin
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-AtBin"
+    x-cli-format: direct
+
+  recon_range:
+    type: string
+    title: Reconstruction Tilt Angle Range
+    description: "Min and max tilt angles for reconstruction (degrees), e.g., '-60 60'. Leave empty for all angles"
+    default: ""
+    pattern: "^(|[-0-9.]+ [-0-9.]+)$"
+    x-parameter-group: reconstruction
+    x-bash-var: recon_range
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-ReconRange"
+    x-cli-format: direct
+
+  sart_iterations:
+    type: string
+    title: SART Iterations and Projections
+    description: "SART iterations and projections per update, e.g., '15 5'"
+    default: "15 5"
+    pattern: "^[0-9]+ [0-9]+$"
+    x-parameter-group: reconstruction
+    x-bash-var: sart_iterations
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-Sart"
+    x-cli-format: direct
+
+  use_wbp:
+    type: boolean
+    title: Use Weighted Back Projection
+    description: Enable WBP reconstruction instead of SART
+    default: false
+    x-parameter-group: reconstruction
+    x-bash-var: use_wbp
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-Wbp"
+    x-cli-format: boolean_to_int
+
+  flip_vol:
+    type: boolean
+    title: Flip Volume to XYZ
+    description: Save volume in xyz fashion instead of default xzy
+    default: false
+    x-parameter-group: reconstruction
+    x-bash-var: flip_vol
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-FlipVol"
+    x-cli-format: boolean_to_int
+
+  flip_int:
+    type: boolean
+    title: Flip Volume Intensity
+    description: Flip intensity to make structure white
+    default: false
+    x-parameter-group: reconstruction
+    x-bash-var: flip_int
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-FlipInt"
+    x-cli-format: boolean_to_int
+
+  intp_cor:
+    type: boolean
+    title: Interpolation Correction
+    description: Correct for information loss due to linear interpolation
+    default: true
+    x-parameter-group: reconstruction
+    x-bash-var: intp_cor
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-IntpCor"
+    x-cli-format: boolean_to_int
+
+  out_xf:
+    type: boolean
+    title: Generate IMOD XF File
+    description: Generate IMOD-compatible XF alignment file
+    default: false
+    x-parameter-group: reconstruction
+    x-bash-var: out_xf
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-OutXF"
+    x-cli-format: boolean_to_int
+
+  # CTF Options
+  amp_contrast:
+    type: number
+    title: Amplitude Contrast
+    description: Amplitude contrast for CTF estimation
+    minimum: 0.01
+    maximum: 0.3
+    default: 0.07
+    x-parameter-group: ctf
+    x-bash-var: amp_contrast
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-AmpContrast"
+    x-cli-format: direct
+
+  ext_phase:
+    type: string
+    title: Phase Shift and Search Range
+    description: "Phase shift guess and search range in degrees (e.g., '90 10'). For phase plate only"
+    default: ""
+    pattern: "^(|[-0-9.]+ [0-9.]+)$"
+    x-parameter-group: ctf
+    x-bash-var: ext_phase
+    x-bash-format: quoted
+    x-bash-type: string
+    x-bash-skip: false
+    x-cli-flag: "-ExtPhase"
+    x-cli-format: direct
+
+  corr_ctf:
+    type: boolean
+    title: Local CTF Correction
+    description: Perform local CTF correction on raw tilt series
+    default: true
+    x-parameter-group: ctf
+    x-bash-var: corr_ctf
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: "-CorrCTF"
+    x-cli-format: boolean_to_int
+
+  # SLURM Resource Options - Component 0 (GPU Processing)
+  slurm_component_0_partition:
+    type: string
+    title: "Component 0: Partition"
+    description: SLURM partition for GPU processing component
+    enum:
+      - gpu
+    default: gpu
+    x-slurm-directive: "--partition"
+    x-hetjob-component: 0
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_0_gpus:
+    type: integer
+    title: "Component 0: Number of GPUs"
+    description: GPUs to allocate for AreTomo3 reconstruction
+    minimum: 1
+    maximum: 8
+    default: 8
+    x-slurm-directive: "--gres=gpu:"
+    x-hetjob-component: 0
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_0_nodes:
+    type: integer
+    title: "Component 0: Number of Nodes"
+    description: Number of nodes to allocate for GPU component
+    minimum: 1
+    maximum: 10
+    default: 1
+    x-slurm-directive: "--nodes"
+    x-hetjob-component: 0
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_0_cpus_per_task:
+    type: integer
+    title: "Component 0: CPUs per Task"
+    description: Number of CPU cores for GPU component
+    minimum: 1
+    maximum: 64
+    default: 16
+    x-slurm-directive: "--cpus-per-task"
+    x-hetjob-component: 0
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_0_mem_per_gpu:
+    type: string
+    title: "Component 0: Memory per GPU"
+    description: Memory per GPU for reconstruction (e.g., 96G, 128G). Leave blank for SLURM default.
+    default: "96G"
+    pattern: "^([0-9]+[KMGT]){0,1}$"
+    x-slurm-directive: "--mem-per-gpu"
+    x-hetjob-component: 0
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_0_mem_per_cpu:
+    type: string
+    title: "Component 0: Memory per CPU"
+    description: Memory per CPU for GPU component (e.g., 96G, 128G, 196G). Leave blank for SLURM default.
+    default: ""
+    pattern: "^([0-9]+[KMGT]){0,1}$"
+    x-slurm-directive: "--mem-per-cpu"
+    x-hetjob-component: 0
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_0_time:
+    type: string
+    title: "Component 0: Time Limit"
+    description: Maximum runtime for GPU component (HH:MM:SS)
+    default: "140:00:00"
+    pattern: "^[0-9]{1,3}:[0-5][0-9]:[0-5][0-9]$"
+    x-slurm-directive: "--time"
+    x-hetjob-component: 0
+    x-compute-resource: true
+    x-bash-skip: true
+
+  # SLURM Resource Options - Component 1 (CPU Processing)
+  slurm_component_1_partition:
+    type: string
+    title: "Component 1: Partition"
+    description: SLURM partition for CPU processing component
+    enum:
+      - cpu
+    default: cpu
+    x-slurm-directive: "--partition"
+    x-hetjob-component: 1
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_1_nodes:
+    type: integer
+    title: "Component 1: Number of Nodes"
+    description: Number of nodes to allocate for CPU component
+    minimum: 1
+    maximum: 10
+    default: 1
+    x-slurm-directive: "--nodes"
+    x-hetjob-component: 1
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_1_cpus_per_task:
+    type: integer
+    title: "Component 1: CPUs per Task"
+    description: Number of CPU cores for CPU component
+    minimum: 1
+    maximum: 64
+    default: 1
+    x-slurm-directive: "--cpus-per-task"
+    x-hetjob-component: 1
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_1_mem_per_cpu:
+    type: string
+    title: "Component 1: Memory per CPU"
+    description: Memory per CPU for reformat/metrics (e.g., 196G, 256G). Leave blank for SLURM default.
+    default: "196G"
+    pattern: "^([0-9]+[KMGT]){0,1}$"
+    x-slurm-directive: "--mem-per-cpu"
+    x-hetjob-component: 1
+    x-compute-resource: true
+    x-bash-skip: true
+
+  slurm_component_1_time:
+    type: string
+    title: "Component 1: Time Limit"
+    description: Maximum runtime for CPU component (HH:MM:SS)
+    default: "140:00:00"
+    pattern: "^[0-9]{1,3}:[0-5][0-9]:[0-5][0-9]$"
+    x-slurm-directive: "--time"
+    x-hetjob-component: 1
+    x-compute-resource: true
+    x-bash-skip: true
+
+required:
+  - pixel_size

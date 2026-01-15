@@ -1,7 +1,7 @@
 'use client';
 
-const Home: React.FC = () => {
-  return <div>Select a view from the links above</div>;
-};
+import { DashboardView } from '@app/components/DashboardView/DashboardView';
 
-export default Home;
+export default function HomePage() {
+  return <DashboardView />;
+}

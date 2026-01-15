@@ -7,8 +7,7 @@ from django.contrib.auth.models import User
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 #from cryo_grids.models import Site, Dewar, Cane, Puck, CryoGridBox, Sample
-from clouddocs.models import DriveFolder
-from confluence.models import Space
+from external_links.models import ExternalResource
 
 #from cryo_grids.models import *
 from cryo_grids.models import (
@@ -36,9 +35,20 @@ def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
 
 def create_project():
-    confluence = Space.objects.create(name='BD01', space_id='CHOL', url='https://czbiohub.atlassian.net/wiki/spaces/CHOL/overview')
-    drive = DriveFolder.objects.create(name='BD01', url='https://drive.google.com/drive/u/0/folders/10UfcYF1vcVJi44yMwIWjaXBjXvz8qahN')
-    project = Project.objects.create(name='BD01', google_drive_folder=drive, confluence_space=confluence)
+    # Create ExternalResource for documentation space
+    external_confluence = ExternalResource.objects.create(
+        resource_type='doc_space',
+        system_name='Confluence',
+        name='BD01',
+        url='https://czbiohub.atlassian.net/wiki/spaces/CHOL/overview',
+        metadata={'space_id': 'CHOL'}
+    )
+
+    # Create project with unified documentation field
+    project = Project.objects.create(
+        name='BD01',
+        documentation_space=external_confluence
+    )
     return project
 
 def create_sample():
