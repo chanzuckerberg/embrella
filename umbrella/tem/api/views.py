@@ -54,12 +54,15 @@ class SessionView(View):
             # choose recon types based on plan
             if proc_run.proc_plan.name == 'czii-live':
                 reconstruction_types = [
-                    {'type': 'DCTF',   'job_name': 'aretomo3', 'vol_number': 'vol001'},
-                    {'type': 'SART',   'job_name': 'aretomo3', 'vol_number': 'vol003'},
+                    {'type': 'DCTF',   'job_name': 'aretomo3',
+                        'vol_number': 'vol001'},
+                    {'type': 'SART',   'job_name': 'aretomo3',
+                        'vol_number': 'vol003'},
                 ]
             elif proc_run.proc_plan.name == 'czii-denoise':
+                # NOTE: denoise does not have a volume number
                 reconstruction_types = [
-                    {'type': 'Denoised', 'job_name': 'denoise', 'vol_number': 'vol001'},
+                    {'type': 'Denoised', 'job_name': 'denoise', 'vol_number': ''},
                 ]
             else:
                 # skip other plans (e.g., czii-copick)
@@ -74,8 +77,10 @@ class SessionView(View):
 
                 save_path = (
                     f"/hpc/group.czii/krios1.processing/project/"
-                    f"{recon_info['job_name']}/{session.name}/{proc_run.name}/{recon_info['vol_number']}"
+                    f"{recon_info['job_name']}/{session.name}/{proc_run.name}"
                 )
+                if recon_info['vol_number']:
+                    save_path += f"/{recon_info['vol_number']}"
                 runs_data.append({
                     "runId": proc_run.name,
                     "numTomograms": tomogram_counts.get(recon_type, 0),
@@ -101,7 +106,8 @@ class SessionView(View):
             if session_id:
                 # Get specific session
                 try:
-                    session = MsiSession.objects.select_related('project').get(name=session_id)
+                    session = MsiSession.objects.select_related(
+                        'project').get(name=session_id)
                 except MsiSession.DoesNotExist:
                     return JsonResponse({"error": "Session not found"}, status=404)
 
