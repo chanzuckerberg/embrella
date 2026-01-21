@@ -31,7 +31,7 @@ class AretomoSyncer(syncers.ProcessSyncer):
         # Check both SART and DCTF reconstructions
         recon_type_to_vol_dir = {
             "DCTF": "vol001",
-            "SART": "vol002",
+            "SART": "vol003",
         }
         for recon_type in ["DCTF", "SART"]:
             vol_dir = recon_type_to_vol_dir[recon_type]
