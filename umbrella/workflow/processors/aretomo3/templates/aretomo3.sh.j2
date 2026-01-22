@@ -31,31 +31,31 @@
 
 # Context variables
 {% for var_name, var_value in context_vars.items() -%}
-{{ var_name }}="{{ var_value }}"
+export {{ var_name }}="{{ var_value }}"
 {% endfor -%}
 
 # Calculated variables
 {% for var_name, var_value in calculated_vars.items() -%}
-{{ var_name }}={{ var_value }}
+export {{ var_name }}={{ var_value }}
 {% endfor -%}
 
 # Schema-driven bash variables (from parameter schema)
 {% for var_name, var_info in schema_vars.items() -%}
 {% if var_info.format == "quoted" -%}
-{{ var_name }}="{{ var_info.value }}"
+export {{ var_name }}="{{ var_info.value }}"
 {% elif var_info.format == "unquoted" -%}
-{{ var_name }}={{ var_info.value }}
+export {{ var_name }}={{ var_info.value }}
 {% elif var_info.format == "exported" -%}
 export {{ var_name }}="{{ var_info.value }}"
 {% endif -%}
 {% endfor -%}
 
 # Input paths
-in_mdoc_dir="/hpc/instruments/czii.krios1/OffloadData/${project_name}"
-gain_fn="{{ gain_file_path }}"
+export in_mdoc_dir="/hpc/instruments/czii.krios1/OffloadData/${project_name}"
+export gain_fn="{{ gain_file_path }}"
 
 # Output path
-out_path="/hpc/projects/group.czii/krios1.processing/aretomo3/${project_name}/${run_number}"
+export out_path="/hpc/projects/group.czii/krios1.processing/aretomo3/${project_name}/${run_number}"
 mkdir -p "${out_path}/vol001" "${out_path}/vol002" "${out_path}/vol003"
 chmod 775 "${out_path}"
 
