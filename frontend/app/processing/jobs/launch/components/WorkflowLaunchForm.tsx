@@ -191,8 +191,13 @@ export default function WorkflowLaunchForm({
         )}`;
 
         const lookupResponse = await fetch(lookupUrl, { credentials: 'include' });
-
-        if (lookupResponse.ok) {
+        if (lookupResponse.status === 204) {
+          // Run doesn't exist yet - this is okay for new runs
+          // Set null to indicate no existing run (skip dependency check)
+          setLookedUpIds(null);
+          // For new runs, automatically assume dependencies are met (no prior runs to check)
+          setDependenciesMet(true);
+        } else if (lookupResponse.ok) {
           const lookupData = await lookupResponse.json();
           if (lookupData.success) {
             setLookedUpIds({
@@ -200,12 +205,6 @@ export default function WorkflowLaunchForm({
               proc_run_id: lookupData.proc_run_id,
             });
           }
-        } else if (lookupResponse.status === 404) {
-          // Run doesn't exist yet - this is okay for new runs
-          // Set null to indicate no existing run (skip dependency check)
-          setLookedUpIds(null);
-          // For new runs, automatically assume dependencies are met (no prior runs to check)
-          setDependenciesMet(true);
         }
       } catch (err) {
         console.error('Error looking up IDs:', err);
@@ -1079,11 +1078,6 @@ export default function WorkflowLaunchForm({
 
                   // Skip parameters with parameter group (they go in accordions)
                   if (prop['x-parameter-group']) {
-                    return false;
-                  }
-
-                  // Skip control-flow parameters
-                  if (prop['x-control-flow']) {
                     return false;
                   }
 
