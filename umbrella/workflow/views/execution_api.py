@@ -54,9 +54,11 @@ def list_available_processors(request):
 
             # Try to get cluster info from database
             try:
-                software = ProcSoftware.objects.get(processor_class=name, active=True)
+                software = ProcSoftware.objects.get(
+                    processor_class=name, active=True)
                 default_cluster = software.default_cluster
-                allowed_clusters = software.allowed_clusters if software.allowed_clusters else ['czii', 'bruno']
+                allowed_clusters = software.allowed_clusters if software.allowed_clusters else [
+                    'czii', 'bruno']
             except ProcSoftware.DoesNotExist:
                 # Fallback to processor class attributes
                 default_cluster = instance.cluster or 'czii'
@@ -114,9 +116,11 @@ def get_processor_schema(request, processor_name: str):
 
         # Try to get cluster info from database
         try:
-            software = ProcSoftware.objects.get(processor_class=processor_name, active=True)
+            software = ProcSoftware.objects.get(
+                processor_class=processor_name, active=True)
             default_cluster = software.default_cluster
-            allowed_clusters = software.allowed_clusters if software.allowed_clusters else ['czii', 'bruno']
+            allowed_clusters = software.allowed_clusters if software.allowed_clusters else [
+                'czii', 'bruno']
         except ProcSoftware.DoesNotExist:
             # Fallback to processor class attributes
             default_cluster = processor.cluster or 'czii'
@@ -211,7 +215,8 @@ def execute_pipe(request):
         auth = data.get("auth", {})
         user_id = auth.get("username") or request.user.username
         password = auth.get("password")
-        cluster_id = data.get("cluster") or data.get("cluster_id")  # Support both field names
+        cluster_id = data.get("cluster") or data.get(
+            "cluster_id")  # Support both field names
 
         # If email provided, take username to be what precedes the @
         if user_id and "@" in user_id:
@@ -224,7 +229,8 @@ def execute_pipe(request):
             }, status=400)
 
         # Get appropriate authentication credentials
-        auth, error = clusterio.get_auth_for_user(user_id, cluster_id, password)
+        auth, error = clusterio.get_auth_for_user(
+            user_id, cluster_id, password)
         if error:
             return JsonResponse(
                 {
@@ -279,7 +285,8 @@ def execute_pipe(request):
             )
 
             if created:
-                logger.info(f"Created new ProcRun: {run_name} for session {session_name} with plan {proc_plan.name}")
+                logger.info(
+                    f"Created new ProcRun: {run_name} for session {session_name} with plan {proc_plan.name}")
 
             # Find matching pipe_in_plan
             matching_pipe_in_plan = None
@@ -514,7 +521,8 @@ def preview_script(request):
             }, status=400)
 
         # Validate SLURM resources
-        slurm_errors = processor.validate_slurm_resources(parameters, cluster_id)
+        slurm_errors = processor.validate_slurm_resources(
+            parameters, cluster_id)
         if slurm_errors:
             return JsonResponse({
                 "success": False,
@@ -526,7 +534,8 @@ def preview_script(request):
         try:
             script_content = processor.render_script(parameters, context)
         except Exception as e:
-            logger.error(f"Error rendering script for preview: {e}", exc_info=True)
+            logger.error(
+                f"Error rendering script for preview: {e}", exc_info=True)
             return JsonResponse({
                 "success": False,
                 "error": f"Failed to render script: {str(e)}",
@@ -775,11 +784,13 @@ def check_dependencies(request):
 
         # Check dependencies
         executor = PipelineExecutor()
-        dependencies_met, missing = executor.check_dependencies_met(proc_run, pipe_in_plan)
+        dependencies_met, missing = executor.check_dependencies_met(
+            proc_run, pipe_in_plan)
 
         # Check if there are any dependencies to check
         from processes.models import PipeJoint
-        has_dependencies = PipeJoint.objects.filter(pipe_in_plan=pipe_in_plan).exists()
+        has_dependencies = PipeJoint.objects.filter(
+            pipe_in_plan=pipe_in_plan).exists()
 
         return JsonResponse({
             "success": True,
@@ -875,7 +886,7 @@ def lookup_execution_ids(request):
                 return JsonResponse({
                     "success": False,
                     "error": f"No processing plan found with processor '{processor_name}'. "
-                            f"Please create a plan with this processor first.",
+                    f"Please create a plan with this processor first.",
                 }, status=404)
 
             proc_plan = pipe_in_plan_with_processor.plan
@@ -901,7 +912,7 @@ def lookup_execution_ids(request):
                 "error": f"Run '{run_name}' does not exist yet for session '{session_name}'. It will be created when you submit the job.",
                 "run_not_found": True,
                 "session_id": msi_session.id,
-            }, status=404)
+            }, status=204)
 
         # Look up pipe in plan that matches the processor
         # Find the pipe_in_plan where the pipe's software processor matches the requested processor
@@ -1027,7 +1038,8 @@ def get_execution_by_job_id(request, job_id: str):
                 # Refresh from database to get updated logs
                 execution.refresh_from_db()
             except Exception as e:
-                logger.error(f"Error fetching logs on-demand for job {job_id}: {e}")
+                logger.error(
+                    f"Error fetching logs on-demand for job {job_id}: {e}")
                 # Continue anyway - we'll return what we have
 
         # Build response
@@ -1170,7 +1182,8 @@ def validate_processor_parameters(request, processor_name: str):
         }, status=404)
 
     except Exception as e:
-        logger.error(f"Error validating processor parameters: {e}", exc_info=True)
+        logger.error(
+            f"Error validating processor parameters: {e}", exc_info=True)
         return JsonResponse({
             "valid": False,
             "errors": [{"field": "__all__", "message": str(e)}],
