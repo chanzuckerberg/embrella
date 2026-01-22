@@ -174,10 +174,13 @@ properties:
     type: integer
     title: Local Shift
     description: Local alignment shift parameter
-    default: '4 4'
-    pattern: '^[0-9]+ [0-9]+$'
+    minimum: 0
+    maximum: 100
+    default: 4
     x-parameter-group: alignment
-    x-bash-var: local_aln
+    x-bash-var:
+      - local_aln_1
+      - local_aln_2
     x-bash-format: unquoted
     x-bash-type: number
     x-bash-skip: false
