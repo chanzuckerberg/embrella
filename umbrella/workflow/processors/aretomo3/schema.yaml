@@ -634,7 +634,7 @@ properties:
     x-bash-skip: false
     x-cli-flag: '-Sart'
     x-cli-format: direct
-    x-cli-default: '15 5'
+    x-cli-default: '20 3'
 
   use_wbp:
     type: boolean
