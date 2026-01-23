@@ -634,7 +634,7 @@ properties:
     x-bash-skip: false
     x-cli-flag: '-Sart'
     x-cli-format: direct
-    x-cli-default: '15 5'
+    x-cli-default: '20 3'
 
   use_wbp:
     type: boolean
@@ -681,7 +681,7 @@ properties:
     type: boolean
     title: Interpolation Correction
     description: Correct for information loss due to linear interpolation
-    default: true
+    default: false
     x-parameter-group: reconstruction
     x-bash-var: intp_cor
     x-bash-format: unquoted
@@ -689,6 +689,7 @@ properties:
     x-bash-skip: false
     x-cli-flag: '-IntpCor'
     x-cli-format: boolean_to_int
+    x-cli-default: true
 
   out_xf:
     type: boolean
