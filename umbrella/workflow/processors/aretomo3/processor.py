@@ -27,7 +27,7 @@ class AreTomo3Processor(BaseProcessor):
 
     name = "aretomo3"
     display_name = "AreTomo3"
-    version = "2.2.2_07-11-2025"
+    version = "2.2.7_01-22-2026"
     cluster = "czii"
     allowed_clusters = ['czii', 'bruno']
     task_name = 'tomographic_reconstruction'
