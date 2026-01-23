@@ -29,8 +29,8 @@ export const useMoveGridBox = (): UseMoveGridBoxResult => {
       const url = getRequestURL(DJANGO_URL, POST_API.MOVE_GRID_BOX).replace('grid_box_id', data.grid_box_id.toString());
 
       const response = await patchResource(url, {
-        destination_puck_id: data.destination_puck_id,
-        destination_position: data.destination_position,
+        puck_id: data.destination_puck_id,
+        position_in_puck: data.destination_position,
       });
 
       if (response.ok) {
