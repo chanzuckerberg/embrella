@@ -110,7 +110,7 @@ copick add tomogram "${tomo_path}" \
 # ============================================================================
 # Get smallest common voxel size across all runs for the given tomogram type
 # This ensures consistent voxel spacing when downsampling
-voxel_size=$(python3 - <<'PY'
+voxel_size=$(python3 - <<PY
 import copick, math
 from copick.ops.get import from_file, get_tomograms, get_runs
 
