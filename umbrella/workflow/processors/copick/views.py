@@ -314,7 +314,7 @@ def validate_parameters(request) -> JsonResponse:
             )
 
         import_tomo_type = params.get("import_tomo_type")
-        valid_types = ["dctf", "wbp", "denoise"]
+        valid_types = ["dctf", "wbp", "denoise", "sart"]
         if import_tomo_type and import_tomo_type not in valid_types:
             errors.append(
                 {
