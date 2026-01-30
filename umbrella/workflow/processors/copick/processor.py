@@ -153,6 +153,7 @@ class CopickProcessor(BaseProcessor):
         elif operation == "import_tomograms":
             template_vars.update(
                 {
+                    "copickRunName": params["copick_run"],  # Existing copick run to import into
                     "importTomoType": params["import_tomo_type"],
                     "importTomogramRun": params["import_tomogram_run"],
                     "downsampleTomogramVoxelSize": params.get("downsample_voxel_size", ""),
