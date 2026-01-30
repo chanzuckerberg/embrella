@@ -135,10 +135,7 @@ properties:
     description: Voxel size of the custom object map (required if object_map_file is provided)
     minimum: 0.1
     maximum: 100.0
-    x-conditional-visibility:
-      field: object_map_file
-      operator: ne
-      value: ''
+    x-conditional: "operation == 'add_object' && object_map_file"
 
   # SLURM Resource Options (Compute Resources section)
   slurm_partition:
