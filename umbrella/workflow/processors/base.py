@@ -57,6 +57,12 @@ class BaseProcessor(ABC):
     version: Optional[str] = None
     cluster: Optional[str] = None
 
+    # Set to True for processors that should not appear in processor dropdown
+    # (e.g., copick-add-object which is accessed via Copick form's Add Object tab)
+    # Note: This only affects list_available_processors API. Hidden processors can
+    # still be executed via get_processor() and have their DB records synced.
+    hidden_from_list: bool = False
+
     @classmethod
     def _get_schema_file_path(cls) -> Optional[Path]:
         """
@@ -71,9 +77,10 @@ class BaseProcessor(ABC):
         """
         # Get the directory containing the processor class module
         import inspect
+
         processor_file = inspect.getfile(cls)
         processor_dir = Path(processor_file).parent
-        schema_path = processor_dir / 'schema.yaml'
+        schema_path = processor_dir / "schema.yaml"
 
         return schema_path if schema_path.exists() else None
 
@@ -111,7 +118,7 @@ class BaseProcessor(ABC):
             return None
 
         try:
-            with open(schema_path, 'r') as f:
+            with open(schema_path, "r") as f:
                 schema = yaml.safe_load(f)
             logger.debug(f"Loaded schema from {schema_path} for processor {cls.name}")
             return schema
@@ -185,7 +192,7 @@ class BaseProcessor(ABC):
         )
 
     @abstractmethod
-    def render_script(self, params: Dict[str, Any], run_context: 'RunContext') -> str:
+    def render_script(self, params: Dict[str, Any], run_context: "RunContext") -> str:
         """
         Render a bash script for SLURM submission.
 
@@ -209,7 +216,7 @@ class BaseProcessor(ABC):
         pass
 
     @abstractmethod
-    def parse_output_paths(self, run_context: 'RunContext') -> List[Dict[str, str]]:
+    def parse_output_paths(self, run_context: "RunContext") -> List[Dict[str, str]]:
         """
         Return expected output paths for this processor.
 
@@ -293,17 +300,17 @@ class BaseProcessor(ABC):
         """
         # Define cluster-specific limits
         CLUSTER_LIMITS = {
-            'czii': {
-                'max_gpus': 8,
-                'max_time_hours': 168,  # 7 days
-                'allowed_partitions': ['gpu', 'cpu'],
-                'max_cpus_per_task': 64,
+            "czii": {
+                "max_gpus": 8,
+                "max_time_hours": 168,  # 7 days
+                "allowed_partitions": ["gpu", "cpu"],
+                "max_cpus_per_task": 64,
             },
-            'bruno': {
-                'max_gpus': 4,
-                'max_time_hours': 168,  # 7 days
-                'allowed_partitions': ['gpu', 'cpu'],
-                'max_cpus_per_task': 32,
+            "bruno": {
+                "max_gpus": 4,
+                "max_time_hours": 168,  # 7 days
+                "allowed_partitions": ["gpu", "cpu"],
+                "max_cpus_per_task": 32,
             },
         }
 
@@ -316,24 +323,24 @@ class BaseProcessor(ABC):
 
         schema = self.get_parameter_schema()
 
-        for param_name, prop in schema.get('properties', {}).items():
+        for param_name, prop in schema.get("properties", {}).items():
             # Only validate SLURM directive parameters
-            if not prop.get('x-slurm-directive'):
+            if not prop.get("x-slurm-directive"):
                 continue
 
             value = params.get(param_name)
             if value is None:
-                value = prop.get('default')
+                value = prop.get("default")
             if value is None:
                 continue
 
-            directive = prop.get('x-slurm-directive')
-            component = prop.get('x-hetjob-component')
+            directive = prop.get("x-slurm-directive")
+            component = prop.get("x-hetjob-component")
             component_label = f" (Component {component})" if component is not None else ""
 
             # Validate GPU count
-            if directive == '--gpus':
-                max_gpus = limits.get('max_gpus', 999)
+            if directive == "--gpus":
+                max_gpus = limits.get("max_gpus", 999)
                 if int(value) > max_gpus:
                     errors.append(
                         f"GPU count exceeds cluster maximum{component_label}: "
@@ -341,8 +348,8 @@ class BaseProcessor(ABC):
                     )
 
             # Validate CPUs per task
-            elif directive == '--cpus-per-task':
-                max_cpus = limits.get('max_cpus_per_task', 999)
+            elif directive == "--cpus-per-task":
+                max_cpus = limits.get("max_cpus_per_task", 999)
                 if int(value) > max_cpus:
                     errors.append(
                         f"CPU count exceeds cluster maximum{component_label}: "
@@ -350,8 +357,8 @@ class BaseProcessor(ABC):
                     )
 
             # Validate partition
-            elif directive == '--partition':
-                allowed_partitions = limits.get('allowed_partitions', [])
+            elif directive == "--partition":
+                allowed_partitions = limits.get("allowed_partitions", [])
                 if allowed_partitions and value not in allowed_partitions:
                     errors.append(
                         f"Partition '{value}' not available{component_label} on {cluster_id}. "
@@ -359,12 +366,12 @@ class BaseProcessor(ABC):
                     )
 
             # Validate time limit
-            elif directive == '--time':
-                max_hours = limits.get('max_time_hours')
+            elif directive == "--time":
+                max_hours = limits.get("max_time_hours")
                 if max_hours:
                     # Parse HH:MM:SS format
                     try:
-                        parts = value.split(':')
+                        parts = value.split(":")
                         hours = int(parts[0])
                         if len(parts) > 1:
                             hours += int(parts[1]) / 60
@@ -378,14 +385,13 @@ class BaseProcessor(ABC):
                             )
                     except (ValueError, IndexError):
                         errors.append(
-                            f"Invalid time format{component_label}: {value} "
-                            "(expected HH:MM:SS)",
+                            f"Invalid time format{component_label}: {value} (expected HH:MM:SS)",
                         )
 
         return errors
 
     @abstractmethod
-    def on_job_submit(self, run_context: 'RunContext', job_id: str) -> None:
+    def on_job_submit(self, run_context: "RunContext", job_id: str) -> None:
         """
         Hook called immediately after successful job submission.
 
@@ -410,7 +416,7 @@ class BaseProcessor(ABC):
         pass
 
     @abstractmethod
-    def on_job_complete(self, run_context: 'RunContext', success: bool) -> None:
+    def on_job_complete(self, run_context: "RunContext", success: bool) -> None:
         """
         Hook called when job completes (success or failure).
 
@@ -563,13 +569,13 @@ class BaseProcessor(ABC):
                 # Create/update ProcSoftware and Task records from metadata
         """
         return {
-            'name': self.name,
-            'version': self.version,
-            'processor_class': self.name,
-            'default_cluster': self.cluster,
-            'allowed_clusters': getattr(self, 'allowed_clusters', [self.cluster]),
-            'script_directory': self.get_script_directory(),
-            'task_name': getattr(self, 'task_name', None),
+            "name": self.name,
+            "version": self.version,
+            "processor_class": self.name,
+            "default_cluster": self.cluster,
+            "allowed_clusters": getattr(self, "allowed_clusters", [self.cluster]),
+            "script_directory": self.get_script_directory(),
+            "task_name": getattr(self, "task_name", None),
         }
 
     @classmethod
@@ -602,15 +608,15 @@ class BaseProcessor(ABC):
             # Get the directory containing the processor class module
             processor_file = inspect.getfile(cls)
             processor_dir = Path(processor_file).parent
-            views_path = processor_dir / 'views.py'
+            views_path = processor_dir / "views.py"
 
             if not views_path.exists():
                 return None
 
             # Import the views module dynamically
             # Convert path to module notation: workflow.processors.aretomo3.views
-            module_parts = ['workflow', 'processors', cls.name, 'views']
-            module_name = '.'.join(module_parts)
+            module_parts = ["workflow", "processors", cls.name, "views"]
+            module_name = ".".join(module_parts)
 
             views_module = importlib.import_module(module_name)
             logger.debug(f"Loaded custom views module for processor {cls.name}")
@@ -655,13 +661,13 @@ class BaseProcessor(ABC):
             Schema param "pixel_size" with x-bash-var="pix_size" returns "pix_size"
         """
         schema = self.get_parameter_schema()
-        prop = schema.get('properties', {}).get(param_name, {})
+        prop = schema.get("properties", {}).get(param_name, {})
 
         # Control-flow params don't map to bash variables
-        if prop.get('x-control-flow', False):
+        if prop.get("x-control-flow", False):
             return None
 
-        return prop.get('x-bash-var', param_name)
+        return prop.get("x-bash-var", param_name)
 
     def _get_param_cli_flag(self, param_name: str) -> Optional[str]:
         """
@@ -678,17 +684,17 @@ class BaseProcessor(ABC):
             Control-flow params return None
         """
         schema = self.get_parameter_schema()
-        prop = schema.get('properties', {}).get(param_name, {})
+        prop = schema.get("properties", {}).get(param_name, {})
 
         # Control-flow params don't have CLI flags
-        if prop.get('x-control-flow', False):
+        if prop.get("x-control-flow", False):
             return None
 
         # Parameters that are part of composite flags return None
-        if prop.get('x-cli-flag') is None and not prop.get('x-cli-composite'):
+        if prop.get("x-cli-flag") is None and not prop.get("x-cli-composite"):
             return None
 
-        return prop.get('x-cli-flag')
+        return prop.get("x-cli-flag")
 
     def _format_cli_param(self, param_name: str, value: Any, params: Dict[str, Any]) -> str:
         """
@@ -708,14 +714,14 @@ class BaseProcessor(ABC):
             format_type="custom_formatter" → calls _format_cli_custom_formatter()
         """
         schema = self.get_parameter_schema()
-        prop = schema.get('properties', {}).get(param_name, {})
-        format_type = prop.get('x-cli-format', 'direct')
+        prop = schema.get("properties", {}).get(param_name, {})
+        format_type = prop.get("x-cli-format", "direct")
 
-        if format_type == 'direct':
+        if format_type == "direct":
             return str(value)
 
         # Call processor-specific formatter method
-        formatter_method = f'_format_cli_{format_type}'
+        formatter_method = f"_format_cli_{format_type}"
         if hasattr(self, formatter_method):
             return getattr(self, formatter_method)(value, params)
 
@@ -728,7 +734,7 @@ class BaseProcessor(ABC):
     def generate_bash_variables(
         self,
         params: Dict[str, Any],
-        run_context: 'RunContext',
+        run_context: "RunContext",
     ) -> Dict[str, Any]:
         """
         Generate dictionary of bash variables from schema and parameters.
@@ -755,11 +761,11 @@ class BaseProcessor(ABC):
         schema = self.get_parameter_schema()
         bash_vars = {}
 
-        for param_name, prop in schema.get('properties', {}).items():
+        for param_name, prop in schema.get("properties", {}).items():
             # Get parameter value with default
             value = params.get(param_name)
             if value is None:
-                value = prop.get('default')
+                value = prop.get("default")
 
             # Get bash variable name
             bash_var_name = self._get_param_bash_var(param_name)
@@ -769,7 +775,7 @@ class BaseProcessor(ABC):
                 bash_vars[param_name] = value if value is not None else False
             elif isinstance(bash_var_name, list):
                 # Multi-variable param (e.g., local_shift → local_aln_1, local_aln_2)
-                handler_method = f'_handle_multi_var_{param_name}'
+                handler_method = f"_handle_multi_var_{param_name}"
                 if hasattr(self, handler_method):
                     multi_vars = getattr(self, handler_method)(value, params)
                     bash_vars.update(multi_vars)
@@ -838,23 +844,23 @@ class BaseProcessor(ABC):
         schema = self.get_parameter_schema()
         issues = []
 
-        for param_name, prop in schema.get('properties', {}).items():
+        for param_name, prop in schema.get("properties", {}).items():
             # Skip control-flow params
-            if prop.get('x-control-flow', False):
+            if prop.get("x-control-flow", False):
                 continue
 
             # Check if x-cli-flag is defined (unless it's part of composite)
-            if 'x-cli-flag' not in prop and not prop.get('x-cli-composite'):
+            if "x-cli-flag" not in prop and not prop.get("x-cli-composite"):
                 issues.append(f"Parameter '{param_name}' missing x-cli-flag")
 
             # Check if x-cli-format is defined (None is acceptable for params without CLI flags)
-            if 'x-cli-format' not in prop and prop.get('x-cli-flag') is not None:
+            if "x-cli-format" not in prop and prop.get("x-cli-flag") is not None:
                 issues.append(f"Parameter '{param_name}' missing x-cli-format")
 
             # If custom format, check formatter method exists
-            format_type = prop.get('x-cli-format')
-            if format_type and format_type != 'direct':
-                formatter_method = f'_format_cli_{format_type}'
+            format_type = prop.get("x-cli-format")
+            if format_type and format_type != "direct":
+                formatter_method = f"_format_cli_{format_type}"
                 if not hasattr(self, formatter_method):
                     issues.append(
                         f"Parameter '{param_name}' specifies format '{format_type}' "
@@ -862,9 +868,9 @@ class BaseProcessor(ABC):
                     )
 
             # Check multi-var params have handlers
-            bash_var = prop.get('x-bash-var')
+            bash_var = prop.get("x-bash-var")
             if isinstance(bash_var, list):
-                handler_method = f'_handle_multi_var_{param_name}'
+                handler_method = f"_handle_multi_var_{param_name}"
                 if not hasattr(self, handler_method):
                     issues.append(
                         f"Parameter '{param_name}' specifies multi-var {bash_var} "
@@ -878,7 +884,7 @@ class BaseProcessor(ABC):
     def generate_bash_variables_structured(
         self,
         params: Dict[str, Any],
-        run_context: 'RunContext',
+        run_context: "RunContext",
     ) -> Dict[str, Dict[str, Any]]:
         """
         Generate structured bash variables with metadata for template loops.
@@ -914,46 +920,46 @@ class BaseProcessor(ABC):
         schema = self.get_parameter_schema()
         structured_vars = {}
 
-        for param_name, prop in schema.get('properties', {}).items():
+        for param_name, prop in schema.get("properties", {}).items():
             # Skip if x-bash-skip is True (control-flow params)
-            if prop.get('x-bash-skip', False):
+            if prop.get("x-bash-skip", False):
                 continue
 
             # Get parameter value with default
             value = params.get(param_name)
             if value is None:
-                value = prop.get('default')
+                value = prop.get("default")
 
             # Skip if still None
             if value is None:
                 continue
 
             # Get bash variable name(s)
-            bash_var_name = prop.get('x-bash-var')
+            bash_var_name = prop.get("x-bash-var")
             if not bash_var_name:
                 continue
 
             # Get rendering metadata
-            bash_format = prop.get('x-bash-format', 'quoted')
-            bash_type = prop.get('x-bash-type', 'string')
+            bash_format = prop.get("x-bash-format", "quoted")
+            bash_type = prop.get("x-bash-type", "string")
 
             if isinstance(bash_var_name, list):
                 # Multi-variable param (e.g., local_shift → local_aln_1, local_aln_2)
-                handler_method = f'_handle_multi_var_{param_name}'
+                handler_method = f"_handle_multi_var_{param_name}"
                 if hasattr(self, handler_method):
                     multi_vars = getattr(self, handler_method)(value, params)
                     for var_name, var_value in multi_vars.items():
                         structured_vars[var_name] = {
-                            'value': var_value,
-                            'format': bash_format,
-                            'type': bash_type,
+                            "value": var_value,
+                            "format": bash_format,
+                            "type": bash_type,
                         }
             else:
                 # Single bash variable
                 structured_vars[bash_var_name] = {
-                    'value': value,
-                    'format': bash_format,
-                    'type': bash_type,
+                    "value": value,
+                    "format": bash_format,
+                    "type": bash_type,
                 }
 
         return structured_vars
@@ -991,16 +997,16 @@ class BaseProcessor(ABC):
             {% endfor %}
         """
         schema = self.get_parameter_schema()
-        required_params = set(schema.get('required', []))
+        required_params = set(schema.get("required", []))
         cli_args = []
 
-        for param_name, prop in schema.get('properties', {}).items():
+        for param_name, prop in schema.get("properties", {}).items():
             # Skip control-flow params and composite sub-params
-            if prop.get('x-control-flow', False) or prop.get('x-cli-composite') is True:
+            if prop.get("x-control-flow", False) or prop.get("x-cli-composite") is True:
                 continue
 
             # Get CLI flag
-            cli_flag = prop.get('x-cli-flag')
+            cli_flag = prop.get("x-cli-flag")
             if not cli_flag:
                 continue
 
@@ -1009,11 +1015,11 @@ class BaseProcessor(ABC):
             # - schema_default: form pre-fill value
             # - cli_default: CLI tool's internal default (falls back to schema_default)
             user_value = params.get(param_name)
-            schema_default = prop.get('default')
-            cli_default = prop.get('x-cli-default', schema_default)  # CLI default, or schema default if not specified
+            schema_default = prop.get("default")
+            cli_default = prop.get("x-cli-default", schema_default)  # CLI default, or schema default if not specified
 
             is_required = param_name in required_params
-            always_include = prop.get('x-cli-always-include', False)
+            always_include = prop.get("x-cli-always-include", False)
 
             # Determine effective value (user value or schema default)
             if user_value is not None:
@@ -1044,14 +1050,16 @@ class BaseProcessor(ABC):
             formatted_value = self._format_cli_param(param_name, value, params)
 
             # Skip empty formatted values (e.g., empty strings)
-            if formatted_value == '' or formatted_value is None:
+            if formatted_value == "" or formatted_value is None:
                 continue
 
             # Add to args list
-            cli_args.append({
-                'flag': cli_flag,
-                'value': formatted_value,
-            })
+            cli_args.append(
+                {
+                    "flag": cli_flag,
+                    "value": formatted_value,
+                }
+            )
 
         return cli_args
 
@@ -1082,7 +1090,7 @@ class BaseProcessor(ABC):
         if isinstance(value1, bool) or isinstance(value2, bool):
             str1 = str(value1).lower()
             str2 = str(value2).lower()
-            bool_map = {'true': True, 'false': False, '1': True, '0': False}
+            bool_map = {"true": True, "false": False, "1": True, "0": False}
             if str1 in bool_map and str2 in bool_map:
                 return bool_map[str1] == bool_map[str2]
 
@@ -1092,7 +1100,7 @@ class BaseProcessor(ABC):
     def get_calculated_vars(
         self,
         params: Dict[str, Any],
-        run_context: 'RunContext',
+        run_context: "RunContext",
     ) -> Dict[str, Any]:
         """
         Get processor-specific calculated variables.
@@ -1147,14 +1155,14 @@ class BaseProcessor(ABC):
         schema = self.get_parameter_schema()
         directives = []
 
-        for param_name, prop in schema.get('properties', {}).items():
+        for param_name, prop in schema.get("properties", {}).items():
             # Only process parameters with x-slurm-directive extension
-            slurm_directive = prop.get('x-slurm-directive')
+            slurm_directive = prop.get("x-slurm-directive")
             if not slurm_directive:
                 continue
 
             # Skip hetjob-specific parameters (those are handled separately)
-            if prop.get('x-hetjob-component') is not None:
+            if prop.get("x-hetjob-component") is not None:
                 continue
 
             # Get parameter value with default fallback
@@ -1162,31 +1170,33 @@ class BaseProcessor(ABC):
             value = params.get(param_name)
 
             # Fallback: try without slurm_ prefix for compatibility (e.g., partition)
-            if value is None and param_name.startswith('slurm_'):
+            if value is None and param_name.startswith("slurm_"):
                 fallback_name = param_name[6:]  # Remove 'slurm_' prefix
                 value = params.get(fallback_name)
 
             # Fallback: use schema default
             if value is None:
-                value = prop.get('default')
+                value = prop.get("default")
             if value is None:
                 continue
 
             # Skip empty strings (allows users to leave memory settings blank)
-            if isinstance(value, str) and value.strip() == '':
+            if isinstance(value, str) and value.strip() == "":
                 continue
 
             # Check conditional visibility (e.g., mem-per-gpu only for GPU partition)
-            conditional = prop.get('x-conditional')
+            conditional = prop.get("x-conditional")
             if conditional:
                 # Simple evaluation: "slurm_partition == 'gpu'"
                 if not self._evaluate_conditional(conditional, params):
                     continue
 
-            directives.append({
-                'directive': slurm_directive,
-                'value': str(value),
-            })
+            directives.append(
+                {
+                    "directive": slurm_directive,
+                    "value": str(value),
+                }
+            )
 
         return directives
 
@@ -1232,14 +1242,14 @@ class BaseProcessor(ABC):
         schema = self.get_parameter_schema()
         component_directives = {}
 
-        for param_name, prop in schema.get('properties', {}).items():
+        for param_name, prop in schema.get("properties", {}).items():
             # Only process parameters with x-slurm-directive extension
-            slurm_directive = prop.get('x-slurm-directive')
+            slurm_directive = prop.get("x-slurm-directive")
             if not slurm_directive:
                 continue
 
             # Only process hetjob-specific parameters
-            hetjob_component = prop.get('x-hetjob-component')
+            hetjob_component = prop.get("x-hetjob-component")
             if hetjob_component is None:
                 continue
 
@@ -1248,22 +1258,22 @@ class BaseProcessor(ABC):
             value = params.get(param_name)
 
             # Fallback: try without slurm_ prefix for compatibility (e.g., partition)
-            if value is None and param_name.startswith('slurm_'):
+            if value is None and param_name.startswith("slurm_"):
                 fallback_name = param_name[6:]  # Remove 'slurm_' prefix
                 value = params.get(fallback_name)
 
             # Fallback: use schema default
             if value is None:
-                value = prop.get('default')
+                value = prop.get("default")
             if value is None:
                 continue
 
             # Skip empty strings (allows users to leave memory settings blank)
-            if isinstance(value, str) and value.strip() == '':
+            if isinstance(value, str) and value.strip() == "":
                 continue
 
             # Check conditional visibility
-            conditional = prop.get('x-conditional')
+            conditional = prop.get("x-conditional")
             if conditional:
                 if not self._evaluate_conditional(conditional, params):
                     continue
@@ -1272,10 +1282,12 @@ class BaseProcessor(ABC):
             if hetjob_component not in component_directives:
                 component_directives[hetjob_component] = []
 
-            component_directives[hetjob_component].append({
-                'directive': slurm_directive,
-                'value': str(value),
-            })
+            component_directives[hetjob_component].append(
+                {
+                    "directive": slurm_directive,
+                    "value": str(value),
+                }
+            )
 
         return component_directives
 
@@ -1293,12 +1305,12 @@ class BaseProcessor(ABC):
             True if condition is met, False otherwise
         """
         # Simple parser for "param_name == 'value'" expressions
-        if '==' in conditional:
-            parts = conditional.split('==')
+        if "==" in conditional:
+            parts = conditional.split("==")
             if len(parts) == 2:
                 param_name = parts[0].strip()
                 expected_value = parts[1].strip().strip("'\"")
-                actual_value = str(params.get(param_name, ''))
+                actual_value = str(params.get(param_name, ""))
                 return actual_value == expected_value
 
         # Default to True if we can't parse the conditional
@@ -1307,7 +1319,7 @@ class BaseProcessor(ABC):
     def get_template_context(
         self,
         params: Dict[str, Any],
-        run_context: 'RunContext',
+        run_context: "RunContext",
     ) -> Dict[str, Any]:
         """
         Generate complete template context with structured data for loops.
@@ -1356,10 +1368,10 @@ class BaseProcessor(ABC):
 
         # Get framework-provided context variables
         context_vars = {
-            'project_name': run_context.msi_session.name,
-            'run_number': run_context.run_number,
-            'user_id': run_context.user.username if hasattr(run_context.user, 'username') else str(run_context.user),
-            'job_name': run_context.job_name,
+            "project_name": run_context.msi_session.name,
+            "run_number": run_context.run_number,
+            "user_id": run_context.user.username if hasattr(run_context.user, "username") else str(run_context.user),
+            "job_name": run_context.job_name,
         }
 
         # Get processor-specific calculated variables
@@ -1371,40 +1383,40 @@ class BaseProcessor(ABC):
         # Get control-flow variables for template conditionals
         schema = self.get_parameter_schema()
         control_vars = {}
-        for param_name, prop in schema.get('properties', {}).items():
-            if prop.get('x-control-flow', False):
-                value = params.get(param_name, prop.get('default', False))
+        for param_name, prop in schema.get("properties", {}).items():
+            if prop.get("x-control-flow", False):
+                value = params.get(param_name, prop.get("default", False))
                 control_vars[param_name] = value
 
         # Generate SLURM directives from schema
         # Check if this is a hetjob processor
         hetjob_info = self.get_hetjob_info()
         result = {
-            'schema_vars': schema_vars,
-            'context_vars': context_vars,
-            'calculated_vars': calculated_vars,
-            'cli_args': cli_args,
-            'control_vars': control_vars,
+            "schema_vars": schema_vars,
+            "context_vars": context_vars,
+            "calculated_vars": calculated_vars,
+            "cli_args": cli_args,
+            "control_vars": control_vars,
         }
 
-        if hetjob_info and hetjob_info.get('is_heterogeneous'):
+        if hetjob_info and hetjob_info.get("is_heterogeneous"):
             # Hetjob: generate per-component directives
             component_directives = self.generate_slurm_directives_hetjob(params)
             # Add each component's directives as separate keys
             for component_num, directives in component_directives.items():
-                result[f'slurm_directives_component_{component_num}'] = directives
+                result[f"slurm_directives_component_{component_num}"] = directives
         else:
             # Regular job: single directive list
-            result['slurm_directives'] = self.generate_slurm_directives(params)
+            result["slurm_directives"] = self.generate_slurm_directives(params)
 
         return result
 
     def _spawn_syncer_subprocess(
         self,
         syncer_script_name: str,
-        run_context: 'RunContext',
+        run_context: "RunContext",
         job_id: str,
-    ) -> 'subprocess.Popen':
+    ) -> "subprocess.Popen":
         """
         Spawn a syncer as a background subprocess.
 
@@ -1434,38 +1446,42 @@ class BaseProcessor(ABC):
             using Django-Q scheduled tasks instead.
         """
 
-
         # Build path to syncer script
         syncer_path = os.path.join(
             os.path.dirname(__file__),
-            '../..',
-            'processes/scripts',
+            "../..",
+            "processes/scripts",
             syncer_script_name,
         )
 
         # Ensure script exists
         if not os.path.exists(syncer_path):
             logger.warning(
-                f"Syncer script not found: {syncer_path}. "
-                f"Skipping syncer spawn for {self.name}",
+                f"Syncer script not found: {syncer_path}. Skipping syncer spawn for {self.name}",
             )
             return None
 
         # Set up environment (add project root to PYTHONPATH)
         env = dict(os.environ)
         project_root = os.path.dirname(os.path.dirname(syncer_path))
-        env['PYTHONPATH'] = project_root
+        env["PYTHONPATH"] = project_root
 
         try:
             # Spawn syncer as background process
-            process = subprocess.Popen([
-                "python",
-                syncer_path,
-                "--session", run_context.msi_session.name,
-                "--run", run_context.run_number,
-                "--job-id", job_id,
-                "--continuous",  # Run continuously until job completes
-            ], env=env)
+            process = subprocess.Popen(
+                [
+                    "python",
+                    syncer_path,
+                    "--session",
+                    run_context.msi_session.name,
+                    "--run",
+                    run_context.run_number,
+                    "--job-id",
+                    job_id,
+                    "--continuous",  # Run continuously until job completes
+                ],
+                env=env,
+            )
 
             logger.info(
                 f"Spawned {syncer_script_name} syncer for {run_context.msi_session.name}/"
@@ -1484,7 +1500,7 @@ class BaseProcessor(ABC):
     def _start_syncer_task(
         self,
         syncer_class_path: str,
-        run_context: 'RunContext',
+        run_context: "RunContext",
         job_id: str,
         base_path: str = None,
     ) -> str:

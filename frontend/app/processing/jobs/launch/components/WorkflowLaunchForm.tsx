@@ -68,6 +68,7 @@ export default function WorkflowLaunchForm({
   additionalSections,
   onBeforeSubmit,
   customValidation,
+  getProcessorName,
 }: WorkflowLaunchFormProps) {
   // Form state
   const [sessionRunSelection, setSessionRunSelection] = useState<SessionRunSelection>({
@@ -654,9 +655,12 @@ export default function WorkflowLaunchForm({
       // Merge SLURM options into parameters (backend extracts SLURM directives from parameters)
       const mergedParams = { ...finalParams, ...slurmOptions };
 
+      // Determine effective processor name (may be overridden based on parameters)
+      const effectiveProcessorName = getProcessorName ? getProcessorName(mergedParams) : processor.name;
+
       // Build execution params (same as submit, but for preview)
       const executionParams: ExecutionParams = {
-        processor: processor.name,
+        processor: effectiveProcessorName,
         session_id: effectiveSessionName!, // Use effective (either selected or generated)
         run_name: effectiveRunName!, // Use effective (either selected or generated)
         cluster: cluster,
@@ -732,6 +736,9 @@ export default function WorkflowLaunchForm({
       // Merge SLURM options into parameters (backend extracts SLURM directives from parameters)
       const mergedParams = { ...finalParams, ...slurmOptions };
 
+      // Determine effective processor name (may be overridden based on parameters)
+      const effectiveProcessorName = getProcessorName ? getProcessorName(mergedParams) : processor.name;
+
       // Run custom validation if provided
       if (customValidation) {
         const customErrors = await customValidation(mergedParams);
@@ -743,7 +750,7 @@ export default function WorkflowLaunchForm({
       }
 
       // Validate parameters with backend
-      const validationResult = await validateProcessorParams(processor.name, mergedParams);
+      const validationResult = await validateProcessorParams(effectiveProcessorName, mergedParams);
       if (!validationResult.valid) {
         setValidationErrors(validationResult.errors);
         setIsSubmitting(false);
@@ -752,7 +759,7 @@ export default function WorkflowLaunchForm({
 
       // Build execution params
       const executionParams: ExecutionParams = {
-        processor: processor.name,
+        processor: effectiveProcessorName,
         session_id: effectiveSessionName!, // Use effective (either selected or generated)
         run_name: effectiveRunName!, // Use effective (either selected or generated)
         cluster: cluster,

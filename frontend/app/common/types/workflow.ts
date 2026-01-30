@@ -298,6 +298,12 @@ export interface WorkflowLaunchFormProps {
   additionalSections?: React.ReactNode[];
   onBeforeSubmit?: (params: Record<string, unknown>) => Promise<Record<string, unknown>>;
   customValidation?: (params: Record<string, unknown>) => Promise<ValidationError[]>;
+  /**
+   * Optional function to override the processor name based on parameters.
+   * Used when a form supports multiple operations that map to different processors.
+   * (e.g., Copick form uses 'copick' for create but 'copick-add-object' for add_object)
+   */
+  getProcessorName?: (params: Record<string, unknown>) => string;
 }
 
 /**

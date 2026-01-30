@@ -340,6 +340,50 @@ export async function fetchCopickTemplateMaps(): Promise<{
 }
 
 /**
+ * Get existing Copick add_object ProcRuns from the database.
+ * Uses the copick_params endpoint with plan_type=copick-add-object.
+ * Numbering is per-session (run001, run002, etc.)
+ */
+export async function fetchCopickObjectRuns(sessionId: string): Promise<{
+  success: boolean;
+  run_numbers: string[];
+  next_run_name: string;
+}> {
+  const queryString = buildQueryString({
+    session_name: sessionId,
+    'plan_type': 'copick-add-object',
+  });
+  const response = await fetchResource(`${DJANGO_URL}${API.COPICK_ADD_OBJECT_PARAMS}${queryString}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch copick add-object runs: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  if (data.error) {
+    throw new Error(data.error || 'Failed to fetch copick add-object runs');
+  }
+
+  // Extract run numbers from the response
+  const sessionData = data.sessions?.[0];
+  const runNumbers = sessionData?.run_numbers || [];
+
+  // Calculate next run name (run numbers are returned without 'run' prefix)
+  let nextRunNum = 1;
+  if (runNumbers.length > 0) {
+    const maxNum = Math.max(...runNumbers.map((n: string) => parseInt(n, 10) || 0));
+    nextRunNum = maxNum + 1;
+  }
+  const nextRunName = `run${String(nextRunNum).padStart(3, '0')}`;
+
+  return {
+    success: true,
+    run_numbers: runNumbers,
+    next_run_name: nextRunName,
+  };
+}
+
+/**
  * Get available Copick runs for a given session
  */
 export async function fetchCopickRuns(sessionId: string): Promise<{

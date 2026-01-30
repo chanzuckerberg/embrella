@@ -17,13 +17,14 @@
  */
 
 import { Alert, Box, Tab, Tabs, Typography } from '@mui/material';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   FormFieldConfig,
   SessionSelectionConfig,
   ValidationError,
   WorkflowLaunchFormProps,
 } from '@app/common/types/workflow';
+import { fetchCopickObjectRuns } from '@app/common/services/workflowApi';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
 
 /**
@@ -55,7 +56,33 @@ interface CopickLaunchFormProps
 
 export default function CopickLaunchForm(props: CopickLaunchFormProps) {
   const [operationMode, setOperationMode] = useState<string>('create');
+  const [nextRunName, setNextRunName] = useState<string>('run001');
   const lastSyncedValueRef = useRef<string>('create');
+
+  // Track the selected copick session to fetch the next available run name
+  // Numbering is per-session (run001, run002, etc.) - matches standard proc run naming
+  // Updated via generateRunName callback when user selects copick_session
+  const [selectedCopickSession, setSelectedCopickSession] = useState<string | null>(null);
+
+  // Fetch next available run name when copick session changes (for add_object mode)
+  // Pattern matches WorkflowLaunchForm's useEffect-based data fetching
+  useEffect(() => {
+    if (!selectedCopickSession || operationMode !== 'add_object') {
+      return;
+    }
+
+    const loadNextCopickObjectRunName = async () => {
+      try {
+        const data = await fetchCopickObjectRuns(selectedCopickSession);
+        setNextRunName(data.next_run_name);
+      } catch {
+        // Default to run001 if fetch fails
+        setNextRunName('run001');
+      }
+    };
+
+    loadNextCopickObjectRunName();
+  }, [selectedCopickSession, operationMode]);
 
   /**
    * Tabs section rendered at top of Configure Parameters
@@ -145,10 +172,13 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
         alwaysShowParameters: true, // Show parameters section to allow mode switching via tabs
         generateSessionName: (params) => (params.copick_session as string) || null,
         generateRunName: (params) => {
-          if (params.copick_session && params.copick_run) {
-            return `${params.copick_session}_add_object_${params.copick_run}`;
+          const copickSession = params.copick_session as string;
+          // Track session changes to trigger run name lookup via useEffect
+          // Note: setState during render is handled by React (schedules update for next render)
+          if (copickSession && copickSession !== selectedCopickSession) {
+            setSelectedCopickSession(copickSession);
           }
-          return null;
+          return copickSession ? nextRunName : null;
         },
         hiddenMessage: 'Working on existing Copick project - no MSI session selection needed',
       };
@@ -159,6 +189,7 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
         generateSessionName: (params) => (params.copick_session as string) || null,
         generateRunName: (params) => {
           if (params.copick_session && params.copick_run) {
+            // TODO: Will structure like copick add
             return `${params.copick_session}_import_tomograms_${params.copick_run}`;
           }
           return null;
@@ -167,7 +198,7 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
       };
     }
     return { requiresSessionSelection: true, alwaysShowParameters: true };
-  }, [operationMode]);
+  }, [operationMode, nextRunName, selectedCopickSession]);
 
   /**
    * Custom validation for Copick parameters
@@ -229,6 +260,15 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
     return errors;
   };
 
+  /**
+   * Override processor name based on operation mode.
+   * - add_object uses copick-add-object processor (separate plan for tracking)
+   * - create and import_tomograms use copick processor
+   */
+  const getProcessorName = useCallback((params: Record<string, unknown>) => {
+    return params.operation === 'add_object' ? 'copick-add-object' : 'copick';
+  }, []);
+
   return (
     <WorkflowLaunchForm
       {...props}
@@ -236,6 +276,7 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
       customFields={customFields}
       customValidation={customValidation}
       additionalSections={[tabsSection]} // Render tabs at top of Configure Parameters
+      getProcessorName={getProcessorName}
     />
   );
 }

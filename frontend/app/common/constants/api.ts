@@ -51,8 +51,9 @@ export enum API {
   PIPELINE_EXECUTION_BY_JOB_ID = '/workflow/v1/execution/by_job_id/:jobId/',
 
   // Processor-specific endpoints
-  COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
+  COPICK_ADD_OBJECT_PARAMS = '/workflow/copick_params',
   COPICK_RUNS = '/workflow/v1/processors/copick/runs/',
+  COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
 
   // Session/Run Selection
   MSI_SESSIONS_LIST = '/workflow/get_msi_session_list',
