@@ -34,8 +34,14 @@ tomo_downsamplevoxel_size="{{ downsampleTomogramVoxelSize }}"
 # ============================================================================
 # Directory Setup
 # ============================================================================
+{% if operation == 'create' -%}
+# Create operation: new directory based on ProcRun number
 copick_dir="/hpc/projects/group.czii/krios1.processing/copick/${session}/${copick_procrun}"
 mkdir -p "${copick_dir}"
+{% elif operation == 'import_tomograms' -%}
+# Import operation: use existing copick project directory
+copick_dir="/hpc/projects/group.czii/krios1.processing/copick/${session}/{{ copickRunName }}"
+{% endif -%}
 
 # ============================================================================
 # Logging Setup
@@ -49,7 +55,7 @@ exec >"${LOG_OUT}" 2>"${LOG_ERR}"
 # ============================================================================
 # Email Notifications
 # ============================================================================
-EMAIL_DOMAIN="czii.org"
+EMAIL_DOMAIN="biohub.org"
 MAIL_TO="${SLURM_JOB_USER:-$USER}@${EMAIL_DOMAIN}"
 
 if [[ -n "${SLURM_JOB_ID:-}" ]]; then

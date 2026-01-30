@@ -5,9 +5,7 @@ This script creates Pipe, ProcPlan, and PipeInPlan records for copick-related
 action processors. Task and ProcSoftware records are expected to already exist.
 
 - copick-add-object: For adding pickable objects to existing Copick projects
-
-Future additions may include:
-- copick-import-tomograms: For importing additional tomograms to existing projects
+- copick-import: For importing additional tomograms to existing projects
 
 Run this script:
     just manage runscript 007_init_copick_actions
@@ -20,13 +18,7 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 
-from processes.models import (
-    Pipe,
-    PipeInPlan,
-    ProcPlan,
-    ProcSoftware,
-    Task,
-)
+from processes.models import Pipe, PipeInPlan, ProcPlan, ProcSoftware, Task
 
 
 def create_copick_add_object():
@@ -34,32 +26,32 @@ def create_copick_add_object():
     print("Creating copick-add-object processor records...")
 
     # Check if already exists
-    if ProcPlan.objects.filter(name='copick-add-object').exists():
+    if ProcPlan.objects.filter(name="copick-add-object").exists():
         print("  copick-add-object plan already exists, skipping...")
         return
 
     # Get existing Task and ProcSoftware
-    task = Task.objects.get(name='copick_add_object')
+    task = Task.objects.get(name="copick_add_object")
     print(f"  Found existing Task: {task}")
 
-    software = ProcSoftware.objects.get(name='copick-add-object')
+    software = ProcSoftware.objects.get(name="copick-add-object")
     print(f"  Found existing ProcSoftware: {software}")
 
     # Create Pipe
     pipe = Pipe.objects.create(
-        name='cpck_add_obj_j1',
+        name="cpck_add_obj_j1",
         software=software,
     )
     pipe.tasks_performed.add(task)
     print(f"  Created Pipe: {pipe}")
 
     # Create ProcPlan
-    plan = ProcPlan.objects.create(name='copick-add-object')
+    plan = ProcPlan.objects.create(name="copick-add-object")
     print(f"  Created ProcPlan: {plan}")
 
     # Create PipeInPlan
     pipe_in_plan = PipeInPlan.objects.create(
-        name='copick-add-object-step',
+        name="copick-add-object-step",
         plan=plan,
         step=1,
         pipe=pipe,
@@ -69,6 +61,46 @@ def create_copick_add_object():
     print("  copick-add-object processor records created successfully!")
 
 
+def create_copick_import():
+    """Create database records for copick-import processor."""
+    print("Creating copick-import processor records...")
+
+    # Check if already exists
+    if ProcPlan.objects.filter(name="copick-import").exists():
+        print("  copick-import plan already exists, skipping...")
+        return
+
+    # Get existing Task and ProcSoftware
+    task = Task.objects.get(name="copick_import")
+    print(f"  Found existing Task: {task}")
+
+    software = ProcSoftware.objects.get(name="copick-import")
+    print(f"  Found existing ProcSoftware: {software}")
+
+    # Create Pipe
+    pipe = Pipe.objects.create(
+        name="cpck_import_j1",
+        software=software,
+    )
+    pipe.tasks_performed.add(task)
+    print(f"  Created Pipe: {pipe}")
+
+    # Create ProcPlan
+    plan = ProcPlan.objects.create(name="copick-import")
+    print(f"  Created ProcPlan: {plan}")
+
+    # Create PipeInPlan
+    pipe_in_plan = PipeInPlan.objects.create(
+        name="copick-import-step",
+        plan=plan,
+        step=1,
+        pipe=pipe,
+    )
+    print(f"  Created PipeInPlan: {pipe_in_plan}")
+
+    print("  copick-import processor records created successfully!")
+
+
 def run():
     """Main entry point."""
     print("=" * 60)
@@ -76,9 +108,7 @@ def run():
     print("=" * 60)
 
     create_copick_add_object()
-
-    # Future: Add import_tomograms processor here
-    # create_copick_import_tomograms()
+    create_copick_import()
 
     print("=" * 60)
     print("Done!")

@@ -304,6 +304,7 @@ def get_msi_params_list(request):
             "denoise": "czii-denoise",
             "copick": "czii-copick",
             "copick-add-object": "copick-add-object",
+            "copick-import": "copick-import",
             "octopi": "czii-octopi",
         }
         if plan_type not in plan_map:
