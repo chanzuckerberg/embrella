@@ -114,7 +114,7 @@ properties:
     type: string
     title: PDB ID (Optional)
     description: Protein Data Bank ID associated with this object (e.g., '4V6X')
-    pattern: "^[0-9][A-Za-z0-9]{3}$"
+    pattern: '^[0-9][A-Za-z0-9]{3}$'
     x-conditional-visibility:
       field: operation
       operator: eq
@@ -138,67 +138,67 @@ properties:
     x-conditional-visibility:
       field: object_map_file
       operator: ne
-      value: ""
+      value: ''
 
   # SLURM Resource Options (Compute Resources section)
   slurm_partition:
     type: string
-    title: "Partition"
+    title: 'Partition'
     description: SLURM partition to submit job to
     enum:
       - gpu
       - cpu
     default: gpu
-    x-slurm-directive: "--partition"
+    x-slurm-directive: '--partition'
     x-compute-resource: true
 
   slurm_gpus:
     type: integer
-    title: "Number of GPUs"
+    title: 'Number of GPUs'
     description: GPUs to allocate (only for GPU partition)
     minimum: 1
     maximum: 8
     default: 1
-    x-slurm-directive: "--gpus"
+    x-slurm-directive: '--gpus'
     x-compute-resource: true
     x-conditional: slurm_partition == 'gpu'
 
   slurm_nodes:
     type: integer
-    title: "Number of Nodes"
+    title: 'Number of Nodes'
     description: Number of nodes to allocate
     minimum: 1
     maximum: 10
     default: 1
-    x-slurm-directive: "-N"
+    x-slurm-directive: '-N'
     x-compute-resource: true
 
   slurm_cpus_per_task:
     type: integer
-    title: "CPUs per Task"
+    title: 'CPUs per Task'
     description: Number of CPU cores per task
     minimum: 1
     maximum: 64
     default: 8
-    x-slurm-directive: "--cpus-per-task"
+    x-slurm-directive: '--cpus-per-task'
     x-compute-resource: true
 
   slurm_mem_per_cpu:
     type: string
-    title: "Memory per CPU"
+    title: 'Memory per CPU'
     description: Memory per CPU (e.g., 196G for large tomogram processing). Leave blank for SLURM default.
-    default: ""
-    pattern: "^([0-9]+[KMGT]){0,1}$"
-    x-slurm-directive: "--mem-per-cpu"
+    default: ''
+    pattern: '^([0-9]+[KMGT]){0,1}$'
+    x-slurm-directive: '--mem-per-cpu'
     x-compute-resource: true
 
   slurm_time:
     type: string
-    title: "Time Limit"
+    title: 'Time Limit'
     description: Maximum job runtime (HH:MM:SS format, e.g., 140:00:00)
-    default: "140:00:00"
-    pattern: "^[0-9]{1,3}:[0-5][0-9]:[0-5][0-9]$"
-    x-slurm-directive: "--time"
+    default: '140:00:00'
+    pattern: '^[0-9]{1,3}:[0-5][0-9]:[0-5][0-9]$'
+    x-slurm-directive: '--time'
     x-compute-resource: true
 
 # Note: Required fields are enforced via minLength/minimum constraints
