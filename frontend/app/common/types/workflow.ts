@@ -296,7 +296,10 @@ export interface WorkflowLaunchFormProps {
   // Extensibility hooks
   customFields?: Record<string, React.ComponentType<FormFieldConfig>>;
   additionalSections?: React.ReactNode[];
-  onBeforeSubmit?: (params: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  onBeforeSubmit?: (
+    params: Record<string, unknown>,
+    context: { sessionName: string | null; runName: string | null }
+  ) => Promise<Record<string, unknown>>;
   customValidation?: (params: Record<string, unknown>) => Promise<ValidationError[]>;
   /**
    * Optional function to override the processor name based on parameters.

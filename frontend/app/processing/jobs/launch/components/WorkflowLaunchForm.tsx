@@ -649,7 +649,10 @@ export default function WorkflowLaunchForm({
       // Apply onBeforeSubmit hook if provided
       let finalParams = { ...parameters };
       if (onBeforeSubmit) {
-        finalParams = await onBeforeSubmit(finalParams);
+        finalParams = await onBeforeSubmit(finalParams, {
+          sessionName: effectiveSessionName,
+          runName: effectiveRunName,
+        });
       }
 
       // Merge SLURM options into parameters (backend extracts SLURM directives from parameters)
@@ -730,7 +733,10 @@ export default function WorkflowLaunchForm({
       // Apply onBeforeSubmit hook if provided
       let finalParams = { ...parameters };
       if (onBeforeSubmit) {
-        finalParams = await onBeforeSubmit(finalParams);
+        finalParams = await onBeforeSubmit(finalParams, {
+          sessionName: effectiveSessionName,
+          runName: effectiveRunName,
+        });
       }
 
       // Merge SLURM options into parameters (backend extracts SLURM directives from parameters)

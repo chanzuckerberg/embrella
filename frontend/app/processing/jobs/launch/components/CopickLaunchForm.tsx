@@ -269,6 +269,33 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
     return params.operation === 'add_object' ? 'copick-add-object' : 'copick';
   }, []);
 
+  /**
+   * Pre-submission hook to clean up parameters based on operation mode.
+   * - For "create" mode: removes copick_session (auto-defaulted but not user-selected)
+   *   and adds mode-specific parameters
+   */
+  const onBeforeSubmit = useCallback(
+    async (
+      params: Record<string, unknown>,
+      context: { sessionName: string | null; runName: string | null }
+    ): Promise<Record<string, unknown>> => {
+      const operation = params.operation || 'create';
+
+      if (operation === 'create') {
+        const cleanedParams = Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'copick_session'));
+        return {
+          ...cleanedParams,
+          msi_session_used: context.sessionName,
+          create_copick_project_run: context.runName,
+        };
+      }
+
+      // For add_object and import_tomograms, keep copick_session as-is (user-selected)
+      return params;
+    },
+    []
+  );
+
   return (
     <WorkflowLaunchForm
       {...props}
@@ -277,6 +304,7 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
       customValidation={customValidation}
       additionalSections={[tabsSection]} // Render tabs at top of Configure Parameters
       getProcessorName={getProcessorName}
+      onBeforeSubmit={onBeforeSubmit}
     />
   );
 }
