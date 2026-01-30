@@ -3,14 +3,41 @@
 from django.db import migrations
 
 
+# Processor metadata (matching workflow/processors/copick/*)
+COPICK_ACTION_PROCESSORS = [
+    {
+        'task_name': 'copick_add_object',
+        'software_name': 'copick-add-object',
+        'version': '1.0',
+        'processor_class': 'copick-add-object',
+        'default_cluster': 'bruno',
+        'allowed_clusters': ['bruno'],
+        'script_directory': '/hpc/projects/group.czii/krios1.processing/copick/scripts',
+        'pipe_name': 'cpck_add_obj_j1',
+        'plan_name': 'copick-add-object',
+        'pipe_in_plan_name': 'copick-add-object-step',
+    },
+    {
+        'task_name': 'copick_import',
+        'software_name': 'copick-import',
+        'version': '1.0',
+        'processor_class': 'copick-import',
+        'default_cluster': 'bruno',
+        'allowed_clusters': ['bruno'],
+        'script_directory': '/hpc/projects/group.czii/krios1.processing/copick/scripts',
+        'pipe_name': 'cpck_import_j1',
+        'plan_name': 'copick-import',
+        'pipe_in_plan_name': 'copick-import-step',
+    },
+]
+
+
 def create_copick_action_procplans(apps, schema_editor):
     """
-    Create Pipe, ProcPlan, and PipeInPlan records for copick action processors.
+    Create Task, ProcSoftware, Pipe, ProcPlan, and PipeInPlan records for copick action processors.
 
     - copick-add-object: For adding pickable objects to existing Copick projects
     - copick-import: For importing additional tomograms to existing projects
-
-    Task and ProcSoftware records are created by workflow app sync on startup.
     """
     Task = apps.get_model('processes', 'Task')
     ProcSoftware = apps.get_model('processes', 'ProcSoftware')
@@ -18,61 +45,59 @@ def create_copick_action_procplans(apps, schema_editor):
     ProcPlan = apps.get_model('processes', 'ProcPlan')
     PipeInPlan = apps.get_model('processes', 'PipeInPlan')
 
-    # Create copick-add-object records
-    if not ProcPlan.objects.filter(name='copick-add-object').exists():
-        try:
-            task = Task.objects.get(name='copick_add_object')
-            software = ProcSoftware.objects.get(name='copick-add-object')
+    for proc in COPICK_ACTION_PROCESSORS:
+        plan_name = proc['plan_name']
 
-            pipe = Pipe.objects.create(
-                name='cpck_add_obj_j1',
-                software=software,
-            )
-            pipe.tasks_performed.add(task)
-            print(f"  Created Pipe: {pipe}")
+        if ProcPlan.objects.filter(name=plan_name).exists():
+            print(f"  {plan_name} plan already exists, skipping")
+            continue
 
-            plan = ProcPlan.objects.create(name='copick-add-object')
-            print(f"  Created ProcPlan: {plan}")
+        # Create or get Task
+        task, task_created = Task.objects.get_or_create(
+            name=proc['task_name'],
+            defaults={'step': 1}
+        )
+        if task_created:
+            print(f"  Created Task: {task.name}")
 
-            PipeInPlan.objects.create(
-                name='copick-add-object-step',
-                plan=plan,
-                step=1,
-                pipe=pipe,
-            )
-            print("  Created copick-add-object records")
-        except (Task.DoesNotExist, ProcSoftware.DoesNotExist) as e:
-            print(f"  Skipping copick-add-object: {e}")
-    else:
-        print("  copick-add-object plan already exists, skipping")
+        # Create or update ProcSoftware
+        software, sw_created = ProcSoftware.objects.update_or_create(
+            name=proc['software_name'],
+            defaults={
+                'version': proc['version'],
+                'processor_class': proc['processor_class'],
+                'default_cluster': proc['default_cluster'],
+                'allowed_clusters': proc['allowed_clusters'],
+                'script_directory': proc['script_directory'],
+                'active': True,
+            }
+        )
+        if sw_created:
+            print(f"  Created ProcSoftware: {software.name}")
 
-    # Create copick-import records
-    if not ProcPlan.objects.filter(name='copick-import').exists():
-        try:
-            task = Task.objects.get(name='copick_import')
-            software = ProcSoftware.objects.get(name='copick-import')
+        # Associate Task with ProcSoftware
+        software.capable_tasks.add(task)
 
-            pipe = Pipe.objects.create(
-                name='cpck_import_j1',
-                software=software,
-            )
-            pipe.tasks_performed.add(task)
-            print(f"  Created Pipe: {pipe}")
+        # Create Pipe
+        pipe = Pipe.objects.create(
+            name=proc['pipe_name'],
+            software=software,
+        )
+        pipe.tasks_performed.add(task)
+        print(f"  Created Pipe: {pipe.name}")
 
-            plan = ProcPlan.objects.create(name='copick-import')
-            print(f"  Created ProcPlan: {plan}")
+        # Create ProcPlan
+        plan = ProcPlan.objects.create(name=plan_name)
+        print(f"  Created ProcPlan: {plan.name}")
 
-            PipeInPlan.objects.create(
-                name='copick-import-step',
-                plan=plan,
-                step=1,
-                pipe=pipe,
-            )
-            print("  Created copick-import records")
-        except (Task.DoesNotExist, ProcSoftware.DoesNotExist) as e:
-            print(f"  Skipping copick-import: {e}")
-    else:
-        print("  copick-import plan already exists, skipping")
+        # Create PipeInPlan
+        PipeInPlan.objects.create(
+            name=proc['pipe_in_plan_name'],
+            plan=plan,
+            step=1,
+            pipe=pipe,
+        )
+        print(f"  Created {plan_name} records successfully")
 
 
 def reverse_copick_action_procplans(apps, schema_editor):
