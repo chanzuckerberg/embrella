@@ -7,20 +7,24 @@
  * - Custom validation for dose-related parameters
  * - Session-specific file options (gain files, etc.)
  * - Custom help text and documentation
+ * - CLI command import for pre-populating form from prior runs
  */
 
 import { Alert, Box } from '@mui/material';
 import { useState } from 'react';
-import type { ValidationError, WorkflowLaunchFormProps } from '@app/common/types/workflow';
+import { Button, Icon } from '@czi-sds/components';
+import type { ValidationError, WorkflowLaunchFormProps, HeaderActionsContext } from '@app/common/types/workflow';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
+import CLIParserModal from './CLIParserModal';
 
 interface AreTomo3LaunchFormProps
-  extends Omit<WorkflowLaunchFormProps, 'customFields' | 'additionalSections' | 'customValidation'> {
+  extends Omit<WorkflowLaunchFormProps, 'customFields' | 'additionalSections' | 'customValidation' | 'headerActions'> {
   // No additional props needed for now
 }
 
 export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
   const [doseWarning, setDoseWarning] = useState<string | null>(null);
+  const [cliParserOpen, setCliParserOpen] = useState(false);
 
   /**
    * Custom validation for AreTomo3 parameters
@@ -109,22 +113,39 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
           {doseWarning}
         </Alert>
       )}
-
-      {/*/!* AreTomo3-specific help *!/*/}
-      {/*<Alert severity="info" sx={{ mb: 2 }}>*/}
-      {/*  <Typography variant="subtitle2" gutterBottom>*/}
-      {/*    Session Details*/}
-      {/*  </Typography>*/}
-      {/*  <ul style={{ margin: 0, paddingLeft: '20px' }}>*/}
-      {/*    <li>*/}
-      {/*      TODO*/}
-      {/*    </li>*/}
-      {/*  </ul>*/}
-      {/*</Alert>*/}
     </Box>
   );
 
+  /**
+   * Header actions for AreTomo3 - includes CLI import button
+   */
+  const headerActions = ({ parameters, setParameters, schema }: HeaderActionsContext) => (
+    <>
+      <Button
+        sdsType="secondary"
+        sdsStyle="rounded"
+        startIcon={<Icon sdsIcon="Code" sdsSize="s" />}
+        onClick={() => setCliParserOpen(true)}
+      >
+        Import from CLI
+      </Button>
+      <CLIParserModal
+        open={cliParserOpen}
+        onClose={() => setCliParserOpen(false)}
+        onApply={(parsedParams) => {
+          setParameters((prev) => ({ ...prev, ...parsedParams }));
+        }}
+        schema={schema}
+      />
+    </>
+  );
+
   return (
-    <WorkflowLaunchForm {...props} customValidation={customValidation} additionalSections={[additionalSections]} />
+    <WorkflowLaunchForm
+      {...props}
+      customValidation={customValidation}
+      additionalSections={[additionalSections]}
+      headerActions={headerActions}
+    />
   );
 }

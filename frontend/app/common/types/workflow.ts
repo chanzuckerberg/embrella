@@ -285,6 +285,18 @@ export interface SessionSelectionConfig {
 /**
  * Props for WorkflowLaunchForm base component
  */
+/**
+ * Context provided to headerActions render function
+ */
+export interface HeaderActionsContext {
+  parameters: Record<string, unknown>;
+  setParameters: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  schema: JSONSchema;
+}
+
+/**
+ * Props for WorkflowLaunchForm base component
+ */
 export interface WorkflowLaunchFormProps {
   processor: Processor;
   schema: ProcessorSchema;
@@ -296,6 +308,11 @@ export interface WorkflowLaunchFormProps {
   // Extensibility hooks
   customFields?: Record<string, React.ComponentType<FormFieldConfig>>;
   additionalSections?: React.ReactNode[];
+  /**
+   * Render function for header actions (e.g., "Import from CLI" button).
+   * Receives context with parameters state and setter to allow external parameter manipulation.
+   */
+  headerActions?: (context: HeaderActionsContext) => React.ReactNode;
   onBeforeSubmit?: (
     params: Record<string, unknown>,
     context: { sessionName: string | null; runName: string | null }
