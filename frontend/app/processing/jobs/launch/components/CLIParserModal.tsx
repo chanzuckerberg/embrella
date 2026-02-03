@@ -99,12 +99,10 @@ export default function CLIParserModal({ open, onClose, onApply, schema }: CLIPa
             onChange={(e) => setCliText(e.target.value)}
             onKeyDown={handleKeyDown}
             sx={{ mt: 2 }}
-            slotProps={{
-              input: {
-                sx: {
-                  fontFamily: 'monospace',
-                  fontSize: '0.875rem',
-                },
+            InputProps={{
+              sx: {
+                fontFamily: 'monospace',
+                fontSize: '0.875rem',
               },
             }}
           />
@@ -201,10 +199,8 @@ export default function CLIParserModal({ open, onClose, onApply, schema }: CLIPa
                                 </Typography>
                               }
                               secondary={getIgnoredReasonDescription(token.reason)}
-                              slotProps={{
-                                secondary: {
-                                  sx: { fontSize: '0.75rem' },
-                                },
+                              secondaryTypographyProps={{
+                                sx: { fontSize: '0.75rem' },
                               }}
                             />
                           </ListItem>
