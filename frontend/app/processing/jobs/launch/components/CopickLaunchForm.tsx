@@ -25,7 +25,8 @@ import type {
   ValidationError,
   WorkflowLaunchFormProps,
 } from '@app/common/types/workflow';
-import { fetchCopickImportRuns, fetchCopickObjectRuns, fetchProcessorOptions } from '@app/common/services/workflowApi';
+import { fetchProcessorOptions } from '@app/common/services/workflowApi';
+import { fetchCopickImportRuns, fetchCopickObjectRuns } from '../services/copickApi';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
 
 /**
