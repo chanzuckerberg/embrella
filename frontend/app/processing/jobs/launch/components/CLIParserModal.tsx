@@ -133,7 +133,7 @@ export default function CLIParserModal({ open, onClose, onApply, schema }: CLIPa
               {parseResult.parsedDetails.length > 0 && (
                 <>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Icon sdsIcon="CheckCircle" sdsSize="s" color="success" />
+                    <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />
                     <Typography variant="subtitle2">
                       Recognized Parameters ({parseResult.parsedDetails.length})
                     </Typography>
