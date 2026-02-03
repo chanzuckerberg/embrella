@@ -596,9 +596,9 @@ properties:
   at_bin:
     type: string
     title: Tomogram Binning Factors
-    description: "Binning for tomograms relative to motion-corrected series. One or two floats (e.g., '1.0' or '1.0 2.0')"
+    description: "Binning for tomograms relative to motion-corrected series. One or three floats (e.g., '1.0' or '1.0 2.0 2.0')"
     default: '1.0'
-    pattern: '^[0-9.]+(?: [0-9.]+)?$'
+    pattern: '^[0-9.]+(?: [0-9.]+)*$'
     x-parameter-group: reconstruction
     x-bash-var: at_bin
     x-bash-format: quoted
@@ -735,17 +735,18 @@ properties:
     x-cli-format: direct
 
   corr_ctf:
-    type: boolean
+    type: integer
     title: Local CTF Correction
-    description: Perform local CTF correction on raw tilt series
-    default: true
+    description: '0: No local CTF correction, 1: Local CTF correction, 2: Local CTF correction with phase flipping, 3: Correction and generate vxm-tmp 3d tomograms'
+    enum: [0, 1, 2, 3]
+    default: 1
     x-parameter-group: ctf
     x-bash-var: corr_ctf
     x-bash-format: unquoted
     x-bash-type: number
     x-bash-skip: false
     x-cli-flag: '-CorrCTF'
-    x-cli-format: boolean_to_int
+    x-cli-format: direct
 
   # SLURM Resource Options - Component 0 (GPU Processing)
   slurm_component_0_partition:

@@ -72,7 +72,7 @@ class AreTomo3Processor(BaseProcessor):
             'ext_phase': 2,
             'recon_range': 2,
             'sart_iterations': 2,
-            'at_bin': (1, 2),  # 1 or 2 values allowed
+            'at_bin': (1, 2, 3),  # 1-3 input values allowed
         }
 
         for param_name, expected_count in multi_value_params.items():
