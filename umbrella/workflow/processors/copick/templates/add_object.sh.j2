@@ -28,7 +28,7 @@ conda activate /hpc/projects/group.czii/conda_environments/pyczii
 session="{{ session }}"
 copick_session="{{ copickSession }}"
 copick_run="{{ copickRunName }}"
-copick_procrun="{{ copickRun }}"
+copick_object_procrun="{{ copickRun }}"
 object_name="{{ objectName }}"
 object_diameter="{{ objectDiameter }}"
 
@@ -43,9 +43,9 @@ object_voxel_size="{{ objectVoxelSize }}"
 # ============================================================================
 # Calculated Variables
 # ============================================================================
-copick_base_dir="/hpc/projects/group.czii/krios1.processing/copick/${copick_session}"
+copick_base_dir="/hpc/projects/group.czii/krios1.processing/copick/${copick_session}/${copick_run}"
 copick_config="${copick_base_dir}/config.json"
-copick_output_dir="/hpc/projects/group.czii/krios1.processing/copick/${session}/${copick_procrun}"
+copick_output_dir="/hpc/projects/group.czii/krios1.processing/copick/${session}/${copick_run}"
 radius="$(echo "${object_diameter} / 2" | bc -l)"
 template_maps_dir="/hpc/projects/group.czii/krios1.processing/copick/template_maps"
 
@@ -55,7 +55,7 @@ template_maps_dir="/hpc/projects/group.czii/krios1.processing/copick/template_ma
 mkdir -p "${copick_output_dir}"
 
 # Dynamically set log paths for this job
-JOBTAG="${session}_${copick_procrun}_${SLURM_JOB_ID:-$$}"
+JOBTAG="${session}_${copick_object_procrun}_${SLURM_JOB_ID:-$$}"
 LOG_OUT="${copick_output_dir}/add_object_${JOBTAG}.out"
 LOG_ERR="${copick_output_dir}/add_object_${JOBTAG}.err"
 exec >"${LOG_OUT}" 2>"${LOG_ERR}"
@@ -88,7 +88,7 @@ echo "==========================================================================
 # Helper Functions
 # ============================================================================
 is_number() {
-    """Check if input is a valid number."""
+    # Check if input is a valid number.
     [[ $1 =~ ^[0-9]+([.][0-9]+)?$ ]]
 }
 

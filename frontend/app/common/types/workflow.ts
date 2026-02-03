@@ -296,8 +296,26 @@ export interface WorkflowLaunchFormProps {
   // Extensibility hooks
   customFields?: Record<string, React.ComponentType<FormFieldConfig>>;
   additionalSections?: React.ReactNode[];
-  onBeforeSubmit?: (params: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  onBeforeSubmit?: (
+    params: Record<string, unknown>,
+    context: { sessionName: string | null; runName: string | null }
+  ) => Promise<Record<string, unknown>>;
   customValidation?: (params: Record<string, unknown>) => Promise<ValidationError[]>;
+  /**
+   * Optional function to override the processor name based on parameters.
+   * Used when a form supports multiple operations that map to different processors.
+   * (e.g., Copick form uses 'copick' for create but 'copick-add-object' for add_object)
+   */
+  getProcessorName?: (params: Record<string, unknown>) => string;
+  /**
+   * Callback fired when parameters change. Allows child forms to react to parameter changes.
+   */
+  onParametersChange?: (parameters: Record<string, unknown>, sessionName: string | null) => void;
+  /**
+   * External dynamic options provided by child forms.
+   * These are merged with internally fetched options.
+   */
+  externalDynamicOptions?: Record<string, FieldOption[]>;
 }
 
 /**

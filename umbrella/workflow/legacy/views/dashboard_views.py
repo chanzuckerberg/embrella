@@ -53,7 +53,10 @@ def workflow_get_data(request):
     try:
         # Initialize and connect to remote
         checker = StatusChecker(
-            cluster_id="czii", auth=clusterio.get_auth_service_user(), remote_script_dir=None, local_template_path=None,
+            cluster_id="czii",
+            auth=clusterio.get_auth_service_user(),
+            remote_script_dir=None,
+            local_template_path=None,
         )
         checker.connect()
 
@@ -240,17 +243,49 @@ def get_msi_session_list(request):
 
 @extend_schema(
     methods=["GET"],
-    description="Returns MSI sessions and associated run numbers. Filters by session name if provided.",
+    description="""Returns MSI sessions and associated run numbers for a given processing plan type.
+
+Used to determine the next available run number when submitting jobs.
+
+**Supported plan types:**
+- `aretomo3` → czii-live plan (default)
+- `denoise` → czii-denoise plan
+- `copick` → czii-copick plan (create project)
+- `copick-add-object` → copick-add-object plan (add pickable objects)
+- TODO: `octopi` → czii-octopi plan
+
+**Example response:**
+```json
+{
+  "sessions": [
+    {"name": "24nov10", "run_numbers": ["001", "002", "003"]},
+    {"name": "24dec05", "run_numbers": ["001"]}
+  ]
+}
+```
+
+Run numbers are returned without the 'run' prefix. To get the next run name,
+find the max number and increment (e.g., max "003" → next is "run004").
+""",
     parameters=[
+        OpenApiParameter(
+            name="plan_type",
+            required=False,
+            type=OpenApiTypes.STR,
+            description="Processing plan type. One of: aretomo3, denoise, copick, copick-add-object, octopi. Defaults to 'aretomo3'.",
+            enum=["aretomo3", "denoise", "copick", "copick-add-object", "octopi"],
+        ),
         OpenApiParameter(
             name="session_name",
             required=False,
             type=OpenApiTypes.STR,
-            description="Optional MSI session name to filter",
+            description="Optional MSI session name to filter results to a single session.",
         ),
     ],
     responses={
         200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
         500: OpenApiTypes.OBJECT,
     },
 )
@@ -268,6 +303,8 @@ def get_msi_params_list(request):
             "aretomo3": "czii-live",
             "denoise": "czii-denoise",
             "copick": "czii-copick",
+            "copick-add-object": "copick-add-object",
+            "copick-import": "copick-import",
             "octopi": "czii-octopi",
         }
         if plan_type not in plan_map:
@@ -427,15 +464,19 @@ def trigger_syncer(request):
                 env=dict(os.environ, PYTHONPATH=workflow_dir.resolve()),
             )
 
-            logger.info(f"Started {syncer_type} syncer for session {session_name}, run {run_number}, tracking job {job_id}")
+            logger.info(
+                f"Started {syncer_type} syncer for session {session_name}, run {run_number}, tracking job {job_id}"
+            )
 
-            return JsonResponse({
-                "message": f"{syncer_type.capitalize()} syncer started successfully",
-                "session": session_name,
-                "run": run_number,
-                "job_id": job_id,
-                "status": "running",
-            })
+            return JsonResponse(
+                {
+                    "message": f"{syncer_type.capitalize()} syncer started successfully",
+                    "session": session_name,
+                    "run": run_number,
+                    "job_id": job_id,
+                    "status": "running",
+                }
+            )
 
         except Exception as e:
             logger.error(f"Failed to start syncer: {str(e)}")

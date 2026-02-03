@@ -68,6 +68,9 @@ export default function WorkflowLaunchForm({
   additionalSections,
   onBeforeSubmit,
   customValidation,
+  getProcessorName,
+  onParametersChange,
+  externalDynamicOptions,
 }: WorkflowLaunchFormProps) {
   // Form state
   const [sessionRunSelection, setSessionRunSelection] = useState<SessionRunSelection>({
@@ -97,9 +100,15 @@ export default function WorkflowLaunchForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Data states
-  const [dynamicOptions, setDynamicOptions] = useState<Record<string, FieldOption[]>>({});
+  const [internalDynamicOptions, setInternalDynamicOptions] = useState<Record<string, FieldOption[]>>({});
   const [lookedUpIds, setLookedUpIds] = useState<{ pipe_in_plan_id: number; proc_run_id: number } | null>(null);
   const [dependenciesMet, setDependenciesMet] = useState<boolean>(true);
+
+  // Merge internal and external dynamic options
+  const dynamicOptions = useMemo(() => {
+    if (!externalDynamicOptions) return internalDynamicOptions;
+    return { ...internalDynamicOptions, ...externalDynamicOptions };
+  }, [internalDynamicOptions, externalDynamicOptions]);
 
   // Validation
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
@@ -219,25 +228,12 @@ export default function WorkflowLaunchForm({
     sessionSelectionConfig.requiresSessionSelection,
   ]);
 
-  // Load initial options for Copick (even without session selected)
+  // Notify child forms when parameters change (for custom options loading)
   useEffect(() => {
-    if (processor.name !== 'copick') return;
-
-    const loadInitialOptions = async () => {
-      try {
-        setIsLoadingOptions(true);
-        // Fetch options without session_id to get copick_session options
-        const optionsResult = await fetchProcessorOptions(processor.name, undefined, undefined);
-        setDynamicOptions(optionsResult.options);
-        setIsLoadingOptions(false);
-      } catch (error) {
-        console.error('Failed to load initial options:', error);
-        setIsLoadingOptions(false);
-      }
-    };
-
-    loadInitialOptions();
-  }, [processor.name]);
+    if (onParametersChange) {
+      onParametersChange(parameters, sessionRunSelection.sessionName);
+    }
+  }, [parameters, sessionRunSelection.sessionName, onParametersChange]);
 
   // Load defaults and options when session changes
   useEffect(() => {
@@ -267,7 +263,7 @@ export default function WorkflowLaunchForm({
           sessionName,
           Object.keys(additionalParams).length > 0 ? additionalParams : undefined
         );
-        setDynamicOptions(optionsResult.options);
+        setInternalDynamicOptions(optionsResult.options);
 
         // Set default values for dynamic option fields (first option) if not already set
         const newDefaults: Record<string, string | number | boolean> = {};
@@ -296,62 +292,6 @@ export default function WorkflowLaunchForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- parameters is intentionally omitted to prevent infinite loops
   }, [sessionRunSelection.sessionName, processor.name]);
 
-  // Refetch dynamic options when import_tomo_type changes (Copick processor)
-  useEffect(() => {
-    // Only refetch if we have a session and this is the Copick processor
-    if (!sessionRunSelection.sessionName || processor.name !== 'copick') return;
-
-    // Skip if import_tomo_type is not set yet (will be handled by session load)
-    if (!parameters.import_tomo_type) return;
-
-    const refetchOptions = async () => {
-      try {
-        setIsLoadingOptions(true);
-        const optionsResult = await fetchProcessorOptions(
-          processor.name,
-          sessionRunSelection.sessionName ?? undefined,
-          { import_tomo_type: parameters.import_tomo_type as string | number }
-        );
-        setDynamicOptions(optionsResult.options);
-        setIsLoadingOptions(false);
-      } catch (error) {
-        console.error('Failed to refetch options:', error);
-        setIsLoadingOptions(false);
-      }
-    };
-
-    refetchOptions();
-  }, [parameters.import_tomo_type, sessionRunSelection.sessionName, processor.name]);
-
-  // Refetch dynamic options when copick_session changes (Copick processor add_object)
-  useEffect(() => {
-    // Only refetch if we have copick_session and this is the Copick processor
-    if (processor.name !== 'copick') return;
-    if (!parameters.copick_session) return;
-
-    const refetchOptions = async () => {
-      try {
-        setIsLoadingOptions(true);
-        const optionsResult = await fetchProcessorOptions(
-          processor.name,
-          undefined, // No session_id for add_object operation
-          { copick_session: parameters.copick_session as string }
-        );
-        // Merge with existing options (don't overwrite copick_session)
-        setDynamicOptions((prev) => ({
-          ...prev,
-          ...optionsResult.options,
-        }));
-        setIsLoadingOptions(false);
-      } catch (error) {
-        console.error('Failed to refetch options:', error);
-        setIsLoadingOptions(false);
-      }
-    };
-
-    refetchOptions();
-  }, [parameters.copick_session, processor.name]);
-
   // Load initial options for Membraneseg (even without session selected)
   useEffect(() => {
     if (processor.name !== 'membraneseg') return;
@@ -361,7 +301,7 @@ export default function WorkflowLaunchForm({
         setIsLoadingOptions(true);
         // Fetch options without session_id to get copick_session options
         const optionsResult = await fetchProcessorOptions(processor.name, undefined, undefined);
-        setDynamicOptions(optionsResult.options);
+        setInternalDynamicOptions(optionsResult.options);
 
         // Auto-select first copick_session if available
         if (optionsResult.options.copick_session?.length > 0 && !parameters.copick_session) {
@@ -394,7 +334,7 @@ export default function WorkflowLaunchForm({
           copick_session: parameters.copick_session as string,
         });
         // Merge with existing options
-        setDynamicOptions((prev) => ({
+        setInternalDynamicOptions((prev) => ({
           ...prev,
           ...optionsResult.options,
         }));
@@ -431,7 +371,7 @@ export default function WorkflowLaunchForm({
           copick_procrun: parameters.copick_procrun as string,
         });
         // Merge with existing options
-        setDynamicOptions((prev) => ({
+        setInternalDynamicOptions((prev) => ({
           ...prev,
           ...optionsResult.options,
         }));
@@ -469,7 +409,7 @@ export default function WorkflowLaunchForm({
           tomo_type: parameters.tomo_type as string,
         });
         // Merge with existing options
-        setDynamicOptions((prev) => ({
+        setInternalDynamicOptions((prev) => ({
           ...prev,
           ...optionsResult.options,
         }));
@@ -648,15 +588,21 @@ export default function WorkflowLaunchForm({
       // Apply onBeforeSubmit hook if provided
       let finalParams = { ...parameters };
       if (onBeforeSubmit) {
-        finalParams = await onBeforeSubmit(finalParams);
+        finalParams = await onBeforeSubmit(finalParams, {
+          sessionName: effectiveSessionName,
+          runName: effectiveRunName,
+        });
       }
 
       // Merge SLURM options into parameters (backend extracts SLURM directives from parameters)
       const mergedParams = { ...finalParams, ...slurmOptions };
 
+      // Determine effective processor name (may be overridden based on parameters)
+      const effectiveProcessorName = getProcessorName ? getProcessorName(mergedParams) : processor.name;
+
       // Build execution params (same as submit, but for preview)
       const executionParams: ExecutionParams = {
-        processor: processor.name,
+        processor: effectiveProcessorName,
         session_id: effectiveSessionName!, // Use effective (either selected or generated)
         run_name: effectiveRunName!, // Use effective (either selected or generated)
         cluster: cluster,
@@ -726,11 +672,17 @@ export default function WorkflowLaunchForm({
       // Apply onBeforeSubmit hook if provided
       let finalParams = { ...parameters };
       if (onBeforeSubmit) {
-        finalParams = await onBeforeSubmit(finalParams);
+        finalParams = await onBeforeSubmit(finalParams, {
+          sessionName: effectiveSessionName,
+          runName: effectiveRunName,
+        });
       }
 
       // Merge SLURM options into parameters (backend extracts SLURM directives from parameters)
       const mergedParams = { ...finalParams, ...slurmOptions };
+
+      // Determine effective processor name (may be overridden based on parameters)
+      const effectiveProcessorName = getProcessorName ? getProcessorName(mergedParams) : processor.name;
 
       // Run custom validation if provided
       if (customValidation) {
@@ -743,7 +695,7 @@ export default function WorkflowLaunchForm({
       }
 
       // Validate parameters with backend
-      const validationResult = await validateProcessorParams(processor.name, mergedParams);
+      const validationResult = await validateProcessorParams(effectiveProcessorName, mergedParams);
       if (!validationResult.valid) {
         setValidationErrors(validationResult.errors);
         setIsSubmitting(false);
@@ -752,7 +704,7 @@ export default function WorkflowLaunchForm({
 
       // Build execution params
       const executionParams: ExecutionParams = {
-        processor: processor.name,
+        processor: effectiveProcessorName,
         session_id: effectiveSessionName!, // Use effective (either selected or generated)
         run_name: effectiveRunName!, // Use effective (either selected or generated)
         cluster: cluster,

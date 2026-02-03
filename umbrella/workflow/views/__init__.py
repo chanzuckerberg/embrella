@@ -61,7 +61,11 @@ from workflow.legacy.views.copick_views import (
 )
 
 # Import modern copick-specific views
-from workflow.processors.copick.views import get_copick_runs, get_template_maps as get_copick_template_maps
+from workflow.processors.copick.views import (
+    get_copick_runs,
+    get_template_maps as get_copick_template_maps,
+)
+
 from workflow.legacy.views.dashboard_views import (
     dashboard,
     get_msi_params_list,
@@ -194,8 +198,8 @@ __all__ = [
     "run_create_copick",
     "run_import_tomogram_copick",
     # Copick views (modern)
-    "get_copick_template_maps",
     "get_copick_runs",
+    "get_copick_template_maps",
     # Metadata views
     "get_metadata_summary",
     "get_metadata_viz_data",

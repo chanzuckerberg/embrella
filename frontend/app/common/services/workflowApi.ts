@@ -30,7 +30,7 @@ function replaceUrlParams(url: string, params: Record<string, string | number>):
 /**
  * Helper to build query string
  */
-function buildQueryString(params: Record<string, string | number>): string {
+export function buildQueryString(params: Record<string, string | number>): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     searchParams.append(key, String(value));
@@ -301,65 +301,6 @@ export async function fetchExecutionByJobId(jobId: string): Promise<ExecutionSta
   const data = await response.json();
   if (!data.success) {
     throw new Error(data.error || 'Failed to fetch execution by job ID');
-  }
-
-  return data;
-}
-
-// ============================================================================
-// Copick-Specific Endpoints
-// ============================================================================
-
-/**
- * Get available template maps for Copick objects
- */
-export async function fetchCopickTemplateMaps(): Promise<{
-  success: boolean;
-  template_maps: Array<{
-    name: string;
-    label: string;
-    diameter: number;
-    pdb_id: string;
-    map_file: string;
-    voxel_size: number;
-    description: string;
-  }>;
-}> {
-  const response = await fetchResource(`${DJANGO_URL}${API.COPICK_TEMPLATE_MAPS}`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch copick template maps: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  if (!data.success) {
-    throw new Error(data.error || 'Failed to fetch copick template maps');
-  }
-
-  return data;
-}
-
-/**
- * Get available Copick runs for a given session
- */
-export async function fetchCopickRuns(sessionId: string): Promise<{
-  success: boolean;
-  copick_runs: Array<{
-    name: string;
-    label: string;
-    description: string;
-  }>;
-}> {
-  const queryString = buildQueryString({ session_id: sessionId });
-  const response = await fetchResource(`${DJANGO_URL}${API.COPICK_RUNS}${queryString}`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch copick runs: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  if (!data.success) {
-    throw new Error(data.error || 'Failed to fetch copick runs');
   }
 
   return data;

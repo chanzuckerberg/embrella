@@ -51,8 +51,9 @@ export enum API {
   PIPELINE_EXECUTION_BY_JOB_ID = '/workflow/v1/execution/by_job_id/:jobId/',
 
   // Processor-specific endpoints
-  COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
+  COPICK_ADD_OBJECT_PARAMS = '/workflow/v1/processors/copick/copick_params/',
   COPICK_RUNS = '/workflow/v1/processors/copick/runs/',
+  COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
 
   // Session/Run Selection
   MSI_SESSIONS_LIST = '/workflow/get_msi_session_list',
@@ -72,7 +73,6 @@ export enum API {
   GRID_LOGGING_PUCK_SLOTINFO = '/api/list/pucks/puck_id/slots/',
   GRID_LOGGING_PUCK_GRIDBOXINFO = '/api/list/pucks/puck_id/grid-box/position_in_puck/',
   GRID_LOGGING_GRID_DETAILS = '/api/list/pucks/puck_id/grid-box/position_in_puck/grid/grid_id/',
-  //http://127.0.0.1:8000/api/list/pucks/22/grid-box/2/grid/36/
   GRID_LOGGING_CANES = '/api/list/canes/',
   GRID_LOGGING_PROJECT_LEADERS = '/api/list/project-leaders/',
   GRID_LOGGING_FREEZING_SESSIONS = '/api/list/freezing-sessions/',

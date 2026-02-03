@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from processes.models import PipeExecution, PipeInPlan, ProcRun
+from processes.models import PipeExecution, PipeInPlan, ProcRun, ProcSoftware
 from tem.models import MsiSession
 from umbrella_logger import logger
 
@@ -43,8 +43,6 @@ def list_available_processors(request):
         }
     """
     try:
-        from processes.models import ProcSoftware
-
         processors = list_processors()
         processor_list = []
 
@@ -52,37 +50,46 @@ def list_available_processors(request):
             # Instantiate to get instance attributes
             instance = cls()
 
+            # Skip processors hidden from list (accessed via other UIs, not dropdown)
+            if getattr(instance, "hidden_from_list", False):
+                continue
+
             # Try to get cluster info from database
             try:
-                software = ProcSoftware.objects.get(
-                    processor_class=name, active=True)
+                software = ProcSoftware.objects.get(processor_class=name, active=True)
                 default_cluster = software.default_cluster
-                allowed_clusters = software.allowed_clusters if software.allowed_clusters else [
-                    'czii', 'bruno']
+                allowed_clusters = software.allowed_clusters if software.allowed_clusters else ["czii", "bruno"]
             except ProcSoftware.DoesNotExist:
                 # Fallback to processor class attributes
-                default_cluster = instance.cluster or 'czii'
-                allowed_clusters = ['czii', 'bruno']
+                default_cluster = instance.cluster or "czii"
+                allowed_clusters = ["czii", "bruno"]
 
-            processor_list.append({
-                "name": instance.name,
-                "display_name": instance.display_name,
-                "version": instance.version,
-                "default_cluster": default_cluster,
-                "allowed_clusters": allowed_clusters,
-            })
+            processor_list.append(
+                {
+                    "name": instance.name,
+                    "display_name": instance.display_name,
+                    "version": instance.version,
+                    "default_cluster": default_cluster,
+                    "allowed_clusters": allowed_clusters,
+                }
+            )
 
-        return JsonResponse({
-            "success": True,
-            "processors": processor_list,
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "processors": processor_list,
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error listing processors: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["GET"])
@@ -110,44 +117,48 @@ def get_processor_schema(request, processor_name: str):
         }
     """
     try:
-        from processes.models import ProcSoftware
-
         processor = get_processor(processor_name)
 
         # Try to get cluster info from database
         try:
-            software = ProcSoftware.objects.get(
-                processor_class=processor_name, active=True)
+            software = ProcSoftware.objects.get(processor_class=processor_name, active=True)
             default_cluster = software.default_cluster
-            allowed_clusters = software.allowed_clusters if software.allowed_clusters else [
-                'czii', 'bruno']
+            allowed_clusters = software.allowed_clusters if software.allowed_clusters else ["czii", "bruno"]
         except ProcSoftware.DoesNotExist:
             # Fallback to processor class attributes
-            default_cluster = processor.cluster or 'czii'
-            allowed_clusters = ['czii', 'bruno']
+            default_cluster = processor.cluster or "czii"
+            allowed_clusters = ["czii", "bruno"]
 
-        return JsonResponse({
-            "success": True,
-            "processor": processor.name,
-            "display_name": processor.display_name,
-            "version": processor.version,
-            "default_cluster": default_cluster,
-            "allowed_clusters": allowed_clusters,
-            "schema": processor.get_parameter_schema(),
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "processor": processor.name,
+                "display_name": processor.display_name,
+                "version": processor.version,
+                "default_cluster": default_cluster,
+                "allowed_clusters": allowed_clusters,
+                "schema": processor.get_parameter_schema(),
+            }
+        )
 
     except ValueError as e:
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=404)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=404,
+        )
 
     except Exception as e:
         logger.error(f"Error getting processor schema: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["POST"])
@@ -215,22 +226,23 @@ def execute_pipe(request):
         auth = data.get("auth", {})
         user_id = auth.get("username") or request.user.username
         password = auth.get("password")
-        cluster_id = data.get("cluster") or data.get(
-            "cluster_id")  # Support both field names
+        cluster_id = data.get("cluster") or data.get("cluster_id")  # Support both field names
 
         # If email provided, take username to be what precedes the @
         if user_id and "@" in user_id:
             user_id = user_id.split("@")[0]
 
         if not user_id:
-            return JsonResponse({
-                "success": False,
-                "error": "user_id is required",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "user_id is required",
+                },
+                status=400,
+            )
 
         # Get appropriate authentication credentials
-        auth, error = clusterio.get_auth_for_user(
-            user_id, cluster_id, password)
+        auth, error = clusterio.get_auth_for_user(user_id, cluster_id, password)
         if error:
             return JsonResponse(
                 {
@@ -247,30 +259,43 @@ def execute_pipe(request):
             try:
                 msi_session = MsiSession.objects.get(name=session_name)
             except MsiSession.DoesNotExist:
-                return JsonResponse({
-                    "success": False,
-                    "error": f"Session '{session_name}' not found",
-                }, status=404)
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": f"Session '{session_name}' not found",
+                    },
+                    status=404,
+                )
 
             # Get the processor
             try:
                 processor = get_processor(processor_name)
             except ValueError as e:
-                return JsonResponse({
-                    "success": False,
-                    "error": f"Invalid processor '{processor_name}': {str(e)}",
-                }, status=404)
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": f"Invalid processor '{processor_name}': {str(e)}",
+                    },
+                    status=404,
+                )
 
             # Find plan with this processor
-            pipe_in_plan_with_processor = PipeInPlan.objects.filter(
-                pipe__software__processor_class=processor_name,
-            ).select_related('plan', 'pipe', 'pipe__software').first()
+            pipe_in_plan_with_processor = (
+                PipeInPlan.objects.filter(
+                    pipe__software__processor_class=processor_name,
+                )
+                .select_related("plan", "pipe", "pipe__software")
+                .first()
+            )
 
             if not pipe_in_plan_with_processor:
-                return JsonResponse({
-                    "success": False,
-                    "error": f"No processing plan found with processor '{processor_name}'",
-                }, status=404)
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": f"No processing plan found with processor '{processor_name}'",
+                    },
+                    status=404,
+                )
 
             proc_plan = pipe_in_plan_with_processor.plan
 
@@ -285,21 +310,26 @@ def execute_pipe(request):
             )
 
             if created:
-                logger.info(
-                    f"Created new ProcRun: {run_name} for session {session_name} with plan {proc_plan.name}")
+                logger.info(f"Created new ProcRun: {run_name} for session {session_name} with plan {proc_plan.name}")
 
             # Find matching pipe_in_plan
             matching_pipe_in_plan = None
-            for pip in PipeInPlan.objects.filter(plan=proc_plan).select_related('pipe', 'pipe__software'):
-                if hasattr(pip.pipe.software, 'processor_class') and pip.pipe.software.processor_class == processor_name:
+            for pip in PipeInPlan.objects.filter(plan=proc_plan).select_related("pipe", "pipe__software"):
+                if (
+                    hasattr(pip.pipe.software, "processor_class")
+                    and pip.pipe.software.processor_class == processor_name
+                ):
                     matching_pipe_in_plan = pip
                     break
 
             if not matching_pipe_in_plan:
-                return JsonResponse({
-                    "success": False,
-                    "error": f"No pipeline step found for processor '{processor_name}' in plan '{proc_plan.name}'",
-                }, status=404)
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": f"No pipeline step found for processor '{processor_name}' in plan '{proc_plan.name}'",
+                    },
+                    status=404,
+                )
 
             # Set the IDs for execution
             pipe_in_plan_id = matching_pipe_in_plan.id
@@ -307,39 +337,54 @@ def execute_pipe(request):
 
         # Validate we have IDs (either provided or looked up)
         if not pipe_in_plan_id:
-            return JsonResponse({
-                "success": False,
-                "error": "pipe_in_plan_id is required (or provide processor/session_id/run_name)",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "pipe_in_plan_id is required (or provide processor/session_id/run_name)",
+                },
+                status=400,
+            )
 
         if not proc_run_id:
-            return JsonResponse({
-                "success": False,
-                "error": "proc_run_id is required (or provide processor/session_id/run_name)",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "proc_run_id is required (or provide processor/session_id/run_name)",
+                },
+                status=400,
+            )
 
         if cluster_id not in ["czii", "bruno"]:
-            return JsonResponse({
-                "success": False,
-                "error": "Invalid cluster_id. Must be czii or bruno",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Invalid cluster_id. Must be czii or bruno",
+                },
+                status=400,
+            )
 
         # Get database objects
         try:
             pipe_in_plan = PipeInPlan.objects.get(id=pipe_in_plan_id)
         except PipeInPlan.DoesNotExist:
-            return JsonResponse({
-                "success": False,
-                "error": f"PipeInPlan with id {pipe_in_plan_id} not found",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"PipeInPlan with id {pipe_in_plan_id} not found",
+                },
+                status=404,
+            )
 
         try:
             proc_run = ProcRun.objects.get(id=proc_run_id)
         except ProcRun.DoesNotExist:
-            return JsonResponse({
-                "success": False,
-                "error": f"ProcRun with id {proc_run_id} not found",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"ProcRun with id {proc_run_id} not found",
+                },
+                status=404,
+            )
 
         # Use the authenticated user from the request
         # (The view is @login_required so request.user is already a User instance)
@@ -358,36 +403,50 @@ def execute_pipe(request):
                 cluster_id=cluster_id,
             )
 
-            return JsonResponse({
-                "success": True,
-                **result,
-            })
+            return JsonResponse(
+                {
+                    "success": True,
+                    **result,
+                }
+            )
 
         except ValidationError as e:
-            return JsonResponse({
-                "success": False,
-                "error": "Parameter validation failed",
-                "validation_errors": e.errors,
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Parameter validation failed",
+                    "validation_errors": e.errors,
+                },
+                status=400,
+            )
 
         except ValueError as e:
-            return JsonResponse({
-                "success": False,
-                "error": str(e),
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": str(e),
+                },
+                status=400,
+            )
 
     except json.JSONDecodeError:
-        return JsonResponse({
-            "success": False,
-            "error": "Invalid JSON in request body",
-        }, status=400)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Invalid JSON in request body",
+            },
+            status=400,
+        )
 
     except Exception as e:
         logger.error(f"Error executing pipe: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": f"Internal error: {str(e)}",
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": f"Internal error: {str(e)}",
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["POST"])
@@ -431,62 +490,87 @@ def preview_script(request):
 
         # Validate required fields
         if not processor_name:
-            return JsonResponse({
-                "success": False,
-                "error": "processor is required",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "processor is required",
+                },
+                status=400,
+            )
 
         if not session_name:
-            return JsonResponse({
-                "success": False,
-                "error": "session_id is required",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "session_id is required",
+                },
+                status=400,
+            )
 
         if not run_name:
-            return JsonResponse({
-                "success": False,
-                "error": "run_name is required",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "run_name is required",
+                },
+                status=400,
+            )
 
         # Validate cluster
         if cluster_id not in ["czii", "bruno"]:
-            return JsonResponse({
-                "success": False,
-                "error": "Invalid cluster. Must be czii or bruno",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Invalid cluster. Must be czii or bruno",
+                },
+                status=400,
+            )
 
         # Get processor
         try:
             processor = get_processor(processor_name)
         except ValueError as e:
-            return JsonResponse({
-                "success": False,
-                "error": f"Invalid processor '{processor_name}': {str(e)}",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Invalid processor '{processor_name}': {str(e)}",
+                },
+                status=404,
+            )
 
         # Get MSI session
         try:
             msi_session = MsiSession.objects.get(name=session_name)
         except MsiSession.DoesNotExist:
-            return JsonResponse({
-                "success": False,
-                "error": f"Session '{session_name}' not found",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Session '{session_name}' not found",
+                },
+                status=404,
+            )
 
         # Build RunContext for preview
         # Create temporary in-memory model instances (not saved to DB)
         from workflow.context import RunContext
 
         # Find a pipe_in_plan with this processor to get plan and pipe info
-        pipe_in_plan_with_processor = PipeInPlan.objects.filter(
-            pipe__software__processor_class=processor_name,
-        ).select_related('plan', 'pipe', 'pipe__software').first()
+        pipe_in_plan_with_processor = (
+            PipeInPlan.objects.filter(
+                pipe__software__processor_class=processor_name,
+            )
+            .select_related("plan", "pipe", "pipe__software")
+            .first()
+        )
 
         if not pipe_in_plan_with_processor:
-            return JsonResponse({
-                "success": False,
-                "error": f"No processing plan found with processor '{processor_name}'",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"No processing plan found with processor '{processor_name}'",
+                },
+                status=404,
+            )
 
         proc_plan = pipe_in_plan_with_processor.plan
 
@@ -514,51 +598,66 @@ def preview_script(request):
         # Validate parameters
         errors = processor.validate_parameters(parameters)
         if errors:
-            return JsonResponse({
-                "success": False,
-                "error": "Parameter validation failed",
-                "validation_errors": errors,
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Parameter validation failed",
+                    "validation_errors": errors,
+                },
+                status=400,
+            )
 
         # Validate SLURM resources
-        slurm_errors = processor.validate_slurm_resources(
-            parameters, cluster_id)
+        slurm_errors = processor.validate_slurm_resources(parameters, cluster_id)
         if slurm_errors:
-            return JsonResponse({
-                "success": False,
-                "error": "SLURM resource validation failed",
-                "validation_errors": slurm_errors,
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "SLURM resource validation failed",
+                    "validation_errors": slurm_errors,
+                },
+                status=400,
+            )
 
         # Render script
         try:
             script_content = processor.render_script(parameters, context)
         except Exception as e:
-            logger.error(
-                f"Error rendering script for preview: {e}", exc_info=True)
-            return JsonResponse({
-                "success": False,
-                "error": f"Failed to render script: {str(e)}",
-            }, status=500)
+            logger.error(f"Error rendering script for preview: {e}", exc_info=True)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Failed to render script: {str(e)}",
+                },
+                status=500,
+            )
 
         # Return script content
-        return JsonResponse({
-            "success": True,
-            "script_content": script_content,
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "script_content": script_content,
+            }
+        )
 
     except json.JSONDecodeError:
-        return JsonResponse({
-            "success": False,
-            "error": "Invalid JSON in request body",
-        }, status=400)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Invalid JSON in request body",
+            },
+            status=400,
+        )
 
     except Exception as e:
         logger.error(f"Error previewing script: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": f"Internal error: {str(e)}",
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": f"Internal error: {str(e)}",
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["GET"])
@@ -589,46 +688,54 @@ def get_execution_status(request, execution_id: int):
     try:
         try:
             execution = PipeExecution.objects.select_related(
-                'proc_run',
-                'pipe_in_plan',
-                'pipe_in_plan__pipe',
+                "proc_run",
+                "pipe_in_plan",
+                "pipe_in_plan__pipe",
             ).get(id=execution_id)
         except PipeExecution.DoesNotExist:
-            return JsonResponse({
-                "success": False,
-                "error": f"PipeExecution with id {execution_id} not found",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"PipeExecution with id {execution_id} not found",
+                },
+                status=404,
+            )
 
         # Build response
-        return JsonResponse({
-            "success": True,
-            "execution": {
-                "id": execution.id,
-                "proc_run_id": execution.proc_run.id,
-                "proc_run_name": execution.proc_run.name,
-                "pipe_in_plan_id": execution.pipe_in_plan.id,
-                "pipe_name": execution.pipe_in_plan.pipe.name,
-                "software_name": execution.pipe_in_plan.pipe.software.name,
-                "status": execution.status,
-                "job_id": execution.job_id,
-                "script_path": execution.script_path,
-                "script_content": execution.script_content,
-                "submitted_at": execution.submitted_at.isoformat() if execution.submitted_at else None,
-                "started_at": execution.started_at.isoformat() if execution.started_at else None,
-                "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
-                "error_message": execution.error_message,
-                "parameters": execution.parameters,
-                "created_at": execution.created_at.isoformat(),
-                "updated_at": execution.updated_at.isoformat(),
-            },
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "execution": {
+                    "id": execution.id,
+                    "proc_run_id": execution.proc_run.id,
+                    "proc_run_name": execution.proc_run.name,
+                    "pipe_in_plan_id": execution.pipe_in_plan.id,
+                    "pipe_name": execution.pipe_in_plan.pipe.name,
+                    "software_name": execution.pipe_in_plan.pipe.software.name,
+                    "status": execution.status,
+                    "job_id": execution.job_id,
+                    "script_path": execution.script_path,
+                    "script_content": execution.script_content,
+                    "submitted_at": execution.submitted_at.isoformat() if execution.submitted_at else None,
+                    "started_at": execution.started_at.isoformat() if execution.started_at else None,
+                    "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
+                    "error_message": execution.error_message,
+                    "parameters": execution.parameters,
+                    "created_at": execution.created_at.isoformat(),
+                    "updated_at": execution.updated_at.isoformat(),
+                },
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error getting execution status: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["GET"])
@@ -662,53 +769,67 @@ def list_run_executions(request, proc_run_id: int):
         try:
             proc_run = ProcRun.objects.get(id=proc_run_id)
         except ProcRun.DoesNotExist:
-            return JsonResponse({
-                "success": False,
-                "error": f"ProcRun with id {proc_run_id} not found",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"ProcRun with id {proc_run_id} not found",
+                },
+                status=404,
+            )
 
         # Get all executions for this run
-        executions = PipeExecution.objects.filter(
-            proc_run=proc_run,
-        ).select_related(
-            'pipe_in_plan',
-            'pipe_in_plan__pipe',
-            'pipe_in_plan__pipe__software',
-        ).order_by('pipe_in_plan__step')
+        executions = (
+            PipeExecution.objects.filter(
+                proc_run=proc_run,
+            )
+            .select_related(
+                "pipe_in_plan",
+                "pipe_in_plan__pipe",
+                "pipe_in_plan__pipe__software",
+            )
+            .order_by("pipe_in_plan__step")
+        )
 
         execution_list = []
         for execution in executions:
-            execution_list.append({
-                "id": execution.id,
-                "pipe_in_plan_id": execution.pipe_in_plan.id,
-                "pipe_name": execution.pipe_in_plan.pipe.name,
-                "software_name": execution.pipe_in_plan.pipe.software.name,
-                "step": execution.pipe_in_plan.step,
-                "status": execution.status,
-                "job_id": execution.job_id,
-                "submitted_at": execution.submitted_at.isoformat() if execution.submitted_at else None,
-                "started_at": execution.started_at.isoformat() if execution.started_at else None,
-                "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
-                "error_message": execution.error_message,
-            })
+            execution_list.append(
+                {
+                    "id": execution.id,
+                    "pipe_in_plan_id": execution.pipe_in_plan.id,
+                    "pipe_name": execution.pipe_in_plan.pipe.name,
+                    "software_name": execution.pipe_in_plan.pipe.software.name,
+                    "step": execution.pipe_in_plan.step,
+                    "status": execution.status,
+                    "job_id": execution.job_id,
+                    "submitted_at": execution.submitted_at.isoformat() if execution.submitted_at else None,
+                    "started_at": execution.started_at.isoformat() if execution.started_at else None,
+                    "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
+                    "error_message": execution.error_message,
+                }
+            )
 
-        return JsonResponse({
-            "success": True,
-            "proc_run": {
-                "id": proc_run.id,
-                "name": proc_run.name,
-                "proc_plan_name": proc_run.proc_plan.name,
-                "msi_session_name": proc_run.msi_session.name,
-            },
-            "executions": execution_list,
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "proc_run": {
+                    "id": proc_run.id,
+                    "name": proc_run.name,
+                    "proc_plan_name": proc_run.proc_plan.name,
+                    "msi_session_name": proc_run.msi_session.name,
+                },
+                "executions": execution_list,
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error listing run executions: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["GET"])
@@ -741,70 +862,89 @@ def check_dependencies(request):
     """
     try:
         # Get query parameters
-        pipe_in_plan_id = request.GET.get('pipe_in_plan_id')
-        proc_run_id = request.GET.get('proc_run_id')
+        pipe_in_plan_id = request.GET.get("pipe_in_plan_id")
+        proc_run_id = request.GET.get("proc_run_id")
 
         if not pipe_in_plan_id or not proc_run_id:
-            return JsonResponse({
-                "success": False,
-                "error": "Both pipe_in_plan_id and proc_run_id query parameters are required",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Both pipe_in_plan_id and proc_run_id query parameters are required",
+                },
+                status=400,
+            )
 
         try:
             pipe_in_plan_id = int(pipe_in_plan_id)
         except ValueError:
-            return JsonResponse({
-                "success": False,
-                "error": "pipe_in_plan_id must be an integer",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "pipe_in_plan_id must be an integer",
+                },
+                status=400,
+            )
 
         try:
             proc_run_id = int(proc_run_id)
         except ValueError:
-            return JsonResponse({
-                "success": False,
-                "error": "proc_run_id must be an integer",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "proc_run_id must be an integer",
+                },
+                status=400,
+            )
 
         try:
             pipe_in_plan = PipeInPlan.objects.get(id=pipe_in_plan_id)
         except PipeInPlan.DoesNotExist:
-            return JsonResponse({
-                "success": False,
-                "error": f"PipeInPlan with id {pipe_in_plan_id} not found",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"PipeInPlan with id {pipe_in_plan_id} not found",
+                },
+                status=404,
+            )
 
         try:
             proc_run = ProcRun.objects.get(id=proc_run_id)
         except ProcRun.DoesNotExist:
-            return JsonResponse({
-                "success": False,
-                "error": f"ProcRun with id {proc_run_id} not found",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"ProcRun with id {proc_run_id} not found",
+                },
+                status=404,
+            )
 
         # Check dependencies
         executor = PipelineExecutor()
-        dependencies_met, missing = executor.check_dependencies_met(
-            proc_run, pipe_in_plan)
+        dependencies_met, missing = executor.check_dependencies_met(proc_run, pipe_in_plan)
 
         # Check if there are any dependencies to check
         from processes.models import PipeJoint
-        has_dependencies = PipeJoint.objects.filter(
-            pipe_in_plan=pipe_in_plan).exists()
 
-        return JsonResponse({
-            "success": True,
-            "dependencies_met": dependencies_met,
-            "missing_dependencies": missing,
-            "has_dependencies": has_dependencies,
-        })
+        has_dependencies = PipeJoint.objects.filter(pipe_in_plan=pipe_in_plan).exists()
+
+        return JsonResponse(
+            {
+                "success": True,
+                "dependencies_met": dependencies_met,
+                "missing_dependencies": missing,
+                "has_dependencies": has_dependencies,
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error checking dependencies: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["GET"])
@@ -838,37 +978,49 @@ def lookup_execution_ids(request):
     """
     try:
         # Get query parameters
-        session_name = request.GET.get('session_name')
-        run_name = request.GET.get('run_name')
-        processor_name = request.GET.get('processor_name')
+        session_name = request.GET.get("session_name")
+        run_name = request.GET.get("run_name")
+        processor_name = request.GET.get("processor_name")
 
         # Validate required parameters
         if not session_name:
-            return JsonResponse({
-                "success": False,
-                "error": "session_name query parameter is required",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "session_name query parameter is required",
+                },
+                status=400,
+            )
 
         if not run_name:
-            return JsonResponse({
-                "success": False,
-                "error": "run_name query parameter is required",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "run_name query parameter is required",
+                },
+                status=400,
+            )
 
         if not processor_name:
-            return JsonResponse({
-                "success": False,
-                "error": "processor_name query parameter is required",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "processor_name query parameter is required",
+                },
+                status=400,
+            )
 
         # Look up MSI session
         try:
             msi_session = MsiSession.objects.get(name=session_name)
         except MsiSession.DoesNotExist:
-            return JsonResponse({
-                "success": False,
-                "error": f"Session '{session_name}' not found",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Session '{session_name}' not found",
+                },
+                status=404,
+            )
 
         # Get or create processing run
         # First, need to determine the right plan based on the processor
@@ -878,24 +1030,34 @@ def lookup_execution_ids(request):
 
             # Find which plan contains a pipe with this processor
             # Look through all PipeInPlans to find one with matching processor_class
-            pipe_in_plan_with_processor = PipeInPlan.objects.filter(
-                pipe__software__processor_class=processor_name,
-            ).select_related('plan', 'pipe', 'pipe__software').first()
+            pipe_in_plan_with_processor = (
+                PipeInPlan.objects.filter(
+                    pipe__software__processor_class=processor_name,
+                )
+                .select_related("plan", "pipe", "pipe__software")
+                .first()
+            )
 
             if not pipe_in_plan_with_processor:
-                return JsonResponse({
-                    "success": False,
-                    "error": f"No processing plan found with processor '{processor_name}'. "
-                    f"Please create a plan with this processor first.",
-                }, status=404)
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": f"No processing plan found with processor '{processor_name}'. "
+                        f"Please create a plan with this processor first.",
+                    },
+                    status=404,
+                )
 
             proc_plan = pipe_in_plan_with_processor.plan
 
         except ValueError as e:
-            return JsonResponse({
-                "success": False,
-                "error": f"Invalid processor '{processor_name}': {str(e)}",
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Invalid processor '{processor_name}': {str(e)}",
+                },
+                status=404,
+            )
 
         # Look up the processing run (do NOT create it - lookup should be read-only)
         try:
@@ -907,52 +1069,63 @@ def lookup_execution_ids(request):
         except ProcRun.DoesNotExist:
             # Run doesn't exist yet - this is okay for new runs
             # Return a special response indicating the run needs to be created
-            return JsonResponse({
-                "success": False,
-                "error": f"Run '{run_name}' does not exist yet for session '{session_name}'. It will be created when you submit the job.",
-                "run_not_found": True,
-                "session_id": msi_session.id,
-            }, status=204)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Run '{run_name}' does not exist yet for session '{session_name}'. It will be created when you submit the job.",
+                    "run_not_found": True,
+                    "session_id": msi_session.id,
+                },
+                status=204,
+            )
 
         # Look up pipe in plan that matches the processor
         # Find the pipe_in_plan where the pipe's software processor matches the requested processor
         pipe_in_plans = PipeInPlan.objects.filter(
             plan=proc_run.proc_plan,
-        ).select_related('pipe', 'pipe__software')
+        ).select_related("pipe", "pipe__software")
 
         matching_pipe_in_plan = None
         for pip in pipe_in_plans:
             # Check if this pipe's software processor class matches
             software = pip.pipe.software
-            if hasattr(software, 'processor_class') and software.processor_class == processor_name:
+            if hasattr(software, "processor_class") and software.processor_class == processor_name:
                 matching_pipe_in_plan = pip
                 break
 
         if not matching_pipe_in_plan:
-            return JsonResponse({
-                "success": False,
-                "error": (
-                    f"No pipeline step found for processor '{processor_name}' "
-                    f"in processing plan '{proc_run.proc_plan.name}'"
-                ),
-            }, status=404)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": (
+                        f"No pipeline step found for processor '{processor_name}' "
+                        f"in processing plan '{proc_run.proc_plan.name}'"
+                    ),
+                },
+                status=404,
+            )
 
         # Return the IDs
-        return JsonResponse({
-            "success": True,
-            "pipe_in_plan_id": matching_pipe_in_plan.id,
-            "proc_run_id": proc_run.id,
-            "session_id": msi_session.id,
-            "pipe_name": matching_pipe_in_plan.pipe.name,
-            "software_name": matching_pipe_in_plan.pipe.software.name,
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "pipe_in_plan_id": matching_pipe_in_plan.id,
+                "proc_run_id": proc_run.id,
+                "session_id": msi_session.id,
+                "pipe_name": matching_pipe_in_plan.pipe.name,
+                "software_name": matching_pipe_in_plan.pipe.software.name,
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error looking up execution IDs: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["GET"])
@@ -995,90 +1168,101 @@ def get_execution_by_job_id(request, job_id: str):
     try:
         # Handle SLURM hetjob format (e.g., "9232+0" -> base job "9232")
         # Try exact match first, then base job ID without hetjob suffix
-        base_job_id = job_id.split('+')[0] if '+' in job_id else job_id
+        base_job_id = job_id.split("+")[0] if "+" in job_id else job_id
 
         try:
             execution = PipeExecution.objects.select_related(
-                'proc_run',
-                'proc_run__msi_session',
-                'proc_run__proc_plan',
-                'pipe_in_plan',
-                'pipe_in_plan__pipe',
-                'pipe_in_plan__pipe__software',
+                "proc_run",
+                "proc_run__msi_session",
+                "proc_run__proc_plan",
+                "pipe_in_plan",
+                "pipe_in_plan__pipe",
+                "pipe_in_plan__pipe__software",
             ).get(job_id=job_id)
         except PipeExecution.DoesNotExist:
             # Try base job ID if hetjob format was provided
             if base_job_id != job_id:
                 try:
                     execution = PipeExecution.objects.select_related(
-                        'proc_run',
-                        'proc_run__msi_session',
-                        'proc_run__proc_plan',
-                        'pipe_in_plan',
-                        'pipe_in_plan__pipe',
-                        'pipe_in_plan__pipe__software',
+                        "proc_run",
+                        "proc_run__msi_session",
+                        "proc_run__proc_plan",
+                        "pipe_in_plan",
+                        "pipe_in_plan__pipe",
+                        "pipe_in_plan__pipe__software",
                     ).get(job_id=base_job_id)
                 except PipeExecution.DoesNotExist:
-                    return JsonResponse({
-                        "success": False,
-                        "error": f"No execution found for job_id '{job_id}' or '{base_job_id}'",
-                    }, status=404)
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "error": f"No execution found for job_id '{job_id}' or '{base_job_id}'",
+                        },
+                        status=404,
+                    )
             else:
-                return JsonResponse({
-                    "success": False,
-                    "error": f"No execution found for job_id '{job_id}'",
-                }, status=404)
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": f"No execution found for job_id '{job_id}'",
+                    },
+                    status=404,
+                )
 
         # On-demand log fetching for completed jobs that don't have logs yet
-        if execution.status == 'completed' and execution.logs_fetched_at is None:
+        if execution.status == "completed" and execution.logs_fetched_at is None:
             from workflow.log_fetcher import fetch_job_logs
+
             logger.info(f"Fetching logs on-demand for job {job_id}")
             try:
                 fetch_job_logs(execution)
                 # Refresh from database to get updated logs
                 execution.refresh_from_db()
             except Exception as e:
-                logger.error(
-                    f"Error fetching logs on-demand for job {job_id}: {e}")
+                logger.error(f"Error fetching logs on-demand for job {job_id}: {e}")
                 # Continue anyway - we'll return what we have
 
         # Build response
-        return JsonResponse({
-            "success": True,
-            "execution": {
-                "id": execution.id,
-                "proc_run_id": execution.proc_run.id,
-                "proc_run_name": execution.proc_run.name,
-                "msi_session_name": execution.proc_run.msi_session.name,
-                "proc_plan_name": execution.proc_run.proc_plan.name,
-                "pipe_in_plan_id": execution.pipe_in_plan.id,
-                "pipe_name": execution.pipe_in_plan.pipe.name,
-                "software_name": execution.pipe_in_plan.pipe.software.name,
-                "status": execution.status,
-                "job_id": execution.job_id,
-                "script_path": execution.script_path,
-                "script_content": execution.script_content,
-                "submitted_at": execution.submitted_at.isoformat() if execution.submitted_at else None,
-                "started_at": execution.started_at.isoformat() if execution.started_at else None,
-                "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
-                "error_message": execution.error_message,
-                "parameters": execution.parameters,
-                "created_at": execution.created_at.isoformat(),
-                "updated_at": execution.updated_at.isoformat(),
-                # Job logs (stdout/stderr from SLURM)
-                "stdout_log": execution.stdout_log,
-                "stderr_log": execution.stderr_log,
-                "logs_fetched_at": execution.logs_fetched_at.isoformat() if execution.logs_fetched_at else None,
-                "log_fetch_error": execution.log_fetch_error,
-            },
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "execution": {
+                    "id": execution.id,
+                    "proc_run_id": execution.proc_run.id,
+                    "proc_run_name": execution.proc_run.name,
+                    "msi_session_name": execution.proc_run.msi_session.name,
+                    "proc_plan_name": execution.proc_run.proc_plan.name,
+                    "pipe_in_plan_id": execution.pipe_in_plan.id,
+                    "pipe_name": execution.pipe_in_plan.pipe.name,
+                    "software_name": execution.pipe_in_plan.pipe.software.name,
+                    "status": execution.status,
+                    "job_id": execution.job_id,
+                    "script_path": execution.script_path,
+                    "script_content": execution.script_content,
+                    "submitted_at": execution.submitted_at.isoformat() if execution.submitted_at else None,
+                    "started_at": execution.started_at.isoformat() if execution.started_at else None,
+                    "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
+                    "error_message": execution.error_message,
+                    "parameters": execution.parameters,
+                    "created_at": execution.created_at.isoformat(),
+                    "updated_at": execution.updated_at.isoformat(),
+                    # Job logs (stdout/stderr from SLURM)
+                    "stdout_log": execution.stdout_log,
+                    "stderr_log": execution.stderr_log,
+                    "logs_fetched_at": execution.logs_fetched_at.isoformat() if execution.logs_fetched_at else None,
+                    "log_fetch_error": execution.log_fetch_error,
+                },
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error getting execution by job_id: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
 
 
 # Processor-Specific Custom Endpoints
@@ -1109,33 +1293,41 @@ def get_processor_options(request, processor_name: str):
     """
     try:
         processor = get_processor(processor_name)
-        session_id = request.GET.get('session_id')
+        session_id = request.GET.get("session_id")
 
         # Check if processor has custom views module
         if processor.has_custom_views():
             views_module = processor.get_views_module()
-            if views_module and hasattr(views_module, 'get_dynamic_options'):
+            if views_module and hasattr(views_module, "get_dynamic_options"):
                 # Delegate to processor-specific implementation
                 return views_module.get_dynamic_options(request, session_id)
 
         # Default: return empty options
-        return JsonResponse({
-            "success": True,
-            "options": {},
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "options": {},
+            }
+        )
 
     except ValueError as e:
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=404)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=404,
+        )
 
     except Exception as e:
         logger.error(f"Error getting processor options: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["POST"])
@@ -1165,29 +1357,36 @@ def validate_processor_parameters(request, processor_name: str):
         # Check if processor has custom views module
         if processor.has_custom_views():
             views_module = processor.get_views_module()
-            if views_module and hasattr(views_module, 'validate_parameters'):
+            if views_module and hasattr(views_module, "validate_parameters"):
                 # Delegate to processor-specific implementation
                 return views_module.validate_parameters(request)
 
         # Default: return valid (assumes JSON Schema validation is enough)
-        return JsonResponse({
-            "valid": True,
-            "errors": [],
-        })
+        return JsonResponse(
+            {
+                "valid": True,
+                "errors": [],
+            }
+        )
 
     except ValueError as e:
-        return JsonResponse({
-            "valid": False,
-            "errors": [{"field": "__all__", "message": str(e)}],
-        }, status=404)
+        return JsonResponse(
+            {
+                "valid": False,
+                "errors": [{"field": "__all__", "message": str(e)}],
+            },
+            status=404,
+        )
 
     except Exception as e:
-        logger.error(
-            f"Error validating processor parameters: {e}", exc_info=True)
-        return JsonResponse({
-            "valid": False,
-            "errors": [{"field": "__all__", "message": str(e)}],
-        }, status=500)
+        logger.error(f"Error validating processor parameters: {e}", exc_info=True)
+        return JsonResponse(
+            {
+                "valid": False,
+                "errors": [{"field": "__all__", "message": str(e)}],
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["GET"])
@@ -1213,34 +1412,42 @@ def get_processor_defaults(request, processor_name: str):
     """
     try:
         processor = get_processor(processor_name)
-        session_id = request.GET.get('session_id')
+        session_id = request.GET.get("session_id")
 
         # Check if processor has custom views module
         if processor.has_custom_views():
             views_module = processor.get_views_module()
-            if views_module and hasattr(views_module, 'get_session_defaults'):
+            if views_module and hasattr(views_module, "get_session_defaults"):
                 # Delegate to processor-specific implementation
                 return views_module.get_session_defaults(request, session_id)
 
         # Default: return empty defaults
-        return JsonResponse({
-            "success": True,
-            "session_info": {},
-            "defaults": {},
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "session_info": {},
+                "defaults": {},
+            }
+        )
 
     except ValueError as e:
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=404)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=404,
+        )
 
     except Exception as e:
         logger.error(f"Error getting processor defaults: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
 
 
 @require_http_methods(["GET"])
@@ -1272,31 +1479,39 @@ def get_processor_metadata(request, processor_name: str):
         # Check if processor has custom views module
         if processor.has_custom_views():
             views_module = processor.get_views_module()
-            if views_module and hasattr(views_module, 'get_processor_metadata'):
+            if views_module and hasattr(views_module, "get_processor_metadata"):
                 # Delegate to processor-specific implementation
                 return views_module.get_processor_metadata(request)
 
         # Default: return basic metadata from processor class
-        return JsonResponse({
-            "success": True,
-            "metadata": {
-                "help_text": f"{processor.display_name} processor",
-                "category": "Processing",
-                "examples": [],
-                "docs_url": None,
-                "parameter_notes": {},
-            },
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "metadata": {
+                    "help_text": f"{processor.display_name} processor",
+                    "category": "Processing",
+                    "examples": [],
+                    "docs_url": None,
+                    "parameter_notes": {},
+                },
+            }
+        )
 
     except ValueError as e:
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=404)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=404,
+        )
 
     except Exception as e:
         logger.error(f"Error getting processor metadata: {e}", exc_info=True)
-        return JsonResponse({
-            "success": False,
-            "error": str(e),
-        }, status=500)
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
