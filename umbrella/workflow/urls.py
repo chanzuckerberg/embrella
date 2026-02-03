@@ -44,7 +44,6 @@ urlpatterns = [
     path("get_msi_session_list", views.get_msi_session_list, name="get all msi session name"),
     path("aretomo3_params", views.get_msi_params_list, name="get parameters"),
     path("denoise_params", views.get_msi_params_list, name="get denoise parameters"),
-    path("copick_params", views.get_msi_params_list, name="get copick parameters"),
     path("octopi_params", views.get_msi_params_list, name="get octopi parameters"),
     path("job_logs", views.get_job_logs, name="fetching logs"),
     path("get_plan_id", views.get_plan_id, name="get_plan_id"),
@@ -84,6 +83,7 @@ urlpatterns = [
     # Copick-specific endpoints
     path("v1/processors/copick/runs/", views.get_copick_runs, name="get_copick_runs"),
     path("v1/processors/copick/template_maps/", views.get_copick_template_maps, name="get_copick_template_maps"),
+    path("v1/processors/copick/copick_params/", views.get_msi_params_list, name="get_copick_params"),
     path("v1/execution/execute/", views.execute_pipe, name="execute_pipe"),
     path("v1/execution/preview/", views.preview_script, name="preview_script"),
     path("v1/execution/<int:execution_id>/status/", views.get_execution_status, name="get_execution_status"),
