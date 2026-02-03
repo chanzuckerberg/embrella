@@ -218,16 +218,10 @@ function convertValue(values: string[], type: string): unknown {
       return isNaN(int) ? values[0] : int;
     }
 
-    case 'boolean': {
+    case 'boolean':
       // Handle '0'/'1' boolean representations
-      if (values[0] === '1' || values[0].toLowerCase() === 'true') {
-        return true;
-      }
-      if (values[0] === '0' || values[0].toLowerCase() === 'false') {
-        return false;
-      }
-      return true; // Presence implies true
-    }
+      // Return false only for explicit '0' or 'false', otherwise true (presence implies true)
+      return !(values[0] === '0' || values[0].toLowerCase() === 'false');
 
     case 'string':
     default:

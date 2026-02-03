@@ -119,7 +119,7 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
   /**
    * Header actions for AreTomo3 - includes CLI import button
    */
-  const headerActions = ({ parameters, setParameters, schema }: HeaderActionsContext) => (
+  const headerActions = ({ setParameters, schema }: HeaderActionsContext) => (
     <>
       <Button
         sdsType="secondary"
