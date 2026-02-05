@@ -186,10 +186,15 @@ def create_session(request):
         atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
         session_instance.atlas_session = atlas_session
         path_dicts = {}
-        session_instance.frames = session_instance.get_session_path('frames')
-        session_instance.sums = session_instance.get_session_path('sums')
-        session_instance.mdocs = session_instance.get_session_path('mdocs')
-        session_instance.parents = session_instance.get_session_path('parents')
+        software = session_instance.session_plan.software
+        if software.frames:
+            session_instance.frames = session_instance.get_session_path('frames')
+        if software.sums:
+            session_instance.sums = session_instance.get_session_path('sums')
+        if software.mdocs:
+            session_instance.mdocs = session_instance.get_session_path('mdocs')
+        if software.parents:
+            session_instance.parents = session_instance.get_session_path('parents')
         if atlas_session:
             session_instance.atlas = atlas_session.atlas
         session_instance.save()
