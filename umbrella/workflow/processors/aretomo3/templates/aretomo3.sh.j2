@@ -89,7 +89,6 @@ run_aretomo3_gpu() {
     # AreTomo3 command with fixed flags and schema-generated variable flags
     /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.7_01-22-2026 \
         -InPrefix ${in_mdoc_dir}/${in_prefix} \
-        -InSuffix ${in_suffix} \
         -Gain ${gain_fn} \
         -OutDir ${out_path} \
         -AtBin ${tomo_bin_5A} ${tomo_bin_10A} ${tomo_bin_10A} \

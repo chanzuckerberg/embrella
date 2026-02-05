@@ -280,8 +280,9 @@ properties:
     x-bash-format: quoted
     x-bash-type: string
     x-bash-skip: false
-    x-cli-flag: null
-    x-cli-format: null
+    x-cli-flag: '-InSuffix'
+    x-cli-format: direct
+    x-cli-always-include: true
 
   in_skips:
     type: string
@@ -430,7 +431,7 @@ properties:
     x-bash-skip: false
     x-cli-flag: '-EerSampling'
     x-cli-format: direct
-    x-cli-always-include: true # No documented CLI default, always include for EER data
+    x-cli-default: 1 # CLI default is 1, our form default is 2
 
   group_frames:
     type: string
