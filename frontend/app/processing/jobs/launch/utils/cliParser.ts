@@ -24,12 +24,22 @@ export interface IgnoredToken {
   reason: 'executable' | 'redirect' | 'unknown_flag' | 'orphan_value' | 'shell_artifact';
 }
 
+export interface CliDefaultValue {
+  fieldName: string;
+  title: string;
+  value: unknown;
+}
+
 export interface ParsedCLIResult {
   success: boolean;
   parsedParams: Record<string, unknown>;
   parsedDetails: ParsedParameter[];
   ignoredTokens: IgnoredToken[];
   warnings: string[];
+  /** CLI default values (x-cli-default) for fields not explicitly in the command */
+  cliDefaults: Record<string, unknown>;
+  /** Details about CLI defaults for UI display */
+  cliDefaultDetails: CliDefaultValue[];
 }
 
 interface FlagInfo {
@@ -203,8 +213,8 @@ function tokenize(normalizedInput: string): string[] {
  */
 function convertValue(values: string[], type: string): unknown {
   if (values.length === 0) {
-    // Flag present without value - treat as boolean true
-    return true;
+    // Flag present without value - return empty string so it renders as just the flag
+    return '';
   }
 
   switch (type) {
@@ -249,6 +259,39 @@ function getFieldTitle(schema: JSONSchema, fieldName: string): string {
  * @param schema - The processor JSON schema with x-cli-flag mappings
  * @returns ParsedCLIResult with parsed parameters and ignored tokens
  */
+/**
+ * Extract CLI default values from schema
+ * These are the values the CLI tool uses when a flag is not provided
+ */
+function extractCliDefaults(
+  schema: JSONSchema,
+  excludeFields: Set<string>
+): { defaults: Record<string, unknown>; details: CliDefaultValue[] } {
+  const defaults: Record<string, unknown> = {};
+  const details: CliDefaultValue[] = [];
+
+  if (!schema.properties) {
+    return { defaults, details };
+  }
+
+  for (const [fieldName, prop] of Object.entries(schema.properties)) {
+    const property = prop as JSONSchemaProperty;
+    const cliDefault = property['x-cli-default'];
+
+    // Only include if field has x-cli-default and wasn't explicitly parsed
+    if (cliDefault !== undefined && !excludeFields.has(fieldName)) {
+      defaults[fieldName] = cliDefault;
+      details.push({
+        fieldName,
+        title: property.title || fieldName,
+        value: cliDefault,
+      });
+    }
+  }
+
+  return { defaults, details };
+}
+
 export function parseCLICommand(cliText: string, schema: JSONSchema): ParsedCLIResult {
   const result: ParsedCLIResult = {
     success: false,
@@ -256,6 +299,8 @@ export function parseCLICommand(cliText: string, schema: JSONSchema): ParsedCLIR
     parsedDetails: [],
     ignoredTokens: [],
     warnings: [],
+    cliDefaults: {},
+    cliDefaultDetails: [],
   };
 
   // Handle empty input
@@ -377,6 +422,13 @@ export function parseCLICommand(cliText: string, schema: JSONSchema): ParsedCLIR
   if (!result.success && result.ignoredTokens.length > 0) {
     result.warnings.push('No recognized parameters found. Check that the CLI flags match AreTomo3 syntax.');
   }
+
+  // Extract CLI defaults for fields that weren't explicitly parsed
+  // These represent what the CLI tool would use when the flag is absent
+  const parsedFieldNames = new Set(result.parsedDetails.map((p) => p.fieldName));
+  const { defaults, details } = extractCliDefaults(schema, parsedFieldNames);
+  result.cliDefaults = defaults;
+  result.cliDefaultDetails = details;
 
   return result;
 }

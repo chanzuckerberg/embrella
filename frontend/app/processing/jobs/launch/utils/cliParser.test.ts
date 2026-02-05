@@ -130,7 +130,7 @@ describe('buildFlagMapping', () => {
   });
 
   it('handles empty schema', () => {
-    const mapping = buildFlagMapping({ type: 'object' });
+    const mapping = buildFlagMapping({ type: 'object', properties: {} });
     expect(mapping).toEqual({});
   });
 });
@@ -358,6 +358,37 @@ describe('parseCLICommand', () => {
       expect(result.parsedParams.tilt_axis).toBe(-85.5);
     });
   });
+
+  describe('flags without values', () => {
+    it('returns empty string for flag present without value', () => {
+      // -FmDose without a value should return '' so it renders as "-FmDose" not "-FmDose True"
+      const result = parseCLICommand('-PixSize 1.5 -FmDose -kV 300', mockSchema);
+
+      expect(result.success).toBe(true);
+      expect(result.parsedParams.pixel_size).toBe(1.5);
+      expect(result.parsedParams.frame_dose).toBe('');
+      expect(result.parsedParams.high_tension_kv).toBe(300);
+    });
+
+    it('parses real AreTomo3 command with valueless -FmDose flag', () => {
+      const cli = `/hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.3_07-16-2025 -InPrefix /hpc/projects/krios1.processing/aretomo3/24nov27a/run005/Position_ -InSkips _CTF,_ODD,_EVN,_Vol -InSuffix .mrc -OutDir /hpc/projects/group.czii/krios1.processing/aretomo3/24nov27a/run008 -kV 300 -SplitSum 0 -PixSize 1.540 -AtBin 3.25 6.49 6.49 -Wbp 1 -FlipVol 1 -VolZ 1600 -OutImod 1 -TotalDose 120 -FmDose -Resume 0 -FlipGain 1 -Serial 43000 -Cmd 2 -CorrCTF 3 -Gpu 0,1,2,3,4,5,6,7 2>/dev/null`;
+
+      const result = parseCLICommand(cli, mockSchema);
+
+      expect(result.success).toBe(true);
+      // -FmDose has no value, should be empty string
+      expect(result.parsedParams.frame_dose).toBe('');
+      // Other flags should parse normally
+      expect(result.parsedParams.high_tension_kv).toBe(300);
+      expect(result.parsedParams.pixel_size).toBe(1.54);
+      expect(result.parsedParams.vol_z).toBe(1600);
+      expect(result.parsedParams.use_wbp).toBe(true);
+      expect(result.parsedParams.flip_vol).toBe(true);
+      expect(result.parsedParams.resume_processing).toBe(false);
+      expect(result.parsedParams.serial).toBe(43000);
+      expect(result.parsedParams.corr_ctf).toBe(3);
+    });
+  });
 });
 
 describe('getIgnoredReasonDescription', () => {
@@ -367,5 +398,85 @@ describe('getIgnoredReasonDescription', () => {
     expect(getIgnoredReasonDescription('unknown_flag')).toBe('Unrecognized flag');
     expect(getIgnoredReasonDescription('orphan_value')).toBe('Value without flag');
     expect(getIgnoredReasonDescription('shell_artifact')).toBe('Shell syntax');
+  });
+});
+
+describe('CLI defaults', () => {
+  // Schema with x-cli-default values
+  const schemaWithDefaults: JSONSchema = {
+    type: 'object',
+    properties: {
+      pixel_size: {
+        type: 'number',
+        title: 'Pixel Size',
+        'x-cli-flag': '-PixSize',
+      },
+      mc_iter: {
+        type: 'integer',
+        title: 'Motion Correction Iterations',
+        'x-cli-flag': '-McIter',
+        'x-cli-default': 7, // CLI default differs from form default
+      },
+      use_wbp: {
+        type: 'boolean',
+        title: 'Use WBP',
+        'x-cli-flag': '-Wbp',
+        'x-cli-default': false, // CLI default is false
+      },
+      vol_z: {
+        type: 'integer',
+        title: 'Volume Z',
+        'x-cli-flag': '-VolZ',
+        'x-cli-default': 0, // CLI default is 0
+      },
+    },
+  };
+
+  it('extracts CLI defaults for unparsed fields', () => {
+    const result = parseCLICommand('-PixSize 1.5', schemaWithDefaults);
+
+    expect(result.success).toBe(true);
+    expect(result.parsedParams.pixel_size).toBe(1.5);
+
+    // CLI defaults should be populated for fields not in the command
+    expect(result.cliDefaults.mc_iter).toBe(7);
+    expect(result.cliDefaults.use_wbp).toBe(false);
+    expect(result.cliDefaults.vol_z).toBe(0);
+
+    // pixel_size should NOT be in cliDefaults (it was parsed)
+    expect(result.cliDefaults.pixel_size).toBeUndefined();
+  });
+
+  it('does not include CLI defaults for explicitly parsed fields', () => {
+    const result = parseCLICommand('-PixSize 1.5 -McIter 15', schemaWithDefaults);
+
+    expect(result.success).toBe(true);
+    expect(result.parsedParams.mc_iter).toBe(15);
+
+    // mc_iter was parsed, so it should NOT be in cliDefaults
+    expect(result.cliDefaults.mc_iter).toBeUndefined();
+
+    // Other fields with CLI defaults should still be included
+    expect(result.cliDefaults.use_wbp).toBe(false);
+    expect(result.cliDefaults.vol_z).toBe(0);
+  });
+
+  it('includes details about CLI defaults for UI display', () => {
+    const result = parseCLICommand('-PixSize 1.5', schemaWithDefaults);
+
+    expect(result.cliDefaultDetails).toHaveLength(3);
+    expect(result.cliDefaultDetails.find((d) => d.fieldName === 'mc_iter')).toMatchObject({
+      fieldName: 'mc_iter',
+      title: 'Motion Correction Iterations',
+      value: 7,
+    });
+  });
+
+  it('returns empty CLI defaults when all flags with defaults are parsed', () => {
+    const result = parseCLICommand('-PixSize 1.5 -McIter 10 -Wbp 1 -VolZ 1600', schemaWithDefaults);
+
+    expect(result.success).toBe(true);
+    expect(Object.keys(result.cliDefaults)).toHaveLength(0);
+    expect(result.cliDefaultDetails).toHaveLength(0);
   });
 });

@@ -44,16 +44,20 @@ export default function CLIParserModal({ open, onClose, onApply, schema }: CLIPa
   const [cliText, setCliText] = useState('');
   const [parseResult, setParseResult] = useState<ParsedCLIResult | null>(null);
   const [showIgnored, setShowIgnored] = useState(false);
+  const [showCliDefaults, setShowCliDefaults] = useState(false);
 
   const handleParse = () => {
     const result = parseCLICommand(cliText, schema);
     setParseResult(result);
     setShowIgnored(false);
+    setShowCliDefaults(false);
   };
 
   const handleApply = () => {
     if (parseResult?.success) {
-      onApply(parseResult.parsedParams);
+      // Apply CLI defaults first, then parsed values on top
+      // This ensures the form produces an equivalent CLI command
+      onApply({ ...parseResult.cliDefaults, ...parseResult.parsedParams });
       handleClose();
     }
   };
@@ -62,6 +66,7 @@ export default function CLIParserModal({ open, onClose, onApply, schema }: CLIPa
     setCliText('');
     setParseResult(null);
     setShowIgnored(false);
+    setShowCliDefaults(false);
     onClose();
   };
 
@@ -166,9 +171,53 @@ export default function CLIParserModal({ open, onClose, onApply, schema }: CLIPa
                 </>
               )}
 
+              {/* CLI Defaults (will be applied for unparsed flags) */}
+              {parseResult.cliDefaultDetails.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      '&:hover': { opacity: 0.8 },
+                    }}
+                    onClick={() => setShowCliDefaults(!showCliDefaults)}
+                  >
+                    <Icon sdsIcon="LightBulb" sdsSize="s" color="blue" />
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                      CLI Defaults Applied ({parseResult.cliDefaultDetails.length})
+                    </Typography>
+                    <IconButton size="small" sx={{ ml: 0.5 }}>
+                      {showCliDefaults ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                    </IconButton>
+                  </Box>
+
+                  <Collapse in={showCliDefaults}>
+                    <Paper variant="outlined" sx={{ mt: 1, maxHeight: 150, overflow: 'auto' }}>
+                      <List dense disablePadding>
+                        {parseResult.cliDefaultDetails.map((item, index) => (
+                          <ListItem key={index} sx={{ py: 0.5 }}>
+                            <ListItemText
+                              primary={item.title}
+                              secondary={`Default: ${item.value}`}
+                              secondaryTypographyProps={{
+                                sx: { fontSize: '0.75rem', fontFamily: 'monospace' },
+                              }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Paper>
+                  </Collapse>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                    These values match what the CLI tool uses when flags are absent
+                  </Typography>
+                </Box>
+              )}
+
               {/* Ignored Tokens */}
               {parseResult.ignoredTokens.length > 0 && (
-                <Box>
+                <Box sx={{ mt: 2 }}>
                   <Box
                     sx={{
                       display: 'flex',

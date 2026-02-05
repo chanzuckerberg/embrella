@@ -61,6 +61,7 @@ export interface JSONSchemaProperty {
   'x-cli-flag'?: string | null;
   'x-cli-format'?: string | null;
   'x-cli-composite'?: boolean | string[];
+  'x-cli-default'?: string | number | boolean;
   'x-control-flow'?: boolean;
   'x-advanced'?: boolean;
   'x-conditional'?: string;
