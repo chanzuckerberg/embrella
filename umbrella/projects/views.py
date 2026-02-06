@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 
 from .models import Project
@@ -58,6 +58,8 @@ def getproject(request):
     },
 )
 @api_view(["POST"])
+@authentication_classes([])
+@permission_classes([]) 
 @csrf_exempt
 def create_project(request):
     """
