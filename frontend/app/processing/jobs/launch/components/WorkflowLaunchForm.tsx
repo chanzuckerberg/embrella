@@ -66,6 +66,7 @@ export default function WorkflowLaunchForm({
   sessionSelectionConfig = { requiresSessionSelection: true }, // Default: requires session selection
   customFields,
   additionalSections,
+  headerActions,
   onBeforeSubmit,
   customValidation,
   getProcessorName,
@@ -1002,9 +1003,13 @@ export default function WorkflowLaunchForm({
           !sessionSelectionConfig.requiresSessionSelection ||
           sessionRunSelection.isValid) && (
           <>
-            <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-              {sessionSelectionConfig.requiresSessionSelection ? '3' : '2'}. Configure Parameters
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4 }}>
+              <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>
+                {sessionSelectionConfig.requiresSessionSelection ? '3' : '2'}. Configure Parameters
+              </Typography>
+              {/* Header actions (e.g., Import from CLI button) */}
+              {headerActions?.({ parameters, setParameters, schema: schema.schema })}
+            </Box>
 
             {/* Additional sections from processor-specific components (Processing Tips) */}
             {additionalSections}
