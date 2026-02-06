@@ -359,7 +359,7 @@ properties:
     x-bash-skip: false
     x-cli-flag: '-McIter'
     x-cli-format: direct
-    x-cli-default: 7 # CLI default is 7, our form default is 15
+    x-cli-default: 15
 
   mc_tol:
     type: number
@@ -375,7 +375,7 @@ properties:
     x-bash-skip: false
     x-cli-flag: '-McTol'
     x-cli-format: direct
-    x-cli-default: 0.5 # CLI default is 0.5, our form default is 0.1
+    x-cli-default: 0.1
 
   mc_bin:
     type: integer
@@ -535,6 +535,7 @@ properties:
     x-bash-skip: false
     x-cli-flag: '-InvGain'
     x-cli-format: boolean_to_int
+    x-cli-default: false
 
   # Alignment Options
   dark_tol:
@@ -714,7 +715,7 @@ properties:
   corr_ctf:
     type: integer
     title: Local CTF Correction
-    description: '0: No local CTF correction, 1: Local CTF correction, 2: Local CTF correction with phase flipping, 3: Correction and generate vxm-tmp 3d tomograms'
+    description: '0: No local CTF correction, 1: Local CTF correction (hybrid), 2: Local CTF correction (phase flipping every frequency), 3: Local CTF multiplication'
     enum: [0, 1, 2, 3]
     default: 1
     x-parameter-group: ctf
