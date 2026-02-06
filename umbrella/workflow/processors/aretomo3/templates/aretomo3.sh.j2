@@ -51,7 +51,7 @@ export {{ var_name }}="{{ var_info.value }}"
 {% endfor -%}
 
 # Input paths
-export in_mdoc_dir="/hpc/instruments/czii.krios1/OffloadData/${project_name}"
+export in_mdoc_dir="/hpc/instruments/czii.krios1/OffloadData"
 export gain_fn="{{ gain_file_path }}"
 
 # Output path
@@ -84,11 +84,10 @@ echo "DenoisET training option is: enabled"
 # Define bash functions for heterogeneous job components
 run_aretomo3_gpu() {
     set -e
-    ml cuda
+    ml cuda/12.8.0_570.86.10
 
     # AreTomo3 command with fixed flags and schema-generated variable flags
     /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.7_01-22-2026 \
-        -InPrefix ${in_mdoc_dir}/${in_prefix} \
         -Gain ${gain_fn} \
         -OutDir ${out_path} \
         -Gpu {% for i in range(slurm_component_0_gpus) -%}{{ i }}{% if not loop.last %},{% endif %}{% endfor %} \
