@@ -25,7 +25,6 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
   googleDriveFolders = [],
 }) => {
   const { createProject, isCreating, error, clearError } = useCreateProject();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<ProjectFormData>({
     name: '',
     description: '',
@@ -40,7 +39,6 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
       [field]: value,
     }));
   };
-
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -91,11 +89,11 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
       onClose={handleClose}
       title="Add New Project"
       onSave={handleSave}
-      isSubmitting={isSubmitting}
+      isSubmitting={isCreating}
       disabled={!isFormValid}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {Boolean(error) && (
+        {Boolean(error) && (
           <Alert severity="error" onClose={clearError}>
             {error}
           </Alert>

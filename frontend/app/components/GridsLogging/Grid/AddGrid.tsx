@@ -21,11 +21,10 @@ import {
   useDriveFolderList,
   useConfluenceSpaceList,
   useProjectLeadersList,
-  useCreateProject,
   useGridLoggingGridBoxDetail,
 } from '@app/common/hooks/useGridLogging';
 
-import { UserList, ProjectFormData, FreezingSessionFormData } from '@app/common/types/gridLogging';
+import { UserList, FreezingSessionFormData } from '@app/common/types/gridLogging';
 
 interface AddGridProps {
   open: boolean;
@@ -61,7 +60,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { spaces: confluenceSpacesList } = useConfluenceSpaceList();
   const { pages: confluencePagesList } = useConfluencePageList();
   const { folders: driveFoldersList } = useDriveFolderList();
-  const { createProject } = useCreateProject();
   const { projectLeaders: projectLeadersData } = useProjectLeadersList();
   const { isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
