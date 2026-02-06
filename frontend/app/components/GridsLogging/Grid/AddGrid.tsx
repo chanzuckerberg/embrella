@@ -21,11 +21,10 @@ import {
   useDriveFolderList,
   useConfluenceSpaceList,
   useProjectLeadersList,
-  useCreateProject,
   useGridLoggingGridBoxDetail,
 } from '@app/common/hooks/useGridLogging';
 
-import { UserList, ProjectFormData, FreezingSessionFormData } from '@app/common/types/gridLogging';
+import { UserList, FreezingSessionFormData } from '@app/common/types/gridLogging';
 
 interface AddGridProps {
   open: boolean;
@@ -61,7 +60,6 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { spaces: confluenceSpacesList } = useConfluenceSpaceList();
   const { pages: confluencePagesList } = useConfluencePageList();
   const { folders: driveFoldersList } = useDriveFolderList();
-  const { createProject } = useCreateProject();
   const { projectLeaders: projectLeadersData } = useProjectLeadersList();
   const { isSuccess: choicesLoaded } = useGridLoggingChoices();
   const { isSuccess: usersLoaded } = useGridLoggingUserList();
@@ -122,26 +120,15 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const notesPages = confluencePagesList;
 
   // Handle saving a new project
-  const handleSaveProject = async (data: ProjectFormData) => {
-    const result = await createProject({
-      name: data.name,
-      description: data.description,
-      project_leader: data.projectLeader ? Number(data.projectLeader) : undefined,
-      confluence_space: data.confluenceSpace ? Number(data.confluenceSpace) : undefined,
-      google_drive_folder: data.googleDriveFolder ? Number(data.googleDriveFolder) : undefined,
-    });
-
-    if (result) {
-      // Refresh the projects list
-      await refetchProjects?.();
-
-      setFormData((prev) => ({
-        ...prev,
-        project: result.project.id.toString(),
-      }));
-
-      setAddProjectDialogOpen(false);
-    }
+  const handleSaveProject = async (projectId: number) => {
+    // Refresh the projects list to include the newly created project
+    await refetchProjects?.();
+    // Auto-select the newly created project in the form
+    setFormData((prev) => ({
+      ...prev,
+      project: projectId.toString(),
+    }));
+    setAddProjectDialogOpen(false);
   };
 
   const handleInputChange = (field: string, value: string | number | boolean) => {

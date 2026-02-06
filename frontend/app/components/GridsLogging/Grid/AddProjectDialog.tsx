@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, TextField, FormControl, InputLabel, Select, MenuItem, Alert } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
 import { ProjectFormData } from '@app/common/types/gridLogging';
+import { useCreateProject } from '@app/common/hooks/useGridLogging';
 
 interface AddProjectDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (data: ProjectFormData) => Promise<void>;
+  onSave?: (projectId: number) => void;
   projectLeaders?: Array<{ id: number; username: string; full_name: string }>;
   confluenceSpaces?: Array<{ id: string; url: string }>;
   googleDriveFolders?: Array<{ id: string; name: string }>;
@@ -23,7 +24,7 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
   confluenceSpaces = [],
   googleDriveFolders = [],
 }) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { createProject, isCreating, error, clearError } = useCreateProject();
   const [formData, setFormData] = useState<ProjectFormData>({
     name: '',
     description: '',
@@ -45,15 +46,18 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      await onSave({
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        projectLeader: formData.projectLeader,
-        confluenceSpace: formData.confluenceSpace,
-        googleDriveFolder: formData.googleDriveFolder,
-      });
+    const result = await createProject({
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      project_leader: formData.projectLeader ? Number(formData.projectLeader) : undefined,
+      confluence_space: formData.confluenceSpace ? Number(formData.confluenceSpace) : undefined,
+      google_drive_folder: formData.googleDriveFolder ? Number(formData.googleDriveFolder) : undefined,
+    });
+
+    if (result) {
+      if (onSave) {
+        onSave(result.project.id);
+      }
       // Reset form
       setFormData({
         name: '',
@@ -63,14 +67,8 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
         googleDriveFolder: '',
       });
       onClose();
-    } catch (error) {
-      console.error('Error saving project:', error);
-      alert('Failed to save project. Please try again.');
-    } finally {
-      setIsSubmitting(false);
     }
   };
-
   const handleClose = () => {
     // Reset form on close
     setFormData({
@@ -91,10 +89,15 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
       onClose={handleClose}
       title="Add New Project"
       onSave={handleSave}
-      isSubmitting={isSubmitting}
+      isSubmitting={isCreating}
       disabled={!isFormValid}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {Boolean(error) && (
+          <Alert severity="error" onClose={clearError}>
+            {error}
+          </Alert>
+        )}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             required

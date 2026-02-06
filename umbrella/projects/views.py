@@ -8,8 +8,10 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from workflow.views.job_api import CsrfExemptSessionAuthentication
 
 from .models import Project
 
@@ -58,7 +60,9 @@ def getproject(request):
     },
 )
 @api_view(["POST"])
-@csrf_exempt
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
+
 def create_project(request):
     """
     Create a new project.
