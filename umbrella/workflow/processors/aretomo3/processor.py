@@ -10,12 +10,8 @@ from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
 from umbrella_logger import logger
-
 from workflow.context import RunContext
-from workflow.processors.aretomo3.gain_file_fetcher import (
-    DEFAULT_GAIN_DIRECTORY,
-    list_gain_files,
-)
+from workflow.processors.aretomo3.gain_file_fetcher import DEFAULT_GAIN_DIRECTORY, list_gain_files
 from workflow.processors.base import BaseProcessor
 
 # Import register_processor here to avoid circular import
@@ -29,8 +25,30 @@ class AreTomo3Processor(BaseProcessor):
     display_name = "AreTomo3"
     version = "2.2.7_01-22-2026"
     cluster = "czii"
-    allowed_clusters = ['czii', 'bruno']
-    task_name = 'tomographic_reconstruction'
+    allowed_clusters = ["czii", "bruno"]
+    task_name = "tomographic_reconstruction"
+
+    def _calculate_auto_binning(self, pixel_size: float) -> Dict[str, float]:
+        """
+        Calculate auto-binning factors based on pixel size.
+
+        Computes binning factors to achieve target resolutions:
+        - tomo_bin_5A: binning for 5Å tomogram
+        - tomo_bin_10A: binning for 10Å tomogram
+
+        Args:
+            pixel_size: Calibrated pixel size in Angstroms
+
+        Returns:
+            Dict with tomo_bin_5A and tomo_bin_10A values
+
+        Example:
+            pixel_size=1.54 → {"tomo_bin_5A": 3.25, "tomo_bin_10A": 6.49}
+        """
+        return {
+            "tomo_bin_5A": round(5 / pixel_size, 2),
+            "tomo_bin_10A": round(10 / pixel_size, 2),
+        }
 
     def validate_parameters(self, params: Dict[str, Any]) -> List[str]:
         """
@@ -45,8 +63,8 @@ class AreTomo3Processor(BaseProcessor):
         errors = []
 
         # Validate advanced parameters if enabled
-        if params.get('use_advanced_params'):
-            advanced_params = ['tilt_axis', 'vol_z', 'align_z']
+        if params.get("use_advanced_params"):
+            advanced_params = ["tilt_axis", "vol_z", "align_z"]
             missing = [p for p in advanced_params if p not in params]
             if missing:
                 errors.append(
@@ -54,25 +72,24 @@ class AreTomo3Processor(BaseProcessor):
                 )
 
         # Validate pixel size for binning calculation
-        pixel_size = params.get('pixel_size')
+        pixel_size = params.get("pixel_size")
         if pixel_size:
             try:
-                tomo_bin_5A = round(5 / float(pixel_size), 2)
-                tomo_bin_10A = round(10 / float(pixel_size), 2)
-                if tomo_bin_5A < 1 or tomo_bin_10A < 1:
+                binning = self._calculate_auto_binning(float(pixel_size))
+                if binning["tomo_bin_5A"] < 1 or binning["tomo_bin_10A"] < 1:
                     errors.append("Pixel size results in invalid binning factors (< 1)")
             except (ValueError, ZeroDivisionError):
                 errors.append("Invalid pixel_size value for binning calculation")
 
         # Validate multi-value string format parameters
         multi_value_params = {
-            'mc_patch': 2,
-            'group_frames': 2,
-            'mag_correction': 3,
-            'ext_phase': 2,
-            'recon_range': 2,
-            'sart_iterations': 2,
-            'at_bin': (1, 2, 3),  # 1-3 input values allowed
+            "mc_patch": 2,
+            "group_frames": 2,
+            "mag_correction": 3,
+            "ext_phase": 2,
+            "recon_range": 2,
+            "sart_iterations": 2,
+            "at_bin": (0, 1, 2, 3),  # 0-3 input values allowed
         }
 
         for param_name, expected_count in multi_value_params.items():
@@ -87,22 +104,22 @@ class AreTomo3Processor(BaseProcessor):
                         )
                 elif isinstance(expected_count, tuple):
                     if len(parts) not in expected_count:
-                        expected_str = ' or '.join(map(str, expected_count))
+                        expected_str = " or ".join(map(str, expected_count))
                         errors.append(
                             f"{param_name} must have {expected_str} space-separated values, got {len(parts)}",
                         )
 
         # Validate mode interaction (Cmd and Resume)
-        cmd_mode = params.get('cmd_mode', 0)
-        resume = params.get('resume_processing', False)
+        cmd_mode = params.get("cmd_mode", 0)
+        resume = params.get("resume_processing", False)
         if cmd_mode in [1, 2] and resume:
             errors.append(
                 "resume_processing is ignored when cmd_mode is 1 or 2 (per AreTomo3 documentation: -Cmd 1 and -Cmd 2 ignore -Resume)",
             )
 
         # Validate EerSampling and McBin pairing
-        eer_sampling = int(params.get('eer_sampling', 2))
-        mc_bin = int(params.get('mc_bin', 2))
+        eer_sampling = int(params.get("eer_sampling", 2))
+        mc_bin = int(params.get("mc_bin", 2))
 
         if (eer_sampling == 2 and mc_bin != 2) or (eer_sampling == 1 and mc_bin != 1):
             errors.append(
@@ -123,7 +140,7 @@ class AreTomo3Processor(BaseProcessor):
         Example: tilt_axis=85, tilt_axis_refine=1 → "85 1"
         """
         tilt_axis = value if value is not None else 0
-        tilt_axis_refine = params.get('tilt_axis_refine', 1)
+        tilt_axis_refine = params.get("tilt_axis_refine", 1)
         return f"{tilt_axis} {tilt_axis_refine}"
 
     def _format_cli_boolean_to_int(self, value: Any, params: Dict[str, Any]) -> str:
@@ -178,19 +195,57 @@ class AreTomo3Processor(BaseProcessor):
             "defect.txt" → "/hpc/projects/group.czii/krios1.processing/gain_references/defect.txt"
             "/custom/path/defect.txt" → "/custom/path/defect.txt"
         """
-        if not value or str(value).strip() == '':
-            return ''
+        if not value or str(value).strip() == "":
+            return ""
 
         value_str = str(value).strip()
 
         # If absolute path, use as-is
-        if value_str.startswith('/'):
+        if value_str.startswith("/"):
             return value_str
 
         # Otherwise, resolve relative to gain reference directory
         # This matches the pattern used for gain files
-        gain_dir = '/hpc/projects/group.czii/krios1.processing/gain_references'
+        gain_dir = "/hpc/projects/group.czii/krios1.processing/gain_references"
         return f"{gain_dir}/{value_str}"
+
+    def _format_cli_at_bin_auto(self, value: Any, params: Dict[str, Any]) -> str:
+        """
+        Format -AtBin parameter with auto-calculation when empty.
+
+        If at_bin has a user-provided value, use it directly.
+        If at_bin is empty, auto-calculate binning factors based on pixel_size:
+        - First tomogram: binning for 5Å (5 / pixel_size)
+        - Second tomogram: binning for 10Å (10 / pixel_size)
+        - Third tomogram: binning for 10Å (10 / pixel_size)
+
+        Args:
+            value: User-provided at_bin value (may be empty string)
+            params: All parameters (must include pixel_size)
+
+        Returns:
+            Formatted string with 1 or 3 binning factors
+
+        Example:
+            value="" with pixel_size=1.54 → "3.25 6.49 6.49"
+            value="2.0" → "2.0"
+            value="1.5 3.0 3.0" → "1.5 3.0 3.0"
+        """
+        # If user provided a value, use it directly
+        if value and str(value).strip():
+            return str(value).strip()
+
+        # Auto-calculate based on pixel_size
+        pixel_size = params.get("pixel_size")
+        if not pixel_size:
+            # No pixel_size available, return empty (will be skipped)
+            return ""
+
+        try:
+            binning = self._calculate_auto_binning(float(pixel_size))
+            return f"{binning['tomo_bin_5A']} {binning['tomo_bin_10A']} {binning['tomo_bin_10A']}"
+        except (ValueError, ZeroDivisionError):
+            return ""
 
     def _handle_multi_var_local_shift(self, value: Any, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -202,18 +257,18 @@ class AreTomo3Processor(BaseProcessor):
         """
         if value and value > 0:
             return {
-                'local_aln_1': 4,
-                'local_aln_2': 4,
+                "local_aln_1": 4,
+                "local_aln_2": 4,
             }
         return {
-            'local_aln_1': 0,
-            'local_aln_2': 0,
+            "local_aln_1": 0,
+            "local_aln_2": 0,
         }
 
     def get_calculated_vars(
         self,
         params: Dict[str, Any],
-        run_context: 'RunContext',
+        run_context: "RunContext",
     ) -> Dict[str, Any]:
         """
         Get AreTomo3-specific calculated variables.
@@ -228,11 +283,12 @@ class AreTomo3Processor(BaseProcessor):
         Returns:
             Dict with calculated variables for template
         """
-        pixel_size = float(params['pixel_size'])
+        pixel_size = float(params["pixel_size"])
+        binning = self._calculate_auto_binning(pixel_size)
         return {
-            'tomo_bin_5A': round(5 / pixel_size, 2),
-            'tomo_bin_10A': round(10 / pixel_size, 2),
-            'slurm_component_0_gpus': int(params.get('slurm_component_0_gpus', 8)),
+            "tomo_bin_5A": binning["tomo_bin_5A"],
+            "tomo_bin_10A": binning["tomo_bin_10A"],
+            "slurm_component_0_gpus": int(params.get("slurm_component_0_gpus", 8)),
         }
 
     def _resolve_gain_file_path(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -250,17 +306,17 @@ class AreTomo3Processor(BaseProcessor):
         """
         params = params.copy()  # Don't mutate original
 
-        gain_file_name = params.get('gain_file_name', '').strip()
+        gain_file_name = params.get("gain_file_name", "").strip()
         if not gain_file_name:
             # Fetch most recent gain file from cluster
             logger.info("No gain file specified, fetching most recent from cluster")
-            result = list_gain_files(cluster_id='czii')
+            result = list_gain_files(cluster_id="czii")
 
-            if result['success'] and result['files']:
-                gain_file_name = result['files'][0]['filename']
+            if result["success"] and result["files"]:
+                gain_file_name = result["files"][0]["filename"]
                 logger.info(f"Resolved gain file to most recent: {gain_file_name}")
             else:
-                error_msg = result.get('error', 'Unknown error')
+                error_msg = result.get("error", "Unknown error")
                 logger.error(f"Failed to fetch gain files from cluster: {error_msg}")
                 raise ValueError(
                     f"No gain file specified and failed to fetch from cluster: {error_msg}",
@@ -268,12 +324,12 @@ class AreTomo3Processor(BaseProcessor):
 
         # Build full path
         gain_file_path = os.path.join(DEFAULT_GAIN_DIRECTORY, gain_file_name)
-        params['gain_file_path'] = gain_file_path
+        params["gain_file_path"] = gain_file_path
         logger.info(f"Gain file path: {gain_file_path}")
 
         return params
 
-    def render_script(self, params: Dict[str, Any], run_context: 'RunContext') -> str:
+    def render_script(self, params: Dict[str, Any], run_context: "RunContext") -> str:
         """
         Render AreTomo3 job script using Jinja2 template with schema-driven generation.
 
@@ -288,8 +344,8 @@ class AreTomo3Processor(BaseProcessor):
         params = self._resolve_gain_file_path(params)
 
         # Get template from processor's templates directory
-        template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-        template_file = 'aretomo3.sh.j2'
+        template_dir = os.path.join(os.path.dirname(__file__), "templates")
+        template_file = "aretomo3.sh.j2"
 
         logger.info(f"Loading AreTomo3 template from: {template_dir}/{template_file}")
 
@@ -308,41 +364,40 @@ class AreTomo3Processor(BaseProcessor):
         template_vars = {}
 
         # Add flattened variables at top level for backwards compatibility
-        template_vars.update(context['context_vars'])
-        template_vars.update(context['calculated_vars'])
-        for var_name, var_info in context['schema_vars'].items():
-            template_vars[var_name] = var_info['value']
-        template_vars.update(context['control_vars'])
+        template_vars.update(context["context_vars"])
+        template_vars.update(context["calculated_vars"])
+        for var_name, var_info in context["schema_vars"].items():
+            template_vars[var_name] = var_info["value"]
+        template_vars.update(context["control_vars"])
 
         # Add old-style CLI args string for backwards compatibility
         cli_variable_args = self.generate_cli_arguments(params)
-        template_vars['cli_variable_args'] = cli_variable_args
+        template_vars["cli_variable_args"] = cli_variable_args
 
         # Add structured context for new Jinja loop-based template
-        template_vars['context_vars'] = context['context_vars']
-        template_vars['calculated_vars'] = context['calculated_vars']
-        template_vars['schema_vars'] = context['schema_vars']
-        template_vars['control_vars'] = context['control_vars']
-        template_vars['cli_args'] = context['cli_args']
+        template_vars["context_vars"] = context["context_vars"]
+        template_vars["calculated_vars"] = context["calculated_vars"]
+        template_vars["schema_vars"] = context["schema_vars"]
+        template_vars["control_vars"] = context["control_vars"]
+        template_vars["cli_args"] = context["cli_args"]
 
         # Add SLURM directives (hetjob components)
-        template_vars['slurm_directives_component_0'] = context.get('slurm_directives_component_0', [])
-        template_vars['slurm_directives_component_1'] = context.get('slurm_directives_component_1', [])
+        template_vars["slurm_directives_component_0"] = context.get("slurm_directives_component_0", [])
+        template_vars["slurm_directives_component_1"] = context.get("slurm_directives_component_1", [])
 
         # Add resolved gain file path (computed, not from schema)
-        template_vars['gain_file_path'] = params.get('gain_file_path', '')
+        template_vars["gain_file_path"] = params.get("gain_file_path", "")
 
         # Render the template
         rendered_script = template.render(**template_vars)
 
         logger.info(
-            f"Rendered AreTomo3 script for session {run_context.msi_session.name}, "
-            f"run {run_context.run_number}",
+            f"Rendered AreTomo3 script for session {run_context.msi_session.name}, run {run_context.run_number}",
         )
 
         return rendered_script
 
-    def parse_output_paths(self, run_context: 'RunContext') -> List[Dict[str, str]]:
+    def parse_output_paths(self, run_context: "RunContext") -> List[Dict[str, str]]:
         """
         Define expected output paths for AreTomo3.
 
@@ -417,7 +472,7 @@ class AreTomo3Processor(BaseProcessor):
             ],
         }
 
-    def on_job_submit(self, run_context: 'RunContext', job_id: str) -> None:
+    def on_job_submit(self, run_context: "RunContext", job_id: str) -> None:
         """
         Hook called after successful job submission.
 
@@ -430,12 +485,12 @@ class AreTomo3Processor(BaseProcessor):
         # Start AreTomo3 syncer as Django-Q task to monitor for output files
         # Note: base_path defaults to get_processing_base_path() in BaseProcessor
         self._start_syncer_task(
-            syncer_class_path='workflow.processors.aretomo3.syncer.AretomoSyncer',
+            syncer_class_path="workflow.processors.aretomo3.syncer.AretomoSyncer",
             run_context=run_context,
             job_id=job_id,
         )
 
-    def on_job_complete(self, run_context: 'RunContext', success: bool) -> None:
+    def on_job_complete(self, run_context: "RunContext", success: bool) -> None:
         """
         Hook called when job completes.
 
@@ -450,8 +505,7 @@ class AreTomo3Processor(BaseProcessor):
             )
         else:
             logger.warning(
-                f"AreTomo3 job failed for session {run_context.msi_session.name}, "
-                f"run {run_context.run_number}",
+                f"AreTomo3 job failed for session {run_context.msi_session.name}, run {run_context.run_number}",
             )
 
 

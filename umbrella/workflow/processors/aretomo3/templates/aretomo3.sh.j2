@@ -91,7 +91,6 @@ run_aretomo3_gpu() {
         -InPrefix ${in_mdoc_dir}/${in_prefix} \
         -Gain ${gain_fn} \
         -OutDir ${out_path} \
-        -AtBin ${tomo_bin_5A} ${tomo_bin_10A} ${tomo_bin_10A} \
         -Gpu {% for i in range(slurm_component_0_gpus) -%}{{ i }}{% if not loop.last %},{% endif %}{% endfor %} \
         {% for arg in cli_args %}{{ arg.flag }} {{ arg.value }} \
         {% endfor -%}

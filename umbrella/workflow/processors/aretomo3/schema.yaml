@@ -231,31 +231,6 @@ properties:
     x-cli-format: boolean_to_int
     x-cli-default: 1 # CLI default is 1 (enabled), our form default is 0 (disabled)
 
-  # Custom command line parameters
-  use_custom_params:
-    type: boolean
-    title: Use Custom Command Line Parameters
-    description: Add arbitrary command line parameters to AreTomo3
-    default: false
-    x-parameter-group: custom
-    x-control-flow: true
-    x-bash-skip: true
-    x-cli-flag: null
-    x-cli-format: null
-
-  custom_command_line:
-    type: string
-    title: Custom Command Line Parameters
-    description: Additional command line parameters (e.g., '-OutBin 2 -Gpu 0')
-    x-conditional: use_custom_params
-    x-parameter-group: custom
-    x-bash-var: custom_command_line
-    x-bash-format: quoted
-    x-bash-type: string
-    x-bash-skip: false
-    x-cli-flag: null
-    x-cli-format: null
-
   # Input Processing Options
   in_prefix:
     type: string
@@ -597,16 +572,17 @@ properties:
   at_bin:
     type: string
     title: Tomogram Binning Factors
-    description: "Binning for tomograms relative to motion-corrected series. One or three floats (e.g., '1.0' or '1.0 2.0 2.0')"
-    default: '1.0'
-    pattern: '^[0-9.]+(?: [0-9.]+)*$'
+    description: "Optional: Binning for tomograms relative to motion-corrected series. One or three floats (e.g., '1.0' or '1.0 2.0 2.0'). If left empty, auto binning for 5Å, auto binning for 10Å, auto binning for 10Å will be applied."
+    default: ''
+    pattern: '^(?:[0-9.]+(?: [0-9.]+)*)?$'
     x-parameter-group: reconstruction
     x-bash-var: at_bin
     x-bash-format: quoted
     x-bash-type: string
     x-bash-skip: false
     x-cli-flag: '-AtBin'
-    x-cli-format: direct
+    x-cli-format: at_bin_auto
+    x-cli-always-include: true
 
   recon_range:
     type: string
