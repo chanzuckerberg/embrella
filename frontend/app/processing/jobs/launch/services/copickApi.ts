@@ -63,7 +63,7 @@ async function fetchCopickPlanRuns(sessionId: string, planType: string): Promise
     session_name: sessionId,
     plan_type: planType,
   });
-  const response = await fetchResource(`${DJANGO_URL}${API.COPICK_ADD_OBJECT_PARAMS}${queryString}`);
+  const response = await fetchResource(`${DJANGO_URL}${API.PLAN_RUNS}${queryString}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch ${planType} runs: ${response.statusText}`);
@@ -86,7 +86,7 @@ async function fetchCopickPlanRuns(sessionId: string, planType: string): Promise
 
 /**
  * Get existing Copick add_object ProcRuns from the database.
- * Uses the copick_params endpoint with plan_type=copick-add-object.
+ * Uses the plan_runs endpoint with plan_type=copick-add-object.
  * Numbering is per-session (run001, run002, etc.)
  */
 export function fetchCopickObjectRuns(sessionId: string): Promise<CopickRunsResult> {
@@ -95,7 +95,7 @@ export function fetchCopickObjectRuns(sessionId: string): Promise<CopickRunsResu
 
 /**
  * Get existing Copick import ProcRuns from the database.
- * Uses the copick_params endpoint with plan_type=copick-import.
+ * Uses the plan_runs endpoint with plan_type=copick-import.
  * Numbering is per-session (run001, run002, etc.)
  */
 export function fetchCopickImportRuns(sessionId: string): Promise<CopickRunsResult> {

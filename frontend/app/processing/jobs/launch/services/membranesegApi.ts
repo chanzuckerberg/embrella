@@ -27,7 +27,7 @@ function calculateNextRunName(runNumbers: string[]): string {
 
 /**
  * Get existing Membraneseg ProcRuns from the database for a given session.
- * Uses the shared copick_params endpoint with plan_type=membraneseg.
+ * Uses the plan_runs endpoint with plan_type=membraneseg.
  * Numbering is per-session (run001, run002, etc.)
  */
 export async function fetchMembranesegRuns(sessionId: string): Promise<MembranesegRunsResult> {
@@ -35,9 +35,7 @@ export async function fetchMembranesegRuns(sessionId: string): Promise<Membranes
     session_name: sessionId,
     plan_type: 'membraneseg',
   });
-  // Uses shared copick-ecosystem endpoint for plan run lookups
-  // TODO: refactor API name, COPICK add object is used by all copick-specific projects
-  const response = await fetchResource(`${DJANGO_URL}${API.COPICK_ADD_OBJECT_PARAMS}${queryString}`);
+  const response = await fetchResource(`${DJANGO_URL}${API.PLAN_RUNS}${queryString}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch membraneseg runs: ${response.statusText}`);
