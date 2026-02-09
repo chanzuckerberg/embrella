@@ -189,11 +189,10 @@ properties:
     x-cli-default: 1 # CLI default is 1, our form default is 4
 
   tilt_offset:
-    type: number
-    title: Tilt Offset (°)
-    description: Tilt angle offset in degrees
-    minimum: -10
-    maximum: 10
+    type: boolean
+    title: Tilt Offset Correction
+    description: Enable correction of alpha tilt offset
+    default: false
     x-parameter-group: alignment
     x-bash-var: tilt_cor
     x-bash-format: unquoted
@@ -201,6 +200,7 @@ properties:
     x-bash-skip: false
     x-cli-flag: '-TiltCor'
     x-cli-format: boolean_to_int
+    x-cli-default: false
 
   thickness_measure:
     type: integer
