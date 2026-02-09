@@ -23,7 +23,6 @@ from tem.models import MsiSession
 from umbrella_logger import logger
 
 from common import clusterio
-
 from workflow.agent import StatusChecker
 from workflow.views.constants import (
     HOST,
@@ -252,6 +251,7 @@ Used to determine the next available run number when submitting jobs.
 - `denoise` → czii-denoise plan
 - `copick` → czii-copick plan (create project)
 - `copick-add-object` → copick-add-object plan (add pickable objects)
+- `membraneseg` → membraneseg plan (membrane segmentation)
 - TODO: `octopi` → czii-octopi plan
 
 **Example response:**
@@ -305,6 +305,7 @@ def get_msi_params_list(request):
             "copick": "czii-copick",
             "copick-add-object": "copick-add-object",
             "copick-import": "copick-import",
+            "membraneseg": "membraneseg",
             "octopi": "czii-octopi",
         }
         if plan_type not in plan_map:
