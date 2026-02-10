@@ -978,7 +978,7 @@ export default function WorkflowLaunchForm({
         {/* Session Selection - conditional based on processor requirements */}
         {sessionSelectionConfig.requiresSessionSelection && (
           <Box sx={{ mt: 2 }}>
-            <SessionRunSelector onChange={setSessionRunSelection} disabled={isSubmitting} />
+            <SessionRunSelector onChange={setSessionRunSelection} disabled={isSubmitting} planType={processor.name} />
           </Box>
         )}
 
