@@ -116,7 +116,6 @@ def get_tomo_details(request):
             'msi_session__grid__specimen',
         ).prefetch_related(
             'msi_session__grid__specimen__samples',  # Updated prefetch: use many-to-many field "samples"
-            'runpipedata_set',
         ).filter(
             proc_plan__name__in=['czii-live', 'czii-denoise'],
         ).values(
@@ -127,10 +126,8 @@ def get_tomo_details(request):
             'updated_at',
             'proc_plan_id',
             'msi_session_id',
-            tomograms_id=F('runpipedata__tomograms__id'),
             proc_plan_plan_id=F('proc_plan__id'),
             proc_plan_name=F('proc_plan__name'),
-            run_pipe_run_id=F('runpipedata__run_id'),
             msi_session_name=F('msi_session__name'),
             msi_session_notes=F('msi_session__notes'),
             msi_session_project_id=F('msi_session__project_id'),
@@ -224,18 +221,19 @@ def get_tomo_details(request):
 
         # Prepare unique results for the response
         unique_results = {}
-        base_url = get_base_url()  # Assuming this function exists
+        base_url = get_base_url()
         for entry in queryset:
             procrun_id = entry.get('id')
-            tomogram_id = entry.get('tomograms_id')
-            if procrun_id not in unique_results and tomogram_id is not None:
+            if procrun_id not in unique_results:
                 proc_run_updated_at = datetime.fromisoformat(str(entry.get('updated_at'))).strftime('%Y-%m-%d') if entry.get('updated_at') else None
                 cryogrid_created_at = datetime.fromisoformat(str(entry.get('cryogrid_created_at'))).strftime('%Y-%m-%d') if entry.get('cryogrid_created_at') else None
+                run_name = entry.get('name')
+                session_name = entry.get('msi_session_name')
                 response_model = ResponseModel(
                     tomograms=TomogramModel(
-                        id=tomogram_id,
-                        name="{} (id={})".format(entry.get('name'), tomogram_id),
-                        url=f"{base_url}/admin/processes/tomograms/{tomogram_id}",
+                        id=procrun_id,
+                        name=run_name,
+                        url=f"{base_url}/admin/processes/procrun/{procrun_id}",
                     ),
                     procPlan=ProcPlanModel(
                         id=entry.get('proc_plan_plan_id'),
@@ -265,26 +263,18 @@ def get_tomo_details(request):
                     ),
                     msiSession=MSISessionModel(
                         id=entry.get('msi_session_id'),
-                        name=entry.get('msi_session_name'),
+                        name=session_name,
                         url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_id')}",
                     ),
                 )
-                unique_results[procrun_id] = response_model.dict()
+                result = response_model.model_dump()
+                if session_name and run_name:
+                    result['metadata_url'] = f"{base_url}/metadata/view/{session_name}/{run_name}"
+                else:
+                    result['metadata_url'] = None
+                unique_results[procrun_id] = result
 
         response_data = list(unique_results.values())
-
-        # Add metadata_url to each result
-        for item in response_data:
-            session_name = item.get('msiSession', {}).get('name')
-            run_number = item.get('tomograms', {}).get('name')
-            print(run_number)
-            if session_name and run_number:
-                # Extract just the run number part before the ID
-                if " (id=" in run_number:
-                    run_number = run_number.split(" (id=")[0]
-                item['metadata_url'] = f"{base_url}/metadata/view/{session_name}/{run_number}"
-            else:
-                item['metadata_url'] = None
 
         # Paginate the formatted response data using Django's Paginator
         paginator = Paginator(response_data, page_size)

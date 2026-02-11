@@ -5,24 +5,12 @@
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { buildQueryString } from '@app/common/services/workflowApi';
+import { calculateNextRunName } from '../utils/runNumbers';
 
 interface MembranesegRunsResult {
   success: boolean;
   run_numbers: string[];
   next_run_name: string;
-}
-
-/**
- * Calculate the next run name from a list of run numbers.
- * Run numbers are returned without 'run' prefix (e.g., ['001', '002']).
- */
-function calculateNextRunName(runNumbers: string[]): string {
-  let nextRunNum = 1;
-  if (runNumbers.length > 0) {
-    const maxNum = Math.max(...runNumbers.map((n: string) => parseInt(n, 10) || 0));
-    nextRunNum = maxNum + 1;
-  }
-  return `run${String(nextRunNum).padStart(3, '0')}`;
 }
 
 /**

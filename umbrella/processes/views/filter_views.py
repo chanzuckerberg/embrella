@@ -69,7 +69,6 @@ def available_filters(request):
             'msi_session__grid__specimen',
         ).prefetch_related(
             'msi_session__grid__specimen__samples',  # Updated: prefetch the samples (many-to-many)
-            'runpipedata_set__tomograms_set',
         ).filter(filter_criteria, proc_plan__name__in=['czii-live', 'czii-denoise'])
 
         # Add date ranges

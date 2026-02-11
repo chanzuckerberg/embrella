@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, TextField, Typography } from '@mui/material';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
-import { DJANGO_URL } from '@app/common/constants/api';
+import { API, DJANGO_URL } from '@app/common/constants/api';
+import { fetchResource } from '@app/common/queries/fetchResource';
 import { AutocompleteOptionBasic } from '@czi-sds/components';
+import { calculateNextRunName } from '../utils/runNumbers';
 
 interface MsiSessionData {
   name: string;
@@ -24,9 +26,10 @@ export interface SessionRunSelection {
 interface SessionRunSelectorProps {
   onChange: (selection: SessionRunSelection) => void;
   disabled?: boolean;
+  planType: string; // e.g. 'aretomo3', 'denoise', 'copick'
 }
 
-export const SessionRunSelector = ({ onChange, disabled = false }: SessionRunSelectorProps) => {
+export const SessionRunSelector = ({ onChange, disabled = false, planType }: SessionRunSelectorProps) => {
   const [sessions, setSessions] = useState<MsiSessionData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,28 +83,25 @@ export const SessionRunSelector = ({ onChange, disabled = false }: SessionRunSel
       }
 
       try {
-        const response = await fetch(
-          `${DJANGO_URL}/workflow/aretomo3_params?session_name=${encodeURIComponent(selectedSession.session.name)}`,
-          {
-            credentials: 'include',
-          }
+        const response = await fetchResource(
+          `${DJANGO_URL}${API.PLAN_RUNS}?session_name=${encodeURIComponent(selectedSession.session.name)}&plan_type=${encodeURIComponent(planType)}`
         );
 
         if (response.ok) {
           const data = await response.json();
           const sessionData = data.sessions?.[0];
-          if (sessionData?.run_numbers) {
-            // Format existing runs as "run001", "run002", etc.
-            const sortedRunNumbers = sessionData.run_numbers.sort(
-              (a: string, b: string) =>
-                parseInt(a.match('[0-9]+$')?.[0] || '0') - parseInt(b.match('[0-9]+$')?.[0] || '0')
-            );
-            const formattedRuns = sortedRunNumbers.map((num: string) => `run${num}`);
-            setExistingRuns(formattedRuns);
-            const newRunNum = String(parseInt(sortedRunNumbers[sortedRunNumbers.length - 1]) + 1).padStart(3, '0');
-            // Fake a run name change event:
-            handleRunNameChange({ target: { value: `run${newRunNum}` } } as React.ChangeEvent<HTMLInputElement>);
-          }
+          const runNumbers: string[] = sessionData?.run_numbers || [];
+          const formattedRuns = runNumbers.map((num: string) => `run${num}`);
+          setExistingRuns(formattedRuns);
+
+          const nextRunName = calculateNextRunName(runNumbers);
+          setRunName(nextRunName);
+          setRunNameError('');
+          onChange({
+            sessionName: selectedSession.session.name,
+            runName: nextRunName,
+            isValid: true,
+          });
         }
       } catch (err) {
         console.error('Error fetching existing runs:', err);

@@ -1555,7 +1555,7 @@ find the max number and increment (e.g., max "003" → next is "run004").
             required=False,
             type=OpenApiTypes.STR,
             description="Processing plan type. Defaults to 'aretomo3'.",
-            enum=["aretomo3", "denoise", "copick", "copick-add-object", "copick-import", "membraneseg", "octopi"],
+            enum=["aretomo3", "denoiset", "copick", "copick-add-object", "copick-import", "membraneseg", "octopi"],
         ),
         OpenApiParameter(
             name="session_name",
@@ -1582,7 +1582,7 @@ def get_plan_runs(request):
         # Map plan_type → ProcPlan.name
         plan_map = {
             "aretomo3": "czii-live",
-            "denoise": "czii-denoise",
+            "denoiset": "czii-denoise",
             "copick": "czii-copick",
             "copick-add-object": "copick-add-object",
             "copick-import": "copick-import",
