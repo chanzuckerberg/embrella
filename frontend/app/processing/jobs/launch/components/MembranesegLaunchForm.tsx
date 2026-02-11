@@ -11,9 +11,10 @@
  */
 
 import { Alert, Box, Typography } from '@mui/material';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { SessionSelectionConfig, ValidationError, WorkflowLaunchFormProps } from '@app/common/types/workflow';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
+import { fetchMembranesegRuns } from '../services/membranesegApi';
 
 interface MembranesegLaunchFormProps
   extends Omit<WorkflowLaunchFormProps, 'customFields' | 'additionalSections' | 'customValidation'> {
@@ -21,6 +22,28 @@ interface MembranesegLaunchFormProps
 }
 
 export default function MembranesegLaunchForm(props: MembranesegLaunchFormProps) {
+  const [selectedCopickSession, setSelectedCopickSession] = useState<string | null>(null);
+  const [nextRunName, setNextRunName] = useState<string>('run001');
+
+  // Fetch next available run name when copick session changes
+  useEffect(() => {
+    if (!selectedCopickSession) {
+      return;
+    }
+
+    const loadNextRunName = async () => {
+      try {
+        const data = await fetchMembranesegRuns(selectedCopickSession);
+        setNextRunName(data.next_run_name);
+      } catch {
+        // Default to run001 if fetch fails
+        setNextRunName('run001');
+      }
+    };
+
+    loadNextRunName();
+  }, [selectedCopickSession]);
+
   /**
    * Info section rendered at top of Configure Parameters
    */
@@ -43,21 +66,28 @@ export default function MembranesegLaunchForm(props: MembranesegLaunchFormProps)
    * - No MSI session selection needed (uses Copick session from parameters)
    * - Generates session/run names from copick_session and copick_procrun
    */
+  // Track copick_session changes via onParametersChange callback (not during render)
+  const handleParametersChange = useCallback(
+    (params: Record<string, unknown>) => {
+      const copickSession = params.copick_session as string;
+      if (copickSession && copickSession !== selectedCopickSession) {
+        setSelectedCopickSession(copickSession);
+      }
+    },
+    [selectedCopickSession]
+  );
+
   const sessionSelectionConfig: SessionSelectionConfig = useMemo(
     () => ({
       requiresSessionSelection: false,
       alwaysShowParameters: true,
       generateSessionName: (params) => (params.copick_session as string) || null,
       generateRunName: (params) => {
-        if (params.copick_session && params.copick_procrun) {
-          // Generate a unique run name based on copick session and run
-          return `membraneseg_${params.copick_session}_${params.copick_procrun}`;
-        }
-        return null;
+        const copickSession = params.copick_session as string;
+        return copickSession ? nextRunName : null;
       },
-      hiddenMessage: 'Working with Copick project - no MSI session selection needed',
     }),
-    []
+    [nextRunName]
   );
 
   /**
@@ -113,6 +143,7 @@ export default function MembranesegLaunchForm(props: MembranesegLaunchFormProps)
       sessionSelectionConfig={sessionSelectionConfig}
       customValidation={customValidation}
       additionalSections={[infoSection]}
+      onParametersChange={handleParametersChange}
     />
   );
 }

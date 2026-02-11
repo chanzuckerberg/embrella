@@ -8,11 +8,15 @@ This replaces hardcoded execution logic with a generic, extensible system.
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import F
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from processes.models import PipeExecution, PipeInPlan, ProcRun, ProcSoftware
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun, ProcSoftware
+from rest_framework.decorators import api_view
 from tem.models import MsiSession
 from umbrella_logger import logger
 
@@ -1515,3 +1519,129 @@ def get_processor_metadata(request, processor_name: str):
             },
             status=500,
         )
+
+
+@extend_schema(
+    methods=["GET"],
+    description="""Returns MSI sessions and associated run numbers for a given processing plan type.
+
+Used to determine the next available run number when submitting jobs.
+
+**Supported plan types:**
+- `aretomo3` → czii-live plan (default)
+- `denoise` → czii-denoise plan
+- `copick` → czii-copick plan (create project)
+- `copick-add-object` → copick-add-object plan (add pickable objects)
+- `copick-import` → copick-import plan (import tomograms)
+- `membraneseg` → membraneseg plan (membrane segmentation)
+- `octopi` → czii-octopi plan
+
+**Example response:**
+```json
+{
+  "sessions": [
+    {"name": "24nov10", "run_numbers": ["001", "002", "003"]},
+    {"name": "24dec05", "run_numbers": ["001"]}
+  ]
+}
+```
+
+Run numbers are returned without the 'run' prefix. To get the next run name,
+find the max number and increment (e.g., max "003" → next is "run004").
+""",
+    parameters=[
+        OpenApiParameter(
+            name="plan_type",
+            required=False,
+            type=OpenApiTypes.STR,
+            description="Processing plan type. Defaults to 'aretomo3'.",
+            enum=["aretomo3", "denoise", "copick", "copick-add-object", "copick-import", "membraneseg", "octopi"],
+        ),
+        OpenApiParameter(
+            name="session_name",
+            required=False,
+            type=OpenApiTypes.STR,
+            description="Optional MSI session name to filter results to a single session.",
+        ),
+    ],
+    responses={
+        200: OpenApiTypes.OBJECT,
+        400: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+        500: OpenApiTypes.OBJECT,
+    },
+)
+@api_view(["GET"])
+@require_http_methods(["GET"])
+def get_plan_runs(request):
+    """Get MSI sessions with their run numbers for a given processing plan type."""
+    try:
+        session_name_filter = request.GET.get("session_name", None)
+        plan_type = request.GET.get("plan_type", "aretomo3")
+
+        # Map plan_type → ProcPlan.name
+        plan_map = {
+            "aretomo3": "czii-live",
+            "denoise": "czii-denoise",
+            "copick": "czii-copick",
+            "copick-add-object": "copick-add-object",
+            "copick-import": "copick-import",
+            "membraneseg": "membraneseg",
+            "octopi": "czii-octopi",
+        }
+        if plan_type not in plan_map:
+            return JsonResponse({"error": f'Unsupported plan_type "{plan_type}"'}, status=400)
+
+        plan_name = plan_map[plan_type]
+        logger.info(f"Plan type: {plan_type}, Plan name: {plan_name}")
+
+        try:
+            plan = ProcPlan.objects.get(name=plan_name)
+            plan_id = plan.id
+            logger.info(f"Found plan {plan_name} with ID: {plan_id}")
+        except ProcPlan.DoesNotExist:
+            logger.error(f"Processing plan {plan_name} not found")
+            return JsonResponse({"error": f"Processing plan {plan_name} not found"}, status=404)
+
+        query = (
+            MsiSession.objects.filter(procrun__proc_plan_id=plan_id)
+            .annotate(
+                run_number=F("procrun__name"),
+                run_created_at=F("procrun__created_at"),
+            )
+            .values("name", "run_number", "run_created_at")
+            .distinct()
+        )
+
+        if session_name_filter:
+            query = query.filter(name=session_name_filter)
+
+        query_results = list(query)
+
+        # Group results by name and collect unique run numbers with sorting by created_at
+        grouped_sessions = {}
+        for entry in query_results:
+            name = entry["name"]
+            run_number = entry["run_number"]
+            created_at = entry["run_created_at"]
+            if name not in grouped_sessions:
+                grouped_sessions[name] = []
+            if run_number:
+                # Remove 'run' prefix if it exists
+                stripped_run_number = run_number.replace("run", "")
+                grouped_sessions[name].append((stripped_run_number, created_at))
+
+        # Sort run numbers by created_at (most recent first) and format the response
+        formatted_sessions = [
+            {
+                "name": name,
+                "run_numbers": [run[0] for run in sorted(run_numbers, key=lambda x: x[1], reverse=True)],
+            }
+            for name, run_numbers in grouped_sessions.items()
+        ]
+
+        return JsonResponse({"sessions": formatted_sessions}, status=200)
+
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {str(e)}")
+        return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)

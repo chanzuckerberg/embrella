@@ -83,7 +83,8 @@ urlpatterns = [
     # Copick-specific endpoints
     path("v1/processors/copick/runs/", views.get_copick_runs, name="get_copick_runs"),
     path("v1/processors/copick/template_maps/", views.get_copick_template_maps, name="get_copick_template_maps"),
-    path("v1/processors/copick/copick_params/", views.get_msi_params_list, name="get_copick_params"),
+    # Plan runs endpoint (shared by all processors for run number lookup)
+    path("v1/execution/plan_runs/", views.get_plan_runs, name="get_plan_runs"),
     path("v1/execution/execute/", views.execute_pipe, name="execute_pipe"),
     path("v1/execution/preview/", views.preview_script, name="preview_script"),
     path("v1/execution/<int:execution_id>/status/", views.get_execution_status, name="get_execution_status"),

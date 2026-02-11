@@ -277,7 +277,6 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
           }
           return copickSession ? nextRunName : null;
         },
-        hiddenMessage: 'Working on existing Copick project - no MSI session selection needed',
       };
     } else if (operationMode === 'import_tomograms') {
       return {
@@ -292,7 +291,6 @@ export default function CopickLaunchForm(props: CopickLaunchFormProps) {
           }
           return copickSession ? nextImportRunName : null;
         },
-        hiddenMessage: 'Importing to existing Copick project - no MSI session selection needed',
       };
     }
     return { requiresSessionSelection: true, alwaysShowParameters: true };

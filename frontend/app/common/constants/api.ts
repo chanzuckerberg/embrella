@@ -51,7 +51,7 @@ export enum API {
   PIPELINE_EXECUTION_BY_JOB_ID = '/workflow/v1/execution/by_job_id/:jobId/',
 
   // Processor-specific endpoints
-  COPICK_ADD_OBJECT_PARAMS = '/workflow/v1/processors/copick/copick_params/',
+  PLAN_RUNS = '/workflow/v1/execution/plan_runs/',
   COPICK_RUNS = '/workflow/v1/processors/copick/runs/',
   COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
 
