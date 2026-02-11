@@ -62,7 +62,8 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { folders: driveFoldersList } = useDriveFolderList();
   const { projectLeaders: projectLeadersData } = useProjectLeadersList();
   const { isSuccess: choicesLoaded } = useGridLoggingChoices();
-  const { isSuccess: usersLoaded } = useGridLoggingUserList();
+  const { users: gridLoggingUsersData, isSuccess: usersLoaded } = useGridLoggingUserList();
+  const freezingSessionUsers = gridLoggingUsersData?.users || [];
   const { transformedFreezingSessions, refetch: freezingSessionRefetch } = useFreezingSessionList();
   const { devices: devicesList } = useDeviceList();
 
@@ -359,7 +360,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
       <AddFreezingSessionDialog
         open={addFreezingSessionDialogOpen}
         onClose={() => setAddFreezingSessionDialogOpen(false)}
-        users={projectLeaders}
+        users={freezingSessionUsers}
         devices={devices}
         notesPages={notesPages}
         onSave={handleAddFreezingSession}
