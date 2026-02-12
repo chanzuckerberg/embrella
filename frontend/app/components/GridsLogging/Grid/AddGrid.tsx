@@ -106,7 +106,9 @@ export const AddGrid: React.FC<AddGridProps> = ({
   }, [open, selectedUser?.id, positionInBox, gridBoxId, gridBoxName, clearError]);
 
   const devices = devicesList;
-  const projectLeaders = projectLeadersData?.users || [];
+  const projectLeaders =
+    (projectLeadersData as { project_leaders?: Array<{ id: number; username: string; full_name: string }> } | undefined)
+      ?.project_leaders ?? [];
 
   const confluenceSpaces = confluenceSpacesList.map((space) => ({
     id: space.id.toString(),
