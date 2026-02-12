@@ -1057,8 +1057,16 @@ class ProjectLeaderViewSet(viewsets.ReadOnlyModelViewSet):
     authentication_classes = []
 
     def get_queryset(self):
-        """Get all active users who could be project leaders"""
-        return User.objects.filter(is_active=True).order_by('username')
+        """Get only active project_leaders (by project_leader_id in DB)."""
+        from projects.models import Project
+        leader_ids = (
+            Project.objects.filter(project_leader_id__isnull=False)
+            .values_list('project_leader_id', flat=True)
+            .distinct()
+        )
+        return (
+            User.objects.filter(id__in=leader_ids, is_active=True).order_by('username')
+        )
 
     def list(self, request, *args, **kwargs):
         """List all potential project leaders"""
