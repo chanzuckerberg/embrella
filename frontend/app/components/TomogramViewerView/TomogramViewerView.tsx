@@ -8,7 +8,7 @@ import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
 import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
 import { OmeZarrChunkedImageViewer, IdetikProvider } from '@idetik/react';
 import { ChunkedImageLayer, ChannelsEnabled, createImageSourcePolicy } from '@idetik/core';
-import { getRegionFromZattrs, getZAxisMetadata } from './utils';
+import { getZattrsData, getZAxisMetadata } from './utils';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
@@ -344,28 +344,8 @@ const TomogramViewerContent = ({
       dispatch({ type: 'SET_OBJECT_LABELS', payload: detail.existingReview?.objectLabels || [] });
       dispatch({ type: 'SET_REJECTION_REASONS', payload: detail.existingReview?.rejectionReasons || [] });
 
-      // Use contrast limits from API response if available, otherwise use default
-      if (detail.contrastLimits) {
-        // Validate that the API contrast limits are strictly increasing
-        if (detail.contrastLimits[0] < detail.contrastLimits[1]) {
-          dispatch({ type: 'SET_CONTRAST_LIMITS', payload: detail.contrastLimits });
-          // Set the contrast range to be wider than the limits for better slider control
-          const range = detail.contrastLimits;
-          const padding = (range[1] - range[0]) * 1.0; // 100% padding for wider range
-          const contrastRange: [number, number] = [range[0] - padding, range[1] + padding];
-          dispatch({ type: 'SET_CONTRAST_RANGE', payload: contrastRange });
-        } else {
-          console.warn('Invalid contrast limits from API, using default:', detail.contrastLimits);
-        }
-      } else {
-        // Fallback: set a reasonable contrast range based on reconstruction type
-        const defaultRange: [number, number] = [-0.1, 0.1];
-        dispatch({ type: 'SET_CONTRAST_RANGE', payload: defaultRange });
-      }
-
       if (detail.zarrPath) {
         // Get z-axis metadata and start with middle z-slice
-        // z axis metadata specifies the valid range of z indices
         const zMeta = await getZAxisMetadata(detail.zarrPath);
         setZAxisMetadata(zMeta);
 
@@ -374,7 +354,25 @@ const TomogramViewerContent = ({
         setCurrentZIndex(initialZIndex);
         setZMaxIndex(zMeta.count - 1);
 
-        await getRegionFromZattrs(detail.zarrPath, initialZIndex);
+        // Fetch zattrs data (region and contrast limits) in a single request
+        const zattrsData = await getZattrsData(detail.zarrPath, initialZIndex);
+
+        // Use contrast limits from zattrs if available, otherwise fall back to API response
+        const contrastLimits = zattrsData.contrastLimits
+          ? ([zattrsData.contrastLimits.low, zattrsData.contrastLimits.high] as [number, number])
+          : detail.contrastLimits;
+
+        if (contrastLimits && contrastLimits[0] < contrastLimits[1]) {
+          dispatch({ type: 'SET_CONTRAST_LIMITS', payload: contrastLimits });
+          // Set the contrast range to be wider than the limits for better slider control
+          const padding = (contrastLimits[1] - contrastLimits[0]) * 1.0; // 100% padding for wider range
+          const contrastRange: [number, number] = [contrastLimits[0] - padding, contrastLimits[1] + padding];
+          dispatch({ type: 'SET_CONTRAST_RANGE', payload: contrastRange });
+        } else {
+          // Fallback: set a reasonable contrast range
+          const defaultRange: [number, number] = [-0.1, 0.1];
+          dispatch({ type: 'SET_CONTRAST_RANGE', payload: defaultRange });
+        }
       }
     };
     loadDetail();

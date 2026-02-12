@@ -5,6 +5,7 @@ This module provides utilities for computing optimal contrast limits for cryo-EM
 tomogram data stored in Zarr format. Supports multiple methods including Gaussian
 Mixture Models (GMM) and percentile-based approaches.
 """
+
 import json
 import logging
 import os
@@ -16,11 +17,11 @@ from typing import Literal, Optional, Tuple
 import dask.array as da
 import fsspec
 import numpy as np
+import requests
 import zarr
 from sklearn.mixture import GaussianMixture
 
 LOGGER = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 # Path to this module's directory for subprocess calls
 _MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -55,8 +56,6 @@ def _load_zarr_data_sync(zarr_url: str, max_samples: int = 100_000) -> np.ndarra
     raise RuntimeError(f"Could not load Zarr data from {zarr_url}")
 
 
-
-
 def _extract_data_from_store(store_obj, max_samples: int) -> Optional[np.ndarray]:
     """
     Given a Zarr Group or Array, pick the correct array:
@@ -68,7 +67,9 @@ def _extract_data_from_store(store_obj, max_samples: int) -> Optional[np.ndarray
     try:
         # 1) If it's a group, handle multiscales or pick first array
         # Check for both zarr v2 (zarr.hierarchy.Group) and v3 (zarr.Group) compatibility
-        if isinstance(store_obj, zarr.Group) or (hasattr(zarr, 'hierarchy') and isinstance(store_obj, zarr.hierarchy.Group)):
+        if isinstance(store_obj, zarr.Group) or (
+            hasattr(zarr, "hierarchy") and isinstance(store_obj, zarr.hierarchy.Group)
+        ):
             if "multiscales" in store_obj.attrs:
                 ms = store_obj.attrs["multiscales"]
                 # take the first multiscale spec and its first dataset
@@ -157,8 +158,7 @@ class ContrastLimitCalculator:
         self.volume = _take_random_samples_from_volume(vol, num_samples)
 
     @abstractmethod
-    def compute_contrast_limit(self) -> Tuple[float, float]:
-        ...
+    def compute_contrast_limit(self) -> Tuple[float, float]: ...
 
 
 class PercentileContrastLimitCalculator(ContrastLimitCalculator):
@@ -225,13 +225,56 @@ def _compute_in_subprocess(zarr_url: str, method: str) -> Tuple[float, float]:
     return compute_contrast_limits(data, method=method)
 
 
+def fetch_contrast_limits_from_zattrs(zarr_url: str) -> Optional[Tuple[float, float]]:
+    """
+    Fetch pre-computed contrast limits from .zattrs if available.
+
+    The zattrs should contain: {"contrast_limits": {"low": float, "high": float}}
+
+    Returns:
+        Tuple of (low, high) contrast limits if found, None otherwise.
+    """
+    zattrs_url = f"{zarr_url.rstrip('/')}/.zattrs"
+
+    try:
+        # zattrs are grabbed from the fileserver on cluster
+        if zarr_url.startswith(("http://", "https://")):
+            response = requests.get(zattrs_url, timeout=0.8)
+            if not response.ok:
+                return None
+            zattrs = response.json()
+        else:
+            return None
+
+        contrast_limits = zattrs.get("image_statistics", {}).get("contrast_limits")
+        if (
+            contrast_limits
+            and isinstance(contrast_limits.get("low"), (int, float))
+            and isinstance(contrast_limits.get("high"), (int, float))
+        ):
+            low = float(contrast_limits["low"])
+            high = float(contrast_limits["high"])
+            return low, high
+        return None
+
+    except Exception as e:
+        return None
+
+
 def compute_optimal_contrast_limits(zarr_url: str, method: str = "gmm") -> Tuple[float, float]:
     """
     High-level entry point: compute optimal contrast limits for a zarr URL.
 
-    Runs computation in a subprocess to avoid event loop conflicts between
-    zarr v3's async internals and Django's request handling.
+    First attempts to fetch pre-computed contrast limits from .zattrs.
+    If not available, falls back to computing them in a subprocess to avoid
+    event loop conflicts between zarr v3's async internals and Django's request handling.
     """
+    # Try to fetch pre-computed contrast limits from zattrs first
+    precomputed = fetch_contrast_limits_from_zattrs(zarr_url)
+    if precomputed is not None:
+        return precomputed
+
+    # Run contrast limit calculation in subprocess
     try:
         # Get the umbrella package directory (parent of this file's directory)
         umbrella_dir = os.path.dirname(_MODULE_DIR)
