@@ -48,7 +48,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
   const { createGridBox, isCreating, error, clearError } = useCreateGridBox();
 
   // fetch slots data when puckId is available
-  const { slotsData } = useGridLoggingPuckSlots(puckId);
+  const { slotsData, refetch: refetchPuckSlots } = useGridLoggingPuckSlots(puckId);
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
@@ -65,6 +65,12 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       clearError();
     }
   }, [open, selectedUser?.id, puckId, puckName, positionInPuck, clearError]);
+
+  useEffect(() => {
+    if (open && puckId) {
+      refetchPuckSlots();
+    }
+  }, [open, puckId, refetchPuckSlots]);
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
