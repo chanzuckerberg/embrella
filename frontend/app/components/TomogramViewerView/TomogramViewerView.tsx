@@ -10,6 +10,7 @@ import { OmeZarrChunkedImageViewer, IdetikProvider } from '@idetik/react';
 import { ChunkedImageLayer, ChannelsEnabled, createImageSourcePolicy } from '@idetik/core';
 import { getZattrsData, getZAxisMetadata } from './utils';
 import { useHotkeys } from 'react-hotkeys-hook';
+import './TomogramViewerView.css';
 import { Button, Icon } from '@czi-sds/components';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURLWithPathParams, getRequestURL } from '@app/common/queries/utils';
@@ -162,7 +163,7 @@ const TomogramViewerContent = ({
   // Hide the built-in Channel Controls overlay (we render it in the sidebar instead)
   const viewerClassNames = useMemo(
     () => ({
-      root: 'bg-dark-sds-color-primitive-gray-100 h-full w-full [&_.absolute.top-0.left-0.z-10]:hidden',
+      root: 'bg-dark-sds-color-primitive-gray-100 h-full w-full',
     }),
     []
   );
@@ -392,6 +393,7 @@ const TomogramViewerContent = ({
               fallbackContrastLimits={fallbackContrastLimits}
               classNames={viewerClassNames}
               onLayersCreated={handleLayerCreated}
+              scaleBar={{ visible: true, align: 'start' }}
               policy={customPolicy}
             />
           ) : (
