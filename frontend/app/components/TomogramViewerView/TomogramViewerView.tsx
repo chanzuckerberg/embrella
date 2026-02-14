@@ -168,11 +168,11 @@ const TomogramViewerContent = ({
     []
   );
 
-  // Custom policy to prefetch as much as possible
+  // Custom policy better for both 2d rechunked and 3d chunked data
   const customPolicy = useMemo(
     () =>
       createImageSourcePolicy({
-        prefetch: { x: 0, y: 0, z: 0 },
+        prefetch: { x: 0, y: 0, z: 100 },
         priorityOrder: ['fallbackVisible', 'visibleCurrent', 'prefetchTime', 'fallbackBackground', 'prefetchSpace'],
         lod: {
           min: 0,
