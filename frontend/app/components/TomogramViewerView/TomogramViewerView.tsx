@@ -172,7 +172,7 @@ const TomogramViewerContent = ({
   const customPolicy = useMemo(
     () =>
       createImageSourcePolicy({
-        prefetch: { x: 0, y: 0, z: 100 },
+        prefetch: { x: 0, y: 0, z: 256 },
         priorityOrder: ['fallbackVisible', 'visibleCurrent', 'prefetchTime', 'fallbackBackground', 'prefetchSpace'],
         lod: {
           min: 0,

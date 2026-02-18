@@ -99,8 +99,8 @@ run_aretomo3_gpu() {
 run_reformat_cpu() {
     set -e
     ml anaconda
-    conda activate /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/pyConvert
-    bash /hpc/projects/krios1.processing/aretomo3/scripts/reformat_thumbnail_rechunk.sh ${out_path} 960 180
+    conda activate /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/zarrczar_env
+    bash /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/mrc_to_zarr_and_thumbnails.sh ${out_path} 960 180
 
     conda activate /hpc/projects/group.czii/krios1.processing/software/slabpick/pySlabPick
     python /hpc/projects/group.czii/krios1.processing/software/diagnostics/scripts/plot_aretomo3_metrics.py --session ${project_name} --run ${run_number}
