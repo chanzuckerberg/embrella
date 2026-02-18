@@ -3,7 +3,7 @@ from rest_framework import status, viewsets
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import action, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from workflow.views.job_api import CsrfExemptSessionAuthentication
+from common.auth import CsrfExemptSessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
