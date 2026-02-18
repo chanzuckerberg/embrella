@@ -7,7 +7,7 @@ import { useListResource } from '../base/useListResource';
  * Uses the /api/external-resources/doc_pages/?system_name=Confluence endpoint.
  */
 export const useConfluencePageList = () => {
-  const { items, isSuccess, totalCount } = useListResource({
+  const { items, isSuccess, totalCount, refetch } = useListResource({
     endpoint: `${API.EXTERNAL_RESOURCES_DOC_PAGES}?system_name=Confluence`,
     selectItems: (data: DocPagesResponse) => data.doc_pages || [],
     getTotalCount: (data: DocPagesResponse) => data.count || 0,
@@ -25,5 +25,6 @@ export const useConfluencePageList = () => {
     pages,
     isSuccess,
     totalCount,
+    refetch,
   };
 };

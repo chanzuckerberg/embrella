@@ -5,6 +5,8 @@ import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
 import { Device, ConfluencePage, UserList, FreezingSessionFormData } from '@app/common/types/gridLogging';
+import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
+import { CreateNotesPageDialog } from '@app/components/GridsLogging/Grid/CreateNotesPageDialog';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -17,6 +19,7 @@ export const AddFreezingSessionDialog: React.FC<{
   devices?: Device[];
   notesPages?: ConfluencePage[];
   freezingSessionDate?: Date | null;
+  refetchNotesPages?: () => void;
 }> = ({
   open,
   onClose,
@@ -25,8 +28,10 @@ export const AddFreezingSessionDialog: React.FC<{
   devices = [],
   notesPages = [],
   freezingSessionDate: _freezingSessionDate = null,
+  refetchNotesPages,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [addNoteDialogOpen, setAddNoteDialogOpen] = useState(false);
   const [formData, setFormData] = useState<FreezingSessionFormData>({
     user: '',
     device: 'Leica GP2',
@@ -214,38 +219,29 @@ export const AddFreezingSessionDialog: React.FC<{
             />
           </Box>
 
-          <FormControl sx={{ flex: 1 }}>
-            <InputLabel id="notes-page-label">Notes Page</InputLabel>
-            <Select
-              labelId="notes-page-label"
-              value={formData.notesPage}
-              onChange={(e) => handleInputChange('notesPage', e.target.value)}
-              label="Notes Page"
-              placeholder="Select notes page (optional)"
-              sx={disabledTextFieldStyles}
-              MenuProps={{
-                PaperProps: {
-                  style: {
-                    maxHeight: 180,
-                  },
-                },
-              }}
-            >
-              {notesPages.length === 0 ? (
-                <MenuItem value="" disabled>
-                  No notes pages available
-                </MenuItem>
-              ) : (
-                notesPages.map((page) => (
-                  <MenuItem key={page.id} value={page.id}>
-                    {page.url}
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
+          <FormFieldWithAdd
+            label="Notes Page"
+            placeholder="Select notes page (optional)"
+            value={formData.notesPage}
+            onChange={(value) => handleInputChange('notesPage', value)}
+            options={notesPages.map((page) => ({
+              value: String(page.id),
+              label: page.url,
+            }))}
+            onAdd={() => setAddNoteDialogOpen(true)}
+          />
         </Box>
       </BaseFormDialog>
+
+      <CreateNotesPageDialog
+        open={addNoteDialogOpen}
+        onClose={() => setAddNoteDialogOpen(false)}
+        onSave={(resource) => {
+          refetchNotesPages?.();
+          setFormData((prev) => ({ ...prev, notesPage: String(resource.id) }));
+          setAddNoteDialogOpen(false);
+        }}
+      />
     </LocalizationProvider>
   );
 };

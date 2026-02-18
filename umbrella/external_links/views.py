@@ -1,6 +1,9 @@
 from django.conf import settings
 from rest_framework import status, viewsets
-from rest_framework.decorators import action
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import action, authentication_classes, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from workflow.views.job_api import CsrfExemptSessionAuthentication
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
@@ -8,7 +11,8 @@ from rest_framework.response import Response
 from external_links.models import ExternalResource
 from external_links.serializers import ExternalResourceListSerializer, ExternalResourceSerializer
 
-
+@authentication_classes([CsrfExemptSessionAuthentication])
+@permission_classes([IsAuthenticated])
 class ExternalResourceViewSet(viewsets.ModelViewSet):
     """
     ViewSet for ExternalResource model - handles documentation spaces and pages

@@ -25,6 +25,7 @@ export { useCreateGrid } from './create/useCreateGrid';
 export { useCreateGridBox } from './create/useCreateGridBox';
 export { useCreatePuck } from './create/useCreatePuck';
 export { useCreateFreezingSession } from './create/useCreateFreezingSession';
+export { useCreateExternalResource } from './create/useCreateExternalResource';
 
 // Move hooks
 export { useMoveGrid } from './move/useMoveGrid';

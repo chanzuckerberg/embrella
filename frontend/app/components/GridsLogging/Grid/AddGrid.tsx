@@ -58,7 +58,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { createGrid, isCreating, error, clearError } = useCreateGrid();
   const { createFreezingSession } = useCreateFreezingSession();
   const { spaces: confluenceSpacesList } = useConfluenceSpaceList();
-  const { pages: confluencePagesList } = useConfluencePageList();
+  const { pages: confluencePagesList, refetch: refetchNotesPages } = useConfluencePageList();
   const { folders: driveFoldersList } = useDriveFolderList();
   const { projectLeaders: projectLeadersData } = useProjectLeadersList();
   const { isSuccess: choicesLoaded } = useGridLoggingChoices();
@@ -366,6 +366,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
         devices={devices}
         notesPages={notesPages}
         onSave={handleAddFreezingSession}
+        refetchNotesPages={refetchNotesPages}
       />
     </>
   );
