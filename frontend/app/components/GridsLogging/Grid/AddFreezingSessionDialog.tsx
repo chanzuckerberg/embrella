@@ -62,7 +62,6 @@ export const AddFreezingSessionDialog: React.FC<{
     }
 
     setIsSubmitting(true);
-    console.log('formDataFrreezingsessoion', formData);
     try {
       await onSave({
         user: formData.user,
