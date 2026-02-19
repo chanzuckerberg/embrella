@@ -84,7 +84,7 @@ echo "DenoisET training option is: enabled"
 # Define bash functions for heterogeneous job components
 run_aretomo3_gpu() {
     set -e
-    ml cuda/12.8.0_570.86.10
+    ml cuda
 
     # AreTomo3 command with fixed flags and schema-generated variable flags
     /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.8_Cuda13_02-08-2026 \
