@@ -14,7 +14,7 @@ export const useCreateFreezingSession = () => {
       device: data.device,
       device_temperature: data.device_temperature,
       humidity: data.humidity,
-      ...(data.notes_page && { notes_page: data.notes_page }),
+      ...(data.documentation_page && { documentation_page: data.documentation_page }),
       ...(data.freezingSessionDate && {
         datetime: data.freezingSessionDate.toISOString(),
       }),

@@ -15,8 +15,9 @@ from django.utils import timezone as dj_timezone
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+
+from common.auth import CsrfExemptSessionAuthentication
 from processes.models import JobLog, PipeExecution, SyncerLog, SyncerProcess
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from umbrella_logger import logger
@@ -53,16 +54,6 @@ def calculate_duration(start_time, end_time):
         hours = total_seconds // 3600
         minutes = (total_seconds % 3600) // 60
         return f"{hours}h {minutes}m"
-
-
-class CsrfExemptSessionAuthentication(SessionAuthentication):
-    """
-    SessionAuthentication subclass that doesn't enforce CSRF checks.
-    Use this for API endpoints that handle CSRF validation separately or don't require it.
-    """
-
-    def enforce_csrf(self, request):
-        return  # Skip CSRF check
 
 
 def get_jobs_list(request):
