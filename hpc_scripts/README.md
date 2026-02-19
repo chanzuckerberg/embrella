@@ -14,7 +14,7 @@ For now, a copy is kept in the repo. We will plan to standardize them at some po
 
 ```bash
 ml anaconda
-conda create zarrczar_env python="3.12.12"
+conda create --prefix zarrczar_env python="3.12.12"
 conda activate zarrczar_env
 # clone zarrczar repo https://github.com/czimaginginstitute/zarrczar
 cd zarrczar_repo
