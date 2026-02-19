@@ -7,7 +7,7 @@ export interface FreezingSession {
   device_name: string;
   device_temperature: number;
   humidity: number;
-  notes_page: number | null;
+  documentation_page: number | null;
   display_name: string;
 }
 
@@ -27,7 +27,7 @@ export interface CreateFreezingSessionData {
   device: number;
   device_temperature: number;
   humidity: number;
-  notes_page?: number | null;
+  documentation_page?: number | null;
   freezingSessionDate?: Date | null;
 }
 
@@ -38,7 +38,7 @@ export interface FreezingSessionCreateResponse {
   device: number;
   device_temperature: number;
   humidity: number;
-  notes_page: number | null;
+  documentation_page: number | null;
   display_name: string;
 }
 

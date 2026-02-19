@@ -34,7 +34,7 @@ export const AddFreezingSessionDialog: React.FC<{
   const [addNoteDialogOpen, setAddNoteDialogOpen] = useState(false);
   const [formData, setFormData] = useState<FreezingSessionFormData>({
     user: '',
-    device: 'Leica GP2',
+    device: '',
     temperature: '',
     humidity: '',
     notesPage: '',
@@ -62,6 +62,7 @@ export const AddFreezingSessionDialog: React.FC<{
     }
 
     setIsSubmitting(true);
+    console.log('formDataFrreezingsessoion', formData);
     try {
       await onSave({
         user: formData.user,
