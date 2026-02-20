@@ -168,12 +168,12 @@ const TomogramViewerContent = ({
     []
   );
 
-  // Custom policy better for both 2d rechunked and 3d chunked data
+  // Custom policy better for both 2d rechunked and 3d chunked data. Our AreTomo runs are chunked into 128
   const customPolicy = useMemo(
     () =>
       createImageSourcePolicy({
-        prefetch: { x: 0, y: 0, z: 256 },
-        priorityOrder: ['fallbackVisible', 'visibleCurrent', 'prefetchTime', 'fallbackBackground', 'prefetchSpace'],
+        prefetch: { x: 0, y: 0, z: 128 },
+        priorityOrder: ['fallbackVisible', 'visibleCurrent', 'fallbackBackground', 'prefetchTime', 'prefetchSpace'],
         lod: {
           min: 0,
           bias: 0.5,
