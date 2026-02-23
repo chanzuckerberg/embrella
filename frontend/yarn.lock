@@ -823,20 +823,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@idetik/core@npm:^0.6.2":
-  version: 0.6.2
-  resolution: "@idetik/core@npm:0.6.2"
+"@idetik/core@npm:^0.7.5":
+  version: 0.7.8
+  resolution: "@idetik/core@npm:0.7.8"
   dependencies:
     gl-matrix: "npm:^3.4.3"
-    zarrita: "npm:^0.4.0-next.16"
+    zarrita: "npm:^0.5.4"
     zod: "npm:^3.24.1"
-  checksum: 10c0/b2a1731f74ab95602680c75756c6f271a4cf44dd2b9fdf572dcf2c2213fd430a332b40896736c473ee0725b3844d23b327aec95834363070ff5ec72ffae1c038
+  checksum: 10c0/c1cec3db882d91c41113513c298cb1565df95c379609985f31cff690f017cc36cf54444b82e19780e14f2f7f85c6000f02c5541f147eb47f82d90aaad5ff0958
   languageName: node
   linkType: hard
 
-"@idetik/react@npm:^0.2.3":
-  version: 0.2.3
-  resolution: "@idetik/react@npm:0.2.3"
+"@idetik/react@npm:^0.2.5":
+  version: 0.2.5
+  resolution: "@idetik/react@npm:0.2.5"
   dependencies:
     "@base-ui-components/react": "npm:^1.0.0-beta.2"
     "@emotion/css": "npm:^11.13.0"
@@ -851,10 +851,10 @@ __metadata:
     react-dom: "npm:^18.3.1"
   peerDependencies:
     "@czi-sds/components": ^22.11.4
-    "@idetik/core": ^0.6.0
+    "@idetik/core": ^0.7.5
     react: ^18.3.1
     react-dom: ^18.3.1
-  checksum: 10c0/f943bc043d9088029cd050554973e0d7732c551b8f8c9f865dd2bc06e32d2681a2623ec421b53ffc2e738a5e9fbc6e17113c4e131a1d858e6b580e437bb95e85
+  checksum: 10c0/880fa3701602a160ddb68c7698dcb3b317d5f142b17edd96ea3584700d3ac658a72752294534bd36d2ed5e20e478f85cff12a661b967c5c4f404101f5377081c
   languageName: node
   linkType: hard
 
@@ -2967,13 +2967,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@zarrita/storage@npm:^0.1.0":
-  version: 0.1.2
-  resolution: "@zarrita/storage@npm:0.1.2"
+"@zarrita/storage@npm:^0.1.3":
+  version: 0.1.4
+  resolution: "@zarrita/storage@npm:0.1.4"
   dependencies:
     reference-spec-reader: "npm:^0.2.0"
-    unzipit: "npm:^1.4.3"
-  checksum: 10c0/b2db19f8ac4e5f5a2fa1a082b97fdeac1714a7b7c0a0ead911e0e6d32e9dd622acd9a9938b5f2db2da4d8df51b2bd12da0f6f8c5746a2cf129c3f58c64cf85cb
+    unzipit: "npm:1.4.3"
+  checksum: 10c0/8157662271fe9b4fb527bf4aec60b4b788e149e1b3b2bca0e26c11c5a55f9c3b6b085241c9bb4e14eed2f8e30a3226d074a119a780e6f7dd219ed8894ca499a2
   languageName: node
   linkType: hard
 
@@ -3955,8 +3955,8 @@ __metadata:
     "@emotion/css": "npm:^11.11.2"
     "@emotion/react": "npm:^11.11.3"
     "@emotion/styled": "npm:^11.11.0"
-    "@idetik/core": "npm:^0.6.2"
-    "@idetik/react": "npm:^0.2.3"
+    "@idetik/core": "npm:^0.7.5"
+    "@idetik/react": "npm:^0.2.5"
     "@mui/base": "npm:5.0.0-beta.58"
     "@mui/icons-material": "npm:5.16.7"
     "@mui/lab": "npm:5.0.0-alpha.173"
@@ -11187,7 +11187,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"unzipit@npm:^1.4.3":
+"unzipit@npm:1.4.3":
   version: 1.4.3
   resolution: "unzipit@npm:1.4.3"
   dependencies:
@@ -11744,13 +11744,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zarrita@npm:^0.4.0-next.16":
-  version: 0.4.0
-  resolution: "zarrita@npm:0.4.0"
+"zarrita@npm:^0.5.4":
+  version: 0.5.4
+  resolution: "zarrita@npm:0.5.4"
   dependencies:
-    "@zarrita/storage": "npm:^0.1.0"
+    "@zarrita/storage": "npm:^0.1.3"
     numcodecs: "npm:^0.3.2"
-  checksum: 10c0/089d946a3cbb70bd068b0ab0a1b12928596f8c4af63091501805a4c1914029cedc3156dc6152327afb26b447e82914cec27f6e1e7ae1699a4753df43835a8ce7
+  checksum: 10c0/017ad13751929eceb57e9081deb7ac090708254d746a7dca21009078340ba7c10afc242e414b5a7dac3746c07553b6340715061f82aa2576a343dbdbdd41214a
   languageName: node
   linkType: hard
 

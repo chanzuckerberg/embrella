@@ -1,0 +1,20 @@
+/* Hide built-in Channel Controls overlay (rendered in sidebar instead) */
+.absolute.top-0.left-0.z-10 {
+  display: none;
+}
+
+/* Scale bar styling for OmeZarrChunkedImageViewer */
+.select-none.absolute.bottom-0 {
+  background-color: rgb(0 0 0 / 0.6);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  bottom: 100px !important;
+}
+
+.select-none.absolute.bottom-0 .bg-white {
+  height: 12px;
+}
+
+.select-none.absolute.bottom-0 .text-white {
+  color: white !important;
+}

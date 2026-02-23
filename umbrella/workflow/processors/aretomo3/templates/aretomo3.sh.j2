@@ -84,10 +84,10 @@ echo "DenoisET training option is: enabled"
 # Define bash functions for heterogeneous job components
 run_aretomo3_gpu() {
     set -e
-    ml cuda/12.8.0_570.86.10
+    ml cuda
 
     # AreTomo3 command with fixed flags and schema-generated variable flags
-    /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.7_01-22-2026 \
+    /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.8_Cuda13_02-08-2026 \
         -Gain ${gain_fn} \
         -OutDir ${out_path} \
         -Gpu {% for i in range(slurm_component_0_gpus) -%}{{ i }}{% if not loop.last %},{% endif %}{% endfor %} \
@@ -99,8 +99,8 @@ run_aretomo3_gpu() {
 run_reformat_cpu() {
     set -e
     ml anaconda
-    conda activate /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/pyConvert
-    bash /hpc/projects/krios1.processing/aretomo3/scripts/reformat_thumbnail_rechunk.sh ${out_path} 960 180
+    conda activate /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/zarrczar_env
+    bash /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/mrc_to_zarr_and_thumbnails.sh ${out_path} 960 180
 
     conda activate /hpc/projects/group.czii/krios1.processing/software/slabpick/pySlabPick
     python /hpc/projects/group.czii/krios1.processing/software/diagnostics/scripts/plot_aretomo3_metrics.py --session ${project_name} --run ${run_number}

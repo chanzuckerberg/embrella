@@ -38,48 +38,81 @@ export async function getZAxisMetadata(zarrUrl: string): Promise<{ min: number; 
   }
 }
 
-export async function getRegionFromZattrs(zarrUrl: string, zIndex?: number): Promise<Region> {
+export interface ContrastLimits {
+  low: number;
+  high: number;
+}
+
+export interface ZattrsData {
+  region: Region;
+  contrastLimits: ContrastLimits | null;
+}
+
+/**
+ * Fetch and parse .zattrs from a zarr URL, extracting both region and contrast limits.
+ * This avoids multiple fetches to the same .zattrs file.
+ */
+export async function getZattrsData(zarrUrl: string, zIndex?: number): Promise<ZattrsData> {
   const zattrsUrl = `${zarrUrl}/.zattrs`;
+
+  const defaultRegion = (zIdx?: number): Region =>
+    zIdx !== undefined
+      ? [
+          { dimension: 'z', index: { type: 'point', value: zIdx } },
+          { dimension: 'y', index: { type: 'interval', start: 0, stop: -1 } },
+          { dimension: 'x', index: { type: 'interval', start: 0, stop: -1 } },
+        ]
+      : SAFE_REGION;
 
   try {
     const res = await fetch(zattrsUrl);
     if (!res.ok) {
-      throw new Error(`Failed to fetch zattrs from ${zattrsUrl}: ${res.statusText}`);
+      console.warn(`Failed to fetch zattrs from ${zattrsUrl}: ${res.statusText}`);
+      return { region: defaultRegion(zIndex), contrastLimits: null };
     }
 
     const zattrs = await res.json();
+
+    // Extract region from axes
     const axes = zattrs?.axes ?? zattrs?.multiscales?.[0]?.axes;
+    let region: Region;
 
     if (!Array.isArray(axes)) {
-      throw new Error('No axes found in multiscales[0].axes');
+      console.warn('No axes found in zattrs, using default region');
+      region = defaultRegion(zIndex);
+    } else {
+      region = axes.map((axis: { name: string; type: string }) => {
+        const dim = axis.name;
+        if (axis.type === 'time') {
+          return { dimension: dim, index: { type: 'point', value: 0 } };
+        } else if (dim === 'z' && zIndex !== undefined) {
+          return { dimension: dim, index: { type: 'point', value: zIndex } };
+        } else if (dim === 'x' || dim === 'y') {
+          return { dimension: dim, index: { type: 'interval', start: 0, stop: -1 } };
+        } else {
+          return { dimension: dim, index: { type: 'full' } };
+        }
+      });
     }
 
-    const region: Region = axes.map((axis: { name: string; type: string }) => {
-      const dim = axis.name;
-      if (axis.type === 'time') {
-        return { dimension: dim, index: { type: 'point', value: 0 } };
-      } else if (dim === 'z' && zIndex !== undefined) {
-        // For dynamic z-slicing, set z to a specific point
-        return { dimension: dim, index: { type: 'point', value: zIndex } };
-      } else if (dim === 'x' || dim === 'y') {
-        // Use intervals to avoid chunk manager issues
-        return { dimension: dim, index: { type: 'interval', start: 0, stop: -1 } };
-      } else {
-        return { dimension: dim, index: { type: 'full' } };
-      }
-    });
-    return region;
+    // Extract contrast limits if available
+    let contrastLimits: ContrastLimits | null = null;
+    const contrastLimitsData = zattrs?.image_statistics?.contrast_limits;
+    if (
+      contrastLimitsData &&
+      typeof contrastLimitsData.low === 'number' &&
+      typeof contrastLimitsData.high === 'number'
+    ) {
+      contrastLimits = {
+        low: contrastLimitsData.low,
+        high: contrastLimitsData.high,
+      };
+    }
+
+    return { region, contrastLimits };
   } catch (err) {
     console.warn('Falling back to default region due to error:', err);
-    // If zIndex provided, create safe region with z-point
-    if (zIndex !== undefined) {
-      return [
-        { dimension: 'z', index: { type: 'point', value: zIndex } },
-        { dimension: 'y', index: { type: 'interval', start: 0, stop: -1 } },
-        { dimension: 'x', index: { type: 'interval', start: 0, stop: -1 } },
-      ];
-    }
-    return SAFE_REGION;
+    return { region: defaultRegion(zIndex), contrastLimits: null };
   }
 }
 
