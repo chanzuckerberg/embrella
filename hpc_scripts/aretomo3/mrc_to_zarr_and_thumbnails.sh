@@ -49,50 +49,17 @@ process_file() {
     mv "${directory}/${base_name}_3RD_Vol.mrc" "${directory}/vol003/${base_name}_Vol.mrc" 2>/dev/null
 
     # Thumbnails
-    python <<EOF
-import os
-import mrcfile
-from mrcfile.mrcfile import MrcFile
-print(mrcfile.__version__)
-print(mrcfile.__file__)
-import numpy as np
-import io
-from PIL import Image
+    local vol_path="${directory}/vol003/${base_name}_Vol.mrc"
+    local thumb_path="${directory}/thumbnails/${base_name}.jpeg"
+    if [ -f "$vol_path" ] && [ ! -f "$thumb_path" ]; then
+        zarrczar generate-thumbnail --mrc-path "$vol_path" --jpeg-path "$thumb_path" --bin "4,4,2"
+    fi
 
-def bin_ndarray(arr, bin_factors):
-    shape = tuple(s // f for s, f in zip(arr.shape, bin_factors))
-    trimmed = arr[:shape[0]*bin_factors[0], :shape[1]*bin_factors[1], :shape[2]*bin_factors[2]]
-    reshaped = trimmed.reshape(shape[0], bin_factors[0], shape[1], bin_factors[1], shape[2], bin_factors[2])
-    return reshaped.mean(axis=(1,3,5))
-
-def generate_thumbnail(mrc_path, jpeg_path, bin_factors):
-    try:
-        with MrcFile(mrc_path, permissive=True) as mrc:
-            volume = mrc.data.astype(np.float32)
-        volume = np.transpose(volume, (2, 1, 0))
-        binned = bin_ndarray(volume, bin_factors)
-        center_slice = binned[:, :, binned.shape[2] // 2]
-        norm_slice = 255 * (center_slice - np.min(center_slice)) / (np.max(center_slice) - np.min(center_slice) + 1e-8)
-        img = Image.fromarray(norm_slice.astype(np.uint8))
-        img.save(jpeg_path)
-    except Exception as e:
-        print(f"[WARN] Skipping {mrc_path}: {e}")
-
-base = "${directory}"
-base_name = "${base_name}"
-
-vol_path = os.path.join(base, "vol003", base_name + "_Vol.mrc")
-thumb_path = os.path.join(base, "thumbnails", base_name + ".jpeg")
-if os.path.exists(vol_path) and not os.path.exists(thumb_path):
-    os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
-    generate_thumbnail(vol_path, thumb_path, (4, 4, 2))
-
-ctf_path = os.path.join(base, base_name + "_CTF.mrc")
-ctf_thumb = os.path.join(base, "ctf_thumbnails", base_name + ".jpeg")
-if os.path.exists(ctf_path) and not os.path.exists(ctf_thumb):
-    os.makedirs(os.path.dirname(ctf_thumb), exist_ok=True)
-    generate_thumbnail(ctf_path, ctf_thumb, (4, 4, 1))
-EOF
+    local ctf_path="${directory}/${base_name}_CTF.mrc"
+    local ctf_thumb="${directory}/ctf_thumbnails/${base_name}.jpeg"
+    if [ -f "$ctf_path" ] && [ ! -f "$ctf_thumb" ]; then
+        zarrczar generate-thumbnail --mrc-path "$ctf_path" --jpeg-path "$ctf_thumb" --bin "4,4,1"
+    fi
 
 # convert mrc to zarr in background (throttled by wait_for_jobs)
 for vol_dir in "vol001" "vol003"; do
@@ -102,7 +69,7 @@ for vol_dir in "vol001" "vol003"; do
         echo "[mrc to zarr] Launching $vol_path"
         local zarr_path="${vol_path%.mrc}.zarr"
         (
-            zarrczar convert --mrc-path "$vol_path" --zarr-path "$zarr_path"
+            zarrczar convert --mrc-path "$vol_path" --zarr-path "$zarr_path" --chunk-size 128
             zarrczar compute-image-stats "$zarr_path"
             zarrczar compute-filesystem-stats "$zarr_path"
         ) &
