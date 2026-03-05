@@ -18,7 +18,7 @@ from umbrella_logger import logger
 from workflow.processors.aretomo3 import gain_file_fetcher
 
 
-def get_gain_file_options(cluster_id: str = 'czii') -> List[Dict[str, str]]:
+def get_gain_file_options(cluster_id: str = "czii") -> List[Dict[str, str]]:
     """
     Get gain files formatted as dropdown options for the frontend.
 
@@ -39,20 +39,22 @@ def get_gain_file_options(cluster_id: str = 'czii') -> List[Dict[str, str]]:
 
     options = []
 
-    if not result['success']:
+    if not result["success"]:
         logger.warning(f"Failed to fetch gain files: {result['error']}")
         return options
 
-    for i, file_info in enumerate(result['files']):
-        label = file_info['filename']
+    for i, file_info in enumerate(result["files"]):
+        label = file_info["filename"]
         if i == 0:
             label = f"{label} (most recent)"
 
-        options.append({
-            'value': file_info['filename'],
-            'label': label,
-            'description': f"Modified: {file_info['modified_time']} | Size: {file_info['size_human']}",
-        })
+        options.append(
+            {
+                "value": file_info["filename"],
+                "label": label,
+                "description": f"Modified: {file_info['modified_time']} | Size: {file_info['size_human']}",
+            }
+        )
 
     return options
 
@@ -82,17 +84,19 @@ def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
     # Note: We always fetch gain files regardless of session_id since they're
     # stored in a shared location on the microscope
     try:
-        gain_options = get_gain_file_options(cluster_id='czii')
-        options['gain_file_name'] = gain_options
-        logger.info(f'Loaded {len(gain_options)} gain file options for AreTomo3')
+        gain_options = get_gain_file_options(cluster_id="czii")
+        options["gain_file_name"] = gain_options
+        logger.info(f"Loaded {len(gain_options)} gain file options for AreTomo3")
     except Exception as e:
-        logger.error(f'Error fetching gain files: {e}')
-        options['gain_file_name'] = []
+        logger.error(f"Error fetching gain files: {e}")
+        options["gain_file_name"] = []
 
-    return JsonResponse({
-        'success': True,
-        'options': options,
-    })
+    return JsonResponse(
+        {
+            "success": True,
+            "options": options,
+        }
+    )
 
 
 @require_http_methods(["GET"])
@@ -126,11 +130,22 @@ def get_session_defaults(request, session_id: str = None) -> JsonResponse:
         try:
             session = MsiSession.objects.get(name=session_id)
 
-            # TODO: Extract actual values from session metadata
-            # For now, provide reasonable defaults
+            # Populate pixel_size from calibrated pixel size if available
+            pixel_size = session.get_calibrated_pixel_size()
+            if pixel_size is not None:
+                defaults["pixel_size"] = pixel_size
+
             session_info = {
                 "user": session.user.username if session.user else None,
             }
+
+            # Add magnification info for transparency
+            if session.magnification:
+                session_info["magnification"] = {
+                    "nominal_mag": session.magnification.nominal_mag,
+                    "scope": session.magnification.scope.name,
+                    "pixel_size": pixel_size,
+                }
 
             # Add project info if available
             if session.project:
@@ -162,11 +177,13 @@ def get_session_defaults(request, session_id: str = None) -> JsonResponse:
         except MsiSession.DoesNotExist:
             pass
 
-    return JsonResponse({
-        'success': True,
-        'session_info': session_info,
-        'defaults': defaults,
-    })
+    return JsonResponse(
+        {
+            "success": True,
+            "session_info": session_info,
+            "defaults": defaults,
+        }
+    )
 
 
 @require_http_methods(["GET"])
@@ -185,11 +202,13 @@ def get_processor_metadata(request) -> JsonResponse:
             "docs_url": "https://docs.example.com/aretomo3"
         }
     """
-    return JsonResponse({
-        'success': True,
-        'metadata': {
-            'help_text': 'AreTomo3 is awesome',
-            'category': 'Pre-processing',
-            'docs_url': 'https://github.com/czimaginginstitute/AreTomo3',
-        },
-    })
+    return JsonResponse(
+        {
+            "success": True,
+            "metadata": {
+                "help_text": "AreTomo3 is awesome",
+                "category": "Pre-processing",
+                "docs_url": "https://github.com/czimaginginstitute/AreTomo3",
+            },
+        }
+    )

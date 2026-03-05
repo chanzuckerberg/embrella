@@ -2,7 +2,7 @@ from django.urls import path
 
 from . import views
 
-#register app namespace
+# register app namespace
 app_name = "tem"
 
 urlpatterns = [
@@ -17,7 +17,8 @@ urlpatterns = [
     path("session_list/", views.get_all_sessions, name="get"),
     path("path_list/", views.get_all_image_paths, name="path"),
     path("scrn_filter/", views.get_all_scrns, name="get all scrn sessions"),
-    path('detail/', views.render_screening_form, name='render_screening_form'),
-    path("specific_scrn/", views.get_specific_session, name='specific_scrn'),
-    path('get_projects/', views.get_projects, name='get_projects'),
+    path("detail/", views.render_screening_form, name="render_screening_form"),
+    path("specific_scrn/", views.get_specific_session, name="specific_scrn"),
+    path("get_projects/", views.get_projects, name="get_projects"),
+    path("get_magnifications/", views.get_magnifications, name="get_magnifications"),
 ]

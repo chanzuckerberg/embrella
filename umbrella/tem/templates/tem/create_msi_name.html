@@ -2,52 +2,62 @@
 {% block title %}Session Naming{% endblock %}
 {% block header %}Name your MSI Session{% endblock %}
 {% block form %}
-    <form id="nameForm" action="{% url 'tem:validate_msi_name' %}" method="post">
-      {% csrf_token %}
-      <div class="row form-group">
-        <div class="col-md-12">
-          <label for="session_plan">Session Plan: </label>
-          <label for="session_plan"> {{ session_plan }} </label>
-        </div>
-      </div>
-      <div class="row form-group">
-        <div class="col-md-12">
-          <label for="project">Project: </label>
-          <label for="project"> {{ project.name }} </label>
-        </div>
-      </div>
-      <div class="row form-group">
-        <div class="col-md-12">
-          <label for="grid">Grid: </label>
-          <label for="grid"> {{ grid }} </label>
-        </div>
-      </div>
-      <div class="col-md-12">
-      <input type="hidden" name="session_plan" id="session_plan" value={{ session_plan.id }} >
-      <input type="hidden" name="project" id="project" value={{ project.id }} >
-      <input type="hidden" name="grid" id="grid" value={{ grid.id }} >
-      </div>
-      <hr>
-      <div class="jumbotron">
-          <label for="name">Enter or use the suggested name:</label>
-          <input type="text" id="name" name="name" value= {{ default_name }}  ></>
-      </div>
-      <div class="row form-group">
-        <div class="col-md-12">
-            <input type="submit" value="Create the session">
-        </div>
-      </div>
-    </form>
+<form id="nameForm" action="{% url 'tem:validate_msi_name' %}" method="post">
+  {% csrf_token %}
+  <div class="row form-group">
+    <div class="col-md-12">
+      <label for="session_plan">Session Plan: </label>
+      <label for="session_plan"> {{ session_plan }} </label>
+    </div>
+  </div>
+  <div class="row form-group">
+    <div class="col-md-12">
+      <label for="project">Project: </label>
+      <label for="project"> {{ project.name }} </label>
+    </div>
+  </div>
+  <div class="row form-group">
+    <div class="col-md-12">
+      <label for="grid">Grid: </label>
+      <label for="grid"> {{ grid }} </label>
+    </div>
+  </div>
+  {% if magnification %}
+  <div class="row form-group">
+    <div class="col-md-12">
+      <label>Magnification: </label>
+      <label>{{ magnification.nominal_mag }} ({{ magnification.mode }})</label>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-md-12">
+    <input type="hidden" name="session_plan" id="session_plan" value={{ session_plan.id }}>
+    <input type="hidden" name="project" id="project" value={{ project.id }}>
+    <input type="hidden" name="grid" id="grid" value={{ grid.id }}>
+    {% if magnification %}<input type="hidden" name="magnification" value="{{ magnification.id }}">{% endif %}
+  </div>
+  <hr>
+  <div class="jumbotron">
+    <label for="name">Enter or use the suggested name:</label>
+    <input type="text" id="name" name="name" value={{ default_name }}></>
+  </div>
+  <div class="row form-group">
+    <div class="col-md-12">
+      <input type="submit" value="Create the session">
+    </div>
+  </div>
+</form>
 {% endblock %}
 {% block warning %}
-    {% if error_msg %}
-    <div class="warning" id="warningMessage" >
-      {{ error_msg }}
-    </div>
-    {% endif %}
-  </div>
+{% if error_msg %}
+<div class="warning" id="warningMessage">
+  {{ error_msg }}
+</div>
+{% endif %}
+</div>
 {% endblock %}
 {% block endscript %}
 {% endblock %}
 </body>
+
 </html>

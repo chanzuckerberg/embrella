@@ -21,6 +21,14 @@ admin.site.register(CalibratedPixelSize)
 admin.site.register(ImagingWorkflow)
 admin.site.register(Software)
 admin.site.register(SessionPlan)
-admin.site.register(MsiSession)
+
+
+@admin.register(MsiSession)
+class MsiSessionAdmin(admin.ModelAdmin):
+    list_display = ("name", "user", "project", "session_plan", "magnification", "created_at")
+    list_filter = ("session_plan", "magnification")
+    raw_id_fields = ("grid", "frames", "mdocs", "sums", "parents", "atlas", "atlas_session")
+
+
 admin.site.register(ScreenSessionGroup)
 admin.site.register(AtlasSession)
