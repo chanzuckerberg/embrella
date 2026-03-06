@@ -11,10 +11,15 @@
  * - MDOC magnification validation for pixel size verification
  */
 
-import { Alert, Box, CircularProgress, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, TextField } from '@mui/material';
 import { useCallback, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
-import type { ValidationError, WorkflowLaunchFormProps, HeaderActionsContext } from '@app/common/types/workflow';
+import type {
+  FormFieldConfig,
+  ValidationError,
+  WorkflowLaunchFormProps,
+  HeaderActionsContext,
+} from '@app/common/types/workflow';
 import { fetchProcessorSessionValidation } from '@app/common/services/workflowApi';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
 import CLIParserModal from './CLIParserModal';
@@ -150,64 +155,97 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
   };
 
   /**
-   * Additional UI sections specific to AreTomo3
+   * Custom pixel_size field with inline MDOC validation indicator.
+   * Replicates the auto-generated renderField behavior (WorkflowLaunchForm.tsx:914-941)
+   * but adds dynamic helperText colored by validation state.
    */
-  const additionalSections = (
-    <Box key="aretomo3-additional" sx={{ mt: 3 }}>
-      {/* MDOC pixel size validation */}
-      {isValidating && (
-        <Alert severity="info" icon={<CircularProgress size={20} />} sx={{ mb: 2 }}>
-          Verifying pixel size against MDOC file...
-        </Alert>
-      )}
-      {pixelSizeValidation.mismatch === true && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          <Typography variant="body2" fontWeight="bold" gutterBottom>
-            Magnification Mismatch
-          </Typography>
-          <Typography variant="body2">{pixelSizeValidation.warning}</Typography>
-          {pixelSizeValidation.suggestedPixelSize !== undefined && (
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              Based on MDOC magnification ({pixelSizeValidation.suggestedMagnification}x), the expected pixel size is{' '}
-              <strong>{pixelSizeValidation.suggestedPixelSize} A/px</strong>.
-            </Typography>
-          )}
-          {pixelSizeValidation.mdocFile && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              Source: {pixelSizeValidation.mdocFile}
-            </Typography>
-          )}
-        </Alert>
-      )}
-      {pixelSizeValidation.missing === true && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          <Typography variant="body2">{pixelSizeValidation.warning}</Typography>
-          {pixelSizeValidation.suggestedPixelSize !== undefined && (
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              Based on MDOC magnification ({pixelSizeValidation.suggestedMagnification}x), the expected pixel size is{' '}
-              <strong>{pixelSizeValidation.suggestedPixelSize} A/px</strong>.
-            </Typography>
-          )}
-          {pixelSizeValidation.mdocFile && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              Source: {pixelSizeValidation.mdocFile}
-            </Typography>
-          )}
-        </Alert>
-      )}
-      {pixelSizeValidation.error && pixelSizeValidation.mismatch === undefined && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          Could not verify magnification from MDOC file: {pixelSizeValidation.error}
-        </Alert>
-      )}
-      {/* Dose warning if present */}
-      {!!doseWarning && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {doseWarning}
-        </Alert>
-      )}
-    </Box>
+  const PixelSizeField = useCallback(
+    ({ name, schema: fieldSchema, value, onChange, error }: FormFieldConfig) => {
+      const cliFlag = fieldSchema['x-cli-flag'] as string | undefined;
+      const label = cliFlag ? `${fieldSchema.title || name} ${cliFlag}` : fieldSchema.title || name;
+
+      // TODO: Switch to SDS IntentMessage when released in @czi-sds/components.
+      // Currently using colored helperText as a stand-in for the intent indicator pattern.
+      // Ref: https://sds.czi.design/009eaf17b/p/88e8a7-intent
+      let helperText: React.ReactNode = error || fieldSchema.description;
+      let helperColor: string | undefined;
+
+      if (!error) {
+        if (isValidating) {
+          helperText = (
+            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+              <CircularProgress size={12} />
+              Verifying pixel size against MDOC file...
+            </Box>
+          );
+          helperColor = 'info.main';
+        } else if (pixelSizeValidation.mismatch) {
+          helperText = (
+            <>
+              <strong>Magnification Mismatch</strong> — {pixelSizeValidation.warning}
+              {pixelSizeValidation.suggestedPixelSize !== undefined && (
+                <>
+                  {' '}
+                  Expected: <strong>{pixelSizeValidation.suggestedPixelSize} A/px</strong>
+                </>
+              )}
+            </>
+          );
+          helperColor = 'warning.main';
+        } else if (pixelSizeValidation.missing) {
+          helperText = (
+            <>
+              {pixelSizeValidation.warning}
+              {pixelSizeValidation.suggestedPixelSize !== undefined && (
+                <>
+                  {' '}
+                  Suggested: <strong>{pixelSizeValidation.suggestedPixelSize} A/px</strong>
+                </>
+              )}
+            </>
+          );
+          helperColor = 'info.main';
+        } else if (pixelSizeValidation.error && pixelSizeValidation.mismatch === undefined) {
+          helperText = `Could not verify magnification from MDOC file: ${pixelSizeValidation.error}`;
+          helperColor = 'text.secondary';
+        }
+      }
+
+      return (
+        <TextField
+          key={name}
+          fullWidth
+          type="number"
+          label={
+            <>
+              {label}
+              <span style={{ color: 'red' }}> *</span>
+            </>
+          }
+          value={value ?? ''}
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+          helperText={helperText}
+          error={Boolean(error)}
+          inputProps={{ min: fieldSchema.minimum, max: fieldSchema.maximum, step: 'any' }}
+          margin="normal"
+          sx={{ bgcolor: 'grey.50' }}
+          FormHelperTextProps={helperColor && !error ? { sx: { color: helperColor } } : undefined}
+        />
+      );
+    },
+    [pixelSizeValidation, isValidating]
   );
+
+  /**
+   * Additional UI sections specific to AreTomo3 (dose warning only; pixel size moved inline)
+   */
+  const additionalSections = doseWarning ? (
+    <Box key="aretomo3-additional" sx={{ mt: 3 }}>
+      <Alert severity="warning" sx={{ mb: 2 }}>
+        {doseWarning}
+      </Alert>
+    </Box>
+  ) : null;
 
   /**
    * Header actions for AreTomo3 - includes CLI import button
@@ -237,7 +275,8 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
     <WorkflowLaunchForm
       {...props}
       customValidation={customValidation}
-      additionalSections={[additionalSections]}
+      customFields={{ pixel_size: PixelSizeField }}
+      additionalSections={additionalSections ? [additionalSections] : undefined}
       headerActions={headerActions}
       onSessionInfoLoaded={handleSessionInfoLoaded}
     />

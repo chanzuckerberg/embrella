@@ -297,10 +297,7 @@ def validate_session(request, session_id: str = None) -> JsonResponse:
                     validation["mismatch"] = False
             else:
                 validation["missing"] = True
-                validation["warning"] = (
-                    f"Session has no magnification set. "
-                    f"MDOC reports magnification = {mdoc_mag}."
-                )
+                validation["warning"] = f"Session has no magnification set. MDOC reports {mdoc_mag}x."
                 suggested = _suggest_pixel_size_for_mdoc_mag(mdoc_mag, session.session_plan)
                 if suggested:
                     validation["suggested_pixel_size"] = suggested["pixel_size"]
