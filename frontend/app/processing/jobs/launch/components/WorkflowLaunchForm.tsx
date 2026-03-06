@@ -70,6 +70,7 @@ export default function WorkflowLaunchForm({
   onBeforeSubmit,
   customValidation,
   getProcessorName,
+  onSessionInfoLoaded,
   onParametersChange,
   externalDynamicOptions,
 }: WorkflowLaunchFormProps) {
@@ -250,6 +251,9 @@ export default function WorkflowLaunchForm({
           ...defaultsResult.defaults,
           ...prev, // Keep any user changes
         }));
+        if (onSessionInfoLoaded && defaultsResult.session_info) {
+          onSessionInfoLoaded(defaultsResult.session_info, sessionName);
+        }
         setIsLoadingDefaults(false);
 
         // Load dynamic options
@@ -1011,9 +1015,6 @@ export default function WorkflowLaunchForm({
               {headerActions?.({ parameters, setParameters, schema: schema.schema })}
             </Box>
 
-            {/* Additional sections from processor-specific components (Processing Tips) */}
-            {additionalSections}
-
             {/* Loading indicator */}
             {(isLoadingDefaults || isLoadingOptions) && (
               <Alert severity="info" sx={{ my: 2 }}>
@@ -1023,6 +1024,9 @@ export default function WorkflowLaunchForm({
                 </Box>
               </Alert>
             )}
+
+            {/* Additional sections from processor-specific components (Processing Tips) */}
+            {additionalSections}
 
             {/* Regular Parameters (non-compute-resource, non-grouped) */}
             <Box sx={{ mt: 2 }}>

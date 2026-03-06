@@ -159,6 +159,30 @@ export async function fetchProcessorDefaults(processorName: string, sessionId?: 
 }
 
 /**
+ * Run processor-specific session validation (e.g., MDOC magnification check).
+ * This is a separate call from defaults to avoid blocking form loading.
+ */
+export async function fetchProcessorSessionValidation(
+  processorName: string,
+  sessionId: string
+): Promise<{ success: boolean; validation: Record<string, unknown> }> {
+  const url = replaceUrlParams(API.PROCESSOR_VALIDATE_SESSION, { processorName });
+  const queryString = buildQueryString({ session_id: sessionId });
+  const response = await fetchResource(`${DJANGO_URL}${url}${queryString}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to validate session: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to validate session');
+  }
+
+  return data;
+}
+
+/**
  * Get processor metadata (help text, examples, documentation)
  */
 export async function fetchProcessorMetadata(processorName: string): Promise<ProcessorMetadata> {

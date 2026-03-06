@@ -330,6 +330,113 @@ class TestGetSessionDefaults:
 
         assert "pixel_size" not in data["defaults"]
 
+    def test_defaults_do_not_include_mdoc_validation(self, test_msi_session, rf):
+        """get_session_defaults no longer includes MDOC validation (moved to validate_session)."""
+        from workflow.processors.aretomo3.views import get_session_defaults
+
+        session = test_msi_session
+        microscope = session.session_plan.scope
+
+        mag = Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
+        session.magnification = mag
+        session.save()
+
+        request = rf.get("/")
+        response = get_session_defaults(request, session_id=session.name)
+        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+
+        # magnification info should not contain pixel_size_validation
+        mag_info = data["session_info"]["magnification"]
+        assert "pixel_size_validation" not in mag_info
+
+
+@pytest.mark.django_db
+class TestValidateSession:
+    """Tests for validate_session returning MDOC magnification validation."""
+
+    @patch("workflow.processors.aretomo3.views.mdoc_reader.read_mdoc_magnification")
+    def test_magnification_match(self, mock_mdoc, test_msi_session, rf):
+        """validate_session returns mismatch=false when magnifications match."""
+        from workflow.processors.aretomo3.views import validate_session
+
+        session = test_msi_session
+        microscope = session.session_plan.scope
+
+        mag = Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
+        session.magnification = mag
+        session.save()
+
+        mock_mdoc.return_value = {
+            "success": True,
+            "magnification": 50000,
+            "mdoc_file": "Position_1.mdoc",
+            "error": None,
+        }
+
+        request = rf.get("/")
+        response = validate_session(request, session_id=session.name)
+        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+
+        assert data["success"] is True
+        assert data["validation"]["mismatch"] is False
+        assert data["validation"]["mdoc_magnification"] == 50000
+
+    @patch("workflow.processors.aretomo3.views.mdoc_reader.read_mdoc_magnification")
+    def test_magnification_mismatch(self, mock_mdoc, test_msi_session, rf):
+        """validate_session returns mismatch=true when magnifications differ."""
+        from workflow.processors.aretomo3.views import validate_session
+
+        session = test_msi_session
+        microscope = session.session_plan.scope
+
+        mag = Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
+        session.magnification = mag
+        session.save()
+
+        mock_mdoc.return_value = {
+            "success": True,
+            "magnification": 81000,
+            "mdoc_file": "Position_1.mdoc",
+            "error": None,
+        }
+
+        request = rf.get("/")
+        response = validate_session(request, session_id=session.name)
+        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+
+        assert data["validation"]["mismatch"] is True
+        assert "warning" in data["validation"]
+
+    @patch("workflow.processors.aretomo3.views.mdoc_reader.read_mdoc_magnification")
+    def test_mdoc_error(self, mock_mdoc, test_msi_session, rf):
+        """validate_session returns error when MDOC read fails."""
+        from workflow.processors.aretomo3.views import validate_session
+
+        mock_mdoc.return_value = {
+            "success": False,
+            "magnification": None,
+            "mdoc_file": None,
+            "error": "No MDOC files found",
+        }
+
+        request = rf.get("/")
+        response = validate_session(request, session_id=test_msi_session.name)
+        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+
+        assert data["success"] is True
+        assert data["validation"]["error"] == "No MDOC files found"
+
+    def test_no_session_id(self, rf):
+        """validate_session returns empty validation when no session_id."""
+        from workflow.processors.aretomo3.views import validate_session
+
+        request = rf.get("/")
+        response = validate_session(request, session_id=None)
+        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+
+        assert data["success"] is True
+        assert data["validation"] == {}
+
 
 @pytest.mark.django_db
 class TestAreTomo3Integration:

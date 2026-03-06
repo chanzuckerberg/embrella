@@ -8,23 +8,70 @@
  * - Session-specific file options (gain files, etc.)
  * - Custom help text and documentation
  * - CLI command import for pre-populating form from prior runs
+ * - MDOC magnification validation for pixel size verification
  */
 
-import { Alert, Box } from '@mui/material';
-import { useState } from 'react';
+import { Alert, Box, CircularProgress, Typography } from '@mui/material';
+import { useCallback, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
 import type { ValidationError, WorkflowLaunchFormProps, HeaderActionsContext } from '@app/common/types/workflow';
+import { fetchProcessorSessionValidation } from '@app/common/services/workflowApi';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
 import CLIParserModal from './CLIParserModal';
 
+interface PixelSizeValidation {
+  mdocMagnification?: number;
+  mdocFile?: string;
+  mismatch?: boolean;
+  missing?: boolean;
+  warning?: string;
+  suggestedPixelSize?: number;
+  suggestedMagnification?: number;
+  error?: string;
+}
+
 interface AreTomo3LaunchFormProps
-  extends Omit<WorkflowLaunchFormProps, 'customFields' | 'additionalSections' | 'customValidation' | 'headerActions'> {
+  extends Omit<
+    WorkflowLaunchFormProps,
+    'customFields' | 'additionalSections' | 'customValidation' | 'headerActions' | 'onSessionInfoLoaded'
+  > {
   // No additional props needed for now
 }
 
 export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
   const [doseWarning, setDoseWarning] = useState<string | null>(null);
   const [cliParserOpen, setCliParserOpen] = useState(false);
+  const [pixelSizeValidation, setPixelSizeValidation] = useState<PixelSizeValidation>({});
+  const [isValidating, setIsValidating] = useState(false);
+
+  const handleSessionInfoLoaded = useCallback(
+    (_sessionInfo: Record<string, unknown>, sessionName: string) => {
+      // Fire async MDOC magnification validation (separate from defaults to avoid blocking form)
+      setPixelSizeValidation({});
+      setIsValidating(true);
+      fetchProcessorSessionValidation(props.processor.name, sessionName)
+        .then((result) => {
+          const v = result.validation;
+          setPixelSizeValidation({
+            mdocMagnification: v.mdoc_magnification as number | undefined,
+            mdocFile: v.mdoc_file as string | undefined,
+            mismatch: v.mismatch as boolean | undefined,
+            missing: v.missing as boolean | undefined,
+            warning: v.warning as string | undefined,
+            suggestedPixelSize: v.suggested_pixel_size as number | undefined,
+            suggestedMagnification: v.suggested_magnification as number | undefined,
+            error: v.error as string | undefined,
+          });
+        })
+        .catch((err) => {
+          setPixelSizeValidation({ error: String(err) });
+        })
+        .finally(() => {
+          setIsValidating(false);
+        });
+    },
+    [props.processor.name]
+  );
 
   /**
    * Custom validation for AreTomo3 parameters
@@ -107,6 +154,52 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
    */
   const additionalSections = (
     <Box key="aretomo3-additional" sx={{ mt: 3 }}>
+      {/* MDOC pixel size validation */}
+      {isValidating && (
+        <Alert severity="info" icon={<CircularProgress size={20} />} sx={{ mb: 2 }}>
+          Verifying pixel size against MDOC file...
+        </Alert>
+      )}
+      {pixelSizeValidation.mismatch === true && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="body2" fontWeight="bold" gutterBottom>
+            Magnification Mismatch
+          </Typography>
+          <Typography variant="body2">{pixelSizeValidation.warning}</Typography>
+          {pixelSizeValidation.suggestedPixelSize !== undefined && (
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              Based on MDOC magnification ({pixelSizeValidation.suggestedMagnification}x), the expected pixel size is{' '}
+              <strong>{pixelSizeValidation.suggestedPixelSize} A/px</strong>.
+            </Typography>
+          )}
+          {pixelSizeValidation.mdocFile && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+              Source: {pixelSizeValidation.mdocFile}
+            </Typography>
+          )}
+        </Alert>
+      )}
+      {pixelSizeValidation.missing === true && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2">{pixelSizeValidation.warning}</Typography>
+          {pixelSizeValidation.suggestedPixelSize !== undefined && (
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              Based on MDOC magnification ({pixelSizeValidation.suggestedMagnification}x), the expected pixel size is{' '}
+              <strong>{pixelSizeValidation.suggestedPixelSize} A/px</strong>.
+            </Typography>
+          )}
+          {pixelSizeValidation.mdocFile && (
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+              Source: {pixelSizeValidation.mdocFile}
+            </Typography>
+          )}
+        </Alert>
+      )}
+      {pixelSizeValidation.error && pixelSizeValidation.mismatch === undefined && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Could not verify magnification from MDOC file: {pixelSizeValidation.error}
+        </Alert>
+      )}
       {/* Dose warning if present */}
       {!!doseWarning && (
         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -146,6 +239,7 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
       customValidation={customValidation}
       additionalSections={[additionalSections]}
       headerActions={headerActions}
+      onSessionInfoLoaded={handleSessionInfoLoaded}
     />
   );
 }

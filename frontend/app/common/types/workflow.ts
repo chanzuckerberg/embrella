@@ -119,6 +119,7 @@ export interface ProcessorDynamicOptions {
 export interface ProcessorDefaults {
   success: boolean;
   defaults: Record<string, unknown>;
+  session_info?: Record<string, unknown>;
 }
 
 /**
@@ -325,6 +326,10 @@ export interface WorkflowLaunchFormProps {
    * (e.g., Copick form uses 'copick' for create but 'copick-add-object' for add_object)
    */
   getProcessorName?: (params: Record<string, unknown>) => string;
+  /**
+   * Callback fired when session defaults are loaded, providing session_info and session name from the backend.
+   */
+  onSessionInfoLoaded?: (sessionInfo: Record<string, unknown>, sessionName: string) => void;
   /**
    * Callback fired when parameters change. Allows child forms to react to parameter changes.
    */

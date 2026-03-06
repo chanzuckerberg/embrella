@@ -42,6 +42,7 @@ export enum API {
   PROCESSOR_OPTIONS = '/workflow/v1/processors/:processorName/options/',
   PROCESSOR_DEFAULTS = '/workflow/v1/processors/:processorName/defaults/',
   PROCESSOR_METADATA = '/workflow/v1/processors/:processorName/metadata/',
+  PROCESSOR_VALIDATE_SESSION = '/workflow/v1/processors/:processorName/validate-session/',
   PIPELINE_EXECUTE = '/workflow/v1/execution/execute/',
   PIPELINE_PREVIEW = '/workflow/v1/execution/preview/',
   PIPELINE_EXECUTION_STATUS = '/workflow/v1/execution/:executionId/status/',
