@@ -79,7 +79,7 @@ class Magnification(models.Model):
     index = models.PositiveIntegerField(default=0, help_text="Base 0 index of list order")
 
     def __str__(self):
-        return "%s %dx mode:(%s)" % (self.scope, self.nominal_mag, self.mode)
+        return "%gkx (%s) (%s)" % (self.nominal_mag / 1000, self.mode, self.scope)
 
     class Meta:
         app_label = "tem"

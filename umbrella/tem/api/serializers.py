@@ -45,6 +45,10 @@ class MagnificationSerializer(serializers.Serializer):
     mode = serializers.CharField()
     index = serializers.IntegerField()
     scope__name = serializers.CharField()
+    display = serializers.SerializerMethodField()
+
+    def get_display(self, obj):
+        return "%gkx (%s) (%s)" % (obj["nominal_mag"] / 1000, obj["mode"], obj["scope__name"])
 
 
 class CreatedSessionSerializer(serializers.Serializer):

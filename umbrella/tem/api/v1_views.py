@@ -134,7 +134,8 @@ def get_magnifications(request):
         return Response([])
     mags = (
         Magnification.objects.filter(scope=plan.scope)
-        .order_by("index")
+        .order_by("nominal_mag")
         .values("id", "nominal_mag", "mode", "index", "scope__name")
     )
-    return Response(list(mags))
+    serializer = MagnificationSerializer(mags, many=True)
+    return Response(serializer.data)
