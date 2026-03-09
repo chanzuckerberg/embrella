@@ -76,43 +76,9 @@ def detail(request, session_id):
 
 
 def reserve_session(request):
-    if request.method == "POST":
-        form = ReserveMsiSessionForm(request.POST)
-        if form.is_valid():
-            # Extract the form data
-            plan_id = form.cleaned_data["session_plan"].id
-            project_id = form.cleaned_data["project"].id
-            grid_id = form.cleaned_data["grid"].id
-
-            # Get the project, session plan, and grid objects
-            project = Project.objects.get(pk=project_id)
-            session_plan = SessionPlan.objects.get(pk=plan_id)
-            grid = CryoGrid.objects.get(pk=grid_id)
-
-            # Generate a default name
-            name = models.suggest_name("")
-
-            # Get magnification if selected
-            magnification_id = form.cleaned_data.get("magnification")
-            magnification = magnification_id  # This is already the model instance from ModelForm
-
-            # Create the context for the next template
-            context = {
-                "default_name": name,
-                "session_plan": session_plan,
-                "project": project,
-                "grid": grid,
-                "magnification": magnification,
-            }
-
-            # Render the create_msi_name template with the context
-            return render(request, "tem/create_msi_name.html", context)
-        else:
-            # If the form is invalid, render the form with errors
-            return render(request, "tem/reserve.html", {"form": form})
-    else:
-        form = ReserveMsiSessionForm()
-        return render(request, "tem/reserve.html", {"form": form})
+    # Form is now a single-page JS app that calls v1 APIs directly.
+    # No server-side form logic needed — just render the template.
+    return render(request, "tem/reserve.html")
 
 
 def create_msi_name(request, data={}):

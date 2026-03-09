@@ -1,11 +1,13 @@
 from django.urls import path
 
 from . import views
+from .api import v1_views
 
 # register app namespace
 app_name = "tem"
 
-urlpatterns = [
+# Legacy template-based routes (included under /legacy/tem/)
+legacy_urlpatterns = [
     path("reserve", views.reserve_session, name="reserve"),
     path("create", views.create_session, name="create"),
     path("create_msi_name", views.create_msi_name, name="create_msi_name"),
@@ -22,3 +24,14 @@ urlpatterns = [
     path("get_projects/", views.get_projects, name="get_projects"),
     path("get_magnifications/", views.get_magnifications, name="get_magnifications"),
 ]
+
+# v1 API endpoints (included under /tem/)
+v1_urlpatterns = [
+    path("v1/sessions/", v1_views.create_session, name="v1_create_session"),
+    path("v1/sessions/form-options/", v1_views.form_options, name="v1_form_options"),
+    path("v1/sessions/suggest-name/", v1_views.suggest_session_name, name="v1_suggest_name"),
+    path("v1/magnifications/", v1_views.get_magnifications, name="v1_magnifications"),
+]
+
+# Combined for backward compatibility when included without specifying which set
+urlpatterns = legacy_urlpatterns + v1_urlpatterns
