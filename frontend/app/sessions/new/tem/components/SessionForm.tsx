@@ -82,7 +82,7 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: compact ? 2 : 3 }}>
-      {errors.submit && <Alert severity="error">{errors.submit}</Alert>}
+      {Boolean(errors.submit) && <Alert severity="error">{errors.submit}</Alert>}
 
       <Box sx={{ '& > button': { width: '100%' } }}>
         <DropdownSelect
@@ -91,7 +91,7 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
           options={sessionPlanOptions}
           onChange={(option) => updateField('sessionPlanId', option?.id ?? null)}
         />
-        {errors.sessionPlanId && (
+        {Boolean(errors.sessionPlanId) && (
           <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.sessionPlanId}</Box>
         )}
       </Box>
@@ -103,7 +103,9 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
           options={projectOptions}
           onChange={(option) => updateField('projectId', option?.id ?? null)}
         />
-        {errors.projectId && <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.projectId}</Box>}
+        {Boolean(errors.projectId) && (
+          <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.projectId}</Box>
+        )}
       </Box>
 
       <Box sx={{ '& > button': { width: '100%' } }}>
@@ -122,7 +124,9 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
           options={gridOptions}
           onChange={(option) => updateField('gridId', option?.id ?? null)}
         />
-        {errors.gridId && <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.gridId}</Box>}
+        {Boolean(errors.gridId) && (
+          <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.gridId}</Box>
+        )}
       </Box>
 
       <Box sx={{ '& > button': { width: '100%' } }}>

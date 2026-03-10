@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, TextField, Typography } from '@mui/material';
+import { AutocompleteOptionBasic, Button } from '@czi-sds/components';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource } from '@app/common/queries/fetchResource';
-import { AutocompleteOptionBasic } from '@czi-sds/components';
 import { calculateNextRunName } from '../utils/runNumbers';
+import { SessionFormDialog } from '@app/sessions/new/tem/components/SessionFormDialog';
+import { CreatedSession } from '@app/sessions/new/tem/types';
 
 interface MsiSessionData {
   name: string;
@@ -38,36 +40,39 @@ export const SessionRunSelector = ({ onChange, disabled = false, planType }: Ses
   const [runName, setRunName] = useState<string>('');
   const [runNameError, setRunNameError] = useState<string>('');
   const [existingRuns, setExistingRuns] = useState<string[]>([]);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-  // Fetch sessions on mount - just get all MSI sessions
-  useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const response = await fetch(`${DJANGO_URL}/workflow/get_msi_session_list`, {
-          credentials: 'include',
-        });
+      const response = await fetch(`${DJANGO_URL}/workflow/get_msi_session_list`, {
+        credentials: 'include',
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch sessions');
-        }
-
-        const data = await response.json();
-        // Transform session_names array to sessions array format
-        const sessionsData = (data.session_names || []).map((name: string) => ({
-          name,
-          run_numbers: [], // Not needed since we're using text input
-        }));
-        setSessions(sessionsData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error fetching sessions');
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error('Failed to fetch sessions');
       }
-    };
 
+      const data = await response.json();
+      // Transform session_names array to sessions array format
+      const sessionsData = (data.session_names || []).map((name: string) => ({
+        name,
+        run_numbers: [], // Not needed since we're using text input
+      }));
+      setSessions(sessionsData);
+      return sessionsData as MsiSessionData[];
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error fetching sessions');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch sessions on mount
+  useEffect(() => {
     fetchSessions();
   }, []);
 
@@ -145,6 +150,18 @@ export const SessionRunSelector = ({ onChange, disabled = false, planType }: Ses
     });
   };
 
+  // Handle new session creation from dialog
+  const handleSessionCreated = async (createdSession: CreatedSession) => {
+    setShowCreateDialog(false);
+    const updatedSessions = await fetchSessions();
+    // Auto-select the newly created session
+    const newSession = updatedSessions.find((s) => s.name === createdSession.name);
+    if (newSession) {
+      const option: SessionOption = { name: newSession.name, session: newSession };
+      setSelectedSession(option);
+    }
+  };
+
   // Handle run name input
   const handleRunNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -175,14 +192,21 @@ export const SessionRunSelector = ({ onChange, disabled = false, planType }: Ses
         </Typography>
       )}
 
-      <DropdownSelect
-        topLabel="MSI Session:"
-        topLabelClass="!mb-[8px]"
-        value={selectedSession}
-        options={sessionOptions}
-        onChange={handleSessionChange}
-        disabled={disabled || loading || sessions.length === 0}
-      />
+      <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <Box sx={{ flex: 1 }}>
+          <DropdownSelect
+            topLabel="MSI Session:"
+            topLabelClass="!mb-[8px]"
+            value={selectedSession}
+            options={sessionOptions}
+            onChange={handleSessionChange}
+            disabled={disabled || loading}
+          />
+        </Box>
+        <Button sdsType="secondary" sdsStyle="minimal" onClick={() => setShowCreateDialog(true)} disabled={disabled}>
+          + New Session
+        </Button>
+      </Box>
 
       {selectedSession && (
         <Box sx={{ mt: 2 }}>
@@ -205,10 +229,20 @@ export const SessionRunSelector = ({ onChange, disabled = false, planType }: Ses
       )}
 
       {sessions.length === 0 && !loading && !error && (
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          No sessions available. Create a TEM session first before launching workflows.
+        <Alert severity="info" sx={{ mt: 2 }}>
+          No sessions available.{' '}
+          <Button sdsType="secondary" sdsStyle="minimal" onClick={() => setShowCreateDialog(true)}>
+            Create a TEM session
+          </Button>{' '}
+          to get started.
         </Alert>
       )}
+
+      <SessionFormDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onSuccess={handleSessionCreated}
+      />
     </Box>
   );
 };
