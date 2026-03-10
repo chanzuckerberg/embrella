@@ -54,3 +54,13 @@ class MagnificationSerializer(serializers.Serializer):
 class CreatedSessionSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    project_name = serializers.CharField()
+    grid_name = serializers.CharField()
+    session_plan_name = serializers.CharField()
+    magnification_display = serializers.CharField(allow_null=True)
+    frames = serializers.CharField(allow_null=True)
+    sums = serializers.CharField(allow_null=True)
+    mdocs = serializers.CharField(allow_null=True)
+    parents = serializers.CharField(allow_null=True)
+    atlas = serializers.CharField(allow_null=True)
+    legacy_url = serializers.CharField()

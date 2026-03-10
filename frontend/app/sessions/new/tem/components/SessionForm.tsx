@@ -4,10 +4,11 @@ import React, { useMemo } from 'react';
 import { Alert, Box, CircularProgress, TextField } from '@mui/material';
 import { Button } from '@czi-sds/components';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
+import { CreatedSession } from '../types';
 import { useSessionForm } from './useSessionForm';
 
 interface SessionFormProps {
-  onSuccess?: (session: { id: number; name: string }) => void;
+  onSuccess?: (session: CreatedSession) => void;
   onCancel?: () => void;
   compact?: boolean;
 }

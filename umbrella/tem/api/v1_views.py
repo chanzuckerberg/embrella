@@ -70,7 +70,20 @@ def create_session(request):
     session.save()
 
     return Response(
-        {"id": session.id, "name": session.name},
+        {
+            "id": session.id,
+            "name": session.name,
+            "project_name": project.name,
+            "grid_name": str(grid),
+            "session_plan_name": str(session_plan),
+            "magnification_display": str(magnification) if magnification else None,
+            "frames": str(session.frames) if session.frames else None,
+            "sums": str(session.sums) if session.sums else None,
+            "mdocs": str(session.mdocs) if session.mdocs else None,
+            "parents": str(session.parents) if session.parents else None,
+            "atlas": str(session.atlas) if session.atlas else None,
+            "legacy_url": f"/legacy/tem/{session.id}/",
+        },
         status=status.HTTP_201_CREATED,
     )
 

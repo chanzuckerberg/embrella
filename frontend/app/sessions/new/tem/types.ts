@@ -40,6 +40,16 @@ export interface FormOptions {
 export interface CreatedSession {
   id: number;
   name: string;
+  project_name: string;
+  grid_name: string;
+  session_plan_name: string;
+  magnification_display: string | null;
+  frames: string | null;
+  sums: string | null;
+  mdocs: string | null;
+  parents: string | null;
+  atlas: string | null;
+  legacy_url: string;
 }
 
 export interface SessionFormState {
