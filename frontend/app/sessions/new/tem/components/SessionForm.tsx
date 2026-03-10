@@ -136,6 +136,9 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
           options={magnificationOptions}
           onChange={(option) => updateField('magnificationId', option?.id ?? null)}
         />
+        {Boolean(errors.magnificationId) && (
+          <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.magnificationId}</Box>
+        )}
       </Box>
 
       <Box>

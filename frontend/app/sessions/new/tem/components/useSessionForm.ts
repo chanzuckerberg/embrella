@@ -160,6 +160,7 @@ export function useSessionForm(): UseSessionFormReturn {
     if (!state.sessionPlanId) newErrors.sessionPlanId = 'Session plan is required.';
     if (!state.projectId) newErrors.projectId = 'Project is required.';
     if (!state.gridId) newErrors.gridId = 'Grid is required.';
+    if (!state.magnificationId && magnifications.length > 0) newErrors.magnificationId = 'Magnification is required.';
 
     if (!state.name.trim()) {
       newErrors.name = 'Session name is required.';
@@ -171,7 +172,7 @@ export function useSessionForm(): UseSessionFormReturn {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [state]);
+  }, [state, magnifications.length]);
 
   const submit = useCallback(async (): Promise<CreatedSession | null> => {
     if (!validate()) return null;
@@ -186,6 +187,7 @@ export function useSessionForm(): UseSessionFormReturn {
         project_id: state.projectId,
         grid_id: state.gridId,
       };
+      // might not have any magnification options, so this is optional
       if (state.magnificationId) {
         payload.magnification_id = state.magnificationId;
       }
