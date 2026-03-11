@@ -120,6 +120,9 @@ export function useSessionForm(): UseSessionFormReturn {
 
   // Fetch magnifications when sessionPlanId changes
   useEffect(() => {
+    // Reset magnification selection when session plan changes
+    setState((prev) => ({ ...prev, magnificationId: null }));
+
     if (!state.sessionPlanId) {
       setMagnifications([]);
       return;
