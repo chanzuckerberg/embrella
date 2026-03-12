@@ -26,7 +26,7 @@ interface SubNavItem {
 
 const MAIN_NAV_ITEMS: NavItem[] = [
   { label: 'Samples', href: '/samples/grids', section: 'samples' },
-  { label: 'Sessions', href: '/sessions/new', section: 'sessions' },
+  { label: 'Sessions', href: '/sessions/browse', section: 'sessions' },
   { label: 'Processing', href: '/processing/jobs/monitor', section: 'processing' },
 ];
 
@@ -66,7 +66,7 @@ const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
     { label: 'Clear Cassette', href: '/samples/clear-cassette' },
   ],
   sessions: [
-    { label: 'New TEM Session', href: '/sessions/new' },
+    { label: 'New TEM Session', href: '/sessions/new/tem' },
     { label: 'Screen Multiple Grids', href: '/sessions/screen' },
     { label: 'Browse Sessions', href: '/sessions/browse' },
   ],

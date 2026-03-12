@@ -7,18 +7,18 @@ Provides processor-specific endpoints for:
 - Processor metadata (help text, examples, documentation)
 """
 
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from tem.models import MsiSession
+from tem.models import CalibratedPixelSize, Magnification, MsiSession
 from umbrella_logger import logger
 
-from workflow.processors.aretomo3 import gain_file_fetcher
+from workflow.processors.aretomo3 import gain_file_fetcher, mdoc_reader
 
 
-def get_gain_file_options(cluster_id: str = 'czii') -> List[Dict[str, str]]:
+def get_gain_file_options(cluster_id: str = "czii") -> List[Dict[str, str]]:
     """
     Get gain files formatted as dropdown options for the frontend.
 
@@ -39,20 +39,22 @@ def get_gain_file_options(cluster_id: str = 'czii') -> List[Dict[str, str]]:
 
     options = []
 
-    if not result['success']:
+    if not result["success"]:
         logger.warning(f"Failed to fetch gain files: {result['error']}")
         return options
 
-    for i, file_info in enumerate(result['files']):
-        label = file_info['filename']
+    for i, file_info in enumerate(result["files"]):
+        label = file_info["filename"]
         if i == 0:
             label = f"{label} (most recent)"
 
-        options.append({
-            'value': file_info['filename'],
-            'label': label,
-            'description': f"Modified: {file_info['modified_time']} | Size: {file_info['size_human']}",
-        })
+        options.append(
+            {
+                "value": file_info["filename"],
+                "label": label,
+                "description": f"Modified: {file_info['modified_time']} | Size: {file_info['size_human']}",
+            }
+        )
 
     return options
 
@@ -82,17 +84,54 @@ def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
     # Note: We always fetch gain files regardless of session_id since they're
     # stored in a shared location on the microscope
     try:
-        gain_options = get_gain_file_options(cluster_id='czii')
-        options['gain_file_name'] = gain_options
-        logger.info(f'Loaded {len(gain_options)} gain file options for AreTomo3')
+        gain_options = get_gain_file_options(cluster_id="czii")
+        options["gain_file_name"] = gain_options
+        logger.info(f"Loaded {len(gain_options)} gain file options for AreTomo3")
     except Exception as e:
-        logger.error(f'Error fetching gain files: {e}')
-        options['gain_file_name'] = []
+        logger.error(f"Error fetching gain files: {e}")
+        options["gain_file_name"] = []
 
-    return JsonResponse({
-        'success': True,
-        'options': options,
-    })
+    return JsonResponse(
+        {
+            "success": True,
+            "options": options,
+        }
+    )
+
+
+def _suggest_pixel_size_for_mdoc_mag(mdoc_mag: int, session_plan) -> Optional[Dict[str, Any]]:
+    """
+    Given a magnification value from the MDOC, look up what the pixel size
+    would be using the session's scope and camera.
+
+    Searches Magnification records matching the scope and nominal_mag,
+    then finds the latest CalibratedPixelSize for that mag + camera.
+
+    Returns:
+        {'pixel_size': float, 'nominal_mag': int} or None
+    """
+    mags = Magnification.objects.filter(
+        scope=session_plan.scope,
+        nominal_mag=mdoc_mag,
+    )
+    if not mags.exists():
+        return None
+
+    for mag in mags:
+        cal = (
+            CalibratedPixelSize.objects.filter(
+                mag=mag,
+                camera=session_plan.camera,
+            )
+            .order_by("-calibrated_at")
+            .first()
+        )
+        if cal:
+            return {
+                "pixel_size": cal.pixel_spacing,
+                "nominal_mag": mag.nominal_mag,
+            }
+    return None
 
 
 @require_http_methods(["GET"])
@@ -126,11 +165,22 @@ def get_session_defaults(request, session_id: str = None) -> JsonResponse:
         try:
             session = MsiSession.objects.get(name=session_id)
 
-            # TODO: Extract actual values from session metadata
-            # For now, provide reasonable defaults
+            # Populate pixel_size from calibrated pixel size if available
+            pixel_size = session.get_calibrated_pixel_size()
+            if pixel_size is not None:
+                defaults["pixel_size"] = pixel_size
+
             session_info = {
                 "user": session.user.username if session.user else None,
             }
+
+            # Add magnification info for transparency
+            if session.magnification:
+                session_info["magnification"] = {
+                    "nominal_mag": session.magnification.nominal_mag,
+                    "scope": session.magnification.scope.name,
+                    "pixel_size": pixel_size,
+                }
 
             # Add project info if available
             if session.project:
@@ -162,11 +212,13 @@ def get_session_defaults(request, session_id: str = None) -> JsonResponse:
         except MsiSession.DoesNotExist:
             pass
 
-    return JsonResponse({
-        'success': True,
-        'session_info': session_info,
-        'defaults': defaults,
-    })
+    return JsonResponse(
+        {
+            "success": True,
+            "session_info": session_info,
+            "defaults": defaults,
+        }
+    )
 
 
 @require_http_methods(["GET"])
@@ -185,11 +237,75 @@ def get_processor_metadata(request) -> JsonResponse:
             "docs_url": "https://docs.example.com/aretomo3"
         }
     """
-    return JsonResponse({
-        'success': True,
-        'metadata': {
-            'help_text': 'AreTomo3 is awesome',
-            'category': 'Pre-processing',
-            'docs_url': 'https://github.com/czimaginginstitute/AreTomo3',
-        },
-    })
+    return JsonResponse(
+        {
+            "success": True,
+            "metadata": {
+                "help_text": "AreTomo3 is awesome",
+                "category": "Pre-processing",
+                "docs_url": "https://github.com/czimaginginstitute/AreTomo3",
+            },
+        }
+    )
+
+
+@require_http_methods(["GET"])
+def validate_session(request, session_id: str = None) -> JsonResponse:
+    """
+    Validate session data by cross-referencing MDOC magnification on cluster.
+
+    This is separated from get_session_defaults because the SSH round-trip
+    to read the MDOC file is slow (~7s) and shouldn't block form loading.
+
+    Args:
+        request: Django HTTP request
+        session_id: MSI session ID
+
+    Returns:
+        JsonResponse with validation results nested under magnification.pixel_size_validation
+    """
+    if not session_id:
+        return JsonResponse({"success": True, "validation": {}})
+
+    try:
+        session = MsiSession.objects.get(name=session_id)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({"success": True, "validation": {}})
+
+    validation = {}
+    try:
+        mdoc_result = mdoc_reader.read_mdoc_magnification(session_id)
+        if mdoc_result["success"]:
+            mdoc_mag = mdoc_result["magnification"]
+            validation["mdoc_magnification"] = mdoc_mag
+            validation["mdoc_file"] = mdoc_result["mdoc_file"]
+
+            if session.magnification:
+                db_mag = session.magnification.nominal_mag
+                if mdoc_mag != db_mag:
+                    validation["mismatch"] = True
+                    validation["warning"] = (
+                        f"MDOC magnification ({mdoc_mag}) does not match "
+                        f"session magnification ({db_mag}). "
+                        f"The pixel size may be incorrect."
+                    )
+                    suggested = _suggest_pixel_size_for_mdoc_mag(mdoc_mag, session.session_plan)
+                    if suggested:
+                        validation["suggested_pixel_size"] = suggested["pixel_size"]
+                        validation["suggested_magnification"] = suggested["nominal_mag"]
+                else:
+                    validation["mismatch"] = False
+            else:
+                validation["missing"] = True
+                validation["warning"] = f"Session has no magnification set. MDOC reports {mdoc_mag}x."
+                suggested = _suggest_pixel_size_for_mdoc_mag(mdoc_mag, session.session_plan)
+                if suggested:
+                    validation["suggested_pixel_size"] = suggested["pixel_size"]
+                    validation["suggested_magnification"] = suggested["nominal_mag"]
+        else:
+            validation["error"] = mdoc_result["error"]
+    except Exception as e:
+        logger.warning(f"Failed to read MDOC magnification: {e}")
+        validation["error"] = str(e)
+
+    return JsonResponse({"success": True, "validation": validation})

@@ -105,6 +105,7 @@ from .execution_api import (
     lookup_execution_ids,
     preview_script,
     validate_processor_parameters,
+    validate_processor_session,
 )
 
 # Import and re-export job API views
@@ -239,4 +240,5 @@ __all__ = [
     "lookup_execution_ids",
     "preview_script",
     "validate_processor_parameters",
+    "validate_processor_session",
 ]

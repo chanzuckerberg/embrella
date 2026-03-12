@@ -1,5 +1,10 @@
 import { API, DJANGO_URL, MOCKED_APIS, MOCKED_POST_APIS, POST_API } from '../constants/api';
 
+function getCsrfToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export async function fetchResource(requestURL: string): Promise<Response> {
   const mockResponse = MOCKED_APIS[new URL(requestURL).pathname as API];
   if (mockResponse !== undefined) {
@@ -35,11 +40,13 @@ export async function postResource(requestURL: string, body: Record<string, unkn
     }) as Promise<Response>;
   }
 
+  const csrfToken = getCsrfToken();
   const response = await fetch(requestURL, {
     method: 'POST',
-    credentials: 'include', // Include cookies in the request
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfToken && { 'X-CSRFToken': csrfToken }),
     },
     body: JSON.stringify(body),
   });
@@ -54,10 +61,12 @@ export async function postResource(requestURL: string, body: Record<string, unkn
 }
 
 export const patchResource = async (url: string, body: object): Promise<Response> => {
+  const csrfToken = getCsrfToken();
   return fetch(url, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfToken && { 'X-CSRFToken': csrfToken }),
     },
     credentials: 'include',
     body: JSON.stringify(body),

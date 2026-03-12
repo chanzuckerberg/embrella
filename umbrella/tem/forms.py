@@ -9,7 +9,7 @@ class ReserveMsiSessionForm(ModelForm):
 
     class Meta:
         model = MsiSession
-        fields = ["session_plan", "project", "grid", "user"]
+        fields = ["session_plan", "project", "grid", "user", "magnification"]
 
     def __init__(self, **kwargs):
         super(ReserveMsiSessionForm, self).__init__(**kwargs)
@@ -27,7 +27,7 @@ class MsiSessionForm(ModelForm):
 class UpdateNotesForm(ModelForm):
     class Meta:
         model = MsiSession
-        fields = ["atlas_session", "notes", "project"]
+        fields = ["atlas_session", "notes", "project", "magnification"]
 
 
 class ReserveScreenSessionGroupForm(ModelForm):
