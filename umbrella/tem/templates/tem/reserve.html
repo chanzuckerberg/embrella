@@ -2,251 +2,255 @@
 {% block title %}Session Creation{% endblock %}
 {% block header %}Create TEM Multi-Scaled Imaging Session{% endblock %}
 {% block form %}
-    <form id="sessionForm" action="{% url 'tem:create_msi_name' %}" method="post">
-      {% csrf_token %}
-      <div class="row form-group">
-        <div class="col-md-12">
-          <label for="session_plan">Session Plan</label>
-          <select id="session_plan" name="session_plan" required>
-            {% for option in form.session_plan.field.choices %}
-              <option value="{{ option.0 }}" {% if option.0 == form.session_plan.value %}selected{% endif %}>
-                {{ option.1 }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
+<form id="sessionForm">
+  <div class="row form-group">
+    <div class="col-md-12">
+      <label for="session_plan">Session Plan</label>
+      <select id="session_plan" name="session_plan" required>
+        <option value="">Loading...</option>
+      </select>
+    </div>
+  </div>
+  <div class="row form-group">
+    <div class="col-md-12">
+      <label for="project">Project</label>
+      <div class="mb-1">
+        <select id="project" name="project" required style="width: 100%;">
+          <option value="">Loading...</option>
+        </select>
       </div>
-      <div class="row form-group">
-        <div class="col-md-12">
-          <label for="project">Project</label>
-          <div class="mb-1">
-            <select id="project" name="project" required style="width: 100%;">
-              {% for option in form.project.field.choices %}
-                <option value="{{ option.0 }}" {% if option.0 == form.project.value %}selected{% endif %}>
-                  {{ option.1 }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="text-right">
-            <button type="button" class="btn btn-link text-primary p-0" id="addProjectBtn" title="Create New Project">
-              + Create New Project
-            </button>
-          </div>
-        </div>
+      <div class="text-right">
+        <button type="button" class="btn btn-link text-primary p-0" id="addProjectBtn" title="Create New Project">
+          + Create New Project
+        </button>
       </div>
-      <div class="row form-group">
-        <div class="col-md-6">
-          <label for="user">Filter by user</label>
-          <select id="user" name="user">
-            {% for option in form.user.field.choices %}
-              <option value="{{ option.0 }}" {% if option.0 == form.user.value %}selected{% endif %}>
-                {{ option.1 }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label for="grid">Grid</label>
-          <select id="grid" name="grid" required>
-            {% for option in form.grid.field.choices %}
-              <option value="{{ option.0 }}" {% if option.0 == form.grid.value %}selected{% endif %}>
-                {{ option.1 }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div class="row form-group">
-        <div class="col-md-12">
-            <input type="submit" value="Next">
-        </div>
-      </div>
-    </form>
+    </div>
+  </div>
+  <div class="row form-group">
+    <div class="col-md-6">
+      <label for="user">User</label>
+      <select id="user" name="user" required>
+        <option value="">Loading...</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label for="grid">Grid</label>
+      <select id="grid" name="grid" required>
+        <option value="">Loading...</option>
+      </select>
+    </div>
+  </div>
+  <div class="row form-group">
+    <div class="col-md-12">
+      <label for="magnification">Magnification</label>
+      <select id="magnification" name="magnification">
+        <option value="">---------</option>
+      </select>
+    </div>
+  </div>
+  <div class="row form-group">
+    <div class="col-md-12">
+      <label for="name">Session Name</label>
+      <input type="text" id="name" name="name" class="form-control" placeholder="Loading..." required>
+    </div>
+  </div>
+  <div class="row form-group">
+    <div class="col-md-12">
+      <input type="submit" value="Create Session" id="submitBtn">
+    </div>
+  </div>
+</form>
 {% endblock %}
 
 {% block endscript %}
-  <!-- Include Select2 CSS and JS files -->
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  
-  <script>
-    $(document).ready(function() {
-      // Load all grids and set default grid on page load
-      function loadAllGrids() {
-        $.ajax({
-          url: "{% url 'get_grids_by_user' %}",
-          success: function(data) {
-            populateGridDropdown(data);
-          }
-        });
-      }
+<!-- Include Select2 CSS and JS files -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-      // Set default session plan
-      function setDefaultSessionPlan() {
-        const targetText = "tem tomography collected with tomo5 on krios1 and falcon4i";
-        const $sessionPlan = $('#session_plan option');
-        
-        $sessionPlan.each(function() {
+<script>
+  $(document).ready(function () {
+    var csrfToken = '{{ csrf_token }}';
+
+    // Load form options (session plans + projects) from v1 API
+    $.ajax({
+      url: '/tem/v1/sessions/form-options/',
+      success: function (data) {
+        var $plan = $('#session_plan');
+        $plan.empty().append('<option value="">Select a session plan</option>');
+        $.each(data.session_plans, function (i, item) {
+          $plan.append('<option value="' + item.id + '">' + item.name + '</option>');
+        });
+        // Set default session plan
+        var targetText = "tem tomography collected with tomo5 on krios1 and falcon4i";
+        $plan.find('option').each(function () {
           if ($(this).text().trim().toLowerCase() === targetText.toLowerCase()) {
-            $('#session_plan').val($(this).val());
-            return false; // Break the loop once found
+            $plan.val($(this).val()).trigger('change');
+            return false;
           }
         });
-      }
-      
-      // Call the function to set default session plan
-      setDefaultSessionPlan();
-      
-      // Load all grids on page load
-      loadAllGrids();
-      
-      // Load grids for a specific user
-      function loadGridsForUser(userId) {
-        $.ajax({
-          url: "{% url 'get_grids_by_user' %}",
-          data: {
-            'user_id': userId
-          },
-          success: function(data) {
-            populateGridDropdown(data);
-          }
-        });
-      }
 
-      // Populate the grid dropdown and set default if available
-      function populateGridDropdown(data) {
-        var $grid = $('#grid');
-        $grid.empty();
-        
-        // Add all grid options and check for default
-        var defaultGridId = null;
-        $.each(data, function(index, item) {
-          var isDefault = item.is_default || false;
-          if (isDefault) {
-            defaultGridId = item.id;
-          }
-          
-          // Format the grid name to include ID and date
-          var formattedName = item.display_name || item.name;
-          
-          // // Add the creation date if available
-          // if (item.create_on) {
-          //   // Format the date if needed or use as is
-          //   formattedName += ' from ' + item.create_on;
-          // }
-          
-          $grid.append('<option value="' + item.id + '">' + formattedName + '</option>');
+        var $project = $('#project');
+        $project.empty().append('<option value="">Select a project</option>');
+        $.each(data.projects, function (i, item) {
+          $project.append('<option value="' + item.id + '">' + item.name + '</option>');
         });
-        
-        // Set the default grid if one is found
-        if (defaultGridId !== null) {
-          $grid.val(defaultGridId);
-        } else {
-          $grid.prepend('<option value="">Select a grid</option>');
-          $grid.val('');
-        }
-        
-        // Initialize or refresh Select2 on the grid dropdown
-        if ($grid.hasClass('select2-hidden-accessible')) {
-          $grid.select2('destroy');
-        }
-        
-        $grid.select2({
-          placeholder: "Search for a grid...",
-          allowClear: true,
-          width: '100%',
-          matcher: customMatcher
+      }
+    });
+
+    // Load suggested name from v1 API
+    $.ajax({
+      url: '/tem/v1/sessions/suggest-name/',
+      success: function (data) {
+        $('#name').val(data.suggested_name).attr('placeholder', '');
+      }
+    });
+
+    // Load users and pre-select current user
+    $.ajax({
+      url: '/api/list/all/users/',
+      success: function (data) {
+        var $user = $('#user');
+        $user.empty();
+        var users = data.users || data.results || data;
+        $.each(users, function (i, item) {
+          var label = item.full_name || item.username || (item.first_name + ' ' + item.last_name);
+          $user.append('<option value="' + item.id + '">' + label + '</option>');
         });
-        
-        // Trigger change event so any dependent elements update
-        $grid.trigger('change');
+        // Pre-select the logged-in user
+        var currentUserId = '{{ request.user.id }}';
+        if (currentUserId) {
+          $user.val(currentUserId);
+        }
       }
-      
-      // Custom matcher function to improve search functionality
-      function customMatcher(params, data) {
-        // If there are no search terms, return all of the data
-        if ($.trim(params.term) === '') {
-          return data;
-        }
-        
-        // Do not display the item if there is no 'text' property
-        if (typeof data.text === 'undefined') {
-          return null;
-        }
-        
-        // `params.term` should be the term that is used for searching
-        // `data.text` is the text that is displayed for the data object
-        if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
-          return data;
-        }
-        
-        // Return `null` if the term should not be displayed
-        return null;
+    });
+
+    // Load all grids on page load
+    $.ajax({
+      url: '/get_grids_by_user/',
+      success: function (data) {
+        populateGridDropdown(data);
       }
-      
-      // Handle user dropdown change
-      $('#user').change(function() {
-        var userId = $(this).val();
-        loadGridsForUser(userId);
+    });
+
+    function populateGridDropdown(data) {
+      var $grid = $('#grid');
+      $grid.empty();
+      var defaultGridId = null;
+      $.each(data, function (index, item) {
+        if (item.is_default) defaultGridId = item.id;
+        var name = item.display_name || item.name;
+        $grid.append('<option value="' + item.id + '">' + name + '</option>');
       });
-
-      // Add project popup functionality
-      $('#addProjectBtn').click(function() {
-        // Use a relative URL, or build it from the current domain
-        var adminUrl = window.location.origin + '/admin/projects/project/add/';
-        var popup = window.open(adminUrl, 'CreateProject', 'width=800,height=600,resizable=yes,scrollbars=yes');
-        
-        // Check if popup was created successfully
-        if (popup) {
-          // Poll for popup being closed
-          var popupChecker = setInterval(function() {
-            if (popup.closed) {
-              clearInterval(popupChecker);
-              // Refresh the projects dropdown
-              refreshProjects();
-            }
-          }, 500);
-        } else {
-          alert('Please allow popups for this site to create a new project.');
-        }
-      });
-      
-      // Function to refresh projects dropdown
-      function refreshProjects() {
-        $.ajax({
-          url: "{% url 'tem:get_projects' %}",  // You'll need to create this view
-          success: function(data) {
-            var $project = $('#project');
-            var selectedValue = $project.val(); // Store the current selection
-            $project.empty();
-            
-            $.each(data, function(index, item) {
-              $project.append('<option value="' + item.id + '">' + item.name + '</option>');
-            });
-            
-            // Try to restore the previous selection if it exists
-            if (selectedValue) {
-              $project.val(selectedValue);
-            }
-          }
-        });
+      if (defaultGridId) {
+        $grid.val(defaultGridId);
+      } else {
+        $grid.prepend('<option value="">Select a grid</option>').val('');
       }
+      if ($grid.hasClass('select2-hidden-accessible')) $grid.select2('destroy');
+      $grid.select2({ placeholder: "Search for a grid...", allowClear: true, width: '100%' });
+    }
 
-      $('#sessionForm').submit(function(event) {
-        var sessionPlan = $('#session_plan').val();
-        var project = $('#project').val();
-        var grid = $('#grid').val();
-
-        if (!sessionPlan || !project || !grid) {
-          event.preventDefault();
-          $('#warningMessage').show();
-        } else {
-          $('#warningMessage').hide();
+    // Load magnifications from v1 API when session plan changes
+    $('#session_plan').change(function () {
+      var planId = $(this).val();
+      var $mag = $('#magnification');
+      $mag.empty().append('<option value="">---------</option>');
+      if (!planId) return;
+      $.ajax({
+        url: '/tem/v1/magnifications/',
+        data: { session_plan_id: planId },
+        success: function (data) {
+          $.each(data, function (i, item) {
+            $mag.append('<option value="' + item.id + '">' + item.scope__name + ' ' + item.nominal_mag + 'x (' + item.mode + ')</option>');
+          });
         }
       });
     });
-  </script>
+
+    // Add project popup
+    $('#addProjectBtn').click(function () {
+      var popup = window.open(window.location.origin + '/admin/projects/project/add/', 'CreateProject', 'width=800,height=600,resizable=yes,scrollbars=yes');
+      if (popup) {
+        var checker = setInterval(function () {
+          if (popup.closed) {
+            clearInterval(checker);
+            // Reload form options to pick up new project
+            $.ajax({
+              url: '/tem/v1/sessions/form-options/',
+              success: function (data) {
+                var $project = $('#project');
+                var prev = $project.val();
+                $project.empty().append('<option value="">Select a project</option>');
+                $.each(data.projects, function (i, item) {
+                  $project.append('<option value="' + item.id + '">' + item.name + '</option>');
+                });
+                if (prev) $project.val(prev);
+              }
+            });
+          }
+        }, 500);
+      }
+    });
+
+    // Submit form via v1 API
+    $('#sessionForm').submit(function (event) {
+      event.preventDefault();
+
+      var sessionPlanId = $('#session_plan').val();
+      var projectId = $('#project').val();
+      var gridId = $('#grid').val();
+      var name = $('#name').val().trim();
+      var magnificationId = $('#magnification').val() || null;
+
+      if (!sessionPlanId || !projectId || !gridId || !name) {
+        $('#warningMessage').text('Please fill out all required fields.').show();
+        return;
+      }
+
+      var payload = {
+        name: name,
+        session_plan_id: parseInt(sessionPlanId),
+        project_id: parseInt(projectId),
+        grid_id: parseInt(gridId),
+      };
+      if (magnificationId) {
+        payload.magnification_id = parseInt(magnificationId);
+      }
+
+      $('#submitBtn').prop('disabled', true).val('Creating...');
+      $('#warningMessage').hide();
+
+      $.ajax({
+        url: '/tem/v1/sessions/',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        headers: { 'X-CSRFToken': csrfToken },
+        success: function (data) {
+          // Redirect to session detail page
+          window.location.href = '/legacy/tem/' + data.id + '/';
+        },
+        error: function (xhr) {
+          $('#submitBtn').prop('disabled', false).val('Create Session');
+          var errors = xhr.responseJSON;
+          if (errors) {
+            var messages = [];
+            $.each(errors, function (field, msgs) {
+              if (Array.isArray(msgs)) {
+                messages.push(field + ': ' + msgs.join(', '));
+              } else if (typeof msgs === 'string') {
+                messages.push(field + ': ' + msgs);
+              }
+            });
+            $('#warningMessage').text(messages.join(' | ')).show();
+          } else {
+            $('#warningMessage').text('An error occurred. Please try again.').show();
+          }
+        }
+      });
+    });
+  });
+</script>
 {% endblock %}
 </body>
 </html>

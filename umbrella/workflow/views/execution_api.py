@@ -1521,6 +1521,36 @@ def get_processor_metadata(request, processor_name: str):
         )
 
 
+@require_http_methods(["GET"])
+@login_required
+def validate_processor_session(request, processor_name: str):
+    """
+    Run processor-specific session validation (e.g., MDOC magnification check).
+
+    GET /workflow/v1/processors/<name>/validate-session/?session_id=<id>
+
+    Delegates to processor-specific views module if available.
+    This is separated from defaults to avoid blocking form loading with slow I/O.
+    """
+    try:
+        processor = get_processor(processor_name)
+        session_id = request.GET.get("session_id")
+
+        if processor.has_custom_views():
+            views_module = processor.get_views_module()
+            if views_module and hasattr(views_module, "validate_session"):
+                return views_module.validate_session(request, session_id)
+
+        return JsonResponse({"success": True, "validation": {}})
+
+    except ValueError as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=404)
+
+    except Exception as e:
+        logger.error(f"Error validating processor session: {e}", exc_info=True)
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
 @extend_schema(
     methods=["GET"],
     description="""Returns MSI sessions and associated run numbers for a given processing plan type.

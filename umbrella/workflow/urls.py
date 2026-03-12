@@ -80,6 +80,11 @@ urlpatterns = [
     ),
     path("v1/processors/<str:processor_name>/defaults/", views.get_processor_defaults, name="get_processor_defaults"),
     path("v1/processors/<str:processor_name>/metadata/", views.get_processor_metadata, name="get_processor_metadata"),
+    path(
+        "v1/processors/<str:processor_name>/validate-session/",
+        views.validate_processor_session,
+        name="validate_processor_session",
+    ),
     # Copick-specific endpoints
     path("v1/processors/copick/runs/", views.get_copick_runs, name="get_copick_runs"),
     path("v1/processors/copick/template_maps/", views.get_copick_template_maps, name="get_copick_template_maps"),
