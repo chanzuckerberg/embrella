@@ -100,6 +100,7 @@ def cleanup_transient_syncer_logs(job_id):
     These action types are only useful for debugging incomplete syncs.
     Once the syncer completes, any remaining ones would be noise.
     """
+    deleted_count = 0
     try:
         deleted_count, _ = SyncerLog.objects.filter(
             job_id=job_id,
@@ -109,6 +110,7 @@ def cleanup_transient_syncer_logs(job_id):
             log.info(f"Cleaned up {deleted_count} transient syncer logs for job {job_id}")
     except Exception as e:
         log.warning(f"Failed to clean up syncer logs for job {job_id}: {e}")
+    return {"deleted_count": deleted_count}
 
 
 def parse_zarr_filename(filename):
@@ -201,7 +203,11 @@ class ProcessSyncer(object):
                 self._log_to_db("stopped", f"Syncer {status}: {error_message or 'Normal termination'}")
                 # Clean up transient logs on successful completion
                 if status == "completed" and self.job_id:
-                    cleanup_transient_syncer_logs(self.job_id)
+                    cleanup = cleanup_transient_syncer_logs(self.job_id)
+                    self._log_to_db(
+                        "stopped",
+                        f"Removed {cleanup['deleted_count']} transient syncer logs for job {self.job_id}",
+                    )
             except Exception as e:
                 log.warning(f"Failed to mark syncer as {status}: {e}")
 
