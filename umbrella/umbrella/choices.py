@@ -11,6 +11,7 @@ CANE_COLORS = [
     ('FFC0CB', 'Pink'),
     ('996699','Purple'), # RGB=(153,102,153)
     ('E5C100','Gold'), # RGB=(229,193,0)
+    ('dc6d0e','Orange'),
 ]
 
 PUCK_COLORS = [
