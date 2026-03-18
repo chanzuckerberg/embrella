@@ -93,11 +93,11 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
             # Clean up transient logs now that syncer is complete
             from workflow.syncers import cleanup_transient_syncer_logs
 
-            cleanup_transient_syncer_logs(job_id)
+            cleanup = cleanup_transient_syncer_logs(job_id)
             return {
                 "success": True,
                 "action": "stopped",
-                "message": "Job completed, syncer stopped",
+                "message": f"Job completed, syncer stopped. Removed {cleanup['deleted_count']} transient syncer logs for job {job_id}",
                 "session": session_name,
                 "run_id": run_id,
                 "job_id": job_id,
