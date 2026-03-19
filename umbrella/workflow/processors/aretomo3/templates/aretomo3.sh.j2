@@ -87,7 +87,7 @@ run_aretomo3_gpu() {
     ml cuda
 
     # AreTomo3 command with fixed flags and schema-generated variable flags
-    /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.8_Cuda13_02-08-2026 \
+    /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.9_Cuda13_03-18-2026 \
         -Gain ${gain_fn} \
         -OutDir ${out_path} \
         -Gpu {% for i in range(slurm_component_0_gpus) -%}{{ i }}{% if not loop.last %},{% endif %}{% endfor %} \
