@@ -104,6 +104,7 @@ class DenoisETProcessor(BaseProcessor):
         template_vars['control_vars'] = context['control_vars']
         template_vars['cli_args'] = context['cli_args']
         template_vars['slurm_directives'] = context.get('slurm_directives', [])
+        template_vars['cluster'] = run_context.cluster_id
 
         # Render template with schema-driven variables
         script = template.render(**template_vars)

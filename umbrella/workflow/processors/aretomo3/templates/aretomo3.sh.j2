@@ -14,7 +14,9 @@
 #SBATCH --mail-type=ALL
 #SBATCH -o /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_aretomo3.out
 #SBATCH -e /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_aretomo3.err
-
+{% if cluster == "czii" -%}
+#SBATCH --qos=embrella
+{% endif %}
 #SBATCH hetjob
 
 # Component 1: Reformat and Metrics CPU Processing
