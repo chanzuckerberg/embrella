@@ -12,10 +12,12 @@ import {
 } from '@app/common/components/EntityTable/utils/linkUtils';
 import { LinkCellProps } from '@app/common/components/EntityTable/types';
 import { GridData } from '../types';
+import { LabelChip } from '../components/LabelEditor/LabelChip';
 
 export const GRID_COLUMN_IDS = {
   CRYOGRID: 'cryogrid',
   SPECIMEN: 'specimen',
+  LABELS: 'labels',
   FREEZING_SESSION: 'freezingSession',
   MSI_SESSION: 'msiSession',
   PROJECT: 'project',
@@ -44,6 +46,19 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     cell: getLinkCellListFromCellContext,
     enableSorting: false,
     header: humanize(GRID_COLUMN_IDS.SPECIMEN),
+  },
+  {
+    id: GRID_COLUMN_IDS.LABELS,
+    accessorFn: (rowData: EntityDataTypes): string => {
+      const { labels } = rowData as GridData;
+      return labels?.map((l) => l.name).join(', ') ?? '';
+    },
+    cell: ({ row }) => {
+      const data = row.original as GridData;
+      return <LabelChip gridId={data.grid.id} labels={data.labels ?? []} />;
+    },
+    enableSorting: false,
+    header: 'Labels',
   },
   {
     id: GRID_COLUMN_IDS.MSI_SESSION,

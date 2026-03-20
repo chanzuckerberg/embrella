@@ -20,7 +20,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 
 interface Suggestion {
   value: string;
-  category: 'grid' | 'project' | 'user' | 'sample' | 'msiSession';
+  category: 'grid' | 'project' | 'user' | 'sample' | 'msiSession' | 'label';
 }
 
 interface FilterTag {
@@ -34,6 +34,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   user: 'User',
   sample: 'Sample',
   msiSession: 'MSI',
+  label: 'Label',
   search: 'Search',
 };
 
@@ -43,6 +44,7 @@ const QUALIFIER_MAP: Record<string, string> = {
   'sample:': 'sample',
   'grid:': 'grid',
   'session:': 'msiSession',
+  'label:': 'label',
 };
 
 const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -51,10 +53,11 @@ const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string
   sample: { bg: '#e8f5e9', border: '#a5d6a7', text: '#2e7d32' },
   grid: { bg: '#fff3e0', border: '#ffcc80', text: '#e65100' },
   msiSession: { bg: '#e0f7fa', border: '#80deea', text: '#00695c' },
+  label: { bg: '#fff8e1', border: '#ffd54f', text: '#f57f17' },
   search: { bg: '#f5f5f5', border: '#bdbdbd', text: '#424242' },
 };
 
-const SEARCHBAR_CATEGORIES = ['project', 'user', 'sample', 'msiSession', 'search'];
+const SEARCHBAR_CATEGORIES = ['project', 'user', 'sample', 'msiSession', 'label', 'search'];
 
 /** Map frontend-only categories to the backend filter category they dispatch as. */
 const CATEGORY_DISPATCH_MAP: Record<string, string> = {
@@ -228,7 +231,7 @@ export const SearchBar = () => {
     }
   };
 
-  const SUGGESTION_ORDER = ['project', 'user', 'sample', 'msiSession', 'grid'];
+  const SUGGESTION_ORDER = ['project', 'user', 'sample', 'msiSession', 'label', 'grid'];
 
   const groupedSuggestions = suggestions.reduce(
     (acc, s) => {

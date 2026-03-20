@@ -30,6 +30,7 @@ import {
 import styles from '../GridLogging.module.css';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { MoveGrid } from '../Grid/MoveGrid';
+import { LabelChip } from '@app/components/GridsView/components/LabelEditor/LabelChip';
 
 interface GridDetailsProps {
   selectedPuck: PuckList | null;
@@ -63,6 +64,7 @@ const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
   blotTime: data.parameters?.blot_time || 0,
   blotForce: data.parameters?.blot_force || 0,
   blotDistance: data.parameters?.blot_distance || 0,
+  labels: data.labels ?? [],
 });
 
 export const GridDetails: React.FC<GridDetailsProps> = ({
@@ -560,6 +562,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   type="number"
                   sx={!isEditMode ? disabledTextFieldStyles : {}}
                 />
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500, minWidth: 50 }}>
+                  Labels
+                </Typography>
+                {selectedGridId != null && <LabelChip gridId={selectedGridId} labels={formData.labels} />}
               </Box>
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
