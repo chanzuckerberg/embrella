@@ -49,7 +49,7 @@ export const GRID_FILTER_CONFIGS: GridFilterConfig[][] = [
     {
       filterCategory: 'status',
       filterId: GridFilterId.STATUS,
-      label: 'Status',
+      label: 'Grid Status',
     },
   ],
 ];
