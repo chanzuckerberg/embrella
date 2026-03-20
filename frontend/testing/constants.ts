@@ -251,6 +251,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<TestFilterCategory> = {
         selected: false,
       },
     ],
+    search: [],
     status: [
       {
         name: 'baz bar foo barbaz',

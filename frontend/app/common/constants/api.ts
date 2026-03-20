@@ -11,6 +11,7 @@ export enum API {
   USER = '/user',
   GRIDS = '/cryo_grids/v1/grids',
   GRIDS_FILTERS_LIST = '/cryo_grids/v1/filterlist',
+  GRIDS_SEARCH_SUGGESTIONS = '/cryo_grids/v1/search_suggestions',
   TOMOGRAMS = '/processes/v1/tomograms',
   TOMOGRAMS_FILTERLIST = '/processes/v1/filterlist',
   ANNOTATIONS = '/processes/v1/annotations',

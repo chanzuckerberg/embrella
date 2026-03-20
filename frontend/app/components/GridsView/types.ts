@@ -44,6 +44,7 @@ export type GridFilterCategory =
   | 'puck'
   | 'sample'
   | 'screeningSession'
+  | 'search'
   | 'status'
   | 'user';
 
