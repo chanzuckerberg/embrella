@@ -26,6 +26,7 @@ from cryo_grids.viewsets import (
     CryoGridViewSet,
     FreezingSessionViewSet,
     GridLoggingChoicesViewSet,
+    LabelViewSet,
     ProjectLeaderViewSet,
     PuckViewSet,
     SampleViewSet,
@@ -68,6 +69,7 @@ router.register(r"api/list/samples", SampleViewSet, basename="sample")
 router.register(r"api/list/freezing-sessions", FreezingSessionViewSet, basename="freezing-session")
 router.register(r"api/list/grids", CryoGridViewSet, basename="grid")
 router.register(r"api/list/project-leaders", ProjectLeaderViewSet, basename="project-leader")
+router.register(r"api/list/labels", LabelViewSet, basename="label")
 
 import mimetypes
 

@@ -15,11 +15,21 @@ from cryo_grids.models import (
     Cane,
     CryoGrid,
     CryoGridBox,
+    Label,
     PlungeFreezingSession,
     Puck,
     Sample,
     Specimen,
 )
+
+
+class LabelSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+
+    class Meta:
+        model = Label
+        fields = ['id', 'name', 'color', 'created_by', 'created_by_name', 'created_at']
+        read_only_fields = ['id', 'created_by', 'created_by_name', 'created_at']
 
 
 class PuckSerializer(serializers.ModelSerializer):
@@ -241,12 +251,15 @@ class GridDetailsSerializer(serializers.ModelSerializer):
     # Parameters
     parameters = serializers.SerializerMethodField()
 
+    # Labels
+    labels = serializers.SerializerMethodField()
+
     class Meta:
         model = CryoGrid
         fields = [
             'grid_name', 'user', 'notes', 'clipped', 'trashed',
             'location', 'freezing_session', 'specimen', 'project',
-            'position_in_box', 'copy_number', 'parameters',
+            'position_in_box', 'copy_number', 'parameters', 'labels',
         ]
 
     def get_grid_name(self, obj):
@@ -310,6 +323,12 @@ class GridDetailsSerializer(serializers.ModelSerializer):
             "blot_force": obj.blot_force,
             "blot_distance": obj.blot_distance,
         }
+
+    def get_labels(self, obj):
+        return [
+            {"id": label.id, "name": label.name, "color": label.color}
+            for label in obj.labels.all()
+        ]
 
 
 class CryoGridSerializer(serializers.ModelSerializer):

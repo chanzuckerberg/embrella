@@ -24,7 +24,7 @@ from stores.models import Path
 from cryo_grids.models import CryoGridCassette
 
 from .forms import ClearCassetteForm, CopyGridForm, NumberToCopyGridForm
-from .models import CryoGrid, CryoGridBox, Sample, Specimen
+from .models import CryoGrid, CryoGridBox, Label, Sample, Specimen
 from .utils import (
     CassetteModel,
     CryoGridsQueryParams,
@@ -291,6 +291,7 @@ def available_filters(request):
             "msisession",
             "specimen__samples",
             "atlassession__group",
+            "labels",
         )
 
         current_time = now()
@@ -354,6 +355,14 @@ def available_filters(request):
                 .annotate(count=Count("id"))
                 .order_by("sample_temp_name")
                 .values(name=F("sample_temp_name"), count=F("count"))
+            ),
+            "label": list(
+                queryset.annotate(label_temp_name=F("labels__name"))
+                .filter(label_temp_name__isnull=False)
+                .values(label_temp_name=F("label_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("label_temp_name")
+                .values(name=F("label_temp_name"), count=F("count"))
             ),
             "cassette": list(
                 queryset.annotate(cassette_temp_name=F("grid_cassette__name"))
@@ -529,6 +538,7 @@ def get_cryo_grids_details(request):
             .prefetch_related(
                 "msisession",
                 "atlassession__group",
+                "labels",
             )
             .values(
                 "id",
@@ -548,8 +558,11 @@ def get_cryo_grids_details(request):
                 fz_session_datetime=F("freezing_session__datetime"),
                 specimen_uniq_id=F("specimen__id"),
                 screening_session_name=F("atlassession__group__name"),
+                label_id=F("labels__id"),
+                label_name=F("labels__name"),
+                label_color=F("labels__color"),
             )
-            .order_by(sort_order)
+            .order_by(sort_order, '-id')
         )
 
         # Apply custom filters
@@ -622,6 +635,7 @@ def apply_filters(queryset, filters):
         "msiSession": "msisession__name__in",
         "screeningSession": "atlassession__group__name__in",
         "status": "trashed__in",
+        "label": "labels__name__in",
     }
 
     q_filters = Q()
@@ -670,6 +684,7 @@ def apply_filters(queryset, filters):
                         | Q(user__username__icontains=search_term)
                         | Q(specimen__samples__name__icontains=search_term)
                         | Q(msisession__name__icontains=search_term)
+                        | Q(labels__name__icontains=search_term)
                     )
             if search_q:
                 filter_q_objects.append(search_q)
@@ -747,6 +762,16 @@ def search_suggestions(request):
         if name:
             suggestions.append({"value": name, "category": "msiSession"})
 
+    # Label names
+    label_names = (
+        Label.objects.filter(name__icontains=term)
+        .values_list("name", flat=True)
+        .distinct()[:limit_per_category]
+    )
+    for name in label_names:
+        if name:
+            suggestions.append({"value": name, "category": "label"})
+
     return JsonResponse({"suggestions": suggestions[:20]})
 
 
@@ -768,10 +793,21 @@ def format_queryset_results(queryset):
                 "freezingSession": format_freezing_session(item).model_dump(),
                 "screeningSession": item["screening_session_name"],
                 "msiSession": [],
+                "labels": [],
             }
         # Attach MSI session
         if item["msisession_id"]:
             add_msi_session(formatted_result[grid_id]["msiSession"], item)
+
+        # Attach label
+        if item.get("label_id"):
+            existing_label_ids = {l["id"] for l in formatted_result[grid_id]["labels"]}
+            if item["label_id"] not in existing_label_ids:
+                formatted_result[grid_id]["labels"].append({
+                    "id": item["label_id"],
+                    "name": item["label_name"],
+                    "color": item["label_color"],
+                })
 
     return formatted_result
 

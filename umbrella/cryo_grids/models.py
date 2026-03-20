@@ -150,6 +150,55 @@ class Specimen(models.Model):
         return f"Specimen ({sample_names})" if sample_names else "Specimen (no samples)"
 
 
+LABEL_COLORS = [
+    '#e53935',  # red
+    '#d81b60',  # pink
+    '#8e24aa',  # purple
+    '#5e35b1',  # deep purple
+    '#3949ab',  # indigo
+    '#1e88e5',  # blue
+    '#039be5',  # light blue
+    '#00897b',  # teal
+    '#43a047',  # green
+    '#7cb342',  # light green
+    '#f4511e',  # deep orange
+    '#6d4c41',  # brown
+    '#546e7a',  # blue grey
+    '#fb8c00',  # orange
+    '#fdd835',  # yellow
+    '#212121',  # black
+    '#757575',  # grey
+]
+
+
+def random_label_color():
+    import random
+    return random.choice(LABEL_COLORS)
+
+
+class Label(models.Model):
+    name = models.CharField(max_length=25, unique=True)
+    color = models.CharField(max_length=7, default=random_label_color, help_text='Hex color like #ff5722')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_labels')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class GridLabel(models.Model):
+    grid = models.ForeignKey('CryoGrid', on_delete=models.CASCADE)
+    label = models.ForeignKey(Label, on_delete=models.CASCADE)
+    added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='added_grid_labels')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['grid', 'label']
+
+    def __str__(self):
+        return f'{self.label.name} on {self.grid}'
+
+
 class CryoGrid(models.Model):
     create_on = models.DateField(auto_now_add=True)
     updated_on = models.DateField(auto_now=True)
@@ -170,6 +219,7 @@ class CryoGrid(models.Model):
     blot_force = models.FloatField(default=0.0, blank=True,null=True,help_text='Blot force')
     blot_distance = models.FloatField(default=0.0, blank=True, null=True, help_text="Blot distance")
     resource_link = models.URLField(max_length=200, blank=True, null=True, help_text='Link to additional resources related to this cryo-grid')
+    labels = models.ManyToManyField(Label, blank=True, through='GridLabel', related_name='grids')
 
     class Meta:
         unique_together = ["name","freezing_session","specimen","copy_number"]

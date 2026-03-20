@@ -38,6 +38,7 @@ class CryoGridsQueryParams(BaseModel):
         "date",
         "freezingSession",
         "search",
+        "label",
     }
 
     @validator("q")
@@ -168,6 +169,7 @@ class FiltersModel(BaseModel):
     msiSession: Optional[List[FilterModel]] = None
     status: Optional[List[FilterModel]] = None
     date: Optional[List[DateRangeModel]] = None
+    label: Optional[List[FilterModel]] = None
 
 
 class ApiResponseModel(BaseModel):
