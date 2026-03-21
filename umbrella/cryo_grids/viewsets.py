@@ -1333,7 +1333,7 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 {
                     "success": True,
                     "message": "Labels updated successfully",
-                    "labels": LabelSerializer(grid.labels.all(), many=True).data,
+                    "labels": LabelSerializer(grid.labels.order_by("gridlabel__added_at"), many=True).data,
                 },
                 status=status.HTTP_200_OK,
             )
