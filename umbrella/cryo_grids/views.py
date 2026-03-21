@@ -24,7 +24,7 @@ from stores.models import Path
 from cryo_grids.models import CryoGridCassette
 
 from .forms import ClearCassetteForm, CopyGridForm, NumberToCopyGridForm
-from .models import CryoGrid, CryoGridBox, Label, Sample, Specimen
+from .models import CryoGrid, CryoGridBox, GridLabel, Label, Sample, Specimen
 from .utils import (
     CassetteModel,
     CryoGridsQueryParams,
@@ -562,7 +562,7 @@ def get_cryo_grids_details(request):
                 label_name=F("labels__name"),
                 label_color=F("labels__color"),
             )
-            .order_by(sort_order, '-id')
+            .order_by(sort_order, "-id")
         )
 
         # Apply custom filters
@@ -764,9 +764,7 @@ def search_suggestions(request):
 
     # Label names
     label_names = (
-        Label.objects.filter(name__icontains=term)
-        .values_list("name", flat=True)
-        .distinct()[:limit_per_category]
+        Label.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit_per_category]
     )
     for name in label_names:
         if name:
@@ -803,11 +801,13 @@ def format_queryset_results(queryset):
         if item.get("label_id"):
             existing_label_ids = {l["id"] for l in formatted_result[grid_id]["labels"]}
             if item["label_id"] not in existing_label_ids:
-                formatted_result[grid_id]["labels"].append({
-                    "id": item["label_id"],
-                    "name": item["label_name"],
-                    "color": item["label_color"],
-                })
+                formatted_result[grid_id]["labels"].append(
+                    {
+                        "id": item["label_id"],
+                        "name": item["label_name"],
+                        "color": item["label_color"],
+                    }
+                )
 
     return formatted_result
 
@@ -1004,6 +1004,11 @@ def _save_copied_grid(old_grid, box, position, number_of_copies=1):
         new_grid.create_on = datetime.today()
         new_grid.updated_on = datetime.today()
         new_grid.save()
+
+        # Copy labels from the original grid
+        for gl in GridLabel.objects.filter(grid=old_grid):
+            GridLabel.objects.create(grid=new_grid, label=gl.label, added_by=gl.added_by)
+
         created_grids.append(new_grid)
 
     return created_grids[0] if len(created_grids) == 1 else created_grids
