@@ -97,6 +97,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
                   startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
                   onClick={() => handleAddGridBox()}
                   size="small"
+                  disabled={!selectedUser}
                 >
                   Add Grid Box
                 </Button>

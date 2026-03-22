@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useContext, useMemo, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -11,6 +11,7 @@ import {
   TextField,
   InputAdornment,
   IconButton,
+  Chip,
 } from '@mui/material';
 import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 import { Button, Icon } from '@czi-sds/components';
@@ -41,6 +42,7 @@ const NUQS_OPTIONS = { history: 'replace' as const, shallow: true, clearOnDefaul
 
 export const GridsLogging: React.FC = () => {
   const [urlState, setUrlState] = useQueryStates(gridLoggingParsers, NUQS_OPTIONS);
+  const [isFilteringByOwner, setIsFilteringByOwner] = useState(true);
   const [isAddPuckDialogOpen, setIsAddPuckDialogOpen] = useState(false);
   const [puckDetailsRefetch, setPuckDetailsRefetch] = useState<() => void>(() => {});
   const [gridDetailsRefetch, setGridDetailsRefetch] = useState<() => void>(() => {});
@@ -49,8 +51,10 @@ export const GridsLogging: React.FC = () => {
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
 
-  // Fetch pucks for the selected user — uses URL state directly for immediate deep-link support
-  const { pucks: pucksData, refetch: refetchPuckList } = useGridLoggingPucksByUser(urlState.user_id ?? undefined);
+  // Fetch pucks — filtered by owner when chip is active, all pucks otherwise
+  const { pucks: pucksData, refetch: refetchPuckList } = useGridLoggingPucksByUser(
+    isFilteringByOwner ? (urlState.user_id ?? undefined) : undefined
+  );
 
   // Also fetch ALL pucks for search purposes
   const { pucks: allPucksData } = useGridLoggingPucksList();
@@ -84,18 +88,25 @@ export const GridsLogging: React.FC = () => {
     return allPucksList.filter((puck) => `CZII-0${puck.name}`.toLowerCase().includes(puckSearchQuery.toLowerCase()));
   }, [pucksList, allPucksList, puckSearchQuery]);
 
-  // Set the current user as default when users are loaded (only if no URL user_id)
+  // Set the current user as default on first load only
+  const hasSetDefaultUser = useRef(false);
   useEffect(() => {
-    if (usersList.length > 0 && currentUser && !urlState.user_id) {
+    if (urlState.user_id) {
+      hasSetDefaultUser.current = true;
+      return;
+    }
+    if (!hasSetDefaultUser.current && usersList.length > 0 && currentUser) {
       const foundUser = usersList.find((u) => String(u.id) === String(currentUser.id));
       if (foundUser) {
         setUrlState({ user_id: foundUser.id });
       }
+      hasSetDefaultUser.current = true;
     }
   }, [usersList, currentUser, urlState.user_id, setUrlState]);
 
-  // Handle user selection - updated for Autocomplete
+  // Handle user selection - re-enables owner filter
   const handleUserChange = (event: React.SyntheticEvent, newValue: UserList | null) => {
+    setIsFilteringByOwner(!!newValue);
     setUrlState({
       user_id: newValue?.id ?? null,
       puck_id: null,
@@ -207,6 +218,7 @@ export const GridsLogging: React.FC = () => {
                   startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
                   onClick={handleAddPuck}
                   size="small"
+                  disabled={!selectedUser}
                 >
                   Add puck
                 </Button>
@@ -237,34 +249,47 @@ export const GridsLogging: React.FC = () => {
                   },
                 }}
               />
+              {!selectedUser && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 0.5 }}>
+                  Select a user to add pucks and grids
+                </Typography>
+              )}
             </Box>
 
             {/* Search box for pucks */}
-            {selectedUser && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 4, mt: -6 }}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Search pucks by name..."
-                  value={puckSearchQuery}
-                  onChange={(e) => setUrlState({ puck_search: e.target.value || null })}
-                  variant="outlined"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Icon sdsIcon="Search" sdsSize="l" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: puckSearchQuery && (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setUrlState({ puck_search: null })} edge="end">
-                          <Icon sdsIcon="XMark" sdsSize="l" />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 4, mt: -6 }}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Search pucks by name..."
+                value={puckSearchQuery}
+                onChange={(e) => setUrlState({ puck_search: e.target.value || null })}
+                variant="outlined"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Icon sdsIcon="Search" sdsSize="l" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: puckSearchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setUrlState({ puck_search: null })} edge="end">
+                        <Icon sdsIcon="XMark" sdsSize="l" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
+
+            {/* Owner filter chip */}
+            {isFilteringByOwner && selectedUser && (
+              <Chip
+                label={`Owner: ${selectedUser.full_name || selectedUser.username}`}
+                onDelete={() => setIsFilteringByOwner(false)}
+                size="small"
+                sx={{ mb: 1 }}
+              />
             )}
 
             {/* Puck Selector Component */}
