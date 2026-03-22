@@ -12,7 +12,7 @@ import {
   InputAdornment,
   IconButton,
 } from '@mui/material';
-import { useSearchParams } from 'next/navigation';
+import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 import { Button, Icon } from '@czi-sds/components';
 import {
   useGridLoggingUserList,
@@ -28,24 +28,29 @@ import { GridBoxInfo } from './GridBox/GridBoxInfo';
 import { GridDetails } from './Grid/GridDetails';
 import { AddPuck } from './Pucks/AddPuck';
 
+const gridLoggingParsers = {
+  user_id: parseAsInteger,
+  puck_id: parseAsInteger,
+  slot_position: parseAsInteger,
+  grid_position: parseAsInteger,
+  grid_id: parseAsInteger,
+  puck_search: parseAsString,
+};
+
+const NUQS_OPTIONS = { history: 'replace' as const, shallow: true, clearOnDefault: true };
+
 export const GridsLogging: React.FC = () => {
-  const [selectedUser, setSelectedUser] = useState<UserList | null>(null);
-  const [selectedPuck, setSelectedPuck] = useState<PuckList | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const [selectedGrid, setSelectedGrid] = useState<number | null>(null);
-  const [selectedGridId, setSelectedGridId] = useState<number | null>(null);
+  const [urlState, setUrlState] = useQueryStates(gridLoggingParsers, NUQS_OPTIONS);
   const [isAddPuckDialogOpen, setIsAddPuckDialogOpen] = useState(false);
   const [puckDetailsRefetch, setPuckDetailsRefetch] = useState<() => void>(() => {});
   const [gridDetailsRefetch, setGridDetailsRefetch] = useState<() => void>(() => {});
   const [gridBoxInfoRefetch, setGridBoxInfoRefetch] = useState<() => void>(() => {});
-  const [puckSearchQuery, setPuckSearchQuery] = useState('');
 
   const { users } = useGridLoggingUserList();
   const currentUser = useContext(UserContext);
-  const searchParams = useSearchParams();
 
-  // Fetch pucks for the selected user
-  const { pucks: pucksData, refetch: refetchPuckList } = useGridLoggingPucksByUser(selectedUser?.id);
+  // Fetch pucks for the selected user — uses URL state directly for immediate deep-link support
+  const { pucks: pucksData, refetch: refetchPuckList } = useGridLoggingPucksByUser(urlState.user_id ?? undefined);
 
   // Also fetch ALL pucks for search purposes
   const { pucks: allPucksData } = useGridLoggingPucksList();
@@ -57,6 +62,20 @@ export const GridsLogging: React.FC = () => {
   const pucksList = useMemo(() => pucksData?.pucks || [], [pucksData]);
   const allPucksList = useMemo(() => allPucksData?.pucks || [], [allPucksData]);
 
+  // Derive objects from URL IDs
+  const selectedUser = useMemo(
+    () => usersList.find((u) => u.id === urlState.user_id) ?? null,
+    [usersList, urlState.user_id]
+  );
+  const selectedPuck = useMemo(
+    () => pucksList.find((p) => p.id === urlState.puck_id) ?? null,
+    [pucksList, urlState.puck_id]
+  );
+  const selectedSlot = urlState.slot_position;
+  const selectedGrid = urlState.grid_position;
+  const selectedGridId = urlState.grid_id;
+  const puckSearchQuery = urlState.puck_search ?? '';
+
   // Filter pucks based on search query
   const filteredPucksList = useMemo(() => {
     if (!puckSearchQuery.trim()) {
@@ -65,63 +84,26 @@ export const GridsLogging: React.FC = () => {
     return allPucksList.filter((puck) => `CZII-0${puck.name}`.toLowerCase().includes(puckSearchQuery.toLowerCase()));
   }, [pucksList, allPucksList, puckSearchQuery]);
 
-  // Restore state from URL parameters
+  // Set the current user as default when users are loaded (only if no URL user_id)
   useEffect(() => {
-    const userId = searchParams.get('user_id');
-    const puckId = searchParams.get('puck_id');
-    const slotPosition = searchParams.get('slot_position');
-    const gridPosition = searchParams.get('grid_position');
-    const gridId = searchParams.get('grid_id');
-
-    // Restore user selection
-    if (userId && usersList.length > 0) {
-      const user = usersList.find((u) => String(u.id) === userId);
-      if (user) {
-        setSelectedUser(user);
-      }
-    }
-
-    // Restore puck selection - now that we have pucksList
-    if (puckId && pucksList.length > 0) {
-      const puck = pucksList.find((p) => String(p.id) === puckId);
-      if (puck) {
-        setSelectedPuck(puck);
-      }
-    }
-    // Restore slot selection
-    if (slotPosition) {
-      setSelectedSlot(parseInt(slotPosition));
-    }
-
-    // Restore grid selection
-    if (gridPosition) {
-      setSelectedGrid(parseInt(gridPosition));
-    }
-
-    if (gridId) {
-      setSelectedGridId(parseInt(gridId));
-    }
-  }, [searchParams, usersList, pucksList]);
-
-  // Set the current user as default when users are loaded (only if no URL params)
-  useEffect(() => {
-    if (usersList.length > 0 && currentUser && !selectedUser && !searchParams.get('user_id')) {
-      // Find the current user in the users list
+    if (usersList.length > 0 && currentUser && !urlState.user_id) {
       const foundUser = usersList.find((u) => String(u.id) === String(currentUser.id));
       if (foundUser) {
-        setSelectedUser(foundUser);
+        setUrlState({ user_id: foundUser.id });
       }
     }
-  }, [usersList, currentUser, selectedUser, searchParams]);
+  }, [usersList, currentUser, urlState.user_id, setUrlState]);
 
   // Handle user selection - updated for Autocomplete
   const handleUserChange = (event: React.SyntheticEvent, newValue: UserList | null) => {
-    setSelectedUser(newValue);
-    // Reset selected puck and slot when user changes
-    setSelectedPuck(null);
-    setSelectedSlot(null);
-    // Reset search query when user changes
-    setPuckSearchQuery('');
+    setUrlState({
+      user_id: newValue?.id ?? null,
+      puck_id: null,
+      slot_position: null,
+      grid_position: null,
+      grid_id: null,
+      puck_search: null,
+    });
   };
 
   const handleAddPuck = () => {
@@ -129,48 +111,53 @@ export const GridsLogging: React.FC = () => {
   };
 
   const handlePuckSelect = (puck: PuckList | null) => {
-    setSelectedPuck(puck);
-    // Reset selected slot when puck changes
-    setSelectedSlot(null);
+    setUrlState({
+      puck_id: puck?.id ?? null,
+      slot_position: null,
+      grid_position: null,
+      grid_id: null,
+    });
   };
   const handleGridDetailsRefetchReady = useCallback((refetch: () => void) => {
     setGridDetailsRefetch(() => refetch);
   }, []);
 
   const handleSlotSelect = (slotPosition: number, _gridBoxId?: number) => {
-    setSelectedSlot(slotPosition);
-    // Reset grid selection when slot changes
-    setSelectedGrid(null);
-    setSelectedGridId(null);
+    setUrlState({
+      slot_position: slotPosition,
+      grid_position: null,
+      grid_id: null,
+    });
   };
 
   const handleGridSelect = (gridPosition: number, gridId?: number) => {
-    setSelectedGrid(gridPosition);
-    setSelectedGridId(gridId || null);
+    setUrlState({
+      grid_position: gridPosition,
+      grid_id: gridId ?? null,
+    });
   };
   const handlePuckCreated = (_newPuck: PuckList) => {
     window.location.reload();
   };
   const handlePuckDeleted = () => {
-    // Refetch the pucks list to update the UI
     if (refetchPuckList) {
       refetchPuckList();
     }
-    // Clear the selected puck since it was deleted
-    setSelectedPuck(null);
-    setSelectedSlot(null);
-    setSelectedGrid(null);
-    setSelectedGridId(null);
+    setUrlState({
+      puck_id: null,
+      slot_position: null,
+      grid_position: null,
+      grid_id: null,
+    });
   };
 
   const handleMoveGridBoxSuccess = (newPuckId: number, newSlotPosition: number) => {
-    const newPuck = pucksList?.find((p) => p.id === newPuckId);
-    if (newPuck) {
-      setSelectedPuck(newPuck);
-      setSelectedSlot(newSlotPosition);
-      setSelectedGrid(null);
-      setSelectedGridId(null);
-    }
+    setUrlState({
+      puck_id: newPuckId,
+      slot_position: newSlotPosition,
+      grid_position: null,
+      grid_id: null,
+    });
     if (puckDetailsRefetch) {
       puckDetailsRefetch();
     }
@@ -181,22 +168,16 @@ export const GridsLogging: React.FC = () => {
     newGridBoxId: number,
     newPositionInBox: number
   ) => {
-    // Find and set the new puck
-    const newPuck = pucksList?.find((p) => p.id === newPuckId);
-    if (newPuck) {
-      setSelectedPuck(newPuck);
-      setSelectedSlot(newSlotPosition);
-      setSelectedGrid(newPositionInBox);
-      // Keep the same gridId since the grid itself hasn't changed, just moved
-    }
+    setUrlState({
+      puck_id: newPuckId,
+      slot_position: newSlotPosition,
+      grid_position: newPositionInBox,
+    });
 
     // Refetch all related data to show updated locations
     if (puckDetailsRefetch) {
       puckDetailsRefetch();
     }
-    // if (gridDetailsRefetch) {
-    //   gridDetailsRefetch();
-    // }
     if (gridBoxInfoRefetch) {
       gridBoxInfoRefetch();
     }
@@ -266,7 +247,7 @@ export const GridsLogging: React.FC = () => {
                   size="small"
                   placeholder="Search pucks by name..."
                   value={puckSearchQuery}
-                  onChange={(e) => setPuckSearchQuery(e.target.value)}
+                  onChange={(e) => setUrlState({ puck_search: e.target.value || null })}
                   variant="outlined"
                   InputProps={{
                     startAdornment: (
@@ -276,7 +257,7 @@ export const GridsLogging: React.FC = () => {
                     ),
                     endAdornment: puckSearchQuery && (
                       <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setPuckSearchQuery('')} edge="end">
+                        <IconButton size="small" onClick={() => setUrlState({ puck_search: null })} edge="end">
                           <Icon sdsIcon="XMark" sdsSize="l" />
                         </IconButton>
                       </InputAdornment>
@@ -320,10 +301,7 @@ export const GridsLogging: React.FC = () => {
             onMoveGridBoxSuccess={handleMoveGridBoxSuccess}
             onGridBoxInfoRefetchReady={handleGridBoxInfoRefetchReady}
             onGridBoxDeleted={() => {
-              // Clear selections and refetch puck details
-              setSelectedSlot(null);
-              setSelectedGrid(null);
-              setSelectedGridId(null);
+              setUrlState({ slot_position: null, grid_position: null, grid_id: null });
               if (puckDetailsRefetch) {
                 puckDetailsRefetch();
               }
