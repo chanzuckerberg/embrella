@@ -68,6 +68,9 @@ export enum API {
   REVIEW_TOMOGRAMS = '/api/reviews/:reviewId/tomograms',
   TOMOGRAM_DETAIL = '/api/reviews/:reviewId/tomograms/:tomogramId',
 
+  // Grid Detail (by ID)
+  GRID_DETAIL = '/api/list/grids/grid_id/',
+
   // Grid Logging
   GRID_LOGGING_USERS = '/api/list/all/users',
   GRID_LOGGING_PUCKS = '/api/list/pucks',

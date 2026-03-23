@@ -1014,6 +1014,29 @@ class CryoGridViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     authentication_classes = [CsrfExemptSessionAuthentication]
 
+    def retrieve(self, request, *args, **kwargs):
+        """Return full grid details using GridDetailsSerializer."""
+        try:
+            grid = (
+                CryoGrid.objects.select_related(
+                    "user",
+                    "grid_box",
+                    "grid_box__puck",
+                    "specimen",
+                    "freezing_session",
+                    "freezing_session__user",
+                    "freezing_session__device",
+                    "intended_project",
+                )
+                .prefetch_related("specimen__samples")
+                .get(id=kwargs.get("pk"))
+            )
+        except CryoGrid.DoesNotExist:
+            return Response({"error": "Grid not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = GridDetailsSerializer(grid, context={"request": request})
+        return Response(serializer.data)
+
     @method_decorator(csrf_exempt)
     def create(self, request, *args, **kwargs):
         """Create a new grid"""
