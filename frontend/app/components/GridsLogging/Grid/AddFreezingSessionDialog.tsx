@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
-import { Device, ConfluencePage, UserList, FreezingSessionFormData } from '@app/common/types/gridLogging';
+import { Device, UserList, FreezingSessionFormData, ExternalResource } from '@app/common/types/gridLogging';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { CreateNotesPageDialog } from '@app/components/GridsLogging/Grid/CreateNotesPageDialog';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -17,7 +17,7 @@ export const AddFreezingSessionDialog: React.FC<{
   onSave: (data: FreezingSessionFormData) => void;
   users?: UserList[];
   devices?: Device[];
-  notesPages?: ConfluencePage[];
+  notesPages?: ExternalResource[];
   freezingSessionDate?: Date | null;
   refetchNotesPages?: () => void;
 }> = ({

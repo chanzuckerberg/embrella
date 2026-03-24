@@ -15,7 +15,6 @@ export * from './details/gridBoxDetails';
 
 // Resource types
 export * from './resources/confluenceSpaceList';
-export * from './resources/confluencePageList';
 export * from './resources/driveFolderList';
 export * from './externalResource';
 

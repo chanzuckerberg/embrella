@@ -13,7 +13,6 @@ export { useProjectsList } from './list/useProjectList';
 export { useProjectLeadersList } from './list/useProjectLeadersList';
 export { useGridLoggingUserList } from './list/useGridLoggingUserList';
 export { useConfluenceSpaceList } from './list/useConfluenceSpaceList';
-export { useConfluencePageList } from './list/useConfluencePageList';
 export { useDocumentationPageList } from './list/useDocumentationPageList';
 export { useDriveFolderList } from './list/useDriveFolderList';
 export { useGridLoggingCaneList } from './list/useCaneList';
