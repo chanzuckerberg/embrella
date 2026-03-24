@@ -6,6 +6,7 @@ import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
 import { useCreateExternalResource } from '@app/common/hooks/useGridLogging';
 import type { ExternalResource } from '@app/common/types/gridLogging/externalResource';
+import { detectDocumentationSystemFromUrl } from '@app/common/utils/documentationUrl';
 
 export const CreateNotesPageDialog: React.FC<{
   open: boolean;
@@ -28,11 +29,12 @@ export const CreateNotesPageDialog: React.FC<{
     if (!name.trim() || !url.trim()) {
       return;
     }
+    const trimmedUrl = url.trim();
     const result = await createExternalResource({
       resource_type: 'doc_page',
-      system_name: 'Confluence',
+      system_name: detectDocumentationSystemFromUrl(trimmedUrl),
       name: name.trim(),
-      url: url.trim(),
+      url: trimmedUrl,
     });
     if (result?.resource) {
       onSave(result.resource);

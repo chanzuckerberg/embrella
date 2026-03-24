@@ -226,7 +226,7 @@ export const AddFreezingSessionDialog: React.FC<{
             onChange={(value) => handleInputChange('notesPage', value)}
             options={notesPages.map((page) => ({
               value: String(page.id),
-              label: page.url,
+              label: page.system_name ? `${page.name} (${page.system_name})` : page.name || page.url,
             }))}
             onAdd={() => setAddNoteDialogOpen(true)}
           />

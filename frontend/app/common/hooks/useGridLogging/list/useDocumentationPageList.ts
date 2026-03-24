@@ -3,17 +3,16 @@ import { DocPagesResponse, ExternalResource } from '@app/common/types/gridLoggin
 import { useListResource } from '../base/useListResource';
 
 /**
- * Hook to fetch Confluence pages from the external_links API.
- * Uses the /api/external-resources/doc_pages/?system_name=Confluence endpoint.
+ * All documentation pages (Confluence, Google Docs/Drive, Benchling, etc.)
+ * — no system_name filter.
  */
-export const useConfluencePageList = () => {
+export const useDocumentationPageList = () => {
   const { items, isSuccess, totalCount, refetch } = useListResource({
-    endpoint: `${API.EXTERNAL_RESOURCES_DOC_PAGES}?system_name=Confluence`,
+    endpoint: API.EXTERNAL_RESOURCES_DOC_PAGES,
     selectItems: (data: DocPagesResponse) => data.doc_pages || [],
     getTotalCount: (data: DocPagesResponse) => data.count || 0,
   });
 
-  // Map ExternalResource to confluence page format for backwards compatibility
   const pages = (items as ExternalResource[]).map((resource) => ({
     id: resource.id,
     name: resource.name,
