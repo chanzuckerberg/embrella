@@ -13,6 +13,8 @@ import {
 import { LinkCellProps } from '@app/common/components/EntityTable/types';
 import { GridData } from '../types';
 import { LabelChip } from '../components/LabelEditor/LabelChip';
+import { GridNameCell } from '../components/GridNameCell';
+import { GridDetailIconCell } from '../components/GridDetailIconCell';
 
 export const GRID_COLUMN_IDS = {
   CRYOGRID: 'cryogrid',
@@ -27,8 +29,11 @@ export const GRID_COLUMN_IDS = {
 export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] = [
   {
     id: GRID_COLUMN_IDS.CRYOGRID,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps => getLinkPropsFromLinkField((rowData as GridData).grid),
-    cell: getLinkCellFromCellContext,
+    accessorFn: (rowData: EntityDataTypes): string => (rowData as GridData).grid.name,
+    cell: ({ row }) => {
+      const data = row.original as GridData;
+      return <GridNameCell gridId={data.grid.id} name={data.grid.name} />;
+    },
     enableSorting: false,
     header: humanize(GRID_COLUMN_IDS.CRYOGRID),
   },
@@ -87,5 +92,16 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     },
     enableSorting: true,
     header: 'Updated At',
+  },
+  {
+    id: 'details',
+    accessorFn: () => '',
+    cell: ({ row }) => {
+      const data = row.original as GridData;
+      return <GridDetailIconCell gridId={data.grid.id} />;
+    },
+    enableSorting: false,
+    header: '',
+    size: 1,
   },
 ];

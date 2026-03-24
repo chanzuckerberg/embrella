@@ -13,13 +13,13 @@ import {
   IconButton,
   Chip,
 } from '@mui/material';
-import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
+import { parseAsBoolean, parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 import { Button, Icon } from '@czi-sds/components';
+import { useGridLoggingUserList } from '@app/common/hooks/useGridLogging/list/useGridLoggingUserList';
 import {
-  useGridLoggingUserList,
   useGridLoggingPucksList,
   useGridLoggingPucksByUser,
-} from '@app/common/hooks/useGridLogging';
+} from '@app/common/hooks/useGridLogging/other/useGridLoggingPuckList';
 import { UserList, PuckList } from '@app/common/types/gridLogging';
 import { UserContext } from '@app/common/context/UserProvider';
 import styles from './GridLogging.module.css';
@@ -36,13 +36,15 @@ const gridLoggingParsers = {
   grid_position: parseAsInteger,
   grid_id: parseAsInteger,
   puck_search: parseAsString,
+  owner: parseAsBoolean.withDefault(true),
 };
 
 const NUQS_OPTIONS = { history: 'replace' as const, shallow: true, clearOnDefault: true };
 
 export const GridsLogging: React.FC = () => {
   const [urlState, setUrlState] = useQueryStates(gridLoggingParsers, NUQS_OPTIONS);
-  const [isFilteringByOwner, setIsFilteringByOwner] = useState(true);
+  const isFilteringByOwner = urlState.owner;
+  const setIsFilteringByOwner = useCallback((value: boolean) => setUrlState({ owner: value }), [setUrlState]);
   const [isAddPuckDialogOpen, setIsAddPuckDialogOpen] = useState(false);
   const [puckDetailsRefetch, setPuckDetailsRefetch] = useState<() => void>(() => {});
   const [gridDetailsRefetch, setGridDetailsRefetch] = useState<() => void>(() => {});
