@@ -23,7 +23,7 @@ class AreTomo3Processor(BaseProcessor):
 
     name = "aretomo3"
     display_name = "AreTomo3"
-    version = "2.2.8"
+    version = "2.2.9"
     cluster = "czii"
     allowed_clusters = ["czii", "bruno"]
     task_name = "tomographic_reconstruction"
@@ -387,6 +387,9 @@ class AreTomo3Processor(BaseProcessor):
 
         # Add resolved gain file path (computed, not from schema)
         template_vars["gain_file_path"] = params.get("gain_file_path", "")
+
+        # Add cluster identifier for cluster-specific template logic
+        template_vars["cluster"] = run_context.cluster_id
 
         # Render the template
         rendered_script = template.render(**template_vars)

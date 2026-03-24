@@ -8,6 +8,9 @@
 #SBATCH {{ directive.directive }}={{ directive.value }}
 {% endif -%}
 {% endfor %}
+{% if cluster == "czii" -%}
+#SBATCH --qos=embrella
+{% endif %}
 ml anaconda
 conda activate /hpc/projects/group.czii/krios1.processing/software/denoiset/pyDenoiset
 

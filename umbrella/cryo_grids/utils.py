@@ -172,6 +172,7 @@ class FiltersModel(BaseModel):
     label: Optional[List[FilterModel]] = None
 
 
+
 class ApiResponseModel(BaseModel):
     filters: FiltersModel
 
