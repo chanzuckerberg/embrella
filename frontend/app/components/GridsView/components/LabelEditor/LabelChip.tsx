@@ -202,7 +202,7 @@ export const LabelChip = ({ gridId, labels: initialLabels }: LabelChipProps) => 
             border: '1px solid',
             borderColor: 'primary.main',
             borderRadius: 1,
-            p: 0.5,
+            p: '4px',
             minHeight: 32,
             backgroundColor: '#fff',
           }}
@@ -227,7 +227,7 @@ export const LabelChip = ({ gridId, labels: initialLabels }: LabelChipProps) => 
                 '& .MuiChip-deleteIcon': {
                   color: 'rgba(255,255,255,0.7)',
                   fontSize: 14,
-                  mr: 0.25,
+                  mr: '2px',
                   '&:hover': { color: '#fff' },
                 },
               }}
@@ -253,7 +253,7 @@ export const LabelChip = ({ gridId, labels: initialLabels }: LabelChipProps) => 
           placement="bottom-start"
           style={{ zIndex: 1300, width: anchorRef.current?.offsetWidth }}
         >
-          <Paper elevation={3} sx={{ maxHeight: 200, overflow: 'auto', mt: 0.5 }}>
+          <Paper elevation={3} sx={{ maxHeight: 200, overflow: 'auto', mt: '4px' }}>
             {suggestions.map((label, idx) => (
               <Box
                 key={label.id}
@@ -262,7 +262,7 @@ export const LabelChip = ({ gridId, labels: initialLabels }: LabelChipProps) => 
                 onMouseEnter={() => setHighlightedIndex(idx)}
                 sx={{
                   px: 1.5,
-                  py: 0.75,
+                  py: '6px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
