@@ -11,12 +11,12 @@ interface HistoryTabProps {
 }
 
 export const HistoryTab: React.FC<HistoryTabProps> = ({ gridDetails }) => (
-  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+  <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
     <Typography variant="body2" color="text.secondary">
       Created: {gridDetails.created_on || '-'} · Last Updated: {gridDetails.updated_on || '-'}
     </Typography>
 
-    <Typography variant="subtitle2" sx={{ mt: 1 }}>
+    <Typography variant="subtitle2" sx={{ mt: '8px' }}>
       Label History
     </Typography>
     {gridDetails.labels.length === 0 ? (
@@ -24,16 +24,16 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ gridDetails }) => (
         No labels added yet.
       </Typography>
     ) : (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {gridDetails.labels.map((label: GridLabelDetail) => (
           <Box
             key={`${label.id}-${label.added_at}`}
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1.5,
-              p: 1,
-              borderRadius: 1,
+              gap: '12px',
+              p: '8px',
+              borderRadius: '8px',
               bgcolor: 'rgba(0,0,0,0.02)',
             }}
           >
@@ -50,12 +50,12 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ gridDetails }) => (
               {label.name}
             </Typography>
             {label.added_by !== null && label.added_by !== '' && (
-              <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ ml: '8px' }}>
                 by {label.added_by}
               </Typography>
             )}
             {!!label.added_at && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', ml: '8px' }}>
                 <AccessTimeIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                 <Typography variant="caption" color="text.secondary">
                   {formatTimeAgo(label.added_at)}

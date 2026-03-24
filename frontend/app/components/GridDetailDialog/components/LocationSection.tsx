@@ -24,9 +24,9 @@ export const LocationSection: React.FC<LocationSectionProps> = ({
   gridBoxData,
   clippedValue,
 }) => (
-  <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2, mt: 1 }}>
-    <Typography sx={{ mb: 1.5, fontSize: '0.875rem' }}>Location</Typography>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+  <Box sx={{ borderTop: 1, borderColor: 'divider', pt: '16px', mt: '8px' }}>
+    <Typography sx={{ mb: '12px', fontSize: '0.875rem' }}>Location</Typography>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
       {/* Puck SVG */}
       {puckForSvg && (
         <Box sx={{ textAlign: 'center' }}>
@@ -37,7 +37,7 @@ export const LocationSection: React.FC<LocationSectionProps> = ({
             disableSlotClick
             highlightedSlot={location.position_in_puck ?? undefined}
           />
-          <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+          <Typography variant="caption" display="block" sx={{ mt: '4px' }}>
             Puck: CZII-0{location.puck_name}
           </Typography>
           <Typography variant="caption" display="block">
@@ -56,7 +56,7 @@ export const LocationSection: React.FC<LocationSectionProps> = ({
             disableGridClick
             maxGrids={(gridBoxData.grid_box?.positions?.length as 4 | 6 | 8) ?? 4}
           />
-          <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+          <Typography variant="caption" display="block" sx={{ mt: '4px' }}>
             Box: {location.grid_box_name}
           </Typography>
           <Typography variant="caption" display="block">
@@ -74,7 +74,7 @@ export const LocationSection: React.FC<LocationSectionProps> = ({
           height={100}
           style={{ objectFit: 'contain' }}
         />
-        <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+        <Typography variant="caption" display="block" sx={{ mt: '4px' }}>
           {clippedValue ? 'Clipped' : 'Unclipped'}
         </Typography>
       </Box>
