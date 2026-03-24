@@ -206,6 +206,13 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 projects={form.projects}
               />
 
+              <LabelsAutocomplete
+                value={currentLabels}
+                onChange={handleLabelsChange}
+                disabled={!isEditMode}
+                sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
+              />
+
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Button
                   sdsType="primary"
