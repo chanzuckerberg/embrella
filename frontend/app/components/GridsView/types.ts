@@ -22,6 +22,7 @@ export interface GridData {
   };
   screeningSession: string;
   msiSession: MSISessionField[];
+  labels: { id: number; name: string; color: string }[];
 }
 
 export enum GridFilterId {
@@ -32,6 +33,7 @@ export enum GridFilterId {
   PUCK = 'PUCK',
   SAMPLE = 'SAMPLE',
   SCREENING_SESSION = 'SCREENING_SESSION',
+  LABEL = 'LABEL',
   STATUS = 'STATUS',
   USER = 'USER',
 }
@@ -39,6 +41,7 @@ export enum GridFilterId {
 export type GridFilterCategory =
   | 'cassette'
   | 'date'
+  | 'label'
   | 'msiSession'
   | 'project'
   | 'puck'

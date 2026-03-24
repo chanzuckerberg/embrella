@@ -81,6 +81,7 @@ export enum API {
   GRID_LOGGING_SPECIMENS = '/api/list/specimens/',
   GRID_LOGGING_DEVICES = '/api/list/freezing-sessions/devices/',
   GRID_LOGGING_SAMPLES = '/api/list/samples/',
+  LABELS = '/api/list/labels/',
   GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',
 
   // Projects
@@ -110,6 +111,8 @@ export enum POST_API {
   MOVE_GRID = '/api/list/grids/grid_id/move/',
   UPDATE_GRID = '/api/list/grids/grid_id/update/',
   CLIP_ALL_GRIDS = '/api/list/grids/clip-all-in-box/grid_box_id/',
+  UPDATE_GRID_LABELS = '/api/list/grids/grid_id/update-labels/',
+  CREATE_LABEL = '/api/list/labels/',
 
   // Storage Explorer (Directories)
   BULK_UPDATE_DIRECTORY_STATUS = '/processes/v1/directories/bulk_update_status',

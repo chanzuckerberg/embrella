@@ -48,6 +48,7 @@ export const GRID_A: GridData = {
       url: 'foobarfoofoo',
     },
   ],
+  labels: [],
 };
 
 export const GRID_B: GridData = {
@@ -91,6 +92,7 @@ export const GRID_B: GridData = {
       url: 'foofoofoobazfoobarbar',
     },
   ],
+  labels: [],
 };
 
 export const GRIDS = [GRID_A, GRID_B];
@@ -211,6 +213,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<TestFilterCategory> = {
         selected: false,
       },
     ],
+    label: [],
     msiSession: [
       {
         name: 'foo bazfoo barfoobar',

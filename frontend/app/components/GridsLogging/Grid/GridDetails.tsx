@@ -18,7 +18,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { DJANGO_URL } from '@app/common/constants/api';
+import { DJANGO_URL, POST_API } from '@app/common/constants/api';
 import {
   useGridLoggingGridDetails,
   useGridLoggingGridBoxDetail,
@@ -30,6 +30,8 @@ import {
 import styles from '../GridLogging.module.css';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { MoveGrid } from '../Grid/MoveGrid';
+import { LabelsAutocomplete } from './LabelsAutocomplete';
+import { LabelData } from '@app/components/GridsView/components/LabelEditor/LabelChip';
 
 interface GridDetailsProps {
   selectedPuck: PuckList | null;
@@ -63,6 +65,7 @@ const mapGridDetailsToFormData = (data: GridDetailsResponse) => ({
   blotTime: data.parameters?.blot_time || 0,
   blotForce: data.parameters?.blot_force || 0,
   blotDistance: data.parameters?.blot_distance || 0,
+  labels: data.labels ?? [],
 });
 
 export const GridDetails: React.FC<GridDetailsProps> = ({
@@ -105,6 +108,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   });
   const [trashedValue, setLocalTrashed] = useState<boolean>(false);
   const [clippedValue, setLocalClipped] = useState<boolean>(false);
+  const [currentLabels, setCurrentLabels] = useState<LabelData[]>([]);
 
   // Add update hook
   const { updateGrid, isUpdating, error: updateError, clearError: clearUpdateError } = useUpdateGrid();
@@ -125,10 +129,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   useEffect(() => {
     if (gridDetails) {
       const formData = mapGridDetailsToFormData(gridDetails);
-
-      console.log('Grid Details formData:', formData);
-      console.log('Freezing Session:', formData.freezingSession);
-      console.log('Specimen:', formData.specimen);
       setEditedData({
         gridName: formData.gridName,
         copyNumber: formData.copyNumber,
@@ -141,6 +141,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         blotForce: formData.blotForce,
         blotDistance: formData.blotDistance,
       });
+      setCurrentLabels(formData.labels);
     }
   }, [gridDetails]);
 
@@ -297,6 +298,22 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     }));
   };
 
+  const handleLabelsChange = async (labels: LabelData[]) => {
+    setCurrentLabels(labels);
+    if (!selectedGridId) return;
+    const url = `${DJANGO_URL}${POST_API.UPDATE_GRID_LABELS.replace('grid_id', String(selectedGridId))}`;
+    try {
+      await fetch(url, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label_ids: labels.map((l) => l.id) }),
+      });
+    } catch (e) {
+      console.error('Failed to update labels:', e);
+    }
+  };
+
   // Show loading state
   if (!gridBoxSuccess || loading) {
     return (
@@ -428,7 +445,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   disabled={!isEditMode}
                   value={isEditMode ? editedData.gridName : formData.gridName}
                   onChange={(e) => handleFieldChange('gridName', e.target.value)}
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 />
                 <TextField
                   fullWidth
@@ -437,7 +454,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   value={isEditMode ? editedData.copyNumber : formData.copyNumber}
                   onChange={(e) => handleFieldChange('copyNumber', parseInt(e.target.value) || 1)}
                   type="number"
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 />
                 <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
               </Box>
@@ -451,7 +468,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   onChange={(e) => handleFieldChange('notes', e.target.value)}
                   multiline
                   rows={1}
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 />
                 <FormControlLabel
                   control={<Checkbox checked={clippedValue} onChange={handleClippedGrid} color="primary" />}
@@ -473,7 +490,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   onChange={(e) =>
                     handleFieldChange('freezingSessionId', e.target.value ? parseInt(e.target.value) : null)
                   }
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 >
                   <MenuItem value="">
                     <em>None</em>
@@ -491,7 +508,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   disabled={!isEditMode}
                   value={isEditMode ? editedData.specimenId || '' : formData.specimen}
                   onChange={(e) => handleFieldChange('specimenId', e.target.value ? parseInt(e.target.value) : null)}
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 >
                   <MenuItem value="">
                     <em>None</em>
@@ -511,7 +528,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   disabled={!isEditMode}
                   value={isEditMode ? editedData.projectId || '' : formData.project}
                   onChange={(e) => handleFieldChange('projectId', e.target.value ? parseInt(e.target.value) : null)}
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 >
                   <MenuItem value="">
                     <em>None</em>
@@ -529,7 +546,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   value={isEditMode ? editedData.positionInBox : formData.positionInBox}
                   onChange={(e) => handleFieldChange('positionInBox', parseInt(e.target.value) || 1)}
                   type="number"
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 />
               </Box>
               <Box sx={{ display: 'flex', gap: 2 }}>
@@ -540,7 +557,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   value={isEditMode ? editedData.blotTime : formData.blotTime}
                   onChange={(e) => handleFieldChange('blotTime', parseFloat(e.target.value) || 0)}
                   type="number"
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 />
                 <TextField
                   fullWidth
@@ -549,7 +566,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   value={isEditMode ? editedData.blotForce : formData.blotForce}
                   onChange={(e) => handleFieldChange('blotForce', parseFloat(e.target.value) || 0)}
                   type="number"
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 />
                 <TextField
                   fullWidth
@@ -558,9 +575,16 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                   value={isEditMode ? editedData.blotDistance : formData.blotDistance}
                   onChange={(e) => handleFieldChange('blotDistance', parseFloat(e.target.value) || 0)}
                   type="number"
-                  sx={!isEditMode ? disabledTextFieldStyles : {}}
+                  sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
                 />
               </Box>
+
+              <LabelsAutocomplete
+                value={currentLabels}
+                onChange={handleLabelsChange}
+                disabled={!isEditMode}
+                sx={!isEditMode ? disabledTextFieldStyles : { mb: 5 }}
+              />
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Button

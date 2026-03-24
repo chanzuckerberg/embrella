@@ -15,6 +15,7 @@ export interface GridDetailsResponse {
   position_in_box: number;
   copy_number: number;
   parameters: GridParameters;
+  labels: { id: number; name: string; color: string }[];
 }
 
 export interface GridLocation {

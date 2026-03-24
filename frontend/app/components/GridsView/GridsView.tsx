@@ -20,6 +20,7 @@ export const GridsView = (): React.JSX.Element => {
         'project',
         'user',
         'sample',
+        'label',
         'msiSession',
         'search',
         'cassette',
