@@ -579,7 +579,7 @@ class FreezingSessionSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.username", read_only=True)
     device_name = serializers.CharField(source="device.name", read_only=True)
     display_name = serializers.SerializerMethodField()
-    datetime = serializers.SerializerMethodField()
+    datetime = serializers.DateTimeField(required=False)
 
     class Meta:
         model = PlungeFreezingSession
@@ -596,12 +596,12 @@ class FreezingSessionSerializer(serializers.ModelSerializer):
             "display_name",
         ]
 
-    def get_datetime(self, obj):
-        """Return datetime in local timezone"""
-        if obj.datetime:
-            local_dt = django_timezone.localtime(obj.datetime)
-            return local_dt.isoformat()
-        return None
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.datetime:
+            local_dt = django_timezone.localtime(instance.datetime)
+            data["datetime"] = local_dt.isoformat()
+        return data
 
     def get_display_name(self, obj):
         """Get human-readable display name matching the __str__ method"""
