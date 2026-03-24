@@ -300,7 +300,7 @@ export const SearchBar = () => {
           InputProps={{
             startAdornment: (
               <>
-                <InputAdornment position="start" sx={{ mr: 0.5 }}>
+                <InputAdornment position="start" sx={{ mr: '4px' }}>
                   <SearchIcon fontSize="small" sx={{ color: 'action.active' }} />
                 </InputAdornment>
                 {tagChips}
@@ -319,7 +319,7 @@ export const SearchBar = () => {
               display: 'flex',
               flexWrap: 'nowrap',
               alignItems: 'center',
-              gap: 0.5,
+              gap: '4px',
               overflowX: 'auto',
               '& input': { flexGrow: 1, flexShrink: 1, minWidth: 120 },
             },

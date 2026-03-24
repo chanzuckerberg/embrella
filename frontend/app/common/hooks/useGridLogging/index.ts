@@ -35,9 +35,9 @@ export { useMoveGridBox } from './move/useMoveGridBox';
 export { useUpdateGridBox } from './update/useUpdateGridBox';
 export { useUpdateGrid } from './update/useUpdateGrid';
 // Detail hooks
-export { useGridLoggingGridDetails } from './details/useGridLoggingGridDetails';
 export { useGridLoggingGridBoxDetail } from './details/useGridLoggingGridBoxDetail';
 export { useGridLoggingPuckSlots } from './details/useGridLoggingPuckSlots';
+export { useGridDetails } from './details/useGridDetails';
 
 // Other hooks
 export { useGridLoggingChoices } from './other/useGridLoggingChoices';

@@ -18,16 +18,6 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
     onPuckSelect(puck);
   };
 
-  if (!selectedUser) {
-    return (
-      <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">
-          Please select a user first to view their pucks
-        </Typography>
-      </Box>
-    );
-  }
-
   return (
     <Box>
       {/* Pucks Grid Display with Interactive SVG */}
@@ -66,7 +56,7 @@ export const PuckListed: React.FC<PuckSelectorProps> = ({ selectedUser, onPuckSe
         {puckList?.length === 0 && (
           <Box className={styles.emptyState}>
             <Typography variant="body1" color="text.secondary">
-              No pucks available for this user
+              {selectedUser ? 'No pucks available for this user' : 'Select a user to get started'}
             </Typography>
           </Box>
         )}

@@ -242,7 +242,7 @@ class PuckDetailSerializer(serializers.ModelSerializer):
 
 class GridDetailsSerializer(serializers.ModelSerializer):
     """
-    Serializer for viewing grid details - matches your UI form
+    Serializer for viewing grid details
     """
 
     # Basic grid info - using SerializerMethodField to avoid source issues
@@ -268,9 +268,14 @@ class GridDetailsSerializer(serializers.ModelSerializer):
     # Labels
     labels = serializers.SerializerMethodField()
 
+    # Timestamps
+    created_on = serializers.DateField(source="create_on", read_only=True)
+    updated_on = serializers.DateField(read_only=True)
+
     class Meta:
         model = CryoGrid
         fields = [
+            "id",
             "grid_name",
             "user",
             "notes",
@@ -284,6 +289,8 @@ class GridDetailsSerializer(serializers.ModelSerializer):
             "copy_number",
             "parameters",
             "labels",
+            "created_on",
+            "updated_on",
         ]
 
     def get_grid_name(self, obj):
@@ -298,9 +305,11 @@ class GridDetailsSerializer(serializers.ModelSerializer):
         return {
             "puck_id": obj.grid_box.puck.id if obj.grid_box and obj.grid_box.puck else None,
             "puck_name": obj.grid_box.puck.name if obj.grid_box and obj.grid_box.puck else None,
+            "puck_color": obj.grid_box.puck.color if obj.grid_box and obj.grid_box.puck else None,
             "grid_box_id": obj.grid_box.id if obj.grid_box else None,
             "grid_box_name": obj.grid_box.name if obj.grid_box else None,
             "position_in_box": obj.position_in_box,
+            "position_in_puck": obj.grid_box.position_in_puck if obj.grid_box else None,
         }
 
     def get_freezing_session(self, obj):
@@ -352,8 +361,14 @@ class GridDetailsSerializer(serializers.ModelSerializer):
 
     def get_labels(self, obj):
         return [
-            {"id": gl.label.id, "name": gl.label.name, "color": gl.label.color}
-            for gl in obj.gridlabel_set.select_related("label").order_by("added_at")
+            {
+                "id": gl.label.id,
+                "name": gl.label.name,
+                "color": gl.label.color,
+                "added_at": gl.added_at.isoformat() if gl.added_at else None,
+                "added_by": gl.added_by.username if gl.added_by else None,
+            }
+            for gl in obj.gridlabel_set.select_related("label", "added_by").order_by("added_at")
         ]
 
 

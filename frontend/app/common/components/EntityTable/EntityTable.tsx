@@ -25,19 +25,23 @@ export const StyledPagination = styled(Pagination)`
   margin-top: 16px;
 `;
 
-const ScrollableCell = styled.div<{ $maxWidth: number }>`
-  max-width: ${(props) => props.$maxWidth}px;
+const ScrollableCell = styled.div<{ maxWidth: number }>`
+  max-width: ${(props) => props.maxWidth}px;
   overflow-x: auto;
   white-space: nowrap;
 `;
 
-const StyledTableCell = styled(TableCell)<{ $width?: number }>`
-  ${(props) => props.$width && `width: ${props.$width}px;`}
+const StyledTableCell = styled(TableCell, {
+  shouldForwardProp: (prop) => prop !== 'width',
+})<{ width?: number }>`
+  ${(props) => props.width && `width: ${props.width}px;`}
   padding: 12px 16px;
 `;
 
-const StyledHeaderCell = styled(TableCell)<{ $width?: number }>`
-  ${(props) => props.$width && `width: ${props.$width}px;`}
+const StyledHeaderCell = styled(TableCell, {
+  shouldForwardProp: (prop) => prop !== 'width',
+})<{ width?: number }>`
+  ${(props) => props.width && `width: ${props.width}px;`}
   padding: 12px 16px;
   font-weight: 600;
   background-color: #f5f5f5;
@@ -73,7 +77,7 @@ export const EntityTable = <T extends EntityDataTypes>({
                 const canSort = header.column.getCanSort();
                 const sorted = header.column.getIsSorted();
                 return (
-                  <StyledHeaderCell key={header.id} $width={width}>
+                  <StyledHeaderCell key={header.id} width={width}>
                     {canSort ? (
                       <TableSortLabel
                         active={!!sorted}
@@ -99,8 +103,8 @@ export const EntityTable = <T extends EntityDataTypes>({
                   const width = cell.column.columnDef.size;
                   const content = flexRender(cell.column.columnDef.cell, cell.getContext());
                   return (
-                    <StyledTableCell key={cell.id} $width={width}>
-                      {meta?.maxWidth ? <ScrollableCell $maxWidth={meta.maxWidth}>{content}</ScrollableCell> : content}
+                    <StyledTableCell key={cell.id} width={width}>
+                      {meta?.maxWidth ? <ScrollableCell maxWidth={meta.maxWidth}>{content}</ScrollableCell> : content}
                     </StyledTableCell>
                   );
                 })}

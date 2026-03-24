@@ -68,13 +68,15 @@ export enum API {
   REVIEW_TOMOGRAMS = '/api/reviews/:reviewId/tomograms',
   TOMOGRAM_DETAIL = '/api/reviews/:reviewId/tomograms/:tomogramId',
 
+  // Grid Detail (by ID)
+  GRID_DETAIL = '/api/list/grids/grid_id/',
+
   // Grid Logging
   GRID_LOGGING_USERS = '/api/list/all/users',
   GRID_LOGGING_PUCKS = '/api/list/pucks',
   // GRID_LOGGING_PUCK_BYUSER = '/api/list/pucks/?user_id=',
   GRID_LOGGING_PUCK_SLOTINFO = '/api/list/pucks/puck_id/slots/',
   GRID_LOGGING_PUCK_GRIDBOXINFO = '/api/list/pucks/puck_id/grid-box/position_in_puck/',
-  GRID_LOGGING_GRID_DETAILS = '/api/list/pucks/puck_id/grid-box/position_in_puck/grid/grid_id/',
   GRID_LOGGING_CANES = '/api/list/canes/',
   GRID_LOGGING_PROJECT_LEADERS = '/api/list/project-leaders/',
   GRID_LOGGING_FREEZING_SESSIONS = '/api/list/freezing-sessions/',
