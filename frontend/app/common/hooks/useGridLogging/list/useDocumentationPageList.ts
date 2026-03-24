@@ -13,16 +13,8 @@ export const useDocumentationPageList = () => {
     getTotalCount: (data: DocPagesResponse) => data.count || 0,
   });
 
-  const pages = (items as ExternalResource[]).map((resource) => ({
-    id: resource.id,
-    name: resource.name,
-    url: resource.url,
-    system_name: resource.system_name,
-    page_id: resource.metadata?.page_id as string | undefined,
-  }));
-
   return {
-    pages,
+    pages: items as ExternalResource[],
     isSuccess,
     totalCount,
     refetch,
