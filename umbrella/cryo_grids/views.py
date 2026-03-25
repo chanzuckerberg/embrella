@@ -50,14 +50,14 @@ def get_frontend_url():
     """Get the frontend URL based on environment"""
     environment = os.getenv("DJANGO_ENV", "development")
     if environment == "staging":
-        return "http://umbrella-dev.czbiohub.org/next"
+        return "http://umbrella-dev.czbiohub.org/"
     elif environment == "production":
-        return "http://umbrella.czbiohub.org/next"
+        return "http://umbrella.czbiohub.org/"
     else:  # development
-        return "http://localhost:3000/next"
+        return "http://localhost:3000/"
 
 
-def build_frontend_url_with_state(request, base_path="/grid_logging"):
+def build_frontend_url_with_state(request, base_path="/samples/grid_logging"):
     """Build frontend URL with state parameters from request"""
     frontend_url = f"{get_frontend_url()}{base_path}"
 
@@ -92,6 +92,9 @@ def build_frontend_url_with_state(request, base_path="/grid_logging"):
     # Add state parameters to URL if any exist
     if state_params:
         frontend_url += "?" + "&".join(state_params)
+
+    # no owner to show all pucks
+    frontend_url += "&owner=false"
 
     return frontend_url
 
