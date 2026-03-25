@@ -20,7 +20,7 @@ import {
   useCreateGrid,
   useDeviceList,
   useCreateFreezingSession,
-  useConfluencePageList,
+  useDocumentationPageList,
   useDriveFolderList,
   useConfluenceSpaceList,
   useProjectLeadersList,
@@ -62,7 +62,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
   const { createGrid, isCreating, error, clearError } = useCreateGrid();
   const { createFreezingSession } = useCreateFreezingSession();
   const { spaces: confluenceSpacesList } = useConfluenceSpaceList();
-  const { pages: confluencePagesList, refetch: refetchNotesPages } = useConfluencePageList();
+  const { pages: documentationPagesList, refetch: refetchNotesPages } = useDocumentationPageList();
   const { folders: driveFoldersList } = useDriveFolderList();
   const { projectLeaders: projectLeadersData } = useProjectLeadersList();
   const { isSuccess: choicesLoaded } = useGridLoggingChoices();
@@ -125,7 +125,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
     name: folder.name,
   }));
 
-  const notesPages = confluencePagesList;
+  const notesPages = documentationPagesList;
 
   // Handle saving a new project
   const handleSaveProject = async (projectId: number) => {
