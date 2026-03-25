@@ -507,7 +507,10 @@ mirrorproddbtolocal: initenv
     scp svc.czii.umbrella@umbrella:/srv/dbbackups/$LATEST ./.scratch/$LATEST
 
     echo "Importing database from snapshot $LATEST..."
-    mysql -h 127.0.0.1 -u root -p < ./.scratch/$LATEST
+    mysql -h 127.0.0.1 -u root -pdevaccount < ./.scratch/$LATEST
+
+    echo "Re-applying remote host grants..."
+    mysql -h 127.0.0.1 -u root -pdevaccount < ./helpers/local_mysql/init.sql
 
 # Stop production server apps
 stopprodserve: initenv
