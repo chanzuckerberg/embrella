@@ -16,9 +16,24 @@ const updateTheme = (themeMode: ThemeMode): Theme => {
   const themeOptions = deepmerge(baseTheme, customTheme);
 
   const appTheme = makeThemeOptions(themeOptions, themeMode);
-  return createTheme(appTheme, {
-    cssVariables: true,
-  });
+
+  // Convert the array-based spacing to a function so MUI internal components
+  // can use fractional values like spacing(0.5) without errors.
+  // Integer indices still map to the SDS spacing array values.
+  const sdsSpacingArray = appTheme.spacing as number[];
+  const spacingFn = (factor: number) => {
+    if (Number.isInteger(factor) && factor >= 0 && factor < sdsSpacingArray.length) {
+      return sdsSpacingArray[factor];
+    }
+    return factor * 8;
+  };
+
+  return createTheme(
+    { ...appTheme, spacing: spacingFn },
+    {
+      cssVariables: true,
+    }
+  );
 };
 
 // CustomThemeProvider component to wrap your app
