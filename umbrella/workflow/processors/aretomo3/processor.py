@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
 from umbrella_logger import logger
+
 from workflow.context import RunContext
 from workflow.processors.aretomo3.gain_file_fetcher import DEFAULT_GAIN_DIRECTORY, list_gain_files
 from workflow.processors.base import BaseProcessor
@@ -23,7 +24,7 @@ class AreTomo3Processor(BaseProcessor):
 
     name = "aretomo3"
     display_name = "AreTomo3"
-    version = "2.2.9"
+    version = "2.3.0"
     cluster = "czii"
     allowed_clusters = ["czii", "bruno"]
     task_name = "tomographic_reconstruction"
