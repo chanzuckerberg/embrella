@@ -176,7 +176,7 @@ export const MOCK_PROCESSOR_SCHEMA = {
 export const URL_BASE = 'http://localhost:8000';
 export const URL_NONEXISTENT = '/nonexistent';
 export const URL_GRIDS = '/cryo_grids/v1/grids';
-export const URL_FILTERS_LIST = '/cryo_grids/v1/filterlist';
+export const URL_FILTERS_LIST = '/cryo_grids/v1/grids/filterlist/';
 export const URL_FOO = '/foo';
 
 // Workflow API URLs
