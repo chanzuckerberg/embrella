@@ -1,12 +1,12 @@
 import { Metadata } from 'next';
-import { GridsView } from '@app/components/GridsView/GridsView';
+import { GridInventory } from '@app/components/GridInventory/GridInventory';
 
 export const metadata: Metadata = {
   title: 'Embrella Grids',
 };
 
 const GridsPage = () => {
-  return <GridsView />;
+  return <GridInventory />;
 };
 
 export default GridsPage;

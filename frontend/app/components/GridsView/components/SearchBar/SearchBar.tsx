@@ -16,7 +16,7 @@ import {
   InputAdornment,
   IconButton,
 } from '@mui/material';
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 interface Suggestion {
   value: string;
@@ -30,6 +30,7 @@ interface FilterTag {
 
 const CATEGORY_LABELS: Record<string, string> = {
   grid: 'Grid',
+  gridBox: 'Grid Box',
   project: 'Project',
   user: 'User',
   sample: 'Sample',
@@ -43,6 +44,7 @@ const QUALIFIER_MAP: Record<string, string> = {
   'user:': 'user',
   'sample:': 'sample',
   'grid:': 'grid',
+  'box:': 'gridBox',
   'session:': 'msiSession',
   'label:': 'label',
 };
@@ -52,6 +54,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string
   user: { bg: '#f3e5f5', border: '#ce93d8', text: '#7b1fa2' },
   sample: { bg: '#e8f5e9', border: '#a5d6a7', text: '#2e7d32' },
   grid: { bg: '#fff3e0', border: '#ffcc80', text: '#e65100' },
+  gridBox: { bg: '#fce4ec', border: '#f48fb1', text: '#c62828' },
   msiSession: { bg: '#e0f7fa', border: '#80deea', text: '#00695c' },
   label: { bg: '#fff8e1', border: '#ffd54f', text: '#f57f17' },
   search: { bg: '#f5f5f5', border: '#bdbdbd', text: '#424242' },
@@ -62,6 +65,7 @@ const SEARCHBAR_CATEGORIES = ['project', 'user', 'sample', 'msiSession', 'label'
 /** Map frontend-only categories to the backend filter category they dispatch as. */
 const CATEGORY_DISPATCH_MAP: Record<string, string> = {
   grid: 'search',
+  gridBox: 'search',
 };
 
 function getTagsFromFilterState(filterState: Record<string, unknown>): FilterTag[] {
@@ -79,7 +83,15 @@ function getTagsFromFilterState(filterState: Record<string, unknown>): FilterTag
   return tags;
 }
 
-export const SearchBar = () => {
+interface SearchBarProps {
+  placeholder?: string;
+  suggestionsApi?: API;
+}
+
+export const SearchBar = ({
+  placeholder = 'Search grids...',
+  suggestionsApi = API.GRIDS_SEARCH_SUGGESTIONS,
+}: SearchBarProps) => {
   const tableState = useContext(TableStateContext);
   const dispatchTableState = useContext(TableDispatchContext);
   const [localInput, setLocalInput] = useState('');
@@ -98,16 +110,19 @@ export const SearchBar = () => {
     blurStampRef.current += 1;
   };
 
-  const fetchSuggestions = (term: string) => {
-    if (term.length < 1) {
-      setSuggestions([]);
-      return;
-    }
-    fetch(`${DJANGO_URL}${API.GRIDS_SEARCH_SUGGESTIONS}?term=${encodeURIComponent(term)}`, { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => setSuggestions(data.suggestions ?? []))
-      .catch(() => setSuggestions([]));
-  };
+  const fetchSuggestions = useCallback(
+    (term: string) => {
+      if (term.length < 1) {
+        setSuggestions([]);
+        return;
+      }
+      fetch(`${DJANGO_URL}${suggestionsApi}?term=${encodeURIComponent(term)}`, { credentials: 'include' })
+        .then((res) => res.json())
+        .then((data) => setSuggestions(data.suggestions ?? []))
+        .catch(() => setSuggestions([]));
+    },
+    [suggestionsApi]
+  );
 
   // Reset highlighted index when suggestions change
   useEffect(() => {
@@ -127,7 +142,7 @@ export const SearchBar = () => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [localInput]);
+  }, [localInput, fetchSuggestions]);
 
   const dispatchFilter = (category: string, value: string) => {
     const existing = tableState.filterState[category as keyof typeof tableState.filterState];
@@ -294,7 +309,7 @@ export const SearchBar = () => {
             }, 200);
           }}
           onKeyDown={handleKeyDown}
-          placeholder={activeTags.length > 0 ? 'Add another filter...' : 'Search grids...'}
+          placeholder={activeTags.length > 0 ? 'Add another filter...' : placeholder}
           size="small"
           fullWidth
           InputProps={{

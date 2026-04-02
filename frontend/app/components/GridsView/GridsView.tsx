@@ -22,7 +22,11 @@ const GridDetailDialog = React.lazy(() =>
   }))
 );
 
-export const GridsView = (): React.JSX.Element => {
+/**
+ * Inner component that renders just the EntityTable + GridDetailDialog.
+ * Consumes TableStateProvider from parent context.
+ */
+export const GridsViewInner = (): React.JSX.Element => {
   const [selectedGridId, setSelectedGridId] = useQueryState('gridDetail', parseAsInteger);
 
   const openGridDetail = useCallback(
@@ -36,35 +40,7 @@ export const GridsView = (): React.JSX.Element => {
 
   return (
     <GridDetailDialogContext.Provider value={contextValue}>
-      <TableStateProvider
-        filterCategories={[
-          'project',
-          'user',
-          'sample',
-          'label',
-          'msiSession',
-          'search',
-          'cassette',
-          'date',
-          'puck',
-          'screeningSession',
-          'status',
-        ]}
-        initialSortState={[{ desc: true, id: GRID_COLUMN_IDS.MODIFIED_ON }]}
-      >
-        <SearchBar />
-        <FilterableTableMain>
-          <Sidebar>
-            <EntityTableFilters<GridFilterId, GridFilterCategory>
-              entityFilterConfigs={GRID_FILTER_CONFIGS}
-              entityFilterListApi={API.GRIDS_FILTERS_LIST}
-            />
-          </Sidebar>
-          <TableWrapper>
-            <EntityTable entityApi={API.GRIDS} entityApiResponseField="grid" columnDefs={GRID_COLUMN_DEFS} />
-          </TableWrapper>
-        </FilterableTableMain>
-      </TableStateProvider>
+      <EntityTable entityApi={API.GRIDS} entityApiResponseField="grid" columnDefs={GRID_COLUMN_DEFS} />
 
       {selectedGridId !== null && (
         <Suspense fallback={<CircularProgress />}>
@@ -72,5 +48,43 @@ export const GridsView = (): React.JSX.Element => {
         </Suspense>
       )}
     </GridDetailDialogContext.Provider>
+  );
+};
+
+/**
+ * Standalone GridsView with its own TableStateProvider, SearchBar, and filters.
+ * Used when rendering the Grids tab independently (backward compatibility).
+ */
+export const GridsView = (): React.JSX.Element => {
+  return (
+    <TableStateProvider
+      filterCategories={[
+        'project',
+        'user',
+        'sample',
+        'label',
+        'msiSession',
+        'search',
+        'cassette',
+        'date',
+        'puck',
+        'screeningSession',
+        'status',
+      ]}
+      initialSortState={[{ desc: true, id: GRID_COLUMN_IDS.MODIFIED_ON }]}
+    >
+      <SearchBar />
+      <FilterableTableMain>
+        <Sidebar>
+          <EntityTableFilters<GridFilterId, GridFilterCategory>
+            entityFilterConfigs={GRID_FILTER_CONFIGS}
+            entityFilterListApi={API.GRIDS_FILTERS_LIST}
+          />
+        </Sidebar>
+        <TableWrapper>
+          <GridsViewInner />
+        </TableWrapper>
+      </FilterableTableMain>
+    </TableStateProvider>
   );
 };
