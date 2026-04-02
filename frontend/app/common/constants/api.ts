@@ -10,8 +10,8 @@ export const DJANGO_URL =
 export enum API {
   USER = '/user',
   GRIDS = '/cryo_grids/v1/grids',
-  GRIDS_FILTERS_LIST = '/cryo_grids/v1/filterlist',
-  GRIDS_SEARCH_SUGGESTIONS = '/cryo_grids/v1/search_suggestions',
+  GRIDS_FILTERS_LIST = '/cryo_grids/v1/grids/filterlist/',
+  GRIDS_SEARCH_SUGGESTIONS = '/cryo_grids/v1/grids/search_suggestions/',
   TOMOGRAMS = '/processes/v1/tomograms',
   TOMOGRAMS_FILTERLIST = '/processes/v1/filterlist',
   ANNOTATIONS = '/processes/v1/annotations',
@@ -69,7 +69,7 @@ export enum API {
   TOMOGRAM_DETAIL = '/api/reviews/:reviewId/tomograms/:tomogramId',
 
   // Grid Detail (by ID)
-  GRID_DETAIL = '/api/list/grids/grid_id/',
+  GRID_DETAIL = '/cryo_grids/v1/grids/grid_id/',
 
   // Grid Logging
   GRID_LOGGING_USERS = '/api/list/all/users',
@@ -85,6 +85,9 @@ export enum API {
   GRID_LOGGING_SAMPLES = '/api/list/samples/',
   LABELS = '/api/list/labels/',
   GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',
+  GRID_BOXES = '/cryo_grids/v1/grid-boxes/',
+  GRID_BOXES_FILTERS_LIST = '/cryo_grids/v1/grid-boxes/filterlist/',
+  GRID_BOXES_SEARCH_SUGGESTIONS = '/cryo_grids/v1/grid-boxes/search_suggestions/',
 
   // Projects
   PROJECTS_LIST = '/projects/project_list/',
@@ -104,16 +107,16 @@ export enum POST_API {
   CREATE_PUCK = '/api/list/pucks/',
   CREATE_GRID_BOX = '/api/list/pucks/puck_id/grid-box/',
   CREATE_FREEZING_SESSION = '/api/list/freezing-sessions/',
-  CREATE_GRID = '/api/list/grids/',
+  CREATE_GRID = '/cryo_grids/v1/grids/',
   CREATE_SAMPLE = '/api/list/samples/',
   CREATE_SPECIMEN = '/api/list/specimens/',
   CREATE_PROJECT = '/projects/create_project/',
   UPDATE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/update/',
   MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
-  MOVE_GRID = '/api/list/grids/grid_id/move/',
-  UPDATE_GRID = '/api/list/grids/grid_id/update/',
-  CLIP_ALL_GRIDS = '/api/list/grids/clip-all-in-box/grid_box_id/',
-  UPDATE_GRID_LABELS = '/api/list/grids/grid_id/update-labels/',
+  MOVE_GRID = '/cryo_grids/v1/grids/grid_id/move/',
+  UPDATE_GRID = '/cryo_grids/v1/grids/grid_id/update/',
+  CLIP_ALL_GRIDS = '/cryo_grids/v1/grids/clip-all-in-box/grid_box_id/',
+  UPDATE_GRID_LABELS = '/cryo_grids/v1/grids/grid_id/update-labels/',
   CREATE_LABEL = '/api/list/labels/',
 
   // Storage Explorer (Directories)

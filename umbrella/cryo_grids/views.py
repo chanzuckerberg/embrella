@@ -10,12 +10,10 @@ from functools import reduce
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.db.models import Case, CharField, Count, F, Q, Value, When
-from django.db.models.functions import StrIndex, Substr, Trim
+from django.db.models import F, Q
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
-from django.utils.timezone import now
 from django.views.decorators.http import require_http_methods
 from pydantic import ValidationError
 from stores.models import Path
@@ -24,7 +22,7 @@ from stores.models import Path
 from cryo_grids.models import CryoGridCassette
 
 from .forms import ClearCassetteForm, CopyGridForm, NumberToCopyGridForm
-from .models import CryoGrid, CryoGridBox, GridLabel, Label, Sample, Specimen
+from .models import CryoGrid, CryoGridBox, GridLabel, Specimen
 from .utils import (
     CassetteModel,
     CryoGridsQueryParams,
@@ -34,7 +32,6 @@ from .utils import (
     PaginationMetadataModel,
     ProjectModel,
     PuckModel,
-    QueryParams,
     SortMetadataModel,
     UnprocessableEntity,
     UserModel,
@@ -258,223 +255,6 @@ def get_specific_grids(request):
 
 
 from django.views.decorators.csrf import csrf_exempt
-
-
-@require_http_methods(["GET"])
-def available_filters(request):
-    try:
-        # request.META['HTTP_ORIGIN'] = '*' # this is only for *
-        # Validate that only the 'q' parameter is present in the request
-        if "q" not in request.GET or len(request.GET) > 1:
-            return JsonResponse({"error": 'Invalid query parameters. Only "q" is allowed.'}, status=422)
-        raw_query_param = request.GET.get("q", "[]")
-
-        # Parse the JSON string into a Python list
-        query_filters = json.loads(raw_query_param)
-
-        # Validate the parsed list with Pydantic
-        query_params = QueryParams(q=query_filters)
-        # print(query_params)
-        # Initialize the selected filters based on the validated query parameters
-        selected_filters = {}
-        for qf in query_params.q:
-            selected_filters[qf.category] = set(qf.value)  # Store as a set for efficient lookup
-        print(selected_filters)
-        # Base queryset and your existing logic for processing the filters...
-        # Base queryset with annotations for counting occurrences
-        queryset = CryoGrid.objects.select_related(
-            "intended_project",
-            "freezing_session",
-            "grid_box__puck",
-            "user",
-            "grid_cassette",
-            "specimen",
-            "sample",
-        ).prefetch_related(
-            "msisession",
-            "specimen__samples",
-            "atlassession__group",
-            "labels",
-        )
-
-        current_time = now()
-        date_ranges = {
-            "last_1_month": current_time - timedelta(days=30),
-            "last_3_months": current_time - timedelta(days=90),
-            "last_6_months": current_time - timedelta(days=180),
-        }
-
-        # Function to add 'selected' key based on user selection
-        # Function to add 'selected' key based on user selection
-        def add_selected_status(filter_list, category):
-            selected_values = selected_filters.get(category, set())
-            # print(selected_values)
-            # Check if None is present in the selected values for this category
-            if None in selected_values:
-                # If None is present, mark all items as selected
-                for item in filter_list:
-                    if item["name"] is None:
-                        item["selected"] = True
-                    else:
-                        item["selected"] = False
-            else:
-                # Otherwise, continue the original logic
-                for item in filter_list:
-                    item_name = item["name"]
-
-                    # Check if the selected filter contains booleans or strings
-                    if isinstance(item_name, bool):
-                        # For boolean comparison (status), check if the item is in selected values
-                        item["selected"] = item_name in selected_values
-                    elif isinstance(item_name, str):
-                        # For string comparison, normalize case and check for match
-                        item["selected"] = item_name.strip().lower() in {
-                            val.lower() for val in selected_values if isinstance(val, str)
-                        }
-                    else:
-                        item["selected"] = False
-
-        # Aggregating counts for each filter
-        filters = {
-            "project": list(
-                queryset.annotate(project_temp_name=F("intended_project__name"))
-                .values(project_temp_name=F("project_temp_name"))
-                .annotate(count=Count("id"))
-                .order_by("project_temp_name")
-                .values(name=F("project_temp_name"), count=F("count"))
-            ),
-            "puck": list(
-                queryset.annotate(puck_temp_name=F("grid_box__puck__name"))
-                .filter(puck_temp_name__isnull=False)  # Exclude null puck names
-                .values(puck_temp_name=F("puck_temp_name"))
-                .annotate(count=Count("id"))
-                .order_by("puck_temp_name")
-                .values(name=F("puck_temp_name"), count=F("count"))
-            ),
-            "sample": list(
-                queryset.annotate(sample_temp_name=F("specimen__samples__name"))
-                .filter(sample_temp_name__isnull=False)  # Exclude null sample names
-                .values(sample_temp_name=F("sample_temp_name"))
-                .annotate(count=Count("id"))
-                .order_by("sample_temp_name")
-                .values(name=F("sample_temp_name"), count=F("count"))
-            ),
-            "label": list(
-                queryset.annotate(label_temp_name=F("labels__name"))
-                .filter(label_temp_name__isnull=False)
-                .values(label_temp_name=F("label_temp_name"))
-                .annotate(count=Count("id"))
-                .order_by("label_temp_name")
-                .values(name=F("label_temp_name"), count=F("count"))
-            ),
-            "cassette": list(
-                queryset.annotate(cassette_temp_name=F("grid_cassette__name"))
-                .filter(cassette_temp_name__isnull=False)  # Exclude null cassette names
-                .values(cassette_temp_name=F("cassette_temp_name"))
-                .annotate(count=Count("id"))
-                .order_by("cassette_temp_name")
-                .values(name=F("cassette_temp_name"), count=F("count"))
-            ),
-            "screeningSession": list(
-                queryset.filter(freezing_session__isnull=False)
-                .annotate(screen_session_temp_name=F("atlassession__group__name"))
-                .filter(screen_session_temp_name__isnull=False)  # Exclude null screening session names
-                .values(screen_session_temp_name=F("screen_session_temp_name"))
-                .annotate(count=Count("id"))
-                .order_by("screen_session_temp_name")
-                .values(name=F("screen_session_temp_name"), count=F("count"))
-            ),
-            "user": list(
-                queryset.annotate(
-                    user_temp_name=Trim(
-                        Case(
-                            When(
-                                user__username__contains="@",
-                                then=Substr(F("user__username"), 1, StrIndex(F("user__username"), Value("@")) - 1),
-                            ),
-                            default=F("user__username"),
-                            output_field=CharField(),
-                        ),
-                    ),
-                )
-                .values(user_temp_name=F("user_temp_name"))
-                .annotate(count=Count("id"))
-                .order_by("user_temp_name")
-                .values(name=Trim(F("user_temp_name")), count=F("count"))
-            ),
-            "msiSession": sorted(
-                list(
-                    queryset.filter(msisession__isnull=False)  # Exclude null msisession relations
-                    .annotate(msi_session_temp_name=F("msisession__name"))
-                    .values(msi_session_temp_name=F("msi_session_temp_name"))
-                    .annotate(count=Count("id"))
-                    .values(name=F("msi_session_temp_name"), count=F("count")),
-                ),
-                key=lambda x: msi_session_sort_key(x["name"]),
-            ),
-            "status": list(
-                queryset.annotate(
-                    status_name=Case(
-                        When(trashed=True, then=Value("Inactive")),
-                        When(trashed=False, then=Value("Active")),
-                        output_field=CharField(),
-                    )
-                )
-                .values("status_name")
-                .annotate(count=Count("id"))
-                .order_by("status_name")
-                .values(name=F("status_name"), count=F("count"))
-            ),
-            "date": [
-                {"name": "last_1_month", "count": queryset.filter(create_on__gte=date_ranges["last_1_month"]).count()},
-                {
-                    "name": "last_3_months",
-                    "count": queryset.filter(create_on__gte=date_ranges["last_3_months"]).count(),
-                },
-                {
-                    "name": "last_6_months",
-                    "count": queryset.filter(create_on__gte=date_ranges["last_6_months"]).count(),
-                },
-            ],
-        }
-        # Process the 'sample' filter and replace sample_name with the detailed information
-        processed_samples = []
-        for item in filters["sample"]:
-            if "name" in item and item["name"]:
-                try:
-                    sample_obj = Sample.objects.get(name=item["name"])
-                    display_name = sample_obj.name
-                    if sample_obj.ontology:
-                        display_name += f" ({sample_obj.ontology})"
-                    processed_samples.append(
-                        {
-                            "name": display_name,
-                            "count": item["count"],
-                            "selected": False,
-                        }
-                    )
-                except Sample.DoesNotExist:
-                    processed_samples.append(item)
-            else:
-                processed_samples.append(item)
-        filters["sample"] = processed_samples
-
-        # Apply 'selected' status to filters
-        for key, filter_list in filters.items():
-            # print(filter_list)
-            add_selected_status(filter_list, key)
-
-        # Convert to the expected output format
-        response_data = {
-            "filters": filters,
-        }
-
-        return JsonResponse(response_data)
-    except ValidationError as e:
-        # Handle Pydantic validation errors
-        return JsonResponse({"error": f"Invalid input: {e.errors()}"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
 
 
 # If you want to test locally, you can comment out the @login_required decorator
@@ -705,75 +485,6 @@ def apply_filters(queryset, filters):
         q_filters = reduce(lambda x, y: x & y, filter_q_objects, Q())
 
     return queryset.filter(q_filters).distinct()
-
-
-@login_required
-@require_http_methods(["GET"])
-def search_suggestions(request):
-    term = request.GET.get("term", "").strip()
-    if len(term) < 1:
-        return JsonResponse({"suggestions": []})
-
-    suggestions = []
-    limit_per_category = 5
-
-    # Grid names
-    grid_names = (
-        CryoGrid.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit_per_category]
-    )
-    for name in grid_names:
-        suggestions.append({"value": name, "category": "grid"})
-
-    # Project names
-    project_names = (
-        CryoGrid.objects.filter(intended_project__name__icontains=term)
-        .values_list("intended_project__name", flat=True)
-        .distinct()[:limit_per_category]
-    )
-    for name in project_names:
-        if name:
-            suggestions.append({"value": name, "category": "project"})
-
-    # Usernames (strip @domain)
-    usernames = (
-        CryoGrid.objects.filter(user__username__icontains=term)
-        .values_list("user__username", flat=True)
-        .distinct()[:limit_per_category]
-    )
-    for username in usernames:
-        if username:
-            display = username.split("@")[0] if "@" in username else username
-            suggestions.append({"value": display, "category": "user"})
-
-    # Sample names
-    sample_names = (
-        CryoGrid.objects.filter(specimen__samples__name__icontains=term)
-        .values_list("specimen__samples__name", flat=True)
-        .distinct()[:limit_per_category]
-    )
-    for name in sample_names:
-        if name:
-            suggestions.append({"value": name, "category": "sample"})
-
-    # MSI Session names
-    session_names = (
-        CryoGrid.objects.filter(msisession__name__icontains=term)
-        .values_list("msisession__name", flat=True)
-        .distinct()[:limit_per_category]
-    )
-    for name in session_names:
-        if name:
-            suggestions.append({"value": name, "category": "msiSession"})
-
-    # Label names
-    label_names = (
-        Label.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit_per_category]
-    )
-    for name in label_names:
-        if name:
-            suggestions.append({"value": name, "category": "label"})
-
-    return JsonResponse({"suggestions": suggestions[:20]})
 
 
 def format_queryset_results(queryset):

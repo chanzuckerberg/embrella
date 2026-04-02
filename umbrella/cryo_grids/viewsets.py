@@ -4,10 +4,13 @@ DRF ViewSets for the cryo_grids app.
 Contains ViewSets for managing Pucks, CryoGridBoxes, and grid logging choices.
 """
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models, transaction
-from django.db.models.functions import Lower
+from django.db.models import Case, CharField, Count, F, Prefetch, Q, Value, When
+from django.db.models.functions import Lower, StrIndex, Substr, Trim
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status, viewsets
@@ -39,6 +42,7 @@ from cryo_grids.models import (
 )
 from cryo_grids.serializers import (
     CaneSerializer,
+    CryoGridBoxListSerializer,
     CryoGridBoxSerializer,
     CryoGridSerializer,
     FreezingSessionSerializer,
@@ -47,6 +51,12 @@ from cryo_grids.serializers import (
     PuckSerializer,
     SampleSerializer,
     SpecimenSerializer,
+)
+from cryo_grids.viewset_helpers import (
+    add_selected_status,
+    apply_grid_box_filters,
+    get_shared_search_suggestions,
+    msi_session_sort_key,
 )
 
 
@@ -932,7 +942,7 @@ class FreezingSessionViewSet(viewsets.ModelViewSet):
 class CryoGridViewSet(viewsets.ModelViewSet):
     """
     ViewSet for CryoGrid model
-    URL: /api/list/grids/
+    URL: /cryo_grids/v1/grids/
     """
 
     queryset = (
@@ -949,6 +959,12 @@ class CryoGridViewSet(viewsets.ModelViewSet):
     serializer_class = CryoGridSerializer
     permission_classes = [IsAuthenticated]
     authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        """Delegate to the existing grid list view for backwards compatibility."""
+        from cryo_grids.views import get_cryo_grids_details
+
+        return get_cryo_grids_details(request)
 
     def retrieve(self, request, *args, **kwargs):
         """Return full grid details using GridDetailsSerializer."""
@@ -1306,6 +1322,193 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @action(detail=False, methods=["get"])
+    def filterlist(self, request):
+        """Return available filter options with counts for grids."""
+        import json
+
+        from django.utils.timezone import now as tz_now
+
+        raw_q = request.GET.get("q", "[]")
+        q_params = json.loads(raw_q)
+
+        # Parse selected filters
+        selected_filters = {}
+        for item in q_params:
+            category = item.get("category")
+            values = item.get("value")
+            if category and values:
+                selected_filters[category] = set(values if isinstance(values, list) else [values])
+
+        queryset = CryoGrid.objects.select_related(
+            "intended_project",
+            "freezing_session",
+            "grid_box__puck",
+            "user",
+            "grid_cassette",
+            "specimen",
+            "sample",
+        ).prefetch_related(
+            "msisession",
+            "specimen__samples",
+            "atlassession__group",
+            "labels",
+        )
+
+        current_time = tz_now()
+        date_ranges = {
+            "last_1_month": current_time - timedelta(days=30),
+            "last_3_months": current_time - timedelta(days=90),
+            "last_6_months": current_time - timedelta(days=180),
+        }
+
+        filters = {
+            "project": list(
+                queryset.annotate(project_temp_name=F("intended_project__name"))
+                .values(project_temp_name=F("project_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("project_temp_name")
+                .values(name=F("project_temp_name"), count=F("count"))
+            ),
+            "puck": list(
+                queryset.annotate(puck_temp_name=F("grid_box__puck__name"))
+                .filter(puck_temp_name__isnull=False)
+                .values(puck_temp_name=F("puck_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("puck_temp_name")
+                .values(name=F("puck_temp_name"), count=F("count"))
+            ),
+            "sample": list(
+                queryset.annotate(sample_temp_name=F("specimen__samples__name"))
+                .filter(sample_temp_name__isnull=False)
+                .values(sample_temp_name=F("sample_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("sample_temp_name")
+                .values(name=F("sample_temp_name"), count=F("count"))
+            ),
+            "label": list(
+                queryset.annotate(label_temp_name=F("labels__name"))
+                .filter(label_temp_name__isnull=False)
+                .values(label_temp_name=F("label_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("label_temp_name")
+                .values(name=F("label_temp_name"), count=F("count"))
+            ),
+            "cassette": list(
+                queryset.annotate(cassette_temp_name=F("grid_cassette__name"))
+                .filter(cassette_temp_name__isnull=False)
+                .values(cassette_temp_name=F("cassette_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("cassette_temp_name")
+                .values(name=F("cassette_temp_name"), count=F("count"))
+            ),
+            "screeningSession": list(
+                queryset.filter(freezing_session__isnull=False)
+                .annotate(screen_session_temp_name=F("atlassession__group__name"))
+                .filter(screen_session_temp_name__isnull=False)
+                .values(screen_session_temp_name=F("screen_session_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("screen_session_temp_name")
+                .values(name=F("screen_session_temp_name"), count=F("count"))
+            ),
+            "user": list(
+                queryset.annotate(
+                    user_temp_name=Trim(
+                        Case(
+                            When(
+                                user__username__contains="@",
+                                then=Substr(F("user__username"), 1, StrIndex(F("user__username"), Value("@")) - 1),
+                            ),
+                            default=F("user__username"),
+                            output_field=CharField(),
+                        ),
+                    ),
+                )
+                .values(user_temp_name=F("user_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("user_temp_name")
+                .values(name=Trim(F("user_temp_name")), count=F("count"))
+            ),
+            "msiSession": sorted(
+                list(
+                    queryset.filter(msisession__isnull=False)
+                    .annotate(msi_session_temp_name=F("msisession__name"))
+                    .values(msi_session_temp_name=F("msi_session_temp_name"))
+                    .annotate(count=Count("id"))
+                    .values(name=F("msi_session_temp_name"), count=F("count")),
+                ),
+                key=lambda x: msi_session_sort_key(x["name"]),
+            ),
+            "status": list(
+                queryset.annotate(
+                    status_name=Case(
+                        When(trashed=True, then=Value("Inactive")),
+                        When(trashed=False, then=Value("Active")),
+                        output_field=CharField(),
+                    )
+                )
+                .values("status_name")
+                .annotate(count=Count("id"))
+                .order_by("status_name")
+                .values(name=F("status_name"), count=F("count"))
+            ),
+            "date": [
+                {"name": "last_1_month", "count": queryset.filter(create_on__gte=date_ranges["last_1_month"]).count()},
+                {
+                    "name": "last_3_months",
+                    "count": queryset.filter(create_on__gte=date_ranges["last_3_months"]).count(),
+                },
+                {
+                    "name": "last_6_months",
+                    "count": queryset.filter(create_on__gte=date_ranges["last_6_months"]).count(),
+                },
+            ],
+        }
+
+        # Enrich sample names with ontology
+        processed_samples = []
+        for item in filters["sample"]:
+            if "name" in item and item["name"]:
+                try:
+                    sample_obj = Sample.objects.get(name=item["name"])
+                    display_name = sample_obj.name
+                    if sample_obj.ontology:
+                        display_name += f" ({sample_obj.ontology})"
+                    processed_samples.append(
+                        {
+                            "name": display_name,
+                            "count": item["count"],
+                            "selected": False,
+                        }
+                    )
+                except Sample.DoesNotExist:
+                    processed_samples.append(item)
+            else:
+                processed_samples.append(item)
+        filters["sample"] = processed_samples
+
+        for key, filter_list in filters.items():
+            add_selected_status(filter_list, key, selected_filters)
+
+        return Response({"filters": filters})
+
+    @action(detail=False, methods=["get"], url_path="search_suggestions")
+    def search_suggestions(self, request):
+        """Return search suggestions for grids."""
+        term = request.GET.get("term", "").strip()
+        if len(term) < 1:
+            return Response({"suggestions": []})
+
+        limit = 5
+        suggestions = []
+
+        # Grid names (entity-specific)
+        for name in CryoGrid.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit]:
+            suggestions.append({"value": name, "category": "grid"})
+
+        suggestions.extend(get_shared_search_suggestions(term, limit))
+        return Response({"suggestions": suggestions[:20]})
+
 
 class ProjectLeaderViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -1366,3 +1569,188 @@ class LabelViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
         serializer.save(created_by=user)
+
+
+class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for CryoGridBox model with nested grids.
+    URL: /api/list/grid-boxes/
+    """
+
+    queryset = (
+        CryoGridBox.objects.select_related("puck", "puck__user")
+        .prefetch_related(
+            Prefetch(
+                "cryogrid_set",
+                queryset=CryoGrid.objects.filter(trashed=False)
+                .select_related("specimen", "user", "intended_project")
+                .prefetch_related("labels", "specimen__samples"),
+            ),
+        )
+        .annotate(grid_count=Count("cryogrid", filter=Q(cryogrid__trashed=False), distinct=True))
+        .order_by("-id")
+    )
+    serializer_class = CryoGridBoxListSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        """
+        List grid boxes with pagination in the format expected by the frontend.
+        Returns { result, pagination, sortBy }.
+        """
+        import json
+
+        queryset = self.filter_queryset(self.get_queryset())
+
+        raw_q = request.GET.get("q", None)
+        q_params = json.loads(raw_q) if raw_q else []
+
+        # Apply filters
+        queryset = apply_grid_box_filters(queryset, q_params)
+
+        page = 1
+        page_size = 10
+        sort_field = "id"
+        asc = False
+
+        for item in q_params:
+            category = item.get("category")
+            value = item.get("value")
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            if category == "page":
+                page = int(value)
+            elif category == "pageSize":
+                page_size = int(value)
+            elif category == "sort":
+                sort_field = value
+            elif category == "asc":
+                asc = bool(value) if isinstance(value, bool) else str(value).lower() == "true"
+
+        # Map camelCase frontend field names to Django model/annotation names
+        sort_field_map = {
+            "gridCount": "grid_count",
+        }
+        db_sort_field = sort_field_map.get(sort_field, sort_field)
+        sort_order = db_sort_field if asc else f"-{db_sort_field}"
+        queryset = queryset.order_by(sort_order)
+
+        # Paginate
+        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+
+        paginator = Paginator(queryset, page_size)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        serializer = self.get_serializer(page_obj.object_list, many=True)
+
+        # Transform to camelCase with gridBox primary entity
+        result = []
+        for item in serializer.data:
+            result.append(
+                {
+                    "gridBox": {
+                        "id": item["id"],
+                        "name": item["name"],
+                    },
+                    "color": item["color"],
+                    "colorDisplay": item["color_display"],
+                    "numberingDisplay": item["numbering_display"],
+                    "puckName": item["puck_name"],
+                    "positionInPuck": item["position_in_puck"],
+                    "maxGrids": item["max_grids"],
+                    "gridCount": item["grid_count"],
+                    "puckUser": item["puck_user"],
+                    "grids": item["grids"],
+                },
+            )
+
+        return Response(
+            {
+                "result": result,
+                "pagination": {
+                    "page": page_obj.number,
+                    "pageSize": page_size,
+                    "totalPages": paginator.num_pages,
+                    "totalResults": paginator.count,
+                },
+                "sortBy": {
+                    "sort": sort_field,
+                    "asc": asc,
+                },
+            },
+        )
+
+    @action(detail=False, methods=["get"])
+    def filterlist(self, request):
+        """Return available filter options with counts for grid boxes."""
+        import json
+
+        raw_q = request.GET.get("q", "[]")
+        q_params = json.loads(raw_q)
+
+        # Parse selected filters
+        selected_filters = {}
+        for item in q_params:
+            category = item.get("category")
+            values = item.get("value")
+            if category and values:
+                selected_filters[category] = set(values if isinstance(values, list) else [values])
+
+        base_qs = CryoGridBox.objects.all()
+
+        def query_filter(qs, filter_expr, value_expr):
+            """Query filter options with counts, aliasing as 'filter_name' to avoid conflict with model 'name' field."""
+            rows = list(
+                qs.filter(**{filter_expr: False})
+                .values(filter_name=F(value_expr))
+                .annotate(count=Count("id", distinct=True))
+                .order_by("filter_name")
+            )
+            return [{"name": r["filter_name"], "count": r["count"]} for r in rows]
+
+        filters = {
+            "project": query_filter(base_qs, "cryogrid__intended_project__isnull", "cryogrid__intended_project__name"),
+            "puck": query_filter(base_qs, "puck__isnull", "puck__name"),
+            "sample": query_filter(base_qs, "cryogrid__specimen__samples__isnull", "cryogrid__specimen__samples__name"),
+            "user": query_filter(base_qs, "cryogrid__user__isnull", "cryogrid__user__username"),
+            "cassette": query_filter(base_qs, "cryogrid__grid_cassette__isnull", "cryogrid__grid_cassette__name"),
+            "label": query_filter(base_qs, "cryogrid__labels__isnull", "cryogrid__labels__name"),
+            "msiSession": query_filter(base_qs, "cryogrid__msisession__isnull", "cryogrid__msisession__name"),
+            "screeningSession": query_filter(
+                base_qs, "cryogrid__atlassession__group__isnull", "cryogrid__atlassession__group__name"
+            ),
+            "status": [
+                {"name": "Active", "count": base_qs.filter(cryogrid__trashed=False).distinct().count()},
+                {"name": "Inactive", "count": base_qs.filter(cryogrid__trashed=True).distinct().count()},
+            ],
+            "date": [],
+        }
+
+        for key, filter_list in filters.items():
+            if key != "date":
+                add_selected_status(filter_list, key, selected_filters)
+
+        return Response({"filters": filters})
+
+    @action(detail=False, methods=["get"], url_path="search_suggestions")
+    def search_suggestions(self, request):
+        """Return search suggestions for grid boxes."""
+        term = request.GET.get("term", "").strip()
+        if len(term) < 1:
+            return Response({"suggestions": []})
+
+        limit = 5
+        suggestions = []
+
+        # Grid box names (entity-specific)
+        for name in CryoGridBox.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit]:
+            suggestions.append({"value": name, "category": "gridBox"})
+
+        suggestions.extend(get_shared_search_suggestions(term, limit))
+        return Response({"suggestions": suggestions[:20]})
