@@ -94,7 +94,7 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} sdsSize="s">
+      <Dialog open={open} onClose={onClose} sdsSize="s" disableScrollLock>
         <DialogTitle title={titleText} onClose={onClose} />
         <DialogContent>
           {!isSuccess || !gridDetails || !form.formData ? (
