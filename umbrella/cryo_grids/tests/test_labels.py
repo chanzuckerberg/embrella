@@ -154,7 +154,7 @@ class TestUpdateLabels:
     def test_set_labels_on_grid(self, client, test_user, grid, label_a, label_b):
         client.force_login(test_user)
         response = client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": [label_a.id, label_b.id]},
             content_type="application/json",
         )
@@ -171,7 +171,7 @@ class TestUpdateLabels:
 
         # Set to only label_a — label_b should be removed
         response = client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": [label_a.id]},
             content_type="application/json",
         )
@@ -184,7 +184,7 @@ class TestUpdateLabels:
         GridLabel.objects.create(grid=grid, label=label_a, added_by=test_user)
 
         response = client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": []},
             content_type="application/json",
         )
@@ -194,7 +194,7 @@ class TestUpdateLabels:
     def test_invalid_label_ids(self, client, test_user, grid):
         client.force_login(test_user)
         response = client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": [99999]},
             content_type="application/json",
         )
@@ -203,7 +203,7 @@ class TestUpdateLabels:
     def test_invalid_label_ids_type(self, client, test_user, grid):
         client.force_login(test_user)
         response = client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": "not_a_list"},
             content_type="application/json",
         )
@@ -214,7 +214,7 @@ class TestUpdateLabels:
         grid.trashed = True
         grid.save()
         response = client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": [label_a.id]},
             content_type="application/json",
         )
@@ -224,7 +224,7 @@ class TestUpdateLabels:
     def test_nonexistent_grid(self, client, test_user, label_a):
         client.force_login(test_user)
         response = client.patch(
-            "/api/list/grids/99999/update-labels/",
+            "/cryo_grids/v1/grids/99999/update-labels/",
             data={"label_ids": [label_a.id]},
             content_type="application/json",
         )
@@ -233,7 +233,7 @@ class TestUpdateLabels:
     def test_added_by_tracked(self, client, test_user, grid, label_a):
         client.force_login(test_user)
         client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": [label_a.id]},
             content_type="application/json",
         )
@@ -246,7 +246,7 @@ class TestUpdateLabels:
         client.force_login(test_user)
         for _ in range(2):
             client.patch(
-                f"/api/list/grids/{grid.id}/update-labels/",
+                f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
                 data={"label_ids": [label_a.id]},
                 content_type="application/json",
             )
@@ -265,7 +265,7 @@ class TestUpdateLabels:
 
         # Add it to the grid
         client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": [typo_id]},
             content_type="application/json",
         )
@@ -273,7 +273,7 @@ class TestUpdateLabels:
 
         # Remove it immediately (within 1 min)
         client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": []},
             content_type="application/json",
         )
@@ -291,7 +291,7 @@ class TestUpdateLabels:
 
         # Remove it
         client.patch(
-            f"/api/list/grids/{grid.id}/update-labels/",
+            f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
             data={"label_ids": []},
             content_type="application/json",
         )
