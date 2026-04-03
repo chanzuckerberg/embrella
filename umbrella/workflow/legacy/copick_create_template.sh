@@ -66,8 +66,9 @@ copick config filesystem \
 copick add tomogram "${tomo_path}" \
   --config "${copick_dir}/config.json" \
   --tomo-type "${tomo_type,,}" \
-  --run-regex '^(Position_[0-9]+(?:_[0-9]+)*)_Vol$'
-  
+  --run-regex '^(Position_[0-9]+(?:_[0-9]+)*)_Vol$' \
+  --run-name-prefix "${session}_"
+
 # downsample tomograms, first check the smallest voxel size avaliable
 
 # ------------------------------------------------------------------

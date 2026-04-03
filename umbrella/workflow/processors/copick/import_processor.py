@@ -23,7 +23,7 @@ class CopickImportProcessor(CopickProcessor):
 
     name = "copick-import"
     display_name = "Copick Import"
-    version = "1.0"
+    version = "1.0.1"
     task_name = "copick_import"
 
     # Hidden from processor dropdown - accessed via Copick form's Import Tomograms tab
