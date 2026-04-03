@@ -4,7 +4,7 @@ import os
 import re
 
 # python library import
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import reduce
 
 from django.contrib.auth.decorators import login_required
@@ -409,53 +409,29 @@ def get_cryo_grids_details(request):
 
 def apply_filters(queryset, filters):
     """
-    Apply filters to a queryset based on a list of filter items.
+    Apply filters to a CryoGrid queryset based on a list of filter items.
+    Uses shared helpers for common categories and adds grid-specific filters
+    (puck, search, filterType).
     """
-    filter_mappings = {
-        "project": "intended_project__name__in",
-        "cassette": "grid_cassette__name__in",
-        "puck": "grid_box__puck__name__in",
-        "msiSession": "msisession__name__in",
-        "screeningSession": "atlassession__group__name__in",
-        "status": "trashed__in",
-        "label": "labels__name__in",
-    }
+    from cryo_grids.viewset_helpers import build_shared_grid_inventory_q_objects
 
-    q_filters = Q()
+    filter_q_objects = build_shared_grid_inventory_q_objects(filters, grid_prefix="")
+
     filter_type = "AND"
-    filter_q_objects = []
-
-    date_mapping = {
-        "last_1_month": 1,
-        "last_3_months": 3,
-        "last_6_months": 6,
-    }
 
     for filter_item in filters:
         category = filter_item.get("category")
         values = filter_item.get("value")
+
         if category == "filterType" and values:
             filter_type = values[0].upper() if isinstance(values, list) else values.upper()
-        elif category in filter_mappings:
-            field = filter_mappings[category]
+        elif category == "puck" and values:
             if values is None or (isinstance(values, list) and None in values):
-                filter_q_objects.append(Q(**{f"{field.split('__')[0]}__isnull": True}))
-            elif values:
+                filter_q_objects.append(Q(grid_box__puck__isnull=True))
+            else:
                 if not isinstance(values, list):
                     values = [values]
-                # Map display labels back to boolean for status/trashed
-                if category == "status":
-                    status_map = {"Active": False, "Inactive": True}
-                    values = [status_map.get(v, v) for v in values]
-                filter_q_objects.append(Q(**{field: values}))
-        elif category == "user" and values:
-            usernames = values if isinstance(values, list) else [values]
-            q_username_filters = Q()
-            for username in usernames:
-                if "@" in username:
-                    username = username.split("@")[0]
-                q_username_filters |= Q(user__username__icontains=username)
-            filter_q_objects.append(q_username_filters)
+                filter_q_objects.append(Q(grid_box__puck__name__in=values))
         elif category == "search" and values:
             search_terms = values if isinstance(values, list) else [values]
             search_q = Q()
@@ -471,18 +447,13 @@ def apply_filters(queryset, filters):
                     )
             if search_q:
                 filter_q_objects.append(search_q)
-        elif category == "date" and values:
-            date_value = values[0] if isinstance(values, list) else values
-            if date_value in date_mapping:
-                months = date_mapping[date_value]
-                now_dt = datetime.now()
-                start_date = now_dt - timedelta(days=months * 30)
-                filter_q_objects.append(Q(updated_on__gte=start_date))
 
-    if filter_type == "OR":
-        q_filters = reduce(lambda x, y: x | y, filter_q_objects, Q())
-    elif filter_type == "AND":
-        q_filters = reduce(lambda x, y: x & y, filter_q_objects, Q())
+    q_filters = Q()
+    if filter_q_objects:
+        if filter_type == "OR":
+            q_filters = reduce(lambda x, y: x | y, filter_q_objects, Q())
+        else:
+            q_filters = reduce(lambda x, y: x & y, filter_q_objects, Q())
 
     return queryset.filter(q_filters).distinct()
 

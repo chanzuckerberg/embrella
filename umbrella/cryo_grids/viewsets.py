@@ -55,8 +55,10 @@ from cryo_grids.serializers import (
 from cryo_grids.viewset_helpers import (
     add_selected_status,
     apply_grid_box_filters,
+    get_shared_filterlist_options,
     get_shared_search_suggestions,
     msi_session_sort_key,
+    parse_selected_filters,
 )
 
 
@@ -1332,13 +1334,7 @@ class CryoGridViewSet(viewsets.ModelViewSet):
         raw_q = request.GET.get("q", "[]")
         q_params = json.loads(raw_q)
 
-        # Parse selected filters
-        selected_filters = {}
-        for item in q_params:
-            category = item.get("category")
-            values = item.get("value")
-            if category and values:
-                selected_filters[category] = set(values if isinstance(values, list) else [values])
+        selected_filters = parse_selected_filters(q_params)
 
         queryset = CryoGrid.objects.select_related(
             "intended_project",
@@ -1694,43 +1690,20 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
         raw_q = request.GET.get("q", "[]")
         q_params = json.loads(raw_q)
 
-        # Parse selected filters
-        selected_filters = {}
-        for item in q_params:
-            category = item.get("category")
-            values = item.get("value")
-            if category and values:
-                selected_filters[category] = set(values if isinstance(values, list) else [values])
-
+        selected_filters = parse_selected_filters(q_params)
         base_qs = CryoGridBox.objects.all()
 
-        def query_filter(qs, filter_expr, value_expr):
-            """Query filter options with counts, aliasing as 'filter_name' to avoid conflict with model 'name' field."""
-            rows = list(
-                qs.filter(**{filter_expr: False})
-                .values(filter_name=F(value_expr))
-                .annotate(count=Count("id", distinct=True))
-                .order_by("filter_name")
-            )
-            return [{"name": r["filter_name"], "count": r["count"]} for r in rows]
+        filters = get_shared_filterlist_options(base_qs, grid_prefix="cryogrid__")
 
-        filters = {
-            "project": query_filter(base_qs, "cryogrid__intended_project__isnull", "cryogrid__intended_project__name"),
-            "puck": query_filter(base_qs, "puck__isnull", "puck__name"),
-            "sample": query_filter(base_qs, "cryogrid__specimen__samples__isnull", "cryogrid__specimen__samples__name"),
-            "user": query_filter(base_qs, "cryogrid__user__isnull", "cryogrid__user__username"),
-            "cassette": query_filter(base_qs, "cryogrid__grid_cassette__isnull", "cryogrid__grid_cassette__name"),
-            "label": query_filter(base_qs, "cryogrid__labels__isnull", "cryogrid__labels__name"),
-            "msiSession": query_filter(base_qs, "cryogrid__msisession__isnull", "cryogrid__msisession__name"),
-            "screeningSession": query_filter(
-                base_qs, "cryogrid__atlassession__group__isnull", "cryogrid__atlassession__group__name"
-            ),
-            "status": [
-                {"name": "Active", "count": base_qs.filter(cryogrid__trashed=False).distinct().count()},
-                {"name": "Inactive", "count": base_qs.filter(cryogrid__trashed=True).distinct().count()},
-            ],
-            "date": [],
-        }
+        # Add grid-box-specific filter: puck (direct relation, not via grid)
+        puck_rows = list(
+            base_qs.filter(puck__isnull=False)
+            .values(filter_name=F("puck__name"))
+            .annotate(count=Count("id", distinct=True))
+            .order_by("filter_name")
+        )
+        filters["puck"] = [{"name": r["filter_name"], "count": r["count"]} for r in puck_rows]
+        filters["date"] = []
 
         for key, filter_list in filters.items():
             if key != "date":

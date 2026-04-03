@@ -5,7 +5,7 @@ Shared helper functions for cryo_grids ViewSets.
 from datetime import datetime, timedelta
 from functools import reduce
 
-from django.db.models import Q
+from django.db.models import Count, F, Q
 
 from cryo_grids.models import CryoGrid, Label
 
@@ -104,20 +104,31 @@ def get_shared_search_suggestions(term, limit=5):
     return suggestions
 
 
-def apply_grid_box_filters(queryset, q_params):
-    """
-    Apply filters to a CryoGridBox queryset based on q_params.
-    Filters grid boxes by their contained grids using reverse relationships.
+def build_shared_grid_inventory_q_objects(q_params, grid_prefix=""):
+    """Build Q objects for filter categories shared across GridInventory tabs.
+
+    Handles: project, user, sample, label, msiSession, cassette, date,
+    screeningSession, status.
+
+    Does NOT handle entity-specific filters: puck, search.
+
+    Args:
+        q_params: List of dicts with 'category' and 'value' keys.
+        grid_prefix: ORM lookup prefix to reach CryoGrid fields
+            (e.g., "" for CryoGrid, "cryogrid__" for CryoGridBox,
+             "cryogridbox__cryogrid__" for Puck).
+
+    Returns:
+        List of Q objects (caller decides AND vs OR combination).
     """
     filter_mappings = {
-        "project": "cryogrid__intended_project__name__in",
-        "cassette": "cryogrid__grid_cassette__name__in",
-        "puck": "puck__name__in",
-        "msiSession": "cryogrid__msisession__name__in",
-        "screeningSession": "cryogrid__atlassession__group__name__in",
-        "status": "cryogrid__trashed__in",
-        "label": "cryogrid__labels__name__in",
-        "sample": "cryogrid__specimen__samples__name__in",
+        "project": f"{grid_prefix}intended_project__name__in",
+        "cassette": f"{grid_prefix}grid_cassette__name__in",
+        "msiSession": f"{grid_prefix}msisession__name__in",
+        "screeningSession": f"{grid_prefix}atlassession__group__name__in",
+        "status": f"{grid_prefix}trashed__in",
+        "label": f"{grid_prefix}labels__name__in",
+        "sample": f"{grid_prefix}specimen__samples__name__in",
     }
 
     date_mapping = {
@@ -126,35 +137,130 @@ def apply_grid_box_filters(queryset, q_params):
         "last_6_months": 6,
     }
 
-    filter_q_objects = []
+    q_objects = []
 
     for filter_item in q_params:
         category = filter_item.get("category")
         values = filter_item.get("value")
 
-        # Skip pagination/sort params
         if category in ("page", "pageSize", "sort", "asc", "filterType"):
             continue
 
         if category in filter_mappings:
             field = filter_mappings[category]
             if values is None or (isinstance(values, list) and None in values):
-                filter_q_objects.append(Q(**{f"{field.split('__')[0]}__isnull": True}))
+                q_objects.append(Q(**{f"{field.split('__')[0]}__isnull": True}))
             elif values:
                 if not isinstance(values, list):
                     values = [values]
                 if category == "status":
                     status_map = {"Active": False, "Inactive": True}
                     values = [status_map.get(v, v) for v in values]
-                filter_q_objects.append(Q(**{field: values}))
+                q_objects.append(Q(**{field: values}))
         elif category == "user" and values:
             usernames = values if isinstance(values, list) else [values]
             q_username_filters = Q()
             for username in usernames:
                 if "@" in username:
                     username = username.split("@")[0]
-                q_username_filters |= Q(cryogrid__user__username__icontains=username)
-            filter_q_objects.append(q_username_filters)
+                q_username_filters |= Q(**{f"{grid_prefix}user__username__icontains": username})
+            q_objects.append(q_username_filters)
+        elif category == "date" and values:
+            date_value = values[0] if isinstance(values, list) else values
+            if date_value in date_mapping:
+                months = date_mapping[date_value]
+                now_dt = datetime.now()
+                start_date = now_dt - timedelta(days=months * 30)
+                q_objects.append(Q(**{f"{grid_prefix}updated_on__gte": start_date}))
+
+    return q_objects
+
+
+def apply_shared_grid_inventory_filters(queryset, q_params, grid_prefix=""):
+    """Apply shared GridInventory filters to a queryset (AND combination).
+
+    Convenience wrapper around build_shared_grid_inventory_q_objects.
+    """
+    q_objects = build_shared_grid_inventory_q_objects(q_params, grid_prefix)
+    if q_objects:
+        combined = reduce(lambda x, y: x & y, q_objects, Q())
+        queryset = queryset.filter(combined).distinct()
+    return queryset
+
+
+def get_shared_filterlist_options(base_qs, grid_prefix=""):
+    """Generate filter options for categories shared across GridInventory tabs.
+
+    Args:
+        base_qs: Base queryset for the entity (CryoGrid, CryoGridBox, or Puck).
+        grid_prefix: ORM lookup prefix to reach CryoGrid fields.
+
+    Returns:
+        Dict of filter category → list of {name, count} dicts.
+    """
+
+    def query_filter(filter_expr, value_expr):
+        rows = list(
+            base_qs.filter(**{filter_expr: False})
+            .values(filter_name=F(value_expr))
+            .annotate(count=Count("id", distinct=True))
+            .order_by("filter_name")
+        )
+        return [{"name": r["filter_name"], "count": r["count"]} for r in rows]
+
+    return {
+        "project": query_filter(f"{grid_prefix}intended_project__isnull", f"{grid_prefix}intended_project__name"),
+        "sample": query_filter(f"{grid_prefix}specimen__samples__isnull", f"{grid_prefix}specimen__samples__name"),
+        "user": query_filter(f"{grid_prefix}user__isnull", f"{grid_prefix}user__username"),
+        "label": query_filter(f"{grid_prefix}labels__isnull", f"{grid_prefix}labels__name"),
+        "cassette": query_filter(f"{grid_prefix}grid_cassette__isnull", f"{grid_prefix}grid_cassette__name"),
+        "msiSession": query_filter(f"{grid_prefix}msisession__isnull", f"{grid_prefix}msisession__name"),
+        "screeningSession": query_filter(
+            f"{grid_prefix}atlassession__group__isnull", f"{grid_prefix}atlassession__group__name"
+        ),
+        "status": [
+            {
+                "name": "Active",
+                "count": base_qs.filter(**{f"{grid_prefix}trashed": False}).distinct().count(),
+            },
+            {
+                "name": "Inactive",
+                "count": base_qs.filter(**{f"{grid_prefix}trashed": True}).distinct().count(),
+            },
+        ],
+    }
+
+
+def parse_selected_filters(q_params):
+    """Parse q_params into a dict of category → set of selected values."""
+    selected = {}
+    for item in q_params:
+        category = item.get("category")
+        values = item.get("value")
+        if category and values:
+            selected[category] = set(values if isinstance(values, list) else [values])
+    return selected
+
+
+def apply_grid_box_filters(queryset, q_params):
+    """
+    Apply filters to a CryoGridBox queryset based on q_params.
+    Uses shared helpers for grid-related filters and adds grid-box-specific
+    filters (puck, search).
+    """
+    q_objects = build_shared_grid_inventory_q_objects(q_params, grid_prefix="cryogrid__")
+
+    for filter_item in q_params:
+        category = filter_item.get("category")
+        values = filter_item.get("value")
+
+        if category == "puck" and values:
+            if values is None or (isinstance(values, list) and None in values):
+                q_objects.append(Q(puck__isnull=True))
+            else:
+                if not isinstance(values, list):
+                    values = [values]
+                q_objects.append(Q(puck__name__in=values))
         elif category == "search" and values:
             search_terms = values if isinstance(values, list) else [values]
             search_q = Q()
@@ -169,17 +275,10 @@ def apply_grid_box_filters(queryset, q_params):
                         | Q(cryogrid__labels__name__icontains=search_term)
                     )
             if search_q:
-                filter_q_objects.append(search_q)
-        elif category == "date" and values:
-            date_value = values[0] if isinstance(values, list) else values
-            if date_value in date_mapping:
-                months = date_mapping[date_value]
-                now_dt = datetime.now()
-                start_date = now_dt - timedelta(days=months * 30)
-                filter_q_objects.append(Q(cryogrid__updated_on__gte=start_date))
+                q_objects.append(search_q)
 
-    if filter_q_objects:
-        combined = reduce(lambda x, y: x & y, filter_q_objects, Q())
+    if q_objects:
+        combined = reduce(lambda x, y: x & y, q_objects, Q())
         queryset = queryset.filter(combined).distinct()
 
     return queryset
