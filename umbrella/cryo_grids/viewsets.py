@@ -55,6 +55,7 @@ from cryo_grids.serializers import (
 from cryo_grids.viewset_helpers import (
     add_selected_status,
     apply_grid_box_filters,
+    apply_shared_grid_inventory_filters,
     get_shared_filterlist_options,
     get_shared_search_suggestions,
     msi_session_sort_key,
@@ -1727,3 +1728,88 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
 
         suggestions.extend(get_shared_search_suggestions(term, limit))
         return Response({"suggestions": suggestions[:20]})
+
+
+class GridInventoryCountsViewSet(viewsets.ViewSet):
+    """
+    Returns filtered counts for all GridInventory tabs in a single request.
+    URL: /cryo_grids/v1/counts/
+    """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request):
+        import json
+
+        raw_q = request.GET.get("q", None)
+        q_params = json.loads(raw_q) if raw_q else []
+
+        # Shared grid-relation filters applied to each entity
+        grids_qs = apply_shared_grid_inventory_filters(CryoGrid.objects.filter(trashed=False), q_params, grid_prefix="")
+        grid_boxes_qs = apply_shared_grid_inventory_filters(
+            CryoGridBox.objects.all(), q_params, grid_prefix="cryogrid__"
+        )
+        pucks_qs = apply_shared_grid_inventory_filters(
+            Puck.objects.all(), q_params, grid_prefix="cryogridbox__cryogrid__"
+        )
+
+        # Entity-specific filters (puck, search) for accurate counts
+        for item in q_params:
+            category = item.get("category")
+            values = item.get("value")
+
+            if category == "puck" and values:
+                if values is None or (isinstance(values, list) and None in values):
+                    grids_qs = grids_qs.filter(grid_box__puck__isnull=True)
+                    grid_boxes_qs = grid_boxes_qs.filter(puck__isnull=True)
+                    pucks_qs = pucks_qs.filter(name__isnull=True)
+                else:
+                    puck_values = values if isinstance(values, list) else [values]
+                    grids_qs = grids_qs.filter(grid_box__puck__name__in=puck_values)
+                    grid_boxes_qs = grid_boxes_qs.filter(puck__name__in=puck_values)
+                    pucks_qs = pucks_qs.filter(name__in=puck_values)
+            elif category == "search" and values:
+                search_terms = values if isinstance(values, list) else [values]
+                # Grids search
+                grid_search_q = Q()
+                for t in search_terms:
+                    if t:
+                        grid_search_q |= (
+                            Q(name__icontains=t)
+                            | Q(intended_project__name__icontains=t)
+                            | Q(user__username__icontains=t)
+                            | Q(specimen__samples__name__icontains=t)
+                            | Q(labels__name__icontains=t)
+                        )
+                if grid_search_q:
+                    grids_qs = grids_qs.filter(grid_search_q)
+                # Grid boxes search
+                gb_search_q = Q()
+                for t in search_terms:
+                    if t:
+                        gb_search_q |= (
+                            Q(name__icontains=t)
+                            | Q(cryogrid__name__icontains=t)
+                            | Q(cryogrid__intended_project__name__icontains=t)
+                            | Q(cryogrid__user__username__icontains=t)
+                            | Q(cryogrid__specimen__samples__name__icontains=t)
+                            | Q(cryogrid__labels__name__icontains=t)
+                        )
+                if gb_search_q:
+                    grid_boxes_qs = grid_boxes_qs.filter(gb_search_q)
+                # Pucks search
+                puck_search_q = Q()
+                for t in search_terms:
+                    if t:
+                        puck_search_q |= Q(name__icontains=t)
+                if puck_search_q:
+                    pucks_qs = pucks_qs.filter(puck_search_q)
+
+        return Response(
+            {
+                "grids": grids_qs.distinct().count(),
+                "gridBoxes": grid_boxes_qs.distinct().count(),
+                "pucks": pucks_qs.distinct().count(),
+            }
+        )

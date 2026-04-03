@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useContext, useMemo } from 'react';
+import React, { useMemo, useContext } from 'react';
 import { Box } from '@mui/material';
 import { Tab, Tabs } from '@czi-sds/components';
 import { parseAsString, useQueryState } from 'nuqs';
@@ -16,7 +16,6 @@ import { SHARED_FILTER_CONFIGS, GridFilterId, GridFilterCategory } from './const
 import { API } from '@app/common/constants/api';
 import { getFilterSearchParamValues } from '@app/common/utils/searchParam';
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
-import { ApiListResponse, EntityDataTypes } from '@app/common/types/tableState';
 import { SEARCH_PARAM_NAME } from '@app/common/types/search';
 
 const TABS = ['grids', 'gridBoxes'] as const;
@@ -36,40 +35,37 @@ const FILTER_CATEGORIES = [
   'status',
 ];
 
-function useTabCounts() {
+interface GridInventoryCounts {
+  grids: number;
+  gridBoxes: number;
+}
+
+function useTabCounts(): GridInventoryCounts | undefined {
   const state = useContext(TableStateContext);
 
   const searchParam = useMemo(
     () => ({
-      [SEARCH_PARAM_NAME.QUERY]: [
-        ...getFilterSearchParamValues(state),
-        { category: 'page', value: [1] },
-        { category: 'pageSize', value: [1] },
-      ],
+      [SEARCH_PARAM_NAME.QUERY]: getFilterSearchParamValues(state),
     }),
     [state]
   );
 
-  const { data: gridsData } = useFetchData<ApiListResponse<EntityDataTypes>>(API.GRIDS, searchParam);
-  const { data: gridBoxesData } = useFetchData<ApiListResponse<EntityDataTypes>>(API.GRID_BOXES, searchParam);
+  const { data } = useFetchData<GridInventoryCounts>(API.GRID_INVENTORY_COUNTS, searchParam);
 
-  return {
-    gridsCount: gridsData?.pagination?.totalResults,
-    gridBoxesCount: gridBoxesData?.pagination?.totalResults,
-  };
+  return data;
 }
 
 function GridInventoryInner(): React.JSX.Element {
   const [activeTab, setActiveTab] = useQueryState('tab', parseAsString.withDefault('grids'));
   const tabIndex = Math.max(TABS.indexOf(activeTab as TabValue), 0);
-  const { gridsCount, gridBoxesCount } = useTabCounts();
+  const counts = useTabCounts();
 
   const handleTabChange = (_: React.SyntheticEvent, newIndex: number) => {
     setActiveTab(TABS[newIndex]);
   };
 
-  const gridsLabel = gridsCount != null ? `Grids (${gridsCount})` : 'Grids';
-  const gridBoxesLabel = gridBoxesCount != null ? `Grid Boxes (${gridBoxesCount})` : 'Grid Boxes';
+  const gridsLabel = counts?.grids != null ? `Grids (${counts.grids})` : 'Grids';
+  const gridBoxesLabel = counts?.gridBoxes != null ? `Grid Boxes (${counts.gridBoxes})` : 'Grid Boxes';
 
   const isGrids = tabIndex === 0;
 

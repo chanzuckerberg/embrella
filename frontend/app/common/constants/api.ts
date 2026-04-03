@@ -9,15 +9,15 @@ export const DJANGO_URL =
 
 export enum API {
   USER = '/user',
-  GRIDS = '/cryo_grids/v1/grids',
+  GRIDS = '/cryo_grids/v1/grids/',
   GRIDS_FILTERS_LIST = '/cryo_grids/v1/grids/filterlist/',
   GRIDS_SEARCH_SUGGESTIONS = '/cryo_grids/v1/grids/search_suggestions/',
-  TOMOGRAMS = '/processes/v1/tomograms',
-  TOMOGRAMS_FILTERLIST = '/processes/v1/filterlist',
-  ANNOTATIONS = '/processes/v1/annotations',
-  ANNOTATIONS_FILTERLIST = '/annotations/v1/filterlist',
-  METADATA_SUMMARY = '/workflow/metadata/api/v1/summary',
-  METADATA_VIZ = '/workflow/metadata/api/v1/data',
+  TOMOGRAMS = '/processes/v1/tomograms/',
+  TOMOGRAMS_FILTERLIST = '/processes/v1/filterlist/',
+  ANNOTATIONS = '/processes/v1/annotations/',
+  ANNOTATIONS_FILTERLIST = '/annotations/v1/filterlist/',
+  METADATA_SUMMARY = '/workflow/metadata/api/v1/summary/',
+  METADATA_VIZ = '/workflow/metadata/api/v1/data/',
   REVIEWS = '/api/reviews/',
 
   // Storage Explorer (Filesystem Surveys & Directories)
@@ -31,7 +31,7 @@ export enum API {
   // Job Management
   JOBS = '/workflow/v1/jobs/',
   JOBS_FILTERLIST = '/workflow/v1/jobs/filterlist/',
-  JOB_LOGS = '/workflow/job_logs',
+  JOB_LOGS = '/workflow/job_logs/',
   SYNCER_LOGS = '/workflow/v1/jobs/:jobId/syncer_logs/',
 
   // SSH Setup
@@ -88,6 +88,7 @@ export enum API {
   GRID_BOXES = '/cryo_grids/v1/grid-boxes/',
   GRID_BOXES_FILTERS_LIST = '/cryo_grids/v1/grid-boxes/filterlist/',
   GRID_BOXES_SEARCH_SUGGESTIONS = '/cryo_grids/v1/grid-boxes/search_suggestions/',
+  GRID_INVENTORY_COUNTS = '/cryo_grids/v1/counts/',
 
   // Projects
   PROJECTS_LIST = '/projects/project_list/',
