@@ -18,8 +18,46 @@ import { getFilterSearchParamValues } from '@app/common/utils/searchParam';
 import { useFetchData } from '@hooks/useFetchData/useFetchData';
 import { SEARCH_PARAM_NAME } from '@app/common/types/search';
 
-const TABS = ['grids', 'gridBoxes'] as const;
+const TABS = ['grids', 'gridBoxes', 'pucks'] as const;
 type TabValue = (typeof TABS)[number];
+
+const TAB_CONFIG: Record<
+  TabValue,
+  {
+    label: string;
+    countKey: keyof GridInventoryCounts;
+    placeholder: string;
+    filtersListApi: API;
+    searchSuggestionsApi: API;
+    component: React.ComponentType;
+  }
+> = {
+  grids: {
+    label: 'Grids',
+    countKey: 'grids',
+    placeholder: 'Search grids...',
+    filtersListApi: API.GRIDS_FILTERS_LIST,
+    searchSuggestionsApi: API.GRIDS_SEARCH_SUGGESTIONS,
+    component: GridsViewInner,
+  },
+  gridBoxes: {
+    label: 'Grid Boxes',
+    countKey: 'gridBoxes',
+    placeholder: 'Search grid boxes...',
+    filtersListApi: API.GRID_BOXES_FILTERS_LIST,
+    searchSuggestionsApi: API.GRID_BOXES_SEARCH_SUGGESTIONS,
+    component: GridBoxesViewInner,
+  },
+  pucks: {
+    label: 'Pucks',
+    countKey: 'pucks',
+    placeholder: 'Search pucks...',
+    filtersListApi: API.PUCKS_VIEW_FILTERS_LIST,
+    searchSuggestionsApi: API.PUCKS_VIEW_SEARCH_SUGGESTIONS,
+    // TODO: Replace with PucksViewInner once implemented
+    component: () => <Box sx={{ p: 4, color: 'text.secondary' }}>Pucks view coming soon</Box>,
+  },
+};
 
 const FILTER_CATEGORIES = [
   'project',
@@ -38,6 +76,7 @@ const FILTER_CATEGORIES = [
 interface GridInventoryCounts {
   grids: number;
   gridBoxes: number;
+  pucks: number;
 }
 
 function useTabCounts(): GridInventoryCounts | undefined {
@@ -59,27 +98,25 @@ function GridInventoryInner(): React.JSX.Element {
   const [activeTab, setActiveTab] = useQueryState('tab', parseAsString.withDefault('grids'));
   const tabIndex = Math.max(TABS.indexOf(activeTab as TabValue), 0);
   const counts = useTabCounts();
+  const config = TAB_CONFIG[TABS[tabIndex]];
+  const ActiveComponent = config.component;
 
   const handleTabChange = (_: React.SyntheticEvent, newIndex: number) => {
     setActiveTab(TABS[newIndex]);
   };
 
-  const gridsLabel = counts?.grids != null ? `Grids (${counts.grids})` : 'Grids';
-  const gridBoxesLabel = counts?.gridBoxes != null ? `Grid Boxes (${counts.gridBoxes})` : 'Grid Boxes';
-
-  const isGrids = tabIndex === 0;
-
   return (
     <Box>
-      <SearchBar
-        placeholder={isGrids ? 'Search grids...' : 'Search grid boxes...'}
-        suggestionsApi={isGrids ? API.GRIDS_SEARCH_SUGGESTIONS : API.GRID_BOXES_SEARCH_SUGGESTIONS}
-      />
+      <SearchBar placeholder={config.placeholder} suggestionsApi={config.searchSuggestionsApi} />
 
       <Box sx={{ pt: 0.5, mb: -5 }}>
         <Tabs value={tabIndex} onChange={handleTabChange} sdsSize="large">
-          <Tab label={gridsLabel} />
-          <Tab label={gridBoxesLabel} />
+          {TABS.map((tab) => {
+            const tabConfig = TAB_CONFIG[tab];
+            const count = counts?.[tabConfig.countKey];
+            const label = count != null ? `${tabConfig.label} (${count})` : tabConfig.label;
+            return <Tab key={tab} label={label} />;
+          })}
         </Tabs>
       </Box>
 
@@ -87,12 +124,11 @@ function GridInventoryInner(): React.JSX.Element {
         <Sidebar>
           <EntityTableFilters<GridFilterId, GridFilterCategory>
             entityFilterConfigs={SHARED_FILTER_CONFIGS}
-            entityFilterListApi={isGrids ? API.GRIDS_FILTERS_LIST : API.GRID_BOXES_FILTERS_LIST}
+            entityFilterListApi={config.filtersListApi}
           />
         </Sidebar>
         <TableWrapper>
-          {tabIndex === 0 && <GridsViewInner />}
-          {tabIndex === 1 && <GridBoxesViewInner />}
+          <ActiveComponent />
         </TableWrapper>
       </FilterableTableMain>
     </Box>

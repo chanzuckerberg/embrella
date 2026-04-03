@@ -1730,6 +1730,209 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({"suggestions": suggestions[:20]})
 
 
+class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for Puck list view with nested grid boxes and grids.
+    URL: /cryo_grids/v1/pucks/
+    """
+
+    queryset = (
+        Puck.objects.select_related("cane", "user")
+        .prefetch_related(
+            Prefetch(
+                "cryogridbox_set",
+                queryset=CryoGridBox.objects.prefetch_related(
+                    Prefetch(
+                        "cryogrid_set",
+                        queryset=CryoGrid.objects.filter(trashed=False)
+                        .select_related("specimen", "user", "intended_project")
+                        .prefetch_related("labels", "specimen__samples"),
+                    ),
+                )
+                .annotate(grid_count=Count("cryogrid", filter=Q(cryogrid__trashed=False), distinct=True))
+                .order_by("position_in_puck"),
+            ),
+        )
+        .annotate(grid_box_count=Count("cryogridbox", distinct=True))
+        .order_by("-id")
+    )
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        """List pucks with pagination in the format expected by the frontend."""
+        import json
+
+        from cryo_grids.serializers import PuckListSerializer
+
+        queryset = self.filter_queryset(self.get_queryset())
+
+        raw_q = request.GET.get("q", None)
+        q_params = json.loads(raw_q) if raw_q else []
+
+        # Apply shared grid-inventory filters (via grid box → grid)
+        queryset = apply_shared_grid_inventory_filters(queryset, q_params, grid_prefix="cryogridbox__cryogrid__")
+
+        # Apply puck-specific filters
+        for item in q_params:
+            category = item.get("category")
+            values = item.get("value")
+
+            if category == "puck" and values:
+                if values is None or (isinstance(values, list) and None in values):
+                    queryset = queryset.filter(name__isnull=True)
+                else:
+                    puck_values = values if isinstance(values, list) else [values]
+                    queryset = queryset.filter(name__in=puck_values)
+            elif category == "search" and values:
+                search_terms = values if isinstance(values, list) else [values]
+                search_q = Q()
+                for t in search_terms:
+                    if t:
+                        search_q |= Q(name__icontains=t)
+                if search_q:
+                    queryset = queryset.filter(search_q).distinct()
+
+        # Parse pagination/sort params
+        page = 1
+        page_size = 10
+        sort_field = "id"
+        asc = False
+
+        for item in q_params:
+            category = item.get("category")
+            value = item.get("value")
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            if category == "page":
+                page = int(value)
+            elif category == "pageSize":
+                page_size = int(value)
+            elif category == "sort":
+                sort_field = value
+            elif category == "asc":
+                asc = bool(value) if isinstance(value, bool) else str(value).lower() == "true"
+
+        sort_field_map = {
+            "gridBoxCount": "grid_box_count",
+            "caneName": "cane__name",
+        }
+        db_sort_field = sort_field_map.get(sort_field, sort_field)
+        sort_order = db_sort_field if asc else f"-{db_sort_field}"
+        queryset = queryset.order_by(sort_order)
+
+        # Paginate
+        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+
+        paginator = Paginator(queryset, page_size)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        serializer = PuckListSerializer(page_obj.object_list, many=True)
+
+        # Transform to camelCase with puck primary entity
+        result = []
+        for item in serializer.data:
+            grid_boxes = []
+            for gb in item["grid_boxes"]:
+                grid_boxes.append(
+                    {
+                        "gridBox": {
+                            "id": gb["id"],
+                            "name": gb["name"],
+                        },
+                        "color": gb["color"],
+                        "colorDisplay": gb["color_display"],
+                        "numberingDisplay": gb["numbering_display"],
+                        "positionInPuck": gb["position_in_puck"],
+                        "maxGrids": gb["max_grids"],
+                        "gridCount": gb["grid_count"],
+                        "grids": gb["grids"],
+                    },
+                )
+            result.append(
+                {
+                    "puck": {
+                        "id": item["id"],
+                        "name": item["name"],
+                    },
+                    "color": item["color"],
+                    "colorDisplay": item["color_display"],
+                    "caneName": item["cane_name"],
+                    "positionInCane": item["position_in_cane"],
+                    "maxBoxes": item["max_boxes"],
+                    "gridBoxCount": item["grid_box_count"],
+                    "userName": item["user_name"],
+                    "gridBoxes": grid_boxes,
+                },
+            )
+
+        return Response(
+            {
+                "result": result,
+                "pagination": {
+                    "page": page_obj.number,
+                    "pageSize": page_size,
+                    "totalPages": paginator.num_pages,
+                    "totalResults": paginator.count,
+                },
+                "sortBy": {
+                    "sort": sort_field,
+                    "asc": asc,
+                },
+            },
+        )
+
+    @action(detail=False, methods=["get"])
+    def filterlist(self, request):
+        """Return available filter options with counts for pucks."""
+        import json
+
+        raw_q = request.GET.get("q", "[]")
+        q_params = json.loads(raw_q)
+
+        selected_filters = parse_selected_filters(q_params)
+        base_qs = Puck.objects.all()
+
+        filters = get_shared_filterlist_options(base_qs, grid_prefix="cryogridbox__cryogrid__")
+
+        # Puck-specific filter: puck name (direct field)
+        puck_rows = list(
+            base_qs.values(filter_name=F("name"))
+            .annotate(count=Count("id", distinct=True))
+            .order_by("filter_name")
+        )
+        filters["puck"] = [{"name": r["filter_name"], "count": r["count"]} for r in puck_rows]
+        filters["date"] = []
+
+        for key, filter_list in filters.items():
+            if key != "date":
+                add_selected_status(filter_list, key, selected_filters)
+
+        return Response({"filters": filters})
+
+    @action(detail=False, methods=["get"], url_path="search_suggestions")
+    def search_suggestions(self, request):
+        """Return search suggestions for pucks."""
+        term = request.GET.get("term", "").strip()
+        if len(term) < 1:
+            return Response({"suggestions": []})
+
+        limit = 5
+        suggestions = []
+
+        # Puck names (entity-specific)
+        for name in Puck.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit]:
+            suggestions.append({"value": name, "category": "search"})
+
+        suggestions.extend(get_shared_search_suggestions(term, limit))
+        return Response({"suggestions": suggestions[:20]})
+
+
 class GridInventoryCountsViewSet(viewsets.ViewSet):
     """
     Returns filtered counts for all GridInventory tabs in a single request.

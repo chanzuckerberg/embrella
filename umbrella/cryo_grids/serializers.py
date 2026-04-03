@@ -249,6 +249,55 @@ class CryoGridBoxListSerializer(serializers.ModelSerializer):
         ]
 
 
+class GridBoxInPuckSerializer(serializers.ModelSerializer):
+    """Serializer for grid boxes nested inside a puck, with nested grids."""
+
+    color_display = serializers.CharField(source="get_color_display", read_only=True)
+    numbering_display = serializers.CharField(source="get_numbering_display", read_only=True)
+    grid_count = serializers.IntegerField(read_only=True)
+    grids = GridInBoxSerializer(source="cryogrid_set", many=True, read_only=True)
+
+    class Meta:
+        model = CryoGridBox
+        fields = [
+            "id",
+            "name",
+            "color",
+            "color_display",
+            "numbering",
+            "numbering_display",
+            "position_in_puck",
+            "max_grids",
+            "grid_count",
+            "grids",
+        ]
+
+
+class PuckListSerializer(serializers.ModelSerializer):
+    """Serializer for puck list view with nested grid boxes and grids."""
+
+    color_display = serializers.CharField(source="get_color_display", read_only=True)
+    cane_name = serializers.CharField(source="cane.name", read_only=True, default=None)
+    user_name = serializers.CharField(source="user.username", read_only=True, default=None)
+    grid_box_count = serializers.IntegerField(read_only=True)
+    grid_boxes = GridBoxInPuckSerializer(source="cryogridbox_set", many=True, read_only=True)
+
+    class Meta:
+        model = Puck
+        fields = [
+            "id",
+            "name",
+            "color",
+            "color_display",
+            "cane_name",
+            "position_in_cane",
+            "max_boxes",
+            "user_name",
+            "grid_box_count",
+            "grid_boxes",
+        ]
+
+
 class CaneSerializer(serializers.ModelSerializer):
     """
     Serializer for Cane model

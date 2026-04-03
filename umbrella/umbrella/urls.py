@@ -30,6 +30,7 @@ from cryo_grids.viewsets import (
     GridLoggingChoicesViewSet,
     LabelViewSet,
     ProjectLeaderViewSet,
+    PuckListViewSet,
     PuckViewSet,
     SampleViewSet,
     SpecimenViewSet,
@@ -73,6 +74,7 @@ router.register(r"cryo_grids/v1/grids", CryoGridViewSet, basename="grid")
 router.register(r"api/list/project-leaders", ProjectLeaderViewSet, basename="project-leader")
 router.register(r"api/list/labels", LabelViewSet, basename="label")
 router.register(r"cryo_grids/v1/grid-boxes", CryoGridBoxViewSet, basename="grid-box")
+router.register(r"cryo_grids/v1/pucks", PuckListViewSet, basename="puck-list")
 router.register(r"cryo_grids/v1/counts", GridInventoryCountsViewSet, basename="grid-inventory-counts")
 
 import mimetypes
