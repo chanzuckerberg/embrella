@@ -89,7 +89,17 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
       : null;
 
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(window.location.href);
+    const url = window.location.href;
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
     setCopySnackbarOpen(true);
   };
 
