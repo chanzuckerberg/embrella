@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, CircularProgress, Tab, Tabs } from '@mui/material';
+import { Box, CircularProgress, IconButton, Snackbar, Alert, Tab, Tabs, Typography } from '@mui/material';
+import LinkIcon from '@mui/icons-material/Link';
 import { Dialog, DialogContent, DialogTitle } from '@czi-sds/components';
 import { useGridDetails } from '@app/common/hooks/useGridLogging/details/useGridDetails';
 import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/details/useGridLoggingPuckSlots';
@@ -29,6 +30,7 @@ interface GridDetailDialogProps {
 
 export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClose, gridId, onGridUpdated }) => {
   const [activeTab, setActiveTab] = useState(0);
+  const [copySnackbarOpen, setCopySnackbarOpen] = useState(false);
 
   const { gridDetails, isSuccess, refetch } = useGridDetails(open ? gridId : null);
 
@@ -86,6 +88,11 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
         } as PuckList)
       : null;
 
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    setCopySnackbarOpen(true);
+  };
+
   // Grid logging link
   const gridLoggingUrl =
     location && gridId
@@ -95,7 +102,21 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
   return (
     <>
       <Dialog open={open} onClose={onClose} sdsSize="s" disableScrollLock>
-        <DialogTitle title={titleText} onClose={onClose} />
+        <DialogTitle
+          title={titleText}
+          onClose={onClose}
+          sx={{ paddingBottom: '0 !important', marginBottom: '0 !important' }}
+        />
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ px: 2, display: 'flex', alignItems: 'center', gap: 0.2 }}
+        >
+          id: {gridId}
+          <IconButton onClick={handleCopyLink} size="small" title="Copy link">
+            <LinkIcon fontSize="small" />
+          </IconButton>
+        </Typography>
         <DialogContent>
           {!isSuccess || !gridDetails || !form.formData ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -156,6 +177,21 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
           )}
         </DialogContent>
       </Dialog>
+
+      <Snackbar
+        open={copySnackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setCopySnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setCopySnackbarOpen(false)}
+          severity="success"
+          sx={{ width: '100%', alignItems: 'center' }}
+        >
+          Link copied to clipboard
+        </Alert>
+      </Snackbar>
 
       {/* MoveGrid Dialog */}
       {gridDetails && location && form.moveGridDialogOpen && (
