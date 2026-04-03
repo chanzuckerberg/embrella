@@ -1,5 +1,6 @@
 import { AnnotationData } from '@app/components/AnnotationsView/types';
 import { GridBoxData } from '@app/components/GridInventory/GridBoxesView/types';
+import { PuckData } from '@app/components/GridInventory/PucksView/types';
 import { GridData } from '@app/components/GridsView/types';
 import { ReviewData } from '@app/components/ReviewsView/types';
 import { TomogramData } from '@app/components/TomogramsView/types';
@@ -10,6 +11,7 @@ export type EntityAPIPrimaryAttributeToDataType = {
   tomograms: TomogramData;
   grid: GridData;
   gridBox: GridBoxData;
+  puck: PuckData;
   review: ReviewData;
   job: Job;
 };

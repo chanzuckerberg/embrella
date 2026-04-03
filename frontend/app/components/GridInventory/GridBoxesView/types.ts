@@ -26,10 +26,10 @@ export interface GridBoxData {
   color: string;
   colorDisplay: string;
   numberingDisplay: string;
-  puckName: string | null;
+  puckName?: string | null;
   positionInPuck: number | null;
   maxGrids: number;
   gridCount: number;
-  puckUser: string | null;
+  puckUser?: string | null;
   grids: GridBoxChildGrid[];
 }

@@ -12,6 +12,7 @@ import { EntityTableFilters } from '@app/common/components/EntityTableFilters/En
 import { SearchBar } from '@app/components/GridsView/components/SearchBar/SearchBar';
 import { GridsViewInner } from '@app/components/GridsView/GridsView';
 import { GridBoxesViewInner } from './GridBoxesView/GridBoxesView';
+import { PucksViewInner } from './PucksView/PucksView';
 import { SHARED_FILTER_CONFIGS, GridFilterId, GridFilterCategory } from './constants/filters';
 import { API } from '@app/common/constants/api';
 import { getFilterSearchParamValues } from '@app/common/utils/searchParam';
@@ -54,8 +55,7 @@ const TAB_CONFIG: Record<
     placeholder: 'Search pucks...',
     filtersListApi: API.PUCKS_VIEW_FILTERS_LIST,
     searchSuggestionsApi: API.PUCKS_VIEW_SEARCH_SUGGESTIONS,
-    // TODO: Replace with PucksViewInner once implemented
-    component: () => <Box sx={{ p: 4, color: 'text.secondary' }}>Pucks view coming soon</Box>,
+    component: PucksViewInner,
   },
 };
 

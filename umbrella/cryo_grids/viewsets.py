@@ -1902,9 +1902,7 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Puck-specific filter: puck name (direct field)
         puck_rows = list(
-            base_qs.values(filter_name=F("name"))
-            .annotate(count=Count("id", distinct=True))
-            .order_by("filter_name")
+            base_qs.values(filter_name=F("name")).annotate(count=Count("id", distinct=True)).order_by("filter_name")
         )
         filters["puck"] = [{"name": r["filter_name"], "count": r["count"]} for r in puck_rows]
         filters["date"] = []
@@ -1927,7 +1925,7 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Puck names (entity-specific)
         for name in Puck.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit]:
-            suggestions.append({"value": name, "category": "search"})
+            suggestions.append({"value": name, "category": "puck"})
 
         suggestions.extend(get_shared_search_suggestions(term, limit))
         return Response({"suggestions": suggestions[:20]})

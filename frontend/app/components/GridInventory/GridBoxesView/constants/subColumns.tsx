@@ -101,6 +101,6 @@ export const GRID_BOX_SUB_COLUMN_DEFS: ColumnDef<GridBoxChildGrid, unknown>[] = 
     cell: ({ row }) => formatDate(row.original.create_on),
     enableSorting: false,
     header: 'Created',
-    size: 90,
+    size: 100,
   },
 ];

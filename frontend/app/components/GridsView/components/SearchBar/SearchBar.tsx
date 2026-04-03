@@ -20,7 +20,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 interface Suggestion {
   value: string;
-  category: 'grid' | 'project' | 'user' | 'sample' | 'msiSession' | 'label';
+  category: 'grid' | 'gridBox' | 'puck' | 'project' | 'user' | 'sample' | 'msiSession' | 'label';
 }
 
 interface FilterTag {
@@ -31,6 +31,7 @@ interface FilterTag {
 const CATEGORY_LABELS: Record<string, string> = {
   grid: 'Grid',
   gridBox: 'Grid Box',
+  puck: 'Puck',
   project: 'Project',
   user: 'User',
   sample: 'Sample',
@@ -55,6 +56,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string
   sample: { bg: '#e8f5e9', border: '#a5d6a7', text: '#2e7d32' },
   grid: { bg: '#fff3e0', border: '#ffcc80', text: '#e65100' },
   gridBox: { bg: '#fce4ec', border: '#f48fb1', text: '#c62828' },
+  puck: { bg: '#ede7f6', border: '#b39ddb', text: '#4527a0' },
   msiSession: { bg: '#e0f7fa', border: '#80deea', text: '#00695c' },
   label: { bg: '#fff8e1', border: '#ffd54f', text: '#f57f17' },
   search: { bg: '#f5f5f5', border: '#bdbdbd', text: '#424242' },
@@ -66,6 +68,7 @@ const SEARCHBAR_CATEGORIES = ['project', 'user', 'sample', 'msiSession', 'label'
 const CATEGORY_DISPATCH_MAP: Record<string, string> = {
   grid: 'search',
   gridBox: 'search',
+  puck: 'search',
 };
 
 function getTagsFromFilterState(filterState: Record<string, unknown>): FilterTag[] {
@@ -246,7 +249,7 @@ export const SearchBar = ({
     }
   };
 
-  const SUGGESTION_ORDER = ['project', 'user', 'sample', 'msiSession', 'label', 'grid'];
+  const SUGGESTION_ORDER = ['project', 'user', 'sample', 'msiSession', 'label', 'grid', 'gridBox', 'puck'];
 
   const groupedSuggestions = suggestions.reduce(
     (acc, s) => {
