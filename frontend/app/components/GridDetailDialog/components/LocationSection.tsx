@@ -26,7 +26,7 @@ export const LocationSection: React.FC<LocationSectionProps> = ({
 }) => (
   <Box sx={{ borderTop: 1, borderColor: 'divider', pt: '16px', mt: '8px' }}>
     <Typography sx={{ mb: '12px', fontSize: '0.875rem' }}>Location</Typography>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap', justifyContent: 'left' }}>
       {/* Puck SVG */}
       {puckForSvg && (
         <Box sx={{ textAlign: 'center' }}>
