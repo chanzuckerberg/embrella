@@ -90,9 +90,9 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
 
   const handleCopyLink = async () => {
     const url = window.location.href;
-    if (navigator.clipboard) {
+    try {
       await navigator.clipboard.writeText(url);
-    } else {
+    } catch {
       const textArea = document.createElement('textarea');
       textArea.value = url;
       document.body.appendChild(textArea);
