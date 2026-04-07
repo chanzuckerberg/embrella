@@ -47,6 +47,7 @@ from cryo_grids.serializers import (
     CryoGridSerializer,
     FreezingSessionSerializer,
     GridDetailsSerializer,
+    GridInBoxSerializer,
     LabelSerializer,
     PuckSerializer,
     SampleSerializer,
@@ -2013,4 +2014,126 @@ class GridInventoryCountsViewSet(viewsets.ViewSet):
                 "gridBoxes": grid_boxes_qs.distinct().count(),
                 "pucks": pucks_qs.distinct().count(),
             }
+        )
+
+
+class StandardSamplesViewSet(viewsets.ViewSet):
+    """
+    Read-only ViewSet that aggregates specimens with grids labeled "standard".
+    Returns specimens with available (non-trashed) grid counts and point of contact.
+    """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        import json
+        from collections import Counter
+
+        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+
+        raw_q = request.GET.get("q", None)
+        q_params = json.loads(raw_q) if raw_q else []
+
+        page = 1
+        page_size = 10
+        sort_field = "availableGridCount"
+        asc = False
+
+        for item in q_params:
+            category = item.get("category")
+            value = item.get("value")
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            if category == "page":
+                page = int(value)
+            elif category == "pageSize":
+                page_size = int(value)
+            elif category == "sort":
+                sort_field = value
+            elif category == "asc":
+                asc = bool(value) if isinstance(value, bool) else str(value).lower() == "true"
+
+        sort_field_map = {
+            "availableGridCount": "available_grid_count",
+            "specimen": "specimen_name",
+        }
+        db_sort_field = sort_field_map.get(sort_field, sort_field)
+        sort_order = db_sort_field if asc else f"-{db_sort_field}"
+
+        queryset = (
+            Specimen.objects.filter(
+                cryogrid__trashed=False,
+                cryogrid__labels__name__iexact="standard",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "cryogrid_set",
+                    queryset=CryoGrid.objects.filter(
+                        trashed=False,
+                        labels__name__iexact="standard",
+                    )
+                    .select_related("specimen", "user", "intended_project")
+                    .prefetch_related("labels", "specimen__samples"),
+                    to_attr="standard_grids",
+                ),
+                "samples",
+            )
+            .annotate(
+                available_grid_count=Count(
+                    "cryogrid",
+                    filter=Q(cryogrid__trashed=False, cryogrid__labels__name__iexact="standard"),
+                    distinct=True,
+                ),
+                specimen_name=models.Value("", output_field=CharField()),
+            )
+            .distinct()
+            .order_by(sort_order)
+        )
+
+        paginator = Paginator(queryset, page_size)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        result = []
+        for specimen in page_obj.object_list:
+            grids = specimen.standard_grids
+            grid_data = GridInBoxSerializer(grids, many=True).data
+
+            # Derive point of contact as most common grid user
+            users = [g.user.username for g in grids if g.user]
+            point_of_contact = Counter(users).most_common(1)[0][0] if users else None
+
+            specimen_name = str(specimen)
+
+            result.append(
+                {
+                    "specimen": {
+                        "id": specimen.id,
+                        "name": specimen_name,
+                    },
+                    "availableGridCount": len(grids),
+                    "pointOfContact": point_of_contact,
+                    "grids": grid_data,
+                }
+            )
+
+        return Response(
+            {
+                "result": result,
+                "pagination": {
+                    "page": page_obj.number,
+                    "pageSize": page_size,
+                    "totalPages": paginator.num_pages,
+                    "totalResults": paginator.count,
+                },
+                "sortBy": {
+                    "sort": sort_field,
+                    "asc": asc,
+                },
+            },
         )

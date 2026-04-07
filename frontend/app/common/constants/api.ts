@@ -86,6 +86,7 @@ export enum API {
   LABELS = '/api/list/labels/',
   GRID_LOGGING_CHOICES = '/api/grid-logging/choices/',
   GRID_BOXES = '/cryo_grids/v1/grid-boxes/',
+  STANDARD_SAMPLES = '/cryo_grids/v1/standard-samples/',
   GRID_BOXES_FILTERS_LIST = '/cryo_grids/v1/grid-boxes/filterlist/',
   GRID_BOXES_SEARCH_SUGGESTIONS = '/cryo_grids/v1/grid-boxes/search_suggestions/',
   PUCKS_VIEW = '/cryo_grids/v1/pucks/',
