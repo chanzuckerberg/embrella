@@ -5,9 +5,39 @@ Shared helper functions for cryo_grids ViewSets.
 from datetime import datetime, timedelta
 from functools import reduce
 
-from django.db.models import Count, F, Q
+from django.db.models import Case, Count, F, IntegerField, Q, Value, When
+from django.db.models.functions import Cast
 
 from cryo_grids.models import CryoGrid, Label
+
+
+def natural_name_annotations(field="name"):
+    """Return annotation kwargs for natural (numeric-first) sorting on a name field.
+
+    Usage: queryset.annotate(**natural_name_annotations("puck__name"))
+    """
+    return {
+        "name_is_numeric": Case(
+            When(**{f"{field}__regex": r"^\d+$"}, then=Value(0)),
+            default=Value(1),
+            output_field=IntegerField(),
+        ),
+        "name_as_number": Case(
+            When(**{f"{field}__regex": r"^\d+$"}, then=Cast(field, IntegerField())),
+            default=Value(None),
+            output_field=IntegerField(),
+        ),
+    }
+
+
+def natural_name_ordering(name_field="name", desc=False):
+    """Return order_by args for natural sorting, given the name column to fall back to.
+
+    Usage: queryset.order_by(*natural_name_ordering("filter_name"))
+    """
+    if desc:
+        return ("-name_is_numeric", "-name_as_number", f"-{name_field}")
+    return ("name_is_numeric", "name_as_number", name_field)
 
 
 def msi_session_sort_key(name):

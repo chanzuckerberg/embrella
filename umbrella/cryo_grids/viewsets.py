@@ -60,6 +60,8 @@ from cryo_grids.viewset_helpers import (
     get_shared_filterlist_options,
     get_shared_search_suggestions,
     msi_session_sort_key,
+    natural_name_annotations,
+    natural_name_ordering,
     parse_selected_filters,
 )
 
@@ -79,7 +81,11 @@ class PuckViewSet(viewsets.ModelViewSet):
         Filter pucks by user_id or cane_id if provided in query params
         If no user_id, return all pucks
         """
-        queryset = Puck.objects.select_related("user", "cane").order_by("name")
+        queryset = (
+            Puck.objects.select_related("user", "cane")
+            .annotate(**natural_name_annotations())
+            .order_by(*natural_name_ordering())
+        )
         user_id = self.request.query_params.get("user_id", None)
         cane_id = self.request.query_params.get("cane_id", None)
 
@@ -1372,8 +1378,8 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 queryset.annotate(puck_temp_name=F("grid_box__puck__name"))
                 .filter(puck_temp_name__isnull=False)
                 .values(puck_temp_name=F("puck_temp_name"))
-                .annotate(count=Count("id"))
-                .order_by("puck_temp_name")
+                .annotate(count=Count("id"), **natural_name_annotations("grid_box__puck__name"))
+                .order_by(*natural_name_ordering("puck_temp_name"))
                 .values(name=F("puck_temp_name"), count=F("count"))
             ),
             "sample": list(
@@ -1697,12 +1703,12 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
 
         filters = get_shared_filterlist_options(base_qs, grid_prefix="cryogrid__")
 
-        # Add grid-box-specific filter: puck (direct relation, not via grid)
+        # Add grid-box-specific filter: puck (direct relation, not via grid), natural sort
         puck_rows = list(
             base_qs.filter(puck__isnull=False)
             .values(filter_name=F("puck__name"))
-            .annotate(count=Count("id", distinct=True))
-            .order_by("filter_name")
+            .annotate(count=Count("id", distinct=True), **natural_name_annotations("puck__name"))
+            .order_by(*natural_name_ordering("filter_name"))
         )
         filters["puck"] = [{"name": r["filter_name"], "count": r["count"]} for r in puck_rows]
         filters["date"] = []
@@ -1754,8 +1760,8 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
                 .order_by("position_in_puck"),
             ),
         )
-        .annotate(grid_box_count=Count("cryogridbox", distinct=True))
-        .order_by("-id")
+        .annotate(grid_box_count=Count("cryogridbox", distinct=True), **natural_name_annotations())
+        .order_by(*natural_name_ordering())
     )
     permission_classes = [IsAuthenticated]
     authentication_classes = [CsrfExemptSessionAuthentication]
@@ -1819,8 +1825,16 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
             "caneName": "cane__name",
         }
         db_sort_field = sort_field_map.get(sort_field, sort_field)
-        sort_order = db_sort_field if asc else f"-{db_sort_field}"
-        queryset = queryset.order_by(sort_order)
+
+        # Natural sort for name: numbers first (ascending), then words
+        if db_sort_field == "name":
+            queryset = queryset.order_by(*natural_name_ordering(desc=not asc))
+        elif db_sort_field == "id" and not asc:
+            # Default sort: use natural name ordering instead of -id
+            queryset = queryset.order_by(*natural_name_ordering())
+        else:
+            sort_order = db_sort_field if asc else f"-{db_sort_field}"
+            queryset = queryset.order_by(sort_order)
 
         # Paginate
         from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
@@ -1901,9 +1915,11 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
 
         filters = get_shared_filterlist_options(base_qs, grid_prefix="cryogridbox__cryogrid__")
 
-        # Puck-specific filter: puck name (direct field)
+        # Puck-specific filter: puck name (direct field), natural sort (numbers first)
         puck_rows = list(
-            base_qs.values(filter_name=F("name")).annotate(count=Count("id", distinct=True)).order_by("filter_name")
+            base_qs.values(filter_name=F("name"))
+            .annotate(count=Count("id", distinct=True), **natural_name_annotations())
+            .order_by(*natural_name_ordering("filter_name"))
         )
         filters["puck"] = [{"name": r["filter_name"], "count": r["count"]} for r in puck_rows]
         filters["date"] = []
