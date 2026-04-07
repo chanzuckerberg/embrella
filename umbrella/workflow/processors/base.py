@@ -934,6 +934,9 @@ class BaseProcessor(ABC):
             if value is None:
                 continue
 
+            # Coerce value to schema-declared type
+            value = self._coerce_to_schema_type(value, prop)
+
             # Get bash variable name(s)
             bash_var_name = prop.get("x-bash-var")
             if not bash_var_name:
@@ -1029,6 +1032,9 @@ class BaseProcessor(ABC):
             else:
                 effective_value = None
 
+            # Coerce value to schema-declared type
+            effective_value = self._coerce_to_schema_type(effective_value, prop)
+
             # Determine if we should include this argument
             if is_required or always_include:
                 # Always include required params and always-include params
@@ -1062,6 +1068,19 @@ class BaseProcessor(ABC):
             )
 
         return cli_args
+
+    def _coerce_to_schema_type(self, value: Any, prop: Dict[str, Any]) -> Any:
+        """Coerce a parameter value to its schema-declared type."""
+        if value is None:
+            return None
+        param_type = prop.get("type")
+        if param_type == "integer":
+            return int(value)
+        elif param_type == "number":
+            return float(value)
+        elif param_type == "boolean" and isinstance(value, str):
+            return value.lower() not in ("false", "0", "")
+        return value
 
     def _values_equal(self, value1: Any, value2: Any) -> bool:
         """
