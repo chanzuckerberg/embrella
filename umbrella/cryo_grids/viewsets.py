@@ -1643,7 +1643,7 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
         # Paginate
         from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 
-        paginator = Paginator(queryset, page_size)
+        paginator = Paginator(queryset, page_size, orphans=3)
         try:
             page_obj = paginator.page(page)
         except PageNotAnInteger:
@@ -1839,7 +1839,7 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
         # Paginate
         from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 
-        paginator = Paginator(queryset, page_size)
+        paginator = Paginator(queryset, page_size, orphans=3)
         try:
             page_obj = paginator.page(page)
         except PageNotAnInteger:
@@ -2107,7 +2107,7 @@ class StandardSamplesViewSet(viewsets.ViewSet):
             .order_by(sort_order)
         )
 
-        paginator = Paginator(queryset, page_size)
+        paginator = Paginator(queryset, page_size, orphans=3)
         try:
             page_obj = paginator.page(page)
         except PageNotAnInteger:

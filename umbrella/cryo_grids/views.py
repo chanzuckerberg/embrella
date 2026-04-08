@@ -269,7 +269,7 @@ def get_cryo_grids_details(request):
         page = int(page_param["value"][0]) if page_param else 1
         page_size = int(page_size_param["value"][0]) if page_size_param else page_size
 
-        paginator = Paginator(formatted_grid_list, page_size)
+        paginator = Paginator(formatted_grid_list, page_size, orphans=3)
 
         try:
             paginated_queryset = paginator.page(page)

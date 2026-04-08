@@ -298,11 +298,14 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
       const pageSize = getSearchParamFirstValue<number>(values, 'pageSize', 0, TEST_DEFAULT_GRIDS_PAGE_SIZE) as number;
       const pageStart = (page - 1) * pageSize;
 
+      const orphans = 3;
+      const totalPages =
+        responseGrids.length <= pageSize + orphans ? 1 : Math.ceil((responseGrids.length - orphans) / pageSize);
       const responseData: ApiListResponse<GridData> = {
         pagination: {
           page,
           pageSize: pageSize,
-          totalPages: Math.ceil(responseGrids.length / pageSize),
+          totalPages,
           totalResults: responseGrids.length,
         },
         result: responseGrids.slice(pageStart, pageStart + pageSize),

@@ -157,7 +157,7 @@ export const useConnect = <T extends EntityDataTypes>(
     data: entityList?.entities || [],
     onPaginationChange,
     onSortingChange,
-    rowCount: entityList?.pagination?.totalResults || 0,
+    pageCount: entityList?.pagination?.totalPages || 0,
     state: reactTableState,
     ...(enableRowSelection && onRowSelectionChange
       ? {

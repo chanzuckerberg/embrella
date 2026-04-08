@@ -86,10 +86,13 @@ export const EntityTable = <T extends EntityDataTypes>({
     getSubRows,
   });
 
-  const { getRowCount, getState, nextPage, previousPage, setPageIndex } = table;
+  const { getPageCount, getState, nextPage, previousPage, setPageIndex } = table;
   const {
     pagination: { pageIndex, pageSize },
   } = getState();
+  // SDS Pagination only accepts totalCount and computes pages as ceil(totalCount/pageSize).
+  // We derive a totalCount from the backend's orphan-aware pageCount so the page numbers match.
+  const totalCount = getPageCount() * pageSize;
 
   const columnCount = table.getFlatHeaders().length;
 
@@ -205,7 +208,7 @@ export const EntityTable = <T extends EntityDataTypes>({
         onPageChange={(page) => setPageIndex(page - 1)}
         onPreviousPage={previousPage}
         pageSize={pageSize}
-        totalCount={getRowCount()}
+        totalCount={totalCount}
         truncateDropdown
       />
     </Fragment>
