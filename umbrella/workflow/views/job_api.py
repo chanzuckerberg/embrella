@@ -15,14 +15,13 @@ from django.utils import timezone as dj_timezone
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-
-from common.auth import CsrfExemptSessionAuthentication
 from processes.models import JobLog, PipeExecution, SyncerLog, SyncerProcess
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from umbrella_logger import logger
 
 from common import clusterio
+from common.auth import CsrfExemptSessionAuthentication
 
 from ..agent import RemoteJobSubmitter, StatusChecker
 from .constants import (
@@ -159,7 +158,7 @@ def get_jobs_list(request):
         pipe_exec_map = {exec.job_id: exec for exec in pipe_executions if exec.job_id}
 
         # Create a mapping of job_id -> JobLog for user information lookup
-        job_logs = JobLog.objects.filter(job_id__isnull=False).select_related('user')
+        job_logs = JobLog.objects.filter(job_id__isnull=False).select_related("user")
         job_log_map = {log.job_id: log for log in job_logs}
 
         # Get set of live job IDs (include both full ID and base ID for hetjobs)
@@ -169,8 +168,8 @@ def get_jobs_list(request):
             if job_id:
                 live_job_ids.add(job_id)
                 # Also add base job ID for hetjobs (e.g., "9232+0" -> "9232")
-                if '+' in job_id:
-                    live_job_ids.add(job_id.split('+')[0])
+                if "+" in job_id:
+                    live_job_ids.add(job_id.split("+")[0])
 
         # NOTE: Status updates are now handled by the JobStatusSyncer which uses sacct
         # for accurate timing. The old code below has been removed:
@@ -183,7 +182,7 @@ def get_jobs_list(request):
         for job in live_jobs:
             job_id = job.get("JOBID")
             # Handle SLURM hetjob format (e.g., "9232+0" -> base job "9232")
-            base_job_id = job_id.split('+')[0] if job_id and '+' in job_id else job_id
+            base_job_id = job_id.split("+")[0] if job_id and "+" in job_id else job_id
             pipe_exec = pipe_exec_map.get(job_id) or pipe_exec_map.get(base_job_id)
 
             # Apply status filter if specified
@@ -216,7 +215,11 @@ def get_jobs_list(request):
                 job_name = job_log.job_name
             elif pipe_exec and pipe_exec.pipe_in_plan and pipe_exec.pipe_in_plan.pipe:
                 # Use software name as fallback
-                job_name = pipe_exec.pipe_in_plan.pipe.software.name if pipe_exec.pipe_in_plan.pipe.software else pipe_exec.pipe_in_plan.pipe.name
+                job_name = (
+                    pipe_exec.pipe_in_plan.pipe.software.name
+                    if pipe_exec.pipe_in_plan.pipe.software
+                    else pipe_exec.pipe_in_plan.pipe.name
+                )
             else:
                 job_name = job.get("NAME")
 
@@ -307,7 +310,11 @@ def get_jobs_list(request):
                     if job_log and job_log.job_name:
                         job_name = job_log.job_name
                     elif pipe_exec.pipe_in_plan and pipe_exec.pipe_in_plan.pipe:
-                        job_name = pipe_exec.pipe_in_plan.pipe.software.name if pipe_exec.pipe_in_plan.pipe.software else pipe_exec.pipe_in_plan.pipe.name
+                        job_name = (
+                            pipe_exec.pipe_in_plan.pipe.software.name
+                            if pipe_exec.pipe_in_plan.pipe.software
+                            else pipe_exec.pipe_in_plan.pipe.name
+                        )
                     else:
                         job_name = "unknown"
 
@@ -347,7 +354,9 @@ def get_jobs_list(request):
                         "cluster": cluster_id,
                         "submittedAt": pipe_exec.submitted_at.isoformat() if pipe_exec.submitted_at else None,
                         "completedAt": pipe_exec.completed_at.isoformat() if pipe_exec.completed_at else None,
-                        "duration": calculate_duration(pipe_exec.started_at or pipe_exec.submitted_at, pipe_exec.completed_at),
+                        "duration": calculate_duration(
+                            pipe_exec.started_at or pipe_exec.submitted_at, pipe_exec.completed_at
+                        ),
                         "processor": processor,
                         "session": session,
                         "hasLogs": bool(pipe_exec.stdout_log or pipe_exec.stderr_log),
@@ -362,7 +371,7 @@ def get_jobs_list(request):
             included_job_ids = {job.get("job", {}).get("id") for job in combined_jobs}
 
             # Query JobLog entries with date range filter
-            legacy_job_logs = JobLog.objects.filter(job_id__isnull=False).select_related('user')
+            legacy_job_logs = JobLog.objects.filter(job_id__isnull=False).select_related("user")
             if date_range_filter:
                 legacy_job_logs = legacy_job_logs.filter(created_at__gte=date_range_filter)
 
@@ -430,33 +439,33 @@ def get_jobs_list(request):
         if sort_by:
             # Map frontend column IDs to job dict keys
             sort_key_map = {
-                'jobId': lambda job: int(job['job']['id']) if job['job']['id'].isdigit() else 0,
-                'jobName': lambda job: job['jobName'].lower() if job['jobName'] else '',
-                'user': lambda job: job['user'].lower() if job['user'] else '',
-                'status': lambda job: job['status'].lower() if job['status'] else '',
-                'timeUsed': lambda job: job['timeUsed'] if job['timeUsed'] else '',
-                'timeLeft': lambda job: job['timeLeft'] if job['timeLeft'] else '',
-                'cluster': lambda job: job['cluster'] if job['cluster'] else '',
-                'partition': lambda job: job['partition'] if job['partition'] else '',
-                'nodes': lambda job: job['nodes'] if job['nodes'] else '',
-                'submittedAt': lambda job: job.get('submittedAt') or '',
-                'completedAt': lambda job: job.get('completedAt') or '',
-                'duration': lambda job: job.get('duration') or '',
-                'processor': lambda job: (job.get('processor') or '').lower(),
-                'session': lambda job: (job.get('session') or '').lower(),
+                "jobId": lambda job: int(job["job"]["id"]) if job["job"]["id"].isdigit() else 0,
+                "jobName": lambda job: job["jobName"].lower() if job["jobName"] else "",
+                "user": lambda job: job["user"].lower() if job["user"] else "",
+                "status": lambda job: job["status"].lower() if job["status"] else "",
+                "timeUsed": lambda job: job["timeUsed"] if job["timeUsed"] else "",
+                "timeLeft": lambda job: job["timeLeft"] if job["timeLeft"] else "",
+                "cluster": lambda job: job["cluster"] if job["cluster"] else "",
+                "partition": lambda job: job["partition"] if job["partition"] else "",
+                "nodes": lambda job: job["nodes"] if job["nodes"] else "",
+                "submittedAt": lambda job: job.get("submittedAt") or "",
+                "completedAt": lambda job: job.get("completedAt") or "",
+                "duration": lambda job: job.get("duration") or "",
+                "processor": lambda job: (job.get("processor") or "").lower(),
+                "session": lambda job: (job.get("session") or "").lower(),
             }
 
             if sort_by in sort_key_map:
                 combined_jobs.sort(key=sort_key_map[sort_by], reverse=not sort_asc)
         else:
             # Default sort by job ID descending
-            sort_by = 'jobId'
+            sort_by = "jobId"
             sort_asc = False
-            combined_jobs.sort(key=lambda job: int(job['job']['id']) if job['job']['id'].isdigit() else 0, reverse=True)
+            combined_jobs.sort(key=lambda job: int(job["job"]["id"]) if job["job"]["id"].isdigit() else 0, reverse=True)
 
         # Apply pagination
         total_count = len(combined_jobs)
-        paginator = Paginator(combined_jobs, page_size)
+        paginator = Paginator(combined_jobs, page_size, orphans=3)
 
         try:
             paginated_jobs = paginator.page(page)
@@ -465,19 +474,21 @@ def get_jobs_list(request):
         except EmptyPage:
             paginated_jobs = paginator.page(paginator.num_pages)
 
-        return JsonResponse({
-            "result": list(paginated_jobs),
-            "pagination": {
-                "page": paginated_jobs.number,
-                "pageSize": page_size,
-                "totalPages": paginator.num_pages,
-                "totalResults": total_count,
-            },
-            "sortBy": {
-                "sort": sort_by,
-                "asc": sort_asc,
-            },
-        })
+        return JsonResponse(
+            {
+                "result": list(paginated_jobs),
+                "pagination": {
+                    "page": paginated_jobs.number,
+                    "pageSize": page_size,
+                    "totalPages": paginator.num_pages,
+                    "totalResults": total_count,
+                },
+                "sortBy": {
+                    "sort": sort_by,
+                    "asc": sort_asc,
+                },
+            }
+        )
 
     except Exception as e:
         logger.exception(f"Error in get_jobs_list: {str(e)}")
@@ -543,7 +554,7 @@ def get_jobs_filterlist(request):
 
         # Get unique job names from JobLog (full RunContext names)
         # Fall back to software names from PipeExecution if JobLog not available
-        job_logs = JobLog.objects.filter(job_name__isnull=False).values_list('job_name', flat=True).distinct()
+        job_logs = JobLog.objects.filter(job_name__isnull=False).values_list("job_name", flat=True).distinct()
         job_names = set(job_logs)
 
         # Also include software names as fallback for jobs without JobLog entries
@@ -552,11 +563,13 @@ def get_jobs_filterlist(request):
             "pipe_in_plan__pipe",
             "pipe_in_plan__pipe__software",
         ).all()
-        job_names.update({
-            exec.pipe_in_plan.pipe.software.name
-            for exec in pipe_executions
-            if exec.pipe_in_plan and exec.pipe_in_plan.pipe and exec.pipe_in_plan.pipe.software
-        })
+        job_names.update(
+            {
+                exec.pipe_in_plan.pipe.software.name
+                for exec in pipe_executions
+                if exec.pipe_in_plan and exec.pipe_in_plan.pipe and exec.pipe_in_plan.pipe.software
+            }
+        )
 
         # Fetch live jobs to get partitions and statuses
         try:
@@ -583,7 +596,7 @@ def get_jobs_filterlist(request):
         live_job_ids = {job.get("JOBID") for job in live_jobs}
 
         # Create mapping for JobLog user lookup
-        job_logs = JobLog.objects.filter(job_id__isnull=False).select_related('user')
+        job_logs = JobLog.objects.filter(job_id__isnull=False).select_related("user")
         job_log_map = {log.job_id: log for log in job_logs}
 
         # Combine live jobs with PipeExecution data
@@ -598,18 +611,24 @@ def get_jobs_filterlist(request):
             if job_log and job_log.job_name:
                 job_name = job_log.job_name
             elif pipe_exec and pipe_exec.pipe_in_plan and pipe_exec.pipe_in_plan.pipe:
-                job_name = pipe_exec.pipe_in_plan.pipe.software.name if pipe_exec.pipe_in_plan.pipe.software else pipe_exec.pipe_in_plan.pipe.name
+                job_name = (
+                    pipe_exec.pipe_in_plan.pipe.software.name
+                    if pipe_exec.pipe_in_plan.pipe.software
+                    else pipe_exec.pipe_in_plan.pipe.name
+                )
             else:
                 job_name = job.get("NAME")
 
-            all_jobs.append({
-                "user": job.get("USER", "").split("@")[0],
-                "status": SLURM_STATE_TO_LABEL_LOCAL.get(job.get("ST"), job.get("ST")),
-                "partition": job.get("PARTITION"),
-                "jobName": job_name,
-                "cluster": cluster_id,
-                "submittedAt": pipe_exec.submitted_at if pipe_exec else None,
-            })
+            all_jobs.append(
+                {
+                    "user": job.get("USER", "").split("@")[0],
+                    "status": SLURM_STATE_TO_LABEL_LOCAL.get(job.get("ST"), job.get("ST")),
+                    "partition": job.get("PARTITION"),
+                    "jobName": job_name,
+                    "cluster": cluster_id,
+                    "submittedAt": pipe_exec.submitted_at if pipe_exec else None,
+                }
+            )
 
         # Add historical jobs from PipeExecution for counting
         for pipe_exec in pipe_executions:
@@ -622,7 +641,11 @@ def get_jobs_filterlist(request):
                 status = status_map.get(pipe_exec.status, pipe_exec.status.capitalize())
                 # Use software name
                 if pipe_exec.pipe_in_plan and pipe_exec.pipe_in_plan.pipe:
-                    job_name = pipe_exec.pipe_in_plan.pipe.software.name if pipe_exec.pipe_in_plan.pipe.software else pipe_exec.pipe_in_plan.pipe.name
+                    job_name = (
+                        pipe_exec.pipe_in_plan.pipe.software.name
+                        if pipe_exec.pipe_in_plan.pipe.software
+                        else pipe_exec.pipe_in_plan.pipe.name
+                    )
                 else:
                     job_name = "unknown"
 
@@ -633,14 +656,16 @@ def get_jobs_filterlist(request):
                 else:
                     user = "unknown"
 
-                all_jobs.append({
-                    "user": user,
-                    "status": status,
-                    "partition": "-",
-                    "jobName": job_name,
-                    "cluster": cluster_id,
-                    "submittedAt": pipe_exec.submitted_at,
-                })
+                all_jobs.append(
+                    {
+                        "user": user,
+                        "status": status,
+                        "partition": "-",
+                        "jobName": job_name,
+                        "cluster": cluster_id,
+                        "submittedAt": pipe_exec.submitted_at,
+                    }
+                )
 
         # Calculate counts for each filter category
         user_counts = Counter(job["user"] for job in all_jobs if job.get("user"))
@@ -726,16 +751,18 @@ def get_jobs_filterlist(request):
             },
         ]
 
-        return JsonResponse({
-            "filters": {
-                "user": user_filters,
-                "status": status_filters,
-                "cluster": cluster_filters,
-                "jobName": job_name_filters,
-                "partition": partition_filters,
-                "completedDateRange": date_filters,
-            },
-        })
+        return JsonResponse(
+            {
+                "filters": {
+                    "user": user_filters,
+                    "status": status_filters,
+                    "cluster": cluster_filters,
+                    "jobName": job_name_filters,
+                    "partition": partition_filters,
+                    "completedDateRange": date_filters,
+                },
+            }
+        )
 
     except Exception as e:
         logger.exception(f"Error in get_jobs_filterlist: {str(e)}")
@@ -814,36 +841,42 @@ def bulk_cancel_jobs(request):
             for job_id in job_ids:
                 try:
                     success, message = canceler.cancel(job_id)
-                    results.append({
-                        "job_id": job_id,
-                        "success": success,
-                        "message": message,
-                    })
+                    results.append(
+                        {
+                            "job_id": job_id,
+                            "success": success,
+                            "message": message,
+                        }
+                    )
 
                     # Update PipeExecution record if cancel was successful
                     if success:
                         pipe_exec = PipeExecution.objects.filter(job_id=job_id).first()
                         if pipe_exec:
-                            pipe_exec.status = 'cancelled'
+                            pipe_exec.status = "cancelled"
                             pipe_exec.completed_at = dj_timezone.now()
-                            pipe_exec.save(update_fields=['status', 'completed_at'])
+                            pipe_exec.save(update_fields=["status", "completed_at"])
                             logger.info(f"Updated PipeExecution for cancelled job {job_id}")
 
                 except Exception as e:
-                    results.append({
-                        "job_id": job_id,
-                        "success": False,
-                        "message": str(e),
-                    })
+                    results.append(
+                        {
+                            "job_id": job_id,
+                            "success": False,
+                            "message": str(e),
+                        }
+                    )
 
             successful = sum(1 for r in results if r["success"])
 
-            return JsonResponse({
-                "success": True,
-                "cancelled": successful,
-                "failed": len(results) - successful,
-                "results": results,
-            })
+            return JsonResponse(
+                {
+                    "success": True,
+                    "cancelled": successful,
+                    "failed": len(results) - successful,
+                    "results": results,
+                }
+            )
 
         except Exception as e:
             logger.exception(f"Error during bulk cancel: {str(e)}")
@@ -860,13 +893,13 @@ def bulk_cancel_jobs(request):
 
 # Map processor names to syncer configurations
 SYNCER_CONFIG = {
-    'aretomo3': {
-        'syncer_type': 'AretomoSyncer',
-        'base_path': '/hpc/projects/group.czii/krios1.processing/aretomo3',
+    "aretomo3": {
+        "syncer_type": "AretomoSyncer",
+        "base_path": "/hpc/projects/group.czii/krios1.processing/aretomo3",
     },
-    'denoiset': {
-        'syncer_type': 'DenoiseSyncer',
-        'base_path': '/hpc/projects/group.czii/krios1.processing/denoise',
+    "denoiset": {
+        "syncer_type": "DenoiseSyncer",
+        "base_path": "/hpc/projects/group.czii/krios1.processing/denoise",
     },
 }
 
@@ -894,20 +927,20 @@ def _get_syncer_status_for_job(job_id: str, pipe_execution: PipeExecution = None
             supports_syncer = processor_name in SYNCER_CONFIG
             if supports_syncer:
                 # No syncer process exists but job supports it
-                job_completed = pipe_execution.status in ['completed', 'failed']
+                job_completed = pipe_execution.status in ["completed", "failed"]
                 return {
-                    'status': None,
-                    'last_heartbeat': None,
-                    'can_rerun': job_completed,  # Can re-run if job completed
-                    'syncer_type': SYNCER_CONFIG.get(processor_name, {}).get('syncer_type'),
+                    "status": None,
+                    "last_heartbeat": None,
+                    "can_rerun": job_completed,  # Can re-run if job completed
+                    "syncer_type": SYNCER_CONFIG.get(processor_name, {}).get("syncer_type"),
                 }
         return None
 
     # Determine if re-run is available
     can_rerun = False
     if pipe_execution:
-        job_running = pipe_execution.status in ['submitted', 'running']
-        job_completed = pipe_execution.status in ['completed', 'failed']
+        job_running = pipe_execution.status in ["submitted", "running"]
+        job_completed = pipe_execution.status in ["completed", "failed"]
 
         if job_running:
             # For running jobs: show if syncer stopped unexpectedly
@@ -917,10 +950,10 @@ def _get_syncer_status_for_job(job_id: str, pipe_execution: PipeExecution = None
             can_rerun = True
 
     return {
-        'status': syncer_process.status,
-        'last_heartbeat': syncer_process.last_heartbeat.isoformat() if syncer_process.last_heartbeat else None,
-        'can_rerun': can_rerun,
-        'syncer_type': syncer_process.syncer_type,
+        "status": syncer_process.status,
+        "last_heartbeat": syncer_process.last_heartbeat.isoformat() if syncer_process.last_heartbeat else None,
+        "can_rerun": can_rerun,
+        "syncer_type": syncer_process.syncer_type,
     }
 
 
@@ -965,40 +998,50 @@ def get_syncer_logs(request, job_id: str):
     """
     try:
         # Handle SLURM hetjob format (e.g., "9232+0" -> base job "9232")
-        base_job_id = job_id.split('+')[0] if '+' in job_id else job_id
+        base_job_id = job_id.split("+")[0] if "+" in job_id else job_id
 
         # Get PipeExecution for the job (try exact match first, then base job ID)
-        pipe_exec = PipeExecution.objects.select_related(
-            'pipe_in_plan__pipe__software',
-        ).filter(job_id=job_id).first()
+        pipe_exec = (
+            PipeExecution.objects.select_related(
+                "pipe_in_plan__pipe__software",
+            )
+            .filter(job_id=job_id)
+            .first()
+        )
 
         if not pipe_exec and base_job_id != job_id:
-            pipe_exec = PipeExecution.objects.select_related(
-                'pipe_in_plan__pipe__software',
-            ).filter(job_id=base_job_id).first()
+            pipe_exec = (
+                PipeExecution.objects.select_related(
+                    "pipe_in_plan__pipe__software",
+                )
+                .filter(job_id=base_job_id)
+                .first()
+            )
 
         # Use the job_id that matches the PipeExecution for log lookup
         lookup_job_id = pipe_exec.job_id if pipe_exec else base_job_id
 
         # Get logs (most recent first, limited to 100)
-        logs = SyncerLog.objects.filter(job_id=lookup_job_id).order_by('-timestamp')[:100]
+        logs = SyncerLog.objects.filter(job_id=lookup_job_id).order_by("-timestamp")[:100]
 
         # Get syncer status
         syncer_status = _get_syncer_status_for_job(lookup_job_id, pipe_exec)
 
-        return JsonResponse({
-            "success": True,
-            "logs": [
-                {
-                    "timestamp": log.timestamp.isoformat(),
-                    "action_type": log.action_type,
-                    "message": log.message,
-                    "metadata": log.metadata,
-                }
-                for log in logs
-            ],
-            "syncer_status": syncer_status,
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "logs": [
+                    {
+                        "timestamp": log.timestamp.isoformat(),
+                        "action_type": log.action_type,
+                        "message": log.message,
+                        "metadata": log.metadata,
+                    }
+                    for log in logs
+                ],
+                "syncer_status": syncer_status,
+            }
+        )
 
     except Exception as e:
         logger.exception(f"Error getting syncer logs for job {job_id}: {str(e)}")
@@ -1038,19 +1081,27 @@ def rerun_syncer(request, job_id: str):
     """
     try:
         # Handle SLURM hetjob format (e.g., "9232+0" -> base job "9232")
-        base_job_id = job_id.split('+')[0] if '+' in job_id else job_id
+        base_job_id = job_id.split("+")[0] if "+" in job_id else job_id
 
         # Get PipeExecution for the job (try exact match first, then base job ID)
-        pipe_exec = PipeExecution.objects.select_related(
-            'pipe_in_plan__pipe__software',
-            'proc_run__msi_session',
-        ).filter(job_id=job_id).first()
+        pipe_exec = (
+            PipeExecution.objects.select_related(
+                "pipe_in_plan__pipe__software",
+                "proc_run__msi_session",
+            )
+            .filter(job_id=job_id)
+            .first()
+        )
 
         if not pipe_exec and base_job_id != job_id:
-            pipe_exec = PipeExecution.objects.select_related(
-                'pipe_in_plan__pipe__software',
-                'proc_run__msi_session',
-            ).filter(job_id=base_job_id).first()
+            pipe_exec = (
+                PipeExecution.objects.select_related(
+                    "pipe_in_plan__pipe__software",
+                    "proc_run__msi_session",
+                )
+                .filter(job_id=base_job_id)
+                .first()
+            )
 
         if not pipe_exec:
             return JsonResponse({"success": False, "error": "Job not found"}, status=404)
@@ -1065,26 +1116,32 @@ def rerun_syncer(request, job_id: str):
             processor_name = software.processor_class or software.name if software else None
 
         if processor_name not in SYNCER_CONFIG:
-            return JsonResponse({
-                "success": False,
-                "error": f"Syncer re-run not supported for processor: {processor_name}",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": f"Syncer re-run not supported for processor: {processor_name}",
+                },
+                status=400,
+            )
 
         syncer_config = SYNCER_CONFIG[processor_name]
 
         # Get session and run info
         if not pipe_exec.proc_run or not pipe_exec.proc_run.msi_session:
-            return JsonResponse({
-                "success": False,
-                "error": "Could not determine session/run for this job",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Could not determine session/run for this job",
+                },
+                status=400,
+            )
 
         session_name = pipe_exec.proc_run.msi_session.name
         run_name = pipe_exec.proc_run.name
 
         # Mark any existing syncer as stopped
-        SyncerProcess.objects.filter(job_id=actual_job_id, status='running').update(
-            status='stopped',
+        SyncerProcess.objects.filter(job_id=actual_job_id, status="running").update(
+            status="stopped",
             stopped_at=dj_timezone.now(),
         )
 
@@ -1092,15 +1149,15 @@ def rerun_syncer(request, job_id: str):
         SyncerLog.objects.create(
             pipe_execution=pipe_exec,
             job_id=actual_job_id,
-            action_type='init',
-            message=f'Syncer re-run triggered by user {request.user.username}',
+            action_type="init",
+            message=f"Syncer re-run triggered by user {request.user.username}",
             metadata={
-                'triggered_by': request.user.username,
-                'session_name': session_name,
-                'run_name': run_name,
-                'processor': processor_name,
+                "triggered_by": request.user.username,
+                "session_name": session_name,
+                "run_name": run_name,
+                "processor": processor_name,
             },
-            syncer_type=syncer_config['syncer_type'],
+            syncer_type=syncer_config["syncer_type"],
             session_name=session_name,
             run_id=run_name,
         )
@@ -1111,17 +1168,21 @@ def rerun_syncer(request, job_id: str):
 
         syncer_script = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            'processors',
+            "processors",
             processor_name,
-            'syncer.py',
+            "syncer.py",
         )
 
         # Spawn syncer process (run once, not continuous - job is already completed)
         cmd = [
-            'python', syncer_script,
-            '--session', session_name,
-            '--run', run_name,
-            '--job-id', actual_job_id,
+            "python",
+            syncer_script,
+            "--session",
+            session_name,
+            "--run",
+            run_name,
+            "--job-id",
+            actual_job_id,
             # Note: NOT using --continuous since this is a re-run for a completed job
         ]
 
@@ -1135,10 +1196,12 @@ def rerun_syncer(request, job_id: str):
             start_new_session=True,
         )
 
-        return JsonResponse({
-            "success": True,
-            "message": "Syncer started successfully",
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Syncer started successfully",
+            }
+        )
 
     except Exception as e:
         logger.exception(f"Error re-running syncer for job {job_id}: {str(e)}")
