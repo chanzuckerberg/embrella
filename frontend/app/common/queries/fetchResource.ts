@@ -1,4 +1,4 @@
-import { API, DJANGO_URL, MOCKED_APIS, MOCKED_POST_APIS, POST_API } from '../constants/api';
+import { DJANGO_URL } from '../constants/api';
 
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
@@ -6,16 +6,6 @@ function getCsrfToken(): string | null {
 }
 
 export async function fetchResource(requestURL: string): Promise<Response> {
-  const mockResponse = MOCKED_APIS[new URL(requestURL).pathname as API];
-  if (mockResponse !== undefined) {
-    return Promise.resolve({
-      status: 200,
-      json: async () => {
-        return typeof mockResponse === 'function' ? mockResponse(requestURL) : mockResponse;
-      },
-    }) as Promise<Response>;
-  }
-
   const response = await fetch(requestURL, {
     credentials: 'include', // Include cookies in the request
   });
@@ -30,16 +20,6 @@ export async function fetchResource(requestURL: string): Promise<Response> {
 }
 
 export async function postResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {
-  const mockResponse = MOCKED_POST_APIS[new URL(requestURL).pathname as POST_API];
-  if (mockResponse !== undefined) {
-    return Promise.resolve({
-      status: 200,
-      json: async () => {
-        return typeof mockResponse === 'function' ? mockResponse(requestURL) : mockResponse;
-      },
-    }) as Promise<Response>;
-  }
-
   const csrfToken = getCsrfToken();
   const response = await fetch(requestURL, {
     method: 'POST',

@@ -182,6 +182,122 @@ class CryoGridBoxSerializer(serializers.ModelSerializer):
         return data
 
 
+class GridLabelInBoxSerializer(serializers.ModelSerializer):
+    """Minimal label serializer for grids nested inside a grid box."""
+
+    class Meta:
+        model = Label
+        fields = ["id", "name", "color"]
+
+
+class GridInBoxSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for grids nested inside a grid box."""
+
+    user_name = serializers.CharField(source="user.username", read_only=True, default=None)
+    specimen_samples = serializers.SerializerMethodField()
+    project_name = serializers.CharField(source="intended_project.name", read_only=True, default=None)
+    labels = GridLabelInBoxSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CryoGrid
+        fields = [
+            "id",
+            "name",
+            "position_in_box",
+            "clipped",
+            "trashed",
+            "notes",
+            "user_name",
+            "specimen_samples",
+            "project_name",
+            "labels",
+            "create_on",
+        ]
+
+    def get_specimen_samples(self, obj):
+        if not obj.specimen:
+            return []
+        return [sample.name for sample in obj.specimen.samples.all()]
+
+
+class CryoGridBoxListSerializer(serializers.ModelSerializer):
+    """Serializer for grid box list view with nested grids."""
+
+    color_display = serializers.CharField(source="get_color_display", read_only=True)
+    numbering_display = serializers.CharField(source="get_numbering_display", read_only=True)
+    puck_name = serializers.CharField(source="puck.name", read_only=True, default=None)
+    puck_user = serializers.CharField(source="puck.user.username", read_only=True, default=None)
+    grid_count = serializers.IntegerField(read_only=True)
+    grids = GridInBoxSerializer(source="cryogrid_set", many=True, read_only=True)
+
+    class Meta:
+        model = CryoGridBox
+        fields = [
+            "id",
+            "name",
+            "color",
+            "color_display",
+            "numbering",
+            "numbering_display",
+            "position_in_puck",
+            "max_grids",
+            "puck",
+            "puck_name",
+            "puck_user",
+            "grid_count",
+            "grids",
+        ]
+
+
+class GridBoxInPuckSerializer(serializers.ModelSerializer):
+    """Serializer for grid boxes nested inside a puck, with nested grids."""
+
+    color_display = serializers.CharField(source="get_color_display", read_only=True)
+    numbering_display = serializers.CharField(source="get_numbering_display", read_only=True)
+    grid_count = serializers.IntegerField(read_only=True)
+    grids = GridInBoxSerializer(source="cryogrid_set", many=True, read_only=True)
+
+    class Meta:
+        model = CryoGridBox
+        fields = [
+            "id",
+            "name",
+            "color",
+            "color_display",
+            "numbering",
+            "numbering_display",
+            "position_in_puck",
+            "max_grids",
+            "grid_count",
+            "grids",
+        ]
+
+
+class PuckListSerializer(serializers.ModelSerializer):
+    """Serializer for puck list view with nested grid boxes and grids."""
+
+    color_display = serializers.CharField(source="get_color_display", read_only=True)
+    cane_name = serializers.CharField(source="cane.name", read_only=True, default=None)
+    user_name = serializers.CharField(source="user.username", read_only=True, default=None)
+    grid_box_count = serializers.IntegerField(read_only=True)
+    grid_boxes = GridBoxInPuckSerializer(source="cryogridbox_set", many=True, read_only=True)
+
+    class Meta:
+        model = Puck
+        fields = [
+            "id",
+            "name",
+            "color",
+            "color_display",
+            "cane_name",
+            "position_in_cane",
+            "max_boxes",
+            "user_name",
+            "grid_box_count",
+            "grid_boxes",
+        ]
+
+
 class CaneSerializer(serializers.ModelSerializer):
     """
     Serializer for Cane model

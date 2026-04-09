@@ -7,11 +7,11 @@ Contains API endpoints for:
 - Review export functionality
 - Tomogram review management
 """
+
 import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from math import ceil
 
 from django.contrib.auth.models import User
 from django.http import JsonResponse
@@ -19,6 +19,11 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rapidfuzz import fuzz
+from rest_framework.decorators import api_view
+from tem.models import MsiSession
+from umbrella.contrast_limits import compute_optimal_contrast_limits
+
 from processes.models import (
     Annotation,
     PipeInPlan,
@@ -30,10 +35,6 @@ from processes.models import (
 )
 from processes.validation import SortMetadataModel
 from processes.views import get_base_url
-from rapidfuzz import fuzz
-from rest_framework.decorators import api_view
-from tem.models import MsiSession
-from umbrella.contrast_limits import compute_optimal_contrast_limits
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +61,7 @@ def _get_data_by_msi_session_data_type(plan, session, data_types=[]):
         my_pipe = vpp.pipe
         # filter data_types as the right input_pipe
         input_joints = PipeJoint.objects.filter(
-            pipe_in_plan__pipe=my_pipe,
-            input_pathtype__static_path__data_type__in=data_types
+            pipe_in_plan__pipe=my_pipe, input_pathtype__static_path__data_type__in=data_types
         )
         if not input_joints:
             continue
@@ -80,13 +80,13 @@ def _get_data_by_msi_session_data_type(plan, session, data_types=[]):
     2. List of annotation picks (`point` type) with `pick` data type.
     """,
     parameters=[
-        OpenApiParameter(name='plan_id', required=True, type=str, description='Processing Plan ID'),
-        OpenApiParameter(name='session_id', required=True, type=str, description='MSI Session ID'),
+        OpenApiParameter(name="plan_id", required=True, type=str, description="Processing Plan ID"),
+        OpenApiParameter(name="session_id", required=True, type=str, description="MSI Session ID"),
     ],
     responses={
-        200: 'List of tomograms and picks',
-        400: 'Missing required parameters',
-        404: 'Plan or Session not found, or data fetch error',
+        200: "List of tomograms and picks",
+        400: "Missing required parameters",
+        404: "Plan or Session not found, or data fetch error",
     },
 )
 @api_view(["GET"])
@@ -95,9 +95,9 @@ def get_tomo_by_msi_session(request):
     Return form selector options as json response of Tomograms
     that belong to the session and are valid as the input of the first pipe in the plan.
     """
-    plan_id = request.GET.get('plan_id')
-    session_id = request.GET.get('session_id')
-    run_number = request.GET.get('run_number')
+    plan_id = request.GET.get("plan_id")
+    session_id = request.GET.get("session_id")
+    run_number = request.GET.get("run_number")
     if not plan_id:
         return JsonResponse({"error": "Processing Plan ID not provided."}, status=400)
     else:
@@ -116,14 +116,15 @@ def get_tomo_by_msi_session(request):
             return JsonResponse({"error": "MsiSession not found."}, status=404)
     # tomo
     try:
-        valid_pipes = _get_data_by_msi_session_data_type(plan, session, data_types=['rec', 'deno'])
+        valid_pipes = _get_data_by_msi_session_data_type(plan, session, data_types=["rec", "deno"])
     except Exception as e:
         return JsonResponse({"error": e}, status=404)
 
     input_tomos = []
     for valid_pipe in valid_pipes:
         tomo = Tomograms.objects.filter(
-            msi_session=session, pipe_data__pipe=valid_pipe,
+            msi_session=session,
+            pipe_data__pipe=valid_pipe,
         )
         if run_number and run_number.strip():  # Check if run_number exists and is not empty
             tomo = tomo.filter(pipe_data__run__name=run_number)
@@ -131,13 +132,15 @@ def get_tomo_by_msi_session(request):
         input_tomos.extend(list(tomo))
     tomo_data = []
     for tomo in input_tomos:
-        tomo_data.append({
-            "id": tomo.id,
-            "name": tomo.pipe_data.__str__(),
-        })
+        tomo_data.append(
+            {
+                "id": tomo.id,
+                "name": tomo.pipe_data.__str__(),
+            }
+        )
 
     try:
-        valid_pipes = _get_data_by_msi_session_data_type(plan, session, data_types=['pick'])
+        valid_pipes = _get_data_by_msi_session_data_type(plan, session, data_types=["pick"])
     except Exception as e:
         return JsonResponse({"error": e}, status=404)
     if not valid_pipes:
@@ -145,7 +148,9 @@ def get_tomo_by_msi_session(request):
     input_picks = []
     for valid_pipe in valid_pipes:
         pick = Annotation.objects.filter(
-            msi_session=session, pipe_data__pipe=valid_pipe, annotation_type='point',
+            msi_session=session,
+            pipe_data__pipe=valid_pipe,
+            annotation_type="point",
         )
         if run_number and run_number.strip():  # Check if run_number exists and is not empty
             pick = pick.filter(pipe_data__run__name=run_number)
@@ -153,15 +158,17 @@ def get_tomo_by_msi_session(request):
         input_picks.extend(list(pick))
     pick_data = []
     for pick in input_picks:
-        pick_data.append({
-            "id": pick.id,
-            "name": pick.pipe_data.__str__(),
-        })
+        pick_data.append(
+            {
+                "id": pick.id,
+                "name": pick.pipe_data.__str__(),
+            }
+        )
 
     return JsonResponse([tomo_data, pick_data], safe=False)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name="dispatch")
 class ReviewView(View):
     """
     View for managing reviews - handles list, create, get, save, and complete operations.
@@ -182,39 +189,36 @@ class ReviewView(View):
         if review_id:
             return self.get_review_metadata(request, review_id)
 
-        search = ''
-        sort_field = 'updatedAt'
-        sort_order = 'desc'
+        search = ""
+        sort_field = "updatedAt"
+        sort_order = "desc"
         limit = None
-        offset = 0
-
         requested_page = 1
 
         try:
-            for item in json.loads(request.GET.get('q', default="[]")):
-                match item['category']:
-                    case 'search':
-                        search = item['value']
-                    case 'sort':
-                        sort_field = item['value'][0]
-                    case 'asc':
-                        sort_order = 'asc' if item['value'][0] else 'desc'
-                    case 'page':
+            for item in json.loads(request.GET.get("q", default="[]")):
+                match item["category"]:
+                    case "search":
+                        search = item["value"]
+                    case "sort":
+                        sort_field = item["value"][0]
+                    case "asc":
+                        sort_order = "asc" if item["value"][0] else "desc"
+                    case "page":
                         limit = 20
-                        requested_page = item['value'][0]
-                        offset = (requested_page - 1) * limit
+                        requested_page = item["value"][0]
 
             # Map frontend sort fields to database fields
             sort_field_map = {
-                'requestedAt': 'created_at',
-                'updatedAt': 'updated_at',
-                'reviewName': 'review_name',
-                'sessionId': 'msi_session__name',
-                'status': 'status',
+                "requestedAt": "created_at",
+                "updatedAt": "updated_at",
+                "reviewName": "review_name",
+                "sessionId": "msi_session__name",
+                "status": "status",
             }
 
             # Start with base queryset
-            queryset = Review.objects.select_related('msi_session', 'requestor').all()
+            queryset = Review.objects.select_related("msi_session", "requestor").all()
 
             # Apply search filter
             if search:
@@ -222,47 +226,54 @@ class ReviewView(View):
                 all_reviews = list(queryset)
 
                 # Preprocess search term
-                search = search.lower().replace('-', '').replace(' ', '')
+                search = search.lower().replace("-", "").replace(" ", "")
 
                 # Filter reviews based on similarity threshold
                 SIMILARITY_THRESHOLD = 70
                 filtered_reviews = []
 
                 for review in all_reviews:
-                    if (fuzz.ratio(search, review.review_name) >= SIMILARITY_THRESHOLD or
-                        fuzz.ratio(search, review.requestor.username) >= SIMILARITY_THRESHOLD or
-                        fuzz.ratio(search, review.msi_session.name) >= SIMILARITY_THRESHOLD or
-                        fuzz.ratio(search, review.reconstruction_type) >= SIMILARITY_THRESHOLD or
-                        search in review.review_name.lower() or
-                        search in review.requestor.username.lower() or
-                        search in review.msi_session.name.lower() or
-                        search in review.reconstruction_type.lower()):
+                    if (
+                        fuzz.ratio(search, review.review_name) >= SIMILARITY_THRESHOLD
+                        or fuzz.ratio(search, review.requestor.username) >= SIMILARITY_THRESHOLD
+                        or fuzz.ratio(search, review.msi_session.name) >= SIMILARITY_THRESHOLD
+                        or fuzz.ratio(search, review.reconstruction_type) >= SIMILARITY_THRESHOLD
+                        or search in review.review_name.lower()
+                        or search in review.requestor.username.lower()
+                        or search in review.msi_session.name.lower()
+                        or search in review.reconstruction_type.lower()
+                    ):
                         filtered_reviews.append(review)
 
                 # Update queryset with filtered reviews
                 queryset = Review.objects.filter(
                     review_id__in=[r.review_id for r in filtered_reviews],
-                ).select_related('msi_session', 'requestor')
+                ).select_related("msi_session", "requestor")
 
             # Apply sorting
-            db_sort_field = sort_field_map.get(sort_field, 'created_at')
-            if sort_order == 'desc':
-                queryset = queryset.order_by(f'-{db_sort_field}')
+            db_sort_field = sort_field_map.get(sort_field, "created_at")
+            if sort_order == "desc":
+                queryset = queryset.order_by(f"-{db_sort_field}")
             else:
                 queryset = queryset.order_by(db_sort_field)
 
-            # Get total count before pagination
-            total_count = queryset.count()
+            # Apply pagination
+            from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 
             if limit is None:
-                limit = total_count
+                limit = queryset.count()
 
-            # Apply pagination
-            queryset = queryset[offset:offset + limit]
+            paginator = Paginator(queryset, limit, orphans=3)
+            try:
+                page_obj = paginator.page(requested_page)
+            except PageNotAnInteger:
+                page_obj = paginator.page(1)
+            except EmptyPage:
+                page_obj = paginator.page(paginator.num_pages)
 
             # Format the response
             reviews_data = []
-            for review in queryset:
+            for review in page_obj:
                 # Determine status based on reviewed count
                 if review.reviewed_count == 0:
                     status = "Not Started"
@@ -271,45 +282,51 @@ class ReviewView(View):
                 else:
                     status = "Complete"
 
-                reviews_data.append({
-                    "review": {
-                        "id": str(review.review_id),
-                        "name": review.review_name,
-                        "type": review.review_type,
-                        "url": f"{get_base_url()}/admin/processes/review/{review.review_id}",
-                        "annotationObjects": review.objects_of_interest.split(',')
-                            if review.objects_of_interest is not None else [],
-                    },
-                    "session": {
-                        "id": review.msi_session.pk,
-                        "name": review.msi_session.name,
-                        "url": f"{get_base_url()}/admin/tem/msisession/{review.msi_session.pk}",
-                    },
-                    "runId": review.run_id,
-                    "reconstructionType": review.reconstruction_type,
-                    "updatedAt": review.updated_at.isoformat(),
-                    "status": status,
-                    "reviewedCount": review.reviewed_count,
-                    "totalCount": review.total_count,
-                    "reviewer": {
-                        "id": str(review.requestor.id) if review.requestor else None,
-                        "name": review.requestor.username if review.requestor else None,
-                    },
-                })
+                reviews_data.append(
+                    {
+                        "review": {
+                            "id": str(review.review_id),
+                            "name": review.review_name,
+                            "type": review.review_type,
+                            "url": f"{get_base_url()}/admin/processes/review/{review.review_id}",
+                            "annotationObjects": review.objects_of_interest.split(",")
+                            if review.objects_of_interest is not None
+                            else [],
+                        },
+                        "session": {
+                            "id": review.msi_session.pk,
+                            "name": review.msi_session.name,
+                            "url": f"{get_base_url()}/admin/tem/msisession/{review.msi_session.pk}",
+                        },
+                        "runId": review.run_id,
+                        "reconstructionType": review.reconstruction_type,
+                        "updatedAt": review.updated_at.isoformat(),
+                        "status": status,
+                        "reviewedCount": review.reviewed_count,
+                        "totalCount": review.total_count,
+                        "reviewer": {
+                            "id": str(review.requestor.id) if review.requestor else None,
+                            "name": review.requestor.username if review.requestor else None,
+                        },
+                    }
+                )
 
-            return JsonResponse({
-                "result": reviews_data,
-                "pagination": {
-                    "page": requested_page,
-                    "pageSize": limit,
-                    "totalPages": ceil(total_count / limit),
-                    "totalResults": total_count,
+            return JsonResponse(
+                {
+                    "result": reviews_data,
+                    "pagination": {
+                        "page": page_obj.number,
+                        "pageSize": limit,
+                        "totalPages": paginator.num_pages,
+                        "totalResults": paginator.count,
+                    },
+                    "sortBy": SortMetadataModel(
+                        sort="updatedAt" if sort_field is not None else None,
+                        asc=sort_order == "asc",
+                    ).model_dump(),
                 },
-                "sortBy": SortMetadataModel(
-                    sort='updatedAt' if sort_field is not None else None,
-                    asc=sort_order == 'asc',
-                ).model_dump(),
-            }, safe=False)
+                safe=False,
+            )
 
         except Exception as e:
             logger.error(f"Error in get reviews: {str(e)}", exc_info=True)
@@ -335,17 +352,17 @@ class ReviewView(View):
                     return JsonResponse({"error": "Invalid review ID format"}, status=400)
 
             # Get the review with related data
-            review = Review.objects.select_related('requestor').get(review_id=review_id)
+            review = Review.objects.select_related("requestor").get(review_id=review_id)
 
             # Get all tomograms for this review
-            tomograms = ReviewTomogram.objects.filter(review=review).values('tomogram_id', 'quality', 'position_id')
+            tomograms = ReviewTomogram.objects.filter(review=review).values("tomogram_id", "quality", "position_id")
 
             # Format the response and sort by position
             tomograms_list = [
                 {
-                    "tomogramId": tomo['tomogram_id'],
-                    "status": tomo['quality'] if tomo['quality'] else 'pending',
-                    "position": tomo['position_id'] if tomo['position_id'] else "None",
+                    "tomogramId": tomo["tomogram_id"],
+                    "status": tomo["quality"] if tomo["quality"] else "pending",
+                    "position": tomo["position_id"] if tomo["position_id"] else "None",
                 }
                 for tomo in tomograms
             ]
@@ -353,10 +370,10 @@ class ReviewView(View):
             # Sort tomograms by position (handle compound position numbers like position_1_2, position_100_1)
             def extract_position_number(position_str):
                 if position_str == "None":
-                    return float('inf')  # Put "None" positions at the end
+                    return float("inf")  # Put "None" positions at the end
                 try:
                     # Extract all numbers from "Position_X_Y" format
-                    parts = position_str.split('_')
+                    parts = position_str.split("_")
                     if len(parts) >= 2:
                         # Convert all numeric parts to integers for proper sorting
                         numbers = []
@@ -365,16 +382,18 @@ class ReviewView(View):
                                 numbers.append(int(part))
                             except ValueError:
                                 # If any part is not numeric, treat as invalid
-                                return float('inf')
+                                return float("inf")
                         return numbers
                     else:
-                        return float('inf')  # Invalid format
+                        return float("inf")  # Invalid format
                 except (ValueError, IndexError):
-                    return float('inf')  # Put invalid positions at the end
+                    return float("inf")  # Put invalid positions at the end
 
-            tomograms_list.sort(key=lambda x: extract_position_number(x['position']))
+            tomograms_list.sort(key=lambda x: extract_position_number(x["position"]))
 
-            logger.debug(f"Sorted tomogram positions for review {review_id}: {[tomo['position'] for tomo in tomograms_list]}")
+            logger.debug(
+                f"Sorted tomogram positions for review {review_id}: {[tomo['position'] for tomo in tomograms_list]}"
+            )
 
             response_data = {
                 "reviewId": str(review.review_id),
@@ -383,8 +402,9 @@ class ReviewView(View):
                     "id": str(review.requestor.id) if review.requestor else None,
                     "name": review.requestor.username if review.requestor else None,
                 },
-                "availableAnnotationObjects": review.objects_of_interest.split(',')
-                    if review.objects_of_interest is not None else [],
+                "availableAnnotationObjects": review.objects_of_interest.split(",")
+                if review.objects_of_interest is not None
+                else [],
                 "tomograms": tomograms_list,
             }
 
@@ -406,9 +426,9 @@ class ReviewView(View):
         """
         if review_id:
             # Check the URL path to determine the action
-            if 'save' in request.path:
+            if "save" in request.path:
                 return self.save_review(request, review_id)
-            elif 'complete' in request.path:
+            elif "complete" in request.path:
                 return self.complete_review(request, review_id)
             else:
                 return JsonResponse({"error": "Invalid endpoint"}, status=400)
@@ -420,81 +440,93 @@ class ReviewView(View):
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
         # Validate required fields
-        required_fields = ['reviewName', 'reviewType', 'sessionId', 'runId', 'reconstructionType', 'requestor']
+        required_fields = ["reviewName", "reviewType", "sessionId", "runId", "reconstructionType", "requestor"]
         for field in required_fields:
             if field not in data:
                 return JsonResponse({"error": f"Missing required field: {field}"}, status=400)
 
         # Validate reconstruction type
-        valid_reconstruction_types = ['DCTF', 'Denoised', 'SART']
-        if data['reconstructionType'] not in valid_reconstruction_types:
-            return JsonResponse({"error": f"Invalid reconstruction type. Must be one of: {', '.join(valid_reconstruction_types)}"}, status=400)
+        valid_reconstruction_types = ["DCTF", "Denoised", "SART"]
+        if data["reconstructionType"] not in valid_reconstruction_types:
+            return JsonResponse(
+                {"error": f"Invalid reconstruction type. Must be one of: {', '.join(valid_reconstruction_types)}"},
+                status=400,
+            )
 
         try:
             # Get the session
-            session = MsiSession.objects.get(id=data['sessionId'])
+            session = MsiSession.objects.get(id=data["sessionId"])
         except MsiSession.DoesNotExist:
             return JsonResponse({"error": "Session not found"}, status=404)
 
         try:
             # Get the requestor user
-            requestor = User.objects.get(id=data['requestor'])
+            requestor = User.objects.get(id=data["requestor"])
         except User.DoesNotExist:
             return JsonResponse({"error": "Requestor user not found"}, status=404)
 
         # Check for duplicate review name
-        if Review.objects.filter(review_name=data['reviewName']).exists():
-            return JsonResponse({
-                "error": "Duplicate review name",
-                "details": f"A review with name '{data['reviewName']}' already exists",
-            }, status=400)
+        if Review.objects.filter(review_name=data["reviewName"]).exists():
+            return JsonResponse(
+                {
+                    "error": "Duplicate review name",
+                    "details": f"A review with name '{data['reviewName']}' already exists",
+                },
+                status=400,
+            )
 
         # Check if there are tomograms to review
         tomogram_count = ReviewTomogram.objects.filter(
             session=session,
-            run_id=data['runId'],
-            reconstruction_type=data['reconstructionType'],
+            run_id=data["runId"],
+            reconstruction_type=data["reconstructionType"],
         ).count()
 
         if tomogram_count == 0:
-            return JsonResponse({
-                "error": "No tomograms found for review",
-                "details": f"No tomograms found for session {session.name}, run {data['runId']}, and reconstruction type {data['reconstructionType']}",
-            }, status=400)
+            return JsonResponse(
+                {
+                    "error": "No tomograms found for review",
+                    "details": f"No tomograms found for session {session.name}, run {data['runId']}, and reconstruction type {data['reconstructionType']}",
+                },
+                status=400,
+            )
 
         # Create the review
         try:
             review = Review.objects.create(
-                review_name=data['reviewName'],
-                review_type=data['reviewType'],
-                run_id=data['runId'],
-                reconstruction_type=data['reconstructionType'],
+                review_name=data["reviewName"],
+                review_type=data["reviewType"],
+                run_id=data["runId"],
+                reconstruction_type=data["reconstructionType"],
                 msi_session=session,
                 requestor=requestor,
-                status='not_started',
+                status="not_started",
                 total_count=tomogram_count,  # Set total count to actual tomogram count
                 reviewed_count=0,
-                objects_of_interest=data['annotationObjects'],
+                objects_of_interest=data["annotationObjects"],
             )
 
             # Update ReviewTomogram records to associate them with this review
             ReviewTomogram.objects.filter(
                 session=session,
-                run_id=data['runId'],
-                reconstruction_type=data['reconstructionType'],
+                run_id=data["runId"],
+                reconstruction_type=data["reconstructionType"],
             ).update(review=review)
 
             # Return the created review
-            return JsonResponse({
-                "reviewId": str(review.review_id),
-                "sessionId": review.msi_session.name,
-                "runId": review.run_id,
-                "reconstructionType": review.reconstruction_type,
-                "reviewName": review.review_name,
-                "totalCount": review.total_count,
-                "status": "not_started",
-                "createdAt": review.created_at.isoformat(),
-            }, status=201)
+            return JsonResponse(
+                {
+                    "reviewId": str(review.review_id),
+                    "sessionId": review.msi_session.name,
+                    "runId": review.run_id,
+                    "reconstructionType": review.reconstruction_type,
+                    "reviewName": review.review_name,
+                    "totalCount": review.total_count,
+                    "status": "not_started",
+                    "createdAt": review.created_at.isoformat(),
+                },
+                status=201,
+            )
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
@@ -512,7 +544,7 @@ class ReviewView(View):
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
 
             # Validate required fields
-            required_fields = ['reviewId', 'savePath', 'annotations']
+            required_fields = ["reviewId", "savePath", "annotations"]
             for field in required_fields:
                 if field not in data:
                     return JsonResponse({"error": f"Missing required field: {field}"}, status=400)
@@ -526,38 +558,42 @@ class ReviewView(View):
                 return JsonResponse({"error": "Review not found"}, status=404)
 
             # Validate quality values
-            valid_qualities = ['accepted', 'rejected', 'uncertain']
+            valid_qualities = ["accepted", "rejected", "uncertain"]
 
             # Validate annotations
-            for annotation in data['annotations']:
-                if 'tomogramId' not in annotation or 'quality' not in annotation:
+            for annotation in data["annotations"]:
+                if "tomogramId" not in annotation or "quality" not in annotation:
                     return JsonResponse({"error": "Each annotation must have tomogramId and quality"}, status=400)
-                if annotation['quality'] not in valid_qualities:
-                    return JsonResponse({"error": f"Invalid quality value. Must be one of: {', '.join(valid_qualities)}"}, status=400)
-                if annotation['quality'] == 'rejected' and not annotation.get('rejectionReasons'):
-                    return JsonResponse({"error": "Rejection reasons are required when quality is rejected"}, status=400)
+                if annotation["quality"] not in valid_qualities:
+                    return JsonResponse(
+                        {"error": f"Invalid quality value. Must be one of: {', '.join(valid_qualities)}"}, status=400
+                    )
+                if annotation["quality"] == "rejected" and not annotation.get("rejectionReasons"):
+                    return JsonResponse(
+                        {"error": "Rejection reasons are required when quality is rejected"}, status=400
+                    )
 
             # Update tomogram reviews
-            for annotation in data['annotations']:
+            for annotation in data["annotations"]:
                 try:
                     tomogram = ReviewTomogram.objects.get(
                         review=review,
-                        tomogram_id=annotation['tomogramId'],
+                        tomogram_id=annotation["tomogramId"],
                     )
                     logger.debug(f"Updating tomogram: {tomogram.tomogram_id}")
 
                     # Update tomogram review data
-                    tomogram.quality = annotation['quality']
+                    tomogram.quality = annotation["quality"]
 
                     # Handle rejection reasons
-                    if annotation['quality'] == 'rejected':
-                        tomogram.rejection_reasons = json.dumps(annotation['rejectionReasons'])
+                    if annotation["quality"] == "rejected":
+                        tomogram.rejection_reasons = json.dumps(annotation["rejectionReasons"])
                     else:
                         tomogram.rejection_reasons = json.dumps([])  # Empty array instead of None
 
                     # Handle object labels
-                    if 'objectLabels' in annotation:
-                        tomogram.object_labels = json.dumps(annotation['objectLabels'])
+                    if "objectLabels" in annotation:
+                        tomogram.object_labels = json.dumps(annotation["objectLabels"])
                     else:
                         tomogram.object_labels = json.dumps([])  # Empty array instead of None
 
@@ -571,22 +607,24 @@ class ReviewView(View):
             total_count = ReviewTomogram.objects.filter(review=review).count()
             reviewed_count = ReviewTomogram.objects.filter(
                 review=review,
-                quality__in=['accepted', 'rejected', 'uncertain'],
+                quality__in=["accepted", "rejected", "uncertain"],
             ).count()
 
             # Update review's save path and reviewed count
-            review.save_path = data['savePath']
+            review.save_path = data["savePath"]
             review.reviewed_count = reviewed_count
             review.save()
 
             # Return success response with counts
-            return JsonResponse({
-                "ok": True,
-                "savedAt": datetime.now(timezone.utc).isoformat(),
-                "savePath": data['savePath'],
-                "reviewedCount": reviewed_count,
-                "totalCount": total_count,
-            })
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "savedAt": datetime.now(timezone.utc).isoformat(),
+                    "savePath": data["savePath"],
+                    "reviewedCount": reviewed_count,
+                    "totalCount": total_count,
+                }
+            )
 
         except Exception as e:
             logger.error(f"Unexpected error in save_review: {str(e)}", exc_info=True)
@@ -604,7 +642,7 @@ class ReviewView(View):
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
 
             # Validate review ID matches URL parameter
-            if data.get('reviewId') != review_id:
+            if data.get("reviewId") != review_id:
                 return JsonResponse({"error": "Review ID in request body does not match URL parameter"}, status=400)
 
             # Convert string to UUID if needed
@@ -620,22 +658,24 @@ class ReviewView(View):
                 return JsonResponse({"error": "Review not found"}, status=404)
 
             # Update review status
-            review.status = 'completed'
+            review.status = "completed"
             review.save()
 
             # Update review counts
             review.reviewed_count = ReviewTomogram.objects.filter(
                 review=review,
-                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary'],
+                quality__in=["accepted", "rejected", "uncertain", "exemplary"],
             ).count()
             review.save()
 
             # Return success response
-            return JsonResponse({
-                "ok": True,
-                "finishedAt": datetime.utcnow().isoformat() + 'Z',
-                "savePath": review.save_path if review.save_path else None,
-            })
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "finishedAt": datetime.utcnow().isoformat() + "Z",
+                    "savePath": review.save_path if review.save_path else None,
+                }
+            )
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
@@ -654,14 +694,14 @@ def export_review_results(request, review_id):
                 return JsonResponse({"error": "Invalid review ID format"}, status=400)
 
         # Get the review with related tomograms
-        review = Review.objects.select_related('msi_session', 'requestor').get(review_id=review_id)
+        review = Review.objects.select_related("msi_session", "requestor").get(review_id=review_id)
 
         # Get the reviewedOnly parameter
-        reviewed_only = request.GET.get('reviewedOnly', 'false').lower() == 'true'
+        reviewed_only = request.GET.get("reviewedOnly", "false").lower() == "true"
 
         # If reviewedOnly is true, allow export during review
         # If reviewedOnly is false, only allow export when review is completed
-        if not reviewed_only and review.status != 'completed':
+        if not reviewed_only and review.status != "completed":
             return JsonResponse({"error": "Review must be completed before exporting all tomograms"}, status=400)
 
         # Get tomograms for this review
@@ -669,7 +709,7 @@ def export_review_results(request, review_id):
             # Only get reviewed tomograms (not pending)
             tomograms = ReviewTomogram.objects.filter(
                 review=review,
-                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary'],
+                quality__in=["accepted", "rejected", "uncertain", "exemplary"],
             )
         else:
             # Get all tomograms (including pending)
@@ -709,9 +749,9 @@ def export_review_results(request, review_id):
         # Set headers for file download
         export_type = "reviewed_only" if reviewed_only else "complete"
         filename = f"review_{review_id}_{export_type}_export.json"
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        response['Content-Type'] = 'application/json'
-        response['Content-Length'] = len(json.dumps(export_data))
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Content-Type"] = "application/json"
+        response["Content-Length"] = len(json.dumps(export_data))
 
         return response
 
@@ -750,15 +790,15 @@ def get_review_tomograms(request, review_id):
         # Get tomograms for the review
         tomograms = ReviewTomogram.objects.filter(
             review=review,
-        ).values('tomogram_id', 'quality')
+        ).values("tomogram_id", "quality")
 
         logger.debug(f"Found {tomograms.count()} tomograms for review {review_id}")
 
         # Format the response
         tomograms_data = [
             {
-                "tomogramId": tomo['tomogram_id'],
-                "status": tomo['quality'] if tomo['quality'] else 'pending',
+                "tomogramId": tomo["tomogram_id"],
+                "status": tomo["quality"] if tomo["quality"] else "pending",
             }
             for tomo in tomograms
         ]
@@ -770,7 +810,7 @@ def get_review_tomograms(request, review_id):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name="dispatch")
 class ReviewTomogramView(View):
     """
     View for managing individual tomogram reviews.
@@ -831,9 +871,13 @@ class ReviewTomogramView(View):
                 job_name = "denoise"
 
             # Updated zarr path construction - migrated to new location
-            response_data["zarrPath"] = f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_id}/{run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+            response_data["zarrPath"] = (
+                f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_id}/{run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+            )
 
-            logger.debug(f"Computing contrast limits for {review.reconstruction_type} reconstruction: {response_data['zarrPath']}")
+            logger.debug(
+                f"Computing contrast limits for {review.reconstruction_type} reconstruction: {response_data['zarrPath']}"
+            )
             try:
                 contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
                 response_data["contrastLimits"] = contrast_limits
@@ -886,13 +930,15 @@ class ReviewTomogramView(View):
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
 
             # Validate required fields
-            if 'quality' not in data:
+            if "quality" not in data:
                 return JsonResponse({"error": "Missing required field: quality"}, status=400)
 
             # Validate quality value
-            valid_qualities = ['accepted', 'rejected', 'uncertain', 'exemplary', 'pending']
-            if data['quality'] not in valid_qualities:
-                return JsonResponse({"error": f"Invalid quality value. Must be one of: {', '.join(valid_qualities)}"}, status=400)
+            valid_qualities = ["accepted", "rejected", "uncertain", "exemplary", "pending"]
+            if data["quality"] not in valid_qualities:
+                return JsonResponse(
+                    {"error": f"Invalid quality value. Must be one of: {', '.join(valid_qualities)}"}, status=400
+                )
 
             # Get the tomogram
             try:
@@ -906,17 +952,17 @@ class ReviewTomogramView(View):
                 return JsonResponse({"error": "Tomogram not found"}, status=404)
 
             # Update tomogram review data
-            tomogram.quality = data['quality']
+            tomogram.quality = data["quality"]
 
             # Handle rejection reasons - store as JSON string
-            if data['quality'] == 'rejected':
-                tomogram.rejection_reasons = json.dumps(data['rejectionReasons'])
+            if data["quality"] == "rejected":
+                tomogram.rejection_reasons = json.dumps(data["rejectionReasons"])
             else:
                 tomogram.rejection_reasons = json.dumps([])
 
             # Handle object labels - store as JSON string
-            if 'objectLabels' in data:
-                tomogram.object_labels = json.dumps(data['objectLabels'])
+            if "objectLabels" in data:
+                tomogram.object_labels = json.dumps(data["objectLabels"])
 
             # Save the changes
             tomogram.save()
@@ -925,7 +971,7 @@ class ReviewTomogramView(View):
             review = tomogram.review
             review.reviewed_count = ReviewTomogram.objects.filter(
                 review=review,
-                quality__in=['accepted', 'rejected', 'uncertain', 'exemplary'],
+                quality__in=["accepted", "rejected", "uncertain", "exemplary"],
             ).count()
             review.save()
 

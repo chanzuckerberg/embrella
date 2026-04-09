@@ -1,4 +1,5 @@
 import { ColumnDef } from '@tanstack/react-table';
+import { Link } from '@czi-sds/components';
 
 import { EntityDataTypes } from '@app/common/types/tableState';
 import { humanize } from '@app/common/utils/string';
@@ -36,6 +37,7 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     },
     enableSorting: false,
     header: humanize(GRID_COLUMN_IDS.CRYOGRID),
+    size: 160,
   },
   {
     id: GRID_COLUMN_IDS.PROJECT,
@@ -43,6 +45,7 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     cell: getLinkCellFromCellContext,
     enableSorting: false,
     header: humanize(GRID_COLUMN_IDS.PROJECT),
+    size: 140,
   },
   {
     id: GRID_COLUMN_IDS.SPECIMEN,
@@ -51,6 +54,7 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     cell: getLinkCellListFromCellContext,
     enableSorting: false,
     header: humanize(GRID_COLUMN_IDS.SPECIMEN),
+    size: 140,
   },
   {
     id: GRID_COLUMN_IDS.LABELS,
@@ -64,14 +68,29 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     },
     enableSorting: false,
     header: 'Labels',
+    size: 140,
   },
   {
     id: GRID_COLUMN_IDS.MSI_SESSION,
     accessorFn: (rowData: EntityDataTypes): LinkCellProps[] =>
       getLinkPropsFromLinkFieldList((rowData as GridData).msiSession),
-    cell: getLinkCellListFromCellContext,
+    cell: ({ row }) => {
+      const sessions = (row.original as GridData).msiSession ?? [];
+      return (
+        <div style={{ maxHeight: '5.6em', overflowY: 'auto', width: '100%' }}>
+          {sessions.map((session) => (
+            <div key={session.id}>
+              <Link href={session.url} sdsStyle="default" target="_blank">
+                {session.name}
+              </Link>
+            </div>
+          ))}
+        </div>
+      );
+    },
     enableSorting: false,
     header: 'MSI',
+    size: 100,
   },
   {
     id: GRID_COLUMN_IDS.FREEZING_SESSION,
@@ -81,6 +100,7 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     },
     enableSorting: false,
     header: humanize(GRID_COLUMN_IDS.FREEZING_SESSION),
+    size: 140,
   },
   {
     id: GRID_COLUMN_IDS.MODIFIED_ON,
@@ -92,6 +112,7 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     },
     enableSorting: true,
     header: 'Updated At',
+    size: 120,
   },
   {
     id: 'details',
@@ -102,6 +123,6 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     },
     enableSorting: false,
     header: '',
-    size: 1,
+    size: 50,
   },
 ];

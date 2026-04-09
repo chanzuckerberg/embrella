@@ -4,10 +4,13 @@ DRF ViewSets for the cryo_grids app.
 Contains ViewSets for managing Pucks, CryoGridBoxes, and grid logging choices.
 """
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models, transaction
-from django.db.models.functions import Lower
+from django.db.models import Case, CharField, Count, F, Prefetch, Q, Value, When
+from django.db.models.functions import Lower, StrIndex, Substr, Trim
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status, viewsets
@@ -39,14 +42,27 @@ from cryo_grids.models import (
 )
 from cryo_grids.serializers import (
     CaneSerializer,
+    CryoGridBoxListSerializer,
     CryoGridBoxSerializer,
     CryoGridSerializer,
     FreezingSessionSerializer,
     GridDetailsSerializer,
+    GridInBoxSerializer,
     LabelSerializer,
     PuckSerializer,
     SampleSerializer,
     SpecimenSerializer,
+)
+from cryo_grids.viewset_helpers import (
+    add_selected_status,
+    apply_grid_box_filters,
+    apply_shared_grid_inventory_filters,
+    get_shared_filterlist_options,
+    get_shared_search_suggestions,
+    msi_session_sort_key,
+    natural_name_annotations,
+    natural_name_ordering,
+    parse_selected_filters,
 )
 
 
@@ -65,7 +81,11 @@ class PuckViewSet(viewsets.ModelViewSet):
         Filter pucks by user_id or cane_id if provided in query params
         If no user_id, return all pucks
         """
-        queryset = Puck.objects.select_related("user", "cane").order_by("name")
+        queryset = (
+            Puck.objects.select_related("user", "cane")
+            .annotate(**natural_name_annotations())
+            .order_by(*natural_name_ordering())
+        )
         user_id = self.request.query_params.get("user_id", None)
         cane_id = self.request.query_params.get("cane_id", None)
 
@@ -684,7 +704,7 @@ class CaneViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for listing Canes
     READ-ONLY - supports list and retrieve
-    URL: /api/canes/
+    URL: /api/list/canes/
     """
 
     permission_classes = []
@@ -716,7 +736,7 @@ class CaneViewSet(viewsets.ReadOnlyModelViewSet):
 class SpecimenViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Specimen model with full CRUD operations
-    URL: /api/specimens/
+    URL: /api/list/specimens/
     """
 
     permission_classes = []
@@ -791,7 +811,7 @@ class SpecimenViewSet(viewsets.ModelViewSet):
 class SampleViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Sample model with full CRUD operations
-    URL: /api/samples/
+    URL: /api/list/samples/
     """
 
     permission_classes = []
@@ -841,7 +861,7 @@ class SampleViewSet(viewsets.ModelViewSet):
 class FreezingSessionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for PlungeFreezingSession model with full CRUD operations
-    URL: /api/freezing-sessions/
+    URL: /api/list/freezing-sessions/
     """
 
     permission_classes = []
@@ -932,7 +952,7 @@ class FreezingSessionViewSet(viewsets.ModelViewSet):
 class CryoGridViewSet(viewsets.ModelViewSet):
     """
     ViewSet for CryoGrid model
-    URL: /api/list/grids/
+    URL: /cryo_grids/v1/grids/
     """
 
     queryset = (
@@ -949,6 +969,12 @@ class CryoGridViewSet(viewsets.ModelViewSet):
     serializer_class = CryoGridSerializer
     permission_classes = [IsAuthenticated]
     authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        """Delegate to the existing grid list view for backwards compatibility."""
+        from cryo_grids.views import get_cryo_grids_details
+
+        return get_cryo_grids_details(request)
 
     def retrieve(self, request, *args, **kwargs):
         """Return full grid details using GridDetailsSerializer."""
@@ -1306,12 +1332,193 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    @action(detail=False, methods=["get"])
+    def filterlist(self, request):
+        """Return available filter options with counts for grids."""
+        import json
+
+        from django.utils.timezone import now as tz_now
+
+        raw_q = request.GET.get("q", "[]")
+        q_params = json.loads(raw_q)
+
+        selected_filters = parse_selected_filters(q_params)
+
+        queryset = CryoGrid.objects.select_related(
+            "intended_project",
+            "freezing_session",
+            "grid_box__puck",
+            "user",
+            "grid_cassette",
+            "specimen",
+            "sample",
+        ).prefetch_related(
+            "msisession",
+            "specimen__samples",
+            "atlassession__group",
+            "labels",
+        )
+
+        current_time = tz_now()
+        date_ranges = {
+            "last_1_month": current_time - timedelta(days=30),
+            "last_3_months": current_time - timedelta(days=90),
+            "last_6_months": current_time - timedelta(days=180),
+        }
+
+        filters = {
+            "project": list(
+                queryset.annotate(project_temp_name=F("intended_project__name"))
+                .values(project_temp_name=F("project_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("project_temp_name")
+                .values(name=F("project_temp_name"), count=F("count"))
+            ),
+            "puck": list(
+                queryset.annotate(puck_temp_name=F("grid_box__puck__name"))
+                .filter(puck_temp_name__isnull=False)
+                .values(puck_temp_name=F("puck_temp_name"))
+                .annotate(count=Count("id"), **natural_name_annotations("grid_box__puck__name"))
+                .order_by(*natural_name_ordering("puck_temp_name"))
+                .values(name=F("puck_temp_name"), count=F("count"))
+            ),
+            "sample": list(
+                queryset.annotate(sample_temp_name=F("specimen__samples__name"))
+                .filter(sample_temp_name__isnull=False)
+                .values(sample_temp_name=F("sample_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("sample_temp_name")
+                .values(name=F("sample_temp_name"), count=F("count"))
+            ),
+            "label": list(
+                queryset.annotate(label_temp_name=F("labels__name"))
+                .filter(label_temp_name__isnull=False)
+                .values(label_temp_name=F("label_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("label_temp_name")
+                .values(name=F("label_temp_name"), count=F("count"))
+            ),
+            "cassette": list(
+                queryset.annotate(cassette_temp_name=F("grid_cassette__name"))
+                .filter(cassette_temp_name__isnull=False)
+                .values(cassette_temp_name=F("cassette_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("cassette_temp_name")
+                .values(name=F("cassette_temp_name"), count=F("count"))
+            ),
+            "screeningSession": list(
+                queryset.filter(freezing_session__isnull=False)
+                .annotate(screen_session_temp_name=F("atlassession__group__name"))
+                .filter(screen_session_temp_name__isnull=False)
+                .values(screen_session_temp_name=F("screen_session_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("screen_session_temp_name")
+                .values(name=F("screen_session_temp_name"), count=F("count"))
+            ),
+            "user": list(
+                queryset.annotate(
+                    user_temp_name=Trim(
+                        Case(
+                            When(
+                                user__username__contains="@",
+                                then=Substr(F("user__username"), 1, StrIndex(F("user__username"), Value("@")) - 1),
+                            ),
+                            default=F("user__username"),
+                            output_field=CharField(),
+                        ),
+                    ),
+                )
+                .values(user_temp_name=F("user_temp_name"))
+                .annotate(count=Count("id"))
+                .order_by("user_temp_name")
+                .values(name=Trim(F("user_temp_name")), count=F("count"))
+            ),
+            "msiSession": sorted(
+                list(
+                    queryset.filter(msisession__isnull=False)
+                    .annotate(msi_session_temp_name=F("msisession__name"))
+                    .values(msi_session_temp_name=F("msi_session_temp_name"))
+                    .annotate(count=Count("id"))
+                    .values(name=F("msi_session_temp_name"), count=F("count")),
+                ),
+                key=lambda x: msi_session_sort_key(x["name"]),
+            ),
+            "status": list(
+                queryset.annotate(
+                    status_name=Case(
+                        When(trashed=True, then=Value("Inactive")),
+                        When(trashed=False, then=Value("Active")),
+                        output_field=CharField(),
+                    )
+                )
+                .values("status_name")
+                .annotate(count=Count("id"))
+                .order_by("status_name")
+                .values(name=F("status_name"), count=F("count"))
+            ),
+            "date": [
+                {"name": "last_1_month", "count": queryset.filter(create_on__gte=date_ranges["last_1_month"]).count()},
+                {
+                    "name": "last_3_months",
+                    "count": queryset.filter(create_on__gte=date_ranges["last_3_months"]).count(),
+                },
+                {
+                    "name": "last_6_months",
+                    "count": queryset.filter(create_on__gte=date_ranges["last_6_months"]).count(),
+                },
+            ],
+        }
+
+        # Enrich sample names with ontology
+        processed_samples = []
+        for item in filters["sample"]:
+            if "name" in item and item["name"]:
+                try:
+                    sample_obj = Sample.objects.get(name=item["name"])
+                    display_name = sample_obj.name
+                    if sample_obj.ontology:
+                        display_name += f" ({sample_obj.ontology})"
+                    processed_samples.append(
+                        {
+                            "name": display_name,
+                            "count": item["count"],
+                            "selected": False,
+                        }
+                    )
+                except Sample.DoesNotExist:
+                    processed_samples.append(item)
+            else:
+                processed_samples.append(item)
+        filters["sample"] = processed_samples
+
+        for key, filter_list in filters.items():
+            add_selected_status(filter_list, key, selected_filters)
+
+        return Response({"filters": filters})
+
+    @action(detail=False, methods=["get"], url_path="search_suggestions")
+    def search_suggestions(self, request):
+        """Return search suggestions for grids."""
+        term = request.GET.get("term", "").strip()
+        if len(term) < 1:
+            return Response({"suggestions": []})
+
+        limit = 5
+        suggestions = []
+
+        # Grid names (entity-specific)
+        for name in CryoGrid.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit]:
+            suggestions.append({"value": name, "category": "grid"})
+
+        suggestions.extend(get_shared_search_suggestions(term, limit))
+        return Response({"suggestions": suggestions[:20]})
+
 
 class ProjectLeaderViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for listing users who can be project leaders
     READ-ONLY - supports list and retrieve
-    URL: /api/project-leaders/
+    URL: /api/list/project-leaders/
     """
 
     permission_classes = []
@@ -1366,3 +1573,583 @@ class LabelViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
         serializer.save(created_by=user)
+
+
+class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for CryoGridBox model with nested grids.
+    URL: /api/cryo_grids/v1/grid-boxes/
+    """
+
+    queryset = (
+        CryoGridBox.objects.select_related("puck", "puck__user")
+        .prefetch_related(
+            Prefetch(
+                "cryogrid_set",
+                queryset=CryoGrid.objects.filter(trashed=False)
+                .select_related("specimen", "user", "intended_project")
+                .prefetch_related("labels", "specimen__samples"),
+            ),
+        )
+        .annotate(grid_count=Count("cryogrid", filter=Q(cryogrid__trashed=False), distinct=True))
+        .order_by("-id")
+    )
+    serializer_class = CryoGridBoxListSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        """
+        List grid boxes with pagination in the format expected by the frontend.
+        Returns { result, pagination, sortBy }.
+        """
+        import json
+
+        queryset = self.filter_queryset(self.get_queryset())
+
+        raw_q = request.GET.get("q", None)
+        q_params = json.loads(raw_q) if raw_q else []
+
+        # Apply filters
+        queryset = apply_grid_box_filters(queryset, q_params)
+
+        page = 1
+        page_size = 10
+        sort_field = "id"
+        asc = False
+
+        for item in q_params:
+            category = item.get("category")
+            value = item.get("value")
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            if category == "page":
+                page = int(value)
+            elif category == "pageSize":
+                page_size = int(value)
+            elif category == "sort":
+                sort_field = value
+            elif category == "asc":
+                asc = bool(value) if isinstance(value, bool) else str(value).lower() == "true"
+
+        # Map camelCase frontend field names to Django model/annotation names
+        sort_field_map = {
+            "gridCount": "grid_count",
+        }
+        db_sort_field = sort_field_map.get(sort_field, sort_field)
+        sort_order = db_sort_field if asc else f"-{db_sort_field}"
+        queryset = queryset.order_by(sort_order)
+
+        # Paginate
+        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+
+        paginator = Paginator(queryset, page_size, orphans=3)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        serializer = self.get_serializer(page_obj.object_list, many=True)
+
+        # Transform to camelCase with gridBox primary entity
+        result = []
+        for item in serializer.data:
+            result.append(
+                {
+                    "gridBox": {
+                        "id": item["id"],
+                        "name": item["name"],
+                    },
+                    "color": item["color"],
+                    "colorDisplay": item["color_display"],
+                    "numberingDisplay": item["numbering_display"],
+                    "puckName": item["puck_name"],
+                    "positionInPuck": item["position_in_puck"],
+                    "maxGrids": item["max_grids"],
+                    "gridCount": item["grid_count"],
+                    "puckUser": item["puck_user"],
+                    "grids": item["grids"],
+                },
+            )
+
+        return Response(
+            {
+                "result": result,
+                "pagination": {
+                    "page": page_obj.number,
+                    "pageSize": page_size,
+                    "totalPages": paginator.num_pages,
+                    "totalResults": paginator.count,
+                },
+                "sortBy": {
+                    "sort": sort_field,
+                    "asc": asc,
+                },
+            },
+        )
+
+    @action(detail=False, methods=["get"])
+    def filterlist(self, request):
+        """Return available filter options with counts for grid boxes."""
+        import json
+
+        raw_q = request.GET.get("q", "[]")
+        q_params = json.loads(raw_q)
+
+        selected_filters = parse_selected_filters(q_params)
+        base_qs = CryoGridBox.objects.all()
+
+        filters = get_shared_filterlist_options(base_qs, grid_prefix="cryogrid__")
+
+        # Add grid-box-specific filter: puck (direct relation, not via grid), natural sort
+        puck_rows = list(
+            base_qs.filter(puck__isnull=False)
+            .values(filter_name=F("puck__name"))
+            .annotate(count=Count("id", distinct=True), **natural_name_annotations("puck__name"))
+            .order_by(*natural_name_ordering("filter_name"))
+        )
+        filters["puck"] = [{"name": r["filter_name"], "count": r["count"]} for r in puck_rows]
+        filters["date"] = []
+
+        for key, filter_list in filters.items():
+            if key != "date":
+                add_selected_status(filter_list, key, selected_filters)
+
+        return Response({"filters": filters})
+
+    @action(detail=False, methods=["get"], url_path="search_suggestions")
+    def search_suggestions(self, request):
+        """Return search suggestions for grid boxes."""
+        term = request.GET.get("term", "").strip()
+        if len(term) < 1:
+            return Response({"suggestions": []})
+
+        limit = 5
+        suggestions = []
+
+        # Grid box names (entity-specific)
+        for name in CryoGridBox.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit]:
+            suggestions.append({"value": name, "category": "gridBox"})
+
+        suggestions.extend(get_shared_search_suggestions(term, limit))
+        return Response({"suggestions": suggestions[:20]})
+
+
+class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for Puck list view with nested grid boxes and grids.
+    URL: /cryo_grids/v1/pucks/
+    """
+
+    queryset = (
+        Puck.objects.select_related("cane", "user")
+        .prefetch_related(
+            Prefetch(
+                "cryogridbox_set",
+                queryset=CryoGridBox.objects.prefetch_related(
+                    Prefetch(
+                        "cryogrid_set",
+                        queryset=CryoGrid.objects.filter(trashed=False)
+                        .select_related("specimen", "user", "intended_project")
+                        .prefetch_related("labels", "specimen__samples"),
+                    ),
+                )
+                .annotate(grid_count=Count("cryogrid", filter=Q(cryogrid__trashed=False), distinct=True))
+                .order_by("position_in_puck"),
+            ),
+        )
+        .annotate(grid_box_count=Count("cryogridbox", distinct=True), **natural_name_annotations())
+        .order_by(*natural_name_ordering())
+    )
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        """List pucks with pagination in the format expected by the frontend."""
+        import json
+
+        from cryo_grids.serializers import PuckListSerializer
+
+        queryset = self.filter_queryset(self.get_queryset())
+
+        raw_q = request.GET.get("q", None)
+        q_params = json.loads(raw_q) if raw_q else []
+
+        # Apply shared grid-inventory filters (via grid box → grid)
+        queryset = apply_shared_grid_inventory_filters(queryset, q_params, grid_prefix="cryogridbox__cryogrid__")
+
+        # Apply puck-specific filters
+        for item in q_params:
+            category = item.get("category")
+            values = item.get("value")
+
+            if category == "puck" and values:
+                if values is None or (isinstance(values, list) and None in values):
+                    queryset = queryset.filter(name__isnull=True)
+                else:
+                    puck_values = values if isinstance(values, list) else [values]
+                    queryset = queryset.filter(name__in=puck_values)
+            elif category == "search" and values:
+                search_terms = values if isinstance(values, list) else [values]
+                search_q = Q()
+                for t in search_terms:
+                    if t:
+                        search_q |= Q(name__icontains=t)
+                if search_q:
+                    queryset = queryset.filter(search_q).distinct()
+
+        # Parse pagination/sort params
+        page = 1
+        page_size = 10
+        sort_field = "id"
+        asc = False
+
+        for item in q_params:
+            category = item.get("category")
+            value = item.get("value")
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            if category == "page":
+                page = int(value)
+            elif category == "pageSize":
+                page_size = int(value)
+            elif category == "sort":
+                sort_field = value
+            elif category == "asc":
+                asc = bool(value) if isinstance(value, bool) else str(value).lower() == "true"
+
+        sort_field_map = {
+            "gridBoxCount": "grid_box_count",
+            "caneName": "cane__name",
+        }
+        db_sort_field = sort_field_map.get(sort_field, sort_field)
+
+        # Natural sort for name: numbers first (ascending), then words
+        if db_sort_field == "name":
+            queryset = queryset.order_by(*natural_name_ordering(desc=not asc))
+        elif db_sort_field == "id" and not asc:
+            # Default sort: use natural name ordering instead of -id
+            queryset = queryset.order_by(*natural_name_ordering())
+        else:
+            sort_order = db_sort_field if asc else f"-{db_sort_field}"
+            queryset = queryset.order_by(sort_order)
+
+        # Paginate
+        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+
+        paginator = Paginator(queryset, page_size, orphans=3)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        serializer = PuckListSerializer(page_obj.object_list, many=True)
+
+        # Transform to camelCase with puck primary entity
+        result = []
+        for item in serializer.data:
+            grid_boxes = []
+            for gb in item["grid_boxes"]:
+                grid_boxes.append(
+                    {
+                        "gridBox": {
+                            "id": gb["id"],
+                            "name": gb["name"],
+                        },
+                        "color": gb["color"],
+                        "colorDisplay": gb["color_display"],
+                        "numberingDisplay": gb["numbering_display"],
+                        "positionInPuck": gb["position_in_puck"],
+                        "maxGrids": gb["max_grids"],
+                        "gridCount": gb["grid_count"],
+                        "grids": gb["grids"],
+                    },
+                )
+            result.append(
+                {
+                    "puck": {
+                        "id": item["id"],
+                        "name": item["name"],
+                    },
+                    "color": item["color"],
+                    "colorDisplay": item["color_display"],
+                    "caneName": item["cane_name"],
+                    "positionInCane": item["position_in_cane"],
+                    "maxBoxes": item["max_boxes"],
+                    "gridBoxCount": item["grid_box_count"],
+                    "userName": item["user_name"],
+                    "gridBoxes": grid_boxes,
+                },
+            )
+
+        return Response(
+            {
+                "result": result,
+                "pagination": {
+                    "page": page_obj.number,
+                    "pageSize": page_size,
+                    "totalPages": paginator.num_pages,
+                    "totalResults": paginator.count,
+                },
+                "sortBy": {
+                    "sort": sort_field,
+                    "asc": asc,
+                },
+            },
+        )
+
+    @action(detail=False, methods=["get"])
+    def filterlist(self, request):
+        """Return available filter options with counts for pucks."""
+        import json
+
+        raw_q = request.GET.get("q", "[]")
+        q_params = json.loads(raw_q)
+
+        selected_filters = parse_selected_filters(q_params)
+        base_qs = Puck.objects.all()
+
+        filters = get_shared_filterlist_options(base_qs, grid_prefix="cryogridbox__cryogrid__")
+
+        # Puck-specific filter: puck name (direct field), natural sort (numbers first)
+        puck_rows = list(
+            base_qs.values(filter_name=F("name"))
+            .annotate(count=Count("id", distinct=True), **natural_name_annotations())
+            .order_by(*natural_name_ordering("filter_name"))
+        )
+        filters["puck"] = [{"name": r["filter_name"], "count": r["count"]} for r in puck_rows]
+        filters["date"] = []
+
+        for key, filter_list in filters.items():
+            if key != "date":
+                add_selected_status(filter_list, key, selected_filters)
+
+        return Response({"filters": filters})
+
+    @action(detail=False, methods=["get"], url_path="search_suggestions")
+    def search_suggestions(self, request):
+        """Return search suggestions for pucks."""
+        term = request.GET.get("term", "").strip()
+        if len(term) < 1:
+            return Response({"suggestions": []})
+
+        limit = 5
+        suggestions = []
+
+        # Puck names (entity-specific)
+        for name in Puck.objects.filter(name__icontains=term).values_list("name", flat=True).distinct()[:limit]:
+            suggestions.append({"value": name, "category": "puck"})
+
+        suggestions.extend(get_shared_search_suggestions(term, limit))
+        return Response({"suggestions": suggestions[:20]})
+
+
+class GridInventoryCountsViewSet(viewsets.ViewSet):
+    """
+    Returns filtered counts for all GridInventory tabs in a single request.
+    URL: /cryo_grids/v1/counts/
+    """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request):
+        import json
+
+        raw_q = request.GET.get("q", None)
+        q_params = json.loads(raw_q) if raw_q else []
+
+        # Shared grid-relation filters applied to each entity
+        grids_qs = apply_shared_grid_inventory_filters(CryoGrid.objects.filter(trashed=False), q_params, grid_prefix="")
+        grid_boxes_qs = apply_shared_grid_inventory_filters(
+            CryoGridBox.objects.all(), q_params, grid_prefix="cryogrid__"
+        )
+        pucks_qs = apply_shared_grid_inventory_filters(
+            Puck.objects.all(), q_params, grid_prefix="cryogridbox__cryogrid__"
+        )
+
+        # Entity-specific filters (puck, search) for accurate counts
+        for item in q_params:
+            category = item.get("category")
+            values = item.get("value")
+
+            if category == "puck" and values:
+                if values is None or (isinstance(values, list) and None in values):
+                    grids_qs = grids_qs.filter(grid_box__puck__isnull=True)
+                    grid_boxes_qs = grid_boxes_qs.filter(puck__isnull=True)
+                    pucks_qs = pucks_qs.filter(name__isnull=True)
+                else:
+                    puck_values = values if isinstance(values, list) else [values]
+                    grids_qs = grids_qs.filter(grid_box__puck__name__in=puck_values)
+                    grid_boxes_qs = grid_boxes_qs.filter(puck__name__in=puck_values)
+                    pucks_qs = pucks_qs.filter(name__in=puck_values)
+            elif category == "search" and values:
+                search_terms = values if isinstance(values, list) else [values]
+                # Grids search
+                grid_search_q = Q()
+                for t in search_terms:
+                    if t:
+                        grid_search_q |= (
+                            Q(name__icontains=t)
+                            | Q(intended_project__name__icontains=t)
+                            | Q(user__username__icontains=t)
+                            | Q(specimen__samples__name__icontains=t)
+                            | Q(labels__name__icontains=t)
+                        )
+                if grid_search_q:
+                    grids_qs = grids_qs.filter(grid_search_q)
+                # Grid boxes search
+                gb_search_q = Q()
+                for t in search_terms:
+                    if t:
+                        gb_search_q |= (
+                            Q(name__icontains=t)
+                            | Q(cryogrid__name__icontains=t)
+                            | Q(cryogrid__intended_project__name__icontains=t)
+                            | Q(cryogrid__user__username__icontains=t)
+                            | Q(cryogrid__specimen__samples__name__icontains=t)
+                            | Q(cryogrid__labels__name__icontains=t)
+                        )
+                if gb_search_q:
+                    grid_boxes_qs = grid_boxes_qs.filter(gb_search_q)
+                # Pucks search
+                puck_search_q = Q()
+                for t in search_terms:
+                    if t:
+                        puck_search_q |= Q(name__icontains=t)
+                if puck_search_q:
+                    pucks_qs = pucks_qs.filter(puck_search_q)
+
+        return Response(
+            {
+                "grids": grids_qs.distinct().count(),
+                "gridBoxes": grid_boxes_qs.distinct().count(),
+                "pucks": pucks_qs.distinct().count(),
+            }
+        )
+
+
+class StandardSamplesViewSet(viewsets.ViewSet):
+    """
+    Read-only ViewSet that aggregates specimens with grids labeled "standard".
+    Returns specimens with available (non-trashed) grid counts and point of contact.
+    """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [CsrfExemptSessionAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        import json
+        from collections import Counter
+
+        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+
+        raw_q = request.GET.get("q", None)
+        q_params = json.loads(raw_q) if raw_q else []
+
+        page = 1
+        page_size = 10
+        sort_field = "availableGridCount"
+        asc = False
+
+        for item in q_params:
+            category = item.get("category")
+            value = item.get("value")
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            if category == "page":
+                page = int(value)
+            elif category == "pageSize":
+                page_size = int(value)
+            elif category == "sort":
+                sort_field = value
+            elif category == "asc":
+                asc = bool(value) if isinstance(value, bool) else str(value).lower() == "true"
+
+        sort_field_map = {
+            "availableGridCount": "available_grid_count",
+            "specimen": "specimen_name",
+        }
+        db_sort_field = sort_field_map.get(sort_field, sort_field)
+        sort_order = db_sort_field if asc else f"-{db_sort_field}"
+
+        queryset = (
+            Specimen.objects.filter(
+                cryogrid__trashed=False,
+                cryogrid__labels__name__iexact="standard",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "cryogrid_set",
+                    queryset=CryoGrid.objects.filter(
+                        trashed=False,
+                        labels__name__iexact="standard",
+                    )
+                    .select_related("specimen", "user", "intended_project")
+                    .prefetch_related("labels", "specimen__samples"),
+                    to_attr="standard_grids",
+                ),
+                "samples",
+            )
+            .annotate(
+                available_grid_count=Count(
+                    "cryogrid",
+                    filter=Q(cryogrid__trashed=False, cryogrid__labels__name__iexact="standard"),
+                    distinct=True,
+                ),
+                specimen_name=models.Value("", output_field=CharField()),
+            )
+            .distinct()
+            .order_by(sort_order)
+        )
+
+        paginator = Paginator(queryset, page_size, orphans=3)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        result = []
+        for specimen in page_obj.object_list:
+            grids = specimen.standard_grids
+            grid_data = GridInBoxSerializer(grids, many=True).data
+
+            # Derive point of contact as most common grid user
+            users = [g.user.username for g in grids if g.user]
+            point_of_contact = Counter(users).most_common(1)[0][0] if users else None
+
+            specimen_name = str(specimen)
+
+            result.append(
+                {
+                    "specimen": {
+                        "id": specimen.id,
+                        "name": specimen_name,
+                    },
+                    "availableGridCount": len(grids),
+                    "pointOfContact": point_of_contact,
+                    "grids": grid_data,
+                }
+            )
+
+        return Response(
+            {
+                "result": result,
+                "pagination": {
+                    "page": page_obj.number,
+                    "pageSize": page_size,
+                    "totalPages": paginator.num_pages,
+                    "totalResults": paginator.count,
+                },
+                "sortBy": {
+                    "sort": sort_field,
+                    "asc": asc,
+                },
+            },
+        )

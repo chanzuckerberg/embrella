@@ -6,11 +6,6 @@ from . import views
 app_name = "cryo_grids"
 
 urlpatterns = [
-    path("detail", views.grid_boxes_view, name="detail"),
-    path('all_grid_boxes/', views.get_all_grid_boxes, name='get_all_grid_boxes'),
-    path('specific_grids/', views.get_specific_grids, name='get_specific_grids'),
-    path('v1/grids/', views.get_cryo_grids_details, name='get_cryo_grids_details'),
-    path('v1/filterlist', views.available_filters, name='available_filters'),
     path("grid_detail/<int:grid_id>/", views.grid_detail_view, name="grid_detail"),
     # adding a pattern with error_msg in url is a work-around for a Django bug
     # not able to pass kwargs to views. AC
@@ -25,5 +20,4 @@ urlpatterns = [
          name='get_available_positions'),
     path('update-grid-trashed/<int:grid_id>/', views.update_grid_trashed_status, name='update_grid_trashed_status'),
     path('update-grid-clipped/<int:grid_id>/', views.update_grid_clipped_status, name='update_grid_clipped_status'),
-    path('v1/search_suggestions', views.search_suggestions, name='search_suggestions'),
 ]

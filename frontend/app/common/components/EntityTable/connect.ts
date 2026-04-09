@@ -1,7 +1,9 @@
-import { useCallback, useContext, useMemo } from 'react';
+import { useCallback, useContext, useMemo, useState } from 'react';
 import {
   ColumnDef,
+  ExpandedState,
   getCoreRowModel,
+  getExpandedRowModel,
   PaginationState,
   RowSelectionState,
   TableState as ReactTableTableState,
@@ -41,7 +43,15 @@ export const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   // Example of data access: row.tomograms.id
   const typedRow = row as EntityAPIPrimaryAttributeToDataType[K];
   const typedEntityAttribute = entityApiResponseField as unknown as keyof EntityAPIPrimaryAttributeToDataType[K];
-  const entity = typedRow[typedEntityAttribute] as EntityLinkField;
+  const entity = typedRow[typedEntityAttribute] as EntityLinkField | undefined;
+
+  // Sub-rows (e.g. child grids inside a grid box) may not have the primary entity attribute.
+  // Fall back to a direct 'id' field if the primary entity is not found.
+  if (!entity) {
+    const directId = (row as unknown as Record<string, unknown>).id;
+    if (directId != null) return String(directId);
+    return String(Math.random());
+  }
 
   return entity.id.toString();
 };
@@ -73,6 +83,8 @@ interface UseConnectOptions {
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: (updater: Updater<RowSelectionState>) => void;
   enableRowSelection?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getSubRows?: (row: any) => any[] | undefined;
 }
 
 export const useConnect = <T extends EntityDataTypes>(
@@ -82,7 +94,8 @@ export const useConnect = <T extends EntityDataTypes>(
   columnDefs: ColumnDef<T, any>[],
   options?: UseConnectOptions
 ) => {
-  const { rowSelection, onRowSelectionChange, enableRowSelection = false } = options || {};
+  const { rowSelection, onRowSelectionChange, enableRowSelection = false, getSubRows } = options || {};
+  const [expanded, setExpanded] = useState<ExpandedState>({});
   const state = useContext<TableState>(TableStateContext);
   const dispatch = useContext(TableDispatchContext);
 
@@ -101,8 +114,9 @@ export const useConnect = <T extends EntityDataTypes>(
       pagination: getPaginationStateForPayload(entityPagination),
       sorting: getSortingStateForPayload(entitySortBy),
       ...(enableRowSelection && rowSelection !== undefined ? { rowSelection } : {}),
+      ...(getSubRows ? { expanded } : {}),
     }),
-    [entityPagination, entitySortBy, enableRowSelection, rowSelection]
+    [entityPagination, entitySortBy, enableRowSelection, rowSelection, getSubRows, expanded]
   );
 
   const onPaginationChange = useCallback(
@@ -143,12 +157,19 @@ export const useConnect = <T extends EntityDataTypes>(
     data: entityList?.entities || [],
     onPaginationChange,
     onSortingChange,
-    rowCount: entityList?.pagination?.totalResults || 0,
+    pageCount: entityList?.pagination?.totalPages || 0,
     state: reactTableState,
     ...(enableRowSelection && onRowSelectionChange
       ? {
           enableRowSelection: true,
           onRowSelectionChange,
+        }
+      : {}),
+    ...(getSubRows
+      ? {
+          getSubRows,
+          getExpandedRowModel: getExpandedRowModel(),
+          onExpandedChange: setExpanded,
         }
       : {}),
   });
