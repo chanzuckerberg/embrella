@@ -704,7 +704,7 @@ class CaneViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for listing Canes
     READ-ONLY - supports list and retrieve
-    URL: /api/canes/
+    URL: /api/list/canes/
     """
 
     permission_classes = []
@@ -736,7 +736,7 @@ class CaneViewSet(viewsets.ReadOnlyModelViewSet):
 class SpecimenViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Specimen model with full CRUD operations
-    URL: /api/specimens/
+    URL: /api/list/specimens/
     """
 
     permission_classes = []
@@ -811,7 +811,7 @@ class SpecimenViewSet(viewsets.ModelViewSet):
 class SampleViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Sample model with full CRUD operations
-    URL: /api/samples/
+    URL: /api/list/samples/
     """
 
     permission_classes = []
@@ -861,7 +861,7 @@ class SampleViewSet(viewsets.ModelViewSet):
 class FreezingSessionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for PlungeFreezingSession model with full CRUD operations
-    URL: /api/freezing-sessions/
+    URL: /api/list/freezing-sessions/
     """
 
     permission_classes = []
@@ -1518,7 +1518,7 @@ class ProjectLeaderViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for listing users who can be project leaders
     READ-ONLY - supports list and retrieve
-    URL: /api/project-leaders/
+    URL: /api/list/project-leaders/
     """
 
     permission_classes = []
@@ -1578,7 +1578,7 @@ class LabelViewSet(viewsets.ModelViewSet):
 class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for CryoGridBox model with nested grids.
-    URL: /api/list/grid-boxes/
+    URL: /api/cryo_grids/v1/grid-boxes/
     """
 
     queryset = (

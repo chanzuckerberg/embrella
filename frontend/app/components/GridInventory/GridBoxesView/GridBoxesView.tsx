@@ -3,8 +3,6 @@
 import React, { Suspense, useCallback, useMemo } from 'react';
 import { parseAsInteger, useQueryState } from 'nuqs';
 import { CircularProgress } from '@mui/material';
-import { TableWrapper } from '@app/common/components/TableWrapper/TableWrapper';
-import { TableStateProvider } from '@app/common/components/TableStateProvider/TableStateProvider';
 import { EntityTable } from '@app/common/components/EntityTable/EntityTable';
 import { API } from '@app/common/constants/api';
 import { GridDetailDialogContext } from '@app/components/GridsView/context/GridDetailDialogContext';
@@ -50,19 +48,5 @@ export const GridBoxesViewInner = (): React.JSX.Element => {
         </Suspense>
       )}
     </GridDetailDialogContext.Provider>
-  );
-};
-
-/**
- * Standalone GridBoxesView with its own TableStateProvider.
- * Used when rendering the Grid Boxes tab independently (backward compatibility).
- */
-export const GridBoxesView = (): React.JSX.Element => {
-  return (
-    <TableStateProvider filterCategories={[]} initialSortState={[{ desc: true, id: 'id' }]}>
-      <TableWrapper>
-        <GridBoxesViewInner />
-      </TableWrapper>
-    </TableStateProvider>
   );
 };
