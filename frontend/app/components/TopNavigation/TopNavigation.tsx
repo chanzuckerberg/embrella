@@ -143,7 +143,7 @@ const StyledNavLink = styled(Link, {
   shouldForwardProp: (prop) => prop !== 'isActive',
 })<{ isActive?: boolean }>`
   padding: 0 16px;
-  font-size: 18px;
+  font-size: 18px !important;
   color: ${(props) => (props.isActive ? '#a78bfa' : '#ffffff')};
   text-decoration: none !important;
   padding-bottom: 4px;
