@@ -20,7 +20,8 @@ interface FilterProps<FilterId, FilterCategory extends string> {
 const COMPLEX_FILTER_PROPS: Pick<
   EntityTableComplexFilterProps,
   'isTriggerChangeOnOptionClick' | 'multiple' | 'search'
-> = {
+> & { closeOnBlur: boolean } = {
+  closeOnBlur: true,
   isTriggerChangeOnOptionClick: true,
   multiple: true,
   search: true,

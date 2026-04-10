@@ -136,7 +136,7 @@ export const HistoricalJobsView: React.FC = () => {
             />
           </Box>
         </Sidebar>
-        <Box>
+        <Box sx={{ padding: '8px 24px', '@media (max-width: 900px)': { padding: '8px' } }}>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
             <Button
               sdsType="secondary"
