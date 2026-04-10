@@ -1,34 +1,44 @@
 'use client';
 
-import React from 'react';
-import { TableWrapper } from '@app/common/components/TableWrapper/TableWrapper';
-import { FilterableTableMain } from '@app/common/components/FilterableTableMain/FilterableTableMain';
-import { TableStateProvider } from '@app/common/components/TableStateProvider/TableStateProvider';
-import { Sidebar } from '@app/common/components/Sidebar/Sidebar';
-import { GRID_COLUMN_DEFS, GRID_COLUMN_IDS } from './constants/columns';
-import { SortingState } from '@tanstack/react-table';
+import React, { Suspense, useCallback, useMemo } from 'react';
+import { parseAsInteger, useQueryState } from 'nuqs';
+import { CircularProgress } from '@mui/material';
+import { GRID_COLUMN_DEFS } from './constants/columns';
 import { EntityTable } from '@app/common/components/EntityTable/EntityTable';
 import { API } from '@app/common/constants/api';
-import { GridFilterId, GridFilterCategory } from './types';
-import { GRID_FILTER_CONFIGS } from './constants/filters';
-import { EntityTableFilters } from '@app/common/components/EntityTableFilters/EntityTableFilters';
+import { GridDetailDialogContext } from './context/GridDetailDialogContext';
 
-export const GridsView = (): React.JSX.Element => {
-  const initialSortState: SortingState = [{ desc: true, id: GRID_COLUMN_IDS.MODIFIED_ON }];
+const GridDetailDialog = React.lazy(() =>
+  import('@app/components/GridDetailDialog/GridDetailDialog').then((mod) => ({
+    default: mod.GridDetailDialog,
+  }))
+);
+
+/**
+ * Inner component that renders just the EntityTable + GridDetailDialog.
+ * Consumes TableStateProvider from parent context.
+ */
+export const GridsViewInner = (): React.JSX.Element => {
+  const [selectedGridId, setSelectedGridId] = useQueryState('gridDetail', parseAsInteger);
+
+  const openGridDetail = useCallback(
+    (gridId: number) => {
+      setSelectedGridId(gridId);
+    },
+    [setSelectedGridId]
+  );
+
+  const contextValue = useMemo(() => ({ openGridDetail }), [openGridDetail]);
 
   return (
-    <TableStateProvider initialSortState={initialSortState}>
-      <FilterableTableMain>
-        <Sidebar>
-          <EntityTableFilters<GridFilterId, GridFilterCategory>
-            entityFilterConfigs={GRID_FILTER_CONFIGS}
-            entityFilterListApi={API.GRIDS_FILTERS_LIST}
-          />
-        </Sidebar>
-        <TableWrapper>
-          <EntityTable entityApi={API.GRIDS} entityApiResponseField="grid" columnDefs={GRID_COLUMN_DEFS} />
-        </TableWrapper>
-      </FilterableTableMain>
-    </TableStateProvider>
+    <GridDetailDialogContext.Provider value={contextValue}>
+      <EntityTable entityApi={API.GRIDS} entityApiResponseField="grid" columnDefs={GRID_COLUMN_DEFS} />
+
+      {selectedGridId !== null && (
+        <Suspense fallback={<CircularProgress />}>
+          <GridDetailDialog open onClose={() => setSelectedGridId(null)} gridId={selectedGridId} />
+        </Suspense>
+      )}
+    </GridDetailDialogContext.Provider>
   );
 };

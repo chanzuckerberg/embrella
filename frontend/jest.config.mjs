@@ -4,7 +4,7 @@ const createJestConfig = nextJest({
   dir: './',
 });
 
-export default createJestConfig({
+const baseConfig = createJestConfig({
   testEnvironment: 'jsdom',
   testMatch: [
     '<rootDir>/app/**/*.test.{ts,tsx}',
@@ -19,3 +19,12 @@ export default createJestConfig({
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 });
+
+// next/jest overrides transformIgnorePatterns — patch after resolution to allow nuqs (ESM-only)
+export default async () => {
+  const config = await baseConfig();
+  config.transformIgnorePatterns = config.transformIgnorePatterns.map((pattern) =>
+    pattern.includes('node_modules') ? pattern.replace('node_modules/', 'node_modules/(?!nuqs)/') : pattern
+  );
+  return config;
+};

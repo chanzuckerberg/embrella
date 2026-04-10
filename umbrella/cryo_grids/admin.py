@@ -13,6 +13,8 @@ from .models import (
     CryoGridBox,
     CryoGridCassette,
     Dewar,
+    GridLabel,
+    Label,
     PlungeFreezingDevice,
     PlungeFreezingSession,
     Puck,
@@ -81,6 +83,8 @@ admin.site.register(PlungeFreezingDevice)
 admin.site.register(PlungeFreezingSession)
 admin.site.register(Sample)
 admin.site.register(Specimen)
+admin.site.register(Label)
+admin.site.register(GridLabel)
 
 # Form for the popup action
 class CopyGridForm(forms.Form):

@@ -32,6 +32,11 @@ export const GRID_FILTER_CONFIGS: GridFilterConfig[][] = [
       filterId: GridFilterId.DATE,
       label: 'Date',
     },
+    {
+      filterCategory: 'label',
+      filterId: GridFilterId.LABEL,
+      label: 'Label',
+    },
   ],
   [
     {
@@ -49,7 +54,7 @@ export const GRID_FILTER_CONFIGS: GridFilterConfig[][] = [
     {
       filterCategory: 'status',
       filterId: GridFilterId.STATUS,
-      label: 'Status',
+      label: 'Grid Status',
     },
   ],
 ];

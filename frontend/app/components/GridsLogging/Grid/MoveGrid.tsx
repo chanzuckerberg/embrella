@@ -4,13 +4,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
 import { PuckList, GridDetailsResponse, UserList } from '@app/common/types/gridLogging';
-import {
-  useGridLoggingPucksByCane,
-  useGridLoggingPuckSlots,
-  useGridLoggingGridBoxDetail,
-  useMoveGrid,
-  useGridLoggingCaneList,
-} from '@app/common/hooks/useGridLogging';
+import { useGridLoggingPucksByCane } from '@app/common/hooks/useGridLogging/other/useGridLoggingPuckList';
+import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/details/useGridLoggingPuckSlots';
+import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/details/useGridLoggingGridBoxDetail';
+import { useMoveGrid } from '@app/common/hooks/useGridLogging/move/useMoveGrid';
+import { useGridLoggingCaneList } from '@app/common/hooks/useGridLogging/list/useCaneList';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 
 interface MoveGridProps {

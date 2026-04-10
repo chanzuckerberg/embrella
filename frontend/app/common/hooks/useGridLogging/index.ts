@@ -13,7 +13,7 @@ export { useProjectsList } from './list/useProjectList';
 export { useProjectLeadersList } from './list/useProjectLeadersList';
 export { useGridLoggingUserList } from './list/useGridLoggingUserList';
 export { useConfluenceSpaceList } from './list/useConfluenceSpaceList';
-export { useConfluencePageList } from './list/useConfluencePageList';
+export { useDocumentationPageList } from './list/useDocumentationPageList';
 export { useDriveFolderList } from './list/useDriveFolderList';
 export { useGridLoggingCaneList } from './list/useCaneList';
 
@@ -35,9 +35,9 @@ export { useMoveGridBox } from './move/useMoveGridBox';
 export { useUpdateGridBox } from './update/useUpdateGridBox';
 export { useUpdateGrid } from './update/useUpdateGrid';
 // Detail hooks
-export { useGridLoggingGridDetails } from './details/useGridLoggingGridDetails';
 export { useGridLoggingGridBoxDetail } from './details/useGridLoggingGridBoxDetail';
 export { useGridLoggingPuckSlots } from './details/useGridLoggingPuckSlots';
+export { useGridDetails } from './details/useGridDetails';
 
 // Other hooks
 export { useGridLoggingChoices } from './other/useGridLoggingChoices';

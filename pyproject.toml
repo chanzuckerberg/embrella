@@ -122,6 +122,7 @@ ignore = [
     "B006",   # mutable default in argument
     "N801",   # capwords class name
     "DTZ003", # utcnow() calls
+    "COM812", # trailing comma missing
 ]
 
 [tool.ruff.lint.isort]

@@ -24,7 +24,7 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
   isSelected = false,
   disableGridClick = false,
   gridBoxData,
-  selectedGrid: _selectedGrid = null,
+  selectedGrid = null,
   slotsData,
   selectedSlot = null,
   maxGrids = 4, // Default to 4
@@ -114,10 +114,21 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
               const gridNumber = parseInt(dataPosition, 10);
 
               if (gridNumber >= 1 && gridNumber <= maxGrids) {
-                const gridStyle = getGridStyle(gridNumber);
+                const isHighlighted = selectedGrid !== null && gridNumber === selectedGrid;
 
-                // Apply visual styling based on grid status
-                Object.assign(path.style, gridStyle);
+                if (!isHighlighted) {
+                  const gridStyle = getGridStyle(gridNumber);
+                  Object.assign(path.style, gridStyle);
+                }
+
+                if (selectedGrid !== null) {
+                  if (isHighlighted) {
+                    path.style.filter = 'brightness(1.3) drop-shadow(0 0 6px rgba(0,0,0,0.8))';
+                    path.style.opacity = '1';
+                  } else if (getGridStatus(gridNumber) === 'occupied') {
+                    path.style.opacity = '0.15';
+                  }
+                }
               }
               // Only add click handlers if slot clicking is not disabled
               if (!disableGridClick) {

@@ -62,7 +62,7 @@ const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
   samples: [
     { label: 'Grid Logging', href: '/samples/grid_logging' },
     { label: 'Grid Inventory', href: '/samples/cryo_grids' },
-    { label: 'Grid Boxes', href: '/samples/boxes' },
+    { label: 'Standard Samples', href: '/samples/standard-samples' },
     { label: 'Clear Cassette', href: '/samples/clear-cassette' },
   ],
   sessions: [
@@ -127,10 +127,12 @@ const SubNavbarInner = styled.div`
   margin-right: auto;
 `;
 
-const StyledNavLink = styled(Link)<{ $isActive?: boolean }>`
+const StyledNavLink = styled(Link, {
+  shouldForwardProp: (prop) => prop !== 'isActive',
+})<{ isActive?: boolean }>`
   padding: 0 16px;
   font-size: 18px;
-  color: ${(props) => (props.$isActive ? '#a78bfa' : '#ffffff')};
+  color: ${(props) => (props.isActive ? '#a78bfa' : '#ffffff')};
   text-decoration: none !important;
   padding-bottom: 4px;
   display: inline-flex;
@@ -143,10 +145,12 @@ const StyledNavLink = styled(Link)<{ $isActive?: boolean }>`
   }
 `;
 
-const StyledSubNavLink = styled(Link)<{ $isActive?: boolean }>`
+const StyledSubNavLink = styled(Link, {
+  shouldForwardProp: (prop) => prop !== 'isActive',
+})<{ isActive?: boolean }>`
   padding: 8px 16px;
   font-size: 16px;
-  color: ${(props) => (props.$isActive ? '#6e4ff9' : 'rgb(13, 0, 1)')};
+  color: ${(props) => (props.isActive ? '#6e4ff9' : 'rgb(13, 0, 1)')};
   text-decoration: none !important;
   font-weight: normal;
   border-radius: 6px;
@@ -159,10 +163,12 @@ const StyledSubNavLink = styled(Link)<{ $isActive?: boolean }>`
   }
 `;
 
-const StyledJobsButton = styled.button<{ $isActive?: boolean }>`
+const StyledJobsButton = styled('button', {
+  shouldForwardProp: (prop) => prop !== 'isActive',
+})<{ isActive?: boolean }>`
   padding: 8px 16px;
   font-size: 16px;
-  color: ${(props) => (props.$isActive ? '#6e4ff9' : 'rgb(13, 0, 1)')};
+  color: ${(props) => (props.isActive ? '#6e4ff9' : 'rgb(13, 0, 1)')};
   background: transparent;
   border: none;
   cursor: pointer;
@@ -290,7 +296,7 @@ export const TopNavigation = () => {
             >
               {MAIN_NAV_ITEMS.map((item) => {
                 return (
-                  <StyledNavLink key={item.section} href={item.href} $isActive={activeSection === item.section}>
+                  <StyledNavLink key={item.section} href={item.href} isActive={activeSection === item.section}>
                     {item.label}
                   </StyledNavLink>
                 );
@@ -381,7 +387,7 @@ export const TopNavigation = () => {
                 <StyledJobsButton
                   ref={jobsButtonRef}
                   onClick={() => setIsJobsDropdownOpen((prev) => !prev)}
-                  $isActive={isJobsActive}
+                  isActive={isJobsActive}
                 >
                   Jobs
                   <Icon sdsIcon="ChevronDown" sdsSize="xs" />
@@ -412,7 +418,7 @@ export const TopNavigation = () => {
                 <StyledJobsButton
                   ref={tomogramsButtonRef}
                   onClick={() => setIsTomogramsDropdownOpen((prev) => !prev)}
-                  $isActive={isTomogramsActive}
+                  isActive={isTomogramsActive}
                 >
                   Tomograms
                   <Icon sdsIcon="ChevronDown" sdsSize="xs" />
@@ -443,7 +449,7 @@ export const TopNavigation = () => {
                 <StyledJobsButton
                   ref={dataButtonRef}
                   onClick={() => setIsDataDropdownOpen((prev) => !prev)}
-                  $isActive={isDataActive}
+                  isActive={isDataActive}
                 >
                   Data
                   <Icon sdsIcon="ChevronDown" sdsSize="xs" />
@@ -473,7 +479,7 @@ export const TopNavigation = () => {
             )}
             {/* Other sub-nav items */}
             {subNavItems.map((item) => (
-              <StyledSubNavLink key={item.href} href={item.href} $isActive={pathname === item.href}>
+              <StyledSubNavLink key={item.href} href={item.href} isActive={pathname === item.href}>
                 {item.label}
               </StyledSubNavLink>
             ))}

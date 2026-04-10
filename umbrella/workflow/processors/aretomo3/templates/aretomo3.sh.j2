@@ -14,7 +14,9 @@
 #SBATCH --mail-type=ALL
 #SBATCH -o /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_aretomo3.out
 #SBATCH -e /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_aretomo3.err
-
+{% if cluster == "czii" -%}
+#SBATCH --qos=embrella
+{% endif %}
 #SBATCH hetjob
 
 # Component 1: Reformat and Metrics CPU Processing
@@ -87,7 +89,7 @@ run_aretomo3_gpu() {
     ml cuda
 
     # AreTomo3 command with fixed flags and schema-generated variable flags
-    /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.2.8_Cuda13_02-08-2026 \
+    /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.3.0_Cuda13_03-21-2026 \
         -Gain ${gain_fn} \
         -OutDir ${out_path} \
         -Gpu {% for i in range(slurm_component_0_gpus) -%}{{ i }}{% if not loop.last %},{% endif %}{% endfor %} \

@@ -95,7 +95,7 @@ describe('useConnect', () => {
 
     const { result } = renderHook(() => useConnect(entityFilterConfigs, API.TOMOGRAMS_FILTERLIST), { wrapper });
 
-    expect(useFetchFilters).toHaveBeenCalledWith('/processes/v1/filterlist', {
+    expect(useFetchFilters).toHaveBeenCalledWith('/processes/v1/filterlist/', {
       q: [],
     });
 

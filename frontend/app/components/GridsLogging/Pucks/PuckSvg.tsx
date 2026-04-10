@@ -12,6 +12,7 @@ interface PuckSVGProps {
   onSlotClick?: (slotPosition: number) => void;
   isSelected?: boolean;
   disableSlotClick?: boolean;
+  highlightedSlot?: number;
 }
 
 export const PuckSVG: React.FC<PuckSVGProps> = ({
@@ -22,6 +23,7 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
   onSlotClick,
   isSelected = false,
   disableSlotClick = false,
+  highlightedSlot,
 }) => {
   const puckColor = puck.color.startsWith('#') ? puck.color : `#${puck.color}`;
 
@@ -145,11 +147,20 @@ export const PuckSVG: React.FC<PuckSVGProps> = ({
               const maxBoxes = puck?.max_boxes || 12;
 
               if (slotNumber >= 1 && slotNumber <= maxBoxes) {
-                // const status = getSlotStatus(slotNumber);
                 const slotStyle = getSlotStyle(slotNumber);
 
                 // Apply visual styling based on slot status
                 Object.assign(circle.style, slotStyle);
+
+                // Bright fill + dark stroke for highlighted slot, dim others
+                if (highlightedSlot !== undefined) {
+                  if (slotNumber === highlightedSlot) {
+                    circle.style.filter = 'brightness(1.3) drop-shadow(0 0 6px rgba(0,0,0,0.8))';
+                    circle.style.opacity = '1';
+                  } else if (getSlotStatus(slotNumber) === 'filled') {
+                    circle.style.opacity = '0.2';
+                  }
+                }
 
                 // Only add click handlers if slot clicking is not disabled
                 if (!disableSlotClick) {

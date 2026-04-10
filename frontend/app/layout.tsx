@@ -7,6 +7,7 @@ import { ContentWrapper } from '@app/common/components/ContentWrapper';
 import { CustomThemeProvider } from './common/CustomThemeProvider';
 import { UserProvider } from './common/context/UserProvider';
 import { FeatureFlagsProvider } from './common/context/FeatureFlagsProvider';
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME } from './common/types/cookies';
 
@@ -47,8 +48,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CustomThemeProvider>
             <UserProvider>
               <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
-                <NavbarWrapper />
-                <ContentWrapper>{children}</ContentWrapper>
+                <NuqsAdapter>
+                  <NavbarWrapper />
+                  <ContentWrapper>{children}</ContentWrapper>
+                </NuqsAdapter>
               </FeatureFlagsProvider>
             </UserProvider>
           </CustomThemeProvider>

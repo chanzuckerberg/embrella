@@ -1,8 +1,8 @@
+// TODO: Replace useFetchData with @tanstack/react-query useQuery — this hook is redundant now that React Query is adopted (see useExternalResources.ts for pattern)
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { getRequestURL } from '@app/common/queries/utils';
 import { fetchResource } from '@app/common/queries/fetchResource';
-import { API, DJANGO_URL, MOCKED_APIS } from '@app/common/constants/api';
-import { Review } from '@app/components/TomogramViewerView/types';
+import { DJANGO_URL } from '@app/common/constants/api';
 
 interface UseFetchData<D> {
   data?: D;
@@ -26,7 +26,7 @@ export const useFetchData = <D>(
   }, []);
 
   useEffect(() => {
-    if (!shouldFetch) return;
+    if (!shouldFetch || !relativeURL) return;
 
     (async (): Promise<D> => {
       setDataState((d) => ({

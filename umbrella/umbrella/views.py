@@ -1,43 +1,55 @@
 """
 Custom views for umbrella app.
 """
-from django.shortcuts import redirect
-from django.urls import reverse
-from django.contrib.auth import logout
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
+from django.contrib import admin
+from django.contrib.auth import login, logout
+from django.contrib.auth.forms import AuthenticationForm
 from django.http import HttpRequest, HttpResponseRedirect
-from urllib.parse import urlencode
+from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from loguru import logger
+
 from django_google_sso import views as google_sso_views
+
+
+def _get_next_url(request):
+    """Extract the next URL from query params or HTTP_REFERER."""
+    next_url = request.GET.get('next', '')
+    if not next_url:
+        referrer = request.META.get('HTTP_REFERER', '')
+        next_url = referrer if referrer else '/'
+    return next_url
 
 
 def custom_login_view(request):
     """
-    Custom login view that redirects to Google SSO with proper next parameter.
+    Login view that shows both a username/password form and a Google SSO button.
 
-    Uses HTTP_REFERER to preserve the frontend URL across different ports
-    (e.g., http://localhost:3000/workflows/launch) instead of relative paths.
-
-    Stores the next URL in session so it persists through OAuth redirects.
+    Stores the full next URL (including host) in the session so cross-origin
+    redirects back to the frontend (e.g., localhost:3000) work after auth.
     """
-    # Get the next URL from query params or HTTP_REFERER
-    next_url = request.GET.get('next', '')
-
-    if not next_url:
-        # Use HTTP_REFERER to get the full URL the user came from
-        # This preserves frontend URLs like http://localhost:3000/workflows/launch
-        referrer = request.META.get('HTTP_REFERER', '')
-        next_url = referrer if referrer else '/'
-
-    # Store next URL in session so it persists through OAuth redirects
+    next_url = _get_next_url(request)
     request.session['google_sso_next_url'] = next_url
 
-    # Redirect to Google SSO login with the next parameter
-    google_sso_url = reverse('django_google_sso:oauth_start_login')
-    redirect_url = f'{google_sso_url}?{urlencode({"next": next_url})}'
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            redirect_url = request.session.pop('google_sso_next_url', '/')
+            return HttpResponseRedirect(redirect_url)
+    else:
+        form = AuthenticationForm(request)
 
-    return redirect(redirect_url)
+    # Render the admin login template (django-google-sso's google_sso/login.html
+    # extends admin/login.html and adds the SSO button alongside the form)
+    context = {
+        'form': form,
+        'next': next_url,
+        **admin.site.each_context(request),
+    }
+    return render(request, 'google_sso/login.html', context)
 
 
 @csrf_exempt

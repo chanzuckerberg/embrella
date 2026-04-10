@@ -23,13 +23,18 @@ from cryo_grids.api.views import (
 )
 from cryo_grids.viewsets import (
     CaneViewSet,
+    CryoGridBoxViewSet,
     CryoGridViewSet,
     FreezingSessionViewSet,
+    GridInventoryCountsViewSet,
     GridLoggingChoicesViewSet,
+    LabelViewSet,
     ProjectLeaderViewSet,
+    PuckListViewSet,
     PuckViewSet,
     SampleViewSet,
     SpecimenViewSet,
+    StandardSamplesViewSet,
 )
 from custom.views import version_info
 from django.conf import settings
@@ -66,8 +71,13 @@ router.register(r"api/list/canes", CaneViewSet, basename="cane")
 router.register(r"api/list/specimens", SpecimenViewSet, basename="specimen")
 router.register(r"api/list/samples", SampleViewSet, basename="sample")
 router.register(r"api/list/freezing-sessions", FreezingSessionViewSet, basename="freezing-session")
-router.register(r"api/list/grids", CryoGridViewSet, basename="grid")
+router.register(r"cryo_grids/v1/grids", CryoGridViewSet, basename="grid")
 router.register(r"api/list/project-leaders", ProjectLeaderViewSet, basename="project-leader")
+router.register(r"api/list/labels", LabelViewSet, basename="label")
+router.register(r"cryo_grids/v1/grid-boxes", CryoGridBoxViewSet, basename="grid-box")
+router.register(r"cryo_grids/v1/standard-samples", StandardSamplesViewSet, basename="standard-sample")
+router.register(r"cryo_grids/v1/pucks", PuckListViewSet, basename="puck-list")
+router.register(r"cryo_grids/v1/counts", GridInventoryCountsViewSet, basename="grid-inventory-counts")
 
 import mimetypes
 

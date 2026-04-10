@@ -1,7 +1,10 @@
 """
 Django-Q2 async tasks for output file syncer monitoring.
 """
-from processes.tasks._setup import *  # noqa: F401,F403 - Django setup
+# isort: skip_file
+# _setup must be imported first to call django.setup() before any Django imports
+
+from processes.tasks._setup import *  # noqa: F401,F403
 
 from datetime import timedelta
 
@@ -37,7 +40,7 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
 
     try:
         # Import syncer class dynamically
-        module_path, class_name = syncer_class_path.rsplit('.', 1)
+        module_path, class_name = syncer_class_path.rsplit(".", 1)
         module = __import__(module_path, fromlist=[class_name])
         syncer_class = getattr(module, class_name)
 
@@ -46,20 +49,19 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
         if not pipe_exec:
             logger.error(f"No PipeExecution found for job {job_id} - cannot determine cluster")
             return {
-                'success': False,
-                'action': 'error',
-                'message': 'PipeExecution not found',
-                'session': session_name,
-                'run_id': run_id,
-                'job_id': job_id,
+                "success": False,
+                "action": "error",
+                "message": "PipeExecution not found",
+                "session": session_name,
+                "run_id": run_id,
+                "job_id": job_id,
             }
 
         # cluster_id is persisted in the parameters JSON field (default to 'czii' for legacy jobs)
-        cluster_id = pipe_exec.parameters.get('cluster_id', 'czii')
-        if cluster_id == 'czii' and 'cluster_id' not in (pipe_exec.parameters or {}):
+        cluster_id = pipe_exec.parameters.get("cluster_id", "czii")
+        if cluster_id == "czii" and "cluster_id" not in (pipe_exec.parameters or {}):
             logger.warning(
-                f"Job {job_id} has no cluster_id in parameters - "
-                f"defaulting to 'czii' (legacy job)",
+                f"Job {job_id} has no cluster_id in parameters - defaulting to 'czii' (legacy job)",
             )
 
         logger.info(f"Job {job_id} uses cluster: {cluster_id}")
@@ -69,32 +71,36 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
 
         if not job_active:
             logger.info(
-                f"Job {job_id} is no longer running. "
-                f"Stopping syncer for {session_name}/{run_id}.",
+                f"Job {job_id} is no longer running. Stopping syncer for {session_name}/{run_id}.",
             )
             # Log syncer completion to database
             from processes.models import SyncerLog, SyncerProcess
+
             SyncerLog.objects.create(
                 pipe_execution=pipe_exec,
                 job_id=job_id,
-                action_type='stopped',
-                message=f'Syncer stopped - job {job_id} completed',
-                metadata={'reason': 'job_completed', 'cluster_id': cluster_id},
+                action_type="stopped",
+                message=f"Syncer stopped - job {job_id} completed",
+                metadata={"reason": "job_completed", "cluster_id": cluster_id},
                 session_name=session_name,
                 run_id=run_id,
             )
             # Update SyncerProcess status
             SyncerProcess.objects.filter(job_id=job_id).update(
-                status='completed',
+                status="completed",
                 stopped_at=timezone.now(),
             )
+            # Clean up transient logs now that syncer is complete
+            from workflow.syncers import cleanup_transient_syncer_logs
+
+            cleanup = cleanup_transient_syncer_logs(job_id)
             return {
-                'success': True,
-                'action': 'stopped',
-                'message': 'Job completed, syncer stopped',
-                'session': session_name,
-                'run_id': run_id,
-                'job_id': job_id,
+                "success": True,
+                "action": "stopped",
+                "message": f"Job completed, syncer stopped. Removed {cleanup['deleted_count']} transient syncer logs for job {job_id}",
+                "session": session_name,
+                "run_id": run_id,
+                "job_id": job_id,
             }
 
         # Verify session exists
@@ -102,13 +108,13 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
         if not session:
             logger.error(f"Session {session_name} not found")
             return {
-                'success': False,
-                'error': 'Session not found',
-                'session': session_name,
+                "success": False,
+                "error": "Session not found",
+                "session": session_name,
             }
 
         # Instantiate syncer and run one iteration
-        syncer = syncer_class(base_path=base_path, log_dir='/tmp')  # log_dir not used in task mode
+        syncer = syncer_class(base_path=base_path, log_dir="/tmp")  # log_dir not used in task mode
         syncer.job_id = job_id  # Set job_id before setup so it's available for logging
 
         # Setup syncer with session and run info (creates initial log entry and SyncerProcess record)
@@ -120,27 +126,27 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
 
         # Schedule next iteration (5 minutes from now)
         async_task(
-            'processes.tasks.run_syncer_iteration',
+            "processes.tasks.run_syncer_iteration",
             syncer_class_path,
             base_path,
             session_name,
             run_id,
             job_id,
-            task_name=f'syncer_{session_name}_{run_id}',
+            task_name=f"syncer_{session_name}_{run_id}",
             timeout=300,  # 5 minute timeout
-            hook='django_q.hooks.default',  # Use default hook for error handling
-            q_options={'eta': timezone.now() + timedelta(minutes=5)},
+            hook="django_q.hooks.default",  # Use default hook for error handling
+            q_options={"eta": timezone.now() + timedelta(minutes=5)},
         )
 
         logger.info(f"Syncer iteration completed for {session_name}/{run_id}. Next run in 5 minutes.")
 
         return {
-            'success': True,
-            'action': 'synced_and_rescheduled',
-            'message': 'Sync completed, next iteration scheduled',
-            'session': session_name,
-            'run_id': run_id,
-            'job_id': job_id,
+            "success": True,
+            "action": "synced_and_rescheduled",
+            "message": "Sync completed, next iteration scheduled",
+            "session": session_name,
+            "run_id": run_id,
+            "job_id": job_id,
         }
 
     except Exception as e:
@@ -151,17 +157,18 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
         # Log error to database
         try:
             from processes.models import SyncerLog, SyncerProcess
+
             SyncerLog.objects.create(
                 job_id=job_id,
-                action_type='error',
-                message=f'Syncer error: {str(e)}',
-                metadata={'error': str(e), 'session_name': session_name, 'run_id': run_id},
+                action_type="error",
+                message=f"Syncer error: {str(e)}",
+                metadata={"error": str(e), "session_name": session_name, "run_id": run_id},
                 session_name=session_name,
                 run_id=run_id,
             )
             # Update SyncerProcess status to failed
             SyncerProcess.objects.filter(job_id=job_id).update(
-                status='failed',
+                status="failed",
                 stopped_at=timezone.now(),
                 error_message=str(e),
             )
@@ -169,11 +176,11 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
             logger.warning(f"Failed to log syncer error to database: {log_error}")
 
         return {
-            'success': False,
-            'error': str(e),
-            'session': session_name,
-            'run_id': run_id,
-            'job_id': job_id,
+            "success": False,
+            "error": str(e),
+            "session": session_name,
+            "run_id": run_id,
+            "job_id": job_id,
         }
 
 
@@ -196,25 +203,24 @@ def start_syncer_monitoring(syncer_class_path, base_path, session_name, run_id, 
         str: Django-Q task ID
     """
     task_id = async_task(
-        'processes.tasks.run_syncer_iteration',
+        "processes.tasks.run_syncer_iteration",
         syncer_class_path,
         base_path,
         session_name,
         run_id,
         job_id,
-        task_name=f'syncer_{session_name}_{run_id}',
+        task_name=f"syncer_{session_name}_{run_id}",
         timeout=300,  # 5 minute timeout
     )
 
     logger.info(
-        f"Started syncer monitoring for {session_name}/{run_id}, "
-        f"job {job_id}. Task ID: {task_id}",
+        f"Started syncer monitoring for {session_name}/{run_id}, job {job_id}. Task ID: {task_id}",
     )
 
     return task_id
 
 
-def run_job_status_syncer(job_id: str, cluster_id: str = 'czii'):
+def run_job_status_syncer(job_id: str, cluster_id: str = "czii"):
     """
     Single iteration of job status syncer.
 
@@ -245,13 +251,13 @@ def run_job_status_syncer(job_id: str, cluster_id: str = 'czii'):
             # Job not in sacct yet (just submitted) - reschedule in 30 seconds
             logger.debug(f"Job {job_id} not in sacct yet, rescheduling...")
             async_task(
-                'processes.tasks.run_job_status_syncer',
+                "processes.tasks.run_job_status_syncer",
                 job_id,
                 cluster_id,
-                task_name=f'job_status_{job_id}',
-                q_options={'eta': timezone.now() + timedelta(seconds=30)},
+                task_name=f"job_status_{job_id}",
+                q_options={"eta": timezone.now() + timedelta(seconds=30)},
             )
-            return {'status': 'waiting', 'job_id': job_id}
+            return {"status": "waiting", "job_id": job_id}
 
         # Update PipeExecution with current info
         syncer.update_pipe_execution(job_info)
@@ -263,37 +269,37 @@ def run_job_status_syncer(job_id: str, cluster_id: str = 'czii'):
                 f"(elapsed: {job_info.get('elapsed', 'unknown')})",
             )
             return {
-                'status': 'completed',
-                'job_id': job_id,
-                'state': job_info['state'],
-                'elapsed': job_info.get('elapsed'),
+                "status": "completed",
+                "job_id": job_id,
+                "state": job_info["state"],
+                "elapsed": job_info.get("elapsed"),
             }
 
         # Job still running - reschedule for 60 seconds from now
         logger.debug(f"Job {job_id} still {job_info['state']}, rescheduling...")
         async_task(
-            'processes.tasks.run_job_status_syncer',
+            "processes.tasks.run_job_status_syncer",
             job_id,
             cluster_id,
-            task_name=f'job_status_{job_id}',
-            q_options={'eta': timezone.now() + timedelta(seconds=60)},
+            task_name=f"job_status_{job_id}",
+            q_options={"eta": timezone.now() + timedelta(seconds=60)},
         )
-        return {'status': 'running', 'job_id': job_id, 'state': job_info['state']}
+        return {"status": "running", "job_id": job_id, "state": job_info["state"]}
 
     except Exception as e:
         logger.error(f"Error in job status syncer for {job_id}: {e}")
         # Reschedule anyway to retry (with backoff)
         async_task(
-            'processes.tasks.run_job_status_syncer',
+            "processes.tasks.run_job_status_syncer",
             job_id,
             cluster_id,
-            task_name=f'job_status_{job_id}',
-            q_options={'eta': timezone.now() + timedelta(seconds=120)},  # 2 min backoff on error
+            task_name=f"job_status_{job_id}",
+            q_options={"eta": timezone.now() + timedelta(seconds=120)},  # 2 min backoff on error
         )
-        return {'status': 'error', 'job_id': job_id, 'error': str(e)}
+        return {"status": "error", "job_id": job_id, "error": str(e)}
 
 
-def start_job_status_syncer(job_id: str, cluster_id: str = 'czii'):
+def start_job_status_syncer(job_id: str, cluster_id: str = "czii"):
     """
     Start the job status syncer for a newly submitted job.
 
@@ -308,10 +314,10 @@ def start_job_status_syncer(job_id: str, cluster_id: str = 'czii'):
         str: Django-Q task ID
     """
     task_id = async_task(
-        'processes.tasks.run_job_status_syncer',
+        "processes.tasks.run_job_status_syncer",
         job_id,
         cluster_id,
-        task_name=f'job_status_{job_id}',
+        task_name=f"job_status_{job_id}",
     )
 
     logger.info(f"Started job status syncer for job {job_id} on {cluster_id}. Task ID: {task_id}")

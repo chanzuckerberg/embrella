@@ -114,9 +114,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "umbrella.middleware.APIAuthenticationMiddleware",  # Return 401 for API requests - MUST come before LoginRequiredMiddleware
     #"django.contrib.auth.middleware.LoginRequiredMiddleware",
@@ -188,6 +188,7 @@ GOOGLE_SSO_CLIENT_SECRET = os.environ.get("GOOGLE_SSO_CLIENT_SECRET")
 GOOGLE_SSO_ALLOWABLE_DOMAINS = ["umbrella.czbiohub.org", "127.0.0.1:8000", "127.0.0.1", "czii.org"]
 GOOGLE_SSO_PRE_LOGIN_CALLBACK = "umbrella.hooks.pre_login_callback"
 GOOGLE_SSO_ALLOWED_DOMAINS = ["czii.org", "czbiohub.org"]
+GOOGLE_SSO_SESSION_COOKIE_AGE = 1209600  # 14 days — match SESSION_COOKIE_AGE
 # Configure Google SSO to respect the 'next' parameter for redirects
 GOOGLE_SSO_SAVE_BASIC_GOOGLE_INFO = False
 

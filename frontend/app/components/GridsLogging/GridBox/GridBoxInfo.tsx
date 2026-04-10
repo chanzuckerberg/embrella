@@ -240,6 +240,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                   startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
                   onClick={() => handleAddGrid()}
                   size="small"
+                  disabled={!selectedUser}
                 >
                   Add Grid
                 </Button>

@@ -48,6 +48,7 @@ export const GRID_A: GridData = {
       url: 'foobarfoofoo',
     },
   ],
+  labels: [],
 };
 
 export const GRID_B: GridData = {
@@ -91,6 +92,7 @@ export const GRID_B: GridData = {
       url: 'foofoofoobazfoobarbar',
     },
   ],
+  labels: [],
 };
 
 export const GRIDS = [GRID_A, GRID_B];
@@ -174,7 +176,7 @@ export const MOCK_PROCESSOR_SCHEMA = {
 export const URL_BASE = 'http://localhost:8000';
 export const URL_NONEXISTENT = '/nonexistent';
 export const URL_GRIDS = '/cryo_grids/v1/grids';
-export const URL_FILTERS_LIST = '/cryo_grids/v1/filterlist';
+export const URL_FILTERS_LIST = '/cryo_grids/v1/grids/filterlist/';
 export const URL_FOO = '/foo';
 
 // Workflow API URLs
@@ -211,6 +213,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<TestFilterCategory> = {
         selected: false,
       },
     ],
+    label: [],
     msiSession: [
       {
         name: 'foo bazfoo barfoobar',
@@ -251,6 +254,7 @@ export const FETCH_RESPONSE_FILTERS_LIST: FiltersList<TestFilterCategory> = {
         selected: false,
       },
     ],
+    search: [],
     status: [
       {
         name: 'baz bar foo barbaz',
@@ -294,11 +298,14 @@ export const FETCH_RESPONSES: Record<string, FetchResponseInfo> = {
       const pageSize = getSearchParamFirstValue<number>(values, 'pageSize', 0, TEST_DEFAULT_GRIDS_PAGE_SIZE) as number;
       const pageStart = (page - 1) * pageSize;
 
+      const orphans = 3;
+      const totalPages =
+        responseGrids.length <= pageSize + orphans ? 1 : Math.ceil((responseGrids.length - orphans) / pageSize);
       const responseData: ApiListResponse<GridData> = {
         pagination: {
           page,
           pageSize: pageSize,
-          totalPages: Math.ceil(responseGrids.length / pageSize),
+          totalPages,
           totalResults: responseGrids.length,
         },
         result: responseGrids.slice(pageStart, pageStart + pageSize),
