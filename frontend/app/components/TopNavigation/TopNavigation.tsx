@@ -102,6 +102,12 @@ const NavbarInner = styled.div`
   max-width: 75rem;
   margin-left: auto;
   margin-right: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 const StyledSubNavbar = styled.div`
@@ -124,6 +130,13 @@ const SubNavbarInner = styled.div`
   max-width: 75rem;
   margin-left: auto;
   margin-right: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 const StyledNavLink = styled(Link, {
@@ -137,6 +150,8 @@ const StyledNavLink = styled(Link, {
   display: inline-flex;
   align-items: center;
   transition: color 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
     color: #a78bfa;
@@ -155,6 +170,8 @@ const StyledSubNavLink = styled(Link, {
   border-radius: 6px;
   background: transparent;
   transition: color 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
     color: #6e4ff9;
@@ -178,6 +195,8 @@ const StyledJobsButton = styled('button', {
   align-items: center;
   gap: 4px;
   font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
     color: #6e4ff9;
@@ -247,7 +266,7 @@ export const TopNavigation = () => {
       {/* Main Navigation */}
       <StyledNavbar>
         <NavbarInner>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0, whiteSpace: 'nowrap' }}>
             <Typography
               variant="h4"
               component="span"
@@ -302,7 +321,7 @@ export const TopNavigation = () => {
               })}
             </Box>
           </Box>
-          <Box>
+          <Box sx={{ flexShrink: 0 }}>
             <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
               <Button
                 sdsType="secondary"
