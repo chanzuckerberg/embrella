@@ -79,8 +79,16 @@ export const GridFormFields: React.FC<GridFormFieldsProps> = ({
         label="Clipped"
       />
       <FormControlLabel
-        control={<Checkbox checked={trashedValue} onChange={onTrashedChange} color="primary" />}
+        control={
+          <Checkbox
+            checked={trashedValue}
+            onChange={onTrashedChange}
+            color="primary"
+            sx={trashedValue ? { pointerEvents: 'none' } : undefined}
+          />
+        }
         label="Trashed"
+        sx={trashedValue ? { pointerEvents: 'none' } : undefined}
       />
     </Box>
 

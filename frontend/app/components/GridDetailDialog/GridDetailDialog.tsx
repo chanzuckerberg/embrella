@@ -9,6 +9,7 @@ import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/detail
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/details/useGridLoggingGridBoxDetail';
 import { PuckList } from '@app/common/types/gridLogging';
 import { useGridForm } from '@app/components/GridsLogging/Grid/useGridForm';
+import { TrashGridDialog } from '@app/components/GridsLogging/Grid/TrashGridDialog';
 import { TabPanel } from './utils';
 import { DetailsTab } from './components/DetailsTab';
 import { HistoryTab } from './components/HistoryTab';
@@ -229,6 +230,13 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
           />
         </React.Suspense>
       )}
+
+      <TrashGridDialog
+        open={form.trashDialogOpen}
+        onClose={() => form.setTrashDialogOpen(false)}
+        onConfirm={form.confirmTrash}
+        isProcessing={form.isTrashProcessing}
+      />
     </>
   );
 };
