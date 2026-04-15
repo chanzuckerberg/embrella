@@ -2090,7 +2090,8 @@ class StandardSamplesViewSet(viewsets.ViewSet):
                         labels__name__iexact="standard",
                     )
                     .select_related("specimen", "user", "intended_project")
-                    .prefetch_related("labels", "specimen__samples"),
+                    .prefetch_related("labels", "specimen__samples")
+                    .order_by("id"),
                     to_attr="standard_grids",
                 ),
                 "samples",
