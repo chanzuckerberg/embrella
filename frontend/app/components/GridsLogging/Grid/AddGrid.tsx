@@ -242,17 +242,9 @@ export const AddGrid: React.FC<AddGridProps> = ({
           placeholder="Grid Name [Ex.Grid1]"
           value={formData.gridName}
           onChange={(e) => handleInputChange('gridName', e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start" sx={{ color: 'rgba(0, 0, 0, 0.87)', mr: -4 }}>
-                Grid-
-              </InputAdornment>
-            ),
-          }}
           sx={{
             ...disabledTextFieldStyles,
             flex: 1,
-            '& .MuiInputBase-input': { paddingLeft: 0 },
           }}
         />
         <FormFieldWithAdd

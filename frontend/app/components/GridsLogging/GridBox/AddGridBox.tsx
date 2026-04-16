@@ -141,17 +141,9 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
         placeholder="Grid Box Name [Ex. Puck5Slot4Pos2]"
         value={formData.gridBoxName}
         onChange={(e) => handleInputChange('gridBoxName', e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start" sx={{ color: 'rgba(0, 0, 0, 0.87)', mr: -4 }}>
-              Box-
-            </InputAdornment>
-          ),
-        }}
         sx={{
           ...disabledTextFieldStyles,
           flex: 1,
-          '& .MuiInputBase-input': { paddingLeft: 0 },
         }}
       />
       <TextField
