@@ -1796,7 +1796,10 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
                 search_q = Q()
                 for t in search_terms:
                     if t:
-                        search_q |= Q(name__icontains=t)
+                        term_q = Q(name__icontains=t)
+                        if t.isdigit():
+                            term_q |= Q(cryogridbox__cryogrid__id=int(t))
+                        search_q |= term_q
                 if search_q:
                     queryset = queryset.filter(search_q).distinct()
 
@@ -1993,20 +1996,23 @@ class GridInventoryCountsViewSet(viewsets.ViewSet):
                 grid_search_q = Q()
                 for t in search_terms:
                     if t:
-                        grid_search_q |= (
+                        t_q = (
                             Q(name__icontains=t)
                             | Q(intended_project__name__icontains=t)
                             | Q(user__username__icontains=t)
                             | Q(specimen__samples__name__icontains=t)
                             | Q(labels__name__icontains=t)
                         )
+                        if t.isdigit():
+                            t_q |= Q(id=int(t))
+                        grid_search_q |= t_q
                 if grid_search_q:
                     grids_qs = grids_qs.filter(grid_search_q)
                 # Grid boxes search
                 gb_search_q = Q()
                 for t in search_terms:
                     if t:
-                        gb_search_q |= (
+                        t_q = (
                             Q(name__icontains=t)
                             | Q(cryogrid__name__icontains=t)
                             | Q(cryogrid__intended_project__name__icontains=t)
@@ -2014,13 +2020,19 @@ class GridInventoryCountsViewSet(viewsets.ViewSet):
                             | Q(cryogrid__specimen__samples__name__icontains=t)
                             | Q(cryogrid__labels__name__icontains=t)
                         )
+                        if t.isdigit():
+                            t_q |= Q(cryogrid__id=int(t))
+                        gb_search_q |= t_q
                 if gb_search_q:
                     grid_boxes_qs = grid_boxes_qs.filter(gb_search_q)
                 # Pucks search
                 puck_search_q = Q()
                 for t in search_terms:
                     if t:
-                        puck_search_q |= Q(name__icontains=t)
+                        t_q = Q(name__icontains=t)
+                        if t.isdigit():
+                            t_q |= Q(cryogridbox__cryogrid__id=int(t))
+                        puck_search_q |= t_q
                 if puck_search_q:
                     pucks_qs = pucks_qs.filter(puck_search_q)
 

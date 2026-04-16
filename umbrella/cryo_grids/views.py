@@ -332,7 +332,7 @@ def apply_filters(queryset, filters):
             search_q = Q()
             for search_term in search_terms:
                 if search_term:
-                    search_q |= (
+                    term_q = (
                         Q(name__icontains=search_term)
                         | Q(intended_project__name__icontains=search_term)
                         | Q(user__username__icontains=search_term)
@@ -340,6 +340,9 @@ def apply_filters(queryset, filters):
                         | Q(msisession__name__icontains=search_term)
                         | Q(labels__name__icontains=search_term)
                     )
+                    if search_term.isdigit():
+                        term_q |= Q(id=int(search_term))
+                    search_q |= term_q
             if search_q:
                 filter_q_objects.append(search_q)
 
