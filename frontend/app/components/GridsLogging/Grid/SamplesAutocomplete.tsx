@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Autocomplete, Box, Chip, Paper, PaperProps, SxProps, TextField, Theme } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { Icon } from '@czi-sds/components';
 import { Sample } from '@app/common/types/gridLogging';
 import { useSampleList } from '@app/common/hooks/useGridLogging';
@@ -71,6 +72,7 @@ export const SamplesAutocomplete: React.FC<SamplesAutocompleteProps> = ({
         isOptionEqualToValue={(option, val) => option.id === val.id}
         onChange={(_event, newValue) => onChange(newValue as Sample[])}
         PaperComponent={DropdownPaper}
+        popupIcon={<SearchIcon fontSize="small" />}
         renderTags={(tagValue, getTagProps) =>
           tagValue.map((sample, index) => {
             const { onDelete, ...tagProps } = getTagProps({ index });
@@ -102,13 +104,14 @@ export const SamplesAutocomplete: React.FC<SamplesAutocompleteProps> = ({
         renderInput={(params) => (
           <TextField
             {...params}
+            label="Samples Present on Grid"
             required={required}
             placeholder={value.length === 0 ? 'Select sample(s)' : ''}
             sx={disabledTextFieldStyles}
           />
         )}
         ListboxProps={{ sx: { maxHeight: 200 } }}
-        sx={{ flex: 1, ...sx }}
+        sx={{ flex: 1, '& .MuiAutocomplete-popupIndicator': { transform: 'none' }, ...sx }}
       />
     </Box>
   );

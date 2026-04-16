@@ -87,7 +87,6 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
               {error}
             </Alert>
           )}
-          <label style={{ fontSize: '12px', color: 'grey' }}>Samples Present on Grid</label>
           <SamplesAutocomplete
             value={formData.samples}
             onChange={(samples) => setFormData((prev) => ({ ...prev, samples }))}

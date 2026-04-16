@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, TextField, FormControl, InputLabel, Select, MenuItem, Alert } from '@mui/material';
+import { Box, TextField, Alert } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
+import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { ProjectFormData } from '@app/common/types/gridLogging';
 import { useCreateProject } from '@app/common/hooks/useGridLogging';
 
@@ -108,38 +109,15 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
             sx={{ ...disabledTextFieldStyles, flex: 1 }}
           />
 
-          <FormControl sx={{ flex: 1 }}>
-            <InputLabel id="project-leader-label">Project Leader</InputLabel>
-            <Select
-              labelId="project-leader-label"
-              value={formData.projectLeader}
-              onChange={(e) => handleInputChange('projectLeader', e.target.value)}
-              label="Project Leader"
-              sx={disabledTextFieldStyles}
-              MenuProps={{
-                PaperProps: {
-                  style: {
-                    maxHeight: 180,
-                  },
-                },
-              }}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {projectLeaders.length === 0 ? (
-                <MenuItem value="" disabled>
-                  No project leaders available
-                </MenuItem>
-              ) : (
-                projectLeaders.map((leader) => (
-                  <MenuItem key={leader.id} value={leader.id.toString()}>
-                    {leader.full_name || leader.username}
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
+          <FormFieldWithAdd
+            label="Project Leader"
+            value={formData.projectLeader}
+            onChange={(value) => handleInputChange('projectLeader', value)}
+            options={projectLeaders.map((leader) => ({
+              value: leader.id.toString(),
+              label: leader.full_name || leader.username,
+            }))}
+          />
         </Box>
 
         <TextField
@@ -153,57 +131,18 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
         />
 
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControl sx={{ flex: 1 }}>
-            <InputLabel id="confluence-space-label">Confluence Space</InputLabel>
-            <Select
-              labelId="confluence-space-label"
-              value={formData.confluenceSpace}
-              onChange={(e) => handleInputChange('confluenceSpace', e.target.value)}
-              label="Confluence Space"
-              sx={disabledTextFieldStyles}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {confluenceSpaces.length === 0 ? (
-                <MenuItem value="" disabled>
-                  No confluence spaces available
-                </MenuItem>
-              ) : (
-                confluenceSpaces.map((space) => (
-                  <MenuItem key={space.id} value={space.id}>
-                    {space.url}
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
-
-          <FormControl sx={{ flex: 1 }}>
-            <InputLabel id="google-drive-folder-label">Google Drive Folder</InputLabel>
-            <Select
-              labelId="google-drive-folder-label"
-              value={formData.googleDriveFolder}
-              onChange={(e) => handleInputChange('googleDriveFolder', e.target.value)}
-              label="Google Drive Folder"
-              sx={disabledTextFieldStyles}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {googleDriveFolders.length === 0 ? (
-                <MenuItem value="" disabled>
-                  No google drive folders available
-                </MenuItem>
-              ) : (
-                googleDriveFolders.map((folder) => (
-                  <MenuItem key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
+          <FormFieldWithAdd
+            label="Confluence Space"
+            value={formData.confluenceSpace}
+            onChange={(value) => handleInputChange('confluenceSpace', value)}
+            options={confluenceSpaces.map((space) => ({ value: space.id, label: space.url }))}
+          />
+          <FormFieldWithAdd
+            label="Google Drive Folder"
+            value={formData.googleDriveFolder}
+            onChange={(value) => handleInputChange('googleDriveFolder', value)}
+            options={googleDriveFolders.map((folder) => ({ value: folder.id, label: folder.name }))}
+          />
         </Box>
       </Box>
     </BaseFormDialog>

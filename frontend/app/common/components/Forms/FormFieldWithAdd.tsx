@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Box, MenuItem, FormControl, InputLabel, Select, IconButton } from '@mui/material';
+import { Box, TextField, Autocomplete, IconButton } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { Icon } from '@czi-sds/components';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
 
@@ -25,41 +26,31 @@ export const FormFieldWithAdd: React.FC<FormFieldWithAddProps> = ({
   required = false,
   disabled = false,
   options = [],
-  placeholder: _placeholder,
-  flex = 1, // Default to flex: 1
+  placeholder,
+  flex = 1,
 }) => {
+  const selectedOption = options.find((option) => option.value === value) ?? null;
+
   return (
     <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flex: flex, minWidth: 0 }}>
-      <FormControl required={required} sx={{ flex: 1, minWidth: 0 }}>
-        <InputLabel>{label}</InputLabel>
-        <Select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          label={label}
-          disabled={disabled}
-          sx={{
-            ...disabledTextFieldStyles,
-            '& .MuiSelect-select': {
-              whiteSpace: 'normal',
-              wordBreak: 'break-word',
-            },
-          }}
-          MenuProps={{
-            PaperProps: {
-              style: {
-                maxHeight: 180,
-              },
-            },
-          }}
-        >
-          <MenuItem value="">Select {label}</MenuItem>
-          {options.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <Autocomplete
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          ...disabledTextFieldStyles,
+          '& .MuiAutocomplete-popupIndicator': { transform: 'none' },
+        }}
+        options={options}
+        value={selectedOption}
+        onChange={(_event, newValue) => onChange(newValue?.value ?? '')}
+        getOptionLabel={(option) => option.label}
+        getOptionKey={(option) => option.value}
+        isOptionEqualToValue={(option, val) => option.value === val.value}
+        disabled={disabled}
+        clearOnEscape
+        popupIcon={<SearchIcon fontSize="small" />}
+        renderInput={(params) => <TextField {...params} label={label} required={required} placeholder={placeholder} />}
+      />
       {onAdd && (
         <IconButton
           onClick={onAdd}
