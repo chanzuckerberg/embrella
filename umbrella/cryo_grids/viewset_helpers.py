@@ -296,7 +296,7 @@ def apply_grid_box_filters(queryset, q_params):
             search_q = Q()
             for search_term in search_terms:
                 if search_term:
-                    search_q |= (
+                    term_q = (
                         Q(name__icontains=search_term)
                         | Q(cryogrid__name__icontains=search_term)
                         | Q(cryogrid__intended_project__name__icontains=search_term)
@@ -304,6 +304,9 @@ def apply_grid_box_filters(queryset, q_params):
                         | Q(cryogrid__specimen__samples__name__icontains=search_term)
                         | Q(cryogrid__labels__name__icontains=search_term)
                     )
+                    if search_term.isdigit():
+                        term_q |= Q(cryogrid__id=int(search_term))
+                    search_q |= term_q
             if search_q:
                 q_objects.append(search_q)
 

@@ -19,9 +19,8 @@ from pydantic import ValidationError
 from stores.models import Path
 
 # project app imports
-from cryo_grids.models import CryoGridCassette
 
-from .forms import ClearCassetteForm, CopyGridForm, NumberToCopyGridForm
+from .forms import CopyGridForm, NumberToCopyGridForm
 from .models import CryoGrid, CryoGridBox, GridLabel, Specimen
 from .utils import (
     CassetteModel,
@@ -333,7 +332,7 @@ def apply_filters(queryset, filters):
             search_q = Q()
             for search_term in search_terms:
                 if search_term:
-                    search_q |= (
+                    term_q = (
                         Q(name__icontains=search_term)
                         | Q(intended_project__name__icontains=search_term)
                         | Q(user__username__icontains=search_term)
@@ -341,6 +340,9 @@ def apply_filters(queryset, filters):
                         | Q(msisession__name__icontains=search_term)
                         | Q(labels__name__icontains=search_term)
                     )
+                    if search_term.isdigit():
+                        term_q |= Q(id=int(search_term))
+                    search_q |= term_q
             if search_q:
                 filter_q_objects.append(search_q)
 
@@ -639,49 +641,6 @@ def copy_grid_to_box(request, error_msg=""):
     if request.method == "POST":
         return _handle_grid_to_copy_post(request)
 
-
-def clear_cassette_view(request, error_msg=""):
-    """
-    Starting view that renders the form to select the cassette to clear its grids.
-    """
-    if request.method == "POST":
-        cassette_id = request.POST["cassette"]
-        return HttpResponseRedirect(reverse("cryo_grids:clear_cassette_filter", args=(cassette_id,)))
-    else:
-        form = ClearCassetteForm()
-        return render(request, "cryo_grids/clear_cassette.html", {"form": form})
-
-
-def clear_cassette_filter(request, cassette_id, error_msg=""):
-    """
-    process and render the page for selecting where the grids will be moved to
-    after taken out of the cassette.
-    """
-    cassette = CryoGridCassette.objects.get(id=cassette_id)
-    grids = CryoGrid.objects.filter(grid_cassette=cassette)
-    context = {"cassette": cassette, "grids": grids}
-    return render(request, "cryo_grids/clear_cassette_move.html", context)
-
-
-@require_http_methods(["POST"])
-def clear_cassette_move(request, error_msg=""):
-    """
-    process the action of clearing cassette and move the grids.
-    When finished, render the cassette filter page again which should be empty.
-    """
-    if request.method == "POST":
-        for k in request.POST.keys():
-            if "_move" in k:
-                grid_id = int(k.split("_")[0])
-                value = request.POST[k]
-                grid = CryoGrid.objects.get(id=grid_id)
-                cassette_id = grid.grid_cassette.pk
-                grid.grid_cassette = None
-                if value.endswith("trash"):
-                    grid.grid_box = None
-                    grid.trashed = True
-                grid.save()
-        return HttpResponseRedirect(reverse("cryo_grids:clear_cassette_filter", args=(cassette_id,)))
 
 
 @csrf_exempt

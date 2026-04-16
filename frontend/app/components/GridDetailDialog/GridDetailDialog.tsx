@@ -9,6 +9,7 @@ import { useGridLoggingPuckSlots } from '@app/common/hooks/useGridLogging/detail
 import { useGridLoggingGridBoxDetail } from '@app/common/hooks/useGridLogging/details/useGridLoggingGridBoxDetail';
 import { PuckList } from '@app/common/types/gridLogging';
 import { useGridForm } from '@app/components/GridsLogging/Grid/useGridForm';
+import { TrashGridDialog } from '@app/components/GridsLogging/Grid/TrashGridDialog';
 import { TabPanel } from './utils';
 import { DetailsTab } from './components/DetailsTab';
 import { HistoryTab } from './components/HistoryTab';
@@ -88,18 +89,29 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
         } as PuckList)
       : null;
 
-  const handleCopyLink = async () => {
+  const handleCopyLink = () => {
     const url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      const textArea = document.createElement('textarea');
-      textArea.value = url;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
+
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(() => setCopySnackbarOpen(true));
+      return;
     }
+
+    // Fallback for non-HTTPS: use a hidden textarea styled to avoid
+    // focus-trap interference from the Dialog overlay.
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    Object.assign(textArea.style, {
+      position: 'fixed',
+      left: '-9999px',
+      top: '-9999px',
+      opacity: '0',
+    });
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
     setCopySnackbarOpen(true);
   };
 
@@ -218,6 +230,13 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
           />
         </React.Suspense>
       )}
+
+      <TrashGridDialog
+        open={form.trashDialogOpen}
+        onClose={() => form.setTrashDialogOpen(false)}
+        onConfirm={form.confirmTrash}
+        isProcessing={form.isTrashProcessing}
+      />
     </>
   );
 };

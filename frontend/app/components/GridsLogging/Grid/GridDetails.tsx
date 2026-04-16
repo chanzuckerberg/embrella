@@ -9,6 +9,7 @@ import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridDetails } from '@app/common/hooks/useGridLogging/details/useGridDetails';
 import styles from '../GridLogging.module.css';
 import { MoveGrid } from './MoveGrid';
+import { TrashGridDialog } from './TrashGridDialog';
 import { GridFormFields } from './GridFormFields';
 import { useGridForm } from './useGridForm';
 import { mapGridDetailsToFormData } from './utils';
@@ -241,6 +242,12 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         gridId={selectedGridId}
         selectedUser={selectedUser}
         onSuccess={onMoveGridSuccess}
+      />
+      <TrashGridDialog
+        open={form.trashDialogOpen}
+        onClose={() => form.setTrashDialogOpen(false)}
+        onConfirm={form.confirmTrash}
+        isProcessing={form.isTrashProcessing}
       />
     </>
   );
