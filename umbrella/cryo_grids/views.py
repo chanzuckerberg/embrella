@@ -19,7 +19,6 @@ from pydantic import ValidationError
 from stores.models import Path
 
 # project app imports
-
 from .forms import CopyGridForm, NumberToCopyGridForm
 from .models import CryoGrid, CryoGridBox, GridLabel, Specimen
 from .utils import (
@@ -401,7 +400,7 @@ def get_specimen_list(specimen_id):
         specimen_list = []
         base_url = get_base_url()
         for sample in specimen.samples.all():
-            sample_url = f"{base_url}/admin/cryo_grids/specimen/{sample.id}"
+            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
             specimen_list.append(
                 {
                     "id": sample.id,
@@ -494,7 +493,7 @@ def get_specimen_info(specimen_id):
         base_url = get_base_url()
         samples_list = []
         for sample in specimen.samples.all():
-            sample_url = f"{base_url}/admin/cryo_grids/specimen/{sample.id}"
+            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
             samples_list.append(
                 {
                     "id": sample.id,
@@ -640,7 +639,6 @@ def copy_grid_to_box(request, error_msg=""):
     """
     if request.method == "POST":
         return _handle_grid_to_copy_post(request)
-
 
 
 @csrf_exempt

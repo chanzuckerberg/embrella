@@ -37,13 +37,14 @@ export const getLinkCellListFromCellContext = (
   }
 
   return (
-    <>
+    <div style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
       {linkCellPropsList.map((linkCellProps, i) => (
-        <div key={i}>
+        <span key={i}>
           <Link {...DEFAULT_LINK_PROPS} {...linkCellProps} />
-        </div>
+          {i < linkCellPropsList.length - 1 && ', '}
+        </span>
       ))}
-    </>
+    </div>
   );
 };
 

@@ -29,15 +29,21 @@ export const FormFieldWithAdd: React.FC<FormFieldWithAddProps> = ({
   flex = 1, // Default to flex: 1
 }) => {
   return (
-    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flex: flex }}>
-      <FormControl required={required} sx={{ flex: 1 }}>
+    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flex: flex, minWidth: 0 }}>
+      <FormControl required={required} sx={{ flex: 1, minWidth: 0 }}>
         <InputLabel>{label}</InputLabel>
         <Select
           value={value}
           onChange={(e) => onChange(e.target.value)}
           label={label}
           disabled={disabled}
-          sx={disabledTextFieldStyles}
+          sx={{
+            ...disabledTextFieldStyles,
+            '& .MuiSelect-select': {
+              whiteSpace: 'normal',
+              wordBreak: 'break-word',
+            },
+          }}
           MenuProps={{
             PaperProps: {
               style: {
