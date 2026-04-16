@@ -290,7 +290,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               </Box>
             </Box>
 
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ color: 'primary.main' }}>
                   GridBox Information
@@ -339,7 +339,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 </Box>
               )}
 
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, minWidth: 0 }}>
                 <TextField
                   fullWidth
                   label="Grid box name"
@@ -351,7 +351,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 <TextField fullWidth label="Puck" value={formData.puckName} disabled sx={disabledTextFieldStyles} />
               </Box>
 
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, minWidth: 0 }}>
                 <TextField
                   fullWidth
                   select={isEditMode}
@@ -386,7 +386,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 </TextField>
               </Box>
 
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, minWidth: 0 }}>
                 <TextField
                   fullWidth
                   label="Position in puck"
