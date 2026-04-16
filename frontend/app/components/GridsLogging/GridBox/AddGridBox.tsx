@@ -96,7 +96,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     const result = await createGridBox({
       puck_id: Number(formData.puck),
       puckName: formData.puckName,
-      gridBoxName: `Box-${formData.gridBoxName}`,
+      gridBoxName: formData.gridBoxName,
       color: formData.color,
       numbering: formData.numbering,
       position_in_puck: Number(formData.positionInPuck),
