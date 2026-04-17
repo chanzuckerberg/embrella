@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, InputAdornment, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, TextField, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { LabelsAutocomplete } from './LabelsAutocomplete';
@@ -242,17 +242,9 @@ export const AddGrid: React.FC<AddGridProps> = ({
           placeholder="Grid Name [Ex.Grid1]"
           value={formData.gridName}
           onChange={(e) => handleInputChange('gridName', e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start" sx={{ color: 'rgba(0, 0, 0, 0.87)', mr: -4 }}>
-                Grid-
-              </InputAdornment>
-            ),
-          }}
           sx={{
             ...disabledTextFieldStyles,
             flex: 1,
-            '& .MuiInputBase-input': { paddingLeft: 0 },
           }}
         />
         <FormFieldWithAdd
@@ -266,32 +258,30 @@ export const AddGrid: React.FC<AddGridProps> = ({
             label: freezingSession.display_name,
           }))}
         />
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-          <FormFieldWithAdd
-            label="Specimen"
-            value={formData.specimen}
-            onChange={(value) => handleInputChange('specimen', value)}
-            onAdd={() => setAddSpecimenDialogOpen(true)}
-            required
-            disabled={!choicesLoaded || !specimensLoaded}
-            options={transformedSpecimens.map((specimen) => ({
-              value: specimen.id.toString(),
-              label: specimen.display_name || `Specimen #${specimen.id}`,
-            }))}
-          />
-          <FormFieldWithAdd
-            label="Project"
-            value={formData.project}
-            onChange={(value) => handleInputChange('project', value)}
-            onAdd={() => setAddProjectDialogOpen(true)}
-            required
-            disabled={!choicesLoaded}
-            options={projects.map((project) => ({
-              value: project.id.toString(),
-              label: project.name,
-            }))}
-          />
-        </Box>
+        <FormFieldWithAdd
+          label="Specimen"
+          value={formData.specimen}
+          onChange={(value) => handleInputChange('specimen', value)}
+          onAdd={() => setAddSpecimenDialogOpen(true)}
+          required
+          disabled={!choicesLoaded || !specimensLoaded}
+          options={transformedSpecimens.map((specimen) => ({
+            value: specimen.id.toString(),
+            label: specimen.display_name || `Specimen #${specimen.id}`,
+          }))}
+        />
+        <FormFieldWithAdd
+          label="Project"
+          value={formData.project}
+          onChange={(value) => handleInputChange('project', value)}
+          onAdd={() => setAddProjectDialogOpen(true)}
+          required
+          disabled={!choicesLoaded}
+          options={projects.map((project) => ({
+            value: project.id.toString(),
+            label: project.name,
+          }))}
+        />
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           {positionInBox !== undefined ? (

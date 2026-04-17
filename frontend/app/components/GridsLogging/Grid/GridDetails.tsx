@@ -142,7 +142,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               />
             </Box>
 
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
               {/* Edit/Save/Cancel Icons header */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ color: 'primary.main' }}>

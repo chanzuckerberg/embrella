@@ -42,7 +42,7 @@ export const GridFormFields: React.FC<GridFormFieldsProps> = ({
   projects,
 }) => (
   <>
-    <Box sx={{ display: 'flex', gap: 2 }}>
+    <Box sx={{ display: 'flex', gap: 2, minWidth: 0 }}>
       <TextField
         fullWidth
         label="Grid Name"
@@ -63,7 +63,7 @@ export const GridFormFields: React.FC<GridFormFieldsProps> = ({
       <TextField fullWidth label="User" disabled value={formData.user} sx={disabledTextFieldStyles} />
     </Box>
 
-    <Box sx={{ display: 'flex', gap: 2 }}>
+    <Box sx={{ display: 'flex', gap: 2, minWidth: 0 }}>
       <TextField
         fullWidth
         label="Notes"
@@ -92,7 +92,7 @@ export const GridFormFields: React.FC<GridFormFieldsProps> = ({
       />
     </Box>
 
-    <Box sx={{ display: 'flex', gap: 2 }}>
+    <Box sx={{ display: 'flex', gap: 2, minWidth: 0 }}>
       <TextField
         fullWidth
         select={isEditMode}
@@ -131,7 +131,7 @@ export const GridFormFields: React.FC<GridFormFieldsProps> = ({
       </TextField>
     </Box>
 
-    <Box sx={{ display: 'flex', gap: 2 }}>
+    <Box sx={{ display: 'flex', gap: 2, minWidth: 0 }}>
       <TextField
         fullWidth
         select={isEditMode}
@@ -161,7 +161,7 @@ export const GridFormFields: React.FC<GridFormFieldsProps> = ({
       />
     </Box>
 
-    <Box sx={{ display: 'flex', gap: 2 }}>
+    <Box sx={{ display: 'flex', gap: 2, minWidth: 0 }}>
       <TextField
         fullWidth
         label="Blot Time"
