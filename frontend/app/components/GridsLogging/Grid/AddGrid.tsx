@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, InputAdornment, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, TextField, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { LabelsAutocomplete } from './LabelsAutocomplete';

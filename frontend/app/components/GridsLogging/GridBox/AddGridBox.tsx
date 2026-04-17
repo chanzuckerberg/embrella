@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
+import { Box, TextField, MenuItem, FormControl, InputLabel, Select, Alert } from '@mui/material';
 import { UserList } from '@app/common/types/gridLogging';
 import {
   useCreateGridBox,
