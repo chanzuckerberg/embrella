@@ -48,6 +48,10 @@ interface UseGridFormReturn {
   moveGridDialogOpen: boolean;
   setMoveGridDialogOpen: (open: boolean) => void;
 
+  // Duplicate grid dialog
+  duplicateGridDialogOpen: boolean;
+  setDuplicateGridDialogOpen: (open: boolean) => void;
+
   // Trash confirmation dialog
   trashDialogOpen: boolean;
   setTrashDialogOpen: (open: boolean) => void;
@@ -78,6 +82,7 @@ export const useGridForm = ({ gridId, gridDetails, refetch, onGridUpdated }: Use
   const [trashedValue, setLocalTrashed] = useState(false);
   const [currentLabels, setCurrentLabels] = useState<LabelData[]>([]);
   const [moveGridDialogOpen, setMoveGridDialogOpen] = useState(false);
+  const [duplicateGridDialogOpen, setDuplicateGridDialogOpen] = useState(false);
   const [trashDialogOpen, setTrashDialogOpen] = useState(false);
   const [isTrashProcessing, setIsTrashProcessing] = useState(false);
 
@@ -242,6 +247,8 @@ export const useGridForm = ({ gridId, gridDetails, refetch, onGridUpdated }: Use
     handleLabelsChange,
     moveGridDialogOpen,
     setMoveGridDialogOpen,
+    duplicateGridDialogOpen,
+    setDuplicateGridDialogOpen,
     trashDialogOpen,
     setTrashDialogOpen,
     confirmTrash,

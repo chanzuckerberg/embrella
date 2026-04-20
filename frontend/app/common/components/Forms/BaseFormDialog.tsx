@@ -10,7 +10,7 @@ interface BaseFormDialogProps {
   onClose: () => void;
   title: string;
   titleExtra?: React.ReactNode;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   children: React.ReactNode;
   onSave: () => void;
   isSubmitting?: boolean;
@@ -60,7 +60,7 @@ export const BaseFormDialog: React.FC<BaseFormDialogProps> = ({
           </IconButton>
         </MuiDialogTitle>
       ) : (
-        <DialogTitle title={title} subtitle={subtitle} onClose={onClose} />
+        <DialogTitle title={title} subtitle={subtitle as string | undefined} onClose={onClose} />
       )}
       <DialogContent>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2, pb: 2, mt: 2 }}>
