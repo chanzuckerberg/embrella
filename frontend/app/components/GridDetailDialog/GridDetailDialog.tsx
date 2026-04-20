@@ -158,7 +158,6 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
               <TabPanel value={activeTab} index={0}>
                 <DetailsTab
                   formData={form.formData}
-                  gridId={gridId}
                   isEditMode={form.isEditMode}
                   editedData={form.editedData}
                   onEditClick={form.handleEditClick}

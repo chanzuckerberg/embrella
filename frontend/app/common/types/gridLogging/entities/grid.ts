@@ -55,3 +55,25 @@ export interface MoveGridResponse {
     trashed: boolean;
   };
 }
+
+// Grid duplicate types
+export interface DuplicateGridData {
+  grid_id: number;
+  destination_grid_box_id: number;
+  number_to_copy: number;
+}
+
+export interface DuplicateGridResponse {
+  success: boolean;
+  message: string;
+  new_grid_ids: number[];
+  grids: GridCreateResponse[];
+}
+
+export interface AvailablePositionsResponse {
+  box_id: number;
+  max_grids: number;
+  used_positions: number[];
+  available_positions: number[];
+  available_count: number;
+}
