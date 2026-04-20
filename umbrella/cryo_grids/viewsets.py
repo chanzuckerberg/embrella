@@ -1026,6 +1026,82 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+    @action(detail=False, methods=["post"], url_path=r"(?P<grid_id>[0-9]+)/duplicate")
+    def duplicate(self, request, grid_id=None):
+        """
+        Duplicate a grid into a destination box ``number_to_copy`` times.
+        URL: POST /cryo_grids/v1/grids/{grid_id}/duplicate/
+
+        Body: {"destination_grid_box_id": int, "number_to_copy": int}
+        """
+        from cryo_grids.services import DuplicateGridError, duplicate_grid
+
+        try:
+            source_grid = CryoGrid.objects.get(id=grid_id)
+        except CryoGrid.DoesNotExist:
+            return Response(
+                {"success": False, "error": "Grid not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        destination_grid_box_id = request.data.get("destination_grid_box_id")
+        number_to_copy = request.data.get("number_to_copy")
+
+        if destination_grid_box_id is None or number_to_copy is None:
+            return Response(
+                {
+                    "success": False,
+                    "error": "Both destination_grid_box_id and number_to_copy are required",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            number_to_copy = int(number_to_copy)
+        except (TypeError, ValueError):
+            return Response(
+                {"success": False, "error": "number_to_copy must be an integer"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            destination_box = CryoGridBox.objects.get(id=destination_grid_box_id)
+        except CryoGridBox.DoesNotExist:
+            return Response(
+                {
+                    "success": False,
+                    "error": f"Destination grid box with ID {destination_grid_box_id} not found",
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            new_grids = duplicate_grid(
+                source_grid=source_grid,
+                destination_box=destination_box,
+                number_to_copy=number_to_copy,
+                request_user=request.user if request.user.is_authenticated else None,
+            )
+        except DuplicateGridError as e:
+            return Response(
+                {"success": False, "error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        message = (
+            f'Duplicated grid "{source_grid.name}" into {destination_box.name} '
+            f"({len(new_grids)} {'copies' if len(new_grids) != 1 else 'copy'})"
+        )
+        return Response(
+            {
+                "success": True,
+                "message": message,
+                "new_grid_ids": [g.id for g in new_grids],
+                "grids": CryoGridSerializer(new_grids, many=True).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     @method_decorator(csrf_exempt)
     @action(detail=False, methods=["patch"], url_path=r"(?P<grid_id>[0-9]+)/move")
     def move_grid(self, request, grid_id=None):
@@ -1688,6 +1764,42 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
                     "asc": asc,
                 },
             },
+        )
+
+    @action(detail=False, methods=["get"], url_path="available_positions")
+    def available_positions(self, request):
+        """
+        Return position availability for a grid box.
+        URL: GET /cryo_grids/v1/grid-boxes/available_positions/?box_id={id}
+        """
+        from cryo_grids.services import get_available_positions
+
+        box_id = request.GET.get("box_id")
+        if not box_id:
+            return Response(
+                {"success": False, "error": "box_id query parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            box = CryoGridBox.objects.get(pk=box_id)
+        except (CryoGridBox.DoesNotExist, ValueError):
+            return Response(
+                {"success": False, "error": "Grid box not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        available = get_available_positions(box)
+        max_grids = box.max_grids or 4
+        used = sorted(set(range(1, max_grids + 1)) - set(available))
+        return Response(
+            {
+                "box_id": box.id,
+                "max_grids": max_grids,
+                "used_positions": used,
+                "available_positions": available,
+                "available_count": len(available),
+            }
         )
 
     @action(detail=False, methods=["get"])

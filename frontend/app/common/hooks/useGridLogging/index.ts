@@ -31,6 +31,10 @@ export { useCreateExternalResource } from './create/useCreateExternalResource';
 export { useMoveGrid } from './move/useMoveGrid';
 export { useMoveGridBox } from './move/useMoveGridBox';
 
+// Duplicate hooks
+export { useDuplicateGrid } from './duplicate/useDuplicateGrid';
+export { useAvailablePositions } from './duplicate/useAvailablePositions';
+
 // Update hooks
 export { useUpdateGridBox } from './update/useUpdateGridBox';
 export { useUpdateGrid } from './update/useUpdateGrid';
