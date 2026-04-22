@@ -19,6 +19,9 @@
 # ============================================================================
 # Environment Setup
 # ============================================================================
+# Group-writable files/dirs so other users can launch subsequent runs in the same session.
+umask 002
+
 ml anaconda
 conda activate /hpc/projects/group.czii/conda_environments/pyczii
 

@@ -31,6 +31,10 @@
 #SBATCH -o /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_reformat.out
 #SBATCH -e /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_reformat.err
 
+# Ensure all files/dirs created by this job are group-writable so other users can
+# launch subsequent runs in the same session dir.
+umask 002
+
 # Context variables
 {% for var_name, var_value in context_vars.items() -%}
 export {{ var_name }}="{{ var_value }}"
@@ -86,6 +90,7 @@ echo "DenoisET training option is: enabled"
 # Define bash functions for heterogeneous job components
 run_aretomo3_gpu() {
     set -e
+    umask 002
     ml cuda
 
     # AreTomo3 command with fixed flags and schema-generated variable flags
@@ -100,6 +105,7 @@ run_aretomo3_gpu() {
 
 run_reformat_cpu() {
     set -e
+    umask 002
     ml anaconda
     conda activate /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/zarrczar_env
     bash /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/mrc_to_zarr_and_thumbnails.sh ${out_path} 960 180
