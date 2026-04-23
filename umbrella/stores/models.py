@@ -21,6 +21,9 @@ DATA_TYPES = [
                 ('pick','particle point annotation'),
                 ('seg','segmentation'),
                 ('galr','particle gallery'),
+                ('proc_dir','processing directory on cluster filesystem'),
+                ('zarr_url','zarr volume URL for tomogram viewer'),
+                ('thumb_url','thumbnail/CTF-thumbnail URL base'),
             ]
 
 def fill_place_holders(input_str, key_values={}):
@@ -44,7 +47,7 @@ class Path(models.Model):
         return self.overlay_path
 
 class StaticPath(models.Model):
-    data_type = models.CharField(max_length=8, choices=DATA_TYPES,unique=True)
+    data_type = models.CharField(max_length=16, choices=DATA_TYPES,unique=True)
     static_path = models.CharField(max_length=255, help_text="path reference with placeholder")
     def __str__(self):
         return self.data_type
@@ -94,4 +97,23 @@ class Cluster(models.Model):
 def _invalidate_clusterio_cache(sender, **kwargs):
     from common.clusterio import clear_cluster_cache
     clear_cluster_cache()
+
+
+def resolve_review_path(data_type, cluster, msi_session, **context):
+    """Resolve a review/metadata PathType template into a concrete URL or filesystem path.
+
+    `data_type`    — StaticPath.data_type of the template row (e.g. 'proc_dir', 'zarr_url', 'thumb_url').
+    `cluster`      — stores.Cluster instance; supplies {http_base}.
+    `msi_session`  — tem.MsiSession instance; supplies {scope} (lowercased) and {msi_session}.
+    `**context`    — additional placeholder values (e.g. workflow, run, position, vol_suffix).
+    """
+    pt = PathType.objects.select_related('static_path').get(static_path__data_type=data_type)
+    scope = msi_session.session_plan.scope.name.lower()
+    values = {
+        'http_base': cluster.http_base_url,
+        'scope': scope,
+        'msi_session': msi_session.name,
+        **{k: str(v) for k, v in context.items() if v is not None},
+    }
+    return fill_place_holders(pt.overlay_path, values)
 
