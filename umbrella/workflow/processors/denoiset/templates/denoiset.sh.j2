@@ -11,6 +11,9 @@
 {% if cluster == "czii" -%}
 #SBATCH --qos=embrella
 {% endif %}
+# Group-writable files/dirs so other users can launch subsequent runs in the same session.
+umask 0002
+
 ml anaconda
 conda activate /hpc/projects/group.czii/krios1.processing/software/denoiset/pyDenoiset
 
