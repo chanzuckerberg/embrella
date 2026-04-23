@@ -70,9 +70,6 @@ KEYFILE = os.getenv("SLURM_KEYFILE")
 # Environment Configuration
 ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
 
-# Cluster Configuration
-DEFAULT_CLUSTER_ID = "czii"
-
 # Remote Paths
 DATA_COLLECTION_PATH = "/hpc/instruments/czii.krios1/OffloadData/"
 

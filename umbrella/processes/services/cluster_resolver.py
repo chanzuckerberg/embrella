@@ -12,9 +12,10 @@ at submission time. These helpers read it consistently with a shared default.
   metadata views and Review creation which don't have a PipeExecution yet.
 """
 
+
 def _default_cluster_id() -> str:
-    # Lazy import to avoid the workflow.views package-init cycle.
-    from workflow.views.constants import DEFAULT_CLUSTER_ID
+    from workflow.constants import DEFAULT_CLUSTER_ID
+
     return DEFAULT_CLUSTER_ID
 
 

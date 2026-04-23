@@ -25,9 +25,9 @@ from processes.models import (
 from umbrella_logger import logger
 
 from .agent import RemoteJobSubmitter
+from .constants import DEFAULT_CLUSTER_ID
 from .context import RunContext
 from .processors import get_processor
-from .views.constants import DEFAULT_CLUSTER_ID
 
 
 class ValidationError(Exception):
@@ -198,7 +198,7 @@ class PipelineExecutor:
         try:
             from processes.tasks import start_job_status_syncer
 
-            cluster_id = context.cluster_id or DEFAULT_CLUSTER_ID
+            cluster_id = parameters_with_metadata["cluster_id"]
             start_job_status_syncer(job_id=job_id, cluster_id=cluster_id)
             logger.info(f"Started job status syncer for job {job_id} on {cluster_id}")
         except Exception as e:

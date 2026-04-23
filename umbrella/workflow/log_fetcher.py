@@ -182,7 +182,7 @@ def fetch_job_logs(execution) -> Dict[str, any]:
     # Determine cluster: prefer the stamp on parameters, else fall back to the software default.
     from processes.services.cluster_resolver import cluster_id_from_parameters
 
-    from workflow.views.constants import DEFAULT_CLUSTER_ID
+    from workflow.constants import DEFAULT_CLUSTER_ID
 
     cluster_id = cluster_id_from_parameters(execution.parameters, default=None)
     if not cluster_id:
