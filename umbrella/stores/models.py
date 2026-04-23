@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 DATA_TYPES = [
                 ('atlas','grid atlas'),
@@ -86,4 +88,10 @@ class Cluster(models.Model):
 
     def __str__(self):
         return self.cluster_id
+
+
+@receiver([post_save, post_delete], sender=Cluster)
+def _invalidate_clusterio_cache(sender, **kwargs):
+    from common.clusterio import clear_cluster_cache
+    clear_cluster_cache()
 

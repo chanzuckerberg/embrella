@@ -4,6 +4,7 @@ import re
 import stat
 import subprocess
 from fnmatch import fnmatch
+from functools import lru_cache
 
 import paramiko
 from umbrella_logger import logger
@@ -60,31 +61,45 @@ def get_auth_service_user():
     return _get_cached_auth()
 
 
-CLUSTER_DETAILS = {
-    "czii": {
-        "hostname": "10.50.120.90",
-        "port": 22,
-    },
-    "bruno": {
-        "hostname": "192.168.98.229",
-        "port": 22,
-    },
-}
+@lru_cache(maxsize=32)
+def _lookup_cluster(cluster_id):
+    """Fetch an active Cluster row; raise a clear error if it's missing/inactive.
+
+    Cached per-process; invalidated on Cluster save/delete via signals in stores.models.
+    lru_cache does not cache exceptions, so failed lookups are re-attempted.
+    """
+    from stores.models import Cluster
+    try:
+        return Cluster.objects.get(cluster_id=cluster_id, is_active=True)
+    except Cluster.DoesNotExist:
+        raise Exception(f"Cluster '{cluster_id}' not found")
+
+
+@lru_cache(maxsize=32)
+def _cluster_exists(cluster_id):
+    """Return True if an active Cluster row exists for this id. Cached like _lookup_cluster."""
+    from stores.models import Cluster
+    return Cluster.objects.filter(cluster_id=cluster_id, is_active=True).exists()
+
+
+def clear_cluster_cache():
+    """Invalidate the in-process Cluster lookup cache. Called from a post_save/post_delete signal."""
+    _lookup_cluster.cache_clear()
+    _cluster_exists.cache_clear()
 
 
 def get_cluster_ssh_connection(cluster_id, auth=None):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    if cluster_id not in CLUSTER_DETAILS:
-        raise Exception(f"Cluster '{cluster_id}' not found")
 
-    cluster_info = CLUSTER_DETAILS[cluster_id]
+    cluster = _lookup_cluster(cluster_id)
+
     if auth is None:
         # Use service user auth by default
         auth = _get_cached_auth()
     ssh_config = {
-        "hostname": cluster_info["hostname"],
-        "port": cluster_info["port"],
+        "hostname": cluster.ssh_hostname,
+        "port": cluster.ssh_port,
         "timeout": 10,
         "allow_agent": False,
         "look_for_keys": False,
@@ -475,7 +490,7 @@ def test_ssh_as_user(username, cluster_id):
             'username': str
         }
     """
-    if cluster_id not in CLUSTER_DETAILS:
+    if not _cluster_exists(cluster_id):
         return {
             "can_connect": False,
             "error": f"Invalid cluster_id: {cluster_id}",
@@ -590,9 +605,9 @@ def get_auth_for_user(username, cluster_id, password=None):
         username = username.split('@')[0]
 
     # Validate cluster_id
-    if cluster_id not in CLUSTER_DETAILS:
+    if not _cluster_exists(cluster_id):
         return None, {
-            "error": f"Invalid cluster_id. Must be czii or bruno, got: {cluster_id}",
+            "error": f"Invalid cluster_id: {cluster_id}",
             "ssh_setup_required": False,
             "cluster_id": cluster_id,
             "username": username,
@@ -653,7 +668,7 @@ def setup_ssh_key_for_user(username, password, cluster_id):
             'error': str or None
         }
     """
-    if cluster_id not in CLUSTER_DETAILS:
+    if not _cluster_exists(cluster_id):
         return {
             "success": False,
             "message": f"Invalid cluster_id: {cluster_id}",
