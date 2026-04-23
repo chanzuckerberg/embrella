@@ -62,3 +62,28 @@ class PathType(models.Model):
     def __str__(self):
         return '%s=>%s' % (self.static_path.data_type, self.overlay_path)
 
+
+class Cluster(models.Model):
+    cluster_id = models.CharField(
+        max_length=16,
+        primary_key=True,
+        help_text="Short identifier used in code (e.g. 'czii', 'bruno')",
+    )
+    name = models.CharField(max_length=64, help_text="Human-readable display name")
+
+    http_base_url = models.CharField(
+        max_length=255,
+        help_text="Base URL of Caddy server, e.g. https://czii-onsite.czbiohub.org/ (no scope subdir)",
+    )
+
+    ssh_hostname = models.CharField(max_length=128)
+    ssh_port = models.PositiveIntegerField(default=22)
+
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        app_label = 'stores'
+
+    def __str__(self):
+        return self.cluster_id
+
