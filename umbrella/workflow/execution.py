@@ -27,10 +27,12 @@ from umbrella_logger import logger
 from .agent import RemoteJobSubmitter
 from .context import RunContext
 from .processors import get_processor
+from .views.constants import DEFAULT_CLUSTER_ID
 
 
 class ValidationError(Exception):
     """Raised when parameter validation fails."""
+
     def __init__(self, errors: List[str]):
         self.errors = errors
         super().__init__(f"Validation failed: {'; '.join(errors)}")
@@ -84,8 +86,7 @@ class PipelineExecutor:
             Exception: If job submission fails
         """
         logger.info(
-            f"Executing pipe {pipe_in_plan.pipe.name} "
-            f"for run {proc_run.name} (user: {user})",
+            f"Executing pipe {pipe_in_plan.pipe.name} for run {proc_run.name} (user: {user})",
         )
 
         # 1. Get processor for this pipe's software
@@ -101,12 +102,14 @@ class PipelineExecutor:
         # 2. Validate cluster selection
         if cluster_id:
             # Check if cluster is allowed for this software
-            allowed = software.allowed_clusters if software.allowed_clusters else ['czii', 'bruno']
+            allowed = software.allowed_clusters if software.allowed_clusters else ["czii", "bruno"]
             if cluster_id not in allowed:
-                raise ValidationError([
-                    f"Cluster '{cluster_id}' is not allowed for software '{software.name}'. "
-                    f"Allowed clusters: {', '.join(allowed)}",
-                ])
+                raise ValidationError(
+                    [
+                        f"Cluster '{cluster_id}' is not allowed for software '{software.name}'. "
+                        f"Allowed clusters: {', '.join(allowed)}",
+                    ]
+                )
 
         # 3. Build RunContext with inputs from previous pipes
         context = self._build_run_context(pipe_in_plan, proc_run, user, processor, cluster_id)
@@ -164,13 +167,12 @@ class PipelineExecutor:
             submitter.close()
 
         # 6. Create execution records with het-group metadata if applicable
-        # Add heterogeneous job info to parameters for tracking
+        # Add heterogeneous job info + cluster_id to parameters
         hetjob_info = processor.get_hetjob_info()
+        parameters_with_metadata = parameters.copy()
+        parameters_with_metadata["cluster_id"] = context.cluster_id or DEFAULT_CLUSTER_ID
         if hetjob_info:
-            parameters_with_metadata = parameters.copy()
-            parameters_with_metadata['_hetjob_info'] = hetjob_info
-        else:
-            parameters_with_metadata = parameters
+            parameters_with_metadata["_hetjob_info"] = hetjob_info
 
         pipe_exec = self._create_execution_record(
             pipe_in_plan,
@@ -178,7 +180,7 @@ class PipelineExecutor:
             user,
             job_id,
             parameters_with_metadata,
-            submitter.last_script_path if hasattr(submitter, 'last_script_path') else None,
+            submitter.last_script_path if hasattr(submitter, "last_script_path") else None,
             context.job_name,  # Pass the full job name from context
             script_content,  # Pass the rendered script content for storage
         )
@@ -186,6 +188,7 @@ class PipelineExecutor:
         # 7. Start Django-Q monitoring for status updates
         try:
             from processes.tasks import schedule_pipe_execution_monitoring
+
             schedule_pipe_execution_monitoring(pipe_exec.id, job_id)
             logger.info(f"Started Django-Q monitoring for PipeExecution {pipe_exec.id}")
         except Exception as e:
@@ -194,7 +197,8 @@ class PipelineExecutor:
         # 7b. Start universal job status syncer (uses sacct for accurate timing)
         try:
             from processes.tasks import start_job_status_syncer
-            cluster_id = context.cluster_id or 'czii'
+
+            cluster_id = context.cluster_id or DEFAULT_CLUSTER_ID
             start_job_status_syncer(job_id=job_id, cluster_id=cluster_id)
             logger.info(f"Started job status syncer for job {job_id} on {cluster_id}")
         except Exception as e:
@@ -207,10 +211,10 @@ class PipelineExecutor:
             logger.warning(f"Error in on_job_submit hook: {e}", exc_info=True)
 
         return {
-            'job_id': job_id,
-            'script_path': submitter.last_script_path if hasattr(submitter, 'last_script_path') else None,
-            'status': 'submitted',
-            'pipe_execution_id': pipe_exec.id,
+            "job_id": job_id,
+            "script_path": submitter.last_script_path if hasattr(submitter, "last_script_path") else None,
+            "status": "submitted",
+            "pipe_execution_id": pipe_exec.id,
         }
 
     def _build_run_context(
@@ -218,7 +222,7 @@ class PipelineExecutor:
         pipe_in_plan: PipeInPlan,
         proc_run: ProcRun,
         user: User,
-        processor: 'BaseProcessor',
+        processor: "BaseProcessor",
         cluster_id: Optional[str] = None,
     ) -> RunContext:
         """
@@ -261,8 +265,7 @@ class PipelineExecutor:
                 )
             else:
                 missing_inputs.append(
-                    f"{joint.input_pathtype.static_path.data_type} "
-                    f"from {joint.input_pipe_in_plan.pipe.name}",
+                    f"{joint.input_pathtype.static_path.data_type} from {joint.input_pipe_in_plan.pipe.name}",
                 )
 
         if missing_inputs:
@@ -276,7 +279,7 @@ class PipelineExecutor:
         software = pipe_in_plan.pipe.software
         if not cluster_id:
             # Use software's default_cluster, fallback to 'czii' if not set
-            cluster_id = getattr(software, 'default_cluster', None) or getattr(software, 'cluster', 'czii')
+            cluster_id = getattr(software, "default_cluster", None) or getattr(software, "cluster", "czii")
 
         # Generate job name for SLURM submission
         # Format: {processor_name}_{session_name}_{run_name}_{pipe_name}
@@ -307,7 +310,7 @@ class PipelineExecutor:
             >>> _parse_job_id("Submitted batch job 123456")
             '123456'
         """
-        match = re.search(r'Submitted batch job (\d+)', slurm_output)
+        match = re.search(r"Submitted batch job (\d+)", slurm_output)
         if match:
             return match.group(1)
         return None
@@ -322,7 +325,7 @@ class PipelineExecutor:
         script_path: Optional[str],
         job_name: str,
         script_content: Optional[str] = None,
-    ) -> 'PipeExecution':
+    ) -> "PipeExecution":
         """
         Create PipeExecution record in database and corresponding JobLog for user tracking.
 
@@ -344,7 +347,7 @@ class PipelineExecutor:
         pipe_exec = PipeExecution.objects.create(
             proc_run=proc_run,
             pipe_in_plan=pipe_in_plan,
-            status='submitted',
+            status="submitted",
             job_id=job_id,
             parameters=parameters,
             script_path=script_path,
@@ -411,7 +414,7 @@ class PipelineExecutor:
             input_execution = PipeExecution.objects.filter(
                 proc_run=proc_run,
                 pipe_in_plan=joint.input_pipe_in_plan,
-                status='completed',
+                status="completed",
             ).first()
 
             if not input_execution:

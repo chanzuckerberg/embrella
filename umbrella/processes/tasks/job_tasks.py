@@ -1,10 +1,11 @@
 """
 Django-Q2 async tasks for pipeline execution status monitoring.
 """
-from processes.tasks._setup import *  # noqa: F401,F403 - Django setup
 
 from django.utils import timezone
 from umbrella_logger import logger
+
+from processes.tasks._setup import *  # noqa: F401,F403 - Django setup
 
 
 def check_job_status(job_id, cluster_id):
@@ -20,21 +21,21 @@ def check_job_status(job_id, cluster_id):
     """
     from workflow.views.utils import track_jobs_internal
 
-    active_states = ['PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING']
+    active_states = ["PENDING", "CONFIGURING", "RUNNING", "COMPLETING"]
 
     try:
         jobs_data = track_jobs_internal(cluster_id=cluster_id)
 
-        for job in jobs_data.get('jobs', []):
+        for job in jobs_data.get("jobs", []):
             # SLURM returns 'JOBID' key from squeue output
-            slurm_job_id = str(job.get('JOBID') or job.get('job_id') or '')
+            slurm_job_id = str(job.get("JOBID") or job.get("job_id") or "")
             # Handle hetjob format: "9238+0" should match "9238"
             # Extract base job ID from hetjob format
-            slurm_base_id = slurm_job_id.split('+')[0] if '+' in slurm_job_id else slurm_job_id
-            target_base_id = str(job_id).split('+')[0] if '+' in str(job_id) else str(job_id)
+            slurm_base_id = slurm_job_id.split("+")[0] if "+" in slurm_job_id else slurm_job_id
+            target_base_id = str(job_id).split("+")[0] if "+" in str(job_id) else str(job_id)
 
             if slurm_base_id == target_base_id:
-                state = job.get('ST', job.get('state', '')).upper()
+                state = job.get("ST", job.get("state", "")).upper()
                 is_active = state in active_states
                 logger.info(
                     f"Found job {job_id} (SLURM: {slurm_job_id}) on {cluster_id} cluster "
@@ -74,8 +75,10 @@ def poll_pipe_execution_status(pipe_execution_id):
         pipe_exec = PipeExecution.objects.get(id=pipe_execution_id)
 
         # Get cluster_id from parameters (default to 'czii' for legacy jobs)
-        cluster_id = pipe_exec.parameters.get('cluster_id', 'czii')
-        if cluster_id == 'czii' and 'cluster_id' not in (pipe_exec.parameters or {}):
+        from processes.services.cluster_resolver import cluster_id_from_parameters
+
+        cluster_id = cluster_id_from_parameters(pipe_exec.parameters)
+        if cluster_id == "czii" and "cluster_id" not in (pipe_exec.parameters or {}):
             logger.warning(
                 f"PipeExecution {pipe_execution_id} has no cluster_id in parameters - "
                 f"defaulting to 'czii' (legacy job)",
@@ -86,13 +89,13 @@ def poll_pipe_execution_status(pipe_execution_id):
 
         if not job_active:
             # Job completed - update status and stop polling
-            pipe_exec.status = 'completed'
+            pipe_exec.status = "completed"
             pipe_exec.completed_at = timezone.now()
-            pipe_exec.save(update_fields=['status', 'completed_at'])
+            pipe_exec.save(update_fields=["status", "completed_at"])
 
             # Cancel this scheduled task
             Schedule.objects.filter(
-                func='processes.tasks.poll_pipe_execution_status',
+                func="processes.tasks.poll_pipe_execution_status",
                 args=str(pipe_execution_id),
             ).delete()
 
@@ -102,45 +105,43 @@ def poll_pipe_execution_status(pipe_execution_id):
             )
 
             return {
-                'success': True,
-                'pipe_execution_id': pipe_execution_id,
-                'action': 'completed',
-                'status': 'completed',
-                'message': 'Job completed, polling stopped',
+                "success": True,
+                "pipe_execution_id": pipe_execution_id,
+                "action": "completed",
+                "status": "completed",
+                "message": "Job completed, polling stopped",
             }
 
         # Job still active - update status if needed
-        if pipe_exec.status == 'submitted':
+        if pipe_exec.status == "submitted":
             # First time we see it running
-            pipe_exec.status = 'running'
+            pipe_exec.status = "running"
             pipe_exec.started_at = timezone.now()
-            pipe_exec.save(update_fields=['status', 'started_at'])
+            pipe_exec.save(update_fields=["status", "started_at"])
 
             logger.info(
-                f"PipeExecution {pipe_execution_id} transitioned to running. "
-                f"Job {pipe_exec.job_id} is active.",
+                f"PipeExecution {pipe_execution_id} transitioned to running. Job {pipe_exec.job_id} is active.",
             )
 
             return {
-                'success': True,
-                'pipe_execution_id': pipe_execution_id,
-                'action': 'status_updated',
-                'status': 'running',
-                'message': 'Status updated to running',
+                "success": True,
+                "pipe_execution_id": pipe_execution_id,
+                "action": "status_updated",
+                "status": "running",
+                "message": "Status updated to running",
             }
 
         # Job still running, no status change needed
         logger.debug(
-            f"PipeExecution {pipe_execution_id} still running. "
-            f"Job {pipe_exec.job_id} is active.",
+            f"PipeExecution {pipe_execution_id} still running. Job {pipe_exec.job_id} is active.",
         )
 
         return {
-            'success': True,
-            'pipe_execution_id': pipe_execution_id,
-            'action': 'no_change',
-            'status': pipe_exec.status,
-            'message': 'Job still running',
+            "success": True,
+            "pipe_execution_id": pipe_execution_id,
+            "action": "no_change",
+            "status": pipe_exec.status,
+            "message": "Job still running",
         }
 
     except PipeExecution.DoesNotExist:
@@ -148,14 +149,14 @@ def poll_pipe_execution_status(pipe_execution_id):
 
         # Cancel scheduled task for non-existent execution
         Schedule.objects.filter(
-            func='processes.tasks.poll_pipe_execution_status',
+            func="processes.tasks.poll_pipe_execution_status",
             args=str(pipe_execution_id),
         ).delete()
 
         return {
-            'success': False,
-            'pipe_execution_id': pipe_execution_id,
-            'error': 'PipeExecution not found',
+            "success": False,
+            "pipe_execution_id": pipe_execution_id,
+            "error": "PipeExecution not found",
         }
 
     except Exception as e:
@@ -163,9 +164,9 @@ def poll_pipe_execution_status(pipe_execution_id):
             f"Error polling status for PipeExecution {pipe_execution_id}: {str(e)}",
         )
         return {
-            'success': False,
-            'pipe_execution_id': pipe_execution_id,
-            'error': str(e),
+            "success": False,
+            "pipe_execution_id": pipe_execution_id,
+            "error": str(e),
         }
 
 
@@ -188,17 +189,16 @@ def schedule_pipe_execution_monitoring(pipe_execution_id, job_id):
     from django_q.tasks import schedule
 
     schedule_id = schedule(
-        'processes.tasks.poll_pipe_execution_status',
+        "processes.tasks.poll_pipe_execution_status",
         pipe_execution_id,
         schedule_type=Schedule.MINUTES,
         minutes=5,
         repeats=-1,  # Indefinitely until cancelled
-        task_name=f'poll_pipe_exec_{pipe_execution_id}',
+        task_name=f"poll_pipe_exec_{pipe_execution_id}",
     )
 
     logger.info(
-        f"Scheduled monitoring for PipeExecution {pipe_execution_id}, "
-        f"job {job_id}. Schedule ID: {schedule_id}",
+        f"Scheduled monitoring for PipeExecution {pipe_execution_id}, job {job_id}. Schedule ID: {schedule_id}",
     )
 
     return schedule_id

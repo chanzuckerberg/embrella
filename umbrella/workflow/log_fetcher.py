@@ -8,6 +8,7 @@ This module handles:
 - Truncating large logs (>1MB)
 - Updating PipeExecution records with log content
 """
+
 import re
 from typing import Dict, Optional, Tuple
 
@@ -49,14 +50,14 @@ def parse_log_paths_from_script(script_content: str, job_id: str) -> Tuple[Optio
         return stdout_path, stderr_path
 
     # Match #SBATCH -o <path>
-    stdout_match = re.search(r'#SBATCH\s+-o\s+(\S+)', script_content)
+    stdout_match = re.search(r"#SBATCH\s+-o\s+(\S+)", script_content)
     if stdout_match:
-        stdout_path = stdout_match.group(1).replace('%j', job_id)
+        stdout_path = stdout_match.group(1).replace("%j", job_id)
 
     # Match #SBATCH -e <path>
-    stderr_match = re.search(r'#SBATCH\s+-e\s+(\S+)', script_content)
+    stderr_match = re.search(r"#SBATCH\s+-e\s+(\S+)", script_content)
     if stderr_match:
-        stderr_path = stderr_match.group(1).replace('%j', job_id)
+        stderr_path = stderr_match.group(1).replace("%j", job_id)
 
     return stdout_path, stderr_path
 
@@ -76,22 +77,21 @@ def _read_file_content(sftp, remote_path: str, max_size: int = MAX_LOG_SIZE) -> 
 
     if file_size <= max_size:
         # Small file, read normally
-        with sftp.file(remote_path, 'r') as remote_file:
+        with sftp.file(remote_path, "r") as remote_file:
             content = remote_file.read()
-            return content.decode('utf-8', errors='replace')
+            return content.decode("utf-8", errors="replace")
     else:
         # Large file, read only the tail
-        with sftp.file(remote_path, 'r') as remote_file:
+        with sftp.file(remote_path, "r") as remote_file:
             # Seek to near the end
             offset = file_size - TRUNCATE_KEEP_SIZE
             remote_file.seek(offset)
             content = remote_file.read()
-            decoded_content = content.decode('utf-8', errors='replace')
+            decoded_content = content.decode("utf-8", errors="replace")
 
             # Add truncation notice
             truncation_notice = (
-                f"[LOG TRUNCATED - Original size: {file_size} bytes, "
-                f"showing last {TRUNCATE_KEEP_SIZE} bytes]\n\n"
+                f"[LOG TRUNCATED - Original size: {file_size} bytes, showing last {TRUNCATE_KEEP_SIZE} bytes]\n\n"
             )
             return truncation_notice + decoded_content
 
@@ -120,7 +120,7 @@ def read_remote_file_with_truncation(sftp, remote_path: str, max_size: int = MAX
         # For hetjobs: SLURM %j expands to "jobid+component" (e.g., 9242+0)
         # Try the hetjob component 0 path if base path not found
         # Pattern: JOB9242_aretomo3.out -> JOB9242+0_aretomo3.out
-        hetjob_path = re.sub(r'(JOB\d+)([_.])', r'\1+0\2', remote_path)
+        hetjob_path = re.sub(r"(JOB\d+)([_.])", r"\1+0\2", remote_path)
         if hetjob_path != remote_path:
             try:
                 logger.info(f"Trying hetjob path: {hetjob_path}")
@@ -158,33 +158,38 @@ def fetch_job_logs(execution) -> Dict[str, any]:
     """
 
     result = {
-        'success': False,
-        'stdout_fetched': False,
-        'stderr_fetched': False,
-        'error': None,
+        "success": False,
+        "stdout_fetched": False,
+        "stderr_fetched": False,
+        "error": None,
     }
 
     # Validate execution
     if not execution.job_id:
-        result['error'] = "No job_id found in execution"
-        execution.log_fetch_error = result['error']
+        result["error"] = "No job_id found in execution"
+        execution.log_fetch_error = result["error"]
         execution.logs_fetched_at = django_timezone.now()
-        execution.save(update_fields=['log_fetch_error', 'logs_fetched_at'])
+        execution.save(update_fields=["log_fetch_error", "logs_fetched_at"])
         return result
 
     if not execution.script_content:
-        result['error'] = "No script_content found in execution"
-        execution.log_fetch_error = result['error']
+        result["error"] = "No script_content found in execution"
+        execution.log_fetch_error = result["error"]
         execution.logs_fetched_at = django_timezone.now()
-        execution.save(update_fields=['log_fetch_error', 'logs_fetched_at'])
+        execution.save(update_fields=["log_fetch_error", "logs_fetched_at"])
         return result
 
-    # Determine cluster
-    cluster_id = execution.parameters.get('cluster_id')
+    # Determine cluster: prefer the stamp on parameters, else fall back to the software default.
+    from processes.services.cluster_resolver import cluster_id_from_parameters
+
+    from workflow.views.constants import DEFAULT_CLUSTER_ID
+
+    cluster_id = cluster_id_from_parameters(execution.parameters, default=None)
     if not cluster_id:
-        # Fallback to software's default cluster
         software = execution.pipe_in_plan.pipe.software
-        cluster_id = getattr(software, 'default_cluster', None) or getattr(software, 'cluster', 'czii')
+        cluster_id = (
+            getattr(software, "default_cluster", None) or getattr(software, "cluster", None) or DEFAULT_CLUSTER_ID
+        )
 
     logger.info(f"Fetching logs for job {execution.job_id} from cluster {cluster_id}")
 
@@ -195,10 +200,10 @@ def fetch_job_logs(execution) -> Dict[str, any]:
     )
 
     if not stdout_path and not stderr_path:
-        result['error'] = "Could not parse log file paths from script_content"
-        execution.log_fetch_error = result['error']
+        result["error"] = "Could not parse log file paths from script_content"
+        execution.log_fetch_error = result["error"]
         execution.logs_fetched_at = django_timezone.now()
-        execution.save(update_fields=['log_fetch_error', 'logs_fetched_at'])
+        execution.save(update_fields=["log_fetch_error", "logs_fetched_at"])
         return result
 
     # Connect to cluster and fetch logs
@@ -212,30 +217,35 @@ def fetch_job_logs(execution) -> Dict[str, any]:
         if stdout_path:
             logger.info(f"Fetching stdout from {stdout_path}")
             execution.stdout_log = read_remote_file_with_truncation(sftp, stdout_path)
-            result['stdout_fetched'] = True
+            result["stdout_fetched"] = True
 
         # Fetch stderr
         if stderr_path:
             logger.info(f"Fetching stderr from {stderr_path}")
             execution.stderr_log = read_remote_file_with_truncation(sftp, stderr_path)
-            result['stderr_fetched'] = True
+            result["stderr_fetched"] = True
 
-        result['success'] = result['stdout_fetched'] or result['stderr_fetched']
+        result["success"] = result["stdout_fetched"] or result["stderr_fetched"]
         execution.logs_fetched_at = django_timezone.now()
         execution.log_fetch_error = None
-        execution.save(update_fields=[
-            'stdout_log', 'stderr_log', 'logs_fetched_at', 'log_fetch_error',
-        ])
+        execution.save(
+            update_fields=[
+                "stdout_log",
+                "stderr_log",
+                "logs_fetched_at",
+                "log_fetch_error",
+            ]
+        )
 
         logger.info(f"Successfully fetched logs for job {execution.job_id}")
 
     except Exception as e:
         error_msg = f"Error fetching logs: {str(e)}"
         logger.error(f"Error fetching logs for job {execution.job_id}: {e}")
-        result['error'] = error_msg
+        result["error"] = error_msg
         execution.log_fetch_error = error_msg
         execution.logs_fetched_at = django_timezone.now()
-        execution.save(update_fields=['log_fetch_error', 'logs_fetched_at'])
+        execution.save(update_fields=["log_fetch_error", "logs_fetched_at"])
 
     finally:
         if sftp:
