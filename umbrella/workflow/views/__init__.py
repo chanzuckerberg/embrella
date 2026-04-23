@@ -20,36 +20,6 @@ LEGACY (old patterns - see workflow.legacy):
 - dashboard_views.py: Dashboard template rendering (LEGACY)
 """
 
-# Import and re-export constants
-from .constants import (
-    ARETOMO3_BASIC_TEMPLATE_PATH,
-    ARETOMO3_PROCESSING_PATH,
-    ARETOMO3_SCRIPT_PATH,
-    ARETOMO3_TEMPLATE_PATH,
-    BASE_DIR,
-    CELERY_BEAT_SCHEDULE,
-    COPICK_ADD_OBJECT_TEMPLATE_PATH,
-    COPICK_IMPORT_TOMO_TEMPLATE_PATH,
-    COPICK_SCRIPT_DIR,
-    COPICK_TEMPLATE_PATH,
-    DATA_COLLECTION_PATH,
-    DENOISET_SCRIPT_PATH,
-    DENOISET_TEMPLATE_PATH,
-    ENVIRONMENT,
-    HOST,
-    HOST_BRUNO,
-    HOSTNAME,
-    KEYFILE,
-    KEYS,
-    LABEL_TO_SLURM_STATE,
-    METADATA_SUMMARY_PATH,
-    PORT,
-    SLURM_STATE_TO_LABEL,
-    STATUS_CHECKER_SCRIPT_PATH,
-    STATUS_CHECKER_TEMPLATE_PATH,
-    USERNAME,
-)
-
 # Import and re-export LEGACY views (for backward compatibility)
 # These use old patterns - see workflow.legacy for details
 from workflow.legacy.views.aretomo3_views import get_aretomo3_json, run_aretomo3, run_aretomo3_advanced
@@ -59,13 +29,6 @@ from workflow.legacy.views.copick_views import (
     run_create_copick,
     run_import_tomogram_copick,
 )
-
-# Import modern copick-specific views
-from workflow.processors.copick.views import (
-    get_copick_runs,
-    get_template_maps as get_copick_template_maps,
-)
-
 from workflow.legacy.views.dashboard_views import (
     dashboard,
     get_msi_params_list,
@@ -87,6 +50,42 @@ from workflow.legacy.views.template_views import (
     custom_workflow_track,
     cutom_run_create_and_import_copick_page,
     cutom_run_denoise_workflow_page,
+)
+
+# Import modern copick-specific views
+from workflow.processors.copick.views import (
+    get_copick_runs,
+)
+from workflow.processors.copick.views import (
+    get_template_maps as get_copick_template_maps,
+)
+
+# Import and re-export constants
+from .constants import (
+    ARETOMO3_BASIC_TEMPLATE_PATH,
+    ARETOMO3_SCRIPT_PATH,
+    ARETOMO3_TEMPLATE_PATH,
+    BASE_DIR,
+    CELERY_BEAT_SCHEDULE,
+    COPICK_ADD_OBJECT_TEMPLATE_PATH,
+    COPICK_IMPORT_TOMO_TEMPLATE_PATH,
+    COPICK_SCRIPT_DIR,
+    COPICK_TEMPLATE_PATH,
+    DATA_COLLECTION_PATH,
+    DEFAULT_CLUSTER_ID,
+    DENOISET_SCRIPT_PATH,
+    DENOISET_TEMPLATE_PATH,
+    ENVIRONMENT,
+    HOST,
+    HOST_BRUNO,
+    KEYFILE,
+    KEYS,
+    LABEL_TO_SLURM_STATE,
+    PORT,
+    SLURM_STATE_TO_LABEL,
+    STATUS_CHECKER_SCRIPT_PATH,
+    STATUS_CHECKER_TEMPLATE_PATH,
+    USERNAME,
 )
 
 # Import and re-export execution API views
@@ -138,7 +137,6 @@ from .utils import (
 __all__ = [
     # Constants
     "ARETOMO3_BASIC_TEMPLATE_PATH",
-    "ARETOMO3_PROCESSING_PATH",
     "ARETOMO3_SCRIPT_PATH",
     "ARETOMO3_TEMPLATE_PATH",
     "BASE_DIR",
@@ -148,16 +146,15 @@ __all__ = [
     "COPICK_SCRIPT_DIR",
     "COPICK_TEMPLATE_PATH",
     "DATA_COLLECTION_PATH",
+    "DEFAULT_CLUSTER_ID",
     "DENOISET_SCRIPT_PATH",
     "DENOISET_TEMPLATE_PATH",
     "ENVIRONMENT",
     "HOST",
     "HOST_BRUNO",
-    "HOSTNAME",
     "KEYFILE",
     "KEYS",
     "LABEL_TO_SLURM_STATE",
-    "METADATA_SUMMARY_PATH",
     "PORT",
     "SLURM_STATE_TO_LABEL",
     "STATUS_CHECKER_SCRIPT_PATH",

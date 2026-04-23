@@ -74,10 +74,7 @@ ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
 DEFAULT_CLUSTER_ID = "czii"
 
 # Remote Paths
-METADATA_SUMMARY_PATH = "/hpc/projects/group.czii/krios1.processing/aretomo3/"
 DATA_COLLECTION_PATH = "/hpc/instruments/czii.krios1/OffloadData/"
-HOSTNAME = "https://czii-onsite.czbiohub.org/krios1.processing/aretomo3/"
-ARETOMO3_PROCESSING_PATH = "/hpc/projects/group.czii/krios1.processing/aretomo3/"
 
 # SLURM Status Mappings
 SLURM_STATE_TO_LABEL = {
