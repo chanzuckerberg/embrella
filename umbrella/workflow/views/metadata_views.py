@@ -215,7 +215,14 @@ def get_metadata_viz_data(request):
             thumb_kind="ctf_thumbnails",
         )
 
-        merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge="continue")
+        merged_df = preprocess_csv(
+            metrics_path,
+            timestamp_path,
+            thumbnail_base_url,
+            ctf_base_url,
+            merge="continue",
+            cluster_id=cluster.cluster_id,
+        )
 
         # Create a persistent SSH connection with optimized parameters
         ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster.cluster_id)

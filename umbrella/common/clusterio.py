@@ -113,97 +113,29 @@ def get_cluster_ssh_connection(cluster_id, auth=None):
     return ssh
 
 
-def ssh_connect(remote_path, shell=False):
-    # Create an SSH client
-
-    ssh = get_cluster_ssh_connection(cluster_id="czii")
-
-    # Open an SFTP session
-    sftp = ssh.open_sftp()
-
-    # Open the remote file
-    with sftp.file(remote_path, "r") as remote_file:
-        file_contents = remote_file.read()
-
-    # Close the SFTP session and SSH client
-    sftp.close()
-    ssh.close()
-    return file_contents.decode("utf-8")
-
-
-def ssh_connect_bruno(remote_path, shell=False):
-    # Create an SSH client
-    ssh = get_cluster_ssh_connection(cluster_id="bruno", auth=_get_cached_auth())
-
-    # Open an SFTP session
-    sftp = ssh.open_sftp()
-
-    # Open the remote file
-    with sftp.file(remote_path, "r") as remote_file:
-        file_contents = remote_file.read()
-
-    # Close the SFTP session and SSH client
-    sftp.close()
-    ssh.close()
-    return file_contents.decode("utf-8")
-
-
-def ssh_file_exists(remote_path):
-    """
-    Check if a file exists on the remote server.
+def read_remote_file(cluster_id, remote_path, auth=None):
+    """Read a file from a cluster over SFTP and return its UTF-8 content.
 
     Args:
-        remote_path: The path to the file on the remote server
+        cluster_id: Target cluster (e.g., 'czii', 'bruno').
+        remote_path: Absolute path on the cluster filesystem.
+        auth: Optional auth dict; defaults to cached service-user auth.
 
     Returns:
-        bool: True if the file exists, False otherwise
+        File content as a UTF-8 string.
+
+    Raises:
+        FileNotFoundError: if the remote path does not exist.
     """
-    # Create an SSH client
-    ssh = get_cluster_ssh_connection(cluster_id="czii")
-
-    # Open an SFTP session
-    sftp = ssh.open_sftp()
-
+    ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
     try:
-        # Try to get file attributes
-        sftp.stat(remote_path)
-        return True
-    except FileNotFoundError:
-        return False
-    except Exception as e:
-        logger.error(f"Error checking if file exists: {str(e)}")
-        raise
+        sftp = ssh.open_sftp()
+        try:
+            with sftp.file(remote_path, "r") as remote_file:
+                return remote_file.read().decode("utf-8")
+        finally:
+            sftp.close()
     finally:
-        # Close the SFTP session and SSH client
-        sftp.close()
-        ssh.close()
-
-
-def ssh_list_directory(remote_dir):
-    """
-    List the contents of a directory on the remote server.
-
-    Args:
-        remote_dir: The path to the directory on the remote server
-
-    Returns:
-        list: A list of file and directory names in the directory
-    """
-    # Create an SSH client
-    ssh = get_cluster_ssh_connection(cluster_id="czii")
-
-    # Open an SFTP session
-    sftp = ssh.open_sftp()
-
-    try:
-        # List the directory contents
-        return sftp.listdir(remote_dir)
-    except Exception as e:
-        logger.error(f"Error listing directory: {str(e)}")
-        raise
-    finally:
-        # Close the SFTP session and SSH client
-        sftp.close()
         ssh.close()
 
 
