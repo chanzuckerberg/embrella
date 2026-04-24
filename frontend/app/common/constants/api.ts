@@ -72,8 +72,8 @@ export enum API {
   GRID_DETAIL = '/cryo_grids/v1/grids/grid_id/',
 
   // Grid Logging
-  GRID_LOGGING_USERS = '/api/list/all/users',
-  GRID_LOGGING_PUCKS = '/api/list/pucks',
+  GRID_LOGGING_USERS = '/api/list/all/users/',
+  GRID_LOGGING_PUCKS = '/api/list/pucks/',
   // GRID_LOGGING_PUCK_BYUSER = '/api/list/pucks/?user_id=',
   GRID_LOGGING_PUCK_SLOTINFO = '/api/list/pucks/puck_id/slots/',
   GRID_LOGGING_PUCK_GRIDBOXINFO = '/api/list/pucks/puck_id/grid-box/position_in_puck/',
@@ -93,6 +93,7 @@ export enum API {
   PUCKS_VIEW_FILTERS_LIST = '/cryo_grids/v1/pucks/filterlist/',
   PUCKS_VIEW_SEARCH_SUGGESTIONS = '/cryo_grids/v1/pucks/search_suggestions/',
   GRID_INVENTORY_COUNTS = '/cryo_grids/v1/counts/',
+  GRID_BOX_AVAILABLE_POSITIONS = '/cryo_grids/v1/grid-boxes/available_positions/',
 
   // Projects
   PROJECTS_LIST = '/projects/project_list/',
@@ -119,6 +120,7 @@ export enum POST_API {
   UPDATE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/update/',
   MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
   MOVE_GRID = '/cryo_grids/v1/grids/grid_id/move/',
+  DUPLICATE_GRID = '/cryo_grids/v1/grids/grid_id/duplicate/',
   UPDATE_GRID = '/cryo_grids/v1/grids/grid_id/update/',
   CLIP_ALL_GRIDS = '/cryo_grids/v1/grids/clip-all-in-box/grid_box_id/',
   UPDATE_GRID_LABELS = '/cryo_grids/v1/grids/grid_id/update-labels/',

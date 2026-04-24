@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
+import { Box, TextField, MenuItem, FormControl, InputLabel, Select, Alert } from '@mui/material';
 import { UserList } from '@app/common/types/gridLogging';
 import {
   useCreateGridBox,
@@ -96,7 +96,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
     const result = await createGridBox({
       puck_id: Number(formData.puck),
       puckName: formData.puckName,
-      gridBoxName: `Box-${formData.gridBoxName}`,
+      gridBoxName: formData.gridBoxName,
       color: formData.color,
       numbering: formData.numbering,
       position_in_puck: Number(formData.positionInPuck),
@@ -141,17 +141,9 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
         placeholder="Grid Box Name [Ex. Puck5Slot4Pos2]"
         value={formData.gridBoxName}
         onChange={(e) => handleInputChange('gridBoxName', e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start" sx={{ color: 'rgba(0, 0, 0, 0.87)', mr: -4 }}>
-              Box-
-            </InputAdornment>
-          ),
-        }}
         sx={{
           ...disabledTextFieldStyles,
           flex: 1,
-          '& .MuiInputBase-input': { paddingLeft: 0 },
         }}
       />
       <TextField

@@ -5,10 +5,11 @@ import Image from 'next/image';
 import { PuckList, UserList } from '@app/common/types/gridLogging';
 import { Card, CardContent, CardHeader, Typography, Box, CircularProgress, IconButton } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { DJANGO_URL } from '@app/common/constants/api';
 import { useGridDetails } from '@app/common/hooks/useGridLogging/details/useGridDetails';
 import styles from '../GridLogging.module.css';
 import { MoveGrid } from './MoveGrid';
+import { DuplicateGrid } from './DuplicateGrid';
+import { TrashGridDialog } from './TrashGridDialog';
 import { GridFormFields } from './GridFormFields';
 import { useGridForm } from './useGridForm';
 import { mapGridDetailsToFormData } from './utils';
@@ -26,6 +27,7 @@ interface GridDetailsProps {
     newGridBoxId: number,
     newPositionInBox: number
   ) => void;
+  onGridMutated?: () => void;
 }
 
 export const GridDetails: React.FC<GridDetailsProps> = ({
@@ -36,6 +38,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   selectedUser,
   onGridDetailsRefetchReady,
   onMoveGridSuccess,
+  onGridMutated,
 }) => {
   const { gridDetails, isSuccess, refetch } = useGridDetails(selectedGridId);
 
@@ -43,6 +46,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
     gridId: selectedGridId,
     gridDetails,
     refetch,
+    onGridUpdated: onGridMutated,
   });
 
   useEffect(() => {
@@ -55,29 +59,6 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
   if (!selectedPuck || !selectedSlot || !selectedGrid) {
     return null;
   }
-
-  const handleDuplicateGrid = () => {
-    const prefillParams = new URLSearchParams();
-
-    if (selectedUser?.id) {
-      prefillParams.append('return_user_id', selectedUser.id.toString());
-    }
-    if (selectedPuck?.id) {
-      prefillParams.append('return_puck_id', selectedPuck.id.toString());
-    }
-    if (selectedSlot !== null) {
-      prefillParams.append('return_slot_position', selectedSlot.toString());
-    }
-    if (selectedGrid !== null) {
-      prefillParams.append('return_grid_position', selectedGrid.toString());
-    }
-    if (selectedGridId !== null) {
-      prefillParams.append('return_grid_id', selectedGridId.toString());
-    }
-
-    const adminUrl = `${DJANGO_URL}/cryo_grids/grid_detail/${selectedGridId}/?${prefillParams.toString()}`;
-    window.location.href = adminUrl;
-  };
 
   // Show loading state
   if (!isSuccess) {
@@ -141,7 +122,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               />
             </Box>
 
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
               {/* Edit/Save/Cancel Icons header */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ color: 'primary.main' }}>
@@ -220,7 +201,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 <Button
                   sdsType="primary"
                   sdsStyle="rounded"
-                  onClick={handleDuplicateGrid}
+                  onClick={() => form.setDuplicateGridDialogOpen(true)}
                   sx={{ minWidth: 120, fontStyle: 'italic' }}
                   startIcon={<Icon sdsIcon="Copy" sdsSize="s" />}
                 >
@@ -241,6 +222,27 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
         gridId={selectedGridId}
         selectedUser={selectedUser}
         onSuccess={onMoveGridSuccess}
+      />
+      <DuplicateGrid
+        open={form.duplicateGridDialogOpen}
+        onClose={() => form.setDuplicateGridDialogOpen(false)}
+        gridDetails={gridDetails}
+        gridId={selectedGridId}
+        initialLocation={{
+          caneId: selectedPuck?.cane ?? null,
+          puckId: selectedPuck?.id ?? null,
+          slotPosition: selectedSlot ?? null,
+        }}
+        onSuccess={() => {
+          refetch();
+          onGridMutated?.();
+        }}
+      />
+      <TrashGridDialog
+        open={form.trashDialogOpen}
+        onClose={() => form.setTrashDialogOpen(false)}
+        onConfirm={form.confirmTrash}
+        isProcessing={form.isTrashProcessing}
       />
     </>
   );

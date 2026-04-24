@@ -17,13 +17,15 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from processes.models import MsiSession, ProcPlan, ProcRun
+from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from stores.models import Cluster, resolve_review_path
+from tem.models import MsiSession
 from umbrella_logger import logger
 
 from common import clusterio
 from common.clusterio import jsonify
-
 from workflow.agent import Aretomo3
 from workflow.views.constants import (
     ARETOMO3_BASIC_TEMPLATE_PATH,
@@ -38,7 +40,9 @@ from workflow.views.utils import store_log
     methods=["GET"],
     description="Fetches parsed Aretomo3 JSON metadata for a given session and run ID.",
     parameters=[
-        OpenApiParameter(name="session", required=True, type=OpenApiTypes.STR, description="Session name (e.g. 23sep23a)"),
+        OpenApiParameter(
+            name="session", required=True, type=OpenApiTypes.STR, description="Session name (e.g. 23sep23a)"
+        ),
         OpenApiParameter(name="run_id", required=True, type=OpenApiTypes.STR, description="Run ID (e.g. 001)"),
     ],
     responses={
@@ -61,10 +65,32 @@ def get_aretomo3_json(request):
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=400)
 
-    remote_path = f"/hpc/projects/group.czii/krios1.processing/aretomo3/{session_name}/run{run_id}/AreTomo3_Session.json"
+    # ProcRun.name is e.g. "run003"; the legacy frontend passes just "003".
+    run_name = run_id if run_id.startswith("run") else f"run{run_id}"
+
+    cluster_id = request.GET.get("cluster_id") or cluster_id_for_run(session_name, run_name)
 
     try:
-        json_data = clusterio.ssh_connect(remote_path)
+        cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
+    except Cluster.DoesNotExist:
+        return JsonResponse({"error": f"Unknown cluster_id: {cluster_id}"}, status=400)
+
+    try:
+        msi_session = MsiSession.objects.get(name=session_name)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({"error": f"Session not found: {session_name}"}, status=404)
+
+    base_proc_dir = resolve_review_path(
+        "proc_dir",
+        cluster,
+        msi_session=msi_session,
+        workflow="aretomo3",
+        run=run_name,
+    )
+    remote_path = os.path.join(base_proc_dir, "AreTomo3_Session.json")
+
+    try:
+        json_data = clusterio.read_remote_file(cluster.cluster_id, remote_path)
         full_data = jsonify(json_data)
 
         # Extract version and gain
@@ -377,7 +403,8 @@ def run_aretomo3(request):
         session_name_pattern = re.compile(r"^\d{2}[a-z]{3}\d{2}[a-z]$")
         if not session_name_pattern.match(session_name):
             return JsonResponse(
-                {"error": "Invalid session_name format. Please check the session name: 422"}, status=422,
+                {"error": "Invalid session_name format. Please check the session name: 422"},
+                status=422,
             )
 
         # Check if run number already exists in the database
@@ -447,7 +474,10 @@ def run_aretomo3(request):
             # Trigger the AreTomo3 syncer script
             try:
                 syncer_script_path = os.path.join(
-                    os.path.dirname(os.path.dirname(__file__)), "processes", "scripts", "aretomo3_syncer.py",
+                    os.path.dirname(os.path.dirname(__file__)),
+                    "processes",
+                    "scripts",
+                    "aretomo3_syncer.py",
                 )
                 # Run the syncer once with job tracking
                 subprocess.Popen(

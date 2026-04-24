@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, TextField } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
 import { Device, UserList, FreezingSessionFormData, ExternalResource } from '@app/common/types/gridLogging';
@@ -122,65 +122,20 @@ export const AddFreezingSessionDialog: React.FC<{
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <FormControl required sx={{ flex: 1 }}>
-              <InputLabel id="user-label">User</InputLabel>
-              <Select
-                labelId="user-label"
-                value={formData.user}
-                onChange={(e) => handleInputChange('user', e.target.value)}
-                label="User"
-                sx={disabledTextFieldStyles}
-                MenuProps={{
-                  PaperProps: {
-                    style: {
-                      maxHeight: 180,
-                    },
-                  },
-                }}
-              >
-                {users.length === 0 ? (
-                  <MenuItem value="" disabled>
-                    No users available
-                  </MenuItem>
-                ) : (
-                  users.map((user) => (
-                    <MenuItem key={user.id} value={user.id}>
-                      {user.full_name}
-                    </MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
-
-            <FormControl required sx={{ flex: 1 }}>
-              <InputLabel id="device-label">Device</InputLabel>
-              <Select
-                labelId="device-label"
-                value={formData.device}
-                onChange={(e) => handleInputChange('device', e.target.value)}
-                label="Device"
-                sx={disabledTextFieldStyles}
-                MenuProps={{
-                  PaperProps: {
-                    style: {
-                      maxHeight: 180,
-                    },
-                  },
-                }}
-              >
-                {devices.length === 0 ? (
-                  <MenuItem value="" disabled>
-                    No devices available
-                  </MenuItem>
-                ) : (
-                  devices.map((device) => (
-                    <MenuItem key={device.id} value={device.id}>
-                      {device.name}
-                    </MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
+            <FormFieldWithAdd
+              label="User"
+              required
+              value={formData.user}
+              onChange={(value) => handleInputChange('user', value)}
+              options={users.map((user) => ({ value: String(user.id), label: user.full_name }))}
+            />
+            <FormFieldWithAdd
+              label="Device"
+              required
+              value={formData.device}
+              onChange={(value) => handleInputChange('device', value)}
+              options={devices.map((device) => ({ value: String(device.id), label: device.name }))}
+            />
           </Box>
           <DateTimePicker
             label="Freezing Session Date"

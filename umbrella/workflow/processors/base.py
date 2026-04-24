@@ -475,6 +475,7 @@ class BaseProcessor(ABC):
         Example for AreTomo3:
             /hpc/projects/group.czii/krios1.processing/aretomo3
         """
+        # TODO: utilize path types from db instead of hard-coding
         # Use the symlinked path (without group.czii) for backward compatibility
         return f"/hpc/projects/group.czii/krios1.processing/{self.name}"
 

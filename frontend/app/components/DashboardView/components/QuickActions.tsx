@@ -28,7 +28,7 @@ export const QuickActions = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', gap: 2, pb: 5 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, pb: 5 }}>
         {QUICK_ACTIONS.map((action) => (
           <Button
             key={action.href}
@@ -36,7 +36,7 @@ export const QuickActions = () => {
             sdsStyle="rounded"
             startIcon={action.icon}
             onClick={() => router.push(action.href)}
-            style={{ flex: 1 }}
+            style={{ flex: '1 1 auto', minWidth: '140px' }}
           >
             {action.label}
           </Button>

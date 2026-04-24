@@ -4,12 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { Box, TextField, Alert } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
-import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { AddSampleDialog } from './AddSampleDialog';
-import { useSampleList, useCreateSpecimen } from '@app/common/hooks/useGridLogging';
+import { SamplesAutocomplete } from './SamplesAutocomplete';
+import { Sample } from '@app/common/types/gridLogging';
+import { useCreateSpecimen, useSampleList } from '@app/common/hooks/useGridLogging';
 
 interface SpecimenFormData {
-  sampleIds: number[];
+  samples: Sample[];
   notesPage: string;
   notes: string;
 }
@@ -20,16 +21,17 @@ interface AddSpecimenDialogProps {
   onSave?: (specimenId: number) => void;
 }
 
-export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onClose, onSave }) => {
-  const [formData, setFormData] = useState<SpecimenFormData>({
-    sampleIds: [],
-    notesPage: '',
-    notes: '',
-  });
+const INITIAL_FORM: SpecimenFormData = {
+  samples: [],
+  notesPage: '',
+  notes: '',
+};
 
+export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onClose, onSave }) => {
+  const [formData, setFormData] = useState<SpecimenFormData>(INITIAL_FORM);
   const [addSampleDialogOpen, setAddSampleDialogOpen] = useState(false);
-  const { transformedSamples, refetch } = useSampleList();
   const { createSpecimen, isCreating, error, clearError } = useCreateSpecimen();
+  const { refetch: refetchSamples } = useSampleList();
 
   useEffect(() => {
     if (!open) {
@@ -37,55 +39,34 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
     }
   }, [open, clearError]);
 
-  const handleSampleChange = (value: string) => {
-    const sampleId = parseInt(value);
-    if (!isNaN(sampleId)) {
-      setFormData((prev) => ({
-        ...prev,
-        sampleIds: [sampleId],
-      }));
-    }
-  };
-
-  const handleAddSample = (sampleId: number, _sampleName: string) => {
-    // Refresh the samples list to include the newly created sample
-    refetch?.();
-    // Auto-select the newly created sample
-    setFormData((prev) => ({
-      ...prev,
-      sampleIds: [sampleId],
-    }));
+  const handleAddSample = (sampleId: number, sampleName: string) => {
+    refetchSamples?.();
+    setFormData((prev) =>
+      prev.samples.some((s) => s.id === sampleId)
+        ? prev
+        : { ...prev, samples: [...prev.samples, { id: sampleId, name: sampleName, ontology: '' }] }
+    );
   };
 
   const handleSave = async () => {
-    if (formData.sampleIds.length > 0) {
-      const result = await createSpecimen({
-        sample_ids: formData.sampleIds,
-        notes: formData.notes.trim() || undefined,
-        notes_page: formData.notesPage.trim() ? parseInt(formData.notesPage) : undefined,
-      });
+    if (formData.samples.length === 0) return;
+    const result = await createSpecimen({
+      sample_ids: formData.samples.map((s) => s.id),
+      notes: formData.notes.trim() || undefined,
+      notes_page: formData.notesPage.trim() ? parseInt(formData.notesPage) : undefined,
+    });
 
-      if (result) {
-        if (onSave) {
-          onSave(result.specimen.id);
-        }
-        setFormData({
-          sampleIds: [],
-          notesPage: '',
-          notes: '',
-        });
-        onClose();
+    if (result) {
+      if (onSave) {
+        onSave(result.specimen.id);
       }
+      setFormData(INITIAL_FORM);
+      onClose();
     }
   };
 
   const handleClose = () => {
-    // Reset form on close
-    setFormData({
-      sampleIds: [],
-      notesPage: '',
-      notes: '',
-    });
+    setFormData(INITIAL_FORM);
     clearError();
     onClose();
   };
@@ -97,7 +78,7 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
         onClose={handleClose}
         title="Add New Specimen"
         onSave={handleSave}
-        disabled={formData.sampleIds.length === 0 || isCreating}
+        disabled={formData.samples.length === 0 || isCreating}
         saveButtonText={isCreating ? 'Creating...' : 'Save'}
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -106,19 +87,12 @@ export const AddSpecimenDialog: React.FC<AddSpecimenDialogProps> = ({ open, onCl
               {error}
             </Alert>
           )}
-          <label style={{ fontSize: '12px', color: 'grey' }}>Sample Name:Combination of samples on a grid</label>
-          <FormFieldWithAdd
-            label="Sample Name"
-            value={formData.sampleIds[0]?.toString() || ''}
-            onChange={handleSampleChange}
-            onAdd={() => setAddSampleDialogOpen(true)}
-            required
-            options={transformedSamples.map((sample) => ({
-              value: sample.id.toString(),
-              label: sample.label,
-            }))}
-            placeholder="Select or add sample name"
+          <SamplesAutocomplete
+            value={formData.samples}
+            onChange={(samples) => setFormData((prev) => ({ ...prev, samples }))}
+            onAddNew={() => setAddSampleDialogOpen(true)}
             disabled={isCreating}
+            required
           />
 
           <TextField

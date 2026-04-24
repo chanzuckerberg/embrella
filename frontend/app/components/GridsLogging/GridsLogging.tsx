@@ -343,6 +343,10 @@ export const GridsLogging: React.FC = () => {
               selectedUser={selectedUser}
               onGridDetailsRefetchReady={handleGridDetailsRefetchReady}
               onMoveGridSuccess={handleMoveGridSuccess}
+              onGridMutated={() => {
+                if (puckDetailsRefetch) puckDetailsRefetch();
+                if (gridBoxInfoRefetch) gridBoxInfoRefetch();
+              }}
             />
           )}
         </Box>

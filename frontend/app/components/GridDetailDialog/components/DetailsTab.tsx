@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { Box, IconButton, Typography } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { DJANGO_URL } from '@app/common/constants/api';
 import { LabelData } from '@app/components/GridsView/components/LabelEditor/LabelChip';
 import { FreezingSession } from '@app/common/types/gridLogging/entities/freezingSessionList';
 import { Specimen } from '@app/common/types/gridLogging/entities/specimenList';
@@ -14,7 +13,6 @@ import { EditedData, GridFormData } from '@app/components/GridsLogging/Grid/util
 
 interface DetailsTabProps {
   formData: GridFormData;
-  gridId: number;
 
   // Edit mode
   isEditMode: boolean;
@@ -50,7 +48,6 @@ interface DetailsTabProps {
 
 export const DetailsTab: React.FC<DetailsTabProps> = ({
   formData,
-  gridId,
   isEditMode,
   editedData,
   onEditClick,
@@ -132,7 +129,7 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
       projects={projects}
     />
 
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+    <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 2 }}>
       <Button
         sdsType="primary"
         sdsStyle="rounded"
@@ -142,17 +139,6 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
         sx={{ minWidth: 120, fontStyle: 'italic' }}
       >
         Move Grid
-      </Button>
-      <Button
-        sdsType="primary"
-        sdsStyle="rounded"
-        onClick={() => {
-          window.location.href = `${DJANGO_URL}/cryo_grids/grid_detail/${gridId}/`;
-        }}
-        sx={{ minWidth: 120, fontStyle: 'italic' }}
-        startIcon={<Icon sdsIcon="Copy" sdsSize="s" />}
-      >
-        Duplicate Grid
       </Button>
     </Box>
   </>

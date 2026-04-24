@@ -15,8 +15,6 @@ import { HISTORICAL_JOB_FILTER_CONFIGS } from '../constants/filters';
 import { JobLogsModal } from '../../monitor/components/JobLogsModal';
 import { API } from '@app/common/constants/api';
 
-const CLUSTER_ID = 'czii';
-
 export const HistoricalJobsView: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -103,7 +101,7 @@ export const HistoricalJobsView: React.FC = () => {
         <Sidebar>
           <EntityTableFilters
             entityFilterConfigs={HISTORICAL_JOB_FILTER_CONFIGS}
-            entityFilterListApi={`${API.JOBS_FILTERLIST}?cluster_id=${CLUSTER_ID}` as API}
+            entityFilterListApi={API.JOBS_FILTERLIST}
           />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 2 }}>
             <TextField
@@ -136,7 +134,7 @@ export const HistoricalJobsView: React.FC = () => {
             />
           </Box>
         </Sidebar>
-        <Box>
+        <Box sx={{ padding: '8px 24px', '@media (max-width: 900px)': { padding: '8px' } }}>
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
             <Button
               sdsType="secondary"
@@ -151,12 +149,12 @@ export const HistoricalJobsView: React.FC = () => {
 
           {/* Jobs Table with default filter for historical statuses */}
           <EntityTable
-            key={`${CLUSTER_ID}-${refreshKey}-${debouncedJobIdSearch}-${debouncedJobNameSearch}`}
+            key={`${refreshKey}-${debouncedJobIdSearch}-${debouncedJobNameSearch}`}
             entityApi={(() => {
-              const params = [`cluster_id=${CLUSTER_ID}`];
+              const params: string[] = [];
               if (debouncedJobIdSearch) params.push(`job_id=${debouncedJobIdSearch}`);
               if (debouncedJobNameSearch) params.push(`job_name=${debouncedJobNameSearch}`);
-              return `${API.JOBS}?${params.join('&')}` as API;
+              return (params.length ? `${API.JOBS}?${params.join('&')}` : API.JOBS) as API;
             })()}
             entityApiResponseField="job"
             columnDefs={customColumns}

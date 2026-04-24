@@ -16,12 +16,15 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from processes.models import JobLog, PipeExecution, SyncerLog, SyncerProcess
+from processes.services.cluster_resolver import cluster_id_from_parameters
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from stores.models import Cluster
 from umbrella_logger import logger
 
 from common import clusterio
 from common.auth import CsrfExemptSessionAuthentication
+from workflow.constants import DEFAULT_CLUSTER_ID
 
 from ..agent import RemoteJobSubmitter, StatusChecker
 from .constants import (
@@ -65,10 +68,9 @@ def get_jobs_list(request):
     5. Includes historical jobs (completed/failed) from PipeExecution
     """
     try:
-        # Get cluster_id parameter (default to czii)
-        cluster_id = request.GET.get("cluster_id", "czii")
-        if cluster_id not in ["czii", "bruno"]:
-            return JsonResponse({"error": "Invalid cluster_id. Must be czii or bruno"}, status=400)
+        cluster_id = request.GET.get("cluster_id", DEFAULT_CLUSTER_ID)
+        if not Cluster.objects.filter(cluster_id=cluster_id, is_active=True).exists():
+            return JsonResponse({"error": f"Unknown or inactive cluster_id: {cluster_id}"}, status=400)
 
         # Get filter parameters
         raw_q_param = request.GET.get("q", None)
@@ -203,6 +205,12 @@ def get_jobs_list(request):
                 if job.get("PARTITION") not in filter_dict["PARTITION"]:
                     continue
 
+            # Apply cluster filter if specified
+            if "CLUSTER" in filter_dict:
+                job_cluster = cluster_id_from_parameters(pipe_exec.parameters) if pipe_exec else cluster_id
+                if job_cluster not in filter_dict["CLUSTER"]:
+                    continue
+
             # Apply job_id search filter (substring match)
             if job_id_search:
                 if job_id_search not in str(job.get("JOBID", "")):
@@ -252,7 +260,9 @@ def get_jobs_list(request):
                 "nodes": job.get("NODES"),
                 "partition": job.get("PARTITION"),
                 "nodeList": job.get("NODELIST(REASON)"),
-                "cluster": cluster_id,
+                # Prefer the PipeExecution's recorded cluster (truth); fall back
+                # to the queried cluster for jobs not launched via our workflow.
+                "cluster": cluster_id_from_parameters(pipe_exec.parameters) if pipe_exec else cluster_id,
                 "submittedAt": pipe_exec.submitted_at.isoformat() if pipe_exec and pipe_exec.submitted_at else None,
                 "parameters": pipe_exec.parameters if pipe_exec else None,
                 "errorMessage": pipe_exec.error_message if pipe_exec else None,
@@ -292,6 +302,11 @@ def get_jobs_list(request):
                     # Apply status filter
                     if status not in filter_dict["STATUS"]:
                         continue
+
+                    # Apply cluster filter
+                    if "CLUSTER" in filter_dict:
+                        if cluster_id_from_parameters(pipe_exec.parameters) not in filter_dict["CLUSTER"]:
+                            continue
 
                     # Get user from JobLog
                     job_log = job_log_map.get(pipe_exec.job_id)
@@ -351,7 +366,7 @@ def get_jobs_list(request):
                         "nodes": "-",
                         "partition": "-",
                         "nodeList": "-",
-                        "cluster": cluster_id,
+                        "cluster": cluster_id_from_parameters(pipe_exec.parameters),
                         "submittedAt": pipe_exec.submitted_at.isoformat() if pipe_exec.submitted_at else None,
                         "completedAt": pipe_exec.completed_at.isoformat() if pipe_exec.completed_at else None,
                         "duration": calculate_duration(
@@ -407,6 +422,10 @@ def get_jobs_list(request):
 
                 # Apply status filter
                 if status not in filter_dict["STATUS"]:
+                    continue
+
+                # Apply cluster filter (JobLog has no cluster info; assume request cluster_id)
+                if "CLUSTER" in filter_dict and cluster_id not in filter_dict["CLUSTER"]:
                     continue
 
                 combined_job = {
@@ -527,7 +546,7 @@ def get_jobs_filterlist(request):
     - Date ranges
     """
     try:
-        cluster_id = request.GET.get("cluster_id", "czii")
+        cluster_id = request.GET.get("cluster_id", DEFAULT_CLUSTER_ID)
 
         # SLURM state to label mapping
         SLURM_STATE_TO_LABEL_LOCAL = {
@@ -625,7 +644,7 @@ def get_jobs_filterlist(request):
                     "status": SLURM_STATE_TO_LABEL_LOCAL.get(job.get("ST"), job.get("ST")),
                     "partition": job.get("PARTITION"),
                     "jobName": job_name,
-                    "cluster": cluster_id,
+                    "cluster": cluster_id_from_parameters(pipe_exec.parameters) if pipe_exec else cluster_id,
                     "submittedAt": pipe_exec.submitted_at if pipe_exec else None,
                 }
             )
@@ -662,7 +681,7 @@ def get_jobs_filterlist(request):
                         "status": status,
                         "partition": "-",
                         "jobName": job_name,
-                        "cluster": cluster_id,
+                        "cluster": cluster_id_from_parameters(pipe_exec.parameters),
                         "submittedAt": pipe_exec.submitted_at,
                     }
                 )
@@ -718,18 +737,16 @@ def get_jobs_filterlist(request):
             for partition in partitions
         ]
 
-        # Cluster options (counts based on current cluster view)
+        # Cluster options
+        cluster_counts = Counter(j["cluster"] for j in all_jobs if j.get("cluster"))
+        selected_clusters = selected_filters.get("cluster", set())
         cluster_filters = [
             {
-                "name": "czii",
-                "count": sum(1 for j in all_jobs if j["cluster"] == "czii"),
-                "selected": "czii" in selected_filters.get("cluster", set()) or cluster_id == "czii",
-            },
-            {
-                "name": "bruno",
-                "count": sum(1 for j in all_jobs if j["cluster"] == "bruno"),
-                "selected": "bruno" in selected_filters.get("cluster", set()) or cluster_id == "bruno",
-            },
+                "name": c.cluster_id,
+                "count": cluster_counts.get(c.cluster_id, 0),
+                "selected": c.cluster_id in selected_clusters,
+            }
+            for c in Cluster.objects.filter(is_active=True).order_by("cluster_id")
         ]
 
         # Date range options (counts would require date filtering logic)

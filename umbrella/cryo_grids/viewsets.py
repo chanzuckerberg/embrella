@@ -1026,6 +1026,82 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+    @action(detail=False, methods=["post"], url_path=r"(?P<grid_id>[0-9]+)/duplicate")
+    def duplicate(self, request, grid_id=None):
+        """
+        Duplicate a grid into a destination box ``number_to_copy`` times.
+        URL: POST /cryo_grids/v1/grids/{grid_id}/duplicate/
+
+        Body: {"destination_grid_box_id": int, "number_to_copy": int}
+        """
+        from cryo_grids.services import DuplicateGridError, duplicate_grid
+
+        try:
+            source_grid = CryoGrid.objects.get(id=grid_id)
+        except CryoGrid.DoesNotExist:
+            return Response(
+                {"success": False, "error": "Grid not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        destination_grid_box_id = request.data.get("destination_grid_box_id")
+        number_to_copy = request.data.get("number_to_copy")
+
+        if destination_grid_box_id is None or number_to_copy is None:
+            return Response(
+                {
+                    "success": False,
+                    "error": "Both destination_grid_box_id and number_to_copy are required",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            number_to_copy = int(number_to_copy)
+        except (TypeError, ValueError):
+            return Response(
+                {"success": False, "error": "number_to_copy must be an integer"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            destination_box = CryoGridBox.objects.get(id=destination_grid_box_id)
+        except CryoGridBox.DoesNotExist:
+            return Response(
+                {
+                    "success": False,
+                    "error": f"Destination grid box with ID {destination_grid_box_id} not found",
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            new_grids = duplicate_grid(
+                source_grid=source_grid,
+                destination_box=destination_box,
+                number_to_copy=number_to_copy,
+                request_user=request.user if request.user.is_authenticated else None,
+            )
+        except DuplicateGridError as e:
+            return Response(
+                {"success": False, "error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        message = (
+            f'Duplicated grid "{source_grid.name}" into {destination_box.name} '
+            f"({len(new_grids)} {'copies' if len(new_grids) != 1 else 'copy'})"
+        )
+        return Response(
+            {
+                "success": True,
+                "message": message,
+                "new_grid_ids": [g.id for g in new_grids],
+                "grids": CryoGridSerializer(new_grids, many=True).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
     @method_decorator(csrf_exempt)
     @action(detail=False, methods=["patch"], url_path=r"(?P<grid_id>[0-9]+)/move")
     def move_grid(self, request, grid_id=None):
@@ -1690,6 +1766,42 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
             },
         )
 
+    @action(detail=False, methods=["get"], url_path="available_positions")
+    def available_positions(self, request):
+        """
+        Return position availability for a grid box.
+        URL: GET /cryo_grids/v1/grid-boxes/available_positions/?box_id={id}
+        """
+        from cryo_grids.services import get_available_positions
+
+        box_id = request.GET.get("box_id")
+        if not box_id:
+            return Response(
+                {"success": False, "error": "box_id query parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            box = CryoGridBox.objects.get(pk=box_id)
+        except (CryoGridBox.DoesNotExist, ValueError):
+            return Response(
+                {"success": False, "error": "Grid box not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        available = get_available_positions(box)
+        max_grids = box.max_grids or 4
+        used = sorted(set(range(1, max_grids + 1)) - set(available))
+        return Response(
+            {
+                "box_id": box.id,
+                "max_grids": max_grids,
+                "used_positions": used,
+                "available_positions": available,
+                "available_count": len(available),
+            }
+        )
+
     @action(detail=False, methods=["get"])
     def filterlist(self, request):
         """Return available filter options with counts for grid boxes."""
@@ -1796,7 +1908,10 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
                 search_q = Q()
                 for t in search_terms:
                     if t:
-                        search_q |= Q(name__icontains=t)
+                        term_q = Q(name__icontains=t)
+                        if t.isdigit():
+                            term_q |= Q(cryogridbox__cryogrid__id=int(t))
+                        search_q |= term_q
                 if search_q:
                     queryset = queryset.filter(search_q).distinct()
 
@@ -1993,20 +2108,23 @@ class GridInventoryCountsViewSet(viewsets.ViewSet):
                 grid_search_q = Q()
                 for t in search_terms:
                     if t:
-                        grid_search_q |= (
+                        t_q = (
                             Q(name__icontains=t)
                             | Q(intended_project__name__icontains=t)
                             | Q(user__username__icontains=t)
                             | Q(specimen__samples__name__icontains=t)
                             | Q(labels__name__icontains=t)
                         )
+                        if t.isdigit():
+                            t_q |= Q(id=int(t))
+                        grid_search_q |= t_q
                 if grid_search_q:
                     grids_qs = grids_qs.filter(grid_search_q)
                 # Grid boxes search
                 gb_search_q = Q()
                 for t in search_terms:
                     if t:
-                        gb_search_q |= (
+                        t_q = (
                             Q(name__icontains=t)
                             | Q(cryogrid__name__icontains=t)
                             | Q(cryogrid__intended_project__name__icontains=t)
@@ -2014,13 +2132,19 @@ class GridInventoryCountsViewSet(viewsets.ViewSet):
                             | Q(cryogrid__specimen__samples__name__icontains=t)
                             | Q(cryogrid__labels__name__icontains=t)
                         )
+                        if t.isdigit():
+                            t_q |= Q(cryogrid__id=int(t))
+                        gb_search_q |= t_q
                 if gb_search_q:
                     grid_boxes_qs = grid_boxes_qs.filter(gb_search_q)
                 # Pucks search
                 puck_search_q = Q()
                 for t in search_terms:
                     if t:
-                        puck_search_q |= Q(name__icontains=t)
+                        t_q = Q(name__icontains=t)
+                        if t.isdigit():
+                            t_q |= Q(cryogridbox__cryogrid__id=int(t))
+                        puck_search_q |= t_q
                 if puck_search_q:
                     pucks_qs = pucks_qs.filter(puck_search_q)
 
@@ -2090,7 +2214,8 @@ class StandardSamplesViewSet(viewsets.ViewSet):
                         labels__name__iexact="standard",
                     )
                     .select_related("specimen", "user", "intended_project")
-                    .prefetch_related("labels", "specimen__samples"),
+                    .prefetch_related("labels", "specimen__samples")
+                    .order_by("id"),
                     to_attr="standard_grids",
                 ),
                 "samples",

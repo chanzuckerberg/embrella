@@ -4,25 +4,18 @@ import os
 import re
 
 # python library import
-from datetime import datetime
 from functools import reduce
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import F, Q
-from django.http import HttpResponseRedirect, JsonResponse
-from django.shortcuts import render
-from django.urls import reverse
+from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from pydantic import ValidationError
-from stores.models import Path
 
 # project app imports
-from cryo_grids.models import CryoGridCassette
-
-from .forms import ClearCassetteForm, CopyGridForm, NumberToCopyGridForm
-from .models import CryoGrid, CryoGridBox, GridLabel, Specimen
+from .models import CryoGrid, Specimen
 from .utils import (
     CassetteModel,
     CryoGridsQueryParams,
@@ -333,7 +326,7 @@ def apply_filters(queryset, filters):
             search_q = Q()
             for search_term in search_terms:
                 if search_term:
-                    search_q |= (
+                    term_q = (
                         Q(name__icontains=search_term)
                         | Q(intended_project__name__icontains=search_term)
                         | Q(user__username__icontains=search_term)
@@ -341,6 +334,9 @@ def apply_filters(queryset, filters):
                         | Q(msisession__name__icontains=search_term)
                         | Q(labels__name__icontains=search_term)
                     )
+                    if search_term.isdigit():
+                        term_q |= Q(id=int(search_term))
+                    search_q |= term_q
             if search_q:
                 filter_q_objects.append(search_q)
 
@@ -399,7 +395,7 @@ def get_specimen_list(specimen_id):
         specimen_list = []
         base_url = get_base_url()
         for sample in specimen.samples.all():
-            sample_url = f"{base_url}/admin/cryo_grids/specimen/{sample.id}"
+            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
             specimen_list.append(
                 {
                     "id": sample.id,
@@ -492,7 +488,7 @@ def get_specimen_info(specimen_id):
         base_url = get_base_url()
         samples_list = []
         for sample in specimen.samples.all():
-            sample_url = f"{base_url}/admin/cryo_grids/specimen/{sample.id}"
+            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
             samples_list.append(
                 {
                     "id": sample.id,
@@ -532,156 +528,6 @@ def add_msi_session(msi_session_list, item):
     ).model_dump()
     if msi_session_entry not in msi_session_list:
         msi_session_list.append(msi_session_entry)
-
-
-def grid_detail_view(request, grid_id=1, error_msg=""):
-    """
-    View to show grid detail and provide forms to link to admin grid editing
-    and grid copying
-    """
-    form = CopyGridForm()
-    number_form = NumberToCopyGridForm
-    old_grid = CryoGrid.objects.get(id=grid_id)
-    field_objs = old_grid._meta.get_fields()
-    fields = {}
-    for f in field_objs:
-        if f.related_model == Path:
-            continue
-        try:
-            fields[f.name] = getattr(old_grid, f.name)
-        except AttributeError:
-            # reverse ManyToOneRel such as processes.procrun is not in this model
-            continue
-        # ManyToManyField
-        if hasattr(fields[f.name], "all"):
-            fields[f.name] = list(map((lambda x: x.__str__()), fields[f.name].all()))
-    context = {"old_grid": old_grid, "fields": fields, "form": form, "number_form": number_form, "error_msg": error_msg}
-    return render(request, "cryo_grids/grid_detail.html", context)
-
-
-def _save_copied_grid(old_grid, box, position, number_of_copies=1):
-    # grids sharing the same unique requirement except copy_number
-    existing_grids = CryoGrid.objects.filter(
-        name=old_grid.name, freezing_session=old_grid.freezing_session, specimen=old_grid.specimen
-    )
-    existing_numbers = list(map((lambda x: x.copy_number), existing_grids))
-
-    # Find the next available copy numbers
-    max_existing = max(existing_numbers) if existing_numbers else 0
-    new_copy_numbers = list(range(max_existing + 1, max_existing + 1 + number_of_copies))
-
-    created_grids = []
-
-    # Create multiple grids if number_of_copies > 1
-    for i, copy_number in enumerate(new_copy_numbers):
-        new_grid = CryoGrid.objects.get(id=old_grid.id)
-        new_grid.id = None
-        new_grid.grid_cassette = None
-        new_grid.slot_number_in_cassette = None
-        new_grid.trashed = False
-        new_grid.grid_box = box
-        new_grid.position_in_box = position + i  # Increment position for each copy
-        new_grid.copy_number = copy_number
-        new_grid.create_on = datetime.today()
-        new_grid.updated_on = datetime.today()
-        new_grid.save()
-
-        # Copy labels from the original grid
-        for gl in GridLabel.objects.filter(grid=old_grid):
-            GridLabel.objects.create(grid=new_grid, label=gl.label, added_by=gl.added_by)
-
-        created_grids.append(new_grid)
-
-    return created_grids[0] if len(created_grids) == 1 else created_grids
-
-
-def _handle_grid_to_copy_post(request):
-    """
-    Validate parameters and save copied grids
-    """
-    old_grid_id = int(request.POST["old_grid"])
-    old_grid = CryoGrid.objects.get(id=old_grid_id)
-    new_grid_box_id = int(request.POST["new_box"])
-    number_to_copy = int(request.POST["number_to_copy"])
-    box = CryoGridBox.objects.get(id=new_grid_box_id)
-    # validate
-    grids_at_used_positions = CryoGrid.objects.filter(grid_box=box, trashed=False)
-    used_positions = list(map((lambda x: x.position_in_box), grids_at_used_positions))
-    new_positions = list(set(range(1, box.max_grids + 1)).difference(used_positions))
-    new_positions.sort()
-    if number_to_copy > len(new_positions):
-        error_msg = 'Box "%s" has only %d position(s) left.  Not enough to put in %d grids. Please try again.' % (
-            box,
-            len(new_positions),
-            number_to_copy,
-        )
-        return HttpResponseRedirect(
-            reverse("cryo_grids:grid_detail", kwargs={"grid_id": old_grid_id, "error_msg": error_msg})
-        )
-
-    # Create multiple copies at once
-    if number_to_copy > 1:
-        # Use the updated _save_copied_grid function
-        created_grids = _save_copied_grid(old_grid, box, new_positions[0], number_to_copy)
-    else:
-        # Single copy
-        for p in new_positions[:number_to_copy]:
-            _save_copied_grid(old_grid, box, p)
-
-    frontend_url = build_frontend_url_with_state(request)
-    return HttpResponseRedirect(frontend_url)
-
-
-def copy_grid_to_box(request, error_msg=""):
-    """
-    TODO this work around error message passing.  There may be a better way.
-    """
-    if request.method == "POST":
-        return _handle_grid_to_copy_post(request)
-
-
-def clear_cassette_view(request, error_msg=""):
-    """
-    Starting view that renders the form to select the cassette to clear its grids.
-    """
-    if request.method == "POST":
-        cassette_id = request.POST["cassette"]
-        return HttpResponseRedirect(reverse("cryo_grids:clear_cassette_filter", args=(cassette_id,)))
-    else:
-        form = ClearCassetteForm()
-        return render(request, "cryo_grids/clear_cassette.html", {"form": form})
-
-
-def clear_cassette_filter(request, cassette_id, error_msg=""):
-    """
-    process and render the page for selecting where the grids will be moved to
-    after taken out of the cassette.
-    """
-    cassette = CryoGridCassette.objects.get(id=cassette_id)
-    grids = CryoGrid.objects.filter(grid_cassette=cassette)
-    context = {"cassette": cassette, "grids": grids}
-    return render(request, "cryo_grids/clear_cassette_move.html", context)
-
-
-@require_http_methods(["POST"])
-def clear_cassette_move(request, error_msg=""):
-    """
-    process the action of clearing cassette and move the grids.
-    When finished, render the cassette filter page again which should be empty.
-    """
-    if request.method == "POST":
-        for k in request.POST.keys():
-            if "_move" in k:
-                grid_id = int(k.split("_")[0])
-                value = request.POST[k]
-                grid = CryoGrid.objects.get(id=grid_id)
-                cassette_id = grid.grid_cassette.pk
-                grid.grid_cassette = None
-                if value.endswith("trash"):
-                    grid.grid_box = None
-                    grid.trashed = True
-                grid.save()
-        return HttpResponseRedirect(reverse("cryo_grids:clear_cassette_filter", args=(cassette_id,)))
 
 
 @csrf_exempt
@@ -806,33 +652,3 @@ def update_grid_clipped_status(request, grid_id):
         return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 
-@require_http_methods(["GET"])
-def get_available_positions(request, object_id):
-    """AJAX endpoint to get available positions for a selected box."""
-    try:
-        box = CryoGridBox.objects.get(pk=object_id)
-        max_grids = box.max_grids or 4
-        used_positions = list(
-            CryoGrid.objects.filter(
-                grid_box=box,
-                trashed=False,
-            ).values_list("position_in_box", flat=True)
-        )
-
-        all_positions = list(range(1, max_grids + 1))
-        available_positions = [pos for pos in all_positions if pos not in used_positions]
-        max_positions = len(available_positions)
-
-        print(f"Box: {box.name}, Max grids: {max_grids}")  # Debug log
-        print(f"Used positions: {used_positions}")  # Debug log
-        print(f"Available positions: {available_positions}")  # Debug log
-        print(f"Max positions: {max_positions}")  # Debug log
-
-        return JsonResponse(
-            {
-                "max_positions": max_positions,
-                "available_positions": available_positions,
-            }
-        )
-    except CryoGridBox.DoesNotExist:
-        return JsonResponse({"max_positions": 0, "error": "Box not found"})

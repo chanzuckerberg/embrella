@@ -124,9 +124,12 @@ def parse_zarr_filename(filename):
     return None
 
 
-def check_zarr_exists(full_path):
+def check_zarr_exists(full_path, cluster_id=None):
+    from workflow.constants import DEFAULT_CLUSTER_ID
+
+    cluster_id = cluster_id or DEFAULT_CLUSTER_ID
     found_zarrs = []
-    ssh = clusterio.get_cluster_ssh_connection(cluster_id="czii")
+    ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
     stdin, stdout, stderr = ssh.exec_command(f"ls {full_path}")
 
     # Read the output
@@ -164,6 +167,7 @@ class ProcessSyncer(object):
         self._pipe_execution = None
         self._syncer_process = None
         self.job_id = None
+        self.cluster_id = None
 
     def _log_to_db(self, action_type: str, message: str, metadata: dict = None):
         """Log syncer action to database."""
@@ -285,7 +289,7 @@ class ProcessSyncer(object):
             },
         )
 
-        found_zarrs = check_zarr_exists(path_to_zarrs)
+        found_zarrs = check_zarr_exists(path_to_zarrs, cluster_id=self.cluster_id)
         if len(found_zarrs) == 0:
             self._log_to_db(
                 "sync_complete",
@@ -333,7 +337,7 @@ class ProcessSyncer(object):
     def sync_results(self):
         raise NotImplementedError
 
-    def setup(self, run_id, session_name):
+    def setup(self, run_id, session_name, cluster_id=None):
         self.run_id = run_id
         self.session_name = session_name
         self.session_path = f"{self.base_path}/{self.session_name}/{self.run_id}"
@@ -355,6 +359,16 @@ class ProcessSyncer(object):
                     "status": "running",
                 },
             )
+
+        # Resolve cluster_id: caller-provided wins, else derive from the
+        # PipeExecution parameters (canonical source written by
+        # workflow.execution.PipeExecutor at submission time).
+        if cluster_id:
+            self.cluster_id = cluster_id
+        elif self._pipe_execution is not None:
+            from processes.services.cluster_resolver import cluster_id_from_parameters
+
+            self.cluster_id = cluster_id_from_parameters(self._pipe_execution.parameters)
 
         # Only log 'init' on first setup (when SyncerProcess is newly created)
         if created:

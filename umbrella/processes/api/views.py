@@ -21,6 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rapidfuzz import fuzz
 from rest_framework.decorators import api_view
+from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 from umbrella.contrast_limits import compute_optimal_contrast_limits
 
@@ -33,6 +34,7 @@ from processes.models import (
     ReviewTomogram,
     Tomograms,
 )
+from processes.services.cluster_resolver import cluster_id_for_run
 from processes.validation import SortMetadataModel
 from processes.views import get_base_url
 
@@ -491,6 +493,11 @@ class ReviewView(View):
                 status=400,
             )
 
+        # Resolve the cluster this run executed on. `cluster` in the request body
+        # takes precedence; otherwise infer from PipeExecution.parameters.
+        resolved_cluster_id = data.get("cluster") or cluster_id_for_run(session.name, data["runId"])
+        review_cluster = Cluster.objects.filter(cluster_id=resolved_cluster_id, is_active=True).first()
+
         # Create the review
         try:
             review = Review.objects.create(
@@ -500,6 +507,7 @@ class ReviewView(View):
                 reconstruction_type=data["reconstructionType"],
                 msi_session=session,
                 requestor=requestor,
+                cluster=review_cluster,
                 status="not_started",
                 total_count=tomogram_count,  # Set total count to actual tomogram count
                 reviewed_count=0,
@@ -870,10 +878,18 @@ class ReviewTomogramView(View):
                 vol_suffix = ""  # denoised
                 job_name = "denoise"
 
-            # Updated zarr path construction - migrated to new location
-            response_data["zarrPath"] = (
-                f"https://czii-onsite.czbiohub.org/krios1.processing/{job_name}/{session_id}/{run_id}/{vol_suffix}/{tomogram.position_id}_Vol.zarr"
+            # Resolve zarr URL against the review's cluster (falls back to czii if not set).
+            cluster = review.cluster or Cluster.objects.get(cluster_id="czii")
+            response_data["zarrPath"] = resolve_review_path(
+                "zarr_url",
+                cluster=cluster,
+                msi_session=tomogram.session,
+                workflow=job_name,
+                run=run_id,
+                vol_suffix=vol_suffix,
+                position=tomogram.position_id,
             )
+            response_data["cluster"] = cluster.cluster_id
 
             logger.debug(
                 f"Computing contrast limits for {review.reconstruction_type} reconstruction: {response_data['zarrPath']}"

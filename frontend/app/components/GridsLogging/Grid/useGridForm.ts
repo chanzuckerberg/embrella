@@ -48,6 +48,16 @@ interface UseGridFormReturn {
   moveGridDialogOpen: boolean;
   setMoveGridDialogOpen: (open: boolean) => void;
 
+  // Duplicate grid dialog
+  duplicateGridDialogOpen: boolean;
+  setDuplicateGridDialogOpen: (open: boolean) => void;
+
+  // Trash confirmation dialog
+  trashDialogOpen: boolean;
+  setTrashDialogOpen: (open: boolean) => void;
+  confirmTrash: () => Promise<void>;
+  isTrashProcessing: boolean;
+
   // Dropdown data
   freezingSessions: FreezingSession[] | undefined;
   specimens: Specimen[] | undefined;
@@ -72,6 +82,9 @@ export const useGridForm = ({ gridId, gridDetails, refetch, onGridUpdated }: Use
   const [trashedValue, setLocalTrashed] = useState(false);
   const [currentLabels, setCurrentLabels] = useState<LabelData[]>([]);
   const [moveGridDialogOpen, setMoveGridDialogOpen] = useState(false);
+  const [duplicateGridDialogOpen, setDuplicateGridDialogOpen] = useState(false);
+  const [trashDialogOpen, setTrashDialogOpen] = useState(false);
+  const [isTrashProcessing, setIsTrashProcessing] = useState(false);
 
   const { updateGrid, isUpdating, error: updateError, clearError: clearUpdateError } = useUpdateGrid();
   const { freezingSessions } = useFreezingSessionList();
@@ -170,25 +183,33 @@ export const useGridForm = ({ gridId, gridDetails, refetch, onGridUpdated }: Use
     }
   };
 
-  const handleTrashedChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTrashedChange = async () => {
+    if (!gridId || trashedValue) return;
+    setTrashDialogOpen(true);
+  };
+
+  const confirmTrash = async () => {
     if (!gridId) return;
-    const newTrashedStatus = event.target.checked;
-    setLocalTrashed(newTrashedStatus);
+    setIsTrashProcessing(true);
+    setLocalTrashed(true);
     try {
       const response = await fetch(`${DJANGO_URL}/cryo_grids/update-grid-trashed/${gridId}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ trashed: newTrashedStatus }),
+        body: JSON.stringify({ trashed: true }),
       });
       if (response.ok) {
+        setTrashDialogOpen(false);
         refetch();
         onGridUpdated?.();
       } else {
-        setLocalTrashed(!newTrashedStatus);
+        setLocalTrashed(false);
       }
     } catch {
-      setLocalTrashed(!newTrashedStatus);
+      setLocalTrashed(false);
+    } finally {
+      setIsTrashProcessing(false);
     }
   };
 
@@ -226,6 +247,12 @@ export const useGridForm = ({ gridId, gridDetails, refetch, onGridUpdated }: Use
     handleLabelsChange,
     moveGridDialogOpen,
     setMoveGridDialogOpen,
+    duplicateGridDialogOpen,
+    setDuplicateGridDialogOpen,
+    trashDialogOpen,
+    setTrashDialogOpen,
+    confirmTrash,
+    isTrashProcessing,
     freezingSessions,
     specimens,
     projects,

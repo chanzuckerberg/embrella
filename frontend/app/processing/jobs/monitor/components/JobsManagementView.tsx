@@ -241,7 +241,7 @@ export const JobsManagementView: React.FC = () => {
             />
           </Box>
         </Sidebar>
-        <Box>
+        <Box sx={{ padding: '8px 24px', '@media (max-width: 900px)': { padding: '8px' } }}>
           {/* Cluster Selector and Actions Bar */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <ClusterSelector

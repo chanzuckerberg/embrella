@@ -63,7 +63,6 @@ const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
     { label: 'Grid Logging', href: '/samples/grid_logging' },
     { label: 'Grid Inventory', href: '/samples/cryo_grids' },
     { label: 'Standard Samples', href: '/samples/standard-samples' },
-    { label: 'Clear Cassette', href: '/samples/clear-cassette' },
   ],
   sessions: [
     { label: 'New TEM Session', href: '/sessions/new/tem' },
@@ -103,6 +102,12 @@ const NavbarInner = styled.div`
   max-width: 75rem;
   margin-left: auto;
   margin-right: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 const StyledSubNavbar = styled.div`
@@ -125,19 +130,28 @@ const SubNavbarInner = styled.div`
   max-width: 75rem;
   margin-left: auto;
   margin-right: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 const StyledNavLink = styled(Link, {
   shouldForwardProp: (prop) => prop !== 'isActive',
 })<{ isActive?: boolean }>`
   padding: 0 16px;
-  font-size: 18px;
+  font-size: 18px !important;
   color: ${(props) => (props.isActive ? '#a78bfa' : '#ffffff')};
   text-decoration: none !important;
   padding-bottom: 4px;
   display: inline-flex;
   align-items: center;
   transition: color 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
     color: #a78bfa;
@@ -156,6 +170,8 @@ const StyledSubNavLink = styled(Link, {
   border-radius: 6px;
   background: transparent;
   transition: color 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
     color: #6e4ff9;
@@ -179,6 +195,8 @@ const StyledJobsButton = styled('button', {
   align-items: center;
   gap: 4px;
   font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
     color: #6e4ff9;
@@ -248,7 +266,7 @@ export const TopNavigation = () => {
       {/* Main Navigation */}
       <StyledNavbar>
         <NavbarInner>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0, whiteSpace: 'nowrap' }}>
             <Typography
               variant="h4"
               component="span"
@@ -315,7 +333,7 @@ export const TopNavigation = () => {
               </StyledNavLink>
             </Box>
           </Box>
-          <Box>
+          <Box sx={{ flexShrink: 0 }}>
             <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
               <Button
                 sdsType="secondary"
