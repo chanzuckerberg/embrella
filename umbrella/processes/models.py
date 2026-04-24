@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
 from django.utils.timezone import now
-from stores.models import Path, PathType, StaticPath
+from stores.models import Cluster, Path, PathType, StaticPath
 from tem.models import MsiSession, SessionPlan
 
 '''
@@ -680,6 +680,10 @@ class Review(models.Model):
     msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name='raw_tomograms')
     requestor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_reviews')
     objects_of_interest = models.TextField(null=True)
+    cluster = models.ForeignKey(
+        Cluster, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='reviews',
+    )
 
     def __str__(self):
         return f'Review {self.review_name} for {self.msi_session.name}'

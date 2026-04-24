@@ -58,7 +58,9 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
             }
 
         # cluster_id is persisted in the parameters JSON field (default to 'czii' for legacy jobs)
-        cluster_id = pipe_exec.parameters.get("cluster_id", "czii")
+        from processes.services.cluster_resolver import cluster_id_from_parameters
+
+        cluster_id = cluster_id_from_parameters(pipe_exec.parameters)
         if cluster_id == "czii" and "cluster_id" not in (pipe_exec.parameters or {}):
             logger.warning(
                 f"Job {job_id} has no cluster_id in parameters - defaulting to 'czii' (legacy job)",
@@ -118,7 +120,7 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
         syncer.job_id = job_id  # Set job_id before setup so it's available for logging
 
         # Setup syncer with session and run info (creates initial log entry and SyncerProcess record)
-        syncer.setup(run_id=run_id, session_name=session_name)
+        syncer.setup(run_id=run_id, session_name=session_name, cluster_id=cluster_id)
 
         # Run one sync iteration
         logger.info(f"Running syncer iteration for {session_name}/{run_id}")

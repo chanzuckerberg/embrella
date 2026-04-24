@@ -13,17 +13,14 @@ from io import StringIO
 import pandas as pd
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from processes.services.cluster_resolver import cluster_id_for_run
+from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 from umbrella_logger import logger
 
 from common import clusterio
 
-from .constants import (
-    ARETOMO3_PROCESSING_PATH,
-    DATA_COLLECTION_PATH,
-    HOSTNAME,
-    METADATA_SUMMARY_PATH,
-)
+from .constants import DATA_COLLECTION_PATH
 from .utils import (
     apply_filters,
     calculate_metric_ranges,
@@ -46,13 +43,31 @@ def get_metadata_summary(request):
     if not session_name or not run_number:
         return JsonResponse({"error": "Missing session_name or run_number"}, status=400)
 
-    base_proc_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
+    cluster_id = request.GET.get("cluster_id") or cluster_id_for_run(session_name, run_number)
+
+    try:
+        cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
+    except Cluster.DoesNotExist:
+        return JsonResponse({"error": f"Unknown cluster_id: {cluster_id}"}, status=400)
+
+    try:
+        msi_session = MsiSession.objects.get(name=session_name)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({"error": f"Session not found: {session_name}"}, status=404)
+
+    base_proc_dir = resolve_review_path(
+        "proc_dir",
+        cluster,
+        msi_session=msi_session,
+        workflow="aretomo3",
+        run=run_number,
+    )
     metrics_path = os.path.join(base_proc_dir, "TiltSeries_Metrics.csv")
     timestamp_path = os.path.join(base_proc_dir, "TiltSeries_TimeStamp.csv")
 
     try:
         # Create a persistent SSH connection with optimized parameters
-        ssh = clusterio.get_cluster_ssh_connection(cluster_id="czii")
+        ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster.cluster_id)
 
         # Create SFTP client with optimized buffer sizes
         sftp = ssh.open_sftp()
@@ -102,36 +117,16 @@ def get_metadata_summary(request):
             compute_time = time.time() - compute_start
 
             data_collection_dir = f"{DATA_COLLECTION_PATH}{session_name}/{run_number}/"
-            aretomo3_processing_dir = f"{ARETOMO3_PROCESSING_PATH}{session_name}/{run_number}/"
+            aretomo3_processing_dir = base_proc_dir
 
-            # Get User, Project, and grid information
-            user_name = None
-            project_name = None
-            grid_name = None
-            try:
-                try:
-                    session = MsiSession.objects.get(name=session_name)
-                    logger.info(f"Session: {session}")
-
-                    # Get User name
-                    if session.user:
-                        user_name = session.user.username
-                    # Get Project name
-                    if session.project:
-                        project_name = session.project.name
-
-                    # Get Grid name
-                    if session.grid:
-                        grid_name = session.grid.name
-                except MsiSession.DoesNotExist:
-                    # Session not found, leave the values as None
-                    logger.warning(f"No MsiSession found with name: {session_name}")
-            except Exception as e:
-                logger.warning(f"Error retrieving related information: {str(e)}")
+            user_name = msi_session.user.username if msi_session.user else None
+            project_name = msi_session.project.name if msi_session.project else None
+            grid_name = msi_session.grid.name if msi_session.grid else None
 
             response = {
                 "session_name": session_name,
                 "run_number": run_number,
+                "cluster": cluster.cluster_id,
                 "num_tomograms": len(df),
                 "pixel_size": df["Pix_Size(A)"][0],
                 "data_collection_directory": data_collection_dir,
@@ -179,24 +174,58 @@ def get_metadata_viz_data(request):
         if not session_name or not run_number:
             return JsonResponse({"error": "Missing session_name or run_number"}, status=400)
 
+        cluster_id = request.GET.get("cluster_id") or cluster_id_for_run(session_name, run_number)
+
+        try:
+            cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
+        except Cluster.DoesNotExist:
+            return JsonResponse({"error": f"Unknown cluster_id: {cluster_id}"}, status=400)
+
+        try:
+            msi_session = MsiSession.objects.get(name=session_name)
+        except MsiSession.DoesNotExist:
+            return JsonResponse({"error": f"Session not found: {session_name}"}, status=404)
+
         # Parse filters if provided
         filter_config = json.loads(q) if q else {}
 
-        # Read the CSV file
-        base_proc_dir = f"{METADATA_SUMMARY_PATH}{session_name}/{run_number}/"
+        # Resolve cluster-/scope-aware paths and URLs
+        base_proc_dir = resolve_review_path(
+            "proc_dir",
+            cluster,
+            msi_session=msi_session,
+            workflow="aretomo3",
+            run=run_number,
+        )
         metrics_path = os.path.join(base_proc_dir, "TiltSeries_Metrics.csv")
         timestamp_path = os.path.join(base_proc_dir, "TiltSeries_TimeStamp.csv")
 
-        thumbnail_base_url = os.path.join(HOSTNAME, session_name, run_number, "thumbnails/")
-        ctf_base_url = os.path.join(HOSTNAME, session_name, run_number, "ctf_thumbnails/")
-        print(metrics_path)
-        print(timestamp_path)
+        thumbnail_base_url = resolve_review_path(
+            "thumb_url",
+            cluster,
+            msi_session=msi_session,
+            run=run_number,
+            thumb_kind="thumbnails",
+        )
+        ctf_base_url = resolve_review_path(
+            "thumb_url",
+            cluster,
+            msi_session=msi_session,
+            run=run_number,
+            thumb_kind="ctf_thumbnails",
+        )
 
-        merged_df = preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge="continue")
-        print(merged_df)
+        merged_df = preprocess_csv(
+            metrics_path,
+            timestamp_path,
+            thumbnail_base_url,
+            ctf_base_url,
+            merge="continue",
+            cluster_id=cluster.cluster_id,
+        )
 
         # Create a persistent SSH connection with optimized parameters
-        ssh = clusterio.get_cluster_ssh_connection(cluster_id="czii")
+        ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster.cluster_id)
 
         # Create SFTP client with optimized buffer sizes
         sftp = ssh.open_sftp()
@@ -326,12 +355,14 @@ def get_metadata_viz_data(request):
                         "alpha0": float(row["Alpha0"]),
                         "beta0": float(row["Beta0"]) if not pd.isna(row["Beta0"]) else float("nan"),
                     }
-                    result.append({
-                        "name": item_name,
-                        "metrics": metrics,
-                        "thumbnail_path": item_image_path_to_return,
-                        "ctf_path": ctf_thumbnails_path,
-                    })
+                    result.append(
+                        {
+                            "name": item_name,
+                            "metrics": metrics,
+                            "thumbnail_path": item_image_path_to_return,
+                            "ctf_path": ctf_thumbnails_path,
+                        }
+                    )
 
                 # Apply sorting if requested
                 if apply_sorting and sort_by and sort_by != "Select Metric":

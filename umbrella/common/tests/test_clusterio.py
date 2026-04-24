@@ -7,14 +7,29 @@ Tests SSH connection utilities and authentication helpers.
 import base64
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from common import clusterio
 
 
+@pytest.mark.django_db
 class TestGetAuthForUser:
-    """Tests for get_auth_for_user helper function."""
+    """Tests for get_auth_for_user helper function.
 
-    @patch('common.clusterio.test_ssh_as_user')
-    @patch('common.clusterio.get_auth_service_user')
+    These tests hit the `stores.Cluster` table (via `_cluster_exists`) which is
+    seeded by migration `stores.0010_seed_clusters`, so czii/bruno rows exist.
+    Before each test we clear the `lru_cache` on the lookup helpers so prior
+    tests (or a nonexistent-cluster lookup in the same worker) don't leak.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _clear_cluster_cache(self):
+        clusterio.clear_cluster_cache()
+        yield
+        clusterio.clear_cluster_cache()
+
+    @patch("common.clusterio.test_ssh_as_user")
+    @patch("common.clusterio.get_auth_service_user")
     def test_with_ssh_setup(self, mock_get_service_auth, mock_test_ssh):
         """Test authentication when SSH is already set up."""
         # Mock SSH check returning success
@@ -41,7 +56,7 @@ class TestGetAuthForUser:
         mock_test_ssh.assert_called_once_with("testuser", "czii")
         mock_get_service_auth.assert_called_once()
 
-    @patch('common.clusterio.test_ssh_as_user')
+    @patch("common.clusterio.test_ssh_as_user")
     def test_with_password_plain_text(self, mock_test_ssh):
         """Test authentication with plain text password when SSH not set up."""
         # Mock SSH check returning failure
@@ -60,7 +75,7 @@ class TestGetAuthForUser:
         assert auth == {"username": "testuser", "password": "mypassword"}
         mock_test_ssh.assert_called_once_with("testuser", "czii")
 
-    @patch('common.clusterio.test_ssh_as_user')
+    @patch("common.clusterio.test_ssh_as_user")
     def test_with_password_base64_encoded(self, mock_test_ssh):
         """Test authentication with base64 encoded password when SSH not set up."""
         # Mock SSH check returning failure
@@ -82,7 +97,7 @@ class TestGetAuthForUser:
         assert auth == {"username": "testuser", "password": "mypassword"}
         mock_test_ssh.assert_called_once_with("testuser", "czii")
 
-    @patch('common.clusterio.test_ssh_as_user')
+    @patch("common.clusterio.test_ssh_as_user")
     def test_without_password_returns_error(self, mock_test_ssh):
         """Test that missing password returns error when SSH not set up."""
         # Mock SSH check returning failure
@@ -118,7 +133,7 @@ class TestGetAuthForUser:
         assert error["username"] == "testuser"
         assert error["ssh_setup_required"] is False
 
-    @patch('common.clusterio.test_ssh_as_user')
+    @patch("common.clusterio.test_ssh_as_user")
     def test_bruno_cluster(self, mock_test_ssh):
         """Test authentication for bruno cluster."""
         # Mock SSH check returning success
@@ -130,7 +145,7 @@ class TestGetAuthForUser:
         }
 
         # Mock service user auth
-        with patch('common.clusterio.get_auth_service_user') as mock_get_service_auth:
+        with patch("common.clusterio.get_auth_service_user") as mock_get_service_auth:
             mock_service_auth = {
                 "username": "sumslogs",
                 "pkey": MagicMock(),
@@ -145,7 +160,7 @@ class TestGetAuthForUser:
             assert auth == mock_service_auth
             mock_test_ssh.assert_called_once_with("testuser", "bruno")
 
-    @patch('common.clusterio.test_ssh_as_user')
+    @patch("common.clusterio.test_ssh_as_user")
     def test_password_decode_failure_fallback(self, mock_test_ssh):
         """Test that invalid base64 falls back to plain text password."""
         # Mock SSH check returning failure

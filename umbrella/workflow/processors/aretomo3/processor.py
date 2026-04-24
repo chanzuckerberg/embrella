@@ -411,6 +411,7 @@ class AreTomo3Processor(BaseProcessor):
         Returns:
             List of output path specifications
         """
+        # TODO: consider using path types from db instead of hard-coding patterns here
         base_path = f"/hpc/projects/group.czii/krios1.processing/aretomo3/{run_context.msi_session.name}/{run_context.run_number}"
 
         return [

@@ -22,7 +22,6 @@ from umbrella_logger import logger
 
 from common import clusterio
 from common.clusterio import jsonify
-
 from workflow.agent import RemoteJobSubmitter
 from workflow.views.constants import (
     COPICK_ADD_OBJECT_TEMPLATE_PATH,
@@ -73,7 +72,9 @@ from workflow.views.utils import store_log
             description="Unhandled server error during submission",
             response=OpenApiTypes.OBJECT,
             examples=[
-                OpenApiExample("Server error", value={"error": "Some traceback or error string: 500"}, response_only=True),
+                OpenApiExample(
+                    "Server error", value={"error": "Some traceback or error string: 500"}, response_only=True
+                ),
             ],
         ),
     },
@@ -325,7 +326,7 @@ def run_import_tomogram_copick(request):
             if not v
         ]
         if missing:
-            return JsonResponse({"error": f'Missing fields: {", ".join(missing)}'}, status=400)
+            return JsonResponse({"error": f"Missing fields: {', '.join(missing)}"}, status=400)
 
         # Normalize run label: ensure "run###"
         if not copick_run.lower().startswith("run"):
@@ -466,10 +467,14 @@ def run_import_tomogram_copick(request):
             response=OpenApiTypes.OBJECT,
             examples=[
                 OpenApiExample(
-                    "Invalid JSON", value={"error": "Invalid JSON: Expecting value: line 1 column 1 (char 0)"}, response_only=True,
+                    "Invalid JSON",
+                    value={"error": "Invalid JSON: Expecting value: line 1 column 1 (char 0)"},
+                    response_only=True,
                 ),
                 OpenApiExample(
-                    "Server error", value={"error": "Unexpected error in get_template_map_json: <details>"}, response_only=True,
+                    "Server error",
+                    value={"error": "Unexpected error in get_template_map_json: <details>"},
+                    response_only=True,
                 ),
             ],
         ),
@@ -503,7 +508,9 @@ def get_template_map_json(request):
         else:
             # Fallback to remote SSH fetch
             logger.info(f"[get_template_map_json] Local file not found, fetching via SSH: {remote_path}")
-            raw_data = clusterio.ssh_connect_bruno(remote_path)
+            # pytom model templates live on bruno; read from there regardless of which cluster
+            # other jobs ran on. `local_path` is the NFS mount served directly when available.
+            raw_data = clusterio.read_remote_file("bruno", remote_path)
 
         # Parse JSON using your helper
         full_data = jsonify(raw_data)
