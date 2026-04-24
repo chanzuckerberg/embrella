@@ -120,7 +120,7 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
         syncer.job_id = job_id  # Set job_id before setup so it's available for logging
 
         # Setup syncer with session and run info (creates initial log entry and SyncerProcess record)
-        syncer.setup(run_id=run_id, session_name=session_name)
+        syncer.setup(run_id=run_id, session_name=session_name, cluster_id=cluster_id)
 
         # Run one sync iteration
         logger.info(f"Running syncer iteration for {session_name}/{run_id}")
