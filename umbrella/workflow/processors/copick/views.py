@@ -13,8 +13,18 @@ import os
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from processes.models import ProcRun
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from processes.models import PipeExecution, ProcPlan, ProcRun
+from processes.services.cluster_resolver import cluster_id_for_run
+from rest_framework.decorators import api_view
+from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
+
+from .processor import CopickProcessor
+
+COPICK_PLAN_NAME = "czii-copick"
+COPICK_DEFAULT_CLUSTER_ID = CopickProcessor.cluster
 
 
 @require_http_methods(["GET"])
@@ -723,3 +733,128 @@ def get_copick_runs(request) -> JsonResponse:
             "copick_runs": copick_runs,
         }
     )
+
+
+def _latest_pipe_status(proc_run) -> str:
+    latest = (
+        PipeExecution.objects.filter(proc_run=proc_run).order_by("-updated_at").values_list("status", flat=True).first()
+    )
+    return latest or "pending"
+
+
+def _build_copick_project(proc_run) -> dict:
+    session = proc_run.msi_session
+    cluster_id = cluster_id_for_run(session.name, proc_run.name, default=COPICK_DEFAULT_CLUSTER_ID)
+    cluster = Cluster.objects.get(cluster_id=cluster_id)
+    root_url = resolve_review_path(
+        "copick_url",
+        cluster=cluster,
+        msi_session=session,
+        copick_run=proc_run.name,
+    )
+    # TODO: eventually symlink of data folders to save space, so data_url may change.
+    return {
+        "session_name": session.name,
+        "run_name": proc_run.name,
+        "cluster_id": cluster_id,
+        "scope": session.session_plan.scope.name.lower(),
+        "root_url": root_url,
+        "config_url": root_url + "config.json",
+        "data_url": root_url,
+        "status": _latest_pipe_status(proc_run),
+        "created_at": proc_run.created_at.isoformat(),
+        "proc_run_id": proc_run.id,
+    }
+
+
+@extend_schema(
+    methods=["GET"],
+    tags=["Copick Projects"],
+    description=(
+        "List copick projects (one row per ProcRun under the czii-copick plan). "
+        "Each entry includes the HTTP URL of the project root so the copick viewer "
+        "can fetch config.json and the overlay data directly."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="cluster",
+            required=False,
+            type={"type": "array", "items": {"type": "string"}},
+            description=(
+                "Filter by one or more cluster ids (e.g. 'czii', 'bruno'). "
+                "Repeat the param (?cluster=czii&cluster=bruno) or pass a comma-separated "
+                "list (?cluster=czii,bruno). Omit to include all clusters."
+            ),
+        ),
+        OpenApiParameter(
+            name="session_id",
+            required=False,
+            type=OpenApiTypes.STR,
+            description="Filter to a single MsiSession.name.",
+        ),
+        OpenApiParameter(
+            name="status",
+            required=False,
+            type=OpenApiTypes.STR,
+            description="'completed' (default) returns only runs with a completed PipeExecution. 'all' returns every run.",
+        ),
+    ],
+    responses={200: OpenApiTypes.OBJECT},
+)
+@api_view(["GET"])
+@require_http_methods(["GET"])
+def list_copick_projects(request) -> JsonResponse:
+    """List copick projects (one row per ProcRun under the czii-copick plan).
+
+    Query params:
+        cluster: filter by one or more cluster ids (e.g. 'czii', 'bruno').
+            Repeat the param or pass a comma-separated list. Omit for all clusters.
+        session_id: filter to a single MsiSession.name
+        status: 'completed' (default) or 'all'
+    """
+    try:
+        plan = ProcPlan.objects.get(name=COPICK_PLAN_NAME)
+    except ProcPlan.DoesNotExist:
+        return JsonResponse({"success": True, "projects": []})
+
+    qs = ProcRun.objects.filter(proc_plan=plan).select_related("msi_session__session_plan__scope")
+
+    session_id = request.GET.get("session_id")
+    if session_id:
+        qs = qs.filter(msi_session__name=session_id)
+
+    status_filter = request.GET.get("status", "completed")
+    if status_filter == "completed":
+        qs = qs.filter(pipe_executions__status="completed").distinct()
+
+    qs = qs.order_by("-created_at")
+
+    projects = [_build_copick_project(r) for r in qs]
+
+    cluster_filters = {c.strip() for raw in request.GET.getlist("cluster") for c in raw.split(",") if c.strip()}
+    if cluster_filters:
+        projects = [p for p in projects if p["cluster_id"] in cluster_filters]
+
+    return JsonResponse({"success": True, "projects": projects})
+
+
+@extend_schema(
+    methods=["GET"],
+    tags=["Copick Projects"],
+    description="Return a single copick project by (session_name, run_name).",
+    responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+)
+@api_view(["GET"])
+@require_http_methods(["GET"])
+def get_copick_project_detail(request, session_name: str, run_name: str) -> JsonResponse:
+    """Return a single copick project by (session_name, run_name)."""
+    try:
+        run = ProcRun.objects.select_related("msi_session__session_plan__scope").get(
+            proc_plan__name=COPICK_PLAN_NAME,
+            msi_session__name=session_name,
+            name=run_name,
+        )
+    except ProcRun.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Copick project not found"}, status=404)
+
+    return JsonResponse({"success": True, "project": _build_copick_project(run)})
