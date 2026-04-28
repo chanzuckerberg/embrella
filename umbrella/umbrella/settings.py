@@ -51,6 +51,7 @@ LOGIN_REQUIRED_IGNORE_PATHS = [
     r"^/google_sso/*",
     r"^/static/*",
     r"^/login/*",
+    r"^/copick/v1/.*",
 ]
 # Exempt user info endpoint - frontend should handle 401 and redirect
 LOGIN_REQUIRED_IGNORE_VIEW_NAMES = [
@@ -194,7 +195,7 @@ GOOGLE_SSO_SAVE_BASIC_GOOGLE_INFO = False
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*")
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*.czbiohub.org", "umbrella.czbiohub.org", "umbrella-dev.czbiohub.org"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*.czbiohub.org", "umbrella.czbiohub.org", "umbrella-dev.czbiohub.org", "host.containers.internal", "host.docker.internal"]
 ALLOWED_DOMAINS = ["czii.org", "czbiohub.org"]
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True

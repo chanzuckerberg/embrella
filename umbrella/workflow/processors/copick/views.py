@@ -17,7 +17,8 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from processes.models import PipeExecution, ProcPlan, ProcRun
 from processes.services.cluster_resolver import cluster_id_for_run
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 
@@ -802,6 +803,7 @@ def _build_copick_project(proc_run) -> dict:
     responses={200: OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
+@permission_classes([AllowAny])
 @require_http_methods(["GET"])
 def list_copick_projects(request) -> JsonResponse:
     """List copick projects (one row per ProcRun under the czii-copick plan).
@@ -845,6 +847,7 @@ def list_copick_projects(request) -> JsonResponse:
     responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
+@permission_classes([AllowAny])
 @require_http_methods(["GET"])
 def get_copick_project_detail(request, session_name: str, run_name: str) -> JsonResponse:
     """Return a single copick project by (session_name, run_name)."""
