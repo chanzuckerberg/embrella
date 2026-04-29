@@ -173,6 +173,7 @@ urlpatterns = (
         path("processes/", include("processes.urls"), name="processes"),
         path("projects/", include("projects.urls"), name="projects"),
         path("tem/", include(tem_v1_urlpatterns)),
+        path("copick/", include("workflow.processors.copick.api_urls")),
     ]
     + api_patterns  # API endpoints
 )

@@ -319,6 +319,18 @@ export const TopNavigation = () => {
                   </StyledNavLink>
                 );
               })}
+              <StyledNavLink
+                href={
+                  typeof window !== 'undefined' &&
+                  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                    ? 'http://localhost:8880'
+                    : '/viewer/copick-web'
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Viewer
+              </StyledNavLink>
             </Box>
           </Box>
           <Box sx={{ flexShrink: 0 }}>
