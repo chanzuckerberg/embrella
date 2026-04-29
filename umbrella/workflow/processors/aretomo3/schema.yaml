@@ -39,9 +39,10 @@ properties:
     type: number
     title: Frame Dose (e⁻/Ų)
     description: |
-      Note: -TotalDose is disabled in AreTomo3. Instead, you input electron dose per raw frame (not accumulated dose). For EER movies, this is dose per EER frame. For TIFF movies, dose per TIFF frame. Example: 200-frame EER movie with 3 e⁻/Ų total → use 0.015. If not provided, AreTomo3 uses MDOC ExposureDose (post-specimen, less than actual specimen dose).
+      Optional: If blank, AreTomo3 automatically uses MDOC ExposureDose (measured dose by Tomo5). To modify, input electron dose per raw frame (not accumulated dose). For EER movies, this is dose per EER frame. For TIFF movies, dose per TIFF frame. Example: 200-frame EER movie with 3 e⁻/Ų total → use 0.015.
     minimum: 0.001
     maximum: 10
+    x-parameter-group: gain_dark
     x-bash-var: frame_dose
     x-bash-format: quoted
     x-bash-type: number
@@ -221,7 +222,7 @@ properties:
     type: boolean
     title: Denoise Training
     description: Include this data in denoise training set
-    default: false
+    default: true
     x-parameter-group: reconstruction
     x-bash-var: return_value
     x-bash-format: unquoted
@@ -229,7 +230,8 @@ properties:
     x-bash-skip: false
     x-cli-flag: '-SplitSum'
     x-cli-format: boolean_to_int
-    x-cli-default: 1 # CLI default is 1 (enabled), our form default is 0 (disabled)
+    x-cli-default: 1 # CLI default is 1 (enabled)
+    x-cli-always-include: true
 
   # Input Processing Options
   in_prefix:
