@@ -4,15 +4,34 @@ DRF ViewSets for the cryo_grids app.
 Contains ViewSets for managing Pucks, CryoGridBoxes, and grid logging choices.
 """
 
+import json
+from collections import Counter
 from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import models, transaction
-from django.db.models import Case, CharField, Count, F, Prefetch, Q, Value, When
-from django.db.models.functions import Lower, StrIndex, Substr, Trim
+from django.db.models import (
+    Case,
+    CharField,
+    Count,
+    Exists,
+    F,
+    OuterRef,
+    Prefetch,
+    Q,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce, Lower, StrIndex, Substr, Trim
 from django.utils.decorators import method_decorator
+from django.utils.timezone import now as tz_now
 from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema, inline_serializer
+from projects.models import Project
+from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -1386,9 +1405,15 @@ class CryoGridViewSet(viewsets.ModelViewSet):
 
             # Add new labels
             existing_label_ids = set(GridLabel.objects.filter(grid=grid).values_list("label_id", flat=True))
+            added = False
             for label_id in label_ids:
                 if label_id not in existing_label_ids:
                     GridLabel.objects.create(grid=grid, label_id=label_id, added_by=user)
+                    added = True
+
+            # Bump the grid's updated_on (auto_now only fires on save())
+            if added or removed_label_ids:
+                grid.save(update_fields=["updated_on"])
 
             return Response(
                 {
@@ -1411,10 +1436,6 @@ class CryoGridViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def filterlist(self, request):
         """Return available filter options with counts for grids."""
-        import json
-
-        from django.utils.timezone import now as tz_now
-
         raw_q = request.GET.get("q", "[]")
         q_params = json.loads(raw_q)
 
@@ -1602,8 +1623,6 @@ class ProjectLeaderViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Get only active project_leaders (by project_leader_id in DB)."""
-        from projects.models import Project
-
         leader_ids = (
             Project.objects.filter(project_leader_id__isnull=False)
             .values_list("project_leader_id", flat=True)
@@ -1679,8 +1698,6 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
         List grid boxes with pagination in the format expected by the frontend.
         Returns { result, pagination, sortBy }.
         """
-        import json
-
         queryset = self.filter_queryset(self.get_queryset())
 
         raw_q = request.GET.get("q", None)
@@ -1717,8 +1734,6 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = queryset.order_by(sort_order)
 
         # Paginate
-        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-
         paginator = Paginator(queryset, page_size, orphans=3)
         try:
             page_obj = paginator.page(page)
@@ -1805,8 +1820,6 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=["get"])
     def filterlist(self, request):
         """Return available filter options with counts for grid boxes."""
-        import json
-
         raw_q = request.GET.get("q", "[]")
         q_params = json.loads(raw_q)
 
@@ -1880,8 +1893,6 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """List pucks with pagination in the format expected by the frontend."""
-        import json
-
         from cryo_grids.serializers import PuckListSerializer
 
         queryset = self.filter_queryset(self.get_queryset())
@@ -1952,8 +1963,6 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.order_by(sort_order)
 
         # Paginate
-        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-
         paginator = Paginator(queryset, page_size, orphans=3)
         try:
             page_obj = paginator.page(page)
@@ -2020,8 +2029,6 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=["get"])
     def filterlist(self, request):
         """Return available filter options with counts for pucks."""
-        import json
-
         raw_q = request.GET.get("q", "[]")
         q_params = json.loads(raw_q)
 
@@ -2073,8 +2080,6 @@ class GridInventoryCountsViewSet(viewsets.ViewSet):
     authentication_classes = [CsrfExemptSessionAuthentication]
 
     def list(self, request):
-        import json
-
         raw_q = request.GET.get("q", None)
         q_params = json.loads(raw_q) if raw_q else []
 
@@ -2167,11 +2172,6 @@ class StandardSamplesViewSet(viewsets.ViewSet):
     authentication_classes = [CsrfExemptSessionAuthentication]
 
     def list(self, request, *args, **kwargs):
-        import json
-        from collections import Counter
-
-        from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-
         raw_q = request.GET.get("q", None)
         q_params = json.loads(raw_q) if raw_q else []
 
@@ -2260,6 +2260,219 @@ class StandardSamplesViewSet(viewsets.ViewSet):
                     "availableGridCount": len(grids),
                     "pointOfContact": point_of_contact,
                     "grids": grid_data,
+                }
+            )
+
+        return Response(
+            {
+                "result": result,
+                "pagination": {
+                    "page": page_obj.number,
+                    "pageSize": page_size,
+                    "totalPages": paginator.num_pages,
+                    "totalResults": paginator.count,
+                },
+                "sortBy": {
+                    "sort": sort_field,
+                    "asc": asc,
+                },
+            },
+        )
+
+
+_ScreeningLinkSerializer = inline_serializer(
+    name="ScreeningFreezingSessionLink",
+    fields={
+        "id": drf_serializers.IntegerField(),
+        "name": drf_serializers.CharField(),
+        "url": drf_serializers.URLField(),
+    },
+)
+
+_ScreeningLabelSerializer = inline_serializer(
+    name="ScreeningLabel",
+    fields={
+        "id": drf_serializers.IntegerField(),
+        "name": drf_serializers.CharField(),
+        "color": drf_serializers.CharField(),
+    },
+)
+
+_ScreeningGridRowSerializer = inline_serializer(
+    name="ScreeningGridRow",
+    fields={
+        "grid": inline_serializer(
+            name="ScreeningGridRef",
+            fields={
+                "id": drf_serializers.IntegerField(),
+                "name": drf_serializers.CharField(),
+                "updatedAt": drf_serializers.CharField(allow_null=True),
+            },
+        ),
+        "project_name": drf_serializers.CharField(allow_null=True),
+        "specimen_name": drf_serializers.CharField(allow_null=True),
+        "user_name": drf_serializers.CharField(allow_null=True),
+        "clipped": drf_serializers.BooleanField(),
+        "freezing_session": _ScreeningLinkSerializer,
+        "labels": _ScreeningLabelSerializer.__class__(many=True),
+    },
+)
+
+_ScreeningResponseSerializer = inline_serializer(
+    name="ScreeningGridsResponse",
+    fields={
+        "result": _ScreeningGridRowSerializer.__class__(many=True),
+        "pagination": inline_serializer(
+            name="ScreeningPagination",
+            fields={
+                "page": drf_serializers.IntegerField(),
+                "pageSize": drf_serializers.IntegerField(),
+                "totalPages": drf_serializers.IntegerField(),
+                "totalResults": drf_serializers.IntegerField(),
+            },
+        ),
+        "sortBy": inline_serializer(
+            name="ScreeningSortBy",
+            fields={
+                "sort": drf_serializers.CharField(),
+                "asc": drf_serializers.BooleanField(),
+            },
+        ),
+    },
+)
+
+
+class ScreeningGridsViewSet(viewsets.ViewSet):
+    """
+    Read-only ViewSet that returns grids tagged with a screening status label
+    (TBS, TBC, or TBM). Used to power the Screening tab.
+    """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [CsrfExemptSessionAuthentication]
+
+    STATUS_LABELS = ["TBS", "TBC", "TBM"]
+
+    @extend_schema(
+        summary="List grids in the screening pipeline",
+        description=(
+            "Returns non-trashed grids that have at least one screening status label "
+            "(`TBS`, `TBC`, or `TBM`). The Priority column sort uses the lowest-numbered "
+            "`P1`/`P2`/`P3` label attached to each grid; grids without a priority label "
+            "sort last in ascending order. Pagination, sort field, and direction are "
+            "passed via the `q` query parameter as a JSON-encoded list of "
+            "`{category, value}` entries."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="q",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "JSON-encoded array of `{category, value}` entries. Supported categories: "
+                    "`page` (int), `pageSize` (int), `sort` (one of `priority`, `name`, "
+                    "`project`, `updatedAt`), `asc` (bool)."
+                ),
+                examples=[
+                    OpenApiExample(
+                        "Sort by priority ascending, page 1",
+                        value='[{"category":"sort","value":"priority"},'
+                        '{"category":"asc","value":true},'
+                        '{"category":"page","value":1}]',
+                    ),
+                ],
+            ),
+        ],
+        responses={200: _ScreeningResponseSerializer},
+    )
+    def list(self, request, *args, **kwargs):
+        raw_q = request.GET.get("q", None)
+        q_params = json.loads(raw_q) if raw_q else []
+
+        page = 1
+        page_size = 12
+        sort_field = "priority"
+        asc = True
+
+        for item in q_params:
+            category = item.get("category")
+            value = item.get("value")
+            if isinstance(value, list) and len(value) > 0:
+                value = value[0]
+            if category == "page":
+                page = int(value)
+            elif category == "pageSize":
+                page_size = int(value)
+            elif category == "sort":
+                sort_field = value
+            elif category == "asc":
+                asc = bool(value) if isinstance(value, bool) else str(value).lower() == "true"
+
+        sort_field_map = {
+            "priority": "priority_rank",
+            "name": "name",
+            "project": "intended_project__name",
+            "updatedAt": "updated_on",
+        }
+        db_sort_field = sort_field_map.get(sort_field, "priority_rank")
+        sort_order = db_sort_field if asc else f"-{db_sort_field}"
+
+        queryset = (
+            CryoGrid.objects.filter(trashed=False)
+            .filter(
+                Exists(
+                    GridLabel.objects.filter(
+                        grid=OuterRef("pk"),
+                        label__name__in=self.STATUS_LABELS,
+                    )
+                )
+            )
+            .select_related("intended_project", "specimen", "user", "freezing_session__user")
+            .prefetch_related("labels", "specimen__samples")
+            .annotate(
+                priority_rank=Coalesce(
+                    models.Min(
+                        Case(
+                            When(labels__name__in=["P1", "P2", "P3"], then=F("labels__name")),
+                            output_field=CharField(),
+                        )
+                    ),
+                    Value("ZZZ"),
+                )
+            )
+            .order_by(sort_order, "id")
+        )
+
+        paginator = Paginator(queryset, page_size, orphans=3)
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        from cryo_grids.views import format_freezing_session_link
+
+        result = []
+        for grid in page_obj.object_list:
+            freezing_session = format_freezing_session_link(grid.freezing_session)
+
+            labels = [{"id": label.id, "name": label.name, "color": label.color} for label in grid.labels.all()]
+
+            result.append(
+                {
+                    "grid": {
+                        "id": grid.id,
+                        "name": grid.name,
+                        "updatedAt": grid.updated_on.isoformat() if grid.updated_on else None,
+                    },
+                    "project_name": grid.intended_project.name if grid.intended_project else None,
+                    "specimen_name": str(grid.specimen) if grid.specimen else None,
+                    "user_name": grid.user.username if grid.user else None,
+                    "clipped": grid.clipped,
+                    "freezing_session": freezing_session,
+                    "labels": labels,
                 }
             )
 
