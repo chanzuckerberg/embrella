@@ -11,6 +11,7 @@ import { API } from '@app/common/constants/api';
 import { GridDetailDialogContext } from '@app/components/GridsView/context/GridDetailDialogContext';
 
 import { SCREENING_COLUMN_DEFS, SCREENING_COLUMN_IDS } from './constants/columns';
+import { ScreeningLabelsProvider } from './context/ScreeningLabelsContext';
 
 const GridDetailDialog = React.lazy(() =>
   import('@app/components/GridDetailDialog/GridDetailDialog').then((mod) => ({
@@ -40,9 +41,11 @@ const ScreeningViewInner = (): React.JSX.Element => {
 export const ScreeningView = (): React.JSX.Element => {
   return (
     <TableStateProvider filterCategories={[]} initialSortState={[{ desc: false, id: SCREENING_COLUMN_IDS.PRIORITY }]}>
-      <TableWrapper>
-        <ScreeningViewInner />
-      </TableWrapper>
+      <ScreeningLabelsProvider>
+        <TableWrapper>
+          <ScreeningViewInner />
+        </TableWrapper>
+      </ScreeningLabelsProvider>
     </TableStateProvider>
   );
 };

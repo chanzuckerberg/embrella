@@ -8,8 +8,8 @@ import { AccessorReturnType } from '@app/common/components/EntityTable/types';
 import { EntityDataTypes } from '@app/common/types/tableState';
 import { formatDate } from '@app/common/utils/date';
 import { GridDetailIconCell } from '@app/components/GridsView/components/GridDetailIconCell';
-import { LabelChip } from '@app/components/GridsView/components/LabelEditor/LabelChip';
 import { useGridDetailDialog } from '@app/components/GridsView/context/GridDetailDialogContext';
+import { AllLabelsCell } from '../components/AllLabelsCell';
 import { CategoricalLabelChip } from '../components/CategoricalLabelChip';
 import { ScreeningGridData } from '../types';
 
@@ -119,10 +119,7 @@ export const SCREENING_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnTyp
     id: SCREENING_COLUMN_IDS.LABELS,
     accessorFn: (rowData: EntityDataTypes): string =>
       (rowData as ScreeningGridData).labels.map((l) => l.name).join(', '),
-    cell: ({ row }) => {
-      const data = row.original as ScreeningGridData;
-      return <LabelChip gridId={data.grid.id} labels={data.labels} />;
-    },
+    cell: ({ row }) => <AllLabelsCell row={row.original as ScreeningGridData} />,
     enableSorting: false,
     header: 'All Labels',
     size: 150,

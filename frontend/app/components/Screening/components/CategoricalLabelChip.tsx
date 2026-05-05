@@ -6,28 +6,21 @@ import { Box, Chip, ClickAwayListener, Paper, Popper, Typography } from '@mui/ma
 import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { ScreeningLabel } from '@app/components/Screening/types';
 import { LABEL_CATEGORIES, LabelCategory, labelDisplayName } from '@app/components/Screening/constants/labels';
+import { useScreeningLabels } from '@app/components/Screening/context/ScreeningLabelsContext';
 
 interface CategoricalLabelChipProps {
   gridId: number;
   labels: ScreeningLabel[];
   category: LabelCategory;
-  onChange?: (labels: ScreeningLabel[]) => void;
 }
 
-export const CategoricalLabelChip = ({
-  gridId,
-  labels: initialLabels,
-  category,
-  onChange,
-}: CategoricalLabelChipProps) => {
-  const [labels, setLabels] = useState<ScreeningLabel[]>(initialLabels);
+export const CategoricalLabelChip = ({ gridId, labels: initialLabels, category }: CategoricalLabelChipProps) => {
+  const { getLabels, setLabels: setSharedLabels } = useScreeningLabels();
+  const labels = getLabels(gridId, initialLabels);
+
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<ScreeningLabel[]>([]);
   const anchorRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setLabels(initialLabels);
-  }, [initialLabels]);
 
   const categoryNames = LABEL_CATEGORIES[category];
   const current = labels.find((l) => categoryNames.includes(l.name)) ?? null;
@@ -47,8 +40,7 @@ export const CategoricalLabelChip = ({
   }, [open, categoryNames]);
 
   const persist = async (next: ScreeningLabel[]) => {
-    setLabels(next);
-    onChange?.(next);
+    setSharedLabels(gridId, next);
     const url = `${DJANGO_URL}${POST_API.UPDATE_GRID_LABELS.replace('grid_id', String(gridId))}`;
     try {
       const res = await fetch(url, {
