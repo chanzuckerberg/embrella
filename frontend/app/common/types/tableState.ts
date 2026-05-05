@@ -2,6 +2,7 @@ import { AnnotationData } from '@app/components/AnnotationsView/types';
 import { DirectorySummary } from '@app/components/DirectoryExplorerView/types';
 import { GridBoxData } from '@app/components/GridInventory/GridBoxesView/types';
 import { PuckData } from '@app/components/GridInventory/PucksView/types';
+import { ScreeningGridData } from '@app/components/Screening/types';
 import { StandardSampleData } from '@app/components/StandardSamples/types';
 import { GridData } from '@app/components/GridsView/types';
 import { ReviewData } from '@app/components/ReviewsView/types';
@@ -15,6 +16,7 @@ export type EntityDataTypes =
   | GridData
   | PuckData
   | StandardSampleData
+  | ScreeningGridData
   | TomogramData
   | ReviewData
   | Job;
