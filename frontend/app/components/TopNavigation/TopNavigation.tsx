@@ -62,6 +62,7 @@ const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
   samples: [
     { label: 'Grid Logging', href: '/samples/grid_logging' },
     { label: 'Grid Inventory', href: '/samples/cryo_grids' },
+    { label: 'Screening', href: '/samples/screening' },
     { label: 'Standard Samples', href: '/samples/standard-samples' },
   ],
   sessions: [

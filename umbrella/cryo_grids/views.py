@@ -472,6 +472,19 @@ def format_project(item):
     return ProjectModel(id=item["project_id"], name=item["project_name"], url=project_url)
 
 
+def format_freezing_session_link(freezing_session):
+    """Return an EntityLinkField-shaped dict ({id, name, url}) for a PlungeFreezingSession,
+    where url points at the Django admin change page. Returns None if input is None."""
+    if freezing_session is None:
+        return None
+    base_url = get_base_url()
+    return {
+        "id": freezing_session.id,
+        "name": str(freezing_session),
+        "url": f"{base_url}/admin/cryo_grids/plungefreezingsession/{freezing_session.id}/change/",
+    }
+
+
 def format_puck(item):
     return PuckModel(name=item["puck"])
 
@@ -650,5 +663,3 @@ def update_grid_clipped_status(request, grid_id):
     except Exception as e:
         print(f"ERROR: {str(e)}")
         return JsonResponse({"success": False, "error": str(e)}, status=500)
-
-

@@ -13,10 +13,21 @@ export interface LabelData {
 interface LabelChipProps {
   gridId: number;
   labels: LabelData[];
+  /**
+   * When provided, the chip is fully controlled: `controlledLabels` is the
+   * source of truth for what's rendered, and `onSave` is invoked instead of
+   * the default PATCH whenever the label set changes. Use this when multiple
+   * editors on the same row share label state (see Screening tab).
+   */
+  controlledLabels?: LabelData[];
+  onSave?: (next: LabelData[]) => Promise<void> | void;
 }
 
-export const LabelChip = ({ gridId, labels: initialLabels }: LabelChipProps) => {
-  const [labels, setLabels] = useState<LabelData[]>(initialLabels);
+export const LabelChip = ({ gridId, labels: initialLabels, controlledLabels, onSave }: LabelChipProps) => {
+  const isControlled = controlledLabels !== undefined;
+  const [internalLabels, setInternalLabels] = useState<LabelData[]>(initialLabels);
+  const labels = isControlled ? controlledLabels : internalLabels;
+
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<LabelData[]>([]);
@@ -60,7 +71,11 @@ export const LabelChip = ({ gridId, labels: initialLabels }: LabelChipProps) => 
   }, [suggestions]);
 
   const saveLabels = async (newLabels: LabelData[]) => {
-    setLabels(newLabels);
+    if (!isControlled) setInternalLabels(newLabels);
+    if (onSave) {
+      await onSave(newLabels);
+      return;
+    }
     const url = `${DJANGO_URL}${POST_API.UPDATE_GRID_LABELS.replace('grid_id', String(gridId))}`;
     try {
       const res = await fetch(url, {

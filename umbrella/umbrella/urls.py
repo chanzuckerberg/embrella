@@ -34,6 +34,7 @@ from cryo_grids.viewsets import (
     PuckViewSet,
     SampleViewSet,
     SpecimenViewSet,
+    ScreeningGridsViewSet,
     StandardSamplesViewSet,
 )
 from custom.views import version_info
@@ -76,6 +77,7 @@ router.register(r"api/list/project-leaders", ProjectLeaderViewSet, basename="pro
 router.register(r"api/list/labels", LabelViewSet, basename="label")
 router.register(r"cryo_grids/v1/grid-boxes", CryoGridBoxViewSet, basename="grid-box")
 router.register(r"cryo_grids/v1/standard-samples", StandardSamplesViewSet, basename="standard-sample")
+router.register(r"cryo_grids/v1/screening-grids", ScreeningGridsViewSet, basename="screening-grid")
 router.register(r"cryo_grids/v1/pucks", PuckListViewSet, basename="puck-list")
 router.register(r"cryo_grids/v1/counts", GridInventoryCountsViewSet, basename="grid-inventory-counts")
 
