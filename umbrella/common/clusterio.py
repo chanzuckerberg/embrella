@@ -106,8 +106,6 @@ def get_cluster_ssh_connection(cluster_id, auth=None):
         "compress": True,
         "banner_timeout": 10,
     }
-    if auth['username'] == 'david.dong':
-        auth['username'] = 'ddong'
     ssh_config = {**ssh_config, **auth}
     ssh.connect(**ssh_config)
     return ssh
@@ -489,89 +487,45 @@ def test_ssh_as_user(username, cluster_id):
             ssh.close()
 
 
-def get_auth_for_user(username, cluster_id, password=None):
+def get_auth_for_user(user, cluster_id):
     """
-    Determine appropriate authentication credentials for SSH connection.
+    Build SSH auth credentials for a Django user on the given cluster.
 
-    This function implements a two-tier authentication strategy:
-    1. First checks if SSH key is set up for the user (service user can SSH as user)
-    2. If SSH is set up, uses service user's key (no password needed)
-    3. If SSH is not set up and password provided, uses password authentication
-    4. If SSH is not set up and no password, returns error dict
+    Looks up the user's cluster username from UserClusterCredentials and
+    returns service-user-key auth bound to that username. Raises
+    MissingClusterCredentialsError when no row exists — callers should catch
+    this and surface the standard ssh_setup_required 403 contract so the
+    frontend opens the SSH setup modal.
 
     Args:
-        username (str): The cluster username to authenticate as
-        cluster_id (str): The target cluster ('czii' or 'bruno')
-        password (str, optional): User's password for fallback authentication
-                                  (may be base64 encoded or raw text)
+        user: Authenticated Django User instance.
+        cluster_id (str): Target cluster ('czii' or 'bruno').
 
     Returns:
         tuple: (auth_dict, error_dict_or_none)
-            - auth_dict (dict): Authentication credentials for get_cluster_ssh_connection()
-              Format depends on auth method:
-              - Service user: {"username": str, "pkey": paramiko.Ed25519Key}
-              - Password: {"username": str, "password": str}
-            - error_dict (dict or None): Error information if auth setup failed, None on success
-              Format: {
-                  "error": str,
-                  "ssh_setup_required": bool,
-                  "cluster_id": str,
-                  "username": str
-              }
+            - auth_dict (dict): {"username": str, "pkey": paramiko.Ed25519Key}
+              for get_cluster_ssh_connection().
+            - error_dict (dict or None): Cluster-validation error, or None on
+              success. Missing credentials raise instead of returning an
+              error dict.
 
-    Example:
-        # Success with service key
-        auth, error = get_auth_for_user("user123", "czii")
-        if error:
-            return JsonResponse(error, status=403)
-
-        # With password fallback
-        auth, error = get_auth_for_user("user123", "czii", password="secret")
-        if error:
-            return JsonResponse(error, status=403)
+    Raises:
+        MissingClusterCredentialsError: when the user has not set up
+            credentials for `cluster_id`.
     """
-    import base64
+    from users.usernames import resolve_cluster_username
 
-    # If email provided, take username to be what precedes the @
-    if '@' in username:
-        username = username.split('@')[0]
-
-    # Validate cluster_id
     if not _cluster_exists(cluster_id):
         return None, {
             "error": f"Invalid cluster_id: {cluster_id}",
             "ssh_setup_required": False,
             "cluster_id": cluster_id,
-            "username": username,
         }
 
-    # Check if SSH is set up for this user
-    ssh_check = test_ssh_as_user(username, cluster_id)
-
-    if ssh_check["can_connect"]:
-        # SSH is set up, use service user auth
-        auth = get_auth_service_user()
-        auth['username'] = username
-        return auth, None
-    else:
-        # SSH not set up, require password
-        if not password:
-            return None, {
-                "error": "SSH key not set up for this user",
-                "ssh_setup_required": True,
-                "cluster_id": cluster_id,
-                "username": username,
-            }
-
-        # Decode password if base64 encoded
-        try:
-            decoded_password = base64.b64decode(password).decode("utf-8")
-        except Exception:
-            # If decode fails, assume it's already plain text
-            decoded_password = password
-
-        auth = {"username": username, "password": decoded_password}
-        return auth, None
+    cluster_username = resolve_cluster_username(user, cluster_id)
+    auth = get_auth_service_user()
+    auth = {**auth, "username": cluster_username}
+    return auth, None
 
 
 def setup_ssh_key_for_user(username, password, cluster_id):

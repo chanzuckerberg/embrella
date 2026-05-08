@@ -791,17 +791,15 @@ def get_jobs_filterlist(request):
 @permission_classes([IsAuthenticated])
 @extend_schema(
     summary="Cancel multiple jobs",
-    description="Cancel one or more SLURM jobs by job ID. Uses SSH key auth if set up, otherwise requires password.",
+    description="Cancel one or more SLURM jobs by job ID. Requires the user to have completed SSH key setup for the cluster.",
     request={
         "application/json": {
             "type": "object",
             "properties": {
                 "job_ids": {"type": "array", "items": {"type": "string"}},
                 "cluster_id": {"type": "string"},
-                "user_id": {"type": "string"},
-                "password": {"type": "string", "nullable": True},
             },
-            "required": ["job_ids", "cluster_id", "user_id"],
+            "required": ["job_ids", "cluster_id"],
         },
     },
     responses={
@@ -815,30 +813,35 @@ def bulk_cancel_jobs(request):
     """
     Cancel multiple SLURM jobs at once.
 
-    Authentication:
-    1. First checks if SSH key is set up for the user (service user can SSH as user)
-    2. If SSH is set up, uses service user's key (no password needed)
-    3. If SSH is not set up, requires password for authentication
-    4. If SSH is not set up and no password provided, returns error indicating setup is needed
+    Authenticates as the requesting Django user using the cluster username
+    stored in UserClusterCredentials. Returns 403 with ssh_setup_required if
+    the user has not yet set up credentials for the cluster, which the
+    frontend uses to open the SSH setup modal.
     """
+    from users.usernames import MissingClusterCredentialsError
+
     try:
         data = request.data
         job_ids = data.get("job_ids", [])
         cluster_id = data.get("cluster_id", "czii")
-        user_id = data.get("user_id")
-        password = data.get("password")
 
         if not job_ids:
             return JsonResponse({"error": "No job IDs provided"}, status=400)
 
-        if not user_id:
-            return JsonResponse({"error": "User ID required"}, status=400)
-
         if cluster_id not in ["czii", "bruno"]:
             return JsonResponse({"error": "Invalid cluster_id"}, status=400)
 
-        # Get appropriate authentication credentials
-        auth, error = clusterio.get_auth_for_user(user_id, cluster_id, password)
+        try:
+            auth, error = clusterio.get_auth_for_user(request.user, cluster_id)
+        except MissingClusterCredentialsError:
+            return JsonResponse(
+                {
+                    "error": "SSH key not set up for this user",
+                    "ssh_setup_required": True,
+                    "cluster_id": cluster_id,
+                },
+                status=403,
+            )
         if error:
             return JsonResponse(error, status=403)
 
