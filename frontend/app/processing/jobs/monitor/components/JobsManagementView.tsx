@@ -85,59 +85,55 @@ export const JobsManagementView: React.FC = () => {
   }, []);
 
   // Check SSH setup and perform bulk cancel
-  const performBulkCancel = useCallback(
-    async (username: string) => {
-      setBulkCancelLoading(true);
-      setBulkCancelError(null);
-      setBulkCancelSuccess(false);
+  const performBulkCancel = useCallback(async () => {
+    setBulkCancelLoading(true);
+    setBulkCancelError(null);
+    setBulkCancelSuccess(false);
 
-      try {
-        const response = await postResource(`${DJANGO_URL}${POST_API.BULK_CANCEL_JOBS}`, {
-          job_ids: selectedJobIds,
-          cluster_id: selectedCluster,
-          user_id: username,
-          // No password - will use SSH key if set up
-        });
+    try {
+      const response = await postResource(`${DJANGO_URL}${POST_API.BULK_CANCEL_JOBS}`, {
+        job_ids: selectedJobIds,
+        cluster_id: selectedCluster,
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        console.log('Bulk cancel response:', { status: response.status, data });
-
-        if (response.status === 403 && data.ssh_setup_required) {
-          // SSH setup required for bulk cancel operation
-          console.log('SSH setup required for bulk cancel, opening modal');
-          setCurrentUsername(username);
-          setSSHSetupContext('bulk_cancel');
-          setSSHSetupModalOpen(true);
-          return;
+      if (response.status === 403 && data.ssh_setup_required) {
+        // Look up any persisted cluster username so the modal pre-fills it.
+        try {
+          const checkResp = await postResource(`${DJANGO_URL}${API.SSH_CHECK_SETUP}`, {
+            cluster_id: selectedCluster,
+          });
+          const checkData = await checkResp.json();
+          setCurrentUsername(typeof checkData.username === 'string' ? checkData.username : '');
+        } catch (checkErr) {
+          console.warn('Failed to fetch resolved cluster username:', checkErr);
+          setCurrentUsername('');
         }
-
-        if (data.success) {
-          setBulkCancelSuccess(true);
-          setTimeout(() => {
-            handleRefresh();
-          }, 2000);
-        } else {
-          setBulkCancelError('Failed to cancel some jobs. Check individual results.');
-        }
-      } catch (err) {
-        setBulkCancelError(`Error: ${err instanceof Error ? err.message : String(err)}`);
-      } finally {
-        setBulkCancelLoading(false);
+        setSSHSetupContext('bulk_cancel');
+        setSSHSetupModalOpen(true);
+        return;
       }
-    },
-    [selectedJobIds, selectedCluster, handleRefresh]
-  );
+
+      if (data.success) {
+        setBulkCancelSuccess(true);
+        setTimeout(() => {
+          handleRefresh();
+        }, 2000);
+      } else {
+        setBulkCancelError('Failed to cancel some jobs. Check individual results.');
+      }
+    } catch (err) {
+      setBulkCancelError(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setBulkCancelLoading(false);
+    }
+  }, [selectedJobIds, selectedCluster, handleRefresh]);
 
   // Bulk cancel handler
   const handleBulkCancel = useCallback(async () => {
     if (selectedJobIds.length === 0) return;
-
-    // Prompt for username
-    const username = prompt('Enter your username:');
-    if (!username) return;
-
-    await performBulkCancel(username);
+    await performBulkCancel();
   }, [selectedJobIds, performBulkCancel]);
 
   // SSH setup success handler - behavior depends on context
@@ -145,13 +141,13 @@ export const JobsManagementView: React.FC = () => {
     setSSHSetupModalOpen(false);
 
     // Only perform bulk cancel if that's why the modal was opened
-    if (sshSetupContext === 'bulk_cancel' && currentUsername) {
-      performBulkCancel(currentUsername);
+    if (sshSetupContext === 'bulk_cancel') {
+      performBulkCancel();
     }
 
     // Reset context
     setSSHSetupContext(null);
-  }, [sshSetupContext, currentUsername, performBulkCancel]);
+  }, [sshSetupContext, performBulkCancel]);
 
   // SSH setup modal close handler
   const handleSSHSetupClose = useCallback(() => {
@@ -312,7 +308,7 @@ export const JobsManagementView: React.FC = () => {
             onClose={handleSSHSetupClose}
             onSuccess={handleSSHSetupSuccess}
             cluster={selectedCluster}
-            username={currentUsername}
+            defaultUsername={currentUsername}
             purpose="management"
           />
         </Box>

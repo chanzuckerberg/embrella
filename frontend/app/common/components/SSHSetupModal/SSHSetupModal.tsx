@@ -11,7 +11,7 @@ interface SSHSetupModalProps {
   onClose: () => void;
   onSuccess: () => void;
   cluster: 'czii' | 'bruno';
-  username: string;
+  defaultUsername?: string;
   purpose?: 'submission' | 'management';
 }
 
@@ -20,18 +20,24 @@ export const SSHSetupModal: React.FC<SSHSetupModalProps> = ({
   onClose,
   onSuccess,
   cluster,
-  username,
+  defaultUsername = '',
   purpose = 'submission',
 }) => {
+  const [username, setUsername] = useState(defaultUsername);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('SSHSetupModal state changed:', { open, cluster, username });
-  }, [open, cluster, username]);
+    setUsername(defaultUsername);
+  }, [defaultUsername, open]);
 
   const handleSubmit = async () => {
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) {
+      setError('Username is required');
+      return;
+    }
     if (!password) {
       setError('Password is required');
       return;
@@ -45,7 +51,7 @@ export const SSHSetupModal: React.FC<SSHSetupModalProps> = ({
 
       const response = await postResource(`${DJANGO_URL}${POST_API.SSH_SETUP_KEY}`, {
         cluster_id: cluster,
-        username: username,
+        username: trimmedUsername,
         password: encodedPassword,
       });
 
@@ -91,14 +97,24 @@ export const SSHSetupModal: React.FC<SSHSetupModalProps> = ({
             This is a one-time setup. Please enter your credentials to continue:
           </Typography>
 
-          <TextField label="Username" value={username} disabled fullWidth margin="normal" variant="outlined" />
+          <TextField
+            label="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            fullWidth
+            margin="normal"
+            variant="outlined"
+            autoFocus
+            disabled={loading}
+            helperText={`Your username on the ${cluster.toUpperCase()} cluster`}
+          />
 
           <TextField
             label="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === 'Enter' && !loading) {
                 handleSubmit();
               }
@@ -106,7 +122,6 @@ export const SSHSetupModal: React.FC<SSHSetupModalProps> = ({
             fullWidth
             margin="normal"
             variant="outlined"
-            autoFocus
             disabled={loading}
           />
 
@@ -127,7 +142,7 @@ export const SSHSetupModal: React.FC<SSHSetupModalProps> = ({
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={loading || !password}
+              disabled={loading || !password || !username.trim()}
               sdsType="primary"
               sdsStyle="square"
               startIcon={loading ? <CircularProgress size={20} /> : undefined}
