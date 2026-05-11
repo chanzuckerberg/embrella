@@ -55,12 +55,18 @@ def check_ssh_setup(request):
     """
     Check if SSH setup is required for the user on the specified cluster.
 
-    This endpoint tests if the service user can SSH as the specified user
-    using the service user's SSH key. If the connection fails, setup is required.
+    Resolves the user's cluster username from UserClusterCredentials. If no
+    row exists, setup is required and the response username is null so the
+    SSH setup modal opens with an empty field. If a row exists, the
+    response includes the persisted username for modal pre-fill, and we
+    test the actual SSH connection to detect cases where the credentials
+    row exists but the service-user key was removed from authorized_keys.
     """
+    from users.usernames import MissingClusterCredentialsError, resolve_cluster_username
+
     try:
         cluster_id = request.data.get("cluster_id")
-        username = request.data.get("username", request.user.username)
+        explicit_username = request.data.get("username")
 
         if not cluster_id:
             return JsonResponse({"error": "cluster_id is required"}, status=400)
@@ -68,7 +74,21 @@ def check_ssh_setup(request):
         if cluster_id not in ["czii", "bruno"]:
             return JsonResponse({"error": 'cluster_id must be "czii" or "bruno"'}, status=400)
 
-        # Test SSH connection
+        if explicit_username:
+            username = explicit_username
+        else:
+            try:
+                username = resolve_cluster_username(request.user, cluster_id)
+            except MissingClusterCredentialsError:
+                return JsonResponse(
+                    {
+                        "setup_required": True,
+                        "cluster_id": cluster_id,
+                        "username": None,
+                        "error": None,
+                    },
+                )
+
         result = clusterio.test_ssh_as_user(username, cluster_id)
 
         return JsonResponse(
@@ -151,6 +171,18 @@ def setup_ssh_key(request):
 
         # Setup SSH key
         result = clusterio.setup_ssh_key_for_user(username, password, cluster_id)
+
+        # Persist the user's cluster username on success so future SSH
+        # connections look up this row instead of guessing from the email.
+        if result["success"] and result["can_connect"]:
+            from stores.models import Cluster
+            from users.models import UserClusterCredentials
+            cluster = Cluster.objects.get(cluster_id=cluster_id)
+            UserClusterCredentials.objects.update_or_create(
+                user=request.user,
+                cluster=cluster,
+                defaults={"username": username},
+            )
 
         return JsonResponse(
             {

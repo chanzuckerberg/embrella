@@ -51,10 +51,12 @@ export const ClusterSelector: React.FC<ClusterSelectorProps> = ({
       const data = await response.json();
 
       if (data.setup_required) {
-        // Notify parent to open SSH setup modal
-        const username = user.username.includes('@') ? user.username.split('@')[0] : user.username;
+        // Notify parent to open SSH setup modal. The backend returns the
+        // persisted cluster username when one exists (so we can pre-fill
+        // it for re-setup), or null for first-time setup.
+        const resolvedUsername = typeof data.username === 'string' ? data.username : '';
         if (onSSHSetupRequired) {
-          onSSHSetupRequired(value, username);
+          onSSHSetupRequired(value, resolvedUsername);
         }
       } else {
         // Show success message

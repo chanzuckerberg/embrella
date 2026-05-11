@@ -174,23 +174,16 @@ def execute_pipe(request):
 
     POST /workflow/v1/execution/execute/
 
-    Authentication:
-    1. First checks if SSH key is set up for the user (service user can SSH as user)
-    2. If SSH is set up, uses service user's key (no password needed)
-    3. If SSH is not set up, requires password for authentication
-    4. If SSH is not set up and no password provided, returns error indicating setup is needed
+    Authentication: uses the requesting Django user's cluster credentials
+    from UserClusterCredentials. Returns 403 with ssh_setup_required if the
+    user has not yet set up credentials for the cluster, which the frontend
+    uses to open the SSH setup modal.
 
     Request body:
         {
             "pipe_in_plan_id": 123,
             "proc_run_id": 456,
-            "parameters": {
-                "param1": "value1",
-                "param2": 42,
-                ...
-            },
-            "user_id": "username",
-            "password": "pass",  // Optional: base64 encoded or plain text
+            "parameters": {...},
             "cluster_id": "czii"  // Optional: override default cluster (default: "czii")
         }
 
@@ -209,8 +202,7 @@ def execute_pipe(request):
             "success": false,
             "error": "SSH key not set up for this user",
             "ssh_setup_required": true,
-            "cluster_id": "czii",
-            "username": "username"
+            "cluster_id": "czii"
         }
     """
     try:
@@ -227,26 +219,22 @@ def execute_pipe(request):
         run_name = data.get("run_name")
 
         parameters = data.get("parameters", {})
-        auth = data.get("auth", {})
-        user_id = auth.get("username") or request.user.username
-        password = auth.get("password")
         cluster_id = data.get("cluster") or data.get("cluster_id")  # Support both field names
 
-        # If email provided, take username to be what precedes the @
-        if user_id and "@" in user_id:
-            user_id = user_id.split("@")[0]
+        from users.usernames import MissingClusterCredentialsError
 
-        if not user_id:
+        try:
+            auth, error = clusterio.get_auth_for_user(request.user, cluster_id)
+        except MissingClusterCredentialsError:
             return JsonResponse(
                 {
                     "success": False,
-                    "error": "user_id is required",
+                    "error": "SSH key not set up for this user",
+                    "ssh_setup_required": True,
+                    "cluster_id": cluster_id,
                 },
-                status=400,
+                status=403,
             )
-
-        # Get appropriate authentication credentials
-        auth, error = clusterio.get_auth_for_user(user_id, cluster_id, password)
         if error:
             return JsonResponse(
                 {
@@ -255,7 +243,6 @@ def execute_pipe(request):
                 },
                 status=403,
             )
-        auth["username"] = user_id
 
         # If names provided instead of IDs, look them up (and create run if needed)
         if processor_name and session_name and run_name:

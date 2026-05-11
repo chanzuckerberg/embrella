@@ -235,15 +235,13 @@ export default function WorkflowLaunchPage() {
       )}
 
       {/* SSH Setup Modal */}
-      {!!currentUsername && (
-        <SSHSetupModal
-          open={sshSetupModalOpen}
-          onClose={() => setSSHSetupModalOpen(false)}
-          onSuccess={handleSSHSetupSuccess}
-          cluster={selectedCluster as 'czii' | 'bruno'}
-          username={currentUsername}
-        />
-      )}
+      <SSHSetupModal
+        open={sshSetupModalOpen}
+        onClose={() => setSSHSetupModalOpen(false)}
+        onSuccess={handleSSHSetupSuccess}
+        cluster={selectedCluster as 'czii' | 'bruno'}
+        defaultUsername={currentUsername}
+      />
     </PageContainer>
   );
 }

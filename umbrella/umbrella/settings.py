@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     #'social_django',
     "custom",
     "processes",
+    "users",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",

@@ -56,7 +56,7 @@ import { DependencyChecker } from './DependencyChecker';
 import ScriptPreviewModal from './ScriptPreviewModal';
 import { SSHSetupModal } from '@app/common/components/SSHSetupModal';
 import { API, DJANGO_URL } from '@app/common/constants/api';
-import { fetchResource } from '@app/common/queries/fetchResource';
+import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 
 export default function WorkflowLaunchForm({
   processor,
@@ -124,6 +124,7 @@ export default function WorkflowLaunchForm({
   // SSH setup
   const [sshModalOpen, setSshModalOpen] = useState(false);
   const [sshCluster, setSshCluster] = useState<'czii' | 'bruno'>('czii');
+  const [sshDefaultUsername, setSshDefaultUsername] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<{ username: string } | null>(null);
 
   // Script preview
@@ -748,11 +749,20 @@ export default function WorkflowLaunchForm({
         validation_errors?: string[];
       };
       if (err.response?.status === 403 && err.response?.data?.ssh_setup_required) {
-        console.log('SSH setup required, opening modal:', {
-          cluster: err.response.data.cluster || cluster,
-          username: currentUser?.username,
-        });
-        setSshCluster((err.response.data.cluster as 'czii' | 'bruno') || cluster);
+        const targetCluster = (err.response.data.cluster || cluster) as typeof cluster;
+        setSshCluster(targetCluster);
+        // Look up any persisted cluster username so the modal pre-fills the
+        // value the user previously confirmed (vs. forcing them to retype).
+        try {
+          const checkResp = await postResource(`${DJANGO_URL}${API.SSH_CHECK_SETUP}`, {
+            cluster_id: targetCluster,
+          });
+          const checkData = await checkResp.json();
+          setSshDefaultUsername(typeof checkData.username === 'string' ? checkData.username : '');
+        } catch (checkErr) {
+          console.warn('Failed to fetch resolved cluster username:', checkErr);
+          setSshDefaultUsername('');
+        }
         setSshModalOpen(true);
         setIsSubmitting(false);
         return;
@@ -1392,15 +1402,13 @@ export default function WorkflowLaunchForm({
       </form>
 
       {/* SSH Setup Modal - rendered outside form to avoid z-index issues */}
-      {!!currentUser?.username && (
-        <SSHSetupModal
-          open={sshModalOpen}
-          onClose={() => setSshModalOpen(false)}
-          onSuccess={handleSSHSetupSuccess}
-          cluster={sshCluster}
-          username={currentUser.username}
-        />
-      )}
+      <SSHSetupModal
+        open={sshModalOpen}
+        onClose={() => setSshModalOpen(false)}
+        onSuccess={handleSSHSetupSuccess}
+        cluster={sshCluster}
+        defaultUsername={sshDefaultUsername}
+      />
 
       {/* Script Preview Modal */}
       <ScriptPreviewModal
