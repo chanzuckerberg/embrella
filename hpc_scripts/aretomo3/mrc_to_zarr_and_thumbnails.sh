@@ -64,10 +64,10 @@ process_file() {
 # convert mrc to zarr in background (throttled by wait_for_jobs)
 for vol_dir in "vol001" "vol003"; do
     local vol_path="${directory}/${vol_dir}/${base_name}_Vol.mrc"
-    if [ -f "$vol_path" ]; then
+    local zarr_path="${vol_path%.mrc}.zarr"
+    if [ -f "$vol_path" ] && [ ! -d "$zarr_path" ]; then
         wait_for_jobs
         echo "[mrc to zarr] Launching $vol_path"
-        local zarr_path="${vol_path%.mrc}.zarr"
         (
             zarrczar convert --mrc-path "$vol_path" --zarr-path "$zarr_path" --chunk-size 128
             zarrczar compute-image-stats "$zarr_path"
