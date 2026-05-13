@@ -2309,7 +2309,7 @@ _ScreeningGridRowSerializer = inline_serializer(
                 "updatedAt": drf_serializers.CharField(allow_null=True),
             },
         ),
-        "project_name": drf_serializers.CharField(allow_null=True),
+        "project": _ScreeningLinkSerializer,
         "specimen_name": drf_serializers.CharField(allow_null=True),
         "user_name": drf_serializers.CharField(allow_null=True),
         "clipped": drf_serializers.BooleanField(),
@@ -2452,11 +2452,12 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
         except EmptyPage:
             page_obj = paginator.page(paginator.num_pages)
 
-        from cryo_grids.views import format_freezing_session_link
+        from cryo_grids.views import format_freezing_session_link, format_project_link
 
         result = []
         for grid in page_obj.object_list:
             freezing_session = format_freezing_session_link(grid.freezing_session)
+            project = format_project_link(grid.intended_project)
 
             labels = [{"id": label.id, "name": label.name, "color": label.color} for label in grid.labels.all()]
 
@@ -2467,7 +2468,7 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
                         "name": grid.name,
                         "updatedAt": grid.updated_on.isoformat() if grid.updated_on else None,
                     },
-                    "project_name": grid.intended_project.name if grid.intended_project else None,
+                    "project": project,
                     "specimen_name": str(grid.specimen) if grid.specimen else None,
                     "user_name": grid.user.username if grid.user else None,
                     "clipped": grid.clipped,

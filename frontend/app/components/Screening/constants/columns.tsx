@@ -4,7 +4,11 @@ import { Link as SdsLink } from '@czi-sds/components';
 import { Link } from '@mui/material';
 import { ColumnDef } from '@tanstack/react-table';
 
-import { AccessorReturnType } from '@app/common/components/EntityTable/types';
+import { AccessorReturnType, LinkCellProps } from '@app/common/components/EntityTable/types';
+import {
+  getLinkPropsFromLinkField,
+  getLinkCellFromCellContext,
+} from '@app/common/components/EntityTable/utils/linkUtils';
 import { EntityDataTypes } from '@app/common/types/tableState';
 import { formatDate } from '@app/common/utils/date';
 import { GridDetailIconCell } from '@app/components/GridsView/components/GridDetailIconCell';
@@ -49,7 +53,15 @@ export const SCREENING_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnTyp
   },
   {
     id: SCREENING_COLUMN_IDS.PROJECT,
-    accessorFn: (rowData: EntityDataTypes): string => (rowData as ScreeningGridData).project_name ?? '-',
+    accessorFn: (rowData: EntityDataTypes): LinkCellProps | string => {
+      const { project } = rowData as ScreeningGridData;
+      return project ? getLinkPropsFromLinkField(project) : '-';
+    },
+    cell: (props) => {
+      const { project } = props.row.original as ScreeningGridData;
+      if (!project) return '-';
+      return getLinkCellFromCellContext(props);
+    },
     enableSorting: true,
     header: 'Project',
     size: 120,
