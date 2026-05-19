@@ -9,7 +9,9 @@ __pycache__/
 # Distribution / packaging
 .Python
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
 build/
 develop-eggs/
 dist/
