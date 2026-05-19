@@ -23,18 +23,14 @@ ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
 DEBUG = ENVIRONMENT == "development"
 
 def run_with_args(args):
-    return subprocess.check_output(args, cwd=BASE_DIR).decode("utf-8")
+    try:
+        return subprocess.check_output(args, cwd=BASE_DIR).decode("utf-8")
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return "N/A"
 
-GIT_HASH = None
-GIT_BRANCH = None
-START_TIME = None
-if GIT_HASH is None:
-    GIT_HASH = run_with_args(["git", "rev-parse", "--short", "HEAD"])
-    GIT_BRANCH = run_with_args(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-    START_TIME = datetime.now(tz=pytz.utc).astimezone(pytz.timezone("US/Pacific")).strftime("%Y-%m-%d %H:%M %z")
-    if GIT_HASH is None:
-        GIT_HASH = 'N/A'
-        GIT_BRANCH = 'N/A'
+GIT_HASH = run_with_args(["git", "rev-parse", "--short", "HEAD"])
+GIT_BRANCH = run_with_args(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+START_TIME = datetime.now(tz=pytz.utc).astimezone(pytz.timezone("US/Pacific")).strftime("%Y-%m-%d %H:%M %z")
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "America/Los_Angeles"
@@ -196,7 +192,7 @@ GOOGLE_SSO_SAVE_BASIC_GOOGLE_INFO = False
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*")
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*.czbiohub.org", "umbrella.czbiohub.org", "umbrella-dev.czbiohub.org", "host.containers.internal", "host.docker.internal"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*.czbiohub.org", "umbrella.czbiohub.org", "umbrella-dev.czbiohub.org", "host.containers.internal", "host.docker.internal", "nginx"]
 ALLOWED_DOMAINS = ["czii.org", "czbiohub.org"]
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True

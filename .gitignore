@@ -130,6 +130,9 @@ ENV/
 env.bak/
 venv.bak/
 .env*
+# Compose looks for .env in the directory of the first -f file (infra/), not the
+# repo root. Tracking this symlink for the devcontainer
+!infra/.env
 
 # Spyder project settings
 .spyderproject
