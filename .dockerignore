@@ -1,0 +1,60 @@
+# Python
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.venv
+venv/
+*.sqlite3
+*.sqlite3-journal
+
+# Node
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/coverage
+frontend/playwright-report
+frontend/.yarn/cache
+frontend/.yarn/install-state.gz
+frontend/.yarn/unplugged
+
+# Build outputs
+staticfiles/
+docs_build/
+site/
+
+# Logs and runtime
+logs/
+*.log
+*.pid
+
+# Local dev / secrets
+.env
+.env.*
+!.env_template
+*.pem
+*.key
+id_*
+known_hosts
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+*.swp
+
+# Git
+.git
+.gitignore
+
+# Local mysql data (legacy compose dir)
+helpers/local_mysql/mariadb_data/
+
+# Local DB backups / scratch space
+.scratch/
+
+# Docker / planning notes
+.claude/
+.devcontainer/
