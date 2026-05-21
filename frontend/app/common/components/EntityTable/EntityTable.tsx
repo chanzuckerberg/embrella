@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect } from 'react';
 
 import { Pagination } from '@czi-sds/components';
 import styled from '@emotion/styled';
@@ -36,6 +36,7 @@ interface EntityTableProps<T> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getSubRows?: (row: any) => any[] | undefined;
   renderSubRow?: (row: Row<T>) => React.ReactNode;
+  onRowCountChange?: (rowCount: number) => void;
 }
 
 export const StyledPagination = styled(Pagination)`
@@ -78,13 +79,20 @@ export const EntityTable = <T extends EntityDataTypes>({
   enableRowSelection = false,
   getSubRows,
   renderSubRow,
+  onRowCountChange,
 }: EntityTableProps<T>): React.JSX.Element => {
-  const { table } = useConnect<T>(entityApi, entityApiResponseField, columnDefs, {
+  const { table, entityList } = useConnect<T>(entityApi, entityApiResponseField, columnDefs, {
     rowSelection,
     onRowSelectionChange,
     enableRowSelection,
     getSubRows,
   });
+
+  useEffect(() => {
+    if (entityList?.entities) {
+      onRowCountChange?.(entityList.entities.length);
+    }
+  }, [entityList, onRowCountChange]);
 
   const { getPageCount, getState, nextPage, previousPage, setPageIndex } = table;
   const {
