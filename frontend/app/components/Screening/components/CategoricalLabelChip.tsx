@@ -5,7 +5,12 @@ import { Box, Chip, ClickAwayListener, Paper, Popper, Typography } from '@mui/ma
 
 import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { ScreeningLabel } from '@app/components/Screening/types';
-import { LABEL_CATEGORIES, LabelCategory, labelDisplayName } from '@app/components/Screening/constants/labels';
+import {
+  LABEL_CATEGORIES,
+  LABEL_PICKABLE,
+  LabelCategory,
+  labelDisplayName,
+} from '@app/components/Screening/constants/labels';
 import { useScreeningLabels } from '@app/components/Screening/context/ScreeningLabelsContext';
 
 interface CategoricalLabelChipProps {
@@ -23,6 +28,7 @@ export const CategoricalLabelChip = ({ gridId, labels: initialLabels, category }
   const anchorRef = useRef<HTMLDivElement>(null);
 
   const categoryNames = LABEL_CATEGORIES[category];
+  const pickableNames = LABEL_PICKABLE[category];
   const current = labels.find((l) => categoryNames.includes(l.name)) ?? null;
 
   useEffect(() => {
@@ -31,13 +37,13 @@ export const CategoricalLabelChip = ({ gridId, labels: initialLabels, category }
       .then((res) => res.json())
       .then((data) => {
         const all: ScreeningLabel[] = Array.isArray(data) ? data : (data.results ?? []);
-        const ordered = categoryNames
+        const ordered = pickableNames
           .map((name) => all.find((l) => l.name === name))
           .filter((l): l is ScreeningLabel => Boolean(l));
         setOptions(ordered);
       })
       .catch(() => setOptions([]));
-  }, [open, categoryNames]);
+  }, [open, pickableNames]);
 
   const persist = async (next: ScreeningLabel[]) => {
     setSharedLabels(gridId, next);

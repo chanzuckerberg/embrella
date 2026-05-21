@@ -2344,23 +2344,33 @@ _ScreeningResponseSerializer = inline_serializer(
 
 class ScreeningGridsViewSet(viewsets.ViewSet):
     """
-    Read-only ViewSet that returns grids tagged with a screening status label
-    (TBS, TBC, or TBM). Used to power the Screening tab.
+    Read-only ViewSet that returns grids tagged with a screening status label.
+    Matches both the short form (`TBS`, `TBC`, `TBM`) and the long form
+    (`To Be Screened`, `To Be Collected`, `To Be Milled`). Used to power the
+    Screening tab.
     """
 
     permission_classes = [IsAuthenticated]
     authentication_classes = [CsrfExemptSessionAuthentication]
 
-    STATUS_LABELS = ["TBS", "TBC", "TBM"]
+    STATUS_LABELS = [
+        "TBS",
+        "TBC",
+        "TBM",
+        "To Be Screened",
+        "To Be Collected",
+        "To Be Milled",
+    ]
 
     @extend_schema(
         summary="List grids in the screening pipeline",
         description=(
-            "Returns non-trashed grids that have at least one screening status label "
-            "(`TBS`, `TBC`, or `TBM`). The Priority column sort uses the lowest-numbered "
-            "`P1`/`P2`/`P3` label attached to each grid; grids without a priority label "
-            "sort last in ascending order. Pagination, sort field, and direction are "
-            "passed via the `q` query parameter as a JSON-encoded list of "
+            "Returns non-trashed grids that have at least one screening status label. "
+            "Both short (`TBS`/`TBC`/`TBM`) and long (`To Be Screened`/`To Be Collected`/"
+            "`To Be Milled`) forms are accepted. The Priority column sort uses the "
+            "lowest-numbered `P1`/`P2`/`P3` label attached to each grid; grids without "
+            "a priority label sort last in ascending order. Pagination, sort field, and "
+            "direction are passed via the `q` query parameter as a JSON-encoded list of "
             "`{category, value}` entries."
         ),
         parameters=[
