@@ -1543,8 +1543,8 @@ class CryoGridViewSet(viewsets.ModelViewSet):
             "status": list(
                 queryset.annotate(
                     status_name=Case(
-                        When(trashed=True, then=Value("Inactive")),
-                        When(trashed=False, then=Value("Active")),
+                        When(trashed=True, then=Value("Trashed")),
+                        When(trashed=False, then=Value("Not Trashed")),
                         output_field=CharField(),
                     )
                 )
