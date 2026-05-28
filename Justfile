@@ -512,6 +512,54 @@ mirrorproddbtolocal: initenv
     echo "Re-applying remote host grants..."
     mysql -h 127.0.0.1 -u root -pdevaccount < ./helpers/local_mysql/init.sql
 
+# Fetch the latest prod DB snapshot from umbrella:/srv/dbbackups into ./.scratch/.
+# Host-side only (needs SSH access to umbrella). Pair with `just loaddevdb` to
+# import into the dev compose db.
+# Usage:
+#   just fetchprodsnapshot              # from umbrella (production)
+#   just fetchprodsnapshot umbrella-dev # from staging
+fetchprodsnapshot host="umbrella": initenv
+    #!/bin/bash
+    source ./helpers/shell_common.sh
+    set -euo pipefail
+
+    LATEST=$(ssh svc.czii.umbrella@{{host}} "ls -t /srv/dbbackups/backup_*.sql | head -n 1 | xargs basename")
+    echo "Fetching {{host}}:/srv/dbbackups/$LATEST → ./.scratch/$LATEST..."
+    scp svc.czii.umbrella@{{host}}:/srv/dbbackups/$LATEST ./.scratch/$LATEST
+
+    echocolor $GREEN "Fetched ./.scratch/$LATEST"
+    echo "Next: just devexec just loaddevdb $LATEST    # (or just loaddevdb $LATEST from host)"
+
+# Load a SQL snapshot from ./.scratch/ into the dev compose `db` service.
+# Target is always the dev MariaDB container — uses MYSQL_HOST (which compose
+# sets to `db` inside the backend container) with a 127.0.0.1 fallback for
+# host invocations that hit the published 3306:3306 port.
+# Usage:
+#   just loaddevdb backup_2026-05-17.123456.sql                  # host
+#   just devexec just loaddevdb backup_…sql                      # devcontainer
+loaddevdb snapshot: initenv
+    #!/bin/bash
+    source ./helpers/shell_common.sh
+    set -euo pipefail
+
+    if [ ! -f "./.scratch/{{snapshot}}" ]; then
+      echocolor $RED "Snapshot not found: ./.scratch/{{snapshot}}"
+      exit 1
+    fi
+
+    DB_TARGET="${MYSQL_HOST:-127.0.0.1} (dev compose db)"
+    echocolor $GREEN "Target: $DB_TARGET"
+
+    # --skip-ssl: dev db container has no TLS configured; recent MariaDB/MySQL
+    # clients require it by default and bail with "SSL is required".
+    echo "Importing ./.scratch/{{snapshot}} into dev db..."
+    mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount < "./.scratch/{{snapshot}}"
+
+    echo "Re-applying remote host grants on dev db..."
+    mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount < ./helpers/local_mysql/init.sql
+
+    echocolor $GREEN "Loaded ./.scratch/{{snapshot}} into dev db at $DB_TARGET."
+
 # Stop production server apps
 stopprodserve: initenv
     #!/bin/bash
@@ -600,10 +648,10 @@ deploy stage envfile branch:
     fi
 
     HOST=umbrella-dev
-    CONF=./helpers/nginx_staging.conf
+    CONF=./infra/nginx_staging.conf
     if [[ "{{stage}}" == "production" ]]; then
         HOST=umbrella
-        CONF=./helpers/nginx_production.conf
+        CONF=./infra/nginx_production.conf
     fi
 
     # Git pull on host (or scp/rsync from here?)
@@ -647,3 +695,77 @@ deploy stage envfile branch:
     ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && conda activate umbrella && just startprodserve && sleep 1 && systemctl restart nginx'
 
     echocolor $GREEN "Done."
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Container workflows — recipes below run the containerized dev/staging/prod
+# stacks via podman compose. See infra/README.md and .claude/plans/dockerize-embrella.md
+# for layout. The bare-metal recipes above (servedev, startprodserve, deploy)
+# are still supported during transition but `devup` / `deployv2` are the new
+# canonical paths.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Compose invocation pattern. `--env-file .env` makes ${VAR:-default} substitutions
+# in compose.yaml resolve against the repo-root .env (Compose's default lookup
+# would search next to the compose file, which is in infra/ and has no .env).
+COMPOSE_DEV := "podman compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml"
+
+# One-time setup: create the shared external `embrella` podman network. Idempotent.
+netinit:
+    @podman network inspect embrella >/dev/null 2>&1 || podman network create embrella
+
+# Bring up the dev stack (db, backend, worker, frontend, nginx) in the background.
+# First run builds images; subsequent runs use cached layers.
+devup: netinit
+    {{COMPOSE_DEV}} up -d --build
+
+# Tear the dev stack down. Named volumes (db_data, frontend_node_modules, etc.) survive.
+devdown:
+    {{COMPOSE_DEV}} down
+
+# Tail logs from all dev services, or a specific one (e.g. `just devlogs backend`).
+devlogs service="":
+    {{COMPOSE_DEV}} logs -f {{service}}
+
+# Run a one-off command inside the running backend container.
+# Example: `just devexec pytest umbrella/processes/tests/test_services.py`
+devexec +args:
+    {{COMPOSE_DEV}} exec backend {{args}}
+
+# Drop into an interactive zsh shell in the dev container as the embrella user.
+devshell:
+    {{COMPOSE_DEV}} exec -it -u embrella backend zsh -l
+
+# Add a Python dep AND install it into the running .venv.
+# After this, commit the updated pyproject.toml + uv.lock.
+# Run `just devup` afterwards if you want the new dep baked into the image.
+uvadd pkg:
+    {{COMPOSE_DEV}} exec backend uv add {{pkg}}
+    {{COMPOSE_DEV}} exec backend uv sync
+
+# Re-resolve uv.lock and install into the running .venv. Use after a manual
+# pyproject.toml edit, or to sync after a teammate's dep change.
+uvsync:
+    {{COMPOSE_DEV}} exec backend uv lock
+    {{COMPOSE_DEV}} exec backend uv sync
+
+# Build backend + frontend images with the given tag (e.g. `just buildimages staging`).
+buildimages tag:
+    podman build -f infra/backend.Dockerfile  -t embrella/backend:{{tag}}  .
+    podman build -f infra/frontend.Dockerfile -t embrella/frontend:{{tag}} .
+
+# Container-based deploy (parallel to the bare-metal `deploy` recipe).
+# Example: `just deployv2 staging staging` (env name and image tag).
+# Prereq on the target host: `podman network create embrella` and
+# `podman secret create slurm_key /path/to/key` (one-time).
+deployv2 stage tag:
+    #!/bin/bash
+    set -euo pipefail
+    HOST=umbrella-dev
+    if [[ "{{stage}}" == "production" ]]; then HOST=umbrella; fi
+    ssh svc.czii.umbrella@$HOST "set -e; \
+      cd /srv/czii-umbrella-django && \
+      git pull && \
+      (podman network inspect embrella >/dev/null 2>&1 || podman network create embrella) && \
+      IMAGE_TAG={{tag}} podman compose -f infra/compose.yaml -f infra/compose.{{stage}}.yaml pull && \
+      IMAGE_TAG={{tag}} podman compose -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d"

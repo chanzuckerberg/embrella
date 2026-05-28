@@ -1,0 +1,76 @@
+{
+  "name": "Embrella",
+  "dockerComposeFile": ["../infra/compose.yaml", "../infra/compose.dev.yaml"],
+  "service": "backend",
+  "workspaceFolder": "/app",
+  "shutdownAction": "stopCompose",
+  "initializeCommand": "podman network inspect embrella >/dev/null 2>&1 || podman network create embrella",
+  "remoteUser": "embrella",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": "true",
+      "configureZshAsDefaultShell": "true",
+      "installOhMyZsh": "true",
+      "username": "embrella",
+      "upgradePackages": "true"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": "false"
+    },
+    "ghcr.io/jsburckhardt/devcontainer-features/just:1": {},
+    "ghcr.io/devcontainers/features/node:2.0.0": { "version": "20" },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  },
+  "mounts": [
+    "source=claude-code-config-${devcontainerId},target=/home/embrella/.claude,type=volume",
+    "source=gh-config-${devcontainerId},target=/home/embrella/.config/gh,type=volume",
+    "source=shell-history-${devcontainerId},target=/commandhistory,type=volume",
+    "source=playwright-cache-${devcontainerId},target=/home/embrella/.cache/ms-playwright,type=volume"
+  ],
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/embrella/.claude",
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "DEVCONTAINER": "true",
+    "HISTFILE": "/commandhistory/.zsh_history"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "waitFor": "postCreateCommand",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "batisteo.vscode-django",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "Orta.vscode-jest",
+        "ms-playwright.playwright",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/app/.venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestArgs": [],
+        "python.testing.cwd": "${workspaceFolder}/umbrella",
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.codeActionsOnSave": { "source.organizeImports": "explicit" }
+        },
+        "eslint.workingDirectories": ["frontend"],
+        "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+        "prettier.configPath": "frontend/prettier.config.js",
+        "jest.rootPath": "frontend",
+        "jest.jestCommandLine": "yarn jest",
+        "jest.runMode": "on-demand"
+      }
+    }
+  }
+}

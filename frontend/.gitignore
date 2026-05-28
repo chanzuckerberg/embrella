@@ -41,3 +41,6 @@ next-env.d.ts
 
 # configs
 /configs/configs.ts
+
+# playwright auth state seeded by testing/global-setup.ts
+/testing/.auth/

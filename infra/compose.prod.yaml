@@ -1,0 +1,45 @@
+# Production overlay. Combine with compose.yaml.
+#
+# Before first run on a fresh host:
+#   podman network create embrella
+#   podman secret create slurm_key /path/to/svc_czii_umbrella     # the SLURM SSH key
+#
+# Then:
+#   podman compose -f infra/compose.yaml -f infra/compose.prod.yaml pull
+#   podman compose -f infra/compose.yaml -f infra/compose.prod.yaml up -d
+#
+# Or: `just deployv2 production <tag>`.
+
+services:
+  backend:
+    env_file:
+      - ../.env.production
+    environment:
+      DJANGO_ENV: production
+      SLURM_KEYFILE: /run/secrets/slurm_key
+    secrets:
+      - slurm_key
+
+  worker:
+    env_file:
+      - ../.env.production
+    environment:
+      DJANGO_ENV: production
+      SLURM_KEYFILE: /run/secrets/slurm_key
+    secrets:
+      - slurm_key
+
+  frontend:
+    environment:
+      NODE_ENV: production
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx_production.conf:/etc/nginx/nginx.conf:ro
+
+secrets:
+  slurm_key:
+    external: true                 # see header comment for one-time setup

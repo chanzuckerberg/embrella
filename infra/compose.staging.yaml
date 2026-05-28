@@ -1,0 +1,44 @@
+# Staging overlay. Combine with compose.yaml.
+#
+# Before first run on a fresh host:
+#   podman network create embrella
+#   podman secret create slurm_key /path/to/svc_czii_umbrella     # the SLURM SSH key
+#
+# Then:
+#   podman compose -f infra/compose.yaml -f infra/compose.staging.yaml pull
+#   podman compose -f infra/compose.yaml -f infra/compose.staging.yaml up -d
+#
+# Or: `just deployv2 staging <tag>`.
+
+services:
+  backend:
+    env_file:
+      - ../.env.staging
+    environment:
+      DJANGO_ENV: staging
+      SLURM_KEYFILE: /run/secrets/slurm_key
+    secrets:
+      - slurm_key
+
+  worker:
+    env_file:
+      - ../.env.staging
+    environment:
+      DJANGO_ENV: staging
+      SLURM_KEYFILE: /run/secrets/slurm_key
+    secrets:
+      - slurm_key
+
+  frontend:
+    environment:
+      NODE_ENV: production
+
+  nginx:
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx_staging.conf:/etc/nginx/nginx.conf:ro
+
+secrets:
+  slurm_key:
+    external: true                 # see header comment for one-time setup

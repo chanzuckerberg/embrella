@@ -1,0 +1,147 @@
+# Embrella container stack — base file.
+#
+# This is the *base* layer. By itself it describes the shape of the stack but
+# isn't usually run alone — combine it with one environment overlay:
+#
+#   podman compose -f infra/compose.yaml -f infra/compose.dev.yaml      up -d
+#   podman compose -f infra/compose.yaml -f infra/compose.staging.yaml  up -d
+#   podman compose -f infra/compose.yaml -f infra/compose.prod.yaml     up -d
+#
+# Build contexts and bind-mount paths are relative to THIS file (infra/), so
+# `..` refers to the repo root.
+#
+# Networks:
+#   - `embrella` is an EXTERNAL network shared across the org. Only nginx joins
+#     it, so other containerized apps can attach to `embrella` and become
+#     reachable to nginx by service DNS name. Create once with:
+#         podman network create embrella
+#     (Or run `just netinit`.)
+#   - `internal` is project-private. All services join it; nginx joins both.
+#     Subnet is pinned so the gateway IP (used by nginx's `resolver` directive
+#     for upstream DNS — see nginx_dev.conf.template) stays stable.
+#
+# Environment variables understood by our services:
+#   USE_MYSQL                 "True" → entrypoint waits for MySQL before exec
+#   MYSQL_HOST/USER/PWD/NAME  DB connection (read by Django settings.py)
+#   MYSQL_PORT                default 3306
+#   DJANGO_ENV                development | staging | production
+#   EMBRELLA_BUILD_STATIC     "1" → entrypoint runs collectstatic + mkdocs build
+#                             (set on prod/staging web container only)
+#   SLURM_KEYFILE             path inside the container to the SLURM SSH key
+#   DEBUGPY_LISTEN            "1" → manage.py opens a debugpy listener
+#   DEBUGPY_PORT              default 5678
+#   NGINX_RESOLVER            DNS server nginx uses to re-resolve upstreams
+#                             (envsubst'd into nginx_*.conf.template at startup)
+
+name: embrella
+
+x-backend-env: &backend-env
+  USE_MYSQL: "True"
+  MYSQL_HOST: db
+  MYSQL_PORT: "3306"
+
+services:
+  backend:
+    image: embrella/backend:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    environment:
+      <<: *backend-env
+      EMBRELLA_BUILD_STATIC: "1"     # web container builds static + docs
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+    volumes:
+      - backend_static:/app/staticfiles
+    restart: unless-stopped
+
+  worker:
+    image: embrella/backend:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    command: ["python", "umbrella/manage.py", "qcluster"]
+    environment:
+      <<: *backend-env
+      # No EMBRELLA_BUILD_STATIC — worker doesn't serve HTTP.
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+    restart: unless-stopped
+
+  frontend:
+    image: embrella/frontend:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/frontend.Dockerfile
+    networks: [internal]
+    restart: unless-stopped
+
+  db:
+    image: mariadb:10.5.22
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MYSQL_PWD:-devaccount}
+      MARIADB_ROOT_HOST: "%"             # allow root from any container, not just localhost
+      MARIADB_DATABASE: ${MYSQL_NAME:-umbrella}
+    networks: [internal]
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      # The bundled healthcheck.sh authenticates via a `healthcheck` user that
+      # the entrypoint generates on first init and persists in
+      # /var/lib/mysql/.my-healthcheck.cnf. That breaks any time a mysqldump
+      # restore overwrites mysql.user (drops the user) without also rewriting
+      # the .cnf file (still has the old password). Since our standard ops flow
+      # is "boot fresh container, then load a snapshot", ping as root with the
+      # env-provided password instead — survives any user-table state.
+      test: ["CMD-SHELL", "mariadb-admin ping -h127.0.0.1 -uroot -p\"$$MARIADB_ROOT_PASSWORD\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - backend
+      - frontend
+    networks: [internal, embrella]
+    volumes:
+      - backend_static:/srv/staticfiles:ro
+    environment:
+      # The nginx image's docker-entrypoint runs envsubst on every file under
+      # NGINX_ENVSUBST_TEMPLATE_DIR, strips the .template suffix, and writes the
+      # result to NGINX_ENVSUBST_OUTPUT_DIR. We point the output dir at /etc/nginx
+      # so the main nginx.conf is templated (not just conf.d/).
+      #
+      # NGINX_ENVSUBST_FILTER limits substitution to NGINX_-prefixed variables;
+      # without it, envsubst would also clobber nginx's own $remote_addr / $request
+      # references in the config.
+      #
+      # NGINX_RESOLVER is the DNS server nginx uses for `resolver` directives.
+      # We use it to re-resolve `backend` / `frontend` per-request so container
+      # restarts don't leave nginx pointing at a dead IP. Default value is the
+      # gateway of the pinned `internal` subnet, which is where podman's
+      # aardvark-dns listens. Docker users override to 127.0.0.11 in their .env.
+      NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/templates
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_ENVSUBST_FILTER: "^NGINX_"
+      NGINX_RESOLVER: ${NGINX_RESOLVER:-10.89.200.1}
+    restart: unless-stopped
+
+networks:
+  embrella:
+    external: true
+  internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.89.200.0/24
+          gateway: 10.89.200.1
+
+volumes:
+  db_data:
+  backend_static:
