@@ -74,6 +74,20 @@ Five services on two networks:
 
 ## One-time setup on a fresh host
 
+**Resources.** Give your container engine enough headroom — the full stack
+(MariaDB + Django + worker + Next.js + nginx, plus image builds and the
+Playwright browsers) is heavy. Set the VM to at least:
+
+- **Memory:** 8192 MB (8 GB) RAM
+- **Disk:** 50 GB
+
+On macOS/Windows this is the Podman machine or Docker Desktop VM:
+
+```
+podman machine set --memory 8192 --disk-size 50      # podman (recreate/restart the machine after)
+# Docker Desktop: Settings → Resources → set Memory 8 GB, Disk ≥ 50 GB
+```
+
 ```
 podman network create embrella                          # all envs
 podman secret create slurm_key /path/to/svc_czii_umbrella   # staging/prod only
@@ -117,6 +131,20 @@ Playwright MCP server on top of the Python backend image — so both `pytest` an
 - **Browser automation** via the Playwright MCP server (configured in
   [`../.mcp.json`](../.mcp.json)) lets Claude verify UI changes against
   `http://nginx` or `http://frontend:3000` from inside the container.
+
+**Before opening:** you need an `.env` at the repo root — the devcontainer
+won't start without it. Copy the template and fill it in:
+
+```bash
+cp helpers/.env_template .env
+# edit .env: set the real values and delete the YOUDIDNOTUPDATETHIS line.
+# Leave SLURM_KEYFILE empty unless you have a cluster key on this host.
+```
+
+A host-side precheck ([`../.devcontainer/precheck_embrella_requirements.sh`](../.devcontainer/precheck_embrella_requirements.sh),
+run from `initializeCommand`) verifies this and a few other prerequisites
+before any container is built, failing early with a clear message instead of a
+cryptic compose mount error.
 
 Open in VS Code with "Dev Containers: Reopen in Container" → "Embrella
 Full-Stack". On first run: `claude` to sign in, then `gh auth login` for git

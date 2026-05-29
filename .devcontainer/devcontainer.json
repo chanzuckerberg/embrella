@@ -4,7 +4,7 @@
   "service": "backend",
   "workspaceFolder": "/app",
   "shutdownAction": "stopCompose",
-  "initializeCommand": "podman network inspect embrella >/dev/null 2>&1 || podman network create embrella",
+  "initializeCommand": "bash .devcontainer/precheck_embrella_requirements.sh",
   "remoteUser": "embrella",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
