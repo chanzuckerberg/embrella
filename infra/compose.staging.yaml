@@ -4,11 +4,15 @@
 #   podman network create embrella
 #   podman secret create slurm_key /path/to/svc_czii_umbrella     # the SLURM SSH key
 #
-# Then:
-#   podman compose -f infra/compose.yaml -f infra/compose.staging.yaml pull
-#   podman compose -f infra/compose.yaml -f infra/compose.staging.yaml up -d
+# Then (--env-file so ${VAR} interpolation resolves; deployv2 copies the chosen
+# env file to .env.staging on the host):
+#   podman compose --env-file .env.staging -f infra/compose.yaml -f infra/compose.staging.yaml pull
+#   podman compose --env-file .env.staging -f infra/compose.yaml -f infra/compose.staging.yaml up -d
 #
-# Or: `just deployv2 staging <tag>`.
+# Or: `just deployv2 staging .env.staging <tag>`.
+#
+# The db's data lives in the base `db_data` named volume (survives `down`, not
+# `down -v`). Durability is via on-demand backups — see `just dbbackupv2 staging`.
 
 services:
   backend:
