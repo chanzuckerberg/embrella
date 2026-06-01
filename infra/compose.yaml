@@ -36,9 +36,9 @@
 name: embrella
 
 x-backend-env: &backend-env
-  USE_MYSQL: "True"
+  USE_MYSQL: 'True'
   MYSQL_HOST: db
-  MYSQL_PORT: "3306"
+  MYSQL_PORT: '3306'
 
 services:
   backend:
@@ -48,7 +48,7 @@ services:
       dockerfile: infra/backend.Dockerfile
     environment:
       <<: *backend-env
-      EMBRELLA_BUILD_STATIC: "1"     # web container builds static + docs
+      EMBRELLA_BUILD_STATIC: '1' # web container builds static + docs
     depends_on:
       db:
         condition: service_healthy
@@ -62,7 +62,7 @@ services:
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
-    command: ["python", "umbrella/manage.py", "qcluster"]
+    command: ['python', 'umbrella/manage.py', 'qcluster']
     environment:
       <<: *backend-env
       # No EMBRELLA_BUILD_STATIC — worker doesn't serve HTTP.
@@ -84,20 +84,16 @@ services:
     image: mariadb:10.5.22
     environment:
       MARIADB_ROOT_PASSWORD: ${MYSQL_PWD:-devaccount}
-      MARIADB_ROOT_HOST: "%"             # allow root from any container, not just localhost
+      MARIADB_ROOT_HOST: '%' # allow root from any container, not just localhost
       MARIADB_DATABASE: ${MYSQL_NAME:-umbrella}
     networks: [internal]
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      # The bundled healthcheck.sh authenticates via a `healthcheck` user that
-      # the entrypoint generates on first init and persists in
-      # /var/lib/mysql/.my-healthcheck.cnf. That breaks any time a mysqldump
-      # restore overwrites mysql.user (drops the user) without also rewriting
-      # the .cnf file (still has the old password). Since our standard ops flow
-      # is "boot fresh container, then load a snapshot", ping as root with the
-      # env-provided password instead — survives any user-table state.
-      test: ["CMD-SHELL", "mariadb-admin ping -h127.0.0.1 -uroot -p\"$$MARIADB_ROOT_PASSWORD\""]
+      # Ping as root with the env password instead of using the image's bundled
+      # healthcheck.sh. That script logs in as a `healthcheck` user, which a
+      # mysqldump restore can drop during snapshot load
+      test: ['CMD-SHELL', 'mariadb-admin ping -h127.0.0.1 -uroot -p"$$MARIADB_ROOT_PASSWORD"']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -112,23 +108,12 @@ services:
     volumes:
       - backend_static:/srv/staticfiles:ro
     environment:
-      # The nginx image's docker-entrypoint runs envsubst on every file under
-      # NGINX_ENVSUBST_TEMPLATE_DIR, strips the .template suffix, and writes the
-      # result to NGINX_ENVSUBST_OUTPUT_DIR. We point the output dir at /etc/nginx
-      # so the main nginx.conf is templated (not just conf.d/).
-      #
-      # NGINX_ENVSUBST_FILTER limits substitution to NGINX_-prefixed variables;
-      # without it, envsubst would also clobber nginx's own $remote_addr / $request
-      # references in the config.
-      #
-      # NGINX_RESOLVER is the DNS server nginx uses for `resolver` directives.
-      # We use it to re-resolve `backend` / `frontend` per-request so container
-      # restarts don't leave nginx pointing at a dead IP. Default value is the
-      # gateway of the pinned `internal` subnet, which is where podman's
-      # aardvark-dns listens. Docker users override to 127.0.0.11 in their .env.
+      # The nginx image's entrypoint runs envsubst on its config templates at
+      # startup.
+      #   RESOLVER= Docker users set 127.0.0.11 in .env.
       NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/templates
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
-      NGINX_ENVSUBST_FILTER: "^NGINX_"
+      NGINX_ENVSUBST_FILTER: '^NGINX_'
       NGINX_RESOLVER: ${NGINX_RESOLVER:-10.89.200.1}
     restart: unless-stopped
 

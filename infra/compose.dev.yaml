@@ -1,53 +1,40 @@
 # Dev overlay. Combine with compose.yaml:
 #
-#   just devup    # ≡ podman compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml up -d --build
+#   open in devcontainer (recommended)
+#   or just devup
 #
 # Adds: bind-mount source for live reload, runserver/yarn dev commands,
 # publishes ports to host, mounts the SLURM key, debugpy/node-inspector ports.
 
 services:
   backend:
-    command: ["python", "umbrella/manage.py", "runserver", "0.0.0.0:8000"]
+    command: ['python', 'umbrella/manage.py', 'runserver', '0.0.0.0:8000']
     env_file:
       - ../.env
     environment:
       DJANGO_ENV: development
-      PYTHONDONTWRITEBYTECODE: "1"
-      # runserver auto-serves /static/ when DEBUG=True; don't waste startup time
-      # on collectstatic + mkdocs.
-      EMBRELLA_BUILD_STATIC: ""
+      PYTHONDONTWRITEBYTECODE: '1'
+      # runserver auto-serves /static/ when DEBUG=True
+      EMBRELLA_BUILD_STATIC: ''
       # .env's SLURM_KEYFILE points at a host path. Inside the container we
       # want Django to read the mounted-in-container path instead.
       SLURM_KEYFILE: /run/secrets/slurm_key
       # debugpy listens always; attach from VS Code or PyCharm whenever.
-      DEBUGPY_LISTEN: "1"
-      DEBUGPY_PORT: "5678"
+      DEBUGPY_LISTEN: '1'
+      DEBUGPY_PORT: '5678'
     ports:
-      - "8000:8000"
-      - "5678:5678"   # debugpy
+      - '8000:8000'
+      - '5678:5678' # debugpy
     volumes:
-      # Whole repo bind-mounted at /app so .git/, Justfile, top-level configs, and
-      # all source are visible to in-container tools (Claude Code, git, just).
-      # Subdirs like umbrella/, docs/, mkdocs.yml, pyproject.toml, uv.lock all
-      # come along automatically — no separate per-subdir mounts needed.
       - ..:/app
       # Mask the image-built venv so the whole-repo bind doesn't shadow it.
-      # Named volume seeds from the image's /app/.venv on first up.
       - backend_venv:/app/.venv
-      # Share the frontend service's node_modules + .next so the devcontainer
-      # can run `yarn test` / `yarn lint` against the same Linux-arch install
-      # without a parallel `yarn install`. Volume paths differ between services
-      # (frontend: /app/node_modules, here: /app/frontend/node_modules) but the
-      # underlying named volume is the same.
+      # Share the frontend service's node_modules + .next
       - frontend_node_modules:/app/frontend/node_modules
       - frontend_next:/app/frontend/.next
       # SLURM key bind. ${SLURM_KEYFILE} is resolved against the repo-root .env
-      # at compose-up time; if the host file is missing, the fallback /dev/null
-      # mounts an empty file and cluster ops raise a paramiko load error.
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
-      # Git identity for in-container commits. Read-only since gitconfig is
-      # config (not a secret); the doc-recommended pattern avoids mounting
-      # ~/.ssh and routes push auth through `gh` over HTTPS instead.
+      # Git identity for in-container commits
       - ${HOME}/.gitconfig:/home/embrella/.gitconfig:ro
     stdin_open: true
     tty: true
@@ -58,36 +45,29 @@ services:
     environment:
       DJANGO_ENV: development
       SLURM_KEYFILE: /run/secrets/slurm_key
-      DEBUGPY_LISTEN: "1"
-      DEBUGPY_PORT: "5678"
+      DEBUGPY_LISTEN: '1'
+      DEBUGPY_PORT: '5678'
     ports:
-      # Container port 5678 → host port 5679 (backend already owns host 5678).
-      - "5679:5678"
+      - '5679:5678'
     volumes:
       - ..:/app
       - backend_venv:/app/.venv
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
 
   frontend:
-    command: ["yarn", "dev"]
+    command: ['yarn', 'dev']
     working_dir: /app
     environment:
       NODE_ENV: development
-      # Next.js polling fallback for filesystems where inotify events don't
-      # propagate cleanly through bind mounts (macOS virtiofs is the offender).
-      WATCHPACK_POLLING: "true"
-      CHOKIDAR_USEPOLLING: "true"
-      # Node's default ~1.5 GB heap is too small once parallel Playwright
-      # tabs trigger concurrent on-demand RSC compilations and crash the
-      # container. 4 GB matches the backend devcontainer's setting.
-      NODE_OPTIONS: "--max-old-space-size=4096"
+      # Next.js polling
+      WATCHPACK_POLLING: 'true'
+      CHOKIDAR_USEPOLLING: 'true'
+      # Node's default ~1.5 GB heap is too small for PlayWright
+      NODE_OPTIONS: '--max-old-space-size=4096'
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - ../frontend:/app
-      # Named-volume overlay: bind shows the host source, but masks /app/node_modules
-      # and /app/.next so the linux binaries built into the image stay visible
-      # (host node_modules on macOS has darwin binaries that won't load).
       - frontend_node_modules:/app/node_modules
       - frontend_next:/app/.next
     stdin_open: true
@@ -95,16 +75,12 @@ services:
 
   db:
     ports:
-      - "3306:3306"
+      - '3306:3306'
 
   nginx:
-    # :8080 instead of :80 so rootless podman doesn't need
-    # net.ipv4.ip_unprivileged_port_start tweaks. Visit http://localhost:8080.
     ports:
-      - "8080:80"
+      - '8080:80'
     volumes:
-      # The nginx image's entrypoint envsubst's this into /etc/nginx/nginx.conf
-      # (see NGINX_ENVSUBST_* in compose.yaml).
       - ./nginx_dev.conf.template:/etc/nginx/templates/nginx.conf.template:ro
 
 volumes:

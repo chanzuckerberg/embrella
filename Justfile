@@ -531,9 +531,6 @@ fetchprodsnapshot host="umbrella": initenv
     echo "Next: just devexec just loaddevdb $LATEST    # (or just loaddevdb $LATEST from host)"
 
 # Load a SQL snapshot from ./.scratch/ into the dev compose `db` service.
-# Target is always the dev MariaDB container — uses MYSQL_HOST (which compose
-# sets to `db` inside the backend container) with a 127.0.0.1 fallback for
-# host invocations that hit the published 3306:3306 port.
 # Usage:
 #   just loaddevdb backup_2026-05-17.123456.sql                  # host
 #   just devexec just loaddevdb backup_…sql                      # devcontainer

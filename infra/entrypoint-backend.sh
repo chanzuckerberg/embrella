@@ -24,8 +24,7 @@ if [ "$USE_MYSQL" = "True" ] && [ -n "$MYSQL_HOST" ]; then
   echo "MySQL reachable."
 fi
 
-# Migrations are idempotent; backend + worker both run them so neither
-# blocks on the other. Could be optimized by only running in backend, but that may require healthcheck
+# Migrations are idempotent; backend + worker both run them so neither blocks on the other (could be improved).
 echo "Running migrations..."
 python umbrella/manage.py migrate stores --noinput
 python umbrella/manage.py migrate projects --noinput

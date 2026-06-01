@@ -49,4 +49,17 @@ fi
 #    not there yet (idempotent).
 podman network inspect embrella >/dev/null 2>&1 || podman network create embrella
 
+# 6. SSH agent forwarding is optional for cluster hops from inside the container.
+echo "Checking for a host SSH agent (optional, for agent forwarding)..."
+if [[ -z "${SSH_AUTH_SOCK:-}" ]]; then
+  echo "ℹ️  No SSH_AUTH_SOCK on the host — no agent to forward."
+  echo "    Start one and load a key if you want saved SSH in the container:"
+  echo "        eval \"\$(ssh-agent -s)\" && ssh-add ~/.ssh/id_ed25519"
+elif ssh-add -l >/dev/null 2>&1; then
+  echo "✅ Host SSH agent is running with keys loaded — VS Code will forward it."
+else
+  echo "ℹ️  Host SSH agent is running but has no keys loaded."
+  echo "    Add one so there's something to forward:  ssh-add ~/.ssh/id_ed25519"
+fi
+
 echo "✅ Embrella Ready for DevContainer Creation"

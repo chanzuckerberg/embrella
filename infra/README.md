@@ -6,26 +6,26 @@ environment is a thin overlay.
 
 ## Files
 
-| File | Role |
-| --- | --- |
-| `backend.Dockerfile`            | Multi-stage build for the Django image (used by `backend` + `worker`). |
-| `frontend.Dockerfile`           | Multi-stage build for the Next.js image. |
-| `entrypoint-backend.sh`         | Runs at every backend/worker container start. Waits for the DB, runs migrations, optionally builds static + docs. |
-| `compose.yaml`                  | **Base.** Service shapes, networks, named volumes. Never run alone — pair with an overlay. |
-| `compose.dev.yaml`              | Dev overlay. Bind-mounts the whole repo at `/app` (so `.git/`, `Justfile`, configs are all visible inside the container), masks `.venv` with the `backend_venv` named volume, shares the `frontend_node_modules` + `frontend_next` volumes into the backend container so frontend tests run there too, mounts the SLURM key + `~/.gitconfig`, and publishes debug ports. |
-| `compose.staging.yaml`          | Staging overlay. Pulls prebuilt images, uses staging nginx conf, expects a `slurm_key` podman secret. |
-| `compose.prod.yaml`             | Production overlay. Same shape as staging with prod nginx conf and TLS port. |
-| `nginx_dev.conf.template`       | Dev nginx config. `${NGINX_RESOLVER}` is `envsubst`'d at container startup. |
-| `nginx_staging.conf`            | Staging nginx config. Routes /api/admin/etc → `backend:8000`, everything else → `frontend:3000`. |
-| `nginx_production.conf`         | Same as staging, different server_name. |
+| File                      | Role                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `backend.Dockerfile`      | Multi-stage build for the Django image (used by `backend` + `worker`).                                                                                                                                                                                                                                                                                                   |
+| `frontend.Dockerfile`     | Multi-stage build for the Next.js image.                                                                                                                                                                                                                                                                                                                                 |
+| `entrypoint-backend.sh`   | Runs at every backend/worker container start. Waits for the DB, runs migrations, optionally builds static + docs.                                                                                                                                                                                                                                                        |
+| `compose.yaml`            | **Base.** Service shapes, networks, named volumes. Never run alone — pair with an overlay.                                                                                                                                                                                                                                                                               |
+| `compose.dev.yaml`        | Dev overlay. Bind-mounts the whole repo at `/app` (so `.git/`, `Justfile`, configs are all visible inside the container), masks `.venv` with the `backend_venv` named volume, shares the `frontend_node_modules` + `frontend_next` volumes into the backend container so frontend tests run there too, mounts the SLURM key + `~/.gitconfig`, and publishes debug ports. |
+| `compose.staging.yaml`    | Staging overlay. Pulls prebuilt images, uses staging nginx conf, expects a `slurm_key` podman secret.                                                                                                                                                                                                                                                                    |
+| `compose.prod.yaml`       | Production overlay. Same shape as staging with prod nginx conf and TLS port.                                                                                                                                                                                                                                                                                             |
+| `nginx_dev.conf.template` | Dev nginx config. `${NGINX_RESOLVER}` is `envsubst`'d at container startup.                                                                                                                                                                                                                                                                                              |
+| `nginx_staging.conf`      | Staging nginx config. Routes /api/admin/etc → `backend:8000`, everything else → `frontend:3000`.                                                                                                                                                                                                                                                                         |
+| `nginx_production.conf`   | Same as staging, different server_name.                                                                                                                                                                                                                                                                                                                                  |
 
 Related, one level up:
 
-| File | Role |
-| --- | --- |
+| File                                 | Role                                                                                                                                                                                                                                                       |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `../.devcontainer/devcontainer.json` | Single full-stack devcontainer attached to the `backend` service. Adds Node 20, `gh`, `just`, Claude Code, and Playwright MCP on top of the backend image; persists Claude auth + `gh` auth + shell history across rebuilds via per-project named volumes. |
-| `../.mcp.json`                       | Project-scoped MCP servers. Currently exposes Playwright so Claude can drive a headless browser to verify UI changes. |
-| `../.dockerignore`                   | Excludes from the image build context. `.git/` is excluded from images but bind-mounted in dev. |
+| `../.mcp.json`                       | Project-scoped MCP servers. Currently exposes Playwright so Claude can drive a headless browser to verify UI changes.                                                                                                                                      |
+| `../.dockerignore`                   | Excludes from the image build context. `.git/` is excluded from images but bind-mounted in dev.                                                                                                                                                            |
 
 ## Day-to-day commands
 
@@ -101,16 +101,16 @@ mounted from the path in `.env`'s `SLURM_KEYFILE` (typically
 
 The services read these. Defaults come from `.env` / `.env.<stage>` at repo root.
 
-| Variable | Where read | Notes |
-| --- | --- | --- |
-| `DJANGO_ENV`                | settings.py | `development` enables DEBUG. |
-| `USE_MYSQL`                 | settings.py + entrypoint | `True` to use MySQL/MariaDB. |
-| `MYSQL_HOST/USER/PWD/NAME`  | settings.py | `MYSQL_HOST=db` inside the network. |
-| `EMBRELLA_BUILD_STATIC`     | entrypoint | `1` → collectstatic + mkdocs build. Set only on prod/staging web. |
-| `SLURM_KEYFILE`             | clusterio.py | In-container path. Dev overrides to `/run/secrets/slurm_key`. |
-| `DEBUGPY_LISTEN`            | manage.py | `1` opens a debugpy listener on `DEBUGPY_PORT`. |
-| `NGINX_RESOLVER`            | nginx_*.conf.template (envsubst) | DNS server nginx uses to re-resolve upstreams. Defaults to internal gateway IP (podman); override to `127.0.0.11` for Docker. |
-| `IMAGE_TAG`                 | compose.yaml | Image tag for both backend + frontend (default `latest`). |
+| Variable                   | Where read                         | Notes                                                                                                                         |
+| -------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `DJANGO_ENV`               | settings.py                        | `development` enables DEBUG.                                                                                                  |
+| `USE_MYSQL`                | settings.py + entrypoint           | `True` to use MySQL/MariaDB.                                                                                                  |
+| `MYSQL_HOST/USER/PWD/NAME` | settings.py                        | `MYSQL_HOST=db` inside the network.                                                                                           |
+| `EMBRELLA_BUILD_STATIC`    | entrypoint                         | `1` → collectstatic + mkdocs build. Set only on prod/staging web.                                                             |
+| `SLURM_KEYFILE`            | clusterio.py                       | In-container path. Dev overrides to `/run/secrets/slurm_key`.                                                                 |
+| `DEBUGPY_LISTEN`           | manage.py                          | `1` opens a debugpy listener on `DEBUGPY_PORT`.                                                                               |
+| `NGINX_RESOLVER`           | nginx\_\*.conf.template (envsubst) | DNS server nginx uses to re-resolve upstreams. Defaults to internal gateway IP (podman); override to `127.0.0.11` for Docker. |
+| `IMAGE_TAG`                | compose.yaml                       | Image tag for both backend + frontend (default `latest`).                                                                     |
 
 ## Devcontainer
 
@@ -126,8 +126,13 @@ Playwright MCP server on top of the Python backend image — so both `pytest` an
   volumes scoped per project with `${devcontainerId}`:
   `claude-code-config-*`, `gh-config-*`, `shell-history-*`.
 - **Git identity** comes from your host `~/.gitconfig` (bind-mounted, read-only).
-  Push auth goes through `gh` over HTTPS — `~/.ssh` is intentionally not
-  mounted, per Anthropic's recommendation.
+  Push auth can go through `gh` over HTTPS
+- **SSH agent forwarding** is available for git-over-SSH and cluster operations
+  without copying any private keys into the container. make sure the host agent is running with
+  a key loaded _before_ opening the container:
+  ```bash
+  eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519   # on the host
+  ```
 - **Browser automation** via the Playwright MCP server (configured in
   [`../.mcp.json`](../.mcp.json)) lets Claude verify UI changes against
   `http://nginx` or `http://frontend:3000` from inside the container.
@@ -150,47 +155,27 @@ Open in VS Code with "Dev Containers: Reopen in Container" → "Embrella
 Full-Stack". On first run: `claude` to sign in, then `gh auth login` for git
 push.
 
-### Claude Code auth: API key (recommended for devcontainers)
+### Claude Code auth
 
-The interactive `claude` login flow hangs inside the devcontainer because the
-OAuth callback redirects to `localhost:<port>` on your host, which can't reach
-the container. The cleanest workaround is to authenticate with an
-`ANTHROPIC_API_KEY` and forward it from the host:
+Just run `claude` inside the container and follow the interactive login — the
+OAuth flow works as-is. Your credentials persist in the
+`claude-code-config-*` named volume mounted at `/home/embrella/.claude`
+(see [`../.devcontainer/devcontainer.json`](../.devcontainer/devcontainer.json)),
+so you only sign in once and the login survives container rebuilds.
 
-1. **Get an API key.** From [console.anthropic.com](https://console.anthropic.com)
-   → Settings → API Keys, or extract a key already provisioned on your host:
-   ```bash
-   security find-generic-password -s "Claude Code" -w
-   ```
-   (macOS Keychain — works if you've previously logged in to Claude Code on
-   the host.)
+If you'd rather not do the interactive flow (e.g. for a headless/CI build), set
+`ANTHROPIC_API_KEY` (or `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`) on
+the host and forward it into the container by adding it to `containerEnv`:
 
-2. **Export it on the host**, e.g. in `~/.zshrc`:
-   ```bash
-   export ANTHROPIC_API_KEY=sk-ant-api-...
-   ```
-   Re-source the file (`source ~/.zshrc`) and verify with
-   `echo ${ANTHROPIC_API_KEY:0:15}`.
+```json
+"containerEnv": {
+  "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+}
+```
 
-3. **Forward it into the container.** Already wired into
-   [`../.devcontainer/devcontainer.json`](../.devcontainer/devcontainer.json)
-   via:
-   ```json
-   "containerEnv": {
-     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
-   }
-   ```
-   Only the variable *name* is committed; the value is read from the host at
-   container-start time.
-
-4. **Rebuild the container** (Command Palette → "Dev Containers: Rebuild
-   Container"). A plain reopen won't pick up `containerEnv` changes. Then
-   inside the container, `env | grep ANTHROPIC` should show the key and
-   `claude` should start without hanging.
-
-If you have a Claude subscription seat instead of API access, swap
-`ANTHROPIC_API_KEY` for `CLAUDE_CODE_OAUTH_TOKEN` (generated on the host with
-`claude setup-token`) — same wiring otherwise.
+Only the variable _name_ is committed; the value is read from the host at
+container-start time. `containerEnv` changes require a rebuild ("Dev Containers:
+Rebuild Container"), not just a reopen.
 
 ## Debugging
 
@@ -218,6 +203,7 @@ podman logs embrella-backend-1
 ## Common operations
 
 ### Reset the dev database
+
 ```
 just devdown
 podman volume rm embrella_db_data
@@ -225,18 +211,22 @@ just devup
 ```
 
 ### Manually run migrations or seed data
+
 ```
 just devexec python umbrella/manage.py migrate
 just devexec just populatedbexamples
 ```
 
 ### Reload nginx after editing the dev conf template
+
 ```
 podman exec embrella-nginx-1 nginx -s reload
 ```
+
 (The template is bind-mounted, so editing it on host takes effect on reload.)
 
 ### Try staging compose locally without deploying
+
 ```
 podman compose -f infra/compose.yaml -f infra/compose.staging.yaml config
 # prints the resolved config — doesn't start anything
@@ -266,6 +256,6 @@ plan for a fresh `just devup --build`.
 ## Cross-engine notes
 
 Defaults target **podman** (rootless on macOS via `podman machine`). For Docker
-users, override `NGINX_RESOLVER=127.0.0.11` in your shell or `.env` —
-Docker's embedded DNS lives there, while podman's aardvark-dns is on the
-network gateway.
+users, set `NGINX_RESOLVER=127.0.0.11` — there's a commented-out line ready to
+uncomment in `helpers/.env_template`. Docker's embedded DNS lives at that
+address, while podman's aardvark-dns is on the network gateway.

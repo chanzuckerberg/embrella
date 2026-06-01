@@ -35,10 +35,10 @@ services:
 
   nginx:
     ports:
-      - "80:80"
+      - '80:80'
     volumes:
       - ./nginx_staging.conf:/etc/nginx/nginx.conf:ro
 
 secrets:
   slurm_key:
-    external: true                 # see header comment for one-time setup
+    external: true
