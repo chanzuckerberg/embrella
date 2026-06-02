@@ -557,6 +557,26 @@ loaddevdb snapshot: initenv
 
     echocolor $GREEN "Loaded ./.scratch/{{snapshot}} into dev db at $DB_TARGET."
 
+# Back up the dev compose db to ./.scratch/ (the dump pair of `loaddevdb`). Mirrors
+# loaddevdb: connects to ${MYSQL_HOST:-127.0.0.1} with the MariaDB client, so it runs
+# inside the devcontainer (MYSQL_HOST=db) or on the host with the dev stack up. The
+# -h connection authenticates as root@'%' (devaccount), the account init.sql grants.
+# Usage:
+#   just devexec just dbbackupdev            # devcontainer
+#   just dbbackupdev                         # host (dev stack up)
+#   just loaddevdb devbackup_<ts>.sql        # to restore it back
+dbbackupdev: initenv
+    #!/bin/bash
+    source ./helpers/shell_common.sh
+    set -euo pipefail
+    mkdir -p ./.scratch
+    OUT="./.scratch/devbackup_$(date +%F.%H%M%S).sql"
+    echo "Backing up dev compose db → $OUT ..."
+    # --skip-ssl: dev db container has no TLS; recent MariaDB clients otherwise bail.
+    mysqldump --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount \
+      --all-databases --add-drop-database > "$OUT"
+    echocolor $GREEN "Wrote $OUT"
+
 # Stop production server apps
 stopprodserve: initenv
     #!/bin/bash
@@ -806,7 +826,7 @@ loadcontainerdb stage snapshot:
       cd /srv/czii-umbrella-django && \
       export \$(grep '^MYSQL' .env.$ENVNAME | xargs) && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml \
-        exec -T db mariadb --skip-ssl -uroot -p\"\$MYSQL_PWD\" < /srv/dbbackups/{{snapshot}}"
+        exec -T db mariadb --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" < /srv/dbbackups/{{snapshot}}"
     echo "Done. If the dump was --all-databases, verify root-from-% access and app-user grants."
 
 # On-demand backup of the *containerized* db for a stage's stack. Dumps all
@@ -833,7 +853,7 @@ dbbackupv2 stage:
       export \$(grep '^MYSQL' .env.$ENVNAME | xargs) && \
       TS=\$(date +%F.%H%M%S) && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml \
-        exec -T db mariadb-dump --skip-ssl -uroot -p\"\$MYSQL_PWD\" --all-databases --add-drop-database \
+        exec -T db mariadb-dump --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" --all-databases --add-drop-database \
         > /srv/dbbackups/.backup_\$TS.sql.partial && \
       mv /srv/dbbackups/.backup_\$TS.sql.partial /srv/dbbackups/backup_\$TS.sql"
     echo "Done. Latest backups on $HOST:"
