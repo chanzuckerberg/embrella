@@ -2,36 +2,46 @@
 
 The project supports two local-development paths. Pick whichever fits.
 
-|              | Containerized (recommended)                                        | Bare-metal (legacy)          |
-| ------------ | ------------------------------------------------------------------ | ---------------------------- |
-| Prereqs      | `git`, `podman` (with `podman machine` started on macOS), `just`   | `git`, `conda`               |
-| Setup time   | One-time image build (~5 min), then `just devup`                   | Conda env install + dep sync |
-| Tests/manage | `just devexec pytest`, `just devexec python umbrella/manage.py …`  | `pytest`, `just manage …`    |
-| Editor       | VS Code Dev Containers OR PyCharm Pro (Docker Compose interpreter) | Any editor on host           |
-| Layout docs  | [infra/README.md](../../infra/README.md)                           | (rest of this page)          |
+|              | Containerized (recommended)                                       | Bare-metal (legacy)          |
+| ------------ | ----------------------------------------------------------------- | ---------------------------- |
+| Prereqs      | `git`, `podman`, `just`(optional)                                 | `git`, `conda`, `just`       |
+| Setup time   | One-time images build (~10 min).                                  | Conda env install + dep sync |
+| Tests/manage | `just devexec pytest`, `just devexec python umbrella/manage.py …` | `pytest`, `just manage …`    |
+| Editor       | VS Code Dev Containers                                            | Any editor on host           |
+| Layout docs  | [Container Layout](containers.md)                                 | (rest of this page)          |
 
-The `Justfile` contains short shell helpers for common tasks under both paths.
+The `Justfile` contains short shell helpers for common tasks under both paths. [Package Installation.](https://just.systems/man/en/packages.html)
 Run `just --list --unsorted` to see them.
 
 See `just info` for a summary of your development environment.
 
-## Path A: Containerized (recommended)
+# Path A: Containerized (recommended)
+
+Podman size defaults on Mac are too limited. On Linux, skip this block.
 
 ```bash
-$ podman machine start            # macOS only
-$ just netinit                    # one-time: create the embrella podman network
-$ cp helpers/.env_template .env   # if you don't have a .env yet
-$ just devup                      # build images, bring up the stack
+$ podman machine init --memory 8192 --cpus 4 --disk-size 50   # first time
+$ podman machine start
+# Already have a machine? Restart with new options:
+#   podman machine stop && podman machine set --memory 8192 --cpus 4 --disk-size 50 && podman machine start
 ```
 
-On macOS, the default `podman machine` VM has only 4 GB of RAM, which is tight
-once the full stack + devcontainer is running. See
-[infra/README.md → "macOS: bumping the podman machine"](../../infra/README.md#macos-bumping-the-podman-machine)
-for the recommended bump (8 GB / 4 CPUs / 100 GB).
+One-time setup:
 
-Open `http://localhost:8080`. Logs: `just devlogs [service]`. Tear down with
-`just devdown`. Full details: [infra/README.md](../../infra/README.md). Debugger
-attach instructions: [../../.claude/plans/dockerize-embrella.md](../../.claude/plans/dockerize-embrella.md#debugger-support).
+```bash
+$ cp helpers/.env_template .env   # if you don't have a .env yet
+```
+
+Then bring up the stack either way:
+
+- **VS Code Dev Containers (recommended):** "Dev Containers: Reopen in Container"
+  → "Embrella". This brings up the whole compose stack and drops you into the
+  `backend` container with Python + Node + `gh` + Claude Code preinstalled — see
+  [Editing inside the devcontainer](#editing-inside-the-devcontainer) below.
+- **CLI alternative:** `just devup` builds the images and starts the stack in the
+  background.
+
+Open `http://localhost:8080`.
 
 ### Editing inside the devcontainer
 
@@ -41,17 +51,10 @@ preinstalled and mounts the whole repo (with `.git/`) so both `pytest` and
 `yarn test` run from one shell. In VS Code: "Dev Containers: Reopen in
 Container" → "Embrella". On first launch, run `claude` to sign in
 and `gh auth login` for git push. See
-[infra/README.md → Devcontainer](../../infra/README.md#devcontainer) for the
+[Container Layout → Devcontainer](containers.md#devcontainer) for the
 full setup notes.
 
-For quick one-off commands without opening VS Code:
-
-```bash
-$ just devshell            # interactive zsh in the backend container
-$ just devexec pytest -k test_foo
-```
-
-## Path B: Bare-metal (legacy)
+# Path B: Bare-metal (legacy)
 
 You'll need `bash` or `zsh`, plus `git` and `conda`.
 The conda environment (`environment.yml`) installs python, nodejs, and the
@@ -96,6 +99,6 @@ The python and nodejs packages can be installed with these helpers. (Note, these
 (umbrella) $ just populatedbexamples
 ```
 
-## Running
+# Running
 
 Then check out the guide to [running/deploying](./deployment.md) the server.
