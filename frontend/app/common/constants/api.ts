@@ -2,9 +2,9 @@
 
 export const DJANGO_URL =
   typeof window !== 'undefined'
-    ? window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? `http://${window.location.hostname}:8000` // Local Django server - use same hostname as frontend for cookie sharing.
-      : window.location.origin // Deployed envs use same origin for both Django and Next.
+    ? window.location.port === '3000'
+      ? `http://${window.location.hostname}:8000` // Bare-metal dev: Next.js on :3000 reaches Django on :8000 directly.
+      : window.location.origin // Behind nginx (e.g. :8080) and deployed envs: same origin, nginx proxies /api, /user, etc. to Django.
     : (process.env.DJANGO_URL ?? 'http://localhost:8000');
 
 export enum API {
