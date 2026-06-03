@@ -46,9 +46,8 @@ services:
   nginx:
     ports:
       - '80:80'
-      - '443:443'
     volumes:
-      - ./nginx_production.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx_production.conf.template:/etc/nginx/templates/nginx.conf.template:ro
 
 secrets:
   slurm_key:

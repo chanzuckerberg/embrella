@@ -47,7 +47,7 @@ services:
     ports:
       - '80:80'
     volumes:
-      - ./nginx_staging.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx_staging.conf.template:/etc/nginx/templates/nginx.conf.template:ro
 
 secrets:
   slurm_key:

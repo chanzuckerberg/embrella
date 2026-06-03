@@ -665,6 +665,9 @@ deploy stage envfile branch:
         exit 1
     fi
 
+    # NOTE: this bare-metal recipe (host system nginx) is superseded by the
+    # container deploy `deployv2`, which instead uses the nginx_*.conf.template
+    # variants mounted into the nginx container.
     HOST=umbrella-dev
     CONF=./infra/nginx_staging.conf
     if [[ "{{stage}}" == "production" ]]; then
