@@ -15,6 +15,12 @@
 # `down -v`). Durability is via on-demand backups — see `just dbbackupv2 prod`.
 
 services:
+  migrate:
+    env_file:
+      - ../.env.production
+    environment:
+      DJANGO_ENV: production
+
   backend:
     env_file:
       - ../.env.production

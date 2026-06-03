@@ -41,6 +41,22 @@ x-backend-env: &backend-env
   MYSQL_PORT: '3306'
 
 services:
+  # One-shot: runs DB migrations once, then exits 0. backend + worker wait on it
+  migrate:
+    image: embrella/backend:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    command: ['true'] # entrypoint migrates (EMBRELLA_MIGRATE=1), then execs this and exits
+    environment:
+      <<: *backend-env
+      EMBRELLA_MIGRATE: '1' # the ONLY service that runs migrations
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+    restart: 'no'
+
   backend:
     image: embrella/backend:${IMAGE_TAG:-latest}
     build:
@@ -52,6 +68,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks: [internal]
     volumes:
       - backend_static:/app/staticfiles
@@ -65,10 +83,11 @@ services:
     command: ['python', 'umbrella/manage.py', 'qcluster']
     environment:
       <<: *backend-env
-      # No EMBRELLA_BUILD_STATIC — worker doesn't serve HTTP.
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks: [internal]
     restart: unless-stopped
 

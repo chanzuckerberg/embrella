@@ -7,6 +7,9 @@
 #   EMBRELLA_BUILD_STATIC  "1" → run collectstatic + mkdocs build before exec.
 #                          Set on the gunicorn (web) container in staging/prod.
 #                          Unset everywhere else: workers, dev runserver, etc.
+#   EMBRELLA_MIGRATE       "1" → run DB migrations before exec. Set ONLY on the
+#                          one-shot `migrate` service so backend + worker never
+#                          race into migrate on a fresh DB.
 
 set -e
 
@@ -24,17 +27,24 @@ if [ "$USE_MYSQL" = "True" ] && [ -n "$MYSQL_HOST" ]; then
   echo "MySQL reachable."
 fi
 
-# Migrations are idempotent; backend + worker both run them so neither blocks on the other (could be improved).
-echo "Running migrations..."
-python umbrella/manage.py migrate stores --noinput
-python umbrella/manage.py migrate projects --noinput
-python umbrella/manage.py migrate --noinput
+# Migrations run only in the dedicated one-shot `migrate` service
+# (EMBRELLA_MIGRATE=1). Backend + worker skip them, so nothing races on a fresh
+# DB. Migration ordering (stores → projects → rest) lives here so the migrate
+# service inherits it for free.
+if [ "$EMBRELLA_MIGRATE" = "1" ]; then
+  echo "Running migrations..."
+  python umbrella/manage.py migrate stores --noinput
+  python umbrella/manage.py migrate projects --noinput
+  python umbrella/manage.py migrate --noinput
+  echo "Migrations complete."
+fi
 
 if [ "$EMBRELLA_BUILD_STATIC" = "1" ]; then
   echo "Collecting static files..."
   python umbrella/manage.py collectstatic --noinput
   echo "Building docs..."
   mkdocs build || echo "mkdocs build failed (non-fatal)"
+  echo "Static files collected and docs built."
 fi
 
 exec "$@"

@@ -6,7 +6,15 @@
 # Adds: bind-mount source for live reload, runserver/yarn dev commands,
 # publishes ports to host, mounts the SLURM key, debugpy/node-inspector ports.
 
+# migrate from bind-mount to watch when podman compose supports it https://github.com/containers/podman-compose/issues/792
+
 services:
+  migrate:
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_ENV: development
+
   backend:
     command: ['python', 'umbrella/manage.py', 'runserver', '0.0.0.0:8000']
     env_file:
