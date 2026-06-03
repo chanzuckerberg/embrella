@@ -528,19 +528,20 @@ fetchprodsnapshot host="umbrella": initenv
     scp svc.czii.umbrella@{{host}}:/srv/dbbackups/$LATEST ./.scratch/$LATEST
 
     echocolor $GREEN "Fetched ./.scratch/$LATEST"
-    echo "Next: just devexec just loaddevdb $LATEST    # (or just loaddevdb $LATEST from host)"
+    echo "Next: just devexec just loaddevdb ./.scratch/$LATEST    # (or just loaddevdb ./.scratch/$LATEST from host)"
 
-# Load a SQL snapshot from ./.scratch/ into the dev compose `db` service.
+# Load a SQL snapshot into the dev compose `db` service.
+# `snapshot` is a path to the .sql file (relative or absolute).
 # Usage:
-#   just loaddevdb backup_2026-05-17.123456.sql                  # host
-#   just devexec just loaddevdb backup_…sql                      # devcontainer
+#   just loaddevdb ./.scratch/backup_2026-05-17.123456.sql       # host
+#   just devexec just loaddevdb ./.scratch/backup_…sql           # devcontainer
 loaddevdb snapshot: initenv
     #!/bin/bash
     source ./helpers/shell_common.sh
     set -euo pipefail
 
-    if [ ! -f "./.scratch/{{snapshot}}" ]; then
-      echocolor $RED "Snapshot not found: ./.scratch/{{snapshot}}"
+    if [ ! -f "{{snapshot}}" ]; then
+      echocolor $RED "Snapshot not found: {{snapshot}}"
       exit 1
     fi
 
@@ -549,13 +550,13 @@ loaddevdb snapshot: initenv
 
     # --skip-ssl: dev db container has no TLS configured; recent MariaDB/MySQL
     # clients require it by default and bail with "SSL is required".
-    echo "Importing ./.scratch/{{snapshot}} into dev db..."
-    mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount < "./.scratch/{{snapshot}}"
+    echo "Importing {{snapshot}} into dev db..."
+    mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount < "{{snapshot}}"
 
     echo "Re-applying remote host grants on dev db..."
     mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount < ./helpers/local_mysql/init.sql
 
-    echocolor $GREEN "Loaded ./.scratch/{{snapshot}} into dev db at $DB_TARGET."
+    echocolor $GREEN "Loaded {{snapshot}} into dev db at $DB_TARGET."
 
 # Back up the dev compose db to ./.scratch/ (the dump pair of `loaddevdb`). Mirrors
 # loaddevdb: connects to ${MYSQL_HOST:-127.0.0.1} with the MariaDB client, so it runs
@@ -564,7 +565,7 @@ loaddevdb snapshot: initenv
 # Usage:
 #   just devexec just dbbackupdev            # devcontainer
 #   just dbbackupdev                         # host (dev stack up)
-#   just loaddevdb devbackup_<ts>.sql        # to restore it back
+#   just loaddevdb ./.scratch/devbackup_<ts>.sql   # to restore it back
 dbbackupdev: initenv
     #!/bin/bash
     source ./helpers/shell_common.sh
