@@ -46,8 +46,18 @@ if [[ ! -f "$HOME/.gitconfig" ]]; then
 fi
 
 # 5. nginx joins the shared external `embrella` network; create it once if it's
-#    not there yet (idempotent).
-podman network inspect embrella >/dev/null 2>&1 || podman network create embrella
+#    not there yet (idempotent). Works with either podman or docker
+echo "Checking for a container engine (podman or docker)..."
+if command -v podman >/dev/null 2>&1; then
+  engine=podman
+elif command -v docker >/dev/null 2>&1; then
+  engine=docker
+else
+  err "Neither podman nor docker found on PATH — can't create the 'embrella' network."
+  err "Install one of them (or start Docker Desktop), then re-run."
+  exit 1
+fi
+"$engine" network inspect embrella >/dev/null 2>&1 || "$engine" network create embrella
 
 # 6. SSH agent forwarding is optional for cluster hops from inside the container.
 echo "Checking for a host SSH agent (optional, for agent forwarding)..."

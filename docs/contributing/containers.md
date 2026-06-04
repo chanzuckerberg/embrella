@@ -18,7 +18,7 @@ just devexec <cmd>     # one-off command inside the running backend container
 just devshell          # interactive zsh shell inside the backend container (embrella user)
 just uvadd <pkg>       # add Python dep + sync into running .venv
 just buildimages <tag> # build the two images for staging/prod push
-just deployv2 staging .env.staging <tag>
+just deployv2 staging .env.staging <branch> <tag>
 ```
 
 Run `just --list --unsorted` for the full set.

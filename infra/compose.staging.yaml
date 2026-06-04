@@ -2,14 +2,15 @@
 #
 # Before first run on a fresh host:
 #   podman network create embrella
-#   podman secret create slurm_key /path/to/svc_czii_umbrella     # the SLURM SSH key
+#   # Obtain the SLURM SSH key from an admin (vault) and place it on the host,
+#   # then point .env.staging's SLURM_KEYFILE at that host path.
 #
 # Then (--env-file so ${VAR} interpolation resolves; deployv2 copies the chosen
 # env file to .env.staging on the host):
 #   podman compose --env-file .env.staging -f infra/compose.yaml -f infra/compose.staging.yaml pull
 #   podman compose --env-file .env.staging -f infra/compose.yaml -f infra/compose.staging.yaml up -d
 #
-# Or: `just deployv2 staging .env.staging <tag>`.
+# Or: `just deployv2 staging .env.staging <branch> <tag>`.
 #
 # The db's data lives in the base `db_data` named volume (survives `down`, not
 # `down -v`). Durability is via on-demand backups — see `just dbbackupv2 staging`.
@@ -27,8 +28,8 @@ services:
     environment:
       DJANGO_ENV: staging
       SLURM_KEYFILE: /run/secrets/slurm_key
-    secrets:
-      - slurm_key
+    volumes:
+      - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
 
   worker:
     env_file:
@@ -36,8 +37,8 @@ services:
     environment:
       DJANGO_ENV: staging
       SLURM_KEYFILE: /run/secrets/slurm_key
-    secrets:
-      - slurm_key
+    volumes:
+      - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
 
   frontend:
     environment:
@@ -48,7 +49,3 @@ services:
       - '80:80'
     volumes:
       - ./nginx_staging.conf.template:/etc/nginx/templates/nginx.conf.template:ro
-
-secrets:
-  slurm_key:
-    external: true

@@ -775,17 +775,20 @@ buildimages tag:
 # Container-based deploy (parallel to the bare-metal `deploy` recipe).
 # `stage` is the overlay token (prod|staging → infra/compose.<stage>.yaml);
 # `envfile` is the local env file copied to the host as .env.<production|staging>
-# (read by the overlay's env_file and compose's --env-file); `tag` is the image tag.
+# (read by the overlay's env_file and compose's --env-file); `branch` is the git
+# ref the host is checked out to (deterministically, via fetch + reset --hard);
+# `tag` is the image tag (defaults to `latest`).
 # Examples:
-#   just deployv2 staging .env.staging latest
-#   just deployv2 prod    .env.production v1.2.3
-# Prereq on the target host (one-time): `podman network create embrella` and
-# `podman secret create slurm_key /path/to/key`.
+#   just deployv2 staging .env.staging main                  # tag defaults to latest
+#   just deployv2 prod    .env.production v1.2.3-branch v1.2.3
+# Prereq on the target host (one-time): `podman network create embrella`, plus
+# place the SLURM SSH key (from vault/admin) on the host and point the env file's
+# SLURM_KEYFILE at that host path (it's bind-mounted into the containers).
 #
 # The db's data persists in the `db_data` named volume across redeploys, so this
 # does NOT seed the db. For a fresh host / disaster recovery, restore a snapshot
 # afterwards with `just loadcontainerdb`; back up on demand with `just dbbackupv2`.
-deployv2 stage envfile tag:
+deployv2 stage envfile branch tag="latest":
     #!/bin/bash
     set -euo pipefail
     if [[ "{{stage}}" != "prod" && "{{stage}}" != "staging" ]]; then
@@ -799,7 +802,15 @@ deployv2 stage envfile tag:
     just dbbackupv2 {{stage}} || echo "  ⚠ pre-deploy backup skipped/failed (fresh host or db down) — continuing."
     echo "Copying {{envfile}} to $HOST:/srv/czii-umbrella-django/.env.$ENVNAME ..."
     scp {{envfile}} svc.czii.umbrella@$HOST:/srv/czii-umbrella-django/.env.$ENVNAME
-    ssh svc.czii.umbrella@$HOST "set -e; cd /srv/czii-umbrella-django && git pull && \
+    echo "Checking the SLURM key exists on $HOST..."
+    ssh svc.czii.umbrella@$HOST "set -euo pipefail; cd /srv/czii-umbrella-django; \
+      KEY=\$(grep -E '^SLURM_KEYFILE=' .env.$ENVNAME | tail -1 | cut -d= -f2- | tr -d '\"' | tr -d \"'\"); \
+      if [[ -z \"\$KEY\" ]]; then echo \"  ✗ SLURM_KEYFILE not set in .env.$ENVNAME\"; exit 1; fi; \
+      if [[ ! -f \"\$KEY\" ]]; then echo \"  ✗ SLURM key not found at \$KEY (obtain it from an admin/vault and place it there)\"; exit 1; fi; \
+      echo \"  ✓ found at \$KEY\""
+    echo "Checking out branch {{branch}} on $HOST..."
+    ssh svc.czii.umbrella@$HOST "set -e; cd /srv/czii-umbrella-django && \
+      git fetch origin {{branch}} && git checkout {{branch}} && git reset --hard origin/{{branch}} && \
       (podman network inspect embrella >/dev/null 2>&1 || podman network create embrella) && \
       IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml pull && \
       IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d"
