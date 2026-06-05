@@ -22,9 +22,7 @@ USER node
 COPY --chown=node:node frontend/.yarn ./.yarn
 COPY --chown=node:node frontend/.yarnrc.yml frontend/package.json frontend/yarn.lock ./
 
-# write cache to the project-local and mount the build cache there.
-RUN --mount=type=cache,target=/app/.yarn/cache,uid=1000,gid=1000 \
-    yarn install --immutable
+RUN yarn install --immutable
 
 # ---- build stage ----
 FROM deps AS build

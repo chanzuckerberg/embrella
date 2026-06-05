@@ -813,7 +813,8 @@ deployv2 stage envfile branch tag="latest":
     # (no registry yet). Switch to pulling prebuilt images from ghcr.io once a
     # build/push pipeline exists — replace `up -d --build` with `pull && up -d`.
     ssh svc.czii.umbrella@$HOST "set -e; cd /srv/czii-umbrella-django && \
-      git fetch origin {{branch}} && git checkout {{branch}} && git reset --hard origin/{{branch}} && \
+      export GIT_SSH_COMMAND='ssh -i ~/.ssh/umbrella_deployment -o IdentitiesOnly=yes' && \
+      git fetch origin {{branch}} && git checkout -B {{branch}} FETCH_HEAD && \
       (podman network inspect embrella >/dev/null 2>&1 || podman network create embrella) && \
       IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d --build"
 
