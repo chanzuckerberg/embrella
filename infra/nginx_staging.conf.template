@@ -1,4 +1,5 @@
-user  nginx;
+# native kernel overlay driver can't exec a process as a non-root in-container UID.
+user  root;
 worker_processes auto;
 error_log  /dev/stderr warn;
 pid        /var/run/nginx.pid;
