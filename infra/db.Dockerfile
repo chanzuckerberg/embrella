@@ -12,8 +12,8 @@
 # overlays). Everything else about the official image is unchanged.
 FROM docker.io/library/mariadb:10.5.22
 
-# Neutralise the privilege-drop re-exec.
+# Neutralise the privilege-drop re-exec (grep guards fail the build if it's gone).
 RUN set -eux; \
-    grep -Eq 'exec gosu .*"\$BASH_SOURCE"' /usr/local/bin/docker-entrypoint.sh; \
-    sed -i -E '/exec gosu .*"\$BASH_SOURCE"/c\true' /usr/local/bin/docker-entrypoint.sh; \
-    ! grep -Eq 'exec gosu .*"\$BASH_SOURCE"' /usr/local/bin/docker-entrypoint.sh
+    grep -q 'exec gosu' /usr/local/bin/docker-entrypoint.sh; \
+    sed -i '/exec gosu/c\true' /usr/local/bin/docker-entrypoint.sh; \
+    ! grep -q 'exec gosu' /usr/local/bin/docker-entrypoint.sh
