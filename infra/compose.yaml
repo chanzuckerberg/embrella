@@ -102,7 +102,7 @@ services:
     restart: unless-stopped
 
   db:
-    image: mariadb:10.5.22
+    image: docker.io/library/mariadb:10.5.22
     environment:
       MARIADB_ROOT_PASSWORD: ${MYSQL_PWD:?set MYSQL_PWD}
       MARIADB_ROOT_HOST: '%' # allow root from any container, not just localhost
@@ -121,7 +121,7 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:1.27-alpine
+    image: docker.io/library/nginx:1.27-alpine
     depends_on:
       - backend
       - frontend
