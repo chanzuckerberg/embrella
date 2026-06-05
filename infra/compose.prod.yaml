@@ -14,15 +14,20 @@
 #
 # `just loadcontainerdb` is for loading real data (DR / seeding / rollback),
 # backup with `just dbbackupv2 prod`.
+#
+# NOTE: `user: "0:0"` on the app services. These hosts run rootless podman on the
+# native kernel overlay driver, which cannot exec/chown as a non-root
 
 services:
   migrate:
+    user: "0:0"
     env_file:
       - ../${EMBRELLA_ENV_FILE:-.env.production}
     environment:
       DJANGO_ENV: production
 
   backend:
+    user: "0:0"
     env_file:
       - ../${EMBRELLA_ENV_FILE:-.env.production}
     environment:
@@ -32,6 +37,7 @@ services:
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
 
   worker:
+    user: "0:0"
     env_file:
       - ../${EMBRELLA_ENV_FILE:-.env.production}
     environment:
@@ -46,6 +52,7 @@ services:
       MARIADB_PASSWORD: ${MYSQL_PWD:?set MYSQL_PWD}
 
   frontend:
+    user: "0:0"
     environment:
       NODE_ENV: production
 

@@ -16,7 +16,6 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 # shared `frontend_node_modules` / `frontend_next` named volumes are owned
 # by uid 1000 — matching the backend's `embrella` user for the devcontainer.
 RUN chown node:node /app && mkdir -p /home/node/.yarn && chown -R node:node /home/node/.yarn
-USER node
 
 # Bring in the pinned yarn release from the repo
 COPY --chown=node:node frontend/.yarn ./.yarn
