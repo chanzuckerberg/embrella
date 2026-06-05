@@ -785,9 +785,9 @@ buildimages tag:
 # place the SLURM SSH key (from vault/admin) on the host and point the env file's
 # SLURM_KEYFILE at that host path (it's bind-mounted into the containers).
 #
-# The db's data persists in the `db_data` named volume across redeploys, so this
-# does NOT seed the db. For a fresh host / disaster recovery, restore a snapshot
-# afterwards with `just loadcontainerdb`; back up on demand with `just dbbackupv2`.
+# The db's data persists in the `db_data` named volume across redeploys.
+# A fresh host boots a working *empty* app DB on its own
+# use `just loadcontainerdb` to seed. Back up on demand with `just dbbackupv2`.
 deployv2 stage envfile branch tag="latest":
     #!/bin/bash
     set -euo pipefail
@@ -808,18 +808,24 @@ deployv2 stage envfile branch tag="latest":
       if [[ -z \"\$KEY\" ]]; then echo \"  ✗ SLURM_KEYFILE not set in .env.$ENVNAME\"; exit 1; fi; \
       if [[ ! -f \"\$KEY\" ]]; then echo \"  ✗ SLURM key not found at \$KEY (obtain it from an admin/vault and place it there)\"; exit 1; fi; \
       echo \"  ✓ found at \$KEY\""
-    echo "Checking out branch {{branch}} on $HOST..."
+    echo "Checking out branch {{branch}} on $HOST and building images..."
+    # TODO: images are currently BUILT on the host from the checked-out source
+    # (no registry yet). Switch to pulling prebuilt images from ghcr.io once a
+    # build/push pipeline exists — replace `up -d --build` with `pull && up -d`.
     ssh svc.czii.umbrella@$HOST "set -e; cd /srv/czii-umbrella-django && \
       git fetch origin {{branch}} && git checkout {{branch}} && git reset --hard origin/{{branch}} && \
       (podman network inspect embrella >/dev/null 2>&1 || podman network create embrella) && \
-      IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml pull && \
-      IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d"
+      IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d --build"
 
-# Restore a specific SQL snapshot into the prod/staging *container* db. Use for a
-# fresh host / disaster recovery, or to roll back. Runs on the target host via SSH;
-# the dump must already be at /srv/dbbackups/<snapshot> there (where `dbbackupv2`
-# writes it), and the host's .env.<production|staging> (placed by deployv2) supplies
-# the db root password.
+# Restore a specific SQL snapshot into the prod/staging *container* db, then apply
+# migrations. Use to load real data: disaster recovery, seeding a fresh host, or
+# rollback. Runs on the target host via SSH; the dump must already be at
+# /srv/dbbackups/<snapshot> there (where `dbbackupv2` writes it), and the host's
+# .env.<production|staging> (placed by deployv2) supplies the db root password.
+#
+# After restoring, this runs the one-shot `migrate` service so a snapshot that
+# predates the deployed code is brought up to the current schema (the migrate
+# service owns the stores → projects → rest ordering; see entrypoint-backend.sh).
 #
 # CAUTION: a `--all-databases` dump (what `dbbackupv2`/`backupdb` produce) includes
 # the mysql system DB and can clobber the container's grants — afterwards verify
@@ -836,12 +842,14 @@ loadcontainerdb stage snapshot:
     fi
     HOST=umbrella-dev; ENVNAME=staging
     if [[ "{{stage}}" == "prod" ]]; then HOST=umbrella; ENVNAME=production; fi
-    echo "Loading /srv/dbbackups/{{snapshot}} into the {{stage}} db container on $HOST..."
+    echo "Loading /srv/dbbackups/{{snapshot}} into the {{stage}} db container on $HOST, then migrating..."
     ssh svc.czii.umbrella@$HOST "set -euo pipefail; \
       cd /srv/czii-umbrella-django && \
       export \$(grep '^MYSQL' .env.$ENVNAME | xargs) && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml \
-        exec -T db mariadb --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" < /srv/dbbackups/{{snapshot}}"
+        exec -T db mariadb --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" < /srv/dbbackups/{{snapshot}} && \
+      echo 'Restore complete; applying migrations to the restored db...' && \
+      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml run --rm migrate"
     echo "Done. If the dump was --all-databases, verify root-from-% access and app-user grants."
 
 # On-demand backup of the *containerized* db for a stage's stack. Dumps all

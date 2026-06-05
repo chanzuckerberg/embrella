@@ -72,7 +72,9 @@ services:
         condition: service_completed_successfully
     networks: [internal]
     volumes:
-      - backend_static:/app/staticfiles
+      # Must match STATIC_ROOT (= BASE_DIR/staticfiles = /app/umbrella/staticfiles),
+      # where collectstatic writes. nginx serves this volume at /srv/staticfiles.
+      - backend_static:/app/umbrella/staticfiles
     restart: unless-stopped
 
   worker:
@@ -102,7 +104,7 @@ services:
   db:
     image: mariadb:10.5.22
     environment:
-      MARIADB_ROOT_PASSWORD: ${MYSQL_PWD:-devaccount}
+      MARIADB_ROOT_PASSWORD: ${MYSQL_PWD:?set MYSQL_PWD}
       MARIADB_ROOT_HOST: '%' # allow root from any container, not just localhost
       MARIADB_DATABASE: ${MYSQL_NAME:-umbrella}
     networks: [internal]

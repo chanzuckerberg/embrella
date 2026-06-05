@@ -53,7 +53,7 @@ COPY umbrella ./umbrella
 COPY docs ./docs
 COPY mkdocs.yml pyproject.toml uv.lock ./
 COPY infra/entrypoint-backend.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh && mkdir -p /app/staticfiles /app/docs_build
+RUN chmod +x /entrypoint.sh && mkdir -p /app/umbrella/staticfiles /app/docs_build
 
 # Non-root user (uid/gid 1000) so files written into bind mounts and named
 # volumes match the devcontainer's `remoteUser` and the host caller's uid.

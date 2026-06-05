@@ -12,19 +12,19 @@
 #
 # Or: `just deployv2 staging .env.staging <branch> <tag>`.
 #
-# The db's data lives in the base `db_data` named volume (survives `down`, not
-# `down -v`). Durability is via on-demand backups — see `just dbbackupv2 staging`.
+# `just loadcontainerdb` is for loading real data (DR / seeding / rollback),
+# backup with `just dbbackupv2 staging`.
 
 services:
   migrate:
     env_file:
-      - ../.env.staging
+      - ../${EMBRELLA_ENV_FILE:-.env.staging}
     environment:
       DJANGO_ENV: staging
 
   backend:
     env_file:
-      - ../.env.staging
+      - ../${EMBRELLA_ENV_FILE:-.env.staging}
     environment:
       DJANGO_ENV: staging
       SLURM_KEYFILE: /run/secrets/slurm_key
@@ -33,12 +33,17 @@ services:
 
   worker:
     env_file:
-      - ../.env.staging
+      - ../${EMBRELLA_ENV_FILE:-.env.staging}
     environment:
       DJANGO_ENV: staging
       SLURM_KEYFILE: /run/secrets/slurm_key
     volumes:
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
+
+  db:
+    environment:
+      MARIADB_USER: ${MYSQL_USER:?set MYSQL_USER}
+      MARIADB_PASSWORD: ${MYSQL_PWD:?set MYSQL_PWD}
 
   frontend:
     environment:
@@ -46,6 +51,6 @@ services:
 
   nginx:
     ports:
-      - '80:80'
+      - '${NGINX_HOST_PORT:-80}:80'
     volumes:
       - ./nginx_staging.conf.template:/etc/nginx/templates/nginx.conf.template:ro

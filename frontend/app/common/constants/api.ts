@@ -2,9 +2,12 @@
 
 export const DJANGO_URL =
   typeof window !== 'undefined'
-    ? window.location.port === '3000'
-      ? `http://${window.location.hostname}:8000` // Bare-metal dev: Next.js on :3000 reaches Django on :8000 directly.
-      : window.location.origin // Behind nginx (e.g. :8080) and deployed envs: same origin, nginx proxies /api, /user, etc. to Django.
+    ? // Bare-metal dev only: Next.js dev server on :3000 reaches Django on :8000 directly.
+      // Gated on the dev build (next dev) so staging/prod (next build → 'production') never
+      // sniff the port — otherwise an nginx host port of 3000 would wrongly trigger this.
+      process.env.NODE_ENV === 'development' && window.location.port === '3000'
+      ? `http://${window.location.hostname}:8000`
+      : window.location.origin // Behind nginx and deployed envs: same origin, nginx proxies /api, /user, etc. to Django.
     : (process.env.DJANGO_URL ?? 'http://localhost:8000');
 
 export enum API {
