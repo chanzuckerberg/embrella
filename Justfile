@@ -816,6 +816,7 @@ deployv2 stage envfile branch tag="latest":
       export GIT_SSH_COMMAND='ssh -i ~/.ssh/umbrella_deployment -o IdentitiesOnly=yes' && \
       git fetch origin {{branch}} && git checkout -B {{branch}} FETCH_HEAD && \
       (podman network inspect embrella >/dev/null 2>&1 || podman network create embrella) && \
+      (IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml down --remove-orphans 2>/dev/null || true) && \
       IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d --build"
 
 # Restore a specific SQL snapshot into the prod/staging *container* db, then apply

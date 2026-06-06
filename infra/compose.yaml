@@ -41,7 +41,9 @@ x-backend-env: &backend-env
   MYSQL_PORT: '3306'
 
 services:
-  # One-shot: runs DB migrations once, then exits 0. backend + worker wait on it
+  # One-shot: runs DB migrations once, then exits 0. No depends_on — the
+  # entrypoint waits for MySQL itself. (podman's start graph can't handle a
+  # service depending on an exited one-shot.)
   migrate:
     image: embrella/backend:${IMAGE_TAG:-latest}
     build:
@@ -51,9 +53,6 @@ services:
     environment:
       <<: *backend-env
       EMBRELLA_MIGRATE: '1' # the ONLY service that runs migrations
-    depends_on:
-      db:
-        condition: service_healthy
     networks: [internal]
     restart: 'no'
 
@@ -65,11 +64,8 @@ services:
     environment:
       <<: *backend-env
       EMBRELLA_BUILD_STATIC: '1' # web container builds static + docs
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+    # No depends_on: entrypoint waits for MySQL. May briefly serve errors if it
+    # starts before `migrate` finishes; self-heals once migrations land.
     networks: [internal]
     volumes:
       # Must match STATIC_ROOT (= BASE_DIR/staticfiles = /app/umbrella/staticfiles),
@@ -85,11 +81,7 @@ services:
     command: ['python', 'umbrella/manage.py', 'qcluster']
     environment:
       <<: *backend-env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+    # No depends_on: entrypoint waits for MySQL; restart covers the migrate race.
     networks: [internal]
     restart: unless-stopped
 
@@ -122,9 +114,7 @@ services:
 
   nginx:
     image: docker.io/library/nginx:1.27-alpine
-    depends_on:
-      - backend
-      - frontend
+    # No depends_on: nginx resolves upstreams lazily via `resolver` + `set $upstream`.
     networks: [internal, embrella]
     volumes:
       - backend_static:/srv/staticfiles:ro
