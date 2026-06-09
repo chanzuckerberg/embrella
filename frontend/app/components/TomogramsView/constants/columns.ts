@@ -10,6 +10,7 @@ import {
 import { LinkCellProps } from '@app/common/components/EntityTable/types';
 import { TomogramData } from '../types';
 import { ParametersCell } from '../ParametersCell';
+import { MetadataCell } from '../MetadataCell';
 
 export const TOMOGRAM_COLUMN_IDS = {
   TOMOGRAMS: 'tomograms',
@@ -50,30 +51,9 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
 
   {
     id: TOMOGRAM_COLUMN_IDS.METADATA,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps => {
-      const tomogramData = rowData as TomogramData;
-
-      // Only show metadata link for czii-live processing plans
-      const procPlanName = tomogramData.procPlan?.name || '';
-      if (!procPlanName.includes('czii-live')) {
-        return {
-          children: '',
-          href: '',
-        };
-      }
-
-      const sessionName = tomogramData.msiSession?.name || '';
-      let runNumber = tomogramData.tomograms?.name || '';
-      // Clean the run number by removing (id=XX) and trimming whitespace
-      runNumber = runNumber.replace(/\s*\(id=\d+\)/g, '').trim();
-      return {
-        children: 'View Metadata',
-        href: `/metadata/view/${encodeURIComponent(sessionName)}/${encodeURIComponent(runNumber)}`,
-      };
-    },
-    cell: getLinkCellFromCellContext,
+    cell: MetadataCell,
     enableSorting: false,
-    header: humanize(TOMOGRAM_COLUMN_IDS.METADATA),
+    header: 'Session Summary',
   },
   {
     id: 'metadataParameters',

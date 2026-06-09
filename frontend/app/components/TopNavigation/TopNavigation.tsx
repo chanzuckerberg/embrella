@@ -41,21 +41,22 @@ const JOBS_DROPDOWN_ITEMS = [
 // Tomograms dropdown items (Reviews is conditional on feature flag)
 const getTomogramsDropdownItems = (isReviewEnabled: boolean) => {
   const items = [];
+  items.push(
+    { name: 'metadata', label: 'Summary', href: '/processing/tomograms/metadata' }
+    // { name: 'annotations', label: 'Annotations', href: '/processing/tomograms/annotations' }
+  );
   if (isReviewEnabled) {
     items.push({ name: 'reviews', label: 'Reviews', href: '/processing/tomograms/reviews' });
   }
-  items.push(
-    { name: 'metadata', label: 'Metadata', href: '/processing/tomograms/metadata' },
-    { name: 'annotations', label: 'Annotations', href: '/processing/tomograms/annotations' }
-  );
+
   return items;
 };
 
 // Data dropdown items
-const DATA_DROPDOWN_ITEMS = [
-  { name: 'storage', label: 'Storage Explorer', href: '/processing/data/storage' },
-  { name: 'export', label: 'Export', href: '/processing/data/export' },
-];
+// const DATA_DROPDOWN_ITEMS = [
+//   { name: 'storage', label: 'Storage Explorer', href: '/processing/data/storage' },
+//   { name: 'export', label: 'Export', href: '/processing/data/export' },
+// ];
 
 const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
   home: [],
@@ -229,10 +230,10 @@ export const TopNavigation = () => {
   // Dropdown states
   const jobsButtonRef = useRef<HTMLButtonElement | null>(null);
   const tomogramsButtonRef = useRef<HTMLButtonElement | null>(null);
-  const dataButtonRef = useRef<HTMLButtonElement | null>(null);
+  // const dataButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isJobsDropdownOpen, setIsJobsDropdownOpen] = useState(false);
   const [isTomogramsDropdownOpen, setIsTomogramsDropdownOpen] = useState(false);
-  const [isDataDropdownOpen, setIsDataDropdownOpen] = useState(false);
+  // const [isDataDropdownOpen, setIsDataDropdownOpen] = useState(false);
 
   // Check if any Jobs route is active
   const isJobsActive = pathname.startsWith('/processing/jobs');
@@ -241,7 +242,7 @@ export const TopNavigation = () => {
   const isTomogramsActive = pathname.startsWith('/processing/tomograms');
 
   // Check if any Data route is active
-  const isDataActive = pathname.startsWith('/processing/data');
+  // const isDataActive = pathname.startsWith('/processing/data');
 
   const handleLogout = () => {
     // Redirect to logout and then back to frontend home page
@@ -320,18 +321,6 @@ export const TopNavigation = () => {
                   </StyledNavLink>
                 );
               })}
-              <StyledNavLink
-                href={
-                  typeof window !== 'undefined' &&
-                  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-                    ? 'http://localhost:8880'
-                    : '/viewer/copick-web'
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Viewer
-              </StyledNavLink>
             </Box>
           </Box>
           <Box sx={{ flexShrink: 0 }}>
@@ -465,7 +454,7 @@ export const TopNavigation = () => {
                 />
 
                 {/* Data Dropdown */}
-                <StyledJobsButton
+                {/* <StyledJobsButton
                   ref={dataButtonRef}
                   onClick={() => setIsDataDropdownOpen((prev) => !prev)}
                   isActive={isDataActive}
@@ -493,7 +482,7 @@ export const TopNavigation = () => {
                       placement: 'bottom-start',
                     },
                   }}
-                />
+                /> */}
               </>
             )}
             {/* Other sub-nav items */}

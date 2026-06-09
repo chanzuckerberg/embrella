@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Container, Typography } from '@mui/material';
-import { Button } from '@czi-sds/components';
+import { Button, Icon } from '@czi-sds/components';
 import { DJANGO_URL } from '@app/common/constants/api';
 
 export default function BrowseSessionsPage() {
@@ -21,6 +21,34 @@ export default function BrowseSessionsPage() {
           onClick={() => (window.location.href = `${DJANGO_URL}/admin/tem/msisession/`)}
         >
           View Sessions
+        </Button>
+      </Box>
+
+      <Box
+        sx={{
+          mt: 8,
+          px: 3,
+          py: 2.5,
+          backgroundColor: 'grey.50',
+          borderRadius: 1,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 2.5,
+        }}
+      >
+        <Icon sdsIcon="InfoCircle" sdsSize="l" color="gray" />
+        <Box>
+          <Typography variant="subtitle2">Looking for tomogram summaries?</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Browse processed tomogram metadata across all sessions.
+          </Typography>
+        </Box>
+        <Button
+          sdsType="secondary"
+          sdsStyle="rounded"
+          onClick={() => (window.location.href = '/processing/tomograms/metadata')}
+        >
+          Go to Tomogram Summaries
         </Button>
       </Box>
     </Container>

@@ -1,26 +1,24 @@
 import React from 'react';
+import Link from 'next/link';
+import { Button, Icon } from '@czi-sds/components';
 import { CellContext } from '@tanstack/react-table';
 import { EntityDataTypes } from '@app/common/types/tableState';
-import { useFetchData } from '../../../hooks/useFetchData/useFetchData';
+import { TomogramData } from './types';
 
-export type MetadataCellValue = {
-  sessionName: string;
-  runNumber: string;
-};
+export const MetadataCell = (props: CellContext<EntityDataTypes, unknown>) => {
+  const rowData = props.row.original as TomogramData | undefined;
+  if (!rowData?.procPlan?.name?.includes('czii-live')) return <span />;
 
-export const MetadataCell = (props: CellContext<EntityDataTypes, MetadataCellValue>) => {
-  const { sessionName, runNumber } = props.getValue();
-  const shouldFetch = sessionName && runNumber;
-  const apiUrl = shouldFetch
-    ? `http://umbrella.czbiohub.org/workflow/get_aretomo3?session=${encodeURIComponent(sessionName)}&run_id=${encodeURIComponent(runNumber)}`
-    : '';
+  const sessionName = rowData.msiSession?.name ?? '';
+  const runNumber = (rowData.tomograms?.name ?? '').replace(/\s*\(id=\d+\)/g, '').trim();
+  if (!sessionName || !runNumber) return <span />;
 
-  const { data, isSuccess } = useFetchData<Record<string, unknown>>(apiUrl, {});
-
-  if (!shouldFetch) return <span />;
-  if (!isSuccess) return <span>Loading...</span>;
-  if (!data) return <span>No data</span>;
-
-  // Display the result (customize as needed)
-  return <span>{typeof data === 'string' ? data : JSON.stringify(data)}</span>;
+  const href = `/metadata/view/${encodeURIComponent(sessionName)}/${encodeURIComponent(runNumber)}`;
+  return (
+    <Link href={href} style={{ textDecoration: 'none' }}>
+      <Button sdsType="secondary" sdsStyle="rounded" startIcon={<Icon sdsIcon="BarChartVertical3" sdsSize="s" />}>
+        Summary
+      </Button>
+    </Link>
+  );
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useCallback, useMemo } from 'react';
+import React, { Suspense, useCallback, useMemo, useState } from 'react';
 import { parseAsInteger, useQueryState } from 'nuqs';
 import { CircularProgress } from '@mui/material';
 import { GRID_COLUMN_DEFS } from './constants/columns';
@@ -20,6 +20,7 @@ const GridDetailDialog = React.lazy(() =>
  */
 export const GridsViewInner = (): React.JSX.Element => {
   const [selectedGridId, setSelectedGridId] = useQueryState('gridDetail', parseAsInteger);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const openGridDetail = useCallback(
     (gridId: number) => {
@@ -32,11 +33,18 @@ export const GridsViewInner = (): React.JSX.Element => {
 
   return (
     <GridDetailDialogContext.Provider value={contextValue}>
-      <EntityTable entityApi={API.GRIDS} entityApiResponseField="grid" columnDefs={GRID_COLUMN_DEFS} />
+      {/* TODO: remove the `key`-bump workaround once useFetchData is migrated to React Query —
+          then invalidate the grids query via queryClient.invalidateQueries instead of remounting. */}
+      <EntityTable key={refreshKey} entityApi={API.GRIDS} entityApiResponseField="grid" columnDefs={GRID_COLUMN_DEFS} />
 
       {selectedGridId !== null && (
         <Suspense fallback={<CircularProgress />}>
-          <GridDetailDialog open onClose={() => setSelectedGridId(null)} gridId={selectedGridId} />
+          <GridDetailDialog
+            open
+            onClose={() => setSelectedGridId(null)}
+            gridId={selectedGridId}
+            onGridUpdated={() => setRefreshKey((k) => k + 1)}
+          />
         </Suspense>
       )}
     </GridDetailDialogContext.Provider>

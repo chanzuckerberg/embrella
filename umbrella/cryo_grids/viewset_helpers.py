@@ -184,7 +184,7 @@ def build_shared_grid_inventory_q_objects(q_params, grid_prefix=""):
                 if not isinstance(values, list):
                     values = [values]
                 if category == "status":
-                    status_map = {"Active": False, "Inactive": True}
+                    status_map = {"Not Trashed": False, "Trashed": True}
                     values = [status_map.get(v, v) for v in values]
                 q_objects.append(Q(**{field: values}))
         elif category == "user" and values:
@@ -250,11 +250,11 @@ def get_shared_filterlist_options(base_qs, grid_prefix=""):
         ),
         "status": [
             {
-                "name": "Active",
+                "name": "Not Trashed",
                 "count": base_qs.filter(**{f"{grid_prefix}trashed": False}).distinct().count(),
             },
             {
-                "name": "Inactive",
+                "name": "Trashed",
                 "count": base_qs.filter(**{f"{grid_prefix}trashed": True}).distinct().count(),
             },
         ],

@@ -54,7 +54,7 @@ export const GRID_FILTER_CONFIGS: GridFilterConfig[][] = [
     {
       filterCategory: 'status',
       filterId: GridFilterId.STATUS,
-      label: 'Grid Status',
+      label: 'Grid Trashed?',
     },
   ],
 ];
