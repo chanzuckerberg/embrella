@@ -174,5 +174,5 @@ export const useConnect = <T extends EntityDataTypes>(
       : {}),
   });
 
-  return { table };
+  return { table, entityList };
 };

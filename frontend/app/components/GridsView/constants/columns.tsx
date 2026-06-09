@@ -33,7 +33,7 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
     accessorFn: (rowData: EntityDataTypes): string => (rowData as GridData).grid.name,
     cell: ({ row }) => {
       const data = row.original as GridData;
-      return <GridNameCell gridId={data.grid.id} name={data.grid.name} />;
+      return <GridNameCell gridId={data.grid.id} name={data.grid.name} trashed={data.grid.trashed} />;
     },
     enableSorting: false,
     header: humanize(GRID_COLUMN_IDS.CRYOGRID),

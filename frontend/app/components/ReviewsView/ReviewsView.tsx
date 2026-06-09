@@ -5,17 +5,20 @@ import { TableWrapper } from '@app/common/components/TableWrapper/TableWrapper';
 import { API } from '@app/common/constants/api';
 import { TableStateProvider } from '@app/common/components/TableStateProvider/TableStateProvider';
 import { REVIEW_COLUMN_IDS } from './constants/columns';
-import { ReviewsViewHeader } from './components/ReviewsViewHeader/ReviewsViewHeader';
+import { ReviewsViewHeader } from './components/ReviewsViewHeader';
 import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ReviewData } from './types';
 import { CellLink } from '@app/common/components/EntityTable/utils/linkUtils';
 import { AccessorReturnType } from '@app/common/components/EntityTable/types';
-import { ReviewActionButton } from './components/ReviewActionButton/ReviewActionButton';
+import { ReviewActionButton } from './components/ReviewActionButton';
+import { ReviewsEmptyStateCard } from './components/ReviewsEmptyStateCard';
 
 const columnHelper = createColumnHelper<ReviewData>();
 
 export const ReviewsView = () => {
+  const [rowCount, setRowCount] = useState<number | null>(null);
+
   const columns = useMemo(
     () => [
       columnHelper.accessor('review.name', {
@@ -72,7 +75,9 @@ export const ReviewsView = () => {
           entityApi={API.REVIEWS}
           entityApiResponseField="review"
           columnDefs={columns as Array<ColumnDef<ReviewData, AccessorReturnType>>}
+          onRowCountChange={setRowCount}
         />
+        {rowCount !== null && rowCount <= 5 && <ReviewsEmptyStateCard />}
       </TableWrapper>
     </TableStateProvider>
   );
