@@ -1,3 +1,5 @@
+import { EntityLinkField } from '@app/common/types/entity';
+
 export interface ScreeningLabel {
   id: number;
   name: string;
@@ -6,10 +8,10 @@ export interface ScreeningLabel {
 
 export interface ScreeningGridData {
   grid: { id: number; name: string; updatedAt: string | null };
-  project_name: string | null;
+  project: EntityLinkField | null;
   specimen_name: string | null;
   user_name: string | null;
   clipped: boolean;
-  freezing_session: { id: number; name: string; url: string } | null;
+  freezing_session: EntityLinkField | null;
   labels: ScreeningLabel[];
 }

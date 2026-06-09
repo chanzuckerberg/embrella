@@ -485,6 +485,19 @@ def format_freezing_session_link(freezing_session):
     }
 
 
+def format_project_link(project):
+    """Return an EntityLinkField-shaped dict ({id, name, url}) for a Project, where
+    url points at the Django admin change page. Returns None if input is None."""
+    if project is None:
+        return None
+    base_url = get_base_url()
+    return {
+        "id": project.id,
+        "name": project.name,
+        "url": f"{base_url}/admin/projects/project/{project.id}",
+    }
+
+
 def format_puck(item):
     return PuckModel(name=item["puck"])
 
