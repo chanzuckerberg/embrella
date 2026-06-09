@@ -27,8 +27,7 @@ Run `just --list --unsorted` for the full set.
 
 **Resources.** Give your container engine enough headroom — the full stack
 (MariaDB + Django + worker + Next.js + nginx, plus image builds and the Playwright
-browsers) is heavy, and the default podman machine is too
-tight once you add a devcontainer. On macOS/Windows the VM is the podman machine
+browsers) is heavy. On macOS/Windows the VM is the podman machine
 (or the Docker Desktop VM); on Linux containers use the host directly, so there's
 nothing to size. Recommended: **8 GB RAM / 4 CPUs / 50 GB disk**.
 
@@ -46,15 +45,12 @@ podman), recreate the machine: `podman machine rm`, then `podman machine init
 --memory 8192 --cpus 4 --disk-size 50` — note this wipes images and named
 volumes, so plan for a fresh `just devup --build`.
 
-**Network + secrets.**
+**Network**
 
 ```
 podman network create embrella                              # all envs (dev: just netinit)
 podman secret create slurm_key /path/to/svc_czii_umbrella   # staging/prod only
 ```
-
-For dev, `just netinit` does the network step. The SLURM key on dev is bind-mounted
-from the path in `.env`'s `SLURM_KEYFILE` (typically `~/.ssh/svc_czii_umbrella`).
 
 ## Devcontainer
 
@@ -62,22 +58,17 @@ A single full-stack devcontainer lives at `.devcontainer/devcontainer.json`. It
 attaches to the running `backend` compose service, mounts the whole repo
 (including `.git/`) at `/app`, and adds Node 20, `gh`, Claude Code, and the
 Playwright MCP server on top of the Python backend image — so both `pytest` and
-`yarn test` run from one shell. Following Anthropic's
-[devcontainer guide](https://code.claude.com/docs/en/devcontainer):
+`yarn test` run from one shell.
 
-- **Claude Code** is installed via `ghcr.io/anthropics/devcontainer-features/claude-code`.
+- **Claude Code** is installed.
 - **Auth + settings + shell history persist** across rebuilds via three named
   volumes scoped per project with `${devcontainerId}`:
   `claude-code-config-*`, `gh-config-*`, `shell-history-*`.
 - **Git identity** comes from your host `~/.gitconfig` (bind-mounted, read-only).
   Push auth can go through `gh` over HTTPS.
 - **SSH agent forwarding** is available for git-over-SSH and cluster operations
-  without copying any private keys into the container. Make sure the host agent is
-  running with a key loaded _before_ opening the container:
-  ```bash
-  eval "$(ssh-agent -s)" && ssh-add ~/.ssh/id_ed25519   # on the host
-  ```
-- **Browser automation** via the Playwright MCP server (configured in `.mcp.json`)
+  without copying any private keys into the container.
+- **Browser automation** via the Playwright MCP server
   lets Claude verify UI changes against `http://nginx` or `http://frontend:3000`
   from inside the container.
 
@@ -90,10 +81,7 @@ cp helpers/.env_template .env
 # Leave SLURM_KEYFILE empty unless you have a cluster key on this host.
 ```
 
-A host-side precheck (`.devcontainer/precheck_embrella_requirements.sh`, run from
-`initializeCommand`) verifies this and a few other prerequisites before any
-container is built, failing early with a clear message instead of a cryptic compose
-mount error.
+A host-side precheck for devcontainer runs (`.devcontainer/precheck_embrella_requirements.sh`)
 
 Open in VS Code with "Dev Containers: Reopen in Container" → "Embrella". On first
 run: `claude` to sign in, then `gh auth login` for git push.
@@ -114,13 +102,6 @@ The services read these. Defaults come from `.env` / `.env.<stage>` at repo root
 | `NGINX_RESOLVER`           | nginx\_\*.conf.template (envsubst) | DNS server nginx uses to re-resolve upstreams. Defaults to internal gateway IP (podman); override to `127.0.0.11` for Docker. |
 | `IMAGE_TAG`                | compose.yaml                       | Image tag for both backend + frontend (default `latest`).                                                                     |
 
-## Cross-engine notes
-
-Defaults target **podman** (rootless on macOS via `podman machine`). For Docker
-users, set `NGINX_RESOLVER=127.0.0.11` — there's a commented-out line ready to
-uncomment in `helpers/.env_template`. Docker's embedded DNS lives at that address,
-while podman's aardvark-dns is on the network gateway.
-
 ## Debugging
 
 The backend and worker call `debugpy.listen(("0.0.0.0", DEBUGPY_PORT))` at startup
@@ -132,11 +113,13 @@ host: **backend `localhost:5678`**, **worker `localhost:5679`**.
 Launch config for debugging is at `.vscode/launch.json` and attaches with F5. This is wired for the **devcontainer** flow (VS Code running inside the `backend`
 container).
 
+Tests are preconfigured to be run through the Testing module for Jest, Playwright, and Pytest.
+
 ### Frontend
 
 Client-side React / `.tsx` debugging goes through the browser — `http://localhost:8080` (through
 nginx) or `http://localhost:3000` (direct to Next.js). Server-side Next.js
-debugging (Node inspector attach) is not wired up yet
+debugging (Node inspector attach) is not wired up yet.
 
 ## Logs
 
@@ -167,11 +150,17 @@ just dbbackupv2 prod                      # on-demand dump of a prod/staging con
 just loadcontainerdb prod <snapshot.sql>  # restore into a prod/staging container db
 ```
 
-### Manually run migrations or seed data
+### Migrations and seed data
+
+Migrations run automatically. The one-shot `migrate` service applies them on
+every `just devup` (it owns the `stores` → `projects` → rest ordering; see
+`entrypoint-backend.sh`).
+
+To re-apply migrations on demand (e.g. after pulling new migration files), re-run
+the `migrate` service
 
 ```
-just devexec python umbrella/manage.py migrate
-just devexec just populatedbexamples
+podman compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml run --rm migrate
 ```
 
 ### Reload nginx after editing the dev conf template
@@ -191,16 +180,12 @@ podman compose --env-file .env -f infra/compose.yaml -f infra/compose.staging.ya
 
 ## Files
 
-| File                                                       | Role                                                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `infra/backend.Dockerfile`                                 | Multi-stage build for the Django image (used by `backend` + `worker`).                                                                                                                                                                                                                                                                                                   |
-| `infra/frontend.Dockerfile`                                | Multi-stage build for the Next.js image.                                                                                                                                                                                                                                                                                                                                 |
-| `infra/entrypoint-backend.sh`                              | Runs at every backend/worker/migrate container start. Waits for the DB, runs migrations only when `EMBRELLA_MIGRATE=1` (the one-shot `migrate` service), optionally builds static + docs.                                                                                                                                                                                |
-| `infra/compose.yaml`                                       | **Base.** Service shapes, networks, named volumes. Never run alone — pair with an overlay.                                                                                                                                                                                                                                                                               |
-| `infra/compose.dev.yaml`                                   | Dev overlay. Bind-mounts the whole repo at `/app` (so `.git/`, `Justfile`, configs are all visible inside the container), masks `.venv` with the `backend_venv` named volume, shares the `frontend_node_modules` + `frontend_next` volumes into the backend container so frontend tests run there too, mounts the SLURM key + `~/.gitconfig`, and publishes debug ports. |
-| `infra/compose.staging.yaml`                               | Staging overlay. Pulls prebuilt images, uses staging nginx conf, expects a `slurm_key` podman secret.                                                                                                                                                                                                                                                                    |
-| `infra/compose.prod.yaml`                                  | Production overlay. Same shape as staging with prod nginx conf and TLS port.                                                                                                                                                                                                                                                                                             |
-| `infra/nginx_dev.conf.template`                            | Dev nginx config. `${NGINX_RESOLVER}` is `envsubst`'d at container startup.                                                                                                                                                                                                                                                                                              |
-| `infra/nginx_staging.conf.template`                        | Staging nginx config (container deploy). Routes /api/admin/etc → `backend:8000`, everything else → `frontend:3000`. `${NGINX_RESOLVER}` is `envsubst`'d at container startup so upstreams re-resolve after container restarts.                                                                                                                                           |
-| `infra/nginx_production.conf.template`                     | Same as staging, different server_name.                                                                                                                                                                                                                                                                                                                                  |
-| `infra/nginx_staging.conf` / `infra/nginx_production.conf` | Static counterparts used by the legacy bare-metal `deploy` recipe (scp'd to the host's system nginx). Kept in sync manually with the `.template` variants.                                                                                                                                                                                                               |
+| File                          | Role                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `infra/backend.Dockerfile`    | Multi-stage build for the Django image (used by `backend` + `worker`).                                                                                                                                                                                                                                                                                                   |
+| `infra/frontend.Dockerfile`   | Multi-stage build for the Next.js image.                                                                                                                                                                                                                                                                                                                                 |
+| `infra/entrypoint-backend.sh` | Runs at every backend/worker/migrate container start. Waits for the DB, runs migrations only when `EMBRELLA_MIGRATE=1` (the one-shot `migrate` service), optionally builds static + docs.                                                                                                                                                                                |
+| `infra/compose.yaml`          | **Base.** Service shapes, networks, named volumes. Never run alone — pair with an overlay.                                                                                                                                                                                                                                                                               |
+| `infra/compose.dev.yaml`      | Dev overlay. Bind-mounts the whole repo at `/app` (so `.git/`, `Justfile`, configs are all visible inside the container), masks `.venv` with the `backend_venv` named volume, shares the `frontend_node_modules` + `frontend_next` volumes into the backend container so frontend tests run there too, mounts the SLURM key + `~/.gitconfig`, and publishes debug ports. |
+| `infra/compose.staging.yaml`  | Staging overlay. Pulls prebuilt images, uses staging nginx conf, expects a `slurm_key` podman secret.                                                                                                                                                                                                                                                                    |
+| `infra/compose.prod.yaml`     | Production overlay. Same shape as staging with prod nginx conf and TLS port.                                                                                                                                                                                                                                                                                             |

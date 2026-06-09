@@ -26,9 +26,7 @@ if grep -q '^YOUDIDNOTUPDATETHIS=' .env; then
   exit 1
 fi
 
-# 3. SLURM key is optional. The compose mount falls back to /dev/null when
-#    SLURM_KEYFILE is empty, but a non-empty path that doesn't exist makes the
-#    bind mount fail — catch it here with an actionable hint.
+# 3. SLURM key is optional, but path needs to be valid if set.
 slurm_keyfile="$(grep -E '^SLURM_KEYFILE=' .env | tail -1 | cut -d= -f2- | tr -d '"' || true)"
 if [[ -n "$slurm_keyfile" && ! -f "$slurm_keyfile" ]]; then
   err "SLURM_KEYFILE in .env points at a file that doesn't exist:"
@@ -37,16 +35,14 @@ if [[ -n "$slurm_keyfile" && ! -f "$slurm_keyfile" ]]; then
   exit 1
 fi
 
-# 4. ~/.gitconfig is bind-mounted read-only for in-container commits. Create an
-#    empty one if absent so the mount source exists (empty is harmless).
+# 4. ~/.gitconfig is bind-mounted read-only for in-container commits.
 echo "Checking for ~/.gitconfig..."
 if [[ ! -f "$HOME/.gitconfig" ]]; then
   echo "ℹ️  creating an empty ~/.gitconfig so the git-identity mount has a source"
   touch "$HOME/.gitconfig"
 fi
 
-# 5. nginx joins the shared external `embrella` network; create it once if it's
-#    not there yet (idempotent). Works with either podman or docker
+# 5. nginx joins the shared external `embrella` network
 echo "Checking for a container engine (podman or docker)..."
 if command -v podman >/dev/null 2>&1; then
   engine=podman

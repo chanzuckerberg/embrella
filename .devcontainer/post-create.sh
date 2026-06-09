@@ -25,16 +25,9 @@ uv sync --locked
 
 # Install Playwright browsers into the persistent ms-playwright cache volume
 # so the VS Code Playwright extension and `yarn e2e` work without manual setup.
-# The playwright bin lives in the frontend service's shared node_modules
-# (mounted at /app/frontend/node_modules via the frontend_node_modules named
-# volume), so wait until the frontend container has finished `yarn install`.
 playwright_bin=/app/frontend/node_modules/.bin/playwright
 for _ in $(seq 1 60); do [[ -x "$playwright_bin" ]] && break; sleep 2; done
 if [[ -x "$playwright_bin" ]]; then
-  # System libs (glib, nss, etc.) for chromium — backend image is python:3.11-slim
-  # which lacks them. Re-installed on each container rebuild; not baked into the
-  # backend Dockerfile so prod runtime stays lean.
-  # sudo strips PATH, so node from nvm isn't found — preserve it explicitly.
   (cd /app/frontend && sudo env "PATH=$PATH" "$playwright_bin" install-deps chromium)
   (cd /app/frontend && "$playwright_bin" install chromium)
 else
