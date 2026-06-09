@@ -24,10 +24,10 @@ To run the frontend server by itself, you can use the helper:
 
 ### Using local mysql server
 
-Assuming you have `podman` and `podman-compose`, you can start a local instance of a mariadb server matching the deployed version by running `podman-compose up` in the `helpers/local_mysql` directory.
-To mirror production database to it, the helper `just mirrorproddbtolocal` is provided.
+The containerized dev stack (`just devup`) already runs a MariaDB `db` service matching the deployed version — reachable on the host at `127.0.0.1:3306` (user `root`, password `devaccount`). No separate database container is needed.
+To mirror the production database into it, the helper `just mirrorproddbtolocal` is provided (or `just fetchprodsnapshot` + `just loaddevdb`).
 
-Update your development `.env` to have these additional lines:
+If you run the backend outside the container (bare metal), update your development `.env` to have these additional lines:
 
 ```dotenv
 USE_MYSQL=True
@@ -38,7 +38,7 @@ MYSQL_HOST=127.0.0.1
 MYSQL_PORT=3306
 ```
 
-Your throw-away mysql instance should be reachable by cli with `mysql -h 127.0.0.1 -u root -p`. (Pw: garbage)
+Your throw-away mysql instance should be reachable by cli with `mysql -h 127.0.0.1 -u root -p`. (Pw: devaccount)
 
 ## Deploying/managing company-facing servers
 

@@ -29,20 +29,20 @@ Run `just --list --unsorted` for the full set.
 (MariaDB + Django + worker + Next.js + nginx, plus image builds and the Playwright
 browsers) is heavy. On macOS/Windows the VM is the podman machine
 (or the Docker Desktop VM); on Linux containers use the host directly, so there's
-nothing to size. Recommended: **8 GB RAM / 4 CPUs / 50 GB disk**.
+nothing to size. Recommended: **16 GB RAM / 8 CPUs / 50 GB disk**.
 
 ```
 podman machine stop
-podman machine set --memory 8192 --cpus 4 --disk-size 50
+podman machine set --memory 16384 --cpus 8 --disk-size 50
 podman machine start
-# Docker Desktop: Settings → Resources → set Memory 8 GB, Disk ≥ 50 GB
+# Docker Desktop: Settings → Resources → set Memory at least 16 GB, Disk ≥ 50 GB
 ```
 
 `--memory` is MB, `--disk-size` is GB. Inspect current values with
 `podman machine inspect` / `podman machine ls`, and VM disk usage with
 `podman system df`. If `podman machine set` rejects a disk-size change (older
 podman), recreate the machine: `podman machine rm`, then `podman machine init
---memory 8192 --cpus 4 --disk-size 50` — note this wipes images and named
+--memory 16384 --cpus 8 --disk-size 50` — note this wipes images and named
 volumes, so plan for a fresh `just devup --build`.
 
 **Network**

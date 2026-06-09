@@ -49,9 +49,6 @@ known_hosts
 .git
 .gitignore
 
-# Local mysql data (legacy compose dir)
-helpers/local_mysql/mariadb_data/
-
 # Local DB backups / scratch space
 .scratch/
 

@@ -20,10 +20,10 @@ See `just info` for a summary of your development environment.
 Podman size defaults on Mac are too limited. On Linux, skip this block.
 
 ```bash
-$ podman machine init --memory 8192 --cpus 4 --disk-size 50   # first time
+$ podman machine init --memory 16384 --cpus 8 --disk-size 50   # first time
 $ podman machine start
 # Already have a machine? Restart with new options:
-#   podman machine stop && podman machine set --memory 8192 --cpus 4 --disk-size 50 && podman machine start
+#   podman machine stop && podman machine set --memory 16384 --cpus 8 --disk-size 50 && podman machine start
 ```
 
 One-time setup:

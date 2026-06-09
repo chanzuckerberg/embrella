@@ -509,9 +509,6 @@ mirrorproddbtolocal: initenv
     echo "Importing database from snapshot $LATEST..."
     mysql -h 127.0.0.1 -u root -pdevaccount < ./.scratch/$LATEST
 
-    echo "Re-applying remote host grants..."
-    mysql -h 127.0.0.1 -u root -pdevaccount < ./helpers/local_mysql/init.sql
-
 # Fetch the latest prod DB snapshot from umbrella:/srv/dbbackups into ./.scratch/.
 # Host-side only (needs SSH access to umbrella). Pair with `just loaddevdb` to
 # import into the dev compose db.
@@ -553,15 +550,12 @@ loaddevdb snapshot: initenv
     echo "Importing {{snapshot}} into dev db..."
     mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount < "{{snapshot}}"
 
-    echo "Re-applying remote host grants on dev db..."
-    mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount < ./helpers/local_mysql/init.sql
-
     echocolor $GREEN "Loaded {{snapshot}} into dev db at $DB_TARGET."
 
 # Back up the dev compose db to ./.scratch/ (the dump pair of `loaddevdb`). Mirrors
 # loaddevdb: connects to ${MYSQL_HOST:-127.0.0.1} with the MariaDB client, so it runs
 # inside the devcontainer (MYSQL_HOST=db) or on the host with the dev stack up. The
-# -h connection authenticates as root@'%' (devaccount), the account init.sql grants.
+# -h connection authenticates as root@'%' (devaccount), created by the db container init.
 # Usage:
 #   just devexec just dbbackupdev            # devcontainer
 #   just dbbackupdev                         # host (dev stack up)
@@ -572,10 +566,9 @@ dbbackupdev: initenv
     set -euo pipefail
     mkdir -p ./.scratch
     OUT="./.scratch/devbackup_$(date +%F.%H%M%S).sql"
-    echo "Backing up dev compose db → $OUT ..."
-    # --skip-ssl: dev db container has no TLS; recent MariaDB clients otherwise bail.
+    echo "Backing up dev compose db (application DB only) → $OUT ..."
     mysqldump --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount \
-      --all-databases --add-drop-database > "$OUT"
+      --databases "${MYSQL_NAME:-umbrella}" --add-drop-database > "$OUT"
     echocolor $GREEN "Wrote $OUT"
 
 # Stop production server apps
@@ -829,9 +822,9 @@ deployv2 stage envfile branch tag="latest":
 # predates the deployed code is brought up to the current schema (the migrate
 # service owns the stores → projects → rest ordering; see entrypoint-backend.sh).
 #
-# CAUTION: a `--all-databases` dump (what `dbbackupv2`/`backupdb` produce) includes
-# the mysql system DB and can clobber the container's grants — afterwards verify
-# root-from-% access and app-user grants still work
+# CAUTION: a legacy `--all-databases` dump (what bare-metal `backupdb` produces) DOES
+# include the mysql system DB and can clobber the container's grants — if you restore
+# one of those, afterwards verify root-from-% access and app-user grants still work.
 #
 # Usage:
 #   just loadcontainerdb staging backup_2026-05-17.123456.sql
@@ -852,12 +845,12 @@ loadcontainerdb stage snapshot:
         exec -T db mariadb --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" < /srv/dbbackups/{{snapshot}} && \
       echo 'Restore complete; applying migrations to the restored db...' && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml run --rm migrate"
-    echo "Done. If the dump was --all-databases, verify root-from-% access and app-user grants."
+    echo "Done. (If you restored a legacy --all-databases dump, verify root-from-% access and app-user grants.)"
 
-# On-demand backup of the *containerized* db for a stage's stack. Dumps all
-# databases from the running `db` container to /srv/dbbackups/backup_<ts>.sql on
-# the stack's host (same location/format as legacy `backupdb`, so `loadcontainerdb`,
-# `fetchprodsnapshot`, and `loaddevdb` all consume it).
+# On-demand backup of the *containerized* db for a stage's stack. Dumps ONLY the
+# application database ($MYSQL_NAME) to
+# /srv/dbbackups/backup_<ts>.sql on the stack's host (same location/format as legacy
+# `backupdb`, so `loadcontainerdb`, `fetchprodsnapshot`, and `loaddevdb` all consume it).
 #
 # Usage:
 #   just dbbackupv2 prod
@@ -870,7 +863,7 @@ dbbackupv2 stage:
     fi
     HOST=umbrella-dev; ENVNAME=staging
     if [[ "{{stage}}" == "prod" ]]; then HOST=umbrella; ENVNAME=production; fi
-    echo "Backing up the {{stage}} container db on $HOST → /srv/dbbackups/ ..."
+    echo "Backing up the {{stage}} container db (application DB only) on $HOST → /srv/dbbackups/ ..."
     # Dump to a hidden .partial first and rename only on success
     ssh svc.czii.umbrella@$HOST "set -euo pipefail; \
       cd /srv/czii-umbrella-django && \
@@ -878,7 +871,7 @@ dbbackupv2 stage:
       export \$(grep '^MYSQL' .env.$ENVNAME | xargs) && \
       TS=\$(date +%F.%H%M%S) && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml \
-        exec -T db mariadb-dump --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" --all-databases --add-drop-database \
+        exec -T db mariadb-dump --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" --databases \"\$MYSQL_NAME\" --add-drop-database \
         > /srv/dbbackups/.backup_\$TS.sql.partial && \
       mv /srv/dbbackups/.backup_\$TS.sql.partial /srv/dbbackups/backup_\$TS.sql"
     echo "Done. Latest backups on $HOST:"
