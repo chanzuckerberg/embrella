@@ -31,11 +31,10 @@ print(session.session_key)
 export default async function globalSetup(): Promise<void> {
   if (process.env.DEVCONTAINER !== 'true') return;
 
-  const stdout = execFileSync(
-    'python',
-    ['umbrella/manage.py', 'shell', '-c', PYTHON_BOOTSTRAP],
-    { cwd: '/app', encoding: 'utf-8' },
-  );
+  const stdout = execFileSync('python', ['umbrella/manage.py', 'shell', '-c', PYTHON_BOOTSTRAP], {
+    cwd: '/app',
+    encoding: 'utf-8',
+  });
   const sessionKey = stdout.trim().split('\n').pop();
   if (!sessionKey) throw new Error('global-setup: Django shell returned no session key');
 
@@ -59,6 +58,6 @@ export default async function globalSetup(): Promise<void> {
         },
       ],
       origins: [],
-    }),
+    })
   );
 }

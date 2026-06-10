@@ -52,6 +52,8 @@
         "ms-azuretools.vscode-docker"
       ],
       "settings": {
+        "js/ts.tsdk.path": "frontend/node_modules/typescript/lib",
+        "js/ts.tsdk.promptToUseWorkspaceVersion": true,
         "python.defaultInterpreterPath": "/app/.venv/bin/python",
         "python.terminal.activateEnvironment": true,
         "python.testing.pytestEnabled": true,
