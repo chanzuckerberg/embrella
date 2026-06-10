@@ -4,63 +4,47 @@ Everything to run Embrella in containers lives in the repo's `infra/` directory.
 Three target environments (dev, staging, prod) share one set of Dockerfiles and a
 base compose file; each environment is a thin overlay.
 
-For first-time local setup, start with [Getting Started](gettingstarted.md); this
-page is the reference for how the container stack is wired together. |
+For first-time local setup, start with [Getting Started](gettingstarted.md)
 
-## Day-to-day commands
+## Day-to-day commands development
 
 ```
 # on host cli
-just devup       # bring up the full dev stack
-just devdown     # stop and remove containers (volumes survive)
-just devlogs [service]
-just devexec <cmd>     # one-off command inside the running backend container
-just devshell          # interactive zsh shell inside the backend container (embrella user)
-just uvadd <pkg>       # add Python dep + sync into running .venv
-just buildimages <tag> # build the two images for staging/prod push
-just deployv2 staging .env.staging <branch> <tag>
+just dbbackupv2 staging
+just loadcontainerdb
+just deployv2 staging <envfile> <branch> <tag>
+just fetchprodsnapshot      # get a recent snapshot to use for dev
 ```
 
-Run `just --list --unsorted` for the full set.
+```
+# in devcontainer
+just loaddevdb <snapshot>
+just dbbackupdev
+```
+
+Run `just --list --unsorted` for the full set with details
 
 ## One-time setup on a fresh host
 
 **Resources.** Give your container engine enough headroom — the full stack
 (MariaDB + Django + worker + Next.js + nginx, plus image builds and the Playwright
-browsers) is heavy. On macOS/Windows the VM is the podman machine
-(or the Docker Desktop VM); on Linux containers use the host directly, so there's
-nothing to size. Recommended: **16 GB RAM / 8 CPUs / 50 GB disk**.
+browsers) is heavy. Recommended: **16 GB RAM / 8 CPUs / 50 GB disk**.
 
 ```
+# Docker Desktop: Settings → Resources → set Memory at least 16 GB, Disk ≥ 50 GB
+
+# for podman
 podman machine stop
 podman machine set --memory 16384 --cpus 8 --disk-size 50
 podman machine start
-# Docker Desktop: Settings → Resources → set Memory at least 16 GB, Disk ≥ 50 GB
-```
-
-`--memory` is MB, `--disk-size` is GB. Inspect current values with
-`podman machine inspect` / `podman machine ls`, and VM disk usage with
-`podman system df`. If `podman machine set` rejects a disk-size change (older
-podman), recreate the machine: `podman machine rm`, then `podman machine init
---memory 16384 --cpus 8 --disk-size 50` — note this wipes images and named
-volumes, so plan for a fresh `just devup --build`.
-
-**Network**
-
-```
-podman network create embrella                              # all envs (dev: just netinit)
-podman secret create slurm_key /path/to/svc_czii_umbrella   # staging/prod only
 ```
 
 ## Devcontainer
 
 A single full-stack devcontainer lives at `.devcontainer/devcontainer.json`. It
 attaches to the running `backend` compose service, mounts the whole repo
-(including `.git/`) at `/app`, and adds Node 20, `gh`, Claude Code, and the
-Playwright MCP server on top of the Python backend image — so both `pytest` and
-`yarn test` run from one shell.
+(including `.git/`) at `/app`, and adds Node, `gh`, Claude Code, and other extensions.
 
-- **Claude Code** is installed.
 - **Auth + settings + shell history persist** across rebuilds via three named
   volumes scoped per project with `${devcontainerId}`:
   `claude-code-config-*`, `gh-config-*`, `shell-history-*`.
@@ -69,17 +53,8 @@ Playwright MCP server on top of the Python backend image — so both `pytest` an
 - **SSH agent forwarding** is available for git-over-SSH and cluster operations
   without copying any private keys into the container.
 - **Browser automation** via the Playwright MCP server
-  lets Claude verify UI changes against `http://nginx` or `http://frontend:3000`
+  to verify UI changes against `http://nginx` or `http://frontend:3000`
   from inside the container.
-
-**Before opening:** you need an `.env` at the repo root — the devcontainer won't
-start without it. Copy the template and fill it in:
-
-```bash
-cp helpers/.env_template .env
-# edit .env: set the real values and delete the YOUDIDNOTUPDATETHIS line.
-# Leave SLURM_KEYFILE empty unless you have a cluster key on this host.
-```
 
 A host-side precheck for devcontainer runs (`.devcontainer/precheck_embrella_requirements.sh`)
 

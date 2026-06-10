@@ -2,13 +2,12 @@
 
 The project supports two local-development paths. Pick whichever fits.
 
-|              | Containerized (recommended)                                       | Bare-metal (legacy)          |
-| ------------ | ----------------------------------------------------------------- | ---------------------------- |
-| Prereqs      | `git`, `podman`, `just`(optional)                                 | `git`, `conda`, `just`       |
-| Setup time   | One-time images build (~10 min).                                  | Conda env install + dep sync |
-| Tests/manage | `just devexec pytest`, `just devexec python umbrella/manage.py …` | `pytest`, `just manage …`    |
-| Editor       | VS Code Dev Containers                                            | Any editor on host           |
-| Layout docs  | [Container Layout](containers.md)                                 | (rest of this page)          |
+|             | Containerized (recommended)       | Bare-metal (legacy)          |
+| ----------- | --------------------------------- | ---------------------------- |
+| Prereqs     | `git`, `podman`, `just`(optional) | `git`, `conda`, `just`       |
+| Setup time  | One-time images build (~10 min).  | Conda env install + dep sync |
+| Editor      | VS Code Dev Containers            | Any editor on host           |
+| Layout docs | [Container Layout](containers.md) | (rest of this page)          |
 
 The `Justfile` contains short shell helpers for common tasks under both paths. [Package Installation.](https://just.systems/man/en/packages.html)
 Run `just --list --unsorted` to see them.
@@ -30,33 +29,25 @@ One-time setup:
 
 ```bash
 $ cp helpers/.env_template .env   # if you don't have a .env yet
+# make edits to the .env file. Contact local admin for secrets needed.
 ```
 
 Then bring up the stack either way:
 
-- **VS Code Dev Containers (recommended):** "Dev Containers: Reopen in Container"
-  → "Embrella". This brings up the whole compose stack and drops you into the
-  `backend` container with Python + Node + `gh` + Claude Code preinstalled — see
-  [Editing inside the devcontainer](#editing-inside-the-devcontainer) below.
+- **VS Code Dev Containers (recommended):** Install extension for Dev Containers. Then, "Dev Containers: Reopen in Container"
+  → "Embrella". This brings up the whole compose stack and drops you into a preconfigured dev environment.
 - **CLI alternative:** `just devup` builds the images and starts the stack in the
   background.
 
-Open `http://localhost:8080`.
+Open `http://localhost:8080` to view site locally.
 
-### Editing inside the devcontainer
-
-The repo ships a single full-stack devcontainer at `.devcontainer/devcontainer.json`
-that attaches to the `backend` service. It has Python + Node + `gh` + Claude Code
-preinstalled and mounts the whole repo (with `.git/`) so both `pytest` and
-`yarn test` run from one shell. In VS Code: "Dev Containers: Reopen in
-Container" → "Embrella". On first launch, run `claude` to sign in
-and `gh auth login` for git push. See
+See
 [Container Layout → Devcontainer](containers.md#devcontainer) for the
 full setup notes.
 
 # Path B: Bare-metal (legacy)
 
-You'll need `bash` or `zsh`, plus `git` and `conda`.
+You'll need `git` and `conda` installed.
 The conda environment (`environment.yml`) installs python, nodejs, and the
 `just` CLI.
 
