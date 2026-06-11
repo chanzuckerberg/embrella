@@ -14,12 +14,12 @@ import uuid
 from datetime import datetime, timezone
 
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rapidfuzz import fuzz
 from rest_framework.decorators import api_view
 from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
@@ -223,34 +223,16 @@ class ReviewView(View):
             queryset = Review.objects.select_related("msi_session", "requestor").all()
 
             # Apply search filter
+            # TODO: Convert ReviewView into a DRF ViewSet with a proper filter
+            #  backend instead of this hand-rolled search/sort/pagination logic.
             if search:
-                # Get all reviews first
-                all_reviews = list(queryset)
-
-                # Preprocess search term
-                search = search.lower().replace("-", "").replace(" ", "")
-
-                # Filter reviews based on similarity threshold
-                SIMILARITY_THRESHOLD = 70
-                filtered_reviews = []
-
-                for review in all_reviews:
-                    if (
-                        fuzz.ratio(search, review.review_name) >= SIMILARITY_THRESHOLD
-                        or fuzz.ratio(search, review.requestor.username) >= SIMILARITY_THRESHOLD
-                        or fuzz.ratio(search, review.msi_session.name) >= SIMILARITY_THRESHOLD
-                        or fuzz.ratio(search, review.reconstruction_type) >= SIMILARITY_THRESHOLD
-                        or search in review.review_name.lower()
-                        or search in review.requestor.username.lower()
-                        or search in review.msi_session.name.lower()
-                        or search in review.reconstruction_type.lower()
-                    ):
-                        filtered_reviews.append(review)
-
-                # Update queryset with filtered reviews
-                queryset = Review.objects.filter(
-                    review_id__in=[r.review_id for r in filtered_reviews],
-                ).select_related("msi_session", "requestor")
+                search = search.strip()
+                queryset = queryset.filter(
+                    Q(review_name__icontains=search)
+                    | Q(requestor__username__icontains=search)
+                    | Q(msi_session__name__icontains=search)
+                    | Q(reconstruction_type__icontains=search)
+                )
 
             # Apply sorting
             db_sort_field = sort_field_map.get(sort_field, "created_at")
