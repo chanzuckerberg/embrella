@@ -5,8 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = "~=3.11.0"
 dependencies = [
-    "celery>=5.5.3",
-    "chromadb>=1.2.0",
     "cryptography>=46.0.3",
     "dask>=2025.10.0",
     "duckdb>=1.1.0",
@@ -20,11 +18,8 @@ dependencies = [
     "django-q2>=1.8.0",
     "djangorestframework==3.15.2",
     "drf-spectacular>=0.28.0",
-    "drf-yasg>=1.21.11",
     "gunicorn==23.0.0",
-    "html5lib==1.1",
     "jinja2>=3.1.6",
-    "lxml==5.1",
     "markdown>=3.9",
     "mkdocs==1.6.1",
     "mkdocs-autorefs==1.4.2",
@@ -34,7 +29,6 @@ dependencies = [
     "pandas>=2.3.3",
     "paramiko>=4.0.0",
     "pyarrow>=18.0.0",
-    "pycryptodome>=3.23.0",
     "pydantic==2.7.1",
     "pyyaml>=6.0",
     "rapidfuzz>=3.14.1",
@@ -42,11 +36,8 @@ dependencies = [
     "scikit-learn>=1.7.2",
     "scipy>=1.16.2",
     "setuptools==70.0.0",
-    "social-auth-app-django==5.4.1",
-    "social-auth-core==4.5.4",
     "whitenoise==6.11.0",
     "zarr>=3.1.3",
-    "aiohttp>=3.13.2",
 ]
 
 [dependency-groups]

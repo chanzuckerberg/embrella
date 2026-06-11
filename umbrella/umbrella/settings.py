@@ -92,7 +92,6 @@ INSTALLED_APPS = [
     "workflow",
     "tem",
     "stores",
-    #'social_django',
     "custom",
     "processes",
     "users",
@@ -124,7 +123,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     #"umbrella.middleware.SetNextParameterMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "social_django.middleware.SocialAuthExceptionMiddleware",
 ]
 
 TEMPLATES = [
