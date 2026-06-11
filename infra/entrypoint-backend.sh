@@ -27,10 +27,8 @@ if [ "$USE_MYSQL" = "True" ] && [ -n "$MYSQL_HOST" ]; then
   echo "MySQL reachable."
 fi
 
-# Migrations run only in the dedicated one-shot `migrate` service
-# (EMBRELLA_MIGRATE=1). Backend + worker skip them, so nothing races on a fresh
-# DB. Migration ordering (stores → projects → rest) lives here so the migrate
-# service inherits it for free.
+# Migrations run only in the dedicated one-shot `migrate` service (EMBRELLA_MIGRATE=1)
+# Migration ordering (stores → projects → rest)
 if [ "$EMBRELLA_MIGRATE" = "1" ]; then
   echo "Running migrations..."
   python umbrella/manage.py migrate stores --noinput

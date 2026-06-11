@@ -24,10 +24,8 @@ services:
       PYTHONDONTWRITEBYTECODE: '1'
       # runserver auto-serves /static/ when DEBUG=True
       EMBRELLA_BUILD_STATIC: ''
-      # .env's SLURM_KEYFILE points at a host path. Inside the container we
-      # want Django to read the mounted-in-container path instead.
+      # .env's SLURM_KEYFILE points at a host path, reroute in container.
       SLURM_KEYFILE: /run/secrets/slurm_key
-      # debugpy listens always; attach from VS Code or PyCharm whenever.
       DEBUGPY_LISTEN: '1'
       DEBUGPY_PORT: '5678'
     ports:
@@ -37,12 +35,9 @@ services:
       - ..:/app
       # Mask the image-built venv so the whole-repo bind doesn't shadow it.
       - backend_venv:/app/.venv
-      # Share the frontend service's node_modules + .next
       - frontend_node_modules:/app/frontend/node_modules
       - frontend_next:/app/frontend/.next
-      # SLURM key bind. ${SLURM_KEYFILE} is resolved against the repo-root .env
       - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
-      # Git identity for in-container commits
       - ${HOME}/.gitconfig:/home/embrella/.gitconfig:ro
     stdin_open: true
     tty: true

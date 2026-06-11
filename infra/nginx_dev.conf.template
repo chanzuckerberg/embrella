@@ -29,10 +29,7 @@ http {
 
     # Re-resolve `backend` / `frontend` DNS on each request so container restarts
     # don't leave nginx pointing at a dead IP. NGINX_RESOLVER is substituted at
-    # container startup by the nginx image's envsubst entrypoint. See compose.yaml
-    # for the default (podman's aardvark gateway at the pinned subnet) and the
-    # NGINX_ENVSUBST_FILTER that limits substitution to NGINX_-prefixed vars only,
-    # so nginx's own $remote_addr / $request / etc. survive untouched.
+    # container startup by the nginx image's envsubst entrypoint.
     resolver ${NGINX_RESOLVER} ipv6=off valid=5s;
 
     server {

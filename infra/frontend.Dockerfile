@@ -8,13 +8,11 @@ ENV YARN_ENABLE_GLOBAL_CACHE=false \
 
 WORKDIR /app
 
-# corepack must run as root (writes shims under /usr/local/bin).
+# corepack must run as root
 RUN corepack enable && corepack prepare yarn@4.9.1 --activate
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
-# Reuse the base image's `node` user so files in /app and the
-# shared `frontend_node_modules` / `frontend_next` named volumes are owned
-# by uid 1000 — matching the backend's `embrella` user for the devcontainer.
+# For devcontainer: reuse the base image's `node` user, matching uid `embrella` user for the devcontainer.
 RUN chown node:node /app && mkdir -p /home/node/.yarn && chown -R node:node /home/node/.yarn
 
 # Bring in the pinned yarn release from the repo

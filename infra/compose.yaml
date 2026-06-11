@@ -6,32 +6,6 @@
 #   podman compose -f infra/compose.yaml -f infra/compose.dev.yaml      up -d
 #   podman compose -f infra/compose.yaml -f infra/compose.staging.yaml  up -d
 #   podman compose -f infra/compose.yaml -f infra/compose.prod.yaml     up -d
-#
-# Build contexts and bind-mount paths are relative to THIS file (infra/), so
-# `..` refers to the repo root.
-#
-# Networks:
-#   - `embrella` is an EXTERNAL network shared across the org. Only nginx joins
-#     it, so other containerized apps can attach to `embrella` and become
-#     reachable to nginx by service DNS name. Create once with:
-#         podman network create embrella
-#     (Or run `just netinit`.)
-#   - `internal` is project-private. All services join it; nginx joins both.
-#     Subnet is pinned so the gateway IP (used by nginx's `resolver` directive
-#     for upstream DNS — see nginx_dev.conf.template) stays stable.
-#
-# Environment variables understood by our services:
-#   USE_MYSQL                 "True" → entrypoint waits for MySQL before exec
-#   MYSQL_HOST/USER/PWD/NAME  DB connection (read by Django settings.py)
-#   MYSQL_PORT                default 3306
-#   DJANGO_ENV                development | staging | production
-#   EMBRELLA_BUILD_STATIC     "1" → entrypoint runs collectstatic + mkdocs build
-#                             (set on prod/staging web container only)
-#   SLURM_KEYFILE             path inside the container to the SLURM SSH key
-#   DEBUGPY_LISTEN            "1" → manage.py opens a debugpy listener
-#   DEBUGPY_PORT              default 5678
-#   NGINX_RESOLVER            DNS server nginx uses to re-resolve upstreams
-#                             (envsubst'd into nginx_*.conf.template at startup)
 
 name: embrella
 
@@ -41,9 +15,7 @@ x-backend-env: &backend-env
   MYSQL_PORT: '3306'
 
 services:
-  # One-shot: runs DB migrations once, then exits 0. No depends_on — the
-  # entrypoint waits for MySQL itself. (podman's start graph can't handle a
-  # service depending on an exited one-shot.)
+  # One-shot: runs DB migrations
   migrate:
     image: embrella/backend:${IMAGE_TAG:-latest}
     build:
@@ -52,7 +24,7 @@ services:
     command: ['true'] # entrypoint migrates (EMBRELLA_MIGRATE=1), then execs this and exits
     environment:
       <<: *backend-env
-      EMBRELLA_MIGRATE: '1' # the ONLY service that runs migrations
+      EMBRELLA_MIGRATE: '1'
     networks: [internal]
     restart: 'no'
 
@@ -64,12 +36,8 @@ services:
     environment:
       <<: *backend-env
       EMBRELLA_BUILD_STATIC: '1' # web container builds static + docs
-    # No depends_on: entrypoint waits for MySQL. May briefly serve errors if it
-    # starts before `migrate` finishes; self-heals once migrations land.
     networks: [internal]
     volumes:
-      # Must match STATIC_ROOT (= BASE_DIR/staticfiles = /app/umbrella/staticfiles),
-      # where collectstatic writes. nginx serves this volume at /srv/staticfiles.
       - backend_static:/app/umbrella/staticfiles
     restart: unless-stopped
 
@@ -81,7 +49,6 @@ services:
     command: ['python', 'umbrella/manage.py', 'qcluster']
     environment:
       <<: *backend-env
-    # No depends_on: entrypoint waits for MySQL; restart covers the migrate race.
     networks: [internal]
     restart: unless-stopped
 
@@ -103,9 +70,7 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      # Ping as root with the env password instead of using the image's bundled
-      # healthcheck.sh. That script logs in as a `healthcheck` user, which a
-      # mysqldump restore can drop during snapshot load
+      # Ping as root with the env password
       test: ['CMD-SHELL', 'mariadb-admin ping -h127.0.0.1 -uroot -p"$$MARIADB_ROOT_PASSWORD"']
       interval: 10s
       timeout: 5s
@@ -114,13 +79,11 @@ services:
 
   nginx:
     image: docker.io/library/nginx:1.27-alpine
-    # No depends_on: nginx resolves upstreams lazily via `resolver` + `set $upstream`.
     networks: [internal, embrella]
     volumes:
       - backend_static:/srv/staticfiles:ro
     environment:
-      # The nginx image's entrypoint runs envsubst on its config templates at
-      # startup.
+      # The nginx image's entrypoint runs envsubst
       #   RESOLVER= Docker users set 127.0.0.11 in .env.
       NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/templates
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
