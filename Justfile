@@ -509,8 +509,67 @@ mirrorproddbtolocal: initenv
     echo "Importing database from snapshot $LATEST..."
     mysql -h 127.0.0.1 -u root -pdevaccount < ./.scratch/$LATEST
 
-    echo "Re-applying remote host grants..."
-    mysql -h 127.0.0.1 -u root -pdevaccount < ./helpers/local_mysql/init.sql
+# Fetch the latest prod DB snapshot from umbrella:/srv/dbbackups into ./.scratch/.
+# Host-side only (needs SSH access to umbrella). Pair with `just loaddevdb` to
+# import into the dev compose db.
+# Usage:
+#   just fetchprodsnapshot              # from umbrella (production)
+#   just fetchprodsnapshot umbrella-dev # from staging
+fetchprodsnapshot host="umbrella": initenv
+    #!/bin/bash
+    source ./helpers/shell_common.sh
+    set -euo pipefail
+
+    LATEST=$(ssh svc.czii.umbrella@{{host}} "ls -t /srv/dbbackups/backup_*.sql | head -n 1 | xargs basename")
+    echo "Fetching {{host}}:/srv/dbbackups/$LATEST → ./.scratch/$LATEST..."
+    scp svc.czii.umbrella@{{host}}:/srv/dbbackups/$LATEST ./.scratch/$LATEST
+
+    echocolor $GREEN "Fetched ./.scratch/$LATEST"
+    echo "Next: just devexec just loaddevdb ./.scratch/$LATEST    # (or just loaddevdb ./.scratch/$LATEST from host)"
+
+# Load a SQL snapshot into the dev compose `db` service.
+# `snapshot` is a path to the .sql file (relative or absolute).
+# Usage:
+#   just loaddevdb ./.scratch/backup_2026-05-17.123456.sql       # host
+#   just devexec just loaddevdb ./.scratch/backup_…sql           # devcontainer
+loaddevdb snapshot: initenv
+    #!/bin/bash
+    source ./helpers/shell_common.sh
+    set -euo pipefail
+
+    if [ ! -f "{{snapshot}}" ]; then
+      echocolor $RED "Snapshot not found: {{snapshot}}"
+      exit 1
+    fi
+
+    DB_TARGET="${MYSQL_HOST:-127.0.0.1} (dev compose db)"
+    echocolor $GREEN "Target: $DB_TARGET"
+
+    # --skip-ssl: dev db container has no TLS configured; recent MariaDB/MySQL
+    # clients require it by default and bail with "SSL is required".
+    echo "Importing {{snapshot}} into dev db..."
+    mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount < "{{snapshot}}"
+
+    echocolor $GREEN "Loaded {{snapshot}} into dev db at $DB_TARGET."
+
+# Back up the dev compose db to ./.scratch/ (the dump pair of `loaddevdb`). Mirrors
+# loaddevdb: connects to ${MYSQL_HOST:-127.0.0.1} with the MariaDB client, so it runs
+# inside the devcontainer (MYSQL_HOST=db) or on the host with the dev stack up. The
+# -h connection authenticates as root@'%' (devaccount), created by the db container init.
+# Usage:
+#   just devexec just dbbackupdev            # devcontainer
+#   just dbbackupdev                         # host (dev stack up)
+#   just loaddevdb ./.scratch/devbackup_<ts>.sql   # to restore it back
+dbbackupdev: initenv
+    #!/bin/bash
+    source ./helpers/shell_common.sh
+    set -euo pipefail
+    mkdir -p ./.scratch
+    OUT="./.scratch/devbackup_$(date +%F.%H%M%S).sql"
+    echo "Backing up dev compose db (application DB only) → $OUT ..."
+    mysqldump --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount \
+      --databases "${MYSQL_NAME:-umbrella}" --add-drop-database > "$OUT"
+    echocolor $GREEN "Wrote $OUT"
 
 # Stop production server apps
 stopprodserve: initenv
@@ -599,11 +658,14 @@ deploy stage envfile branch:
         exit 1
     fi
 
+    # NOTE: this bare-metal recipe (host system nginx) is superseded by the
+    # container deploy `deployv2`, which instead uses the nginx_*.conf.template
+    # variants mounted into the nginx container.
     HOST=umbrella-dev
-    CONF=./helpers/nginx_staging.conf
+    CONF=./infra/nginx_staging.conf
     if [[ "{{stage}}" == "production" ]]; then
         HOST=umbrella
-        CONF=./helpers/nginx_production.conf
+        CONF=./infra/nginx_production.conf
     fi
 
     # Git pull on host (or scp/rsync from here?)
@@ -647,3 +709,170 @@ deploy stage envfile branch:
     ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && conda activate umbrella && just startprodserve && sleep 1 && systemctl restart nginx'
 
     echocolor $GREEN "Done."
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Container workflows — recipes below run the containerized dev/staging/prod
+# stacks via podman compose. Does not include Docker commands yet.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Compose invocation pattern. `--env-file .env` makes ${VAR:-default} substitutions
+# in compose.yaml resolve against the repo-root .env (Compose's default lookup
+# would search next to the compose file, which is in infra/ and has no .env).
+COMPOSE_DEV := "podman compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml"
+
+# One-time setup: create the shared external `embrella` podman network. Idempotent.
+netinit:
+    @podman network inspect embrella >/dev/null 2>&1 || podman network create embrella
+
+# Bring up the dev stack (db, backend, worker, frontend, nginx) in the background.
+# First run builds images; subsequent runs use cached layers.
+devup: netinit
+    {{COMPOSE_DEV}} up -d --build
+
+# Tear the dev stack down. Named volumes (db_data, frontend_node_modules, etc.) survive.
+devdown:
+    {{COMPOSE_DEV}} down
+
+# Tail logs from all dev services, or a specific one (e.g. `just devlogs backend`).
+devlogs service="":
+    {{COMPOSE_DEV}} logs -f {{service}}
+
+# Run a one-off command inside the running backend container.
+# Example: `just devexec pytest umbrella/processes/tests/test_services.py`
+devexec +args:
+    {{COMPOSE_DEV}} exec backend {{args}}
+
+# Drop into an interactive zsh shell in the dev container as the embrella user.
+devshell:
+    {{COMPOSE_DEV}} exec -it -u embrella backend zsh -l
+
+# Add a Python dep AND install it into the running .venv.
+# After this, commit the updated pyproject.toml + uv.lock.
+# Run `just devup` afterwards if you want the new dep baked into the image.
+uvadd pkg:
+    {{COMPOSE_DEV}} exec backend uv add {{pkg}}
+    {{COMPOSE_DEV}} exec backend uv sync
+
+# Re-resolve uv.lock and install into the running .venv. Use after a manual
+# pyproject.toml edit, or to sync after a teammate's dep change.
+uvsync:
+    {{COMPOSE_DEV}} exec backend uv lock
+    {{COMPOSE_DEV}} exec backend uv sync
+
+# Build backend + frontend images with the given tag (e.g. `just buildimages staging`).
+buildimages tag:
+    podman build -f infra/backend.Dockerfile  -t embrella/backend:{{tag}}  .
+    podman build -f infra/frontend.Dockerfile -t embrella/frontend:{{tag}} .
+
+# Container-based deploy (parallel to the bare-metal `deploy` recipe).
+# `stage` is the overlay token (prod|staging → infra/compose.<stage>.yaml);
+# `envfile` is the local env file copied to the host as .env.<production|staging>
+# (read by the overlay's env_file and compose's --env-file); `branch` is the git
+# ref the host is checked out to (deterministically, via fetch + reset --hard);
+# `tag` is the image tag (defaults to `latest`).
+# Examples:
+#   just deployv2 staging .env.staging main                  # tag defaults to latest
+#   just deployv2 prod    .env.production v1.2.3-branch v1.2.3
+# Prereq on the target host (one-time): `podman network create embrella`, plus
+# place the SLURM SSH key (from vault/admin) on the host and point the env file's
+# SLURM_KEYFILE at that host path (it's bind-mounted into the containers).
+#
+# The db's data persists in the `db_data` named volume across redeploys.
+# A fresh host boots a working *empty* app DB on its own
+# use `just loadcontainerdb` to seed. Back up on demand with `just dbbackupv2`.
+deployv2 stage envfile branch tag="latest":
+    #!/bin/bash
+    set -euo pipefail
+    if [[ "{{stage}}" != "prod" && "{{stage}}" != "staging" ]]; then
+        echo "Error: stage must be one of: prod, staging"; exit 1
+    fi
+    HOST=umbrella-dev; ENVNAME=staging
+    if [[ "{{stage}}" == "prod" ]]; then HOST=umbrella; ENVNAME=production; fi
+    # Snapshot the currently-running db before switching containers. Best-effort:
+    # a fresh host (no .env.<name> / no running db yet) shouldn't block the deploy.
+    echo "Backing up the current {{stage}} db before the switch..."
+    just dbbackupv2 {{stage}} || echo "  ⚠ pre-deploy backup skipped/failed (fresh host or db down) — continuing."
+    echo "Copying {{envfile}} to $HOST:/srv/czii-umbrella-django/.env.$ENVNAME ..."
+    scp {{envfile}} svc.czii.umbrella@$HOST:/srv/czii-umbrella-django/.env.$ENVNAME
+    echo "Checking the SLURM key exists on $HOST..."
+    ssh svc.czii.umbrella@$HOST "set -euo pipefail; cd /srv/czii-umbrella-django; \
+      KEY=\$(grep -E '^SLURM_KEYFILE=' .env.$ENVNAME | tail -1 | cut -d= -f2- | tr -d '\"' | tr -d \"'\"); \
+      if [[ -z \"\$KEY\" ]]; then echo \"  ✗ SLURM_KEYFILE not set in .env.$ENVNAME\"; exit 1; fi; \
+      if [[ ! -f \"\$KEY\" ]]; then echo \"  ✗ SLURM key not found at \$KEY (obtain it from an admin/vault and place it there)\"; exit 1; fi; \
+      echo \"  ✓ found at \$KEY\""
+    echo "Checking out branch {{branch}} on $HOST and building images..."
+    # TODO: images are currently BUILT on the host from the checked-out source
+    # (no registry yet). Switch to pulling prebuilt images from ghcr.io once a
+    # build/push pipeline exists — replace `up -d --build` with `pull && up -d`.
+    ssh svc.czii.umbrella@$HOST "set -e; cd /srv/czii-umbrella-django && \
+      export GIT_SSH_COMMAND='ssh -i ~/.ssh/umbrella_deployment -o IdentitiesOnly=yes' && \
+      git fetch origin {{branch}} && git checkout -B {{branch}} FETCH_HEAD && \
+      (podman network inspect embrella >/dev/null 2>&1 || podman network create embrella) && \
+      (IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml down --remove-orphans 2>/dev/null || true) && \
+      IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d --build"
+
+# Restore a specific SQL snapshot into the prod/staging *container* db, then apply
+# migrations. Use to load real data: disaster recovery, seeding a fresh host, or
+# rollback. Runs on the target host via SSH; the dump must already be at
+# /srv/dbbackups/<snapshot> there (where `dbbackupv2` writes it), and the host's
+# .env.<production|staging> (placed by deployv2) supplies the db root password.
+#
+# After restoring, this runs the one-shot `migrate` service so a snapshot that
+# predates the deployed code is brought up to the current schema (the migrate
+# service owns the stores → projects → rest ordering; see entrypoint-backend.sh).
+#
+# CAUTION: a legacy `--all-databases` dump (what bare-metal `backupdb` produces) DOES
+# include the mysql system DB and can clobber the container's grants — if you restore
+# one of those, afterwards verify root-from-% access and app-user grants still work.
+#
+# Usage:
+#   just loadcontainerdb staging backup_2026-05-17.123456.sql
+#   just loadcontainerdb prod    backup_2026-05-17.123456.sql
+loadcontainerdb stage snapshot:
+    #!/bin/bash
+    set -euo pipefail
+    if [[ "{{stage}}" != "prod" && "{{stage}}" != "staging" ]]; then
+        echo "Error: stage must be one of: prod, staging"; exit 1
+    fi
+    HOST=umbrella-dev; ENVNAME=staging
+    if [[ "{{stage}}" == "prod" ]]; then HOST=umbrella; ENVNAME=production; fi
+    echo "Loading /srv/dbbackups/{{snapshot}} into the {{stage}} db container on $HOST, then migrating..."
+    ssh svc.czii.umbrella@$HOST "set -euo pipefail; \
+      cd /srv/czii-umbrella-django && \
+      export \$(grep '^MYSQL' .env.$ENVNAME | xargs) && \
+      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml \
+        exec -T db mariadb --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" < /srv/dbbackups/{{snapshot}} && \
+      echo 'Restore complete; applying migrations to the restored db...' && \
+      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml run --rm migrate"
+    echo "Done. (If you restored a legacy --all-databases dump, verify root-from-% access and app-user grants.)"
+
+# On-demand backup of the *containerized* db for a stage's stack. Dumps ONLY the
+# application database ($MYSQL_NAME) to
+# /srv/dbbackups/backup_<ts>.sql on the stack's host (same location/format as legacy
+# `backupdb`, so `loadcontainerdb`, `fetchprodsnapshot`, and `loaddevdb` all consume it).
+#
+# Usage:
+#   just dbbackupv2 prod
+#   just dbbackupv2 staging
+dbbackupv2 stage:
+    #!/bin/bash
+    set -euo pipefail
+    if [[ "{{stage}}" != "prod" && "{{stage}}" != "staging" ]]; then
+        echo "Error: stage must be one of: prod, staging"; exit 1
+    fi
+    HOST=umbrella-dev; ENVNAME=staging
+    if [[ "{{stage}}" == "prod" ]]; then HOST=umbrella; ENVNAME=production; fi
+    echo "Backing up the {{stage}} container db (application DB only) on $HOST → /srv/dbbackups/ ..."
+    # Dump to a hidden .partial first and rename only on success
+    ssh svc.czii.umbrella@$HOST "set -euo pipefail; \
+      cd /srv/czii-umbrella-django && \
+      mkdir -p /srv/dbbackups && \
+      export \$(grep '^MYSQL' .env.$ENVNAME | xargs) && \
+      TS=\$(date +%F.%H%M%S) && \
+      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml \
+        exec -T db mariadb-dump --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" --databases \"\$MYSQL_NAME\" --add-drop-database \
+        > /srv/dbbackups/.backup_\$TS.sql.partial && \
+      mv /srv/dbbackups/.backup_\$TS.sql.partial /srv/dbbackups/backup_\$TS.sql"
+    echo "Done. Latest backups on $HOST:"
+    ssh svc.czii.umbrella@$HOST "ls -alh /srv/dbbackups/backup_*.sql | tail -n 5"

@@ -1,0 +1,92 @@
+# Dev overlay. Combine with compose.yaml:
+#
+#   open in devcontainer (recommended)
+#   or just devup
+#
+# Adds: bind-mount source for live reload, runserver/yarn dev commands,
+# publishes ports to host, mounts the SLURM key, debugpy/node-inspector ports.
+
+# migrate from bind-mount to watch when podman compose supports it https://github.com/containers/podman-compose/issues/792
+
+services:
+  migrate:
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_ENV: development
+
+  backend:
+    command: ['python', 'umbrella/manage.py', 'runserver', '0.0.0.0:8000']
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_ENV: development
+      PYTHONDONTWRITEBYTECODE: '1'
+      # runserver auto-serves /static/ when DEBUG=True
+      EMBRELLA_BUILD_STATIC: ''
+      # .env's SLURM_KEYFILE points at a host path, reroute in container.
+      SLURM_KEYFILE: /run/secrets/slurm_key
+      DEBUGPY_LISTEN: '1'
+      DEBUGPY_PORT: '5678'
+    ports:
+      - '8000:8000'
+      - '5678:5678' # debugpy
+    volumes:
+      - ..:/app
+      # Mask the image-built venv so the whole-repo bind doesn't shadow it.
+      - backend_venv:/app/.venv
+      - frontend_node_modules:/app/frontend/node_modules
+      - frontend_next:/app/frontend/.next
+      - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
+      - ${HOME}/.gitconfig:/home/embrella/.gitconfig:ro
+    stdin_open: true
+    tty: true
+
+  worker:
+    env_file:
+      - ../.env
+    environment:
+      DJANGO_ENV: development
+      SLURM_KEYFILE: /run/secrets/slurm_key
+      DEBUGPY_LISTEN: '1'
+      DEBUGPY_PORT: '5678'
+    ports:
+      - '5679:5678'
+    volumes:
+      - ..:/app
+      - backend_venv:/app/.venv
+      - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
+
+  frontend:
+    command: ['yarn', 'dev']
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      # Next.js polling
+      WATCHPACK_POLLING: 'true'
+      CHOKIDAR_USEPOLLING: 'true'
+      # Node's default ~1.5 GB heap is too small for PlayWright
+      NODE_OPTIONS: '--max-old-space-size=4096'
+    ports:
+      - '3000:3000'
+    volumes:
+      - ../frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    stdin_open: true
+    tty: true
+
+  db:
+    ports:
+      - '3306:3306'
+
+  nginx:
+    ports:
+      - '8080:80'
+    volumes:
+      - ./nginx_dev.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+
+volumes:
+  frontend_node_modules:
+  frontend_next:
+  backend_venv:

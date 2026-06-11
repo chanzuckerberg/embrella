@@ -35,6 +35,7 @@ nav:
     - User Guide: "tutorials/userguide.md"
   - Contributing:
     - Getting Started: "contributing/gettingstarted.md"
+    - Container Layout: "contributing/containers.md"
     - Managing Environment Secrets: "contributing/environments.md"
     - Running/Deploying: "contributing/deployment.md"
     - Updating Documentation: "contributing/documentation.md"

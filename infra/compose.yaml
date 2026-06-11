@@ -1,0 +1,106 @@
+# Embrella container stack — base file.
+#
+# This is the *base* layer. By itself it describes the shape of the stack but
+# isn't usually run alone — combine it with one environment overlay:
+#
+#   podman compose -f infra/compose.yaml -f infra/compose.dev.yaml      up -d
+#   podman compose -f infra/compose.yaml -f infra/compose.staging.yaml  up -d
+#   podman compose -f infra/compose.yaml -f infra/compose.prod.yaml     up -d
+
+name: embrella
+
+x-backend-env: &backend-env
+  USE_MYSQL: 'True'
+  MYSQL_HOST: db
+  MYSQL_PORT: '3306'
+
+services:
+  # One-shot: runs DB migrations
+  migrate:
+    image: embrella/backend:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    command: ['true'] # entrypoint migrates (EMBRELLA_MIGRATE=1), then execs this and exits
+    environment:
+      <<: *backend-env
+      EMBRELLA_MIGRATE: '1'
+    networks: [internal]
+    restart: 'no'
+
+  backend:
+    image: embrella/backend:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    environment:
+      <<: *backend-env
+      EMBRELLA_BUILD_STATIC: '1' # web container builds static + docs
+    networks: [internal]
+    volumes:
+      - backend_static:/app/umbrella/staticfiles
+    restart: unless-stopped
+
+  worker:
+    image: embrella/backend:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    command: ['python', 'umbrella/manage.py', 'qcluster']
+    environment:
+      <<: *backend-env
+    networks: [internal]
+    restart: unless-stopped
+
+  frontend:
+    image: embrella/frontend:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/frontend.Dockerfile
+    networks: [internal]
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:10.5.22
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MYSQL_PWD:?set MYSQL_PWD}
+      MARIADB_ROOT_HOST: '%' # allow root from any container, not just localhost
+      MARIADB_DATABASE: ${MYSQL_NAME:-umbrella}
+    networks: [internal]
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      # Ping as root with the env password
+      test: ['CMD-SHELL', 'mariadb-admin ping -h127.0.0.1 -uroot -p"$$MARIADB_ROOT_PASSWORD"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  nginx:
+    image: docker.io/library/nginx:1.27-alpine
+    networks: [internal, embrella]
+    volumes:
+      - backend_static:/srv/staticfiles:ro
+    environment:
+      # The nginx image's entrypoint runs envsubst
+      #   RESOLVER= Docker users set 127.0.0.11 in .env.
+      NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/templates
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_ENVSUBST_FILTER: '^NGINX_'
+      NGINX_RESOLVER: ${NGINX_RESOLVER:-10.89.200.1}
+    restart: unless-stopped
+
+networks:
+  embrella:
+    external: true
+  internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.89.200.0/24
+          gateway: 10.89.200.1
+
+volumes:
+  db_data:
+  backend_static:

@@ -1,0 +1,73 @@
+# Production overlay. Combine with compose.yaml.
+#
+# Before first run on a fresh host:
+#   podman network create embrella
+#   # Obtain the SLURM SSH key from an admin (vault) and place it on the host,
+#   # then point .env.production's SLURM_KEYFILE at that host path.
+#
+# Then (--env-file so ${VAR} interpolation resolves; deployv2 copies the chosen
+# env file to .env.production on the host):
+#   podman compose --env-file .env.production -f infra/compose.yaml -f infra/compose.prod.yaml pull
+#   podman compose --env-file .env.production -f infra/compose.yaml -f infra/compose.prod.yaml up -d
+#
+# Or: `just deployv2 prod .env.production <branch> <tag>`.
+#
+# `just loadcontainerdb` is for loading real data (DR / seeding / rollback),
+# backup with `just dbbackupv2 prod`.
+#
+# NOTE: `user: "0:0"` on the app services. These hosts run rootless podman on the
+# native kernel overlay driver, which cannot exec/chown as a non-root
+
+services:
+  migrate:
+    user: "0:0"
+    env_file:
+      - ../${EMBRELLA_ENV_FILE:-.env.production}
+    environment:
+      DJANGO_ENV: production
+
+  backend:
+    user: "0:0"
+    env_file:
+      - ../${EMBRELLA_ENV_FILE:-.env.production}
+    environment:
+      DJANGO_ENV: production
+      SLURM_KEYFILE: /run/secrets/slurm_key
+    volumes:
+      - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
+
+  worker:
+    user: "0:0"
+    env_file:
+      - ../${EMBRELLA_ENV_FILE:-.env.production}
+    environment:
+      DJANGO_ENV: production
+      SLURM_KEYFILE: /run/secrets/slurm_key
+    volumes:
+      - ${SLURM_KEYFILE:-/dev/null}:/run/secrets/slurm_key:ro
+
+  db:
+    # Derived image patches out the entrypoint's gosu drop to UID 999, and
+    # `--user=root` lets mariadbd run as the container's UID 0 — both required
+    # because rootless podman on the native overlay driver can't exec as a
+    # non-root in-container UID. See infra/db.Dockerfile.
+    image: embrella/db:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/db.Dockerfile
+    user: "0:0"
+    command: ['mariadbd', '--user=root']
+    environment:
+      MARIADB_USER: ${MYSQL_USER:?set MYSQL_USER}
+      MARIADB_PASSWORD: ${MYSQL_PWD:?set MYSQL_PWD}
+
+  frontend:
+    user: "0:0"
+    environment:
+      NODE_ENV: production
+
+  nginx:
+    ports:
+      - '${NGINX_HOST_PORT:-80}:80'
+    volumes:
+      - ./nginx_production.conf.template:/etc/nginx/templates/nginx.conf.template:ro,z

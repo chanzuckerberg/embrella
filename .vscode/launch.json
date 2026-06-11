@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Attach: backend (debugpy)",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": { "host": "localhost", "port": 5678 },
+      "pathMappings": [{ "localRoot": "${workspaceFolder}/umbrella", "remoteRoot": "/app/umbrella" }],
+      "justMyCode": false
+    },
+    {
+      "name": "Attach: worker (debugpy)(devcontainer)",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": { "host": "worker", "port": 5678 },
+      "pathMappings": [{ "localRoot": "${workspaceFolder}/umbrella", "remoteRoot": "/app/umbrella" }],
+      "justMyCode": false
+    }
+  ]
+}
