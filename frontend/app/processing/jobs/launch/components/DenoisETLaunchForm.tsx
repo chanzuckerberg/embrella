@@ -13,10 +13,10 @@ import { Box } from '@mui/material';
 import type { ValidationError, WorkflowLaunchFormProps } from '@app/common/types/workflow';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
 
-interface DenoisETLaunchFormProps
-  extends Omit<WorkflowLaunchFormProps, 'customFields' | 'additionalSections' | 'customValidation'> {
-  // No additional props needed for now
-}
+type DenoisETLaunchFormProps = Omit<
+  WorkflowLaunchFormProps,
+  'customFields' | 'additionalSections' | 'customValidation'
+>;
 
 export default function DenoisETLaunchForm(props: DenoisETLaunchFormProps) {
   /**

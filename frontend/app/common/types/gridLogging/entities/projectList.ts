@@ -10,7 +10,7 @@ export interface Project {
   };
 }
 
-export interface ProjectListResponse extends Array<Project> {}
+export type ProjectListResponse = Array<Project>;
 
 export interface ProjectData {
   id: number;

@@ -35,13 +35,10 @@ interface PixelSizeValidation {
   error?: string;
 }
 
-interface AreTomo3LaunchFormProps
-  extends Omit<
-    WorkflowLaunchFormProps,
-    'customFields' | 'additionalSections' | 'customValidation' | 'headerActions' | 'onSessionInfoLoaded'
-  > {
-  // No additional props needed for now
-}
+type AreTomo3LaunchFormProps = Omit<
+  WorkflowLaunchFormProps,
+  'customFields' | 'additionalSections' | 'customValidation' | 'headerActions' | 'onSessionInfoLoaded'
+>;
 
 export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
   const [doseWarning, setDoseWarning] = useState<string | null>(null);

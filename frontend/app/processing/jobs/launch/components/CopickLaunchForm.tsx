@@ -51,10 +51,7 @@ function OperationField({ operationMode, lastSyncedValueRef, onChange }: Operati
   return null;
 }
 
-interface CopickLaunchFormProps
-  extends Omit<WorkflowLaunchFormProps, 'customFields' | 'additionalSections' | 'customValidation'> {
-  // No additional props needed for now
-}
+type CopickLaunchFormProps = Omit<WorkflowLaunchFormProps, 'customFields' | 'additionalSections' | 'customValidation'>;
 
 export default function CopickLaunchForm(props: CopickLaunchFormProps) {
   const [operationMode, setOperationMode] = useState<string>('create');

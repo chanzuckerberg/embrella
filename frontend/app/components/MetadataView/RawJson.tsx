@@ -1,6 +1,7 @@
 'use client';
 import React, { useCallback, useMemo } from 'react';
-import ReactJson from 'react-json-view';
+import JsonView from '@uiw/react-json-view';
+import { monokaiTheme } from '@uiw/react-json-view/monokai';
 import styles from './MetadataViz.module.css';
 import { Card, CardHeader, SelectChangeEvent } from '@mui/material';
 import { MetadataVizResponse } from '@app/common/types/metadataViz/metadataVizData';
@@ -108,13 +109,12 @@ export const RawJson: React.FC<RawJsonProps> = ({ isOpen, onClose, data, onSortC
             {isLoading ? (
               <div style={{ padding: 15, textAlign: 'center' }}>Loading...</div>
             ) : (
-              <ReactJson
-                src={jsonData}
-                theme="monokai"
+              <JsonView
+                value={jsonData}
                 displayDataTypes={false}
                 enableClipboard={false}
                 collapsed={1}
-                style={{ padding: 15 }}
+                style={{ ...monokaiTheme, padding: 15 }}
               />
             )}
           </div>
