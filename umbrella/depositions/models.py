@@ -127,6 +127,7 @@ class DepositionSession(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+        unique_together = ["dataset", "msi_session"]
 
     def __str__(self):
         return f"DepositionSession {self.pk} — {self.msi_session}"
