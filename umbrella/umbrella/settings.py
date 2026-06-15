@@ -12,15 +12,16 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
-import pytz
 from corsheaders.defaults import default_headers as default_cors_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # Build paths inside the project like this: BASE_DIR / 'subdir'.
 ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
 DEBUG = ENVIRONMENT == "development"
+
 
 def run_with_args(args):
     try:
@@ -28,9 +29,10 @@ def run_with_args(args):
     except (FileNotFoundError, subprocess.CalledProcessError):
         return "N/A"
 
+
 GIT_HASH = run_with_args(["git", "rev-parse", "--short", "HEAD"])
 GIT_BRANCH = run_with_args(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-START_TIME = datetime.now(tz=pytz.utc).astimezone(pytz.timezone("US/Pacific")).strftime("%Y-%m-%d %H:%M %z")
+START_TIME = datetime.now(tz=timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).strftime("%Y-%m-%d %H:%M %z")
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "America/Los_Angeles"
@@ -51,16 +53,16 @@ LOGIN_REQUIRED_IGNORE_PATHS = [
 ]
 # Exempt user info endpoint - frontend should handle 401 and redirect
 LOGIN_REQUIRED_IGNORE_VIEW_NAMES = [
-    'user_info',
+    "user_info",
 ]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
-    #os.path.join(Path(BASE_DIR).resolve().parent, "docs_build"),
+    # os.path.join(Path(BASE_DIR).resolve().parent, "docs_build"),
 ]
 STATIC_URL = "/static/"
 
-DOCUMENTATION_ROOT = Path(BASE_DIR).resolve().parent / 'docs_build'
+DOCUMENTATION_ROOT = Path(BASE_DIR).resolve().parent / "docs_build"
 DOCUMENTATION_HTML_ROOT = DOCUMENTATION_ROOT
 DOCUMENTATION_XSENDFILE = False
 
@@ -115,13 +117,11 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "umbrella.middleware.APIAuthenticationMiddleware",  # Return 401 for API requests - MUST come before LoginRequiredMiddleware
-    #"django.contrib.auth.middleware.LoginRequiredMiddleware",
+    "umbrella.middleware.APIAuthenticationMiddleware",
     "login_required.middleware.LoginRequiredMiddleware",
     "umbrella.middleware.FixLoginRedirectMiddleware",  # Fix login redirects to use HTTP_REFERER
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    #"umbrella.middleware.SetNextParameterMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
@@ -146,51 +146,69 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.BasicAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
     ],
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
     ],
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Umbrella API',
-    'DESCRIPTION': 'API documentation for Umbrella project',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': True,
+    "TITLE": "Embrella API",
+    "DESCRIPTION": "API documentation for Embrella project",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": True,
 }
 
 JAZZMIN_SETTINGS = {
-    # Other Jazzmin settings...
-    "show_ui_builder": True,  # Disable the UI Builder
-    "copyright": "CZII",
+    "show_ui_builder": False,
     "show_version": False,
     "show_view_site": True,
     "show_sidebar": True,
-    "site_logo": "jazzmin/img/biohub-logo.svg",
+    "site_logo": "jazzmin/img/biohub_logo_white.svg",
     "login_logo": "jazzmin/img/biohub-logo.svg",
-    # "topmenu_links": [
-    #     # Url that gets reversed (Permissions can be added)
-    #     {"name": "Go back to the startup page", "url": "/umbrella", "permissions": ["auth.view_user"]},
-    # ],
+    "site_icon": "jazzmin/img/favicon.png",
+    # Match the admin to the Next.js app palette
+    "custom_css": "admin_theme/custom.css",
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "flatly",
+    "default_theme_mode": "auto",
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-outline-primary",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
 }
 
 GOOGLE_SSO_CLIENT_ID = os.environ.get("GOOGLE_SSO_CLIENT_ID")
 GOOGLE_SSO_PROJECT_ID = os.environ.get("GOOGLE_SSO_PROJECT_ID")
 GOOGLE_SSO_CLIENT_SECRET = os.environ.get("GOOGLE_SSO_CLIENT_SECRET")
-GOOGLE_SSO_ALLOWABLE_DOMAINS = ["umbrella.czbiohub.org", "127.0.0.1:8000", "127.0.0.1", "czii.org"]
+GOOGLE_SSO_ALLOWABLE_DOMAINS = ["czii.org", "czbiohub.org", "biohub.org"]
 GOOGLE_SSO_PRE_LOGIN_CALLBACK = "umbrella.hooks.pre_login_callback"
-GOOGLE_SSO_ALLOWED_DOMAINS = ["czii.org", "czbiohub.org"]
 GOOGLE_SSO_SESSION_COOKIE_AGE = 1209600  # 14 days — match SESSION_COOKIE_AGE
 # Configure Google SSO to respect the 'next' parameter for redirects
 GOOGLE_SSO_SAVE_BASIC_GOOGLE_INFO = False
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*")
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*.czbiohub.org", "umbrella.czbiohub.org", "umbrella-dev.czbiohub.org", "host.containers.internal", "host.docker.internal", "nginx"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "*.czbiohub.org",
+    "umbrella.czbiohub.org",
+    "umbrella-dev.czbiohub.org",
+    "host.containers.internal",
+    "host.docker.internal",
+    "nginx",
+]
 ALLOWED_DOMAINS = ["czii.org", "czbiohub.org"]
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
@@ -265,13 +283,13 @@ SESSION_COOKIE_AGE = 1209600
 
 # Django-Q2 Configuration
 Q_CLUSTER = {
-    'name': 'umbrella',
-    'workers': 4,
-    'recycle': 500,
-    'timeout': 300,  # 5 minutes for SSH operations
-    'retry': 360,  # Retry failed tasks after 6 minutes
-    'queue_limit': 50,
-    'bulk': 10,
-    'orm': 'default',  # Use Django ORM as broker
-    'catch_up': False,  # Don't run missed scheduled tasks
+    "name": "umbrella",
+    "workers": 4,
+    "recycle": 500,
+    "timeout": 300,  # 5 minutes for SSH operations
+    "retry": 360,  # Retry failed tasks after 6 minutes
+    "queue_limit": 50,
+    "bulk": 10,
+    "orm": "default",  # Use Django ORM as broker
+    "catch_up": False,  # Don't run missed scheduled tasks
 }
