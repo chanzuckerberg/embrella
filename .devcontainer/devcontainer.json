@@ -19,7 +19,7 @@
       "ppa": "false"
     },
     "ghcr.io/jsburckhardt/devcontainer-features/just:1": {},
-    "ghcr.io/devcontainers/features/node:2.0.0": { "version": "20" },
+    "ghcr.io/devcontainers/features/node:2.0.0": { "version": "24" },
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
   },
