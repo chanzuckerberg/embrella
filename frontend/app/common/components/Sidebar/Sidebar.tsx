@@ -1,4 +1,4 @@
-import React, { ReactNode, useContext, useState } from 'react';
+import React, { ReactNode, useContext, useState, type JSX } from 'react';
 import styled from '@emotion/styled';
 import { Button } from '@mui/material';
 import { Icon } from '@czi-sds/components';

@@ -36,7 +36,7 @@ export const LabelChip = ({ gridId, labels: initialLabels, controlledLabels, onS
 
   const anchorRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Fetch all labels once when entering edit mode
   useEffect(() => {

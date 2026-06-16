@@ -103,7 +103,7 @@ export const SearchBar = ({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const anchorRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const blurStampRef = useRef(0);
 
   const activeTags = getTagsFromFilterState(tableState.filterState as Record<string, unknown>);

@@ -40,7 +40,7 @@ export const MetricScatterPlot: React.FC<MetricScatterPlotProps> = ({
   onHoverPosition,
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<echarts.ECharts>();
+  const chartInstance = useRef<echarts.ECharts>(undefined);
 
   // Memoize position mapping to avoid recalculation
   const positionsMapping = useMemo(
