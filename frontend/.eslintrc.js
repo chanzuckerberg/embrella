@@ -12,15 +12,13 @@ module.exports = {
     'prettier',
     'plugin:prettier/recommended',
     'plugin:sonarjs/recommended',
-    'plugin:mdx/recommended',
     'next',
     'next/core-web-vitals',
   ],
-  plugins: ['@typescript-eslint', 'sonarjs', 'jsx-expressions', 'prettier'],
+  plugins: ['@typescript-eslint', 'sonarjs', 'prettier'],
   rules: {
     // Disable prop-types as we use TypeScript for type checking
     '@typescript-eslint/explicit-function-return-type': 'off',
-    'jsx-expressions/strict-logical-expressions': 'off',
     'sonarjs/cognitive-complexity': 'off',
     'sonarjs/no-duplicate-string': 'off',
     // (thuang): Allow args prefixed with `_`
@@ -34,7 +32,7 @@ module.exports = {
         vars: 'all',
       },
     ],
-    'jsx-expressions/strict-logical-expressions': 'error',
+    // TODO: consider enabling 'react/jsx-no-leaked-render'
     'react-hooks/exhaustive-deps': 'error',
     // React Hooks
     'react-hooks/rules-of-hooks': 'error',

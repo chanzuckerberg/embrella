@@ -214,7 +214,7 @@ export function useSessionForm(): UseSessionFormReturn {
       }
       setErrors(serverErrors);
       return null;
-    } catch (err) {
+    } catch {
       setErrors({ submit: 'An error occurred. Please try again.' });
       return null;
     } finally {

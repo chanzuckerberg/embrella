@@ -9,9 +9,8 @@ import json
 import logging
 import os
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 
-import pytz
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count, Sum
 from django.http import JsonResponse
@@ -628,7 +627,7 @@ def get_directory_files(request, directory_id):
                         "filename": filename,
                         "size_bytes": size,
                         "size_display": format_size(size),
-                        "mtime": datetime.fromtimestamp(mtime, tz=pytz.UTC).isoformat() if mtime else None,
+                        "mtime": datetime.fromtimestamp(mtime, tz=UTC).isoformat() if mtime else None,
                         "uid": uid,
                         "mode": mode,
                         "type": file_type_val,
@@ -788,7 +787,7 @@ def get_survey_files(request, survey_id):
                         "filename": filename,
                         "size_bytes": size,
                         "size_display": format_size(size),
-                        "mtime": datetime.fromtimestamp(mtime, tz=pytz.UTC).isoformat() if mtime else None,
+                        "mtime": datetime.fromtimestamp(mtime, tz=UTC).isoformat() if mtime else None,
                         "uid": uid,
                         "mode": mode,
                         "type": file_type_val,

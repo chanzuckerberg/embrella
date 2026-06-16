@@ -2,17 +2,12 @@
 
 site_name: umbrella
 site_dir: docs_build
-repo_url: "https://github.com/czimaginginstitute/czii-umbrella-django"
-repo_name: "czimaginginstitute/czii-umbrella-django"
-copyright: "2025, CZ Imaging Institute"
+repo_url: 'https://github.com/czimaginginstitute/czii-umbrella-django'
+repo_name: 'czimaginginstitute/czii-umbrella-django'
+copyright: '2026, Biohub'
 theme:
   name: material
   palette:
-    # Palette toggle for light mode
-#    - scheme: default
-#      toggle:
-#        icon: material/brightness-4
-#        name: Switch to light mode
     - scheme: biohub
       toggle:
         icon: material/brightness-4
@@ -24,7 +19,6 @@ theme:
         icon: material/brightness-7
         name: Switch to dark mode
   #logo: assets/umbrella.svg
-  #logo: assets/logo.png
   features:
     - content.code.copy
 extra_css:
@@ -32,14 +26,14 @@ extra_css:
 nav:
   - Home: index.md
   - Tutorials:
-    - User Guide: "tutorials/userguide.md"
+      - User Guide: 'tutorials/userguide.md'
   - Contributing:
-    - Getting Started: "contributing/gettingstarted.md"
-    - Container Layout: "contributing/containers.md"
-    - Managing Environment Secrets: "contributing/environments.md"
-    - Running/Deploying: "contributing/deployment.md"
-    - Updating Documentation: "contributing/documentation.md"
-    - Version Control/Release Convention: "contributing/convention.md"
+      - Getting Started: 'contributing/gettingstarted.md'
+      - Container Layout: 'contributing/containers.md'
+      - Managing Environment Secrets: 'contributing/environments.md'
+      - Running/Deploying: 'contributing/deployment.md'
+      - Updating Documentation: 'contributing/documentation.md'
+      - Version Control/Release Convention: 'contributing/convention.md'
 
 plugins:
   - search
@@ -73,7 +67,6 @@ plugins:
             separate_signature: true
             line_length: 60
 
-
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -94,5 +87,4 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.snippets:
       check_paths: true
-      base_path: [ docs/snippets, docs/templates, "." ]
-
+      base_path: [docs/snippets, docs/templates, '.']

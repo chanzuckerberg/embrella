@@ -50,7 +50,7 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedP
         setError(errorMessage);
         setIsDeleting(false);
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred while deleting the puck. Please try again.');
       setIsDeleting(false);
     }

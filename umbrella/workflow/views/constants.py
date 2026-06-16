@@ -7,14 +7,6 @@ used across the workflow application.
 
 import os
 
-# Celery Configuration
-CELERY_BEAT_SCHEDULE = {
-    "update_job_data_cache_every_5_seconds": {
-        "task": "workflow.tasks.update_job_data_cache",
-        "schedule": 5.0,  # every 5 seconds
-    },
-}
-
 # Directory and Path Constants
 # Go up three levels: views/ -> workflow/ -> umbrella/
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

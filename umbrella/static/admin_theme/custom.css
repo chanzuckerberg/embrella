@@ -1,0 +1,110 @@
+/* ---------------------------------------------------------------------------
+   Match the Django admin (jazzmin 3.0.4 / AdminLTE v4 / Bootstrap 5) to the
+   Next.js app's palette. Source of truth: frontend/app/common/theme.ts and
+--------------------------------------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bs-primary: #6e4ff9;
+  --bs-primary-rgb: 110, 79, 249;
+  --bs-link-color: #6e4ff9;
+  --bs-link-color-rgb: 110, 79, 249;
+  --bs-link-hover-color: #5a3ab8;
+  --bs-link-hover-color-rgb: 90, 58, 184;
+}
+
+#jazzy-navbar {
+  background-color: #343a40 !important;
+}
+#jazzy-navbar,
+#jazzy-navbar .nav-link {
+  color: #ffffff !important;
+}
+#jazzy-navbar .nav-link:hover,
+#jazzy-navbar .nav-link:focus {
+  color: #a78bfa !important;
+}
+
+#jazzy-logo {
+  background-color: var(--bs-secondary-bg) !important;
+}
+
+/* Links in the brand indigo */
+a {
+  color: #6e4ff9;
+}
+a:hover,
+a:focus {
+  color: #5a3ab8;
+}
+
+/* Active sidebar item -> brand indigo instead of default blue */
+.nav-sidebar .nav-link.active,
+.sidebar-menu .nav-link.active {
+  background-color: #6e4ff9 !important;
+  color: #ffffff !important;
+}
+
+/* Primary buttons -> brand indigo */
+.btn-primary {
+  --bs-btn-bg: #6e4ff9;
+  --bs-btn-border-color: #6e4ff9;
+  --bs-btn-hover-bg: #5a3ab8;
+  --bs-btn-hover-border-color: #5a3ab8;
+  --bs-btn-active-bg: #5a3ab8;
+  --bs-btn-active-border-color: #5a3ab8;
+  --bs-btn-disabled-bg: #6e4ff9;
+  --bs-btn-disabled-border-color: #6e4ff9;
+}
+
+/* "Add" buttons (.btn-success) -> app green (green.500 / green.600) */
+.btn-success {
+  --bs-btn-bg: #238444;
+  --bs-btn-border-color: #238444;
+  --bs-btn-hover-bg: #105b2b;
+  --bs-btn-hover-border-color: #105b2b;
+  --bs-btn-active-bg: #105b2b;
+  --bs-btn-active-border-color: #105b2b;
+  --bs-btn-disabled-bg: #238444;
+  --bs-btn-disabled-border-color: #238444;
+}
+
+/* "Change"/"View" buttons: jazzmin maps info -> btn-outline-primary.
+   Bootstrap's outline-primary uses the theme's compiled color, so force indigo. */
+.btn-outline-primary {
+  --bs-btn-color: #6e4ff9;
+  --bs-btn-border-color: #6e4ff9;
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-hover-bg: #6e4ff9;
+  --bs-btn-hover-border-color: #6e4ff9;
+  --bs-btn-active-color: #ffffff;
+  --bs-btn-active-bg: #5a3ab8;
+  --bs-btn-active-border-color: #5a3ab8;
+  --bs-btn-disabled-color: #6e4ff9;
+  --bs-btn-disabled-border-color: #6e4ff9;
+}
+
+/* Secondary buttons -> neutral gray from app palette (gray.600 / gray.700) */
+.btn-secondary {
+  --bs-btn-bg: #6c6c6c;
+  --bs-btn-border-color: #6c6c6c;
+  --bs-btn-hover-bg: #3b3b3b;
+  --bs-btn-hover-border-color: #3b3b3b;
+  --bs-btn-active-bg: #3b3b3b;
+  --bs-btn-active-border-color: #3b3b3b;
+  --bs-btn-disabled-bg: #6c6c6c;
+  --bs-btn-disabled-border-color: #6c6c6c;
+}
+
+/* Inter, to match the app's body font */
+body,
+.app-wrapper {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}

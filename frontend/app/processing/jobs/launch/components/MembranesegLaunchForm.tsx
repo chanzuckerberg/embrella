@@ -16,10 +16,10 @@ import type { SessionSelectionConfig, ValidationError, WorkflowLaunchFormProps }
 import WorkflowLaunchForm from './WorkflowLaunchForm';
 import { fetchMembranesegRuns } from '../services/membranesegApi';
 
-interface MembranesegLaunchFormProps
-  extends Omit<WorkflowLaunchFormProps, 'customFields' | 'additionalSections' | 'customValidation'> {
-  // No additional props needed for now
-}
+type MembranesegLaunchFormProps = Omit<
+  WorkflowLaunchFormProps,
+  'customFields' | 'additionalSections' | 'customValidation'
+>;
 
 export default function MembranesegLaunchForm(props: MembranesegLaunchFormProps) {
   const [selectedCopickSession, setSelectedCopickSession] = useState<string | null>(null);

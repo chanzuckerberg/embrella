@@ -78,7 +78,7 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: docker.io/library/nginx:1.27-alpine
+    image: docker.io/library/nginx:stable-alpine
     networks: [internal, embrella]
     volumes:
       - backend_static:/srv/staticfiles:ro

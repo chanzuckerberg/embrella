@@ -747,19 +747,6 @@ devexec +args:
 devshell:
     {{COMPOSE_DEV}} exec -it -u embrella backend zsh -l
 
-# Add a Python dep AND install it into the running .venv.
-# After this, commit the updated pyproject.toml + uv.lock.
-# Run `just devup` afterwards if you want the new dep baked into the image.
-uvadd pkg:
-    {{COMPOSE_DEV}} exec backend uv add {{pkg}}
-    {{COMPOSE_DEV}} exec backend uv sync
-
-# Re-resolve uv.lock and install into the running .venv. Use after a manual
-# pyproject.toml edit, or to sync after a teammate's dep change.
-uvsync:
-    {{COMPOSE_DEV}} exec backend uv lock
-    {{COMPOSE_DEV}} exec backend uv sync
-
 # Build backend + frontend images with the given tag (e.g. `just buildimages staging`).
 buildimages tag:
     podman build -f infra/backend.Dockerfile  -t embrella/backend:{{tag}}  .

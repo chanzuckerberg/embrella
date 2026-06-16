@@ -19,6 +19,8 @@ const config: PlaywrightTestConfig = {
   },
   fullyParallel: true,
   outputDir: 'playwright-report/',
+  // create a report (open html file in /frontend/playwright-html-report)
+  reporter: [['list'], ['html', { outputFolder: 'playwright-html-report', open: 'never' }]],
   projects: [
     {
       name: 'chromium',
