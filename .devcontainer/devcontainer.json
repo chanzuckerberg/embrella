@@ -37,6 +37,12 @@
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "waitFor": "postCreateCommand",
+  "portsAttributes": {
+    "8080": {
+      "label": "Embrella app (nginx)",
+      "onAutoForward": "openBrowser"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
