@@ -11,7 +11,7 @@ export const TopBar = ({ saveState }: TopBarProps) => {
   return (
     <div className="flex flex-row justify-between items-center basis-[50px] shrink-0 w-full !px-[20px] !py-[10px]">
       <Button
-        sdsStyle="square"
+        sdsStyle="outline"
         sdsType="secondary"
         className="!text-[14px]"
         startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="xs" />}

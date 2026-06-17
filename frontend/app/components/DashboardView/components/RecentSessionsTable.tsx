@@ -75,7 +75,7 @@ export const RecentSessionsTable = ({ isLoading: parentLoading }: RecentSessions
         <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
           Most Recent Sessions
         </Typography>
-        <Button sdsType="secondary" sdsStyle="square" size="small" onClick={() => router.push('/sessions/browse')}>
+        <Button sdsType="secondary" sdsStyle="outline" size="small" onClick={() => router.push('/sessions/browse')}>
           View All
         </Button>
       </Box>

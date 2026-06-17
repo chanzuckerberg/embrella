@@ -190,7 +190,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   variant="contained"
                   startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
                   onClick={() => form.setMoveGridDialogOpen(true)}
@@ -200,7 +200,7 @@ export const GridDetails: React.FC<GridDetailsProps> = ({
                 </Button>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   onClick={() => form.setDuplicateGridDialogOpen(true)}
                   sx={{ minWidth: 120, fontStyle: 'italic' }}
                   startIcon={<Icon sdsIcon="Copy" sdsSize="s" />}

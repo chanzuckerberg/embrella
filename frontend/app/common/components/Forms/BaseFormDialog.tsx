@@ -67,12 +67,12 @@ export const BaseFormDialog: React.FC<BaseFormDialogProps> = ({
           {children}
 
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button sdsType="secondary" sdsStyle="rounded" onClick={onClose} disabled={isSubmitting}>
+            <Button sdsType="secondary" sdsStyle="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button
               sdsType="primary"
-              sdsStyle="rounded"
+              sdsStyle="solid"
               onClick={onSave}
               disabled={isSubmitting || disabled}
               startIcon={isSubmitting ? <CircularProgress size={16} /> : undefined}

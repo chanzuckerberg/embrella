@@ -37,7 +37,12 @@ export const RecentJobsTable = ({ jobs, isLoading }: RecentJobsTableProps) => {
         <Typography variant="subtitle2" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
           Your Most Recent Jobs
         </Typography>
-        <Button sdsType="secondary" sdsStyle="square" size="small" onClick={() => router.push('/processing/jobs/logs')}>
+        <Button
+          sdsType="secondary"
+          sdsStyle="outline"
+          size="small"
+          onClick={() => router.push('/processing/jobs/logs')}
+        >
           View All
         </Button>
       </Box>

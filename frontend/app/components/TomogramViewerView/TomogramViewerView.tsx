@@ -435,7 +435,7 @@ const TomogramViewerContent = ({
             <Button
               disabled={state.saveState === 'saving'}
               className="!w-32"
-              sdsStyle="square"
+              sdsStyle="outline"
               sdsType="secondary"
               startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="xs" />}
               onClick={() => changeTomogram(-1)}
@@ -445,7 +445,7 @@ const TomogramViewerContent = ({
             <Button
               disabled={state.saveState === 'saving'}
               className="!w-32"
-              sdsStyle="square"
+              sdsStyle="solid"
               sdsType="primary"
               endIcon={<Icon sdsIcon="ChevronRight" sdsSize="xs" />}
               onClick={() => changeTomogram(1)}
@@ -457,7 +457,7 @@ const TomogramViewerContent = ({
             <Button
               disabled={state.saveState === 'saving' || reviewedTomograms < 1}
               className="!w-60"
-              sdsStyle="square"
+              sdsStyle="outline"
               sdsType="secondary"
               onClick={downloadReviewResults}
             >

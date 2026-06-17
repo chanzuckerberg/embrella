@@ -327,7 +327,7 @@ export const TopNavigation = () => {
             <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
               <Button
                 sdsType="secondary"
-                sdsStyle="square"
+                sdsStyle="outline"
                 size="small"
                 onClick={() => (window.location.href = `${DJANGO_URL}/admin/`)}
                 sx={{
@@ -343,7 +343,7 @@ export const TopNavigation = () => {
               </Button>
               <Button
                 sdsType="secondary"
-                sdsStyle="square"
+                sdsStyle="outline"
                 size="small"
                 onClick={() => window.open(`${DJANGO_URL}/docs/tutorials/userguide/`, '_blank')}
                 sx={{
@@ -359,7 +359,7 @@ export const TopNavigation = () => {
               </Button>
               <Button
                 sdsType="secondary"
-                sdsStyle="square"
+                sdsStyle="outline"
                 size="small"
                 onClick={handleLogout}
                 sx={{

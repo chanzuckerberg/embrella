@@ -144,7 +144,7 @@ export const SSHSetupModal: React.FC<SSHSetupModalProps> = ({
               onClick={handleSubmit}
               disabled={loading || !password || !username.trim()}
               sdsType="primary"
-              sdsStyle="square"
+              sdsStyle="solid"
               startIcon={loading ? <CircularProgress size={20} /> : undefined}
             >
               {loading ? 'Setting up...' : 'Setup SSH'}

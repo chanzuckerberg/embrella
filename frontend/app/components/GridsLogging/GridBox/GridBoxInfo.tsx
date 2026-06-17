@@ -236,7 +236,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
                   onClick={() => handleAddGrid()}
                   size="small"
@@ -246,7 +246,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 </Button>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   startIcon={<Icon sdsIcon="Grid" sdsSize="l" />}
                   onClick={handleClipAllGrids}
                   size="small"
@@ -407,7 +407,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr: 3 }}>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   variant="contained"
                   startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
                   onClick={handleMoveGridBox}

@@ -46,12 +46,12 @@ export const TrashGridDialog: React.FC<TrashGridDialogProps> = ({ open, onClose,
         </Box>
 
         <Box sx={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-          <Button sdsType="secondary" sdsStyle="rounded" onClick={onClose} disabled={isProcessing}>
+          <Button sdsType="secondary" sdsStyle="outline" onClick={onClose} disabled={isProcessing}>
             No
           </Button>
           <Button
             sdsType="primary"
-            sdsStyle="rounded"
+            sdsStyle="solid"
             onClick={onConfirm}
             disabled={isProcessing}
             startIcon={isProcessing ? <CircularProgress size={16} /> : undefined}

@@ -76,19 +76,14 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
         <div className={styles.buttonGroup}>
           <ButtonDropdown
             sdsType="primary"
-            sdsStyle="rounded"
+            sdsStyle="solid"
             onClick={() => handleToggleSummary()}
             disabled={summaryLoading && !summarySuccess}
           >
             {showSummary ? 'Hide Session Summary' : 'Show Session Summary'}
           </ButtonDropdown>
           {shouldShowGenerateJson && (
-            <Button
-              sdsType="primary"
-              sdsStyle="rounded"
-              onClick={handleToggleJsonView}
-              className={styles.generateButton}
-            >
+            <Button sdsType="primary" sdsStyle="solid" onClick={handleToggleJsonView} className={styles.generateButton}>
               Generate Json
             </Button>
           )}

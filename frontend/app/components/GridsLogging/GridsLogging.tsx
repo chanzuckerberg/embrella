@@ -216,7 +216,7 @@ export const GridsLogging: React.FC = () => {
                 </Typography>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
                   onClick={handleAddPuck}
                   size="small"

@@ -54,7 +54,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => 
 
   return (
     <>
-      <Button sdsType="secondary" sdsStyle="rounded" onClick={handleOpen}>
+      <Button sdsType="secondary" sdsStyle="outline" onClick={handleOpen}>
         Parameters
       </Button>
       <Dialog onClose={() => setOpen(false)} open={open} sdsSize="l" aria-labelledby="parameters-dialog-title">

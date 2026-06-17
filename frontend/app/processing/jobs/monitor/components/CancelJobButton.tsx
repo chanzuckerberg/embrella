@@ -134,7 +134,7 @@ export const CancelJobButton: React.FC<CancelJobButtonProps> = ({ job, onCancel 
                   onClick={performCancel}
                   disabled={loading}
                   sdsType="primary"
-                  sdsStyle="square"
+                  sdsStyle="solid"
                   startIcon={loading ? <CircularProgress size={20} /> : undefined}
                 >
                   {loading ? 'Cancelling...' : 'Cancel Job'}

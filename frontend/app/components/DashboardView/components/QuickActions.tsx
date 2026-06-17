@@ -33,7 +33,7 @@ export const QuickActions = () => {
           <Button
             key={action.href}
             sdsType="primary"
-            sdsStyle="rounded"
+            sdsStyle="solid"
             startIcon={action.icon}
             onClick={() => router.push(action.href)}
             style={{ flex: '1 1 auto', minWidth: '140px' }}

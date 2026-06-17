@@ -10,13 +10,13 @@ interface FilterControlsProps {
 export const FilterControls: React.FC<FilterControlsProps> = ({ onReset, onUncheckAll, onApplyFilters }) => {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-      <Button sdsType="secondary" sdsStyle="rounded" onClick={onReset}>
+      <Button sdsType="secondary" sdsStyle="outline" onClick={onReset}>
         Reset
       </Button>
-      <Button sdsType="secondary" sdsStyle="rounded" onClick={onUncheckAll}>
+      <Button sdsType="secondary" sdsStyle="outline" onClick={onUncheckAll}>
         Uncheck All
       </Button>
-      <Button sdsType="primary" sdsStyle="rounded" onClick={onApplyFilters}>
+      <Button sdsType="primary" sdsStyle="solid" onClick={onApplyFilters}>
         Apply Filter
       </Button>
     </div>

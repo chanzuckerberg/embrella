@@ -17,7 +17,7 @@ export default function ScreenMultipleGridsPage() {
       <Box sx={{ display: 'flex', gap: 2 }}>
         <Button
           sdsType="primary"
-          sdsStyle="rounded"
+          sdsStyle="solid"
           onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/scrn/`)}
         >
           Create Screening Groups
@@ -34,7 +34,7 @@ export default function ScreenMultipleGridsPage() {
       <Box sx={{ display: 'flex', gap: 2 }}>
         <Button
           sdsType="primary"
-          sdsStyle="rounded"
+          sdsStyle="solid"
           onClick={() => (window.location.href = `${DJANGO_URL}/legacy/tem/detail/`)}
         >
           View Screens

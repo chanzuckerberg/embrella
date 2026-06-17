@@ -273,7 +273,7 @@ export const CreateReviewView = () => {
                       // #region Previous Sessions
                     }
                     <Button
-                      sdsStyle="square"
+                      sdsStyle="outline"
                       className="grow"
                       sdsType="secondary"
                       startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
@@ -392,7 +392,7 @@ export const CreateReviewView = () => {
               disabled={
                 isCreatingReview || !selectedTemSession || !selectedRun || !selectedReconstructionType || !reviewName
               }
-              sdsStyle="square"
+              sdsStyle="solid"
               className="self-start"
             >
               Create Review

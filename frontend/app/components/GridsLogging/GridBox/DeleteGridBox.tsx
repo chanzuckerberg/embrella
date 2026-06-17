@@ -110,12 +110,12 @@ export const DeleteGridBox: React.FC<DeleteGridBoxProps> = ({
         </Box>
 
         <Box sx={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-          <Button sdsType="secondary" sdsStyle="rounded" onClick={onClose} disabled={isDeleting}>
+          <Button sdsType="secondary" sdsStyle="outline" onClick={onClose} disabled={isDeleting}>
             No
           </Button>
           <Button
             sdsType="primary"
-            sdsStyle="rounded"
+            sdsStyle="solid"
             onClick={handleConfirmDelete}
             disabled={isDeleting}
             startIcon={isDeleting ? <CircularProgress size={16} /> : undefined}

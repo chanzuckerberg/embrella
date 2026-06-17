@@ -248,7 +248,7 @@ export const JobsManagementView: React.FC = () => {
             />
             <Button
               sdsType="secondary"
-              sdsStyle="square"
+              sdsStyle="outline"
               size="small"
               startIcon={<RefreshIcon />}
               onClick={handleRefresh}
@@ -260,7 +260,7 @@ export const JobsManagementView: React.FC = () => {
           {/* Bulk Actions */}
           {selectedJobIds.length > 0 && (
             <BulkActionsBar count={selectedJobIds.length}>
-              <Button sdsType="primary" sdsStyle="square" onClick={handleBulkCancel} disabled={bulkCancelLoading}>
+              <Button sdsType="primary" sdsStyle="solid" onClick={handleBulkCancel} disabled={bulkCancelLoading}>
                 {bulkCancelLoading
                   ? 'Cancelling...'
                   : `Cancel ${selectedJobIds.length} Job${selectedJobIds.length > 1 ? 's' : ''}`}

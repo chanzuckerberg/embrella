@@ -68,7 +68,7 @@ export const ReviewActionButton = ({
       <div className="flex justify-end">
         <Button
           sdsType="secondary"
-          sdsStyle="square"
+          sdsStyle="outline"
           size="small"
           className="w-[125px]"
           endIcon={<Icon sdsIcon="ChevronDown" sdsSize="xs" />}
@@ -126,7 +126,7 @@ export const ReviewActionButton = ({
     return (
       <div className="flex justify-end">
         <Link href={reviewUrl}>
-          <Button sdsType="secondary" sdsStyle="square" size="small" className="w-[125px]">
+          <Button sdsType="secondary" sdsStyle="outline" size="small" className="w-[125px]">
             {reviewStatus === 'Not Started' ? 'Start Review' : 'Resume Review'}
           </Button>
         </Link>

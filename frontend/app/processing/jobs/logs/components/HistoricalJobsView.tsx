@@ -81,7 +81,7 @@ export const HistoricalJobsView: React.FC = () => {
           ...col,
           cell: ({ row }: { row: { original: Job } }) => {
             return (
-              <Button sdsType="secondary" sdsStyle="square" size="small" onClick={() => handleJobClick(row.original)}>
+              <Button sdsType="secondary" sdsStyle="outline" size="small" onClick={() => handleJobClick(row.original)}>
                 View
               </Button>
             );
@@ -138,7 +138,7 @@ export const HistoricalJobsView: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
             <Button
               sdsType="secondary"
-              sdsStyle="square"
+              sdsStyle="outline"
               size="small"
               startIcon={<RefreshIcon />}
               onClick={handleRefresh}

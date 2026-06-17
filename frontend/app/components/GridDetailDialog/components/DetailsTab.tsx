@@ -132,7 +132,7 @@ export const DetailsTab: React.FC<DetailsTabProps> = ({
     <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 2 }}>
       <Button
         sdsType="primary"
-        sdsStyle="rounded"
+        sdsStyle="solid"
         variant="contained"
         startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
         onClick={onMoveGridClick}
