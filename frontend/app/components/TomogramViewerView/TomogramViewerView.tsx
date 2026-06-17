@@ -125,11 +125,11 @@ const TomogramViewerContent = ({
   const [extraControlProps, setExtraControlProps] = useState<Array<{ label: string; contrastRange: [number, number] }>>(
     []
   );
-  // Gate viewer rendering until after React Strict Mode's double-mount cycle settles.
-  // This prevents the stale closure in IdetikProvider's canvasRefCallback from seeing
+  // prevents stale closure in IdetikProvider's canvasRefCallback from seeing
   // a dangling runtime during the unmount-remount sequence.
   const [isStableMount, setIsStableMount] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsStableMount(true);
     return () => setIsStableMount(false);
   }, []);
@@ -290,10 +290,12 @@ const TomogramViewerContent = ({
     let cancelled = false;
 
     // Reset state for new tomogram (each instance starts fresh due to key-based remounting)
+    /* eslint-disable react-hooks/set-state-in-effect -- resets paired with the async detail fetch below */
     setZAxisMetadata(null);
     setCurrentZIndex(0);
     setChannelLayer(null);
     setExtraControlProps([]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const loadDetail = async () => {
       const url = getRequestURLWithPathParams(DJANGO_URL, '/api/reviews/:reviewId/tomograms/:tomogramId', {

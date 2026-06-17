@@ -34,7 +34,7 @@ export const LabelChip = ({ gridId, labels: initialLabels, controlledLabels, onS
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [allLabels, setAllLabels] = useState<LabelData[]>([]);
 
-  const anchorRef = useRef<HTMLDivElement>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -66,9 +66,11 @@ export const LabelChip = ({ gridId, labels: initialLabels, controlledLabels, onS
     };
   }, [inputValue, allLabels, labels]);
 
-  useEffect(() => {
+  const [prevSuggestions, setPrevSuggestions] = useState(suggestions);
+  if (suggestions !== prevSuggestions) {
+    setPrevSuggestions(suggestions);
     setHighlightedIndex(-1);
-  }, [suggestions]);
+  }
 
   const saveLabels = async (newLabels: LabelData[]) => {
     if (!isControlled) setInternalLabels(newLabels);
@@ -207,7 +209,7 @@ export const LabelChip = ({ gridId, labels: initialLabels, controlledLabels, onS
 
   return (
     <ClickAwayListener onClickAway={() => setEditing(false)}>
-      <Box ref={anchorRef} onClick={(e) => e.stopPropagation()}>
+      <Box ref={setAnchorEl} onClick={(e) => e.stopPropagation()}>
         <Box
           sx={{
             display: 'flex',
@@ -264,9 +266,9 @@ export const LabelChip = ({ gridId, labels: initialLabels, controlledLabels, onS
 
         <Popper
           open={showSuggestions}
-          anchorEl={anchorRef.current}
+          anchorEl={anchorEl}
           placement="bottom-start"
-          style={{ zIndex: 1300, width: anchorRef.current?.offsetWidth }}
+          style={{ zIndex: 1300, width: anchorEl?.offsetWidth }}
         >
           <Paper elevation={3} sx={{ maxHeight: 200, overflow: 'auto', mt: '4px' }}>
             {suggestions.map((label, idx) => (

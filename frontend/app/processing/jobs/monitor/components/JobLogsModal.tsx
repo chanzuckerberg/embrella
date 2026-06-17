@@ -138,6 +138,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ open, onClose, job }
 
   useEffect(() => {
     if (open && job.jobName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- async log fetch when the modal opens
       fetchLogs();
       fetchSyncerLogs();
     }

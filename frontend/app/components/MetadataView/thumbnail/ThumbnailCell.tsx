@@ -82,8 +82,8 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
   const item = items && index < items.length ? items[index] : null;
   const validItem = item && item.thumbnail_path && item.ctf_path;
 
-  // This effect handles hovering from the scatter plot ONLY
-  // It won't interfere with direct mouse hovering on images
+  // Syncs enlarge/tooltip state to scatter-plot hover (also driven by the mouse handlers below).
+  /* eslint-disable react-hooks/set-state-in-effect -- not purely derivable; second state driver */
   useEffect(() => {
     if (!validItem) return;
 
@@ -104,6 +104,7 @@ export const ThumbnailCell: React.FC<ThumbnailCellProps> = memo(({ columnIndex, 
       }
     }
   }, [hoveredPosition, item?.name, thumbnailImageLoaded, isDirectMouseHover, validItem]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleMouseEnter = () => {
     if (validItem && onThumbnailHover && item.name && thumbnailImageLoaded) {

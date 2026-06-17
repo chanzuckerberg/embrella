@@ -1,5 +1,3 @@
-/* eslint-disable sonarjs/no-duplicate-string */
-
 export const DJANGO_URL =
   typeof window !== 'undefined'
     ? // Bare-metal dev only: Next.js dev server on :3000 reaches Django on :8000 directly.

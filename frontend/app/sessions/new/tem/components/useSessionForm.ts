@@ -118,13 +118,19 @@ export function useSessionForm(): UseSessionFormReturn {
     loadGrids();
   }, [state.filterUserId]);
 
-  // Fetch magnifications when sessionPlanId changes
-  useEffect(() => {
-    // Reset magnification selection when session plan changes
+  // Reset the magnification selection when the session plan changes.
+  const [prevSessionPlanId, setPrevSessionPlanId] = useState(state.sessionPlanId);
+  if (state.sessionPlanId !== prevSessionPlanId) {
+    setPrevSessionPlanId(state.sessionPlanId);
     setState((prev) => ({ ...prev, magnificationId: null }));
-
     if (!state.sessionPlanId) {
       setMagnifications([]);
+    }
+  }
+
+  // Fetch magnifications when sessionPlanId changes
+  useEffect(() => {
+    if (!state.sessionPlanId) {
       return;
     }
 

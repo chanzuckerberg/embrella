@@ -104,6 +104,7 @@ export const useFilterState = ({
 
   // Update filters when metric ranges change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- recomputes filter bounds from derived metric ranges
     setFilters((prev) => {
       const newState = { ...prev };
       // Use metricsConfig keys which match FilterConfig

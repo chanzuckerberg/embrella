@@ -2,7 +2,7 @@ import { UserContext } from '@app/common/context/UserProvider';
 import { EntityLinkField } from '@app/common/types/entity';
 import { Button, DropdownMenu, Icon } from '@czi-sds/components';
 import Link from 'next/link';
-import { useContext, useRef, useState } from 'react';
+import { useContext, useState } from 'react';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 
 export interface ReviewActionButtonProps {
@@ -20,7 +20,7 @@ export const ReviewActionButton = ({
   reviewedCount = 0,
   totalCount = 0,
 }: ReviewActionButtonProps) => {
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const currentUser = useContext(UserContext);
 
@@ -75,7 +75,7 @@ export const ReviewActionButton = ({
           onClick={() => {
             setIsDropdownOpen((prev) => !prev);
           }}
-          ref={buttonRef}
+          ref={setAnchorEl}
         >
           View Results
         </Button>
@@ -103,7 +103,7 @@ export const ReviewActionButton = ({
           onClickAway={() => {
             setIsDropdownOpen(false);
           }}
-          anchorEl={buttonRef.current}
+          anchorEl={anchorEl}
           PopperBaseProps={{
             className: 'relative right-10 z-50 rounded-sds-m !w-[240px]',
             popperOptions: {

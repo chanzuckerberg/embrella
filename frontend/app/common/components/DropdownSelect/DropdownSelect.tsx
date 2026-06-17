@@ -1,5 +1,5 @@
 import { AutocompleteOptionBasic, DropdownMenu, InputDropdown } from '@czi-sds/components';
-import { SyntheticEvent, useRef, useState } from 'react';
+import { SyntheticEvent, useState } from 'react';
 
 interface DropdownSelectProps<T> {
   value?: T;
@@ -18,11 +18,11 @@ export const DropdownSelect = <T extends AutocompleteOptionBasic>({
   disabled = false,
   onChange,
 }: DropdownSelectProps<T>) => {
-  const inputRef = useRef<HTMLElement | null>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleDropdownClick = (event: React.MouseEvent<HTMLElement>) => {
-    inputRef.current = event.currentTarget;
+    setAnchorEl(event.currentTarget);
     setIsDropdownOpen((prev) => !prev);
   };
   const handleOptionChange = (_event: SyntheticEvent, option: T) => {
@@ -52,8 +52,8 @@ export const DropdownSelect = <T extends AutocompleteOptionBasic>({
         // @ts-expect-error -- SDS type is not specific enough.
         onChange={handleOptionChange}
         onClickAway={handleClickAway}
-        anchorEl={inputRef.current}
-        width={inputRef.current?.clientWidth}
+        anchorEl={anchorEl}
+        width={anchorEl?.clientWidth}
       />
     </>
   );

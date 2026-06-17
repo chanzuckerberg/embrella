@@ -59,8 +59,10 @@ export const DuplicateGrid: React.FC<DuplicateGridProps> = ({
   const { availablePositions } = useAvailablePositions(destinationBoxId);
   const availableCount = availablePositions?.available_count ?? 0;
 
-  // Reset on open
-  useEffect(() => {
+  // Reset form when the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setFormData({
         destinationCane: '',
@@ -70,12 +72,14 @@ export const DuplicateGrid: React.FC<DuplicateGridProps> = ({
       });
       clearError();
     }
-  }, [open, clearError]);
+  }
 
   const prefillCaneId = initialLocation?.caneId ?? null;
   const prefillPuckId = initialLocation?.puckId ?? null;
   const prefillSlotPosition = initialLocation?.slotPosition ?? null;
 
+  // Seed each destination field once its options finish loading async, if not already set.
+  /* eslint-disable react-hooks/set-state-in-effect -- reacting to async data arrival; guarded to run once per field */
   useEffect(() => {
     if (!open || !prefillCaneId || !canesLoaded) return;
     if (!canes.some((c) => c.id === prefillCaneId)) return;
@@ -93,6 +97,7 @@ export const DuplicateGrid: React.FC<DuplicateGridProps> = ({
     if (!slotsData?.slots?.some((s) => s.position === prefillSlotPosition && s.status === 'filled')) return;
     setFormData((prev) => (prev.destinationSlot ? prev : { ...prev, destinationSlot: prefillSlotPosition.toString() }));
   }, [open, prefillSlotPosition, slotsLoaded, slotsData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => {

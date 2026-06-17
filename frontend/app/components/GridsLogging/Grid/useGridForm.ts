@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
 import {
   useUpdateGrid,
@@ -91,27 +91,27 @@ export const useGridForm = ({ gridId, gridDetails, refetch, onGridUpdated }: Use
   const { specimens } = useSpecimenList();
   const { projects } = useProjectsList();
 
-  // Sync form data from API response
-  useEffect(() => {
-    if (gridDetails) {
-      const formData = mapGridDetailsToFormData(gridDetails);
-      setEditedData({
-        gridName: formData.gridName,
-        copyNumber: formData.copyNumber,
-        notes: formData.notes,
-        freezingSessionId: formData.freezingSessionId,
-        specimenId: formData.specimenId,
-        projectId: formData.projectId,
-        positionInBox: formData.positionInBox,
-        blotTime: formData.blotTime,
-        blotForce: formData.blotForce,
-        blotDistance: formData.blotDistance,
-      });
-      setCurrentLabels(formData.labels);
-      setLocalClipped(gridDetails.clipped);
-      setLocalTrashed(gridDetails.trashed);
-    }
-  }, [gridDetails]);
+  // Re-sync the editable fields when a fresh API response arrives.
+  const [syncedGridDetails, setSyncedGridDetails] = useState(gridDetails);
+  if (gridDetails && gridDetails !== syncedGridDetails) {
+    setSyncedGridDetails(gridDetails);
+    const formData = mapGridDetailsToFormData(gridDetails);
+    setEditedData({
+      gridName: formData.gridName,
+      copyNumber: formData.copyNumber,
+      notes: formData.notes,
+      freezingSessionId: formData.freezingSessionId,
+      specimenId: formData.specimenId,
+      projectId: formData.projectId,
+      positionInBox: formData.positionInBox,
+      blotTime: formData.blotTime,
+      blotForce: formData.blotForce,
+      blotDistance: formData.blotDistance,
+    });
+    setCurrentLabels(formData.labels);
+    setLocalClipped(gridDetails.clipped);
+    setLocalTrashed(gridDetails.trashed);
+  }
 
   const formData = gridDetails ? mapGridDetailsToFormData(gridDetails) : null;
 

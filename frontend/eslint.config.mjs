@@ -62,14 +62,7 @@ const eslintConfig = defineConfig([
     files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
     plugins: { 'react-hooks': reactHooks },
     rules: {
-      // TODO: (eslint-upgrade): triage and re-enable these React Compiler rules as errors.
-      // Downgraded to `warn` to defer a large refactor during the tooling upgrade.
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/refs': 'warn',
       'react-hooks/incompatible-library': 'warn',
-      // `static-components` is the dominant lint-time cost (~55% of runtime); `--cache` keeps
-      // incremental runs fast, so it stays active (as `warn`, like the rules above).
-      'react-hooks/static-components': 'warn',
     },
   },
   prettier,

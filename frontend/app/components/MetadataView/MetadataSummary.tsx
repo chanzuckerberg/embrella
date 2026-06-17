@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ButtonDropdown, Button, Alert } from '@czi-sds/components';
 import { SummaryTable } from './sessionSummary/SummaryTable';
 import styles from './MetadataViz.module.css';
@@ -43,11 +43,13 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
     setIsJsonViewOpen(!isJsonViewOpen);
   };
 
-  useEffect(() => {
+  const [prevSummaryError, setPrevSummaryError] = useState(summaryError);
+  if (summaryError !== prevSummaryError) {
+    setPrevSummaryError(summaryError);
     if (summaryError) {
       setShowError(true);
     }
-  }, [summaryError]);
+  }
 
   const renderContent = () => {
     if (showSummary) {

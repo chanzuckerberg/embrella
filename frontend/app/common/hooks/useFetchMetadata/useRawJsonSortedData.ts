@@ -40,6 +40,7 @@ export const useSortedData = (
   // Update sortedData when data prop changes (but not during sorting operations)
   useEffect(() => {
     if (!isLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mirrors the data prop except mid-sort
       setSortedData(data);
     }
   }, [data, isLoading]);

@@ -101,7 +101,7 @@ export const SearchBar = ({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const anchorRef = useRef<HTMLDivElement>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const blurStampRef = useRef(0);
@@ -128,9 +128,11 @@ export const SearchBar = ({
   );
 
   // Reset highlighted index when suggestions change
-  useEffect(() => {
+  const [prevSuggestions, setPrevSuggestions] = useState(suggestions);
+  if (suggestions !== prevSuggestions) {
+    setPrevSuggestions(suggestions);
     setHighlightedIndex(-1);
-  }, [suggestions]);
+  }
 
   useEffect(() => {
     let searchTerm = localInput;
@@ -292,7 +294,7 @@ export const SearchBar = ({
 
   return (
     <ClickAwayListener onClickAway={() => setShowDropdown(false)}>
-      <div ref={anchorRef} className="px-3 pt-3 pb-1">
+      <div ref={setAnchorEl} className="px-3 pt-3 pb-1">
         <TextField
           inputRef={inputRef}
           value={localInput}
@@ -346,9 +348,9 @@ export const SearchBar = ({
 
         <Popper
           open={showDropdown && (suggestions.length > 0 || localInput.length === 0)}
-          anchorEl={anchorRef.current}
+          anchorEl={anchorEl}
           placement="bottom-start"
-          style={{ zIndex: 1300, width: anchorRef.current?.offsetWidth }}
+          style={{ zIndex: 1300, width: anchorEl?.offsetWidth }}
         >
           <Paper elevation={3} className="mt-1 max-h-[320px] overflow-y-auto" role="listbox">
             {(() => {

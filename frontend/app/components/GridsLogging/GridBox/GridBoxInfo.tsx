@@ -84,17 +84,17 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     }
   }, [onGridBoxInfoRefetchReady, refetch]);
 
-  // Update edited data when gridBoxData changes
-  useEffect(() => {
-    if (gridBoxData) {
-      const formData = mapGridBoxDetailToFormData(gridBoxData);
-      setEditedData({
-        name: formData.name,
-        color: formData.color,
-        numbering: formData.numbering,
-      });
-    }
-  }, [gridBoxData]);
+  // Re-sync the editable fields when fresh data arrives.
+  const [syncedGridBoxData, setSyncedGridBoxData] = useState(gridBoxData);
+  if (gridBoxData && gridBoxData !== syncedGridBoxData) {
+    setSyncedGridBoxData(gridBoxData);
+    const formData = mapGridBoxDetailToFormData(gridBoxData);
+    setEditedData({
+      name: formData.name,
+      color: formData.color,
+      numbering: formData.numbering,
+    });
+  }
 
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {

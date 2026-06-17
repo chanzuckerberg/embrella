@@ -73,6 +73,7 @@ export const SessionRunSelector = ({ onChange, disabled = false, planType }: Ses
 
   // Fetch sessions on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async data fetch on mount
     fetchSessions();
   }, []);
 

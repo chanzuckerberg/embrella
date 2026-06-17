@@ -115,7 +115,7 @@ export default function WorkflowLaunchPage() {
       processor: selectedProcessorData,
       schema,
       cluster: selectedCluster as 'czii' | 'bruno',
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       onSubmit: async (_params: ExecutionParams) => {
         // Success handled by individual forms
       },

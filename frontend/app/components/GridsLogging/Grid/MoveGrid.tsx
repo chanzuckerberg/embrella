@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
 import { PuckList, GridDetailsResponse, UserList } from '@app/common/types/gridLogging';
@@ -63,8 +63,10 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
     formData.destinationSlot ? Number(formData.destinationSlot) : undefined
   );
 
-  // Reset form when dialog opens
-  useEffect(() => {
+  // Reset form when the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setFormData({
         destinationCane: '',
@@ -74,7 +76,7 @@ export const MoveGrid: React.FC<MoveGridProps> = ({
       });
       clearError();
     }
-  }, [open, clearError]);
+  }
 
   // Get available slots (filled with grid boxes only) from the puck slots API
   const availableSlots = useMemo(() => {
