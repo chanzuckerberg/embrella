@@ -7,6 +7,11 @@
     "next-devtools": {
       "command": "npx",
       "args": ["-y", "next-devtools-mcp@latest"]
+    },
+    "sds-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@czi-sds/mcp@latest"]
     }
   }
 }
