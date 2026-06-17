@@ -6,9 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "check": "next lint && yarn prettier --check . && yarn tsc",
-    "fix": "next lint --fix && yarn prettier --write .",
+    "lint": "eslint . --cache",
+    "check": "eslint . --cache && yarn prettier --check . && yarn tsc",
+    "fix": "eslint --fix . --cache && yarn prettier --write .",
     "test": "jest --runInBand",
     "e2e": "playwright test --project chromium",
     "e2e:chrome": "playwright test --project chromium",
@@ -53,6 +53,7 @@
     "tailwindcss": "^4.1.4"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",
@@ -63,24 +64,23 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-window": "^1",
-    "@typescript-eslint/eslint-plugin": "^8.44.0",
-    "@typescript-eslint/parser": "^8.44.0",
-    "eslint": "^8",
-    "eslint-config-next": "^15.5.0",
-    "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-prettier": "^5.0.1",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-sonarjs": "^0.23.0",
+    "eslint": "^10.5.0",
+    "eslint-config-next": "^16.2.9",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-sonarjs": "^4.0.3",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
-    "prettier": "^3.1.0",
+    "prettier": ">=3.8.4",
     "typescript": "^5"
   },
   "resolutions": {
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "csstype": "3.1.3"
+    "csstype": "3.1.3",
+    "baseline-browser-mapping": "^2.10.37",
+    "browserslist": "^4.28.2"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
