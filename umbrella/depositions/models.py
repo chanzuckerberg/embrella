@@ -21,8 +21,8 @@ class Deposition(models.Model):
     authors_json = models.JSONField(
         default=list,
         blank=True,
-        help_text="List of {author_id, is_primary, is_corresponding, author_list_order}. "
-                  "author_id will FK to users.Author once that model exists.",
+        help_text="Ordered list of {author_id, is_primary, is_corresponding, author_list_order}; "
+                  "author_id soft-references users.Author (not a FK).",
     )
     release_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
