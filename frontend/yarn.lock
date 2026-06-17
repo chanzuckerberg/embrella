@@ -618,22 +618,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@czi-sds/components@npm:^22.11.4":
-  version: 22.17.1
-  resolution: "@czi-sds/components@npm:22.17.1"
+"@czi-sds/components@npm:^23.7.0":
+  version: 23.7.0
+  resolution: "@czi-sds/components@npm:23.7.0"
   dependencies:
     chroma-js: "npm:^3.1.2"
   peerDependencies:
     "@emotion/css": ^11.11.2
     "@emotion/react": ^11.11.3
     "@emotion/styled": ^11.11.0
-    "@mui/base": ^5.0.0-beta.30
-    "@mui/icons-material": ^5.15.3
-    "@mui/lab": ^5.0.0-alpha.159
-    "@mui/material": ^5.15.3
+    "@mui/base": 5.0.0-beta.70
+    "@mui/icons-material": ^5.16.8
+    "@mui/lab": ^5.0.0-alpha.174
+    "@mui/material": ^5.16.8
+    "@tanstack/react-table": ^8.21.3
     react: ">=17.0.1"
     react-dom: ">=17.0.1"
-  checksum: 10c0/7cc1329ae56c68440ad77094e6af55d39898ae64c132e80886cbe8dbe198f3d8d70e38da8ae2c783195052a5f3e97c3b5eeb59f02355b245c19261224655c8cf
+  checksum: 10c0/336c339f8bd09d7344d1e279b961d096a76ff12428cfea7efdd1c89f0cf67f0cc32e42f32e0b5c131bf3c8fc7a5fd989b82f5096c122aade534272c5dcd5fa4d
   languageName: node
   linkType: hard
 
@@ -1795,15 +1796,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mui/material-nextjs@npm:^5.15.11":
-  version: 5.18.0
-  resolution: "@mui/material-nextjs@npm:5.18.0"
+"@mui/material-nextjs@npm:^6.4.3":
+  version: 6.5.0
+  resolution: "@mui/material-nextjs@npm:6.5.0"
   dependencies:
-    "@babel/runtime": "npm:^7.23.9"
+    "@babel/runtime": "npm:^7.26.0"
   peerDependencies:
     "@emotion/cache": ^11.11.0
+    "@emotion/react": ^11.11.4
     "@emotion/server": ^11.11.0
-    "@mui/material": ^5.0.0
     "@types/react": ^17.0.0 || ^18.0.0 || ^19.0.0
     next: ^13.0.0 || ^14.0.0 || ^15.0.0
     react: ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -1814,7 +1815,7 @@ __metadata:
       optional: true
     "@types/react":
       optional: true
-  checksum: 10c0/36b5309ed2b1eccbe6abdcefdeb5061b4e2e5a590b582161ce06b2d4ae678e092ccf13393b53f6eee6930e3314a0fdaed8dc2673432079fa90aae0dcbbd7eb2b
+  checksum: 10c0/0eda3b4c734228136cd18e86c8c5b172f933050dc9a69c246b24a01ac30190185122c0a416efef92e51c68fcd14c990c4e7d484fede25286251302b6ec68a5a1
   languageName: node
   linkType: hard
 
@@ -4242,7 +4243,8 @@ __metadata:
   resolution: "create-sds-app@workspace:."
   dependencies:
     "@babel/runtime": "npm:^7.29.7"
-    "@czi-sds/components": "npm:^22.11.4"
+    "@czi-sds/components": "npm:^23.7.0"
+    "@emotion/cache": "npm:^11.14.0"
     "@emotion/css": "npm:^11.11.2"
     "@emotion/react": "npm:^11.11.3"
     "@emotion/styled": "npm:^11.11.0"
@@ -4252,7 +4254,7 @@ __metadata:
     "@mui/icons-material": "npm:5.16.8"
     "@mui/lab": "npm:5.0.0-alpha.173"
     "@mui/material": "npm:5.16.8"
-    "@mui/material-nextjs": "npm:^5.15.11"
+    "@mui/material-nextjs": "npm:^6.4.3"
     "@mui/system": "npm:^5.18.0"
     "@mui/x-date-pickers": "npm:^8.29.0"
     "@playwright/test": "npm:^1.61.0"
