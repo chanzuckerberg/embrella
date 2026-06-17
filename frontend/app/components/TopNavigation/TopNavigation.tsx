@@ -230,10 +230,8 @@ export const TopNavigation = () => {
   // Dropdown states
   const [jobsButton, setJobsButton] = useState<HTMLButtonElement | null>(null);
   const [tomogramsButton, setTomogramsButton] = useState<HTMLButtonElement | null>(null);
-  // const [dataButton, setDataButton] = useState<HTMLButtonElement | null>(null);
   const [isJobsDropdownOpen, setIsJobsDropdownOpen] = useState(false);
   const [isTomogramsDropdownOpen, setIsTomogramsDropdownOpen] = useState(false);
-  // const [isDataDropdownOpen, setIsDataDropdownOpen] = useState(false);
 
   // Check if any Jobs route is active
   const isJobsActive = pathname.startsWith('/processing/jobs');

@@ -57,14 +57,18 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
       return summaryAPIData && <SummaryTable data={summaryAPIData} />;
     }
     if (summaryError && showError) {
+      let errorMessage: string;
+      if (summaryError.status === 404) {
+        errorMessage = 'Required files not found. Please check if the session and run number are correct.';
+      } else if (summaryError.status === 500) {
+        errorMessage = 'Server error occurred. Please try again later';
+      } else {
+        errorMessage = summaryError.message || 'An error occurred while fetching metadata';
+      }
       return (
         <div className={styles.alertContainer}>
           <Alert severity="error" onClose={() => setShowError(false)}>
-            {summaryError.status === 404
-              ? 'Required files not found. Please check if the session and run number are correct.'
-              : summaryError.status === 500
-                ? 'Server error occurred. Please try again later'
-                : summaryError.message || 'An error occurred while fetching metadata'}
+            {errorMessage}
           </Alert>
         </div>
       );

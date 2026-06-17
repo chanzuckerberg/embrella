@@ -16,9 +16,6 @@ import { JobFilterCategory, JobFilterConfig, JobFilterId } from '@app/processing
 export interface FiltersList<FilterCategory extends EntityFilterCategories> {
   filters: Record<FilterCategory, FilterOption[]>;
 }
-// export interface FiltersList<FilterCategory extends string> {
-//   filters: Record<FilterCategory, FilterOption[]>;
-// }
 
 export interface FilterOption {
   name: boolean | string | null;

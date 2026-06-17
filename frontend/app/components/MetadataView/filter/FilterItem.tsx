@@ -99,8 +99,8 @@ export const FilterItem: React.FC<FilterItemProps> = memo(
 
     const renderInputField = (value: number, isMin: boolean) => {
       // Get the current input value from state or use the provided value
-      const inputValue =
-        inputValues?.[isMin ? 'min' : 'max'] !== undefined ? inputValues[isMin ? 'min' : 'max'] : value.toFixed(3);
+      const boundKey = isMin ? 'min' : 'max';
+      const inputValue = inputValues?.[boundKey] !== undefined ? inputValues[boundKey] : value.toFixed(3);
 
       return (
         <TextField

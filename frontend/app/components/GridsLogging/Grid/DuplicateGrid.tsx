@@ -165,6 +165,8 @@ export const DuplicateGrid: React.FC<DuplicateGridProps> = ({
     return `${availableCount} position${availableCount === 1 ? '' : 's'} available in the selected grid box.`;
   })();
 
+  const positionsAvailableLabel = `${availableCount} ${availableCount === 1 ? 'position' : 'positions'}`;
+
   return (
     <BaseFormDialog
       open={open}
@@ -271,7 +273,7 @@ export const DuplicateGrid: React.FC<DuplicateGridProps> = ({
           sx={{ mt: 5 }}
           helperText={
             Boolean(destinationBoxId) && !numberIsValid && numberToCopy > availableCount
-              ? `Only ${availableCount} position${availableCount === 1 ? '' : 's'} available.`
+              ? `Only ${positionsAvailableLabel} available.`
               : ' '
           }
         />

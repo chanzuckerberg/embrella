@@ -50,6 +50,7 @@ export const getRowId = <K extends keyof EntityAPIPrimaryAttributeToDataType>(
   if (!entity) {
     const directId = (row as unknown as Record<string, unknown>).id;
     if (directId != null) return String(directId);
+    // eslint-disable-next-line sonarjs/pseudo-random -- non-security React key fallback for anomalous rows
     return String(Math.random());
   }
 

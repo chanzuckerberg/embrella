@@ -43,6 +43,8 @@ export interface JSONSchema {
 /**
  * Individual parameter schema property
  */
+export type JSONSchemaScalar = string | number | boolean;
+
 export interface JSONSchemaProperty {
   type: string;
   title: string;
@@ -52,7 +54,7 @@ export interface JSONSchemaProperty {
   minLength?: number;
   maxLength?: number;
   enum?: (string | number)[];
-  default?: string | number | boolean;
+  default?: JSONSchemaScalar;
   // Custom extensions for processor behavior
   'x-bash-var'?: string | string[];
   'x-bash-format'?: string;
@@ -61,11 +63,11 @@ export interface JSONSchemaProperty {
   'x-cli-flag'?: string | null;
   'x-cli-format'?: string | null;
   'x-cli-composite'?: boolean | string[];
-  'x-cli-default'?: string | number | boolean;
+  'x-cli-default'?: JSONSchemaScalar;
   'x-control-flow'?: boolean;
   'x-advanced'?: boolean;
   'x-conditional'?: string;
-  'x-conditional-visibility'?: string | { field: string; operator: string; value: string | number | boolean };
+  'x-conditional-visibility'?: string | { field: string; operator: string; value: JSONSchemaScalar };
   'x-dynamic-options'?:
     | boolean
     | {

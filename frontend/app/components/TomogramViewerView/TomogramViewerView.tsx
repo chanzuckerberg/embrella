@@ -367,7 +367,8 @@ const TomogramViewerContent = ({
   return (
     <div className="w-full h-screen flex flex-col items-stretch bg-white">
       <TopBar saveState={state.saveState} />
-      {/* Commented out to allow everyone write access */}
+      {/* Permission banner intentionally disabled to allow everyone write access; kept for context. */}
+      {/* eslint-disable-next-line sonarjs/no-commented-code */}
       {/* {!userCanReview && <PermissionBanner ownerName={review.owner.name} />} */}
       <div className="flex-auto flex min-h-0 border-t border-gray-300">
         <SideBar

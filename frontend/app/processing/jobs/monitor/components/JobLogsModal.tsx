@@ -45,6 +45,26 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => {
 // Processors that support syncers
 const SYNCER_SUPPORTED_PROCESSORS = ['aretomo3', 'denoiset'];
 
+type ChipColor = 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning';
+
+const SYNCER_STATUS_COLOR: Record<string, ChipColor> = {
+  running: 'success',
+  completed: 'info',
+  failed: 'error',
+};
+
+const SYNCER_ACTION_COLOR: Record<string, ChipColor> = {
+  error: 'error',
+  warning: 'warning',
+  tomogram_created: 'success',
+  init: 'primary',
+};
+
+const SYNCER_ACTION_BG: Record<string, string> = {
+  error: '#fff5f5',
+  warning: '#fffef5',
+};
+
 export const JobLogsModal: React.FC<JobLogsModalProps> = ({ open, onClose, job }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -299,12 +319,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ open, onClose, job }
 
             {/* stderr tab */}
             {!!jobLog.stderr_log && (
-              <TabPanel
-                value={activeTab}
-                index={
-                  jobLog.script_content && jobLog.stdout_log ? 3 : jobLog.script_content || jobLog.stdout_log ? 2 : 1
-                }
-              >
+              <TabPanel value={activeTab} index={1 + (jobLog.script_content ? 1 : 0) + (jobLog.stdout_log ? 1 : 0)}>
                 <Box
                   sx={{
                     backgroundColor: '#fff5f5',
@@ -345,15 +360,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ open, onClose, job }
                         <Chip
                           label={syncerStatus.status}
                           size="small"
-                          color={
-                            syncerStatus.status === 'running'
-                              ? 'success'
-                              : syncerStatus.status === 'completed'
-                                ? 'info'
-                                : syncerStatus.status === 'failed'
-                                  ? 'error'
-                                  : 'default'
-                          }
+                          color={SYNCER_STATUS_COLOR[syncerStatus.status] ?? 'default'}
                         />
                       ) : (
                         <Chip label="Not started" size="small" />
@@ -368,13 +375,15 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ open, onClose, job }
                   <RerunSyncerButton job={job} syncerStatus={syncerStatus} onRerun={fetchSyncerLogs} variant="button" />
                 </Box>
 
-                {syncerLoading ? (
+                {syncerLoading && (
                   <Box display="flex" justifyContent="center" py={4}>
                     <CircularProgress size={24} />
                   </Box>
-                ) : syncerLogs.length === 0 ? (
+                )}
+                {!syncerLoading && syncerLogs.length === 0 && (
                   <Alert severity="info">No syncer logs available for this job.</Alert>
-                ) : (
+                )}
+                {!syncerLoading && syncerLogs.length > 0 && (
                   <Box sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid #ddd', borderRadius: 1 }}>
                     <Box
                       component="table"
@@ -412,12 +421,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ open, onClose, job }
                             component="tr"
                             key={index}
                             sx={{
-                              backgroundColor:
-                                log.action_type === 'error'
-                                  ? '#fff5f5'
-                                  : log.action_type === 'warning'
-                                    ? '#fffef5'
-                                    : 'inherit',
+                              backgroundColor: SYNCER_ACTION_BG[log.action_type] ?? 'inherit',
                             }}
                           >
                             <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#666' }}>
@@ -427,17 +431,7 @@ export const JobLogsModal: React.FC<JobLogsModalProps> = ({ open, onClose, job }
                               <Chip
                                 label={log.action_type.replace('_', ' ')}
                                 size="small"
-                                color={
-                                  log.action_type === 'error'
-                                    ? 'error'
-                                    : log.action_type === 'warning'
-                                      ? 'warning'
-                                      : log.action_type === 'tomogram_created'
-                                        ? 'success'
-                                        : log.action_type === 'init'
-                                          ? 'primary'
-                                          : 'default'
-                                }
+                                color={SYNCER_ACTION_COLOR[log.action_type] ?? 'default'}
                                 variant="outlined"
                                 sx={{ fontSize: '0.7rem' }}
                               />

@@ -31,6 +31,46 @@ export const RecentJobsTable = ({ jobs, isLoading }: RecentJobsTableProps) => {
     return new Date(dateStr).toLocaleString();
   };
 
+  const tableContent =
+    jobs.length === 0 ? (
+      <Box sx={{ p: 4, textAlign: 'center' }}>
+        <Typography color="text.secondary">No recent jobs found</Typography>
+      </Box>
+    ) : (
+      <Table>
+        <TableHeader>
+          <CellHeader>Job ID</CellHeader>
+          <CellHeader>Job Name</CellHeader>
+          <CellHeader>User</CellHeader>
+          <CellHeader>Status</CellHeader>
+          <CellHeader>Submitted</CellHeader>
+          <CellHeader>Duration</CellHeader>
+          <CellHeader>Cluster</CellHeader>
+        </TableHeader>
+        <TableBody>
+          {jobs.map((job) => (
+            <TableRow key={job.jobId}>
+              <CellComponent>
+                <span style={{ fontFamily: 'monospace' }}>{job.jobId}</span>
+              </CellComponent>
+              <CellComponent>
+                <span style={{ fontWeight: 500 }}>{job.jobName}</span>
+              </CellComponent>
+              <CellComponent>{job.user}</CellComponent>
+              <CellComponent>
+                <JobStatusBadge status={job.status as JobStatus} />
+              </CellComponent>
+              <CellComponent>{formatDate(job.submittedAt)}</CellComponent>
+              <CellComponent>
+                <span style={{ fontFamily: 'monospace' }}>{job.duration || '-'}</span>
+              </CellComponent>
+              <CellComponent>{job.cluster}</CellComponent>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -54,43 +94,8 @@ export const RecentJobsTable = ({ jobs, isLoading }: RecentJobsTableProps) => {
               <Skeleton key={i} variant="text" height={48} sx={{ mb: 1 }} />
             ))}
           </Box>
-        ) : jobs.length === 0 ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography color="text.secondary">No recent jobs found</Typography>
-          </Box>
         ) : (
-          <Table>
-            <TableHeader>
-              <CellHeader>Job ID</CellHeader>
-              <CellHeader>Job Name</CellHeader>
-              <CellHeader>User</CellHeader>
-              <CellHeader>Status</CellHeader>
-              <CellHeader>Submitted</CellHeader>
-              <CellHeader>Duration</CellHeader>
-              <CellHeader>Cluster</CellHeader>
-            </TableHeader>
-            <TableBody>
-              {jobs.map((job) => (
-                <TableRow key={job.jobId}>
-                  <CellComponent>
-                    <span style={{ fontFamily: 'monospace' }}>{job.jobId}</span>
-                  </CellComponent>
-                  <CellComponent>
-                    <span style={{ fontWeight: 500 }}>{job.jobName}</span>
-                  </CellComponent>
-                  <CellComponent>{job.user}</CellComponent>
-                  <CellComponent>
-                    <JobStatusBadge status={job.status as JobStatus} />
-                  </CellComponent>
-                  <CellComponent>{formatDate(job.submittedAt)}</CellComponent>
-                  <CellComponent>
-                    <span style={{ fontFamily: 'monospace' }}>{job.duration || '-'}</span>
-                  </CellComponent>
-                  <CellComponent>{job.cluster}</CellComponent>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          tableContent
         )}
       </Paper>
     </Box>

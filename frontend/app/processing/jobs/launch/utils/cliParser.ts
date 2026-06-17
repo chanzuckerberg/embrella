@@ -147,7 +147,7 @@ function isExecutablePath(token: string): boolean {
  */
 function isShellRedirect(token: string): boolean {
   // Matches: 2>/dev/null, 2>&1, >/path, >>, etc.
-  return /^[0-9]*[<>]|^&>/.test(token);
+  return /^\d*[<>]|^&>/.test(token);
 }
 
 /**

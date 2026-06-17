@@ -69,6 +69,36 @@ export const RecentSessionsTable = ({ isLoading: parentLoading }: RecentSessions
 
   const loading = parentLoading || isLoading;
 
+  const tableContent =
+    sessions.length === 0 ? (
+      <Box sx={{ p: 4, textAlign: 'center' }}>
+        <Typography color="text.secondary">No recent sessions found</Typography>
+      </Box>
+    ) : (
+      <Table>
+        <TableHeader>
+          <CellHeader>Session Name</CellHeader>
+          <CellHeader>Project</CellHeader>
+          <CellHeader>Created</CellHeader>
+        </TableHeader>
+        <TableBody>
+          {sessions.map((session) => (
+            <TableRow
+              key={session.id}
+              onClick={() => (window.location.href = `${DJANGO_URL}/admin/tem/msisession/${session.id}/`)}
+              style={{ cursor: 'pointer' }}
+            >
+              <CellComponent>
+                <span style={{ fontWeight: 500, color: '#6E4FF9' }}>{session.name}</span>
+              </CellComponent>
+              <CellComponent>{session.projectName}</CellComponent>
+              <CellComponent>{formatDate(session.createdAt)}</CellComponent>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -87,33 +117,8 @@ export const RecentSessionsTable = ({ isLoading: parentLoading }: RecentSessions
               <Skeleton key={i} variant="text" height={48} sx={{ mb: 1 }} />
             ))}
           </Box>
-        ) : sessions.length === 0 ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography color="text.secondary">No recent sessions found</Typography>
-          </Box>
         ) : (
-          <Table>
-            <TableHeader>
-              <CellHeader>Session Name</CellHeader>
-              <CellHeader>Project</CellHeader>
-              <CellHeader>Created</CellHeader>
-            </TableHeader>
-            <TableBody>
-              {sessions.map((session) => (
-                <TableRow
-                  key={session.id}
-                  onClick={() => (window.location.href = `${DJANGO_URL}/admin/tem/msisession/${session.id}/`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <CellComponent>
-                    <span style={{ fontWeight: 500, color: '#6E4FF9' }}>{session.name}</span>
-                  </CellComponent>
-                  <CellComponent>{session.projectName}</CellComponent>
-                  <CellComponent>{formatDate(session.createdAt)}</CellComponent>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          tableContent
         )}
       </Paper>
     </Box>

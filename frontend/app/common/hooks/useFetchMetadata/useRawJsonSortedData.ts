@@ -2,9 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { MetadataVizResponse, FilterConfig } from '@app/common/types/metadataViz/metadataVizData';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 
-// Define cache key type
-type CacheKey = string;
-
 // Define cache item type with expiration
 interface CacheItem {
   data: MetadataVizResponse;
@@ -28,7 +25,7 @@ export const useSortedData = (
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Refs for caching and debouncing
-  const cacheRef = useRef<Map<CacheKey, CacheItem>>(new Map());
+  const cacheRef = useRef<Map<string, CacheItem>>(new Map());
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Keep track of the latest data prop
@@ -55,7 +52,7 @@ export const useSortedData = (
       filters: FilterConfig | undefined,
       sortByValue: string,
       sortDirectionValue: 'asc' | 'desc'
-    ): CacheKey => {
+    ): string => {
       return `${sessionName}_${runNumber}_${JSON.stringify(filters)}_${sortByValue}_${sortDirectionValue}`;
     },
     []

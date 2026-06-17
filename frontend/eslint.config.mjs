@@ -23,7 +23,7 @@ const eslintConfig = defineConfig([
     files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
-      // (thuang): Allow args prefixed with `_`
+      // Allow args prefixed with `_`
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -38,24 +38,18 @@ const eslintConfig = defineConfig([
       'react/prop-types': 'off',
       'sonarjs/cognitive-complexity': 'off',
       'sonarjs/no-duplicate-string': 'off',
+      'sonarjs/todo-tag': 'off',
       // AWS/cloud security rules
       ...sonarjsAwsRulesOff,
-      // TODO: (eslint-upgrade): triage and re-enable these as errors. Downgraded to `warn`
-      // during the ESLint 10 / Next 16 / sonarjs v4 upgrade to land the tooling bump without
-      // a large cross-codebase refactor. Tracked for follow-up cleanup.
-      'sonarjs/no-nested-conditional': 'warn',
-      'sonarjs/no-skipped-tests': 'warn',
-      'sonarjs/todo-tag': 'warn',
-      'sonarjs/no-commented-code': 'warn',
-      'sonarjs/no-nested-functions': 'warn',
-      'sonarjs/no-clear-text-protocols': 'warn',
-      'sonarjs/use-type-alias': 'warn',
-      'sonarjs/slow-regex': 'warn',
-      'sonarjs/pseudo-random': 'warn',
-      'sonarjs/redundant-type-aliases': 'warn',
-      'sonarjs/no-invariant-returns': 'warn',
-      'sonarjs/concise-regex': 'warn',
-      'sonarjs/no-os-command-from-path': 'warn',
+    },
+  },
+  {
+    // test rules
+    files: ['testing/**', '**/*.test.{ts,tsx}', '*.config.{ts,mjs}'],
+    rules: {
+      'sonarjs/no-skipped-tests': 'off',
+      'sonarjs/no-clear-text-protocols': 'off',
+      'sonarjs/no-os-command-from-path': 'off',
     },
   },
   {

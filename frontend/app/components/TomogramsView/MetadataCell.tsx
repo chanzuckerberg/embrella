@@ -10,6 +10,7 @@ export const MetadataCell = (props: CellContext<EntityDataTypes, unknown>) => {
   if (!rowData?.procPlan?.name?.includes('czii-live')) return <span />;
 
   const sessionName = rowData.msiSession?.name ?? '';
+  // eslint-disable-next-line sonarjs/slow-regex
   const runNumber = (rowData.tomograms?.name ?? '').replace(/\s*\(id=\d+\)/g, '').trim();
   if (!sessionName || !runNumber) return <span />;
 

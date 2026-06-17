@@ -28,6 +28,30 @@ interface FilterTag {
   value: string;
 }
 
+// Categories a search suggestion can dispatch as on the backend filter state.
+type DispatchCategory = 'project' | 'user' | 'sample' | 'msiSession' | 'search';
+
+interface SuggestionOptionProps {
+  item: Suggestion;
+  isHighlighted: boolean;
+  onHighlight: () => void;
+  onSelect: () => void;
+}
+
+// Extracted from the suggestion list render to keep function nesting shallow.
+const SuggestionOption = ({ item, isHighlighted, onHighlight, onSelect }: SuggestionOptionProps) => (
+  <div
+    role="option"
+    aria-selected={isHighlighted}
+    className={`cursor-pointer rounded px-2 py-1 ${isHighlighted ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+    onMouseDown={(e) => e.preventDefault()}
+    onMouseEnter={onHighlight}
+    onClick={onSelect}
+  >
+    <Typography variant="body1">{item.value}</Typography>
+  </div>
+);
+
 const CATEGORY_LABELS: Record<string, string> = {
   grid: 'Grid',
   gridBox: 'Grid Box',
@@ -60,6 +84,44 @@ const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string
   msiSession: { bg: '#e0f7fa', border: '#80deea', text: '#00695c' },
   label: { bg: '#fff8e1', border: '#ffd54f', text: '#f57f17' },
   search: { bg: '#f5f5f5', border: '#bdbdbd', text: '#424242' },
+};
+
+interface SuggestionListProps {
+  entries: [string, Suggestion[]][];
+  highlightedIndex: number;
+  onHighlight: (idx: number) => void;
+  onSelect: (item: Suggestion) => void;
+}
+
+// Extracted from the dropdown render so the per-item handlers don't nest too deeply.
+const SuggestionList = ({ entries, highlightedIndex, onHighlight, onSelect }: SuggestionListProps) => {
+  let flatIndex = 0;
+  return (
+    <>
+      {entries.map(([category, items]) => {
+        const colors = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.search;
+        return (
+          <div key={category} className="px-3 py-1">
+            <Typography variant="caption" className="!font-semibold uppercase" style={{ color: colors.text }}>
+              {CATEGORY_LABELS[category] ?? category}
+            </Typography>
+            {items.map((item) => {
+              const idx = flatIndex++;
+              return (
+                <SuggestionOption
+                  key={`${category}-${item.value}`}
+                  item={item}
+                  isHighlighted={idx === highlightedIndex}
+                  onHighlight={() => onHighlight(idx)}
+                  onSelect={() => onSelect(item)}
+                />
+              );
+            })}
+          </div>
+        );
+      })}
+    </>
+  );
 };
 
 const SEARCHBAR_CATEGORIES = ['project', 'user', 'sample', 'msiSession', 'label', 'search'];
@@ -156,7 +218,7 @@ export const SearchBar = ({
     dispatchTableState({
       payload: {
         categoryFilter: {
-          category: category as 'project' | 'user' | 'sample' | 'msiSession' | 'search',
+          category: category as DispatchCategory,
           value: [...current, value],
         },
       },
@@ -208,7 +270,7 @@ export const SearchBar = ({
       dispatchTableState({
         payload: {
           categoryFilter: {
-            category: tag.category as 'project' | 'user' | 'sample' | 'msiSession' | 'search',
+            category: tag.category as DispatchCategory,
             value: remaining,
           },
         },
@@ -218,7 +280,7 @@ export const SearchBar = ({
       dispatchTableState({
         payload: {
           categoryFilter: {
-            category: tag.category as 'project' | 'user' | 'sample' | 'msiSession' | 'search',
+            category: tag.category as DispatchCategory,
             value: [],
           },
         },
@@ -353,36 +415,12 @@ export const SearchBar = ({
           style={{ zIndex: 1300, width: anchorEl?.offsetWidth }}
         >
           <Paper elevation={3} className="mt-1 max-h-[320px] overflow-y-auto" role="listbox">
-            {(() => {
-              let flatIndex = 0;
-              return sortedSuggestionEntries.map(([category, items]) => {
-                const colors = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.search;
-                return (
-                  <div key={category} className="px-3 py-1">
-                    <Typography variant="caption" className="!font-semibold uppercase" style={{ color: colors.text }}>
-                      {CATEGORY_LABELS[category] ?? category}
-                    </Typography>
-                    {items.map((item) => {
-                      const idx = flatIndex++;
-                      const isHighlighted = idx === highlightedIndex;
-                      return (
-                        <div
-                          key={`${category}-${item.value}`}
-                          role="option"
-                          aria-selected={isHighlighted}
-                          className={`cursor-pointer rounded px-2 py-1 ${isHighlighted ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onMouseEnter={() => setHighlightedIndex(idx)}
-                          onClick={() => handleSuggestionClick(item)}
-                        >
-                          <Typography variant="body1">{item.value}</Typography>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              });
-            })()}
+            <SuggestionList
+              entries={sortedSuggestionEntries}
+              highlightedIndex={highlightedIndex}
+              onHighlight={setHighlightedIndex}
+              onSelect={handleSuggestionClick}
+            />
           </Paper>
         </Popper>
       </div>
