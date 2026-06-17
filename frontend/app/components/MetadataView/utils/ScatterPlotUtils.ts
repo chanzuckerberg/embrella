@@ -27,16 +27,6 @@ interface PositionsMapping {
   maxPositionIndex: number;
 }
 
-// Sturges' formula for calculating number of bins
-export const calculateBins = (values: number[] | undefined): number => {
-  // Ensure values is an array and filter out any non-numeric values
-  if (!Array.isArray(values)) {
-    return 5; // Default number of bins if values is not an array
-  }
-
-  return 5; // Simplified for now
-};
-
 // Helper function to format the metric line with safety checks
 export const formatMetricLine = (metrics: Metrics, key: keyof Metrics, label: string, unit: string, multiplier = 1) => {
   if (metrics[key] === undefined || metrics[key] === null) {
@@ -211,11 +201,6 @@ export const createXAxisConfig = (metricsConfig: MetricConfig[], maxPositionInde
 // Create Y-axis configuration
 export const createYAxisConfig = (metricsConfig: MetricConfig[], data: MetadataVizResponse) => {
   return metricsConfig.map((metric, index) => {
-    const values = data.accepted_results.map((item) => {
-      const value = item.metrics[metric.key as keyof Metrics];
-      return metric.key.includes('bad_patch') ? value * 100 : value;
-    });
-
     const [min, max] = metric.key.includes('bad_patch')
       ? [
           data.metric_ranges[metric.key as keyof Metrics][0] * 100,
@@ -236,7 +221,6 @@ export const createYAxisConfig = (metricsConfig: MetricConfig[], data: MetadataV
         fontWeight: 'bold' as const,
         align: 'center' as const,
       },
-      splitNumber: calculateBins(values),
       min: min - padding,
       max: max + padding,
       splitLine: {
