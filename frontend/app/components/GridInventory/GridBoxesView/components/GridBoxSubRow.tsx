@@ -38,7 +38,7 @@ export const GridBoxSubRow = ({ grids }: GridBoxSubRowProps) => {
         {table.getRowModel().rows.map((row) => (
           <TableRow key={row.id} sx={{ '&:last-child td': { borderBottom: 0 } }}>
             {row.getVisibleCells().map((cell) => {
-              const meta = cell.column.columnDef.meta as { align?: string } | undefined;
+              const meta = cell.column.columnDef.meta;
               const isNameCol = cell.column.id === GRID_BOX_SUB_COLUMN_IDS.NAME;
 
               return (

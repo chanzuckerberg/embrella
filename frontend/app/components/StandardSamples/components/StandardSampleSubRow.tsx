@@ -38,7 +38,7 @@ export const StandardSampleSubRow = ({ grids }: StandardSampleSubRowProps) => {
         {table.getRowModel().rows.map((row) => (
           <TableRow key={row.id} sx={{ '&:last-child td': { borderBottom: 0 } }}>
             {row.getVisibleCells().map((cell) => {
-              const meta = cell.column.columnDef.meta as { align?: string } | undefined;
+              const meta = cell.column.columnDef.meta;
               const isNameCol = cell.column.id === STANDARD_SAMPLE_SUB_COLUMN_IDS.NAME;
 
               return (
