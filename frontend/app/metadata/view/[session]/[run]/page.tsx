@@ -7,12 +7,13 @@ export const metadata: Metadata = {
 };
 
 interface MetadataPageProps {
-  params: {
+  params: Promise<{
     session: string;
     run: string;
-  };
+  }>;
 }
 
-export default function MetadataPage({ params }: MetadataPageProps) {
-  return <MetadataView sessionName={params.session} runNumber={params.run} />;
+export default async function MetadataPage({ params }: MetadataPageProps) {
+  const { session, run } = await params;
+  return <MetadataView sessionName={session} runNumber={run} />;
 }

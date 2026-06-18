@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Box, CircularProgress, IconButton, Snackbar, Alert, Tab, Tabs, Typography } from '@mui/material';
 import LinkIcon from '@mui/icons-material/Link';
 import { Dialog, DialogContent, DialogTitle } from '@czi-sds/components';
@@ -50,12 +50,16 @@ export const GridDetailDialog: React.FC<GridDetailDialogProps> = ({ open, onClos
     location?.position_in_puck ?? undefined
   );
 
-  // Reset state when dialog opens/closes or grid changes
-  useEffect(() => {
+  // Reset to the first tab when the dialog opens or the grid changes.
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevGridId, setPrevGridId] = useState(gridId);
+  if (open !== prevOpen || gridId !== prevGridId) {
+    setPrevOpen(open);
+    setPrevGridId(gridId);
     if (open) {
       setActiveTab(0);
     }
-  }, [open, gridId]);
+  }
 
   if (!open || !gridId) return null;
 

@@ -4,5 +4,17 @@ yarn.lock
 .yarn/
 .yarnrc.yml
 
+# Build output
+.next/
+out/
+build/
+coverage/
+next-env.d.ts
+
+# eslint
+.eslintcache
+
 # Playwright
 playwright-report/
+playwright-html-report/
+testing/.auth/

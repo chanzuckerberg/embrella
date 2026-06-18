@@ -117,7 +117,7 @@ export default function CLIParserModal({ open, onClose, onApply, schema }: CLIPa
             <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', mr: 1 }}>
               Ctrl+Enter to parse
             </Typography>
-            <Button sdsType="secondary" sdsStyle="rounded" onClick={handleParse} disabled={!cliText.trim()}>
+            <Button sdsType="secondary" sdsStyle="outline" onClick={handleParse} disabled={!cliText.trim()}>
               Parse
             </Button>
           </Box>
@@ -264,12 +264,12 @@ export default function CLIParserModal({ open, onClose, onApply, schema }: CLIPa
 
           {/* Action Buttons */}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
-            <Button sdsType="secondary" sdsStyle="rounded" onClick={handleClose}>
+            <Button sdsType="secondary" sdsStyle="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button
               sdsType="primary"
-              sdsStyle="rounded"
+              sdsStyle="solid"
               onClick={handleApply}
               disabled={!parseResult?.success || parseResult.parsedDetails.length === 0}
             >

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Box, TextField, MenuItem, Tooltip, Typography, Alert } from '@mui/material';
 import { Icon } from '@czi-sds/components';
 import { PuckList, GridBoxDetailResponse, UserList } from '@app/common/types/gridLogging';
@@ -46,8 +46,10 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
     formData.destinationPuck ? Number(formData.destinationPuck) : undefined
   );
 
-  // Reset form when dialog opens
-  useEffect(() => {
+  // Reset form when the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setFormData({
         destinationCane: '',
@@ -56,7 +58,7 @@ export const MoveGridBox: React.FC<MoveGridBoxProps> = ({
       });
       clearError();
     }
-  }, [open, clearError]);
+  }
 
   // Get available positions (empty slots only) from the puck slots API
   const availablePositions = useMemo(() => {

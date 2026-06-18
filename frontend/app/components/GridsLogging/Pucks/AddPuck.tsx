@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Box, TextField, MenuItem, FormControl, InputLabel, Select, InputAdornment, Alert } from '@mui/material';
 import {
   useGridLoggingChoices,
@@ -38,8 +38,10 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
   // fetch pucks for the selected cane
   const { pucks: pucksData } = useGridLoggingPucksByCane(formData.cane ? Number(formData.cane) : undefined);
 
-  // Reset form when dialog opens
-  useEffect(() => {
+  // Reset form when the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setFormData({
         user: selectedUser?.id || 0,
@@ -50,31 +52,14 @@ export const AddPuck: React.FC<AddPuckProps> = ({ open, onClose, selectedUser, c
       });
       clearError();
     }
-  }, [open, selectedUser?.id, caneId, clearError]);
-
-  useEffect(() => {
-    if (selectedUser?.id) {
-      setFormData((prev) => ({
-        ...prev,
-        user: selectedUser.id,
-      }));
-    }
-  }, [selectedUser?.id]);
-
-  // Reset position when cane changes
-  useEffect(() => {
-    if (formData.cane) {
-      setFormData((prev) => ({
-        ...prev,
-        positionInCane: '',
-      }));
-    }
-  }, [formData.cane]);
+  }
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
+      // Changing the cane invalidates the previously selected position.
+      ...(field === 'cane' ? { positionInCane: '' } : {}),
     }));
   };
 

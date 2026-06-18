@@ -101,14 +101,16 @@ export const CreateReviewView = () => {
   const [runOptions, setRunOptions] = useState<Array<RunOption>>([]);
   const [selectedRun, setSelectedRun] = useState<RunOption | undefined>(undefined);
 
-  const annotationObjectSettingsContainerRef = useRef<HTMLDivElement | null>(null);
+  const [annotationObjectSettingsContainer, setAnnotationObjectSettingsContainer] = useState<HTMLDivElement | null>(
+    null
+  );
 
-  const annotationObjectSearchRef = useRef<HTMLDivElement | null>(null);
+  const [annotationObjectSearch, setAnnotationObjectSearch] = useState<HTMLDivElement | null>(null);
   const [annotationObjectValue, setAnnotationObjectValue] = useState('');
   const [selectedAnnotationObjects, setSelectedAnnotationObjects] = useState<Array<string>>([]);
   const [isAnnotationObjectsDropdownOpen, setIsAnnotationObjectsDropdownOpen] = useState(false);
 
-  const previousSessionsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [previousSessionsButton, setPreviousSessionsButton] = useState<HTMLButtonElement | null>(null);
   const previousSessionsRequestMade = useRef(false);
   const [previousSessions, setPreviousSessions] = useState<Array<ReviewData> | undefined>(undefined);
   const [isPreviousSessionsDropdownOpen, setIsPreviousSessionDropdownOpen] = useState(false);
@@ -209,7 +211,7 @@ export const CreateReviewView = () => {
               </div>
               <div
                 className="grid grid-rows-2 grid-cols-[115px_1fr] gap-[6px] !pb-[12px]"
-                ref={annotationObjectSettingsContainerRef}
+                ref={setAnnotationObjectSettingsContainer}
               >
                 <div className="font-semibold text-[14px]">Review input:</div>
                 <div className="text-[14px]">Label Objects of Interest for Whole-tomogram (Optional)</div>
@@ -240,7 +242,7 @@ export const CreateReviewView = () => {
                       onClick={() => {
                         setIsAnnotationObjectsDropdownOpen(true);
                       }}
-                      ref={annotationObjectSearchRef}
+                      ref={setAnnotationObjectSearch}
                     />
                     <DropdownMenu
                       multiple
@@ -258,7 +260,7 @@ export const CreateReviewView = () => {
                         );
                       }}
                       onClickAway={(event) => {
-                        if (!annotationObjectSearchRef.current?.contains(event?.target as Node)) {
+                        if (!annotationObjectSearch?.contains(event?.target as Node)) {
                           setIsAnnotationObjectsDropdownOpen(false);
                         }
                       }}
@@ -266,14 +268,14 @@ export const CreateReviewView = () => {
                       isOptionEqualToValue={(option: AutocompleteOptionBasic, value: string) => {
                         return option.name === value;
                       }}
-                      anchorEl={annotationObjectSearchRef.current}
-                      width={annotationObjectSearchRef.current?.clientWidth}
+                      anchorEl={annotationObjectSearch}
+                      width={annotationObjectSearch?.clientWidth}
                     />
                     {
                       // #region Previous Sessions
                     }
                     <Button
-                      sdsStyle="square"
+                      sdsStyle="outline"
                       className="grow"
                       sdsType="secondary"
                       startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
@@ -287,7 +289,7 @@ export const CreateReviewView = () => {
                           setPreviousSessions(previousSessions);
                         }
                       }}
-                      ref={previousSessionsButtonRef}
+                      ref={setPreviousSessionsButton}
                     >
                       Add from Previous Session
                     </Button>
@@ -311,8 +313,8 @@ export const CreateReviewView = () => {
                       onClickAway={() => {
                         setIsPreviousSessionDropdownOpen(false);
                       }}
-                      anchorEl={previousSessionsButtonRef.current}
-                      width={annotationObjectSettingsContainerRef.current?.clientWidth}
+                      anchorEl={previousSessionsButton}
+                      width={annotationObjectSettingsContainer?.clientWidth}
                     />
                   </div>
                   <div className="!mt-[8px] flex flex-wrap gap-[6px]">
@@ -392,7 +394,7 @@ export const CreateReviewView = () => {
               disabled={
                 isCreatingReview || !selectedTemSession || !selectedRun || !selectedReconstructionType || !reviewName
               }
-              sdsStyle="square"
+              sdsStyle="solid"
               className="self-start"
             >
               Create Review

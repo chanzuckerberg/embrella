@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Box, TextField, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { disabledTextFieldStyles } from '../GridBox/DisableBoxStyle';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
@@ -87,8 +87,10 @@ export const AddGrid: React.FC<AddGridProps> = ({
     blotDistance: '',
   });
 
-  // Reset form when dialog opens
-  useEffect(() => {
+  // Reset form when the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setFormData({
         user: selectedUser?.id || '',
@@ -108,7 +110,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
       clearError();
       setSelectedLabels([]);
     }
-  }, [open, selectedUser?.id, positionInBox, gridBoxId, gridBoxName, clearError]);
+  }
 
   const devices = devicesList;
   const projectLeaders =

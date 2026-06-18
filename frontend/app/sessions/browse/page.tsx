@@ -17,7 +17,7 @@ export default function BrowseSessionsPage() {
       <Box sx={{ display: 'flex', gap: 2 }}>
         <Button
           sdsType="primary"
-          sdsStyle="rounded"
+          sdsStyle="solid"
           onClick={() => (window.location.href = `${DJANGO_URL}/admin/tem/msisession/`)}
         >
           View Sessions
@@ -45,7 +45,7 @@ export default function BrowseSessionsPage() {
         </Box>
         <Button
           sdsType="secondary"
-          sdsStyle="rounded"
+          sdsStyle="outline"
           onClick={() => (window.location.href = '/processing/tomograms/metadata')}
         >
           Go to Tomogram Summaries

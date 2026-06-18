@@ -251,7 +251,7 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
     <>
       <Button
         sdsType="secondary"
-        sdsStyle="rounded"
+        sdsStyle="outline"
         startIcon={<Icon sdsIcon="Code" sdsSize="s" />}
         onClick={() => setCliParserOpen(true)}
       >

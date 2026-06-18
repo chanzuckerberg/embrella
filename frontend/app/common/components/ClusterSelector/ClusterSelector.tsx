@@ -79,9 +79,10 @@ export const ClusterSelector: React.FC<ClusterSelectorProps> = ({
     }
   }, [user, value, onSSHSetupRequired]);
 
-  // Trigger a re-check when recheckTrigger changes
+  // Re-run the async access check when the parent bumps recheckTrigger (an external signal).
   useEffect(() => {
     if (recheckTrigger !== undefined && recheckTrigger > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- async action in response to an external trigger
       handleCheckAccess();
     }
   }, [recheckTrigger, handleCheckAccess]);

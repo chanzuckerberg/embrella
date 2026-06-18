@@ -34,7 +34,7 @@ const config: PlaywrightTestConfig = {
     },
   ],
   testDir: 'testing',
-  testMatch: /.*\.test\.ts/,
+  testMatch: /\.test\.ts$/,
   timeout: 1.5 * 60 * 1000,
   globalSetup: inDevcontainer ? require.resolve('./testing/global-setup') : undefined,
   use: {

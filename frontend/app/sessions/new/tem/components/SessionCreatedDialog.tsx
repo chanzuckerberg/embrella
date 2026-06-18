@@ -86,13 +86,13 @@ export function SessionCreatedDialog({ open, session, onCreateAnother, onDone }:
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button sdsType="secondary" sdsStyle="rounded" onClick={onCreateAnother}>
+        <Button sdsType="secondary" sdsStyle="outline" onClick={onCreateAnother}>
           Create Another
         </Button>
-        <Button sdsType="secondary" sdsStyle="rounded" onClick={() => window.open(session.legacy_url, '_blank')}>
+        <Button sdsType="secondary" sdsStyle="outline" onClick={() => window.open(session.legacy_url, '_blank')}>
           View Details
         </Button>
-        <Button sdsType="primary" sdsStyle="rounded" onClick={onDone}>
+        <Button sdsType="primary" sdsStyle="solid" onClick={onDone}>
           Done
         </Button>
       </DialogActions>

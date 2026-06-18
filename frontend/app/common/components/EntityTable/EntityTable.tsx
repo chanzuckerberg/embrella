@@ -149,7 +149,7 @@ export const EntityTable = <T extends EntityDataTypes>({
                     onClick={canExpand ? () => row.toggleExpanded() : undefined}
                   >
                     {row.getVisibleCells().map((cell, cellIndex) => {
-                      const meta = cell.column.columnDef.meta as { maxWidth?: number } | undefined;
+                      const meta = cell.column.columnDef.meta;
                       const width = cell.column.columnDef.size;
                       const content = flexRender(cell.column.columnDef.cell, cell.getContext());
                       return (

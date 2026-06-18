@@ -35,7 +35,7 @@ export const ReviewsViewHeader = () => {
       />
       <Link href="/processing/tomograms/reviews/create" className="!mt-auto !mb-auto">
         <Button
-          sdsStyle="square"
+          sdsStyle="solid"
           variant="contained"
           startIcon={<Icon sdsIcon="Plus" sdsSize="xs" />}
           className="h-[32px] !text-[13px] !font-semibold"

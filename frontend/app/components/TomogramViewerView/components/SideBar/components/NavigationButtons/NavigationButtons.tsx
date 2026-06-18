@@ -11,7 +11,7 @@ export const NavigationButtons = ({ currentIndex, totalItems, onPrevious, onNext
   return (
     <div className="flex justify-between gap-4 mt-4">
       <Button
-        sdsStyle="square"
+        sdsStyle="outline"
         sdsType="secondary"
         disabled={currentIndex <= 0}
         onClick={onPrevious}
@@ -21,7 +21,7 @@ export const NavigationButtons = ({ currentIndex, totalItems, onPrevious, onNext
         Previous
       </Button>
       <Button
-        sdsStyle="square"
+        sdsStyle="outline"
         sdsType="secondary"
         disabled={currentIndex >= totalItems - 1}
         onClick={onNext}

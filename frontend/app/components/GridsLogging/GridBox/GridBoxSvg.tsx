@@ -46,7 +46,8 @@ export const GridBoxSVG: React.FC<GridBoxSVGProps> = ({
     // First check if we have grid box data for the selected slot
     if (gridBoxData?.grid_box?.positions) {
       const gridPosition = gridBoxData.grid_box.positions.find((p) => p.q === position);
-      return gridPosition ? (gridPosition.occupied ? 'occupied' : 'empty') : 'unknown';
+      if (!gridPosition) return 'unknown';
+      return gridPosition.occupied ? 'occupied' : 'empty';
     }
 
     // Fallback: check if the slot itself is filled (from slots data)

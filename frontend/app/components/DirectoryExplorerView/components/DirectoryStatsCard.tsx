@@ -19,9 +19,16 @@ export const DirectoryStatsCard = ({ surveyId }: DirectoryStatsCardProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const [prevSurveyId, setPrevSurveyId] = useState(surveyId);
+  if (surveyId !== prevSurveyId) {
+    setPrevSurveyId(surveyId);
     if (!surveyId) {
       setStats(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!surveyId) {
       return;
     }
 

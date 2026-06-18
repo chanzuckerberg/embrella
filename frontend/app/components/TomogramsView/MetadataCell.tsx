@@ -10,13 +10,14 @@ export const MetadataCell = (props: CellContext<EntityDataTypes, unknown>) => {
   if (!rowData?.procPlan?.name?.includes('czii-live')) return <span />;
 
   const sessionName = rowData.msiSession?.name ?? '';
+  // eslint-disable-next-line sonarjs/slow-regex
   const runNumber = (rowData.tomograms?.name ?? '').replace(/\s*\(id=\d+\)/g, '').trim();
   if (!sessionName || !runNumber) return <span />;
 
   const href = `/metadata/view/${encodeURIComponent(sessionName)}/${encodeURIComponent(runNumber)}`;
   return (
     <Link href={href} style={{ textDecoration: 'none' }}>
-      <Button sdsType="secondary" sdsStyle="rounded" startIcon={<Icon sdsIcon="BarChartVertical3" sdsSize="s" />}>
+      <Button sdsType="secondary" sdsStyle="outline" startIcon={<Icon sdsIcon="BarChartVertical3" sdsSize="s" />}>
         Summary
       </Button>
     </Link>

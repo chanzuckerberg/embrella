@@ -52,45 +52,44 @@ export const HistoricalJobsView: React.FC = () => {
     setLogsModalOpen(true);
   }, []);
 
+  const renderJobNameCell = useCallback(
+    ({ getValue, row }: { getValue: () => unknown; row: { original: Job } }) => (
+      <span
+        style={{
+          fontWeight: 500,
+          color: '#6E4FF9',
+          cursor: 'pointer',
+          textDecoration: 'underline',
+        }}
+        onClick={() => handleJobClick(row.original)}
+      >
+        {getValue() as string}
+      </span>
+    ),
+    [handleJobClick]
+  );
+
+  const renderActionsCell = useCallback(
+    ({ row }: { row: { original: Job } }) => (
+      <Button sdsType="secondary" sdsStyle="outline" size="small" onClick={() => handleJobClick(row.original)}>
+        View
+      </Button>
+    ),
+    [handleJobClick]
+  );
+
   // Customize columns to add click handler to job name and view button
   const customColumns = useMemo(() => {
     return HISTORICAL_JOB_COLUMN_DEFS.map((col) => {
       if (col.id === 'jobName') {
-        return {
-          ...col,
-          cell: ({ getValue, row }: { getValue: () => unknown; row: { original: Job } }) => {
-            const value = getValue() as string;
-            return (
-              <span
-                style={{
-                  fontWeight: 500,
-                  color: '#6E4FF9',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-                onClick={() => handleJobClick(row.original)}
-              >
-                {value}
-              </span>
-            );
-          },
-        };
+        return { ...col, cell: renderJobNameCell };
       }
       if (col.id === 'actions') {
-        return {
-          ...col,
-          cell: ({ row }: { row: { original: Job } }) => {
-            return (
-              <Button sdsType="secondary" sdsStyle="square" size="small" onClick={() => handleJobClick(row.original)}>
-                View
-              </Button>
-            );
-          },
-        };
+        return { ...col, cell: renderActionsCell };
       }
       return col;
     });
-  }, [handleJobClick]);
+  }, [renderJobNameCell, renderActionsCell]);
 
   return (
     <TableStateProvider
@@ -138,7 +137,7 @@ export const HistoricalJobsView: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
             <Button
               sdsType="secondary"
-              sdsStyle="square"
+              sdsStyle="outline"
               size="small"
               startIcon={<RefreshIcon />}
               onClick={handleRefresh}

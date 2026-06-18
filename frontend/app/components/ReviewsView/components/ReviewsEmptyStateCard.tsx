@@ -24,7 +24,7 @@ export const ReviewsEmptyStateCard = () => {
           </Typography>
         </Box>
         <Link href="/processing/tomograms/reviews/create">
-          <Button sdsType="secondary" sdsStyle="rounded">
+          <Button sdsType="secondary" sdsStyle="outline">
             Create Review
           </Button>
         </Link>

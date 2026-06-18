@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, type JSX } from 'react';
 
 import { ComplexFilter, InputDropdownProps } from '@czi-sds/components';
 

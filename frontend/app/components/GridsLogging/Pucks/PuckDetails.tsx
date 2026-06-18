@@ -93,7 +93,7 @@ export const PuckDetails: React.FC<PuckDetailsProps> = ({
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
                   onClick={() => handleAddGridBox()}
                   size="small"

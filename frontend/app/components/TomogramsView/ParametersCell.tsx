@@ -6,6 +6,20 @@ import { Button, LoadingIndicator, DialogTitle, DialogContent, Dialog } from '@c
 import { TomogramData } from './types';
 import { DJANGO_URL } from '@app/common/constants/api';
 
+const renderParameterValue = (value: unknown): React.ReactNode => {
+  if (typeof value !== 'object' || value === null) {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.join(', ')}]`;
+  }
+  return (
+    <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: 14, paddingLeft: 8 }}>
+      {JSON.stringify(value, null, 2)}
+    </pre>
+  );
+};
+
 export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => {
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<Record<string, unknown> | string | null>(null);
@@ -54,7 +68,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => 
 
   return (
     <>
-      <Button sdsType="secondary" sdsStyle="rounded" onClick={handleOpen}>
+      <Button sdsType="secondary" sdsStyle="outline" onClick={handleOpen}>
         Parameters
       </Button>
       <Dialog onClose={() => setOpen(false)} open={open} sdsSize="l" aria-labelledby="parameters-dialog-title">
@@ -95,17 +109,7 @@ export const ParametersCell = (props: CellContext<EntityDataTypes, unknown>) => 
                           verticalAlign: 'top',
                         }}
                       >
-                        {typeof value === 'object' && value !== null ? (
-                          Array.isArray(value) ? (
-                            `[${value.join(', ')}]`
-                          ) : (
-                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: 14, paddingLeft: 8 }}>
-                              {JSON.stringify(value, null, 2)}
-                            </pre>
-                          )
-                        ) : (
-                          String(value)
-                        )}
+                        {renderParameterValue(value)}
                       </td>
                     </tr>
                   ))}

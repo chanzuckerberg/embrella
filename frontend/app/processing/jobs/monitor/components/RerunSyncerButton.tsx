@@ -105,7 +105,7 @@ export const RerunSyncerButton: React.FC<RerunSyncerButtonProps> = ({
           </IconButton>
         </Tooltip>
       ) : (
-        <Button onClick={handleOpen} sdsType="secondary" sdsStyle="square" startIcon={<ReplayIcon />}>
+        <Button onClick={handleOpen} sdsType="secondary" sdsStyle="outline" startIcon={<ReplayIcon />}>
           Re-run Syncer
         </Button>
       )}
@@ -152,7 +152,7 @@ export const RerunSyncerButton: React.FC<RerunSyncerButtonProps> = ({
                   onClick={handleRerun}
                   disabled={loading}
                   sdsType="primary"
-                  sdsStyle="square"
+                  sdsStyle="solid"
                   startIcon={loading ? <CircularProgress size={20} /> : undefined}
                 >
                   {loading ? 'Starting...' : 'Re-run Syncer'}

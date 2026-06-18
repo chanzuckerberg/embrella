@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Box, TextField, Alert } from '@mui/material';
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { disabledTextFieldStyles } from '@app/components/GridsLogging/GridBox/DisableBoxStyle';
@@ -17,13 +17,16 @@ export const CreateNotesPageDialog: React.FC<{
   const [url, setUrl] = useState('');
   const { createExternalResource, isCreating, error, clearError } = useCreateExternalResource();
 
-  useEffect(() => {
+  // Reset the form when the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setName('');
       setUrl('');
       clearError();
     }
-  }, [open, clearError]);
+  }
 
   const handleSave = async () => {
     if (!name.trim() || !url.trim()) {

@@ -24,11 +24,9 @@ export const AllLabelsCell = ({ row }: AllLabelsCellProps) => {
         body: JSON.stringify({ label_ids: next.map((l) => l.id) }),
       });
       if (!res.ok) {
-        // eslint-disable-next-line no-console
         console.error('Failed to update labels:', res.status, await res.text());
       }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to update labels:', e);
     }
   };

@@ -28,6 +28,7 @@ export const ClipAllGridsDialog: React.FC<ClipAllGridsDialogProps> = ({
   error,
 }) => {
   const alreadyClippedCount = totalGrids - unclippedCount;
+  const clipButtonLabel = `Clip ${unclippedCount} ${unclippedCount > 1 ? 'Grids' : 'Grid'}`;
 
   return (
     <Dialog open={open} onClose={onClose} sdsSize="xs">
@@ -75,7 +76,7 @@ export const ClipAllGridsDialog: React.FC<ClipAllGridsDialogProps> = ({
         )}
 
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-          <Button onClick={onClose} disabled={isProcessing} sdsType="secondary" sdsStyle="rounded">
+          <Button onClick={onClose} disabled={isProcessing} sdsType="secondary" sdsStyle="outline">
             {unclippedCount === 0 ? 'Close' : 'Cancel'}
           </Button>
           {unclippedCount > 0 && (
@@ -83,10 +84,10 @@ export const ClipAllGridsDialog: React.FC<ClipAllGridsDialogProps> = ({
               onClick={onConfirm}
               disabled={isProcessing}
               sdsType="primary"
-              sdsStyle="rounded"
+              sdsStyle="solid"
               startIcon={<Icon sdsIcon="Grid" sdsSize="s" />}
             >
-              {isProcessing ? 'Clipping...' : `Clip ${unclippedCount} Grid${unclippedCount > 1 ? 's' : ''}`}
+              {isProcessing ? 'Clipping...' : clipButtonLabel}
             </Button>
           )}
         </Box>

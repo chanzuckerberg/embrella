@@ -10,6 +10,7 @@ interface SSHSetupModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  // TODO: cluster list from config or constants.
   cluster: 'czii' | 'bruno';
   defaultUsername?: string;
   purpose?: 'submission' | 'management';
@@ -28,7 +29,9 @@ export const SSHSetupModal: React.FC<SSHSetupModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Re-seed the username when the modal opens or the default changes.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync field to prop on open
     setUsername(defaultUsername);
   }, [defaultUsername, open]);
 
@@ -144,7 +147,7 @@ export const SSHSetupModal: React.FC<SSHSetupModalProps> = ({
               onClick={handleSubmit}
               disabled={loading || !password || !username.trim()}
               sdsType="primary"
-              sdsStyle="square"
+              sdsStyle="solid"
               startIcon={loading ? <CircularProgress size={20} /> : undefined}
             >
               {loading ? 'Setting up...' : 'Setup SSH'}

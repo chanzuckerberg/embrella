@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- deps stage: yarn install with cache ----
-FROM node:20.16.0-slim AS deps
+FROM node:24.16.0-slim AS deps
 
 ENV YARN_ENABLE_GLOBAL_CACHE=false \
     YARN_ENABLE_TELEMETRY=false
@@ -27,7 +27,7 @@ COPY --chown=node:node frontend/ ./
 RUN yarn build
 
 # ---- runtime stage (prod) ----
-FROM node:20.16.0-slim AS runtime
+FROM node:24.16.0-slim AS runtime
 ENV NODE_ENV=production \
     YARN_ENABLE_TELEMETRY=false
 WORKDIR /app

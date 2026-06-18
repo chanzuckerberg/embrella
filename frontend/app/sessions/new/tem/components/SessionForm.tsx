@@ -158,13 +158,13 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 1 }}>
         {onCancel && (
-          <Button sdsType="secondary" sdsStyle="rounded" onClick={onCancel} disabled={isSubmitting}>
+          <Button sdsType="secondary" sdsStyle="outline" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
         )}
         <Button
           sdsType="primary"
-          sdsStyle="rounded"
+          sdsStyle="solid"
           onClick={handleSubmit}
           disabled={isSubmitting}
           startIcon={isSubmitting ? <CircularProgress size={16} /> : undefined}

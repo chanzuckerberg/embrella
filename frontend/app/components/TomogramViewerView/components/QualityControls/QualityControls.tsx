@@ -22,7 +22,7 @@ export const QualityControls = ({
       <h3 className="m-0 text-base font-semibold">Assign Tomogram Quality:</h3>
       <Button
         startIcon={<Icon sdsIcon="Check" sdsSize="s" />}
-        sdsStyle="square"
+        sdsStyle={selectedQuality === 'accepted' ? 'solid' : 'outline'}
         sdsType={selectedQuality === 'accepted' ? 'primary' : 'secondary'}
         fullWidth
         disabled={isDisabled}
@@ -32,7 +32,7 @@ export const QualityControls = ({
       </Button>
       <Button
         startIcon={<Icon sdsIcon="XMark" sdsSize="l" />}
-        sdsStyle="square"
+        sdsStyle={selectedQuality === 'rejected' ? 'solid' : 'outline'}
         sdsType={selectedQuality === 'rejected' ? 'primary' : 'secondary'}
         fullWidth
         disabled={isDisabled}
@@ -42,7 +42,7 @@ export const QualityControls = ({
       </Button>
       <Button
         startIcon={<Icon sdsIcon="QuestionMark" sdsSize="l" />}
-        sdsStyle="square"
+        sdsStyle={selectedQuality === 'uncertain' ? 'solid' : 'outline'}
         sdsType={selectedQuality === 'uncertain' ? 'primary' : 'secondary'}
         fullWidth
         disabled={isDisabled}
@@ -52,7 +52,7 @@ export const QualityControls = ({
       </Button>
       <Button
         startIcon={<Icon sdsIcon="Star" sdsSize="l" />}
-        sdsStyle="square"
+        sdsStyle={selectedQuality === 'exemplary' ? 'solid' : 'outline'}
         sdsType={selectedQuality === 'exemplary' ? 'primary' : 'secondary'}
         fullWidth
         disabled={isDisabled}

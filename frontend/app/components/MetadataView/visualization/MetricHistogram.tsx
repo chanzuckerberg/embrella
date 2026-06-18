@@ -35,7 +35,7 @@ const getDecimalPlaces = (binWidth: number): number => {
 
 export const MetricHistogram: React.FC<MetricHistogramProps> = ({ data, processedData }) => {
   const chartRef = useRef<HTMLDivElement>(null);
-  const chartInstance = useRef<echarts.ECharts>();
+  const chartInstance = useRef<echarts.ECharts>(undefined);
 
   useEffect(() => {
     if (!chartRef.current || !data?.accepted_results?.length) return;

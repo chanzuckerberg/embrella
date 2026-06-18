@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, Dispatch, ReactNode, useCallback, useMemo, useReducer } from 'react';
+import { createContext, Dispatch, ReactNode, useCallback, useMemo, useReducer, type JSX } from 'react';
 import { noop, PaginationState, SortingState, Updater } from '@tanstack/react-table';
 import { EntityFilterCategories } from '@app/common/types/filter';
 import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates, type UseQueryStatesKeysMap } from 'nuqs';

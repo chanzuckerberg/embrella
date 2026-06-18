@@ -1,13 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   compiler: {
-    emotion: {
-      autoLabel: 'never',
-      sourceMap: false,
-    },
+    emotion: true,
   },
-  // output: "export",
-  reactStrictMode: true,
+  transpilePackages: ['@czi-sds/components', '@czi-sds/data-viz'],
 };
 
 module.exports = nextConfig;

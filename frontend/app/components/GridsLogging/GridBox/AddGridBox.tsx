@@ -31,7 +31,6 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
   positionInPuck,
   onGridBoxCreated,
 }) => {
-  // const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     user: selectedUser?.id || '',
     gridBoxName: '',
@@ -49,8 +48,10 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
 
   // fetch slots data when puckId is available
   const { slotsData, refetch: refetchPuckSlots } = useGridLoggingPuckSlots(puckId);
-  // Reset form when dialog opens
-  useEffect(() => {
+  // Reset form when the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setFormData({
         user: selectedUser?.id || '',
@@ -64,7 +65,7 @@ export const AddGridBox: React.FC<AddGridBoxProps> = ({
       });
       clearError();
     }
-  }, [open, selectedUser?.id, puckId, puckName, positionInPuck, clearError]);
+  }
 
   useEffect(() => {
     if (open && puckId) {

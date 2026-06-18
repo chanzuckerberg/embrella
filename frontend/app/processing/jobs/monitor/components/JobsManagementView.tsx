@@ -161,42 +161,42 @@ export const JobsManagementView: React.FC = () => {
     setLogsModalOpen(true);
   }, []);
 
+  const renderJobNameCell = useCallback(
+    ({ getValue, row }: { getValue: () => unknown; row: { original: Job } }) => (
+      <span
+        style={{
+          fontWeight: 500,
+          color: '#6E4FF9',
+          cursor: 'pointer',
+          textDecoration: 'underline',
+        }}
+        onClick={() => handleJobNameClick(row.original)}
+      >
+        {getValue() as string}
+      </span>
+    ),
+    [handleJobNameClick]
+  );
+
+  const renderActionsCell = useCallback(
+    ({ row }: { row: { original: Job } }) => <CancelJobButton job={row.original} onCancel={handleRefresh} />,
+    [handleRefresh]
+  );
+
   // Customize columns to add click handler to job name and filter out Source/Cluster columns
   const customColumns = useMemo(() => {
     return JOB_COLUMN_DEFS.filter((col) => col.id !== 'workflowType' && col.id !== 'cluster').map((col) => {
       if (col.id === 'jobName') {
-        return {
-          ...col,
-          cell: ({ getValue, row }: { getValue: () => unknown; row: { original: Job } }) => {
-            const value = getValue() as string;
-            return (
-              <span
-                style={{
-                  fontWeight: 500,
-                  color: '#6E4FF9',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-                onClick={() => handleJobNameClick(row.original)}
-              >
-                {value}
-              </span>
-            );
-          },
-        };
+        return { ...col, cell: renderJobNameCell };
       }
       if (col.id === 'actions') {
-        return {
-          ...col,
-          cell: ({ row }: { row: { original: Job } }) => {
-            const job = row.original;
-            return <CancelJobButton job={job} onCancel={handleRefresh} />;
-          },
-        };
+        return { ...col, cell: renderActionsCell };
       }
       return col;
     });
-  }, [handleJobNameClick, handleRefresh]);
+  }, [renderJobNameCell, renderActionsCell]);
+
+  const bulkCancelLabel = `Cancel ${selectedJobIds.length} ${selectedJobIds.length > 1 ? 'Jobs' : 'Job'}`;
 
   return (
     <TableStateProvider initialSortState={[{ id: 'jobId', desc: true }]}>
@@ -248,7 +248,7 @@ export const JobsManagementView: React.FC = () => {
             />
             <Button
               sdsType="secondary"
-              sdsStyle="square"
+              sdsStyle="outline"
               size="small"
               startIcon={<RefreshIcon />}
               onClick={handleRefresh}
@@ -260,10 +260,8 @@ export const JobsManagementView: React.FC = () => {
           {/* Bulk Actions */}
           {selectedJobIds.length > 0 && (
             <BulkActionsBar count={selectedJobIds.length}>
-              <Button sdsType="primary" sdsStyle="square" onClick={handleBulkCancel} disabled={bulkCancelLoading}>
-                {bulkCancelLoading
-                  ? 'Cancelling...'
-                  : `Cancel ${selectedJobIds.length} Job${selectedJobIds.length > 1 ? 's' : ''}`}
+              <Button sdsType="primary" sdsStyle="solid" onClick={handleBulkCancel} disabled={bulkCancelLoading}>
+                {bulkCancelLoading ? 'Cancelling...' : bulkCancelLabel}
               </Button>
             </BulkActionsBar>
           )}

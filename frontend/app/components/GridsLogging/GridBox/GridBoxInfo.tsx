@@ -84,17 +84,17 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
     }
   }, [onGridBoxInfoRefetchReady, refetch]);
 
-  // Update edited data when gridBoxData changes
-  useEffect(() => {
-    if (gridBoxData) {
-      const formData = mapGridBoxDetailToFormData(gridBoxData);
-      setEditedData({
-        name: formData.name,
-        color: formData.color,
-        numbering: formData.numbering,
-      });
-    }
-  }, [gridBoxData]);
+  // Re-sync the editable fields when fresh data arrives.
+  const [syncedGridBoxData, setSyncedGridBoxData] = useState(gridBoxData);
+  if (gridBoxData && gridBoxData !== syncedGridBoxData) {
+    setSyncedGridBoxData(gridBoxData);
+    const formData = mapGridBoxDetailToFormData(gridBoxData);
+    setEditedData({
+      name: formData.name,
+      color: formData.color,
+      numbering: formData.numbering,
+    });
+  }
 
   // Early return if no selection
   if (!selectedPuck || !selectedSlot) {
@@ -236,7 +236,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
                   onClick={() => handleAddGrid()}
                   size="small"
@@ -246,7 +246,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
                 </Button>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   startIcon={<Icon sdsIcon="Grid" sdsSize="l" />}
                   onClick={handleClipAllGrids}
                   size="small"
@@ -407,7 +407,7 @@ export const GridBoxInfo: React.FC<GridBoxInfoProps> = ({
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mr: 3 }}>
                 <Button
                   sdsType="primary"
-                  sdsStyle="rounded"
+                  sdsStyle="solid"
                   variant="contained"
                   startIcon={<Icon sdsIcon="ChevronUp2" sdsSize="s" />}
                   onClick={handleMoveGridBox}

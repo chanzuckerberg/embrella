@@ -38,8 +38,8 @@ const CACHE_PROVIDER_OPTIONS = {
   prepend: true,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const featureFlagsCookie = cookies().get(COOKIE_NAME.FEATURE_FLAGS)?.value;
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const featureFlagsCookie = (await cookies()).get(COOKIE_NAME.FEATURE_FLAGS)?.value;
 
   return (
     <html lang="en">

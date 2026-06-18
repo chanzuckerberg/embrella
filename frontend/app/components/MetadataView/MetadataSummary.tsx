@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ButtonDropdown, Button, Alert } from '@czi-sds/components';
 import { SummaryTable } from './sessionSummary/SummaryTable';
 import styles from './MetadataViz.module.css';
@@ -43,11 +43,13 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
     setIsJsonViewOpen(!isJsonViewOpen);
   };
 
-  useEffect(() => {
+  const [prevSummaryError, setPrevSummaryError] = useState(summaryError);
+  if (summaryError !== prevSummaryError) {
+    setPrevSummaryError(summaryError);
     if (summaryError) {
       setShowError(true);
     }
-  }, [summaryError]);
+  }
 
   const renderContent = () => {
     if (showSummary) {
@@ -55,14 +57,18 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
       return summaryAPIData && <SummaryTable data={summaryAPIData} />;
     }
     if (summaryError && showError) {
+      let errorMessage: string;
+      if (summaryError.status === 404) {
+        errorMessage = 'Required files not found. Please check if the session and run number are correct.';
+      } else if (summaryError.status === 500) {
+        errorMessage = 'Server error occurred. Please try again later';
+      } else {
+        errorMessage = summaryError.message || 'An error occurred while fetching metadata';
+      }
       return (
         <div className={styles.alertContainer}>
           <Alert severity="error" onClose={() => setShowError(false)}>
-            {summaryError.status === 404
-              ? 'Required files not found. Please check if the session and run number are correct.'
-              : summaryError.status === 500
-                ? 'Server error occurred. Please try again later'
-                : summaryError.message || 'An error occurred while fetching metadata'}
+            {errorMessage}
           </Alert>
         </div>
       );
@@ -76,19 +82,14 @@ export const MetadataSummary: React.FC<MetadataSummaryProps> = ({
         <div className={styles.buttonGroup}>
           <ButtonDropdown
             sdsType="primary"
-            sdsStyle="rounded"
+            sdsStyle="solid"
             onClick={() => handleToggleSummary()}
             disabled={summaryLoading && !summarySuccess}
           >
             {showSummary ? 'Hide Session Summary' : 'Show Session Summary'}
           </ButtonDropdown>
           {shouldShowGenerateJson && (
-            <Button
-              sdsType="primary"
-              sdsStyle="rounded"
-              onClick={handleToggleJsonView}
-              className={styles.generateButton}
-            >
+            <Button sdsType="primary" sdsStyle="solid" onClick={handleToggleJsonView} className={styles.generateButton}>
               Generate Json
             </Button>
           )}

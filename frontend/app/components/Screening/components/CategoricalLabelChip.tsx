@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Chip, ClickAwayListener, Paper, Popper, Typography } from '@mui/material';
 
 import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
@@ -19,13 +19,17 @@ interface CategoricalLabelChipProps {
   category: LabelCategory;
 }
 
+// Order the available labels to match the configured pickable order, dropping any not present.
+const orderPickableLabels = (all: ScreeningLabel[], pickableNames: readonly string[]): ScreeningLabel[] =>
+  pickableNames.map((name) => all.find((l) => l.name === name)).filter((l): l is ScreeningLabel => Boolean(l));
+
 export const CategoricalLabelChip = ({ gridId, labels: initialLabels, category }: CategoricalLabelChipProps) => {
   const { getLabels, setLabels: setSharedLabels } = useScreeningLabels();
   const labels = getLabels(gridId, initialLabels);
 
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<ScreeningLabel[]>([]);
-  const anchorRef = useRef<HTMLDivElement>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null);
 
   const categoryNames = LABEL_CATEGORIES[category];
   const pickableNames = LABEL_PICKABLE[category];
@@ -37,10 +41,7 @@ export const CategoricalLabelChip = ({ gridId, labels: initialLabels, category }
       .then((res) => res.json())
       .then((data) => {
         const all: ScreeningLabel[] = Array.isArray(data) ? data : (data.results ?? []);
-        const ordered = pickableNames
-          .map((name) => all.find((l) => l.name === name))
-          .filter((l): l is ScreeningLabel => Boolean(l));
-        setOptions(ordered);
+        setOptions(orderPickableLabels(all, pickableNames));
       })
       .catch(() => setOptions([]));
   }, [open, pickableNames]);
@@ -56,11 +57,9 @@ export const CategoricalLabelChip = ({ gridId, labels: initialLabels, category }
         body: JSON.stringify({ label_ids: next.map((l) => l.id) }),
       });
       if (!res.ok) {
-        // eslint-disable-next-line no-console
         console.error('Failed to update labels:', res.status, await res.text());
       }
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Failed to update labels:', e);
     }
   };
@@ -81,7 +80,7 @@ export const CategoricalLabelChip = ({ gridId, labels: initialLabels, category }
 
   return (
     <ClickAwayListener onClickAway={() => setOpen(false)}>
-      <Box ref={anchorRef} onClick={(e) => e.stopPropagation()} sx={{ display: 'inline-flex' }}>
+      <Box ref={setAnchorEl} onClick={(e) => e.stopPropagation()} sx={{ display: 'inline-flex' }}>
         {current ? (
           <Chip
             label={labelDisplayName(current.name)}
@@ -108,7 +107,7 @@ export const CategoricalLabelChip = ({ gridId, labels: initialLabels, category }
           />
         )}
 
-        <Popper open={open} anchorEl={anchorRef.current} placement="bottom-start" style={{ zIndex: 1300 }}>
+        <Popper open={open} anchorEl={anchorEl} placement="bottom-start" style={{ zIndex: 1300 }}>
           <Paper elevation={3} sx={{ mt: '4px', minWidth: 140, py: 0.5 }}>
             {options.map((label) => {
               const isSelected = current?.id === label.id;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useRef, useState } from 'react';
+import { useContext, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import styled from '@emotion/styled';
 import { Link, Button, DropdownMenu, Icon } from '@czi-sds/components';
@@ -228,12 +228,10 @@ export const TopNavigation = () => {
   const isReviewEnabled = featureFlags.includes(FEATURE_FLAG.REVIEW);
 
   // Dropdown states
-  const jobsButtonRef = useRef<HTMLButtonElement | null>(null);
-  const tomogramsButtonRef = useRef<HTMLButtonElement | null>(null);
-  // const dataButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [jobsButton, setJobsButton] = useState<HTMLButtonElement | null>(null);
+  const [tomogramsButton, setTomogramsButton] = useState<HTMLButtonElement | null>(null);
   const [isJobsDropdownOpen, setIsJobsDropdownOpen] = useState(false);
   const [isTomogramsDropdownOpen, setIsTomogramsDropdownOpen] = useState(false);
-  // const [isDataDropdownOpen, setIsDataDropdownOpen] = useState(false);
 
   // Check if any Jobs route is active
   const isJobsActive = pathname.startsWith('/processing/jobs');
@@ -327,7 +325,7 @@ export const TopNavigation = () => {
             <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
               <Button
                 sdsType="secondary"
-                sdsStyle="square"
+                sdsStyle="outline"
                 size="small"
                 onClick={() => (window.location.href = `${DJANGO_URL}/admin/`)}
                 sx={{
@@ -343,7 +341,7 @@ export const TopNavigation = () => {
               </Button>
               <Button
                 sdsType="secondary"
-                sdsStyle="square"
+                sdsStyle="outline"
                 size="small"
                 onClick={() => window.open(`${DJANGO_URL}/docs/tutorials/userguide/`, '_blank')}
                 sx={{
@@ -359,7 +357,7 @@ export const TopNavigation = () => {
               </Button>
               <Button
                 sdsType="secondary"
-                sdsStyle="square"
+                sdsStyle="outline"
                 size="small"
                 onClick={handleLogout}
                 sx={{
@@ -393,7 +391,7 @@ export const TopNavigation = () => {
               <>
                 {/* Jobs Dropdown */}
                 <StyledJobsButton
-                  ref={jobsButtonRef}
+                  ref={setJobsButton}
                   onClick={() => setIsJobsDropdownOpen((prev) => !prev)}
                   isActive={isJobsActive}
                 >
@@ -412,7 +410,7 @@ export const TopNavigation = () => {
                   }))}
                   open={isJobsDropdownOpen}
                   onClickAway={() => setIsJobsDropdownOpen(false)}
-                  anchorEl={jobsButtonRef.current}
+                  anchorEl={jobsButton}
                   PopperBaseProps={{
                     className: 'z-50 rounded-sds-m !w-[200px] [&_li]:list-none [&_svg]:hidden',
                     popperOptions: {
@@ -424,7 +422,7 @@ export const TopNavigation = () => {
 
                 {/* Tomograms Dropdown */}
                 <StyledJobsButton
-                  ref={tomogramsButtonRef}
+                  ref={setTomogramsButton}
                   onClick={() => setIsTomogramsDropdownOpen((prev) => !prev)}
                   isActive={isTomogramsActive}
                 >
@@ -443,7 +441,7 @@ export const TopNavigation = () => {
                   }))}
                   open={isTomogramsDropdownOpen}
                   onClickAway={() => setIsTomogramsDropdownOpen(false)}
-                  anchorEl={tomogramsButtonRef.current}
+                  anchorEl={tomogramsButton}
                   PopperBaseProps={{
                     className: 'z-50 rounded-sds-m !w-[200px] [&_li]:list-none [&_svg]:hidden',
                     popperOptions: {
