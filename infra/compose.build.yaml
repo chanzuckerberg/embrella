@@ -1,0 +1,25 @@
+# Build overlay — local image builds only.
+#
+# The base compose.yaml and the staging/prod overlays are image-only
+# This overlay re-adds the build context and is layered in ONLY for local dev
+
+services:
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+
+  backend:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: infra/frontend.Dockerfile

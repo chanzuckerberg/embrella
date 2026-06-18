@@ -1,6 +1,6 @@
 {
   "name": "Embrella",
-  "dockerComposeFile": ["../infra/compose.yaml", "../infra/compose.dev.yaml"],
+  "dockerComposeFile": ["../infra/compose.yaml", "../infra/compose.build.yaml", "../infra/compose.dev.yaml"],
   "service": "backend",
   "workspaceFolder": "/app",
   "shutdownAction": "stopCompose",

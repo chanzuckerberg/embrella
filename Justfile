@@ -719,7 +719,7 @@ deploy stage envfile branch:
 # Compose invocation pattern. `--env-file .env` makes ${VAR:-default} substitutions
 # in compose.yaml resolve against the repo-root .env (Compose's default lookup
 # would search next to the compose file, which is in infra/ and has no .env).
-COMPOSE_DEV := "podman compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml"
+COMPOSE_DEV := "podman compose --env-file .env -f infra/compose.yaml -f infra/compose.build.yaml -f infra/compose.dev.yaml"
 
 # One-time setup: create the shared external `embrella` podman network. Idempotent.
 netinit:
