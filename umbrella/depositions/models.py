@@ -51,7 +51,7 @@ class Dataset(models.Model):
         choices=STATUS_CHOICES,
         default="draft",
         db_index=True,
-        help_text="Display/submission status; written by the syncer from DepositionJob.state.",
+        help_text="Display/submission status; written by the syncer from DatasetJob.state.",
     )
     sample = models.ForeignKey(
         "cryo_grids.Sample",
@@ -90,7 +90,7 @@ class DatasetFunding(models.Model):
         return f"{self.funding_agency_name} ({self.grant_id})"
 
 
-class DepositionJob(models.Model):
+class DatasetJob(models.Model):
     STATE_CHOICES = [
         ("pending", "Pending"),
         ("prep_submitted", "Prep Submitted"),
@@ -117,7 +117,7 @@ class DepositionJob(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"DepositionJob {self.pk} ({self.state}) for Dataset {self.dataset_id}"
+        return f"DatasetJob {self.pk} ({self.state}) for Dataset {self.dataset_id}"
 
 
 class DepositionSession(models.Model):
