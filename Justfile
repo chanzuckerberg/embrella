@@ -792,6 +792,7 @@ deployv2 stage envfile branch tag="latest":
     # Images are built/pushed by .github/workflows/build-images.yaml to
     # ghcr.io/czimaginginstitute/embrella/{backend,frontend,db}. The host still
     # needs the source checked out for infra/compose*.yaml + nginx templates.
+    # TODO: get self-hosted runner set up to automate all of this, including the templates.
     ssh svc.czii.umbrella@$HOST "set -e; cd /srv/czii-umbrella-django && \
       export GIT_SSH_COMMAND='ssh -i ~/.ssh/umbrella_deployment -o IdentitiesOnly=yes' && \
       git fetch origin {{branch}} && git checkout -B {{branch}} FETCH_HEAD && \
