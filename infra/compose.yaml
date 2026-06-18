@@ -17,7 +17,7 @@ x-backend-env: &backend-env
 services:
   # One-shot: runs DB migrations
   migrate:
-    image: embrella/backend:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-embrella}/backend:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
@@ -29,7 +29,7 @@ services:
     restart: 'no'
 
   backend:
-    image: embrella/backend:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-embrella}/backend:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
@@ -42,7 +42,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: embrella/backend:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-embrella}/backend:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
@@ -53,7 +53,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: embrella/frontend:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-embrella}/frontend:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: infra/frontend.Dockerfile

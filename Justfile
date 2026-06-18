@@ -788,16 +788,22 @@ deployv2 stage envfile branch tag="latest":
       if [[ -z \"\$KEY\" ]]; then echo \"  ✗ SLURM_KEYFILE not set in .env.$ENVNAME\"; exit 1; fi; \
       if [[ ! -f \"\$KEY\" ]]; then echo \"  ✗ SLURM key not found at \$KEY (obtain it from an admin/vault and place it there)\"; exit 1; fi; \
       echo \"  ✓ found at \$KEY\""
-    echo "Checking out branch {{branch}} on $HOST and building images..."
-    # TODO: images are currently BUILT on the host from the checked-out source
-    # (no registry yet). Switch to pulling prebuilt images from ghcr.io once a
-    # build/push pipeline exists — replace `up -d --build` with `pull && up -d`.
+    echo "Checking out branch {{branch}} on $HOST and pulling prebuilt images from ghcr.io..."
+    # Images are built/pushed by .github/workflows/build-images.yaml to
+    # ghcr.io/czimaginginstitute/embrella/{backend,frontend,db}. The host still
+    # needs the source checked out for infra/compose*.yaml + nginx templates.
     ssh svc.czii.umbrella@$HOST "set -e; cd /srv/czii-umbrella-django && \
       export GIT_SSH_COMMAND='ssh -i ~/.ssh/umbrella_deployment -o IdentitiesOnly=yes' && \
       git fetch origin {{branch}} && git checkout -B {{branch}} FETCH_HEAD && \
       (podman network inspect embrella >/dev/null 2>&1 || podman network create embrella) && \
-      (IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml down --remove-orphans 2>/dev/null || true) && \
-      IMAGE_TAG={{tag}} podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d --build"
+      GHCR_USER=\$(grep -E '^GHCR_USER=' .env.$ENVNAME | tail -1 | cut -d= -f2- | tr -d '\"' | tr -d \"'\"); \
+      GHCR_TOKEN=\$(grep -E '^GHCR_TOKEN=' .env.$ENVNAME | tail -1 | cut -d= -f2- | tr -d '\"' | tr -d \"'\"); \
+      if [[ -z \"\$GHCR_USER\" || -z \"\$GHCR_TOKEN\" ]]; then echo '  ✗ GHCR_USER/GHCR_TOKEN not set in .env.$ENVNAME (need a PAT with read:packages)'; exit 1; fi; \
+      echo \"\$GHCR_TOKEN\" | podman login ghcr.io -u \"\$GHCR_USER\" --password-stdin && \
+      export IMAGE_REGISTRY=ghcr.io/czimaginginstitute/embrella IMAGE_TAG={{tag}} && \
+      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml pull && \
+      (podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml down --remove-orphans 2>/dev/null || true) && \
+      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d"
 
 # Restore a specific SQL snapshot into the prod/staging *container* db, then apply
 # migrations. Use to load real data: disaster recovery, seeding a fresh host, or
