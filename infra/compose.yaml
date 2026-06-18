@@ -1,9 +1,9 @@
 # Embrella container stack — base file.
 #
-# This is the *base* layer. By itself it describes the shape of the stack but
-# isn't usually run alone — combine it with one environment overlay:
+# This is the *base* layer.
+# By itself it isn't usually run alone — combine it with one environment overlay:
 #
-#   podman compose -f infra/compose.yaml -f infra/compose.dev.yaml      up -d
+#   podman compose -f infra/compose.yaml -f infra/compose.build.yaml -f infra/compose.dev.yaml up -d
 #   podman compose -f infra/compose.yaml -f infra/compose.staging.yaml  up -d
 #   podman compose -f infra/compose.yaml -f infra/compose.prod.yaml     up -d
 
@@ -18,9 +18,6 @@ services:
   # One-shot: runs DB migrations
   migrate:
     image: ${IMAGE_REGISTRY:-embrella}/backend:${IMAGE_TAG:-latest}
-    build:
-      context: ..
-      dockerfile: infra/backend.Dockerfile
     command: ['true'] # entrypoint migrates (EMBRELLA_MIGRATE=1), then execs this and exits
     environment:
       <<: *backend-env
@@ -30,9 +27,6 @@ services:
 
   backend:
     image: ${IMAGE_REGISTRY:-embrella}/backend:${IMAGE_TAG:-latest}
-    build:
-      context: ..
-      dockerfile: infra/backend.Dockerfile
     environment:
       <<: *backend-env
       EMBRELLA_BUILD_STATIC: '1' # web container builds static + docs
@@ -43,9 +37,6 @@ services:
 
   worker:
     image: ${IMAGE_REGISTRY:-embrella}/backend:${IMAGE_TAG:-latest}
-    build:
-      context: ..
-      dockerfile: infra/backend.Dockerfile
     command: ['python', 'umbrella/manage.py', 'qcluster']
     environment:
       <<: *backend-env
@@ -54,9 +45,6 @@ services:
 
   frontend:
     image: ${IMAGE_REGISTRY:-embrella}/frontend:${IMAGE_TAG:-latest}
-    build:
-      context: ..
-      dockerfile: infra/frontend.Dockerfile
     networks: [internal]
     restart: unless-stopped
 
