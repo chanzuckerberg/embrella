@@ -803,8 +803,7 @@ deployv2 stage envfile branch tag="latest":
       echo \"\$GHCR_TOKEN\" | podman login ghcr.io -u \"\$GHCR_USER\" --password-stdin && \
       export IMAGE_REGISTRY=ghcr.io/czimaginginstitute/embrella IMAGE_TAG={{tag}} && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml pull && \
-      (podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml down --remove-orphans 2>/dev/null || true) && \
-      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d"
+      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d --remove-orphans"
 
 # Restore a specific SQL snapshot into the prod/staging *container* db, then apply
 # migrations. Use to load real data: disaster recovery, seeding a fresh host, or
