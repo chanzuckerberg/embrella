@@ -4,18 +4,11 @@ from tem.models import MsiSession
 
 
 class Deposition(models.Model):
-    STATUS_CHOICES = [
-        ("draft", "Draft"),
-        ("submitting", "Submitting"),
-        ("submitted", "Submitted"),
-        ("failed", "Failed"),
-    ]
-
+    # No status field — status is per-dataset (see Dataset.status). A deposition-level status, if ever needed, is a derived rollup of its datasets.
     deposition_id = models.IntegerField(null=True, unique=True, blank=True, help_text="Assigned by reservation service")
     title = models.CharField(max_length=256)
     description = models.TextField(blank=True)
     submitter_user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="depositions")
-    status = models.CharField(max_length=128, choices=STATUS_CHOICES, default="draft", db_index=True)
     deposition_publications = models.TextField(blank=True)
     related_database_entries = models.TextField(blank=True)
     authors_json = models.JSONField(
@@ -36,6 +29,12 @@ class Deposition(models.Model):
 
 
 class Dataset(models.Model):
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("syncing", "Syncing"),
+        ("pushed", "Pushed"),
+        ("failed", "Failed"),
+    ]
 
     deposition = models.ForeignKey(Deposition, on_delete=models.CASCADE, related_name="datasets")
     dataset_id = models.IntegerField(null=True, unique=True, blank=True, help_text="Assigned by reservation service")
@@ -47,6 +46,13 @@ class Dataset(models.Model):
     assay_label = models.CharField(max_length=256, blank=True)
     assay_ontology_id = models.CharField(max_length=256, blank=True)
     is_authors_same_as_deposition = models.BooleanField(default=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="draft",
+        db_index=True,
+        help_text="Display/submission status; written by the syncer from DepositionJob.state.",
+    )
     sample = models.ForeignKey(
         "cryo_grids.Sample",
         null=True,
@@ -96,7 +102,7 @@ class DepositionJob(models.Model):
         ("failed", "Failed"),
     ]
 
-    deposition = models.OneToOneField(Deposition, on_delete=models.CASCADE, related_name="job")
+    dataset = models.OneToOneField(Dataset, on_delete=models.CASCADE, related_name="job")
     prep_slurm_job_id = models.CharField(max_length=32, null=True, blank=True)
     push_slurm_job_id = models.CharField(max_length=32, null=True, blank=True)
     state = models.CharField(max_length=256, choices=STATE_CHOICES, default="pending", db_index=True)
@@ -111,7 +117,7 @@ class DepositionJob(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"DepositionJob {self.pk} ({self.state}) for Deposition {self.deposition_id}"
+        return f"DepositionJob {self.pk} ({self.state}) for Dataset {self.dataset_id}"
 
 
 class DepositionSession(models.Model):
