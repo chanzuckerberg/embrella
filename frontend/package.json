@@ -43,7 +43,7 @@
     "lint-staged": "^15.5.2",
     "next": "^16.2.9",
     "nuqs": "^2.8.9",
-    "postcss": "^8.5.3",
+    "postcss": "^8.5.10",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hotkeys-hook": "^5.1.0",
