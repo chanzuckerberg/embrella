@@ -90,6 +90,7 @@ INSTALLED_APPS = [
     "django_object_actions",
     "jazzmin",
     "cryo_grids",
+    "depositions",
     "projects",
     "workflow",
     "tem",
