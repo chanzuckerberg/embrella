@@ -46,6 +46,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "verbose_name_plural": "User cluster credentials",
+                "db_table": "users_userclustercredentials",
                 "unique_together": {("user", "cluster")},
             },
         ),

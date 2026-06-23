@@ -818,7 +818,7 @@ def bulk_cancel_jobs(request):
     the user has not yet set up credentials for the cluster, which the
     frontend uses to open the SSH setup modal.
     """
-    from users.usernames import MissingClusterCredentialsError
+    from accounts.cluster_usernames import MissingClusterCredentialsError
 
     try:
         data = request.data

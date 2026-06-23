@@ -221,7 +221,7 @@ def execute_pipe(request):
         parameters = data.get("parameters", {})
         cluster_id = data.get("cluster") or data.get("cluster_id")  # Support both field names
 
-        from users.usernames import MissingClusterCredentialsError
+        from accounts.cluster_usernames import MissingClusterCredentialsError
 
         try:
             auth, error = clusterio.get_auth_for_user(request.user, cluster_id)

@@ -513,7 +513,7 @@ def get_auth_for_user(user, cluster_id):
         MissingClusterCredentialsError: when the user has not set up
             credentials for `cluster_id`.
     """
-    from users.usernames import resolve_cluster_username
+    from accounts.cluster_usernames import resolve_cluster_username
 
     if not _cluster_exists(cluster_id):
         return None, {

@@ -7,10 +7,10 @@ Tests SSH connection utilities and authentication helpers.
 from unittest.mock import MagicMock, patch
 
 import pytest
+from accounts.cluster_usernames import MissingClusterCredentialsError, clear_username_cache
+from accounts.models import UserClusterCredentials
 from django.contrib.auth.models import User
 from stores.models import Cluster
-from users.models import UserClusterCredentials
-from users.usernames import MissingClusterCredentialsError, clear_username_cache
 
 from common import clusterio
 

@@ -1,8 +1,8 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from .cluster_usernames import clear_username_cache
 from .models import UserClusterCredentials
-from .usernames import clear_username_cache
 
 
 @receiver([post_save, post_delete], sender=UserClusterCredentials)

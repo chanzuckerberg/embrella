@@ -13,7 +13,8 @@ class UserClusterCredentials(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        app_label = "users"
+        app_label = "accounts"
+        db_table = "users_userclustercredentials"
         unique_together = ("user", "cluster")
         verbose_name_plural = "User cluster credentials"
 

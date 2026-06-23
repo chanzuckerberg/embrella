@@ -7,10 +7,10 @@ import json
 from unittest.mock import patch
 
 import pytest
+from accounts.models import UserClusterCredentials
 from django.contrib.auth.models import User
 from rest_framework.test import APIRequestFactory, force_authenticate
 from stores.models import Cluster
-from users.models import UserClusterCredentials
 from workflow.views.ssh_views import check_ssh_setup, setup_ssh_key
 
 
