@@ -2,6 +2,30 @@ from django.conf import settings
 from django.db import models
 
 
+class Profile(models.Model):
+    """Per-user identity and feature-flag settings adjacent to ``auth.User``."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    orcid_authenticated = models.CharField(
+        max_length=19,
+        blank=True,
+        help_text="Verified ORCID iD for this account, set by the ORCID login flow.",
+    )
+    feature_flags = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = "accounts"
+
+    def __str__(self):
+        return f"Profile({self.user.username})"
+
+
 class UserClusterCredentials(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
