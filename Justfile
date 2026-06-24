@@ -412,17 +412,27 @@ uv +args="": initenv
 
     export_env && uv {{args}}
 
-# Run scripts to populate initial data during development
-populatedbexamples: initenv
+# Run scripts to populate initial data during development.
+# Pass a script name or path to run just that one, e.g.
+#   just populatedbexamples 007_init_people
+#   just populatedbexamples umbrella/scripts/007_init_people.py
+populatedbexamples script="": initenv
     #!/bin/bash
     export_env
     pushd ./umbrella
     set -x
-    uv run ./manage.py runscript 001_init
-    uv run ./manage.py runscript 002_permission
-    uv run ./manage.py runscript 003_init_multigrid
-    uv run ./manage.py runscript 004_init_processes
-    uv run ./manage.py runscript 005_init_pytom_pick
+    if [ -n "{{script}}" ]; then
+        # Accept a bare name or a path; runscript wants the module name only.
+        name="$(basename "{{script}}")"; name="${name%.py}"
+        uv run ./manage.py runscript "$name"
+    else
+        uv run ./manage.py runscript 001_init
+        uv run ./manage.py runscript 002_permission
+        uv run ./manage.py runscript 003_init_multigrid
+        uv run ./manage.py runscript 004_init_processes
+        uv run ./manage.py runscript 005_init_pytom_pick
+        uv run ./manage.py runscript 007_init_people
+    fi
     popd
 
 #############################################
