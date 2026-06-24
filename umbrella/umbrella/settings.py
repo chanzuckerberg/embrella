@@ -97,6 +97,7 @@ INSTALLED_APPS = [
     "custom",
     "processes",
     "accounts",
+    "people",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
