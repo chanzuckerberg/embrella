@@ -1,767 +1,789 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-{% load static %}
+  {% load static %}
 
-<head>
-  <title>Embrella Home</title>
-  <style>
-    /* Base Styles */
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      background: #f5f7fa;
-      color: #333;
-      line-height: 1.6;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    h1,
-    h2,
-    h3 {
-      margin: 0;
-      font-weight: 400;
-    }
-
-    h1 {
-      font-size: 2.2em;
-      margin-bottom: 10px;
-    }
-
-    h2 {
-      font-size: 1.8em;
-      margin-bottom: 15px;
-      color: #028a87;
-    }
-
-    h3 {
-      font-size: 1.4em;
-      margin-bottom: 10px;
-    }
-
-    p {
-      margin: 10px 0;
-      line-height: 1.6;
-    }
-
-    /* Header Banner */
-    .header-banner {
-      background: linear-gradient(135deg, #028a87, #028a87);
-      color: #fff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-
-    .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .header-title {
-      flex: 1;
-    }
-
-    .header-banner p {
-      font-size: 1.1em;
-      opacity: 0.9;
-    }
-
-    .brand-link {
-      display: block;
-      font-size: 1.75rem;
-      line-height: 1.5;
-      padding: .8125rem .5rem;
-      transition: width .3s ease-in-out;
-      white-space: nowrap;
-    }
-
-    .header-content .brand-link .brand-image {
-      float: left;
-      line-height: .8;
-      margin-left: .8rem;
-      margin-right: 1rem;
-      margin-top: -3px;
-      max-height: 45px;
-      width: auto;
-    }
-
-    .header-content .elevation-3 {
-      box-shadow: 0 10px 20px rgba(0, 0, 0, .19), 0 6px 6px rgba(0, 0, 0, .23) !important;
-    }
-
-    .header-content .img-circle {
-      border-radius: 50%;
-    }
-
-    .header-content img {
-      vertical-align: middle;
-      border-style: none;
-      overflow-clip-margin: content-box;
-      overflow: clip;
-    }
-
-    .footer {
-      display: flex;
-      justify-content: center;
-      font-size: small;
-      color: darkgrey;
-    }
-
-    /* User Controls */
-    .user-controls {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
-
-    .user-login-message {
-      display: flex;
-      justify-content: right;
-      padding-bottom: 2px;
-      padding-right: 10px;
-      padding-left: 10px;
-      font-size: small;
-      text-align: center;
-    }
-
-    .user-login-message .img-circle {
-      opacity: .8;
-      width: 20px;
-      padding: 5px;
-      padding-right: 8px;
-    }
-
-    /* Button Styles */
-    .button {
-      display: inline-block;
-      margin: 5px;
-      padding: 10px 18px;
-      font-size: 15px;
-      cursor: pointer;
-      text-align: center;
-      text-decoration: none;
-      color: #fff;
-      background-color: #028a87;
-      border: none;
-      border-radius: 6px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-    }
-
-    .button:hover {
-      background-color: #028a87;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    .button:active {
-      transform: translateY(0);
-    }
-
-    /* Secondary button style */
-    .button-secondary {
-      background-color: #e74c3c;
-    }
-
-    .button-secondary:hover {
-      background-color: #c0392b;
-    }
-
-    /* Tabs Navigation */
-    .tabs {
-      display: flex;
-      border-bottom: 1px solid #ddd;
-      margin: 20px 0;
-      gap: 5px;
-      overflow-x: auto;
-      scrollbar-width: thin;
-    }
-
-    .tab {
-      padding: 12px 20px;
-      cursor: pointer;
-      border-radius: 6px 6px 0 0;
-      background: #e9e9e9;
-      border: 1px solid #ddd;
-      border-bottom: none;
-      transition: all 0.3s ease;
-      font-weight: 500;
-    }
-
-    .tab:hover {
-      background: #f0f0f0;
-    }
-
-    .tab.active {
-      background: #fff;
-      border-bottom: 3px solid #2c8b4d;
-      color: #2c8b4d;
-    }
-
-    /* Tab Content */
-    .tab-content {
-      display: none;
-      padding: 20px 20px 20px 20px;
-      background: #fff;
-      border-radius: 0 0 8px 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      margin-bottom: 5px;
-    }
-
-    .tab-content.active {
-      display: block;
-      animation: fadeIn 0.5s ease;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
+  <head>
+    <title>Embrella Home</title>
+    <style>
+      /* Base Styles */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        background: #f5f7fa;
+        color: #333;
+        line-height: 1.6;
       }
 
-      to {
-        opacity: 1;
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
       }
-    }
 
-    /* Card Container */
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
-      margin-bottom: 20px;
-    }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-weight: 400;
+      }
 
-    .card {
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-      padding: 20px;
-      text-align: center;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-      border: 1px solid #eee;
-    }
+      h1 {
+        font-size: 2.2em;
+        margin-bottom: 10px;
+      }
 
-    .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    }
+      h2 {
+        font-size: 1.8em;
+        margin-bottom: 15px;
+        color: #028a87;
+      }
 
-    .card p {
-      font-size: 0.95em;
-      color: #666;
-    }
+      h3 {
+        font-size: 1.4em;
+        margin-bottom: 10px;
+      }
 
-    /* Table-like layout for Workflow Management & Search Filters */
-    .table {
-      width: 100%;
-      margin-left: auto;
-      margin-right: auto;
-      border-collapse: separate;
-      border-spacing: 0;
-      background: #fff;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-      border-radius: 8px;
-      overflow: hidden;
-    }
+      p {
+        margin: 10px 0;
+        line-height: 1.6;
+      }
 
-    .table th,
-    .table td {
-      padding: 15px;
-      text-align: center;
-      border-bottom: 1px solid #f0f0f0;
-    }
+      /* Header Banner */
+      .header-banner {
+        background: linear-gradient(135deg, #028a87, #028a87);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
 
-    .table th:not(:last-child),
-    .table td:not(:last-child) {
-      border-right: 1px solid #eaeaea;
-    }
-
-    .table th {
-      background: #f7f9fc;
-      font-size: 1.1em;
-      font-weight: 500;
-      color: #2c8b4d;
-    }
-
-    .table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .table tr:hover td {
-      background-color: #f9f9f9;
-    }
-
-    /* Section styling */
-    .section {
-      margin-bottom: 30px;
-    }
-
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-
-    /* Chatbot Popup Icon (fixed bottom-right) */
-    #chatbot-icon {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, #4facfe, #3f80fe);
-      border-radius: 50%;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      z-index: 1000;
-      font-size: 24px;
-      color: #fff;
-      user-select: none;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    #chatbot-icon:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-    }
-
-    /* Chatbot Popup Box */
-    #chatbot-popup {
-      position: fixed;
-      bottom: 90px;
-      right: 20px;
-      width: 380px;
-      height: 500px;
-      max-height: 80vh;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-      transform: scale(0);
-      transform-origin: bottom right;
-      transition: transform 0.3s ease;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    #chatbot-popup.open {
-      transform: scale(1);
-    }
-
-    /* Header pinned at top */
-    #chatbot-popup header {
-      flex-shrink: 0;
-      background: linear-gradient(135deg, #4facfe, #3f80fe);
-      color: #fff;
-      padding: 15px;
-      font-size: 1.1em;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    #chatbot-popup header .close-btn {
-      background: none;
-      border: none;
-      color: #fff;
-      font-size: 1.5em;
-      cursor: pointer;
-    }
-
-    .chatbot-disclaimer {
-      margin: 0;
-      padding: 10px 15px;
-      background-color: #fff3cd;
-      color: #856404;
-      font-size: 0.85em;
-      border-bottom: 1px solid #ffeeba;
-    }
-
-    /* Chat Container */
-    .chat-container {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      overflow: hidden;
-    }
-
-    /* Chat box */
-    .chat-box {
-      flex: 1;
-      min-height: 0;
-      padding: 15px;
-      overflow-y: auto;
-      background: #f8f9fa;
-    }
-
-    .message {
-      margin: 8px 0;
-      padding: 12px 16px;
-      border-radius: 18px;
-      max-width: 80%;
-      line-height: 1.4;
-      font-size: 15px;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      white-space: pre-wrap;
-      clear: both;
-    }
-
-    .user-message {
-      float: right;
-      background: linear-gradient(135deg, #4facfe, #3f80fe);
-      color: #fff;
-      border-bottom-right-radius: 5px;
-    }
-
-    .bot-message {
-      float: left;
-      background: #e9ecef;
-      color: #333;
-      border-bottom-left-radius: 5px;
-    }
-
-    .bot-message .message-text {
-      word-break: break-word;
-      overflow-wrap: break-word;
-      white-space: normal;
-    }
-
-    .button-logout {
-      background-color: #d9534f;
-      /* Softer red with better visibility */
-      border: none;
-      color: white;
-      padding: 10px 18px;
-      font-size: 15px;
-      cursor: pointer;
-      text-align: center;
-      text-decoration: none;
-      border-radius: 6px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-    }
-
-    .button-logout:hover {
-      background-color: #c9302c;
-      /* Darker red on hover */
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    .button-logout:active {
-      background-color: #ac2925;
-      /* Even darker red when clicked */
-      transform: translateY(0);
-    }
-
-    /* Input area */
-    .input-box {
-      flex-shrink: 0;
-      display: flex;
-      padding: 10px;
-      background: #fff;
-      border-top: 1px solid #eee;
-    }
-
-    .input-box input[type="text"] {
-      flex: 1;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 24px;
-      font-size: 15px;
-      outline: none;
-      transition: border 0.3s;
-    }
-
-    .input-box input[type="text"]:focus {
-      border: 1px solid #4facfe;
-      box-shadow: 0 0 0 2px rgba(79, 172, 254, 0.2);
-    }
-
-    .input-box button {
-      padding: 10px 16px;
-      margin-left: 8px;
-      border: none;
-      border-radius: 24px;
-      background: linear-gradient(135deg, #c0392b, #3f80fe);
-      color: #fff;
-      font-size: 15px;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .input-box button:hover {
-      background: linear-gradient(135deg, #3f80fe, #2d5fe3);
-      transform: translateY(-1px);
-    }
-
-    /* Clearfix for messages */
-    .chat-box::after {
-      content: "";
-      display: table;
-      clear: both;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
       .header-content {
-        flex-direction: column;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header-title {
+        flex: 1;
+      }
+
+      .header-banner p {
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .brand-link {
+        display: block;
+        font-size: 1.75rem;
+        line-height: 1.5;
+        padding: 0.8125rem 0.5rem;
+        transition: width 0.3s ease-in-out;
+        white-space: nowrap;
+      }
+
+      .header-content .brand-link .brand-image {
+        float: left;
+        line-height: 0.8;
+        margin-left: 0.8rem;
+        margin-right: 1rem;
+        margin-top: -3px;
+        max-height: 45px;
+        width: auto;
+      }
+
+      .header-content .elevation-3 {
+        box-shadow:
+          0 10px 20px rgba(0, 0, 0, 0.19),
+          0 6px 6px rgba(0, 0, 0, 0.23) !important;
+      }
+
+      .header-content .img-circle {
+        border-radius: 50%;
+      }
+
+      .header-content img {
+        vertical-align: middle;
+        border-style: none;
+        overflow-clip-margin: content-box;
+        overflow: clip;
+      }
+
+      .footer {
+        display: flex;
+        justify-content: center;
+        font-size: small;
+        color: darkgrey;
+      }
+
+      /* User Controls */
+      .user-controls {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .user-login-message {
+        display: flex;
+        justify-content: right;
+        padding-bottom: 2px;
+        padding-right: 10px;
+        padding-left: 10px;
+        font-size: small;
         text-align: center;
       }
 
-      .user-controls {
-        margin-top: 15px;
+      .user-login-message .img-circle {
+        opacity: 0.8;
+        width: 20px;
+        padding: 5px;
+        padding-right: 8px;
       }
 
-      #chatbot-popup {
-        width: 90%;
-        right: 5%;
-        left: 5%;
+      /* Button Styles */
+      .button {
+        display: inline-block;
+        margin: 5px;
+        padding: 10px 18px;
+        font-size: 15px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        color: #fff;
+        background-color: #028a87;
+        border: none;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
       }
 
+      .button:hover {
+        background-color: #028a87;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .button:active {
+        transform: translateY(0);
+      }
+
+      /* Secondary button style */
+      .button-secondary {
+        background-color: #e74c3c;
+      }
+
+      .button-secondary:hover {
+        background-color: #c0392b;
+      }
+
+      /* Tabs Navigation */
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #ddd;
+        margin: 20px 0;
+        gap: 5px;
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+
+      .tab {
+        padding: 12px 20px;
+        cursor: pointer;
+        border-radius: 6px 6px 0 0;
+        background: #e9e9e9;
+        border: 1px solid #ddd;
+        border-bottom: none;
+        transition: all 0.3s ease;
+        font-weight: 500;
+      }
+
+      .tab:hover {
+        background: #f0f0f0;
+      }
+
+      .tab.active {
+        background: #fff;
+        border-bottom: 3px solid #2c8b4d;
+        color: #2c8b4d;
+      }
+
+      /* Tab Content */
+      .tab-content {
+        display: none;
+        padding: 20px 20px 20px 20px;
+        background: #fff;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        margin-bottom: 5px;
+      }
+
+      .tab-content.active {
+        display: block;
+        animation: fadeIn 0.5s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* Card Container */
       .card-grid {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
       }
-    }
-  </style>
-</head>
 
-<body>
+      .card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+        text-align: center;
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+        border: 1px solid #eee;
+      }
 
-  <!-- HEADER BANNER -->
-  <div class="header-banner">
-    <div class="header-content">
-      <div class="header-title">
-        <div class="brand-link">
-          <img src="/static/jazzmin/img/logo.png" alt="Embrella Logo" class="brand-image elevation-3"
-            style="opacity: .8">
-          <span class="brand-text font-weight-light">Embrella</span>
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      }
+
+      .card p {
+        font-size: 0.95em;
+        color: #666;
+      }
+
+      /* Table-like layout for Workflow Management & Search Filters */
+      .table {
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: #fff;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .table th,
+      .table td {
+        padding: 15px;
+        text-align: center;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .table th:not(:last-child),
+      .table td:not(:last-child) {
+        border-right: 1px solid #eaeaea;
+      }
+
+      .table th {
+        background: #f7f9fc;
+        font-size: 1.1em;
+        font-weight: 500;
+        color: #2c8b4d;
+      }
+
+      .table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .table tr:hover td {
+        background-color: #f9f9f9;
+      }
+
+      /* Section styling */
+      .section {
+        margin-bottom: 30px;
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      /* Chatbot Popup Icon (fixed bottom-right) */
+      #chatbot-icon {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #4facfe, #3f80fe);
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        z-index: 1000;
+        font-size: 24px;
+        color: #fff;
+        user-select: none;
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      #chatbot-icon:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+      }
+
+      /* Chatbot Popup Box */
+      #chatbot-popup {
+        position: fixed;
+        bottom: 90px;
+        right: 20px;
+        width: 380px;
+        height: 500px;
+        max-height: 80vh;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        transform: scale(0);
+        transform-origin: bottom right;
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      #chatbot-popup.open {
+        transform: scale(1);
+      }
+
+      /* Header pinned at top */
+      #chatbot-popup header {
+        flex-shrink: 0;
+        background: linear-gradient(135deg, #4facfe, #3f80fe);
+        color: #fff;
+        padding: 15px;
+        font-size: 1.1em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      #chatbot-popup header .close-btn {
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 1.5em;
+        cursor: pointer;
+      }
+
+      .chatbot-disclaimer {
+        margin: 0;
+        padding: 10px 15px;
+        background-color: #fff3cd;
+        color: #856404;
+        font-size: 0.85em;
+        border-bottom: 1px solid #ffeeba;
+      }
+
+      /* Chat Container */
+      .chat-container {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      /* Chat box */
+      .chat-box {
+        flex: 1;
+        min-height: 0;
+        padding: 15px;
+        overflow-y: auto;
+        background: #f8f9fa;
+      }
+
+      .message {
+        margin: 8px 0;
+        padding: 12px 16px;
+        border-radius: 18px;
+        max-width: 80%;
+        line-height: 1.4;
+        font-size: 15px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: pre-wrap;
+        clear: both;
+      }
+
+      .user-message {
+        float: right;
+        background: linear-gradient(135deg, #4facfe, #3f80fe);
+        color: #fff;
+        border-bottom-right-radius: 5px;
+      }
+
+      .bot-message {
+        float: left;
+        background: #e9ecef;
+        color: #333;
+        border-bottom-left-radius: 5px;
+      }
+
+      .bot-message .message-text {
+        word-break: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
+      }
+
+      .button-logout {
+        background-color: #d9534f;
+        /* Softer red with better visibility */
+        border: none;
+        color: white;
+        padding: 10px 18px;
+        font-size: 15px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+      }
+
+      .button-logout:hover {
+        background-color: #c9302c;
+        /* Darker red on hover */
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .button-logout:active {
+        background-color: #ac2925;
+        /* Even darker red when clicked */
+        transform: translateY(0);
+      }
+
+      /* Input area */
+      .input-box {
+        flex-shrink: 0;
+        display: flex;
+        padding: 10px;
+        background: #fff;
+        border-top: 1px solid #eee;
+      }
+
+      .input-box input[type='text'] {
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 24px;
+        font-size: 15px;
+        outline: none;
+        transition: border 0.3s;
+      }
+
+      .input-box input[type='text']:focus {
+        border: 1px solid #4facfe;
+        box-shadow: 0 0 0 2px rgba(79, 172, 254, 0.2);
+      }
+
+      .input-box button {
+        padding: 10px 16px;
+        margin-left: 8px;
+        border: none;
+        border-radius: 24px;
+        background: linear-gradient(135deg, #c0392b, #3f80fe);
+        color: #fff;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .input-box button:hover {
+        background: linear-gradient(135deg, #3f80fe, #2d5fe3);
+        transform: translateY(-1px);
+      }
+
+      /* Clearfix for messages */
+      .chat-box::after {
+        content: '';
+        display: table;
+        clear: both;
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .header-content {
+          flex-direction: column;
+          text-align: center;
+        }
+
+        .user-controls {
+          margin-top: 15px;
+        }
+
+        #chatbot-popup {
+          width: 90%;
+          right: 5%;
+          left: 5%;
+        }
+
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- HEADER BANNER -->
+    <div class="header-banner">
+      <div class="header-content">
+        <div class="header-title">
+          <div class="brand-link">
+            <img
+              src="/static/jazzmin/img/logo.png"
+              alt="Embrella Logo"
+              class="brand-image elevation-3"
+              style="opacity: 0.8"
+            />
+            <span class="brand-text font-weight-light">Embrella</span>
+          </div>
         </div>
-      </div>
-      <div>
-        <div class="user-controls">
-          <a href="{% url 'admin:index' %}"><button class="button button-secondary">Admin</button></a>
-          <a href="/docs/tutorials/userguide/" target="_blank"><button class="button button-secondary">Docs</button></a>
-          <form method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button type="submit" class="button button-logout">Logout</button>
-          </form>
-        </div>
-        <div class="user-login-message">
-          <div><img src="/static/customs/user-icon.svg" class="img-circle">{{ user.username }}</div>
+        <div>
+          <div class="user-controls">
+            <a href="{% url 'admin:index' %}"><button class="button button-secondary">Admin</button></a>
+            <a href="/docs/tutorials/userguide/" target="_blank"
+              ><button class="button button-secondary">Docs</button></a
+            >
+            <form method="post" action="{% url 'account_logout' %}">
+              {% csrf_token %}
+              <button type="submit" class="button button-logout">Logout</button>
+            </form>
+          </div>
+          <div class="user-login-message">
+            <div><img src="/static/customs/user-icon.svg" class="img-circle" />{{ user.username }}</div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- MAIN CONTENT -->
-  <div class="container">
-    <!-- Tabs Navigation -->
-    <div class="tabs">
-      <div class="tab active" onclick="openTab(event, 'workflow')">Workflow Management</div>
-      <div class="tab" onclick="openTab(event, 'search')">Search and View</div>
-      <div class="tab" onclick="openTab(event, 'run-workflow')">Run Workflow</div>
-      <div class="tab" onclick="openTab(event, 'dashboard')">Workflow Dashboard</div>
-      <!-- <div class="tab" onclick="openTab(event, 'metadata')">Metadata Search</div> -->
-      <div class="tab" onclick="openTab(event, 'archive')">Archive</div>
-    </div>
+    <!-- MAIN CONTENT -->
+    <div class="container">
+      <!-- Tabs Navigation -->
+      <div class="tabs">
+        <div class="tab active" onclick="openTab(event, 'workflow')">Workflow Management</div>
+        <div class="tab" onclick="openTab(event, 'search')">Search and View</div>
+        <div class="tab" onclick="openTab(event, 'run-workflow')">Run Workflow</div>
+        <div class="tab" onclick="openTab(event, 'dashboard')">Workflow Dashboard</div>
+        <!-- <div class="tab" onclick="openTab(event, 'metadata')">Metadata Search</div> -->
+        <div class="tab" onclick="openTab(event, 'archive')">Archive</div>
+      </div>
 
-    <!-- Tab Content -->
-    <div id="workflow" class="tab-content active">
-      <div class="section">
-        <h2>Workflow Management</h2>
-        <div class="inner">
+      <!-- Tab Content -->
+      <div id="workflow" class="tab-content active">
+        <div class="section">
+          <h2>Workflow Management</h2>
+          <div class="inner">
+            <table class="table">
+              <tr>
+                <th style="width: 50%">Grids</th>
+                <th style="width: 50%">TEM Sessions</th>
+              </tr>
+              <tr>
+                <td>
+                  <a href="javascript:void(0)" onclick="window.open(getGridLoggingUrl())" class="button"
+                    >Grid Logging</a
+                  >
+                  <p>Start a Grid Logging</p>
+                </td>
+                <td>
+                  <a href="{% url 'tem:reserve' %}" class="button">New Single-Grid TEM Session</a>
+                  <p>Start new TEM session</p>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <a href="{% url 'tem:scrnreserve' %}" class="button">Screen Multiple Grids</a>
+                  <p>New directory name for screening</p>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="search" class="tab-content">
+        <div class="section">
+          <h2>Search Filters</h2>
           <table class="table">
             <tr>
-              <th style="width: 50%;">Grids</th>
-              <th style="width: 50%;">TEM Sessions</th>
+              <th style="width: 33%">Grids</th>
+              <th style="width: 34%">TEM Sessions</th>
+              <th style="width: 33%">Processing Runs</th>
             </tr>
             <tr>
               <td>
-                <a href="javascript:void(0)" onclick="window.open(getGridLoggingUrl())" class="button">Grid Logging</a>
-                <p>Start a Grid Logging</p>
+                <a href="javascript:void(0)" class="button" onclick="window.location.href = getCryoGridsUrl()"
+                  >Cryo Grids</a
+                >
+                <p>Stored Grid Filter Page</p>
               </td>
               <td>
-                <a href="{% url 'tem:reserve' %}" class="button">New Single-Grid TEM Session</a>
-                <p>Start new TEM session</p>
+                <a href="{% url 'admin:tem_msisession_changelist' %}" class="button">Single Grid Sessions</a>
+                <p>Multiscaled SPA or tomography data collection</p>
+              </td>
+              <td>
+                <a href="javascript:void(0)" class="button" onclick="window.location.href = getReviewsUrl()">Reviews</a>
+                <p>Review Tomograms</p>
               </td>
             </tr>
             <tr>
               <td>
-                <a href="{% url 'tem:scrnreserve' %}" class="button">Screen Multiple Grids</a>
-                <p>New directory name for screening</p>
+                <a href="{% url 'cryo_grids:detail' %}" class="button">Grid Boxes</a>
+              </td>
+              <td>
+                <a href="{% url 'tem:render_screening_form' %}" class="button">Multigrid Screens</a>
+              </td>
+              <td>
+                <a href="javascript:void(0)" class="button" onclick="window.location.href = getTomogramsUrl()"
+                  >Tomograms</a
+                >
+                <p>View Tomogram Metadata</p>
+              </td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <!-- <td>
+              <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
+              <p>Manage annotations</p>
+            </td> -->
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div id="run-workflow" class="tab-content">
+        <div class="section">
+          <h2>Pre-processing</h2>
+          <table class="table">
+            <tr>
+              <th>Aretomo3</th>
+              <th>DenoisET</th>
+            </tr>
+            <tr>
+              <td>
+                <a href="/workflow/run" class="button">Aretomo3</a>
+                <p>Run Aretomo3</p>
+              </td>
+              <td>
+                <a href="/workflow/denoiset_run" class="button">DenoisET</a>
+                <p>Run DenoisET</p>
+              </td>
+            </tr>
+          </table>
+          <!-- close Pre-processing table -->
+
+          <h2>Post-processing</h2>
+          <table class="table" style="table-layout: fixed">
+            <tr>
+              <th style="width: 33%">Copick</th>
+              <th style="width: 33%">MembraneSeg</th>
+              <th style="width: 34%">Octopi</th>
+            </tr>
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px">
+                  <img
+                    src="{% static 'customs/copick-logo.png' %}"
+                    alt="CoPick Logo"
+                    style="width: 45px; height: auto"
+                  />
+                  <a href="/workflow/copick_run" class="button">CoPick</a>
+                </div>
+                <p>Create or Import CoPick projects</p>
+              </td>
+              <td style="visibility: hidden">
+                <a href="/workflow/membraneseg_run" class="button">MembraneSeg</a>
+                <p>Run MembraneSeg</p>
+              </td>
+              <td style="visibility: hidden">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px">
+                  <img
+                    src="{% static 'customs/octopi-logo.png' %}"
+                    alt="Octopi Logo"
+                    style="width: 35px; height: auto"
+                  />
+                  <a href="/workflow/octopi_run" class="button">Octopi</a>
+                </div>
+                <p>Pick with Octopi</p>
               </td>
             </tr>
           </table>
         </div>
       </div>
-    </div>
 
-    <div id="search" class="tab-content">
-      <div class="section">
-        <h2>Search Filters</h2>
-        <table class="table">
-          <tr>
-            <th style="width: 33%;">Grids</th>
-            <th style="width: 34%;">TEM Sessions</th>
-            <th style="width: 33%;">Processing Runs</th>
-          </tr>
-          <tr>
-            <td>
-              <a href="javascript:void(0)" class="button" onclick="window.location.href=getCryoGridsUrl()">Cryo
-                Grids</a>
-              <p>Stored Grid Filter Page</p>
-            </td>
-            <td>
-              <a href="{% url 'admin:tem_msisession_changelist' %}" class="button">Single Grid Sessions</a>
-              <p>Multiscaled SPA or tomography data collection</p>
-            </td>
-            <td>
-              <a href="javascript:void(0)" class="button" onclick="window.location.href=getReviewsUrl()">Reviews</a>
-              <p>Review Tomograms</p>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <a href="{% url 'cryo_grids:detail' %}" class="button">Grid Boxes</a>
-            </td>
-            <td>
-              <a href="{% url 'tem:render_screening_form' %}" class="button">Multigrid Screens</a>
-            </td>
-            <td>
-              <a href="javascript:void(0)" class="button" onclick="window.location.href=getTomogramsUrl()">Tomograms</a>
-              <p>View Tomogram Metadata</p>
-            </td>
-          </tr>
-          <tr>
-            <td>
-            </td>
-            <td>
-            </td>
-            <!-- <td>
-              <a href="javascript:void(0)" class="button" onclick="window.location.href=getAnnotationsUrl()">Annotations</a>
-              <p>Manage annotations</p>
-            </td> -->
-          </tr>
-        </table>
-      </div>
-    </div>
+      <div id="dashboard" class="tab-content">
+        <div class="section">
+          <h2>Workflow Dashboard</h2>
+          <table class="table">
+            <tr>
+              <th>Workflow Dashboard</th>
+              <th>Workflow Cancel</th>
+              <th>Workflow Track</th>
+              <th>Workflow Job Logs</th>
+            </tr>
+            <tr>
+              <td>
+                <a href="/workflow/dashboard" class="button">Dashboard</a>
+                <p>Monitor all active workflows</p>
+              </td>
+              <td>
+                <a href="/workflow/cancel" class="button">Cancel</a>
+                <p>Cancel running workflows</p>
+              </td>
+              <td>
+                <a href="/workflow/track" class="button">Track</a>
+                <p>Track all active workflows</p>
+              </td>
+              <td>
+                <a href="/workflow/logs" class="button">Job Logs</a>
+                <p>Job Logs</p>
+              </td>
+            </tr>
+          </table>
+        </div>
 
-    <div id="run-workflow" class="tab-content">
-      <div class="section">
-        <h2>Pre-processing</h2>
-        <table class="table">
-          <tr>
-            <th>Aretomo3</th>
-            <th>DenoisET</th>
-          </tr>
-          <tr>
-            <td>
-              <a href="/workflow/run" class="button">Aretomo3</a>
-              <p>Run Aretomo3</p>
-            </td>
-            <td>
-              <a href="/workflow/denoiset_run" class="button">DenoisET</a>
-              <p>Run DenoisET</p>
-            </td>
-          </tr>
-        </table> <!-- close Pre-processing table -->
-
-        <h2>Post-processing</h2>
-        <table class="table" style="table-layout: fixed;">
-          <tr>
-            <th style="width:33%;">Copick</th>
-            <th style="width:33%">MembraneSeg</th>
-            <th style="width:34%">Octopi</th>
-          </tr>
-          <tr>
-            <td>
-              <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <img src="{% static 'customs/copick-logo.png' %}" alt="CoPick Logo" style="width:45px; height:auto;">
-                <a href="/workflow/copick_run" class="button">CoPick</a>
-              </div>
-              <p>Create or Import CoPick projects</p>
-            </td>
-            <td style="visibility:hidden;">
-              <a href="/workflow/membraneseg_run" class="button">MembraneSeg</a>
-              <p>Run MembraneSeg</p>
-            </td>
-            <td style="visibility:hidden;">
-              <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <img src="{% static 'customs/octopi-logo.png' %}" alt="Octopi Logo" style="width:35px; height:auto;">
-                <a href="/workflow/octopi_run" class="button">Octopi</a>
-              </div>
-              <p>Pick with Octopi</p>
-            </td>
-          </tr>
-        </table>
-
-      </div>
-    </div>
-
-    <div id="dashboard" class="tab-content">
-      <div class="section">
-        <h2>Workflow Dashboard</h2>
-        <table class="table">
-          <tr>
-            <th>Workflow Dashboard</th>
-            <th>Workflow Cancel</th>
-            <th>Workflow Track</th>
-            <th>Workflow Job Logs</th>
-          </tr>
-          <tr>
-            <td>
-              <a href="/workflow/dashboard" class="button">Dashboard</a>
-              <p>Monitor all active workflows</p>
-            </td>
-            <td>
-              <a href="/workflow/cancel" class="button">Cancel</a>
-              <p>Cancel running workflows</p>
-            </td>
-            <td>
-              <a href="/workflow/track" class="button">Track</a>
-              <p>Track all active workflows</p>
-            </td>
-            <td>
-              <a href="/workflow/logs" class="button">Job Logs</a>
-              <p>Job Logs</p>
-            </td>
-          </tr>
-        </table>
+        <div class="section">
+          <h2>Data Synchronization</h2>
+          <table class="table">
+            <tr>
+              <th>Tomogram Sync</th>
+            </tr>
+            <tr>
+              <td>
+                <a href="{% url 'processes:sync_tomograms' %}" class="button">Sync Tomograms</a>
+                <p>Synchronize tomogram data</p>
+              </td>
+            </tr>
+          </table>
+        </div>
       </div>
 
-      <div class="section">
-        <h2>Data Synchronization</h2>
-        <table class="table">
-          <tr>
-            <th>Tomogram Sync</th>
-          </tr>
-          <tr>
-            <td>
-              <a href="{% url 'processes:sync_tomograms' %}" class="button">Sync Tomograms</a>
-              <p>Synchronize tomogram data</p>
-            </td>
-          </tr>
-        </table>
-      </div>
-    </div>
-
-    <!-- <div id="metadata" class="tab-content">
+      <!-- <div id="metadata" class="tab-content">
       <div class="section">
         <h2>Metadata Search</h2>
         <table class="table">
@@ -777,136 +799,135 @@
         </table>
       </div>
     </div> -->
-    <div id="archive" class="tab-content">
-      <div class="section">
-        <h2>Start a processing run</h2>
-        <div class="card-grid">
-          <div class="card">
-            <a href="{% url 'processes:ptreserve' %}" class="button">Run Processing with Tomograms</a>
-            <p>Create processing run name</p>
+      <div id="archive" class="tab-content">
+        <div class="section">
+          <h2>Start a processing run</h2>
+          <div class="card-grid">
+            <div class="card">
+              <a href="{% url 'processes:ptreserve' %}" class="button">Run Processing with Tomograms</a>
+              <p>Create processing run name</p>
+            </div>
           </div>
         </div>
       </div>
+      <div class="footer">
+        <p>{{ git_branch }}{{ git_hash }} {{ start_time }}</p>
+      </div>
     </div>
-    <div class="footer">
-      <p>{{ git_branch }}{{ git_hash }} {{ start_time }}</p>
-    </div>
-  </div>
 
-  <script>
-    // JavaScript for URL generation
-    function getNextUrl() {
-      const LOCALHOST_PORT = 8000;
-      const LOCALHOST_NEXT_PORT = 3000;
-      let baseUrl = window.location.origin;
-      let nextBaseUrl = baseUrl.includes(LOCALHOST_PORT)
-        ? baseUrl.replace(LOCALHOST_PORT, LOCALHOST_NEXT_PORT)
-        : baseUrl;
-      return `${nextBaseUrl}/next`;
-    }
-    function getCryoGridsUrl() {
-      return `${getNextUrl()}/cryo_grids`;
-    }
-    function getTomogramsUrl() {
-      return `${getNextUrl()}/tomograms`;
-    }
-    function getAnnotationsUrl() {
-      return `${getNextUrl()}/annotations`;
-    }
-    function getReviewsUrl() {
-      return `${getNextUrl()}/reviews`;
-    }
-    function getGridLoggingUrl() {
-      return `${getNextUrl()}/grid_logging`;
-    }
-
-    // Tab functionality
-    function openTab(evt, tabName) {
-      var i, tabcontent, tablinks;
-
-      // Hide all tab content
-      tabcontent = document.getElementsByClassName("tab-content");
-      for (i = 0; i < tabcontent.length; i++) {
-        tabcontent[i].classList.remove("active");
+    <script>
+      // JavaScript for URL generation
+      function getNextUrl() {
+        const LOCALHOST_PORT = 8000;
+        const LOCALHOST_NEXT_PORT = 3000;
+        let baseUrl = window.location.origin;
+        let nextBaseUrl = baseUrl.includes(LOCALHOST_PORT)
+          ? baseUrl.replace(LOCALHOST_PORT, LOCALHOST_NEXT_PORT)
+          : baseUrl;
+        return `${nextBaseUrl}/next`;
+      }
+      function getCryoGridsUrl() {
+        return `${getNextUrl()}/cryo_grids`;
+      }
+      function getTomogramsUrl() {
+        return `${getNextUrl()}/tomograms`;
+      }
+      function getAnnotationsUrl() {
+        return `${getNextUrl()}/annotations`;
+      }
+      function getReviewsUrl() {
+        return `${getNextUrl()}/reviews`;
+      }
+      function getGridLoggingUrl() {
+        return `${getNextUrl()}/grid_logging`;
       }
 
-      // Remove "active" class from all tabs
-      tablinks = document.getElementsByClassName("tab");
-      for (i = 0; i < tablinks.length; i++) {
-        tablinks[i].classList.remove("active");
+      // Tab functionality
+      function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+
+        // Hide all tab content
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+          tabcontent[i].classList.remove("active");
+        }
+
+        // Remove "active" class from all tabs
+        tablinks = document.getElementsByClassName("tab");
+        for (i = 0; i < tablinks.length; i++) {
+          tablinks[i].classList.remove("active");
+        }
+
+        // Show the current tab and add "active" class to the button that opened the tab
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
       }
 
-      // Show the current tab and add "active" class to the button that opened the tab
-      document.getElementById(tabName).classList.add("active");
-      evt.currentTarget.classList.add("active");
-    }
-
-    {#// Toggle the chatbot popup#}
-      {
-        #function toggleChatbot() {# }
-        {#  const popup = document.getElementById('chatbot-popup');# }
-        {#  popup.classList.toggle('open');# }
-        {# }#
-      }
-      {## }
-      {#// Add event listener for Enter key on input field#}
+      {#// Toggle the chatbot popup#}
         {
-          #document.getElementById("user-input").addEventListener("keypress", function (event) {# }
-    {#  if(event.key === "Enter") {# }
-          {#    event.preventDefault();# }
-          {#    sendMessage();# }
+          #function toggleChatbot() {# }
+          {#  const popup = document.getElementById('chatbot-popup');# }
+          {#  popup.classList.toggle('open');# }
           {# }#
         }
-        {# });#
-      }
-      {## }
-      {#// Chatbot sendMessage function#}
-        {
-          #async function sendMessage() {# }
-          {#  const userInput = document.getElementById("user-input").value;# }
-          {#  if (!userInput) return;# }
-          {## }
-          {#  const chatBox = document.getElementById("chat-box");# }
-          {## }
-          {#  // Append user message#}
-            {#  const userMessage = document.createElement("div");# }
-            {#  userMessage.className = "message user-message";# }
-            {#  userMessage.innerText = "You: " + userInput;# }
-            {#  chatBox.appendChild(userMessage);# }
-            {#  document.getElementById("user-input").value = "";# }
+        {## }
+        {#// Add event listener for Enter key on input field#}
+          {
+            #document.getElementById("user-input").addEventListener("keypress", function (event) {# }
+      {#  if(event.key === "Enter") {# }
+            {#    event.preventDefault();# }
+            {#    sendMessage();# }
+            {# }#
+          }
+          {# });#
+        }
+        {## }
+        {#// Chatbot sendMessage function#}
+          {
+            #async function sendMessage() {# }
+            {#  const userInput = document.getElementById("user-input").value;# }
+            {#  if (!userInput) return;# }
             {## }
-            {#  // Scroll to bottom#}
-              {#  chatBox.scrollTop = chatBox.scrollHeight;# }
+            {#  const chatBox = document.getElementById("chat-box");# }
+            {## }
+            {#  // Append user message#}
+              {#  const userMessage = document.createElement("div");# }
+              {#  userMessage.className = "message user-message";# }
+              {#  userMessage.innerText = "You: " + userInput;# }
+              {#  chatBox.appendChild(userMessage);# }
+              {#  document.getElementById("user-input").value = "";# }
               {## }
-              {#  // Fetch bot response#}
-                {#  try {# }
-    {#    const response = await fetch("/agent/confluence/", {#}
-    {#      method: "POST",#}
-    {#      headers: { "Content-Type": "application/json" },#}
-                  {#      body: JSON.stringify({ prompt: userInput })# }
-                  {# });#
-                }
+              {#  // Scroll to bottom#}
+                {#  chatBox.scrollTop = chatBox.scrollHeight;# }
                 {## }
-                {#    const htmlResponse = await response.text();# }
-                {## }
-                {#    // Append bot message#}
-                  {#    const botMessage = document.createElement("div");# }
-                  {#    botMessage.className = "message bot-message";# }
-                  {#    botMessage.innerHTML = `<div class="message-text">${htmlResponse}</div>`;# }
-                  {#    chatBox.appendChild(botMessage);# }
-                  {# } catch (error) {# }
-                  {#    const errorMessage = document.createElement("div");# }
-                  {#    errorMessage.className = "message bot-message";# }
-                  {#    errorMessage.innerHTML = `<div class="message-text">Error fetching response.</div>`;# }
-                  {#    chatBox.appendChild(errorMessage);# }
-                  {# }#
-                }
-                {## }
-                {#  // Scroll to bottom again#}
-                  {#  chatBox.scrollTop = chatBox.scrollHeight;# }
-                  {# }#
-                }
-  </script>
-</body>
-
+                {#  // Fetch bot response#}
+                  {#  try {# }
+      {#    const response = await fetch("/agent/confluence/", {#}
+      {#      method: "POST",#}
+      {#      headers: { "Content-Type": "application/json" },#}
+                    {#      body: JSON.stringify({ prompt: userInput })# }
+                    {# });#
+                  }
+                  {## }
+                  {#    const htmlResponse = await response.text();# }
+                  {## }
+                  {#    // Append bot message#}
+                    {#    const botMessage = document.createElement("div");# }
+                    {#    botMessage.className = "message bot-message";# }
+                    {#    botMessage.innerHTML = `<div class="message-text">${htmlResponse}</div>`;# }
+                    {#    chatBox.appendChild(botMessage);# }
+                    {# } catch (error) {# }
+                    {#    const errorMessage = document.createElement("div");# }
+                    {#    errorMessage.className = "message bot-message";# }
+                    {#    errorMessage.innerHTML = `<div class="message-text">Error fetching response.</div>`;# }
+                    {#    chatBox.appendChild(errorMessage);# }
+                    {# }#
+                  }
+                  {## }
+                  {#  // Scroll to bottom again#}
+                    {#  chatBox.scrollTop = chatBox.scrollHeight;# }
+                    {# }#
+                  }
+    </script>
+  </body>
 </html>
