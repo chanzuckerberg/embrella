@@ -1,0 +1,3 @@
+# Django backend templates contain Jinja-style tags ({% ... %}, {{ ... }}).
+# Prettier's base parser has issues and breaks tags and pages on format.
+umbrella/**/*.html
