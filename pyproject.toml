@@ -11,9 +11,8 @@ dependencies = [
     "django==5.2.15",
     "django-cors-headers>=4.9.0",
     "django-extensions==4.1",
-    "django-google-sso==9.0.3",  # TODO: migrate to django-allauth (https://github.com/pennersr/django-allauth)
+    "django-allauth[socialaccount]>=65,<66",
     "django-jazzmin>=3.0",
-    "django-login-required-middleware==0.8.0",  # TODO: drop in favor of Django 5.2 built-in LoginRequiredMiddleware
     "django-object-actions==4.2.0",
     "django-q2>=1.8.0",
     "djangorestframework==3.15.2",
