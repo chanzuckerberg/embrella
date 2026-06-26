@@ -11,8 +11,8 @@ export async function fetchResource(requestURL: string): Promise<Response> {
   });
 
   // Check for authentication errors - redirect to login
-  if (response.status === 401 || response.status === 302 || response.url.includes('/admin/login')) {
-    window.location.href = `${DJANGO_URL}/admin/login/?next=${encodeURI(window.location.href)}`;
+  if (response.status === 401 || response.status === 302 || response.url.includes('/accounts/login')) {
+    window.location.href = `${DJANGO_URL}/accounts/login/?next=${encodeURI(window.location.href)}`;
     return Promise.reject(new Error('Authentication required'));
   }
 
@@ -32,8 +32,8 @@ export async function postResource(requestURL: string, body: Record<string, unkn
   });
 
   // Check for authentication errors - redirect to login
-  if (response.status === 401 || response.status === 302 || response.url.includes('/admin/login')) {
-    window.location.href = `${DJANGO_URL}/admin/login/?next=${encodeURI(window.location.href)}`;
+  if (response.status === 401 || response.status === 302 || response.url.includes('/accounts/login')) {
+    window.location.href = `${DJANGO_URL}/accounts/login/?next=${encodeURI(window.location.href)}`;
     return Promise.reject(new Error('Authentication required'));
   }
 

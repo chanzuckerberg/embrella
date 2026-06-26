@@ -245,7 +245,7 @@ export const TopNavigation = () => {
   const handleLogout = () => {
     // Redirect to logout and then back to frontend home page
     const frontendUrl = window.location.origin;
-    window.location.href = `${DJANGO_URL}/admin/logout/?next=${encodeURIComponent(frontendUrl)}`;
+    window.location.href = `${DJANGO_URL}/accounts/logout/?next=${encodeURIComponent(frontendUrl)}`;
   };
 
   // Determine active section based on pathname

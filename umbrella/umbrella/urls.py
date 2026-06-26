@@ -33,8 +33,8 @@ from cryo_grids.viewsets import (
     PuckListViewSet,
     PuckViewSet,
     SampleViewSet,
-    SpecimenViewSet,
     ScreeningGridsViewSet,
+    SpecimenViewSet,
     StandardSamplesViewSet,
 )
 from custom.views import version_info
@@ -58,7 +58,6 @@ from tem.urls import v1_urlpatterns as tem_v1_urlpatterns
 
 from umbrella.ping import ping
 from umbrella.user import get_user_info
-from umbrella.views import custom_google_sso_callback, custom_login_view, custom_logout_view
 from umbrella.viewsets import UserViewSet
 
 # Create a router and register our viewsets with it
@@ -156,14 +155,11 @@ urlpatterns = (
         # Root redirect to legacy umbrella (for direct Django access)
         # In production, nginx routes root (/) to Next.js frontend
         path("", RedirectView.as_view(url="/legacy/umbrella/", permanent=False)),
-        # Django admin and authentication
-        # Note: Specific paths must come BEFORE the admin catchall
-        path("admin/login/", custom_login_view, name="login"),
-        path("admin/logout/", custom_logout_view, name="logout"),
+        # Django admin
         path("admin/", admin.site.urls, name="admin"),
-        # Override Google SSO callback to preserve full frontend URL
-        path("google_sso/callback/", custom_google_sso_callback, name="custom_google_sso_callback"),
-        path("google_sso/", include("django_google_sso.urls", namespace="django_google_sso")),
+        # Authentication (django-allauth: /accounts/login, /accounts/logout,
+        # /accounts/google/login, /accounts/google/login/callback, ...)
+        path("accounts/", include("allauth.urls")),
         # Documentation
         re_path(r"^docs/(?P<path>.*)$", documentation_view, name="docs"),
         # Legacy template-based views (all under /legacy/ prefix)

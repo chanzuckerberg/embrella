@@ -41,19 +41,18 @@ USE_TZ = True
 
 WSGI_APPLICATION = "umbrella.wsgi.application"
 ROOT_URLCONF = "umbrella.urls"
-LOGIN_URL = "/admin/login/"
+LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
+# Paths exempt from PathExemptLoginRequiredMiddleware (see umbrella/middleware.py).
+# The built-in LoginRequiredMiddleware has no native ignore list
 LOGIN_REQUIRED_IGNORE_PATHS = [
+    r"^/accounts/.*",
     r"^/admin/login/*",
     r"^/admin/logout/*",
-    r"^/google_sso/*",
     r"^/static/*",
     r"^/login/*",
     r"^/copick/v1/.*",
-]
-# Exempt user info endpoint - frontend should handle 401 and redirect
-LOGIN_REQUIRED_IGNORE_VIEW_NAMES = [
-    "user_info",
+    r"^/user$",
 ]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
@@ -104,7 +103,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_extensions",
-    "django_google_sso",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "corsheaders",
     "drf_spectacular",
     "django_q",
@@ -117,8 +119,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "umbrella.middleware.APIAuthenticationMiddleware",
-    "login_required.middleware.LoginRequiredMiddleware",
+    "umbrella.middleware.PathExemptLoginRequiredMiddleware",
     "umbrella.middleware.FixLoginRedirectMiddleware",  # Fix login redirects to use HTTP_REFERER
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -128,7 +131,7 @@ MIDDLEWARE = [
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -149,6 +152,14 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "60/min",
+        "user": "1000/min",
+    },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
@@ -188,14 +199,30 @@ JAZZMIN_UI_TWEAKS = {
     },
 }
 
-GOOGLE_SSO_CLIENT_ID = os.environ.get("GOOGLE_SSO_CLIENT_ID")
-GOOGLE_SSO_PROJECT_ID = os.environ.get("GOOGLE_SSO_PROJECT_ID")
-GOOGLE_SSO_CLIENT_SECRET = os.environ.get("GOOGLE_SSO_CLIENT_SECRET")
-GOOGLE_SSO_ALLOWABLE_DOMAINS = ["czii.org", "czbiohub.org", "biohub.org"]
-GOOGLE_SSO_PRE_LOGIN_CALLBACK = "umbrella.hooks.pre_login_callback"
-GOOGLE_SSO_SESSION_COOKIE_AGE = 1209600  # 14 days — match SESSION_COOKIE_AGE
-# Configure Google SSO to respect the 'next' parameter for redirects
-GOOGLE_SSO_SAVE_BASIC_GOOGLE_INFO = False
+# --- django-allauth (Google SSO) ---------------------------------------------
+# Provider credentials are sourced from env vars (reusing the existing
+# GOOGLE_SSO_* names) so no DB SocialApp row / admin step is required.
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": os.environ.get("GOOGLE_SSO_CLIENT_ID"),
+            "secret": os.environ.get("GOOGLE_SSO_CLIENT_SECRET"),
+            "key": "",
+        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        "OAUTH_PKCE_ENABLED": True,
+    }
+}
+# Google emails are trusted; skip allauth's signup/email-confirm interstitials.
+SOCIALACCOUNT_AUTO_SIGNUP = True
+ACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True  # match existing local users by email
+ACCOUNT_LOGOUT_ON_GET = True
+SOCIALACCOUNT_ADAPTER = "umbrella.adapters.UmbrellaSocialAccountAdapter"
+ACCOUNT_ADAPTER = "umbrella.adapters.UmbrellaAccountAdapter"
+# Restrict SSO to these email domains
+SSO_ALLOWED_DOMAINS = ["czii.org", "czbiohub.org", "biohub.org"]
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*")
@@ -257,7 +284,7 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
-    # 'django_google_sso.backends.GoogleSSOAuthBackend',
+    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 AUTH_PASSWORD_VALIDATORS = [
     {
