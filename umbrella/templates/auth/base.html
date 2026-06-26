@@ -1,0 +1,21 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block head_title %}Embrella{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'jazzmin/img/favicon.png' %}" />
+    <link rel="stylesheet" href="{% static 'auth/auth.css' %}" />
+  </head>
+  <body>
+    <div class="auth-shell">
+      <div class="auth-logo">
+        <img src="{% static 'jazzmin/img/biohub-logo.svg' %}" alt="biohub" />
+      </div>
+      <div class="card">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </body>
+</html>

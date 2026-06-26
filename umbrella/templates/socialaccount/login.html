@@ -1,0 +1,26 @@
+{% extends "auth/base.html" %}
+{% load i18n %}
+
+{% block head_title %}Sign in with Google — Embrella{% endblock %}
+
+{% block content %}
+  {% if process == "connect" %}
+    <p class="welcome">{% blocktrans with provider.name as provider %}Connect {{ provider }}{% endblocktrans %}</p>
+    <p class="info">
+      {% blocktrans with provider.name as provider %}You are about to connect a new third-party account from {{ provider }}.{% endblocktrans %}
+    </p>
+  {% else %}
+    <p class="welcome">{% blocktrans with provider.name as provider %}Sign in via {{ provider }}{% endblocktrans %}</p>
+    <p class="info">
+      {% blocktrans with provider.name as provider %}You are about to sign in using a third-party account from {{ provider }}.{% endblocktrans %}
+    </p>
+  {% endif %}
+
+  <div class="actions">
+    <form method="post" action="">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">{% trans "Continue" %}</button>
+    </form>
+    <a class="backlink" href="{% url 'account_login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">{% trans "Cancel" %}</a>
+  </div>
+{% endblock %}
