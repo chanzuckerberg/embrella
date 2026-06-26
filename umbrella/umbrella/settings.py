@@ -43,17 +43,6 @@ WSGI_APPLICATION = "umbrella.wsgi.application"
 ROOT_URLCONF = "umbrella.urls"
 LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
-# Paths exempt from PathExemptLoginRequiredMiddleware (see umbrella/middleware.py).
-# The built-in LoginRequiredMiddleware has no native ignore list
-LOGIN_REQUIRED_IGNORE_PATHS = [
-    r"^/accounts/.*",
-    r"^/admin/login/*",
-    r"^/admin/logout/*",
-    r"^/static/*",
-    r"^/login/*",
-    r"^/copick/v1/.*",
-    r"^/user$",
-]
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
@@ -121,7 +110,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "umbrella.middleware.APIAuthenticationMiddleware",
-    "umbrella.middleware.PathExemptLoginRequiredMiddleware",
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "umbrella.middleware.FixLoginRedirectMiddleware",  # Fix login redirects to use HTTP_REFERER
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

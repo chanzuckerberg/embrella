@@ -4,11 +4,9 @@ Custom middleware for the Umbrella project.
 Contains middleware classes for handling authentication redirects and custom workflows.
 """
 
-import re
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from django.conf import settings
-from django.contrib.auth.middleware import LoginRequiredMiddleware
 from django.http import HttpResponseRedirect
 from django.utils.deprecation import MiddlewareMixin
 from umbrella_logger import logger
@@ -27,24 +25,6 @@ LOGIN_PATH = urlparse(settings.LOGIN_URL).path
 def _is_login_redirect(location):
     """True if a redirect Location points at the login page."""
     return bool(location) and LOGIN_PATH in location
-
-
-class PathExemptLoginRequiredMiddleware(LoginRequiredMiddleware):
-    """
-    Django 5.2's built-in LoginRequiredMiddleware makes every view login-required
-    and only supports opting out per-view via @login_not_required. This subclass
-    restores the path-based ignore list we relied on previously: requests whose
-    path matches LOGIN_REQUIRED_IGNORE_PATHS skip the login requirement.
-    """
-
-    def __init__(self, get_response):
-        super().__init__(get_response)
-        self._exempt = [re.compile(p) for p in getattr(settings, "LOGIN_REQUIRED_IGNORE_PATHS", [])]
-
-    def process_view(self, request, view_func, view_args, view_kwargs):
-        if any(pattern.match(request.path) for pattern in self._exempt):
-            return None
-        return super().process_view(request, view_func, view_args, view_kwargs)
 
 
 class APIAuthenticationMiddleware(MiddlewareMixin):
