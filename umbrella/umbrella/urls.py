@@ -173,6 +173,7 @@ urlpatterns = (
         # Note: These also include legacy template routes which should eventually move to /legacy/
         path("workflow/", include("workflow.urls"), name="workflow"),
         path("cryo_grids/", include("cryo_grids.urls"), name="cryo_grids"),
+        path("depositions/", include("depositions.urls"), name="depositions"),
         path("processes/", include("processes.urls"), name="processes"),
         path("projects/", include("projects.urls"), name="projects"),
         path("tem/", include(tem_v1_urlpatterns)),
