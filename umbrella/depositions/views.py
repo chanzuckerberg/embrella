@@ -12,6 +12,7 @@ subset-csv) are stubbed with 501 until those in place.
 
 import logging
 
+from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -45,6 +46,36 @@ def _not_implemented():
     )
 
 
+@extend_schema_view(
+    create=extend_schema(
+        summary="Create a deposition",
+        description="Creates a deposition draft. `deposition_id` is reserved server-side; "
+                    "`submitter_user` is set from the request — don't send them.",
+        examples=[OpenApiExample(
+            "New deposition",
+            request_only=True,
+            value={
+                "title": "In situ cryo-ET of bacterial cells",
+                "description": "Tomograms of whole cells imaged by cryo-ET.",
+                "deposition_publications": "https://doi.org/10.1234/example",
+                "related_database_entries": "EMPIAR-12345, EMD-67890",
+                "authors_json": [
+                    {"author_id": 1, "author_list_order": 1, "is_primary": True, "is_corresponding": True},
+                    {"author_id": 2, "author_list_order": 2, "is_primary": False, "is_corresponding": False},
+                ],
+                "release_date": "2026-12-01",
+            },
+        )],
+    ),
+    partial_update=extend_schema(
+        summary="Update a deposition",
+        examples=[OpenApiExample(
+            "Patch fields",
+            request_only=True,
+            value={"description": "Updated description.", "release_date": "2027-01-15"},
+        )],
+    ),
+)
 class DepositionViewSet(viewsets.ModelViewSet):
     """Container CRUD. list returns depositions with datasets nested (My Submissions)."""
 
@@ -75,6 +106,51 @@ class DepositionViewSet(viewsets.ModelViewSet):
         return Response({"submissions": serializer.data, "total_count": queryset.count()})
 
 
+@extend_schema_view(
+    create=extend_schema(
+        summary="Create a dataset",
+        description="Create a dataset under a deposition. Pass the deposition's `id` (from its "
+                    "create response) as `deposition` — not the `deposition_id`. `dataset_id` "
+                    "and `status` are set for you.",
+        examples=[OpenApiExample(
+            "New dataset",
+            request_only=True,
+            value={
+                "deposition": 1,
+                "title": "Dataset 1 — strain ABC",
+                "description": "Single-axis tilt series, 3.0 A/px.",
+                "sample_preparation": "Plunge-frozen on Quantifoil grids.",
+                "grid_preparation": "Glow-discharged 30 s.",
+                "assay_label": "cryo-electron tomography",
+                "assay_ontology_id": "EFO:0010961",
+            },
+        )],
+    ),
+    partial_update=extend_schema(
+        summary="Update a dataset (fields + nested funding / sessions)",
+        description="Nested `funding` and `sessions` are FULL-REPLACE: any row omitted from the "
+                    "array is deleted. Each session entry must include `msi_session` (the MsiSession's id).",
+        examples=[OpenApiExample(
+            "Patch with funding + sessions",
+            request_only=True,
+            value={
+                "description": "Updated experimental notes.",
+                "funding": [
+                    {"funding_agency_name": "Chan Zuckerberg Initiative", "grant_id": "CZI-2026-001"},
+                    {"funding_agency_name": "NIH", "grant_id": "R01-GM-123456"},
+                ],
+                "sessions": [
+                    {
+                        "msi_session": 42,
+                        "aretomo_run_name": "run001",
+                        "denoise_run_name": "",
+                        "selected_copick_runs": [],
+                    },
+                ],
+            },
+        )],
+    ),
+)
 class DatasetViewSet(viewsets.ModelViewSet):
     """Submit unit CRUD + per-dataset actions."""
 
@@ -119,6 +195,34 @@ class DatasetViewSet(viewsets.ModelViewSet):
         return _not_implemented()  # TODO: config_yaml serializer
 
 
+@extend_schema_view(
+    partial_update=extend_schema(
+        summary="Save a session (metadata + annotations)",
+        description="Saves session metadata and copick annotations in one PATCH. `annotations` "
+                    "upsert by (copick_kind, copick_ref) and are full-replace — any omitted is "
+                    "removed. Method links are managed via their own endpoint.",
+        examples=[OpenApiExample(
+            "Save metadata + annotations",
+            request_only=True,
+            value={
+                "tiltseries_metadata": {
+                    "acceleration_voltage": 300, "pixel_spacing": 1.5,
+                    "tilt_min": -60, "tilt_max": 60, "tilt_step": 3,
+                },
+                "tomogram_metadata": {
+                    "voxel_spacing": 7.84, "reconstruction_method": "WBP", "ctf_corrected": True,
+                },
+                "annotations": [
+                    {
+                        "copick_kind": "picks", "copick_ref": "ribosome-0",
+                        "object_name": "ribosome", "object_count": 1200,
+                        "method_type": "automated", "is_selected": True,
+                    },
+                ],
+            },
+        )],
+    ),
+)
 class DepositionSessionViewSet(
     mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
@@ -147,6 +251,23 @@ class DepositionSessionViewSet(
         return _not_implemented()  # TODO: SCP subset CSV to cluster
 
 
+@extend_schema_view(
+    create=extend_schema(
+        summary="Add a method link to an annotation",
+        description="`annotation` is the annotation's `id`. `link_type` is one of: "
+                    "documentation / models_weights / other / source_code / website.",
+        examples=[OpenApiExample(
+            "New method link",
+            request_only=True,
+            value={
+                "annotation": 1,
+                "link_type": "source_code",
+                "link": "https://github.com/example/picking-model",
+                "custom_name": "Picking model repo",
+            },
+        )],
+    ),
+)
 class MethodLinkViewSet(viewsets.ModelViewSet):
     """CRUD for annotation method links (kept out of nested writes)."""
 
