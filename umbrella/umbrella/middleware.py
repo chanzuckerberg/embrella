@@ -12,13 +12,11 @@ from django.utils.deprecation import MiddlewareMixin
 from umbrella_logger import logger
 
 # Session key used to bridge cross-origin redirects back to the frontend
-# (e.g. localhost:3000) after login/logout. Consumed by umbrella.adapters.
-# This module is the single source of truth; adapters imports it from here.
+# (e.g. localhost:3000) after login/logout. Consumed by umbrella.adapters
 SESSION_NEXT_URL_KEY = "auth_next_url"
 
 
-# Path portion of LOGIN_URL (e.g. '/accounts/login/'). LOGIN_URL is static, so
-# compute it once at import rather than per request.
+# Path portion of LOGIN_URL (e.g. '/accounts/login/')
 LOGIN_PATH = urlparse(settings.LOGIN_URL).path
 
 
@@ -123,10 +121,6 @@ class FixLoginRedirectMiddleware(MiddlewareMixin):
     When the login-required middleware redirects to /accounts/login/?next=/some/path,
     this middleware rewrites the next parameter to the full HTTP_REFERER URL to
     preserve the frontend URL across different ports (e.g., localhost:3000).
-
-    On the way in, when the login page itself is requested, it stashes that full
-    frontend URL in the session so umbrella.adapters can redirect back to it after
-    a successful (cross-origin) login — allauth rejects cross-origin `next` params.
     """
 
     def process_request(self, request):

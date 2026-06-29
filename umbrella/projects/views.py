@@ -17,19 +17,20 @@ from .models import Project
 def index(request):
     project_list = Project.objects.all()
     context = {
-                'projects':project_list,
+        "projects": project_list,
     }
     return render(request, "projects/index.html", context)
+
 
 @extend_schema(
     methods=["GET"],
     description="Returns all projects as serialized JSON. Requires ?valid=true.",
     parameters=[
         OpenApiParameter(
-            name='valid',
+            name="valid",
             required=True,
             type=bool,
-            description='Must be true to get project list',
+            description="Must be true to get project list",
         ),
     ],
     responses={
@@ -39,10 +40,10 @@ def index(request):
 )
 @api_view(["GET"])
 def getproject(request):
-    if request.GET.get('valid', 'true') != 'true':
-        return JsonResponse({'error': 'Invalid request'}, status=400)
+    if request.GET.get("valid", "true") != "true":
+        return JsonResponse({"error": "Invalid request"}, status=400)
     project_list = Project.objects.all()
-    serialized_projects = serialize('json', project_list)
+    serialized_projects = serialize("json", project_list)
     projects_data = json.loads(serialized_projects)
     return JsonResponse(projects_data, safe=False)
 
@@ -76,18 +77,27 @@ def create_project(request):
 
         if serializer.is_valid():
             project = serializer.save()
-            return Response({
-                'message': 'Project created successfully',
-                'project': ProjectSerializer(project).data,
-            }, status=status.HTTP_201_CREATED)
+            return Response(
+                {
+                    "message": "Project created successfully",
+                    "project": ProjectSerializer(project).data,
+                },
+                status=status.HTTP_201_CREATED,
+            )
         else:
-            return Response({
-                'error': 'Validation failed',
-                'detail': serializer.errors,
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "error": "Validation failed",
+                    "detail": serializer.errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     except Exception as e:
-        return Response({
-            'error': 'Failed to create project',
-            'detail': str(e),
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {
+                "error": "Failed to create project",
+                "detail": str(e),
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

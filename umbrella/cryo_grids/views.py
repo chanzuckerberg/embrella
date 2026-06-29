@@ -143,7 +143,6 @@ def get_base_url():
         return "http://localhost:8000"
 
 
-
 # If you want to test locally, you can comment out the @login_required decorator
 # @login_required
 @require_http_methods(["GET"])

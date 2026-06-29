@@ -30,6 +30,7 @@ def run_with_args(args):
         return "N/A"
 
 
+# TODO: Below GIT vars are not used except in legacy html. Plan to remove
 GIT_HASH = run_with_args(["git", "rev-parse", "--short", "HEAD"])
 GIT_BRANCH = run_with_args(["git", "rev-parse", "--abbrev-ref", "HEAD"])
 START_TIME = datetime.now(tz=timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).strftime("%Y-%m-%d %H:%M %z")
@@ -46,7 +47,6 @@ LOGIN_REDIRECT_URL = "/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
-    # os.path.join(Path(BASE_DIR).resolve().parent, "docs_build"),
 ]
 STATIC_URL = "/static/"
 
@@ -246,8 +246,9 @@ ACCOUNT_ADAPTER = "umbrella.adapters.UmbrellaAccountAdapter"
 # Restrict SSO to these email domains
 SSO_ALLOWED_DOMAINS = ["czii.org", "czbiohub.org", "biohub.org"]
 
+# TODO: update secret keys #934
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-_p$6q-6t2x(33d^u=hfgb@fycd0bp^8zy0dwfo@lonrl^zf+4*")
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
@@ -272,8 +273,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://umbrella.czbiohub.org",
     "http://umbrella-dev.czbiohub.org",
 ]
-# IMPORTANT: Do not enable CORS_ORIGIN_ALLOW_ALL in production!
-# CORS_ORIGIN_ALLOW_ALL = True  # REMOVED: This overrides CORS_ALLOWED_ORIGINS
 CORS_ALLOW_METHODS = [
     "DELETE",
     "GET",
@@ -282,17 +281,6 @@ CORS_ALLOW_METHODS = [
     "POST",
     "PUT",
 ]
-# CORS_ALLOW_HEADERS = [
-#     'accept',
-#     'accept-encoding',
-#     'authorization',
-#     'content-type',
-#     'dnt',
-#     'origin',
-#     'user-agent',
-#     'x-csrftoken',
-#     'x-requested-with',
-# ]
 CORS_ALLOW_HEADERS = default_cors_headers + ("Access-Control-Allow-Origin",)
 CORS_EXPOSE_HEADERS = ["Access-Control-Allow-Origin", "Content-Type", "Location"]
 CSRF_TRUSTED_ORIGINS = [
@@ -327,8 +315,6 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_AGE = 1209600
-# SESSION_COOKIE_SAMESITE = None
-
 
 # Django-Q2 Configuration
 Q_CLUSTER = {

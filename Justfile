@@ -484,8 +484,7 @@ builddocs:
 #############################################
 
 # Backs up mysql db to /srv/dbbackups on passed host (default: umbrella). Assumes ssh access as svc.czii.umbrella to host, and that MYSQL_USER, MYSQL_PASSWORD, and MYSQL_NAME are in .env.
-# Dumps ONLY the application database ($MYSQL_NAME), not the mysql system DB. This keeps
-# the grant/user ("password") tables out of the snapshot
+# Dumps ONLY the application database ($MYSQL_NAME), not the mysql system DB, preventing access issues when restoring.
 backupdb envfile +host="umbrella" :
     #!/bin/bash
     set -euo pipefail
