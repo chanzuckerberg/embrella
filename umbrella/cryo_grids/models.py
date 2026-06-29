@@ -136,6 +136,18 @@ class PlungeFreezingSession(models.Model):
         username = self.user.username.split("@")[0] if self.user and self.user.username else "unknown"
         return f"{date_str}-{username}-{self.id}"
 
+SAMPLE_TYPE_CHOICES = [
+    ("cell_line", "Cell Line"),
+    ("in_silico", "In Silico"),
+    ("in_vitro", "In Vitro"),
+    ("organelle", "Organelle"),
+    ("organism", "Organism"),
+    ("organoid", "Organoid"),
+    ("other", "Other"),
+    ("primary_cell_culture", "Primary Cell Culture"),
+    ("tissue", "Tissue"),
+    ("virus", "Virus"),
+]
 
 class Sample(models.Model):
     name = models.CharField(
@@ -143,11 +155,28 @@ class Sample(models.Model):
         unique=True,
         help_text="unique sample name that you may use to search your grid for later. For example, lysosome",
     )
+    # cell_Component_id is ontology
     ontology = models.CharField(
         max_length=32,
         blank=True,
         help_text='ontology name and values to help database deposition. For example: "GO:0005764" for lysosome',
     )
+
+    # New fields for portal deposition alignment
+    sample_type = models.CharField(max_length=40, blank=True, choices=SAMPLE_TYPE_CHOICES)
+    organism_name = models.CharField(max_length=128, blank=True)
+    organism_taxid = models.IntegerField(null=True, blank=True)
+    tissue_name = models.CharField(max_length=128, blank=True)
+    tissue_id = models.CharField(max_length=64, blank=True)
+    cell_name = models.CharField(max_length=128, blank=True)
+    cell_type_id = models.CharField(max_length=64, blank=True)
+    cell_strain_name = models.CharField(max_length=128, blank=True)
+    cell_strain_id = models.CharField(max_length=64, blank=True)
+    cell_component_name = models.CharField(max_length=128, blank=True)
+    development_stage_name = models.CharField(max_length=128, blank=True)
+    development_stage_ontology_id = models.CharField(max_length=64, blank=True)
+    disease_name = models.CharField(max_length=128, blank=True)
+    disease_ontology_id = models.CharField(max_length=64, blank=True)
 
     def __str__(self):
         return self.name
