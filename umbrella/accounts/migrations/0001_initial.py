@@ -35,7 +35,6 @@ def drop_table(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [

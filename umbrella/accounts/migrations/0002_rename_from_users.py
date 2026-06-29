@@ -44,7 +44,6 @@ def rename_accounts_to_users(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("accounts", "0001_initial"),
         ("contenttypes", "0002_remove_content_type_name"),
