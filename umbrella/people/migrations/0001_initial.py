@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
             name='Person',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('orcid', models.CharField(blank=True, help_text="ORCID iD as xxxx-xxxx-xxxx-xxxx. Null so records without an ORCID don't collide.", max_length=19, null=True, unique=True, validators=[django.core.validators.RegexValidator(message='ORCID iD must be formatted as xxxx-xxxx-xxxx-xxxx.', regex='^\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$')])),
+                ('orcid', models.CharField(blank=True, help_text="ORCID iD as xxxx-xxxx-xxxx-xxxx. Null so records without an ORCID don't collide.", max_length=19, null=True, unique=True, validators=[django.core.validators.RegexValidator(message='ORCID iD must be formatted as xxxx-xxxx-xxxx-xxxx.', regex='^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$')])),
                 ('given_name', models.CharField(max_length=128)),
                 ('family_name', models.CharField(max_length=128)),
                 ('contact_email', models.EmailField(blank=True, help_text='Preferred contact email; may differ from the email used to sign in to the app.', max_length=254)),

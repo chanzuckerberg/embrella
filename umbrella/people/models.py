@@ -5,7 +5,7 @@ from django.db import models
 # ORCID iDs are 16 digits grouped in fours; the final character is a checksum
 # that may be the digit's value or the letter ``X``. Stored as ``xxxx-xxxx-xxxx-xxxx``.
 orcid_validator = RegexValidator(
-    regex=r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$",
+    regex=r"^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$",
     message="ORCID iD must be formatted as xxxx-xxxx-xxxx-xxxx.",
 )
 

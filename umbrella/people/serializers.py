@@ -7,7 +7,7 @@ from rest_framework.validators import UniqueValidator
 
 from people.models import Institution, Person
 
-ORCID_RE = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")
+ORCID_RE = re.compile(r"^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$")
 
 
 class InstitutionSerializer(serializers.ModelSerializer):
