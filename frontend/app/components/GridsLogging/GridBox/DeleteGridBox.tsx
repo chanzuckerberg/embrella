@@ -6,6 +6,7 @@ import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/compo
 import { PuckList } from '@app/common/types/gridLogging';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging';
 import { DJANGO_URL } from '@app/common/constants/api';
+import { deleteResource } from '@app/common/queries/fetchResource';
 
 interface DeleteGridBoxProps {
   open: boolean;
@@ -40,13 +41,7 @@ export const DeleteGridBox: React.FC<DeleteGridBoxProps> = ({
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`${DJANGO_URL}/api/list/pucks/grid-box/${gridBoxId}/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
+      const response = await deleteResource(`${DJANGO_URL}/api/list/pucks/grid-box/${gridBoxId}/`);
 
       const data = await response.json();
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Chip, TextField, Box, Popper, Paper, Typography, ClickAwayListener } from '@mui/material';
 import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
+import { patchResource, postResource } from '@app/common/queries/fetchResource';
 
 export interface LabelData {
   id: number;
@@ -80,12 +81,7 @@ export const LabelChip = ({ gridId, labels: initialLabels, controlledLabels, onS
     }
     const url = `${DJANGO_URL}${POST_API.UPDATE_GRID_LABELS.replace('grid_id', String(gridId))}`;
     try {
-      const res = await fetch(url, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label_ids: newLabels.map((l) => l.id) }),
-      });
+      const res = await patchResource(url, { label_ids: newLabels.map((l) => l.id) });
       if (!res.ok) {
         console.error('Failed to update labels:', res.status, await res.text());
       }
@@ -115,12 +111,7 @@ export const LabelChip = ({ gridId, labels: initialLabels, controlledLabels, onS
     }
 
     try {
-      const res = await fetch(`${DJANGO_URL}${POST_API.CREATE_LABEL}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimmed }),
-      });
+      const res = await postResource(`${DJANGO_URL}${POST_API.CREATE_LABEL}`, { name: trimmed });
       if (!res.ok) {
         console.error('Failed to create label:', res.status, await res.text());
         return;

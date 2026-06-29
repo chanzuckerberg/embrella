@@ -143,8 +143,6 @@ def get_base_url():
         return "http://localhost:8000"
 
 
-from django.views.decorators.csrf import csrf_exempt
-
 
 # If you want to test locally, you can comment out the @login_required decorator
 # @login_required
@@ -556,7 +554,6 @@ def add_msi_session(msi_session_list, item):
         msi_session_list.append(msi_session_entry)
 
 
-@csrf_exempt
 @login_required
 @require_http_methods(["POST"])
 def update_grid_trashed_status(request, grid_id):
@@ -651,7 +648,6 @@ def update_grid_trashed_status(request, grid_id):
         )
 
 
-@csrf_exempt
 @login_required
 @require_http_methods(["POST"])
 def update_grid_clipped_status(request, grid_id):

@@ -25,9 +25,7 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import Coalesce, Lower, StrIndex, Substr, Trim
-from django.utils.decorators import method_decorator
 from django.utils.timezone import now as tz_now
-from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema, inline_serializer
 from projects.models import Project
@@ -407,7 +405,6 @@ class PuckViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @method_decorator(csrf_exempt)
     def destroy(self, request, *args, **kwargs):
         """
         Delete a puck and handle cascading operations:
@@ -474,7 +471,6 @@ class PuckViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @method_decorator(csrf_exempt)
     @action(detail=False, methods=["patch"], url_path="grid-box/(?P<grid_box_id>[0-9]+)/update")
     def update_grid_box(self, request, grid_box_id=None):
         """
@@ -536,7 +532,6 @@ class PuckViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @method_decorator(csrf_exempt)
     @action(detail=False, methods=["delete"], url_path="grid-box/(?P<grid_box_id>[0-9]+)")
     def delete_grid_box(self, request, grid_box_id=None):
         """
@@ -589,7 +584,6 @@ class PuckViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @method_decorator(csrf_exempt)
     @action(detail=False, methods=["patch"], url_path="grid-box/(?P<grid_box_id>[0-9]+)/move")
     def move_grid_box(self, request, grid_box_id=None):
         """
@@ -1018,7 +1012,6 @@ class CryoGridViewSet(viewsets.ModelViewSet):
         serializer = GridDetailsSerializer(grid, context={"request": request})
         return Response(serializer.data)
 
-    @method_decorator(csrf_exempt)
     def create(self, request, *args, **kwargs):
         """Create a new grid"""
         try:
@@ -1121,7 +1114,6 @@ class CryoGridViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
-    @method_decorator(csrf_exempt)
     @action(detail=False, methods=["patch"], url_path=r"(?P<grid_id>[0-9]+)/move")
     def move_grid(self, request, grid_id=None):
         """
@@ -1232,7 +1224,6 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @method_decorator(csrf_exempt)
     @action(detail=False, methods=["patch"], url_path=r"(?P<grid_id>[0-9]+)/update")
     def update_grid(self, request, grid_id=None):
         """
@@ -1283,7 +1274,6 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @method_decorator(csrf_exempt)
     @action(detail=False, methods=["post"], url_path=r"clip-all-in-box/(?P<grid_box_id>[0-9]+)")
     def clip_all_in_box(self, request, grid_box_id=None):
         """
@@ -1344,7 +1334,6 @@ class CryoGridViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @method_decorator(csrf_exempt)
     @action(detail=False, methods=["patch"], url_path=r"(?P<grid_id>[0-9]+)/update-labels")
     def update_labels(self, request, grid_id=None):
         """

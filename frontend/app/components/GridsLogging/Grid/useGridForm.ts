@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
+import { patchResource, postResource } from '@app/common/queries/fetchResource';
 import {
   useUpdateGrid,
   useFreezingSessionList,
@@ -171,11 +172,8 @@ export const useGridForm = ({ gridId, gridDetails, refetch, onGridUpdated }: Use
     const newClippedStatus = event.target.checked;
     setLocalClipped(newClippedStatus);
     try {
-      const response = await fetch(`${DJANGO_URL}/cryo_grids/update-grid-clipped/${gridId}/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ clipped: newClippedStatus }),
+      const response = await postResource(`${DJANGO_URL}/cryo_grids/update-grid-clipped/${gridId}/`, {
+        clipped: newClippedStatus,
       });
       if (!response.ok) setLocalClipped(!newClippedStatus);
     } catch {
@@ -193,11 +191,8 @@ export const useGridForm = ({ gridId, gridDetails, refetch, onGridUpdated }: Use
     setIsTrashProcessing(true);
     setLocalTrashed(true);
     try {
-      const response = await fetch(`${DJANGO_URL}/cryo_grids/update-grid-trashed/${gridId}/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ trashed: true }),
+      const response = await postResource(`${DJANGO_URL}/cryo_grids/update-grid-trashed/${gridId}/`, {
+        trashed: true,
       });
       if (response.ok) {
         setTrashDialogOpen(false);
@@ -218,12 +213,7 @@ export const useGridForm = ({ gridId, gridDetails, refetch, onGridUpdated }: Use
     if (!gridId) return;
     const url = `${DJANGO_URL}${POST_API.UPDATE_GRID_LABELS.replace('grid_id', String(gridId))}`;
     try {
-      await fetch(url, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label_ids: labels.map((l) => l.id) }),
-      });
+      await patchResource(url, { label_ids: labels.map((l) => l.id) });
     } catch (e) {
       console.error('Failed to update labels:', e);
     }

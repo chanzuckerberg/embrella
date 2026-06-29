@@ -7,6 +7,7 @@ import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { LabelsAutocomplete } from './LabelsAutocomplete';
 import { LabelData } from '@app/components/GridsView/components/LabelEditor/LabelChip';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
+import { patchResource } from '@app/common/queries/fetchResource';
 import { FormFieldWithAdd } from '@app/common/components/Forms/FormFieldWithAdd';
 import { AddSpecimenDialog } from './AddSpecimenDialog';
 import { AddProjectDialog } from '@app/components/GridsLogging/Grid/AddProjectDialog';
@@ -203,12 +204,7 @@ export const AddGrid: React.FC<AddGridProps> = ({
       if (selectedLabels.length > 0) {
         const url = `${DJANGO_URL}${POST_API.UPDATE_GRID_LABELS.replace('grid_id', String(result.id))}`;
         try {
-          await fetch(url, {
-            method: 'PATCH',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ label_ids: selectedLabels.map((l) => l.id) }),
-          });
+          await patchResource(url, { label_ids: selectedLabels.map((l) => l.id) });
         } catch (e) {
           console.error('Failed to update labels:', e);
         }
