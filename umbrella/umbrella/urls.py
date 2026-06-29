@@ -33,8 +33,8 @@ from cryo_grids.viewsets import (
     PuckListViewSet,
     PuckViewSet,
     SampleViewSet,
-    SpecimenViewSet,
     ScreeningGridsViewSet,
+    SpecimenViewSet,
     StandardSamplesViewSet,
 )
 from custom.views import version_info
@@ -178,6 +178,7 @@ urlpatterns = (
         path("projects/", include("projects.urls"), name="projects"),
         path("tem/", include(tem_v1_urlpatterns)),
         path("copick/", include("workflow.processors.copick.api_urls")),
+        path("people/", include("people.urls")),
     ]
     + api_patterns  # API endpoints
 )

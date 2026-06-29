@@ -1,5 +1,5 @@
 """
-Tests for users.usernames helper.
+Tests for accounts.cluster_usernames helper.
 NOTE: depends on `stores.Cluster` table seeded by migration `stores.0010_seed_clusters`, so czii/bruno rows exist.
 """
 
@@ -7,13 +7,13 @@ import pytest
 from django.contrib.auth.models import AnonymousUser, User
 from stores.models import Cluster
 
-from users.models import UserClusterCredentials
-from users.usernames import (
+from accounts.cluster_usernames import (
     MissingClusterCredentialsError,
     clear_username_cache,
     format_cluster_username_for_display,
     resolve_cluster_username,
 )
+from accounts.models import UserClusterCredentials
 
 
 @pytest.mark.django_db
