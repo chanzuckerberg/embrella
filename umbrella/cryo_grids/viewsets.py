@@ -33,6 +33,7 @@ from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schem
 from projects.models import Project
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
@@ -46,7 +47,6 @@ from umbrella.choices import (
     PUCK_COLORS,
 )
 
-from common.auth import CsrfExemptSessionAuthentication
 from cryo_grids.models import (
     Cane,
     CryoGrid,
@@ -90,8 +90,8 @@ class PuckViewSet(viewsets.ModelViewSet):
     ViewSet for Puck model with full CRUD operations and custom actions
     """
 
-    permission_classes = []  # Allow unauthenticated access
-    authentication_classes = []  # Disable authentication
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
     serializer_class = PuckSerializer
     pagination_class = PageNumberPagination
 
@@ -726,8 +726,8 @@ class CaneViewSet(viewsets.ReadOnlyModelViewSet):
     URL: /api/list/canes/
     """
 
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
     serializer_class = CaneSerializer
     queryset = Cane.objects.select_related("dewar").order_by("name")
 
@@ -758,8 +758,8 @@ class SpecimenViewSet(viewsets.ModelViewSet):
     URL: /api/list/specimens/
     """
 
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
     serializer_class = SpecimenSerializer
     queryset = Specimen.objects.prefetch_related("samples").select_related("documentation_page")
 
@@ -833,8 +833,8 @@ class SampleViewSet(viewsets.ModelViewSet):
     URL: /api/list/samples/
     """
 
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
     serializer_class = SampleSerializer
     queryset = Sample.objects.all().order_by(Lower("name"))
 
@@ -883,8 +883,8 @@ class FreezingSessionViewSet(viewsets.ModelViewSet):
     URL: /api/list/freezing-sessions/
     """
 
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
     serializer_class = FreezingSessionSerializer
     queryset = PlungeFreezingSession.objects.select_related(
         "user",
@@ -987,7 +987,7 @@ class CryoGridViewSet(viewsets.ModelViewSet):
     )
     serializer_class = CryoGridSerializer
     permission_classes = [IsAuthenticated]
-    authentication_classes = [CsrfExemptSessionAuthentication]
+    authentication_classes = [SessionAuthentication]
 
     def list(self, request, *args, **kwargs):
         """Delegate to the existing grid list view for backwards compatibility."""
@@ -1618,8 +1618,8 @@ class ProjectLeaderViewSet(viewsets.ReadOnlyModelViewSet):
     URL: /api/list/project-leaders/
     """
 
-    permission_classes = []
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
 
     def get_queryset(self):
         """Get only active project_leaders (by project_leader_id in DB)."""
@@ -1663,7 +1663,7 @@ class LabelViewSet(viewsets.ModelViewSet):
     queryset = Label.objects.annotate(usage_count=models.Count("grids")).order_by("-usage_count", "name")
     serializer_class = LabelSerializer
     permission_classes = [IsAuthenticated]
-    authentication_classes = [CsrfExemptSessionAuthentication]
+    authentication_classes = [SessionAuthentication]
 
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
@@ -1691,7 +1691,7 @@ class CryoGridBoxViewSet(viewsets.ReadOnlyModelViewSet):
     )
     serializer_class = CryoGridBoxListSerializer
     permission_classes = [IsAuthenticated]
-    authentication_classes = [CsrfExemptSessionAuthentication]
+    authentication_classes = [SessionAuthentication]
 
     def list(self, request, *args, **kwargs):
         """
@@ -1889,7 +1889,7 @@ class PuckListViewSet(viewsets.ReadOnlyModelViewSet):
         .order_by(*natural_name_ordering())
     )
     permission_classes = [IsAuthenticated]
-    authentication_classes = [CsrfExemptSessionAuthentication]
+    authentication_classes = [SessionAuthentication]
 
     def list(self, request, *args, **kwargs):
         """List pucks with pagination in the format expected by the frontend."""
@@ -2077,7 +2077,7 @@ class GridInventoryCountsViewSet(viewsets.ViewSet):
     """
 
     permission_classes = [IsAuthenticated]
-    authentication_classes = [CsrfExemptSessionAuthentication]
+    authentication_classes = [SessionAuthentication]
 
     def list(self, request):
         raw_q = request.GET.get("q", None)
@@ -2169,7 +2169,7 @@ class StandardSamplesViewSet(viewsets.ViewSet):
     """
 
     permission_classes = [IsAuthenticated]
-    authentication_classes = [CsrfExemptSessionAuthentication]
+    authentication_classes = [SessionAuthentication]
 
     def list(self, request, *args, **kwargs):
         raw_q = request.GET.get("q", None)
@@ -2351,7 +2351,7 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
     """
 
     permission_classes = [IsAuthenticated]
-    authentication_classes = [CsrfExemptSessionAuthentication]
+    authentication_classes = [SessionAuthentication]
 
     STATUS_LABELS = [
         "TBS",

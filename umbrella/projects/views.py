@@ -4,14 +4,12 @@ from cryo_grids.serializers import ProjectSerializer
 from django.core.serializers import serialize
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from common.auth import CsrfExemptSessionAuthentication
+from rest_framework.response import Response
 
 from .models import Project
 
@@ -60,9 +58,7 @@ def getproject(request):
     },
 )
 @api_view(["POST"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
-
 def create_project(request):
     """
     Create a new project.

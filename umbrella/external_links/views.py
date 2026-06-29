@@ -1,17 +1,15 @@
 from django.conf import settings
 from rest_framework import status, viewsets
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.decorators import action, authentication_classes, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from common.auth import CsrfExemptSessionAuthentication
+from rest_framework.decorators import action, permission_classes
 from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from external_links.models import ExternalResource
 from external_links.serializers import ExternalResourceListSerializer, ExternalResourceSerializer
 
-@authentication_classes([CsrfExemptSessionAuthentication])
+
 @permission_classes([IsAuthenticated])
 class ExternalResourceViewSet(viewsets.ModelViewSet):
     """

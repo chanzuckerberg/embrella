@@ -11,26 +11,14 @@ import json
 
 from django.http import JsonResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework.authentication import SessionAuthentication
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from umbrella_logger import logger
 
 from common import clusterio
 
 
-class CsrfExemptSessionAuthentication(SessionAuthentication):
-    """
-    SessionAuthentication subclass that doesn't enforce CSRF checks.
-    Use this for API endpoints that handle CSRF validation separately or don't require it.
-    """
-
-    def enforce_csrf(self, request):
-        return  # Skip CSRF check
-
-
 @api_view(["POST"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 @extend_schema(
     summary="Check SSH setup status",
@@ -106,7 +94,6 @@ def check_ssh_setup(request):
 
 
 @api_view(["POST"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 @extend_schema(
     summary="Setup SSH key for user",
