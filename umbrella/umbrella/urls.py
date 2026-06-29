@@ -141,13 +141,14 @@ api_patterns = [
 ]
 
 # Legacy template-based routes (will be migrated to Next.js)
+# Top-level mount owns the bare namespace; legacy gets `legacy_*` to avoid urls.W005.
 legacy_patterns = [
     path("umbrella/", include("custom.urls"), name="umbrella"),
-    path("projects/", include("projects.urls")),
+    path("projects/", include(("projects.urls", "projects"), namespace="legacy_projects")),
     path("tem/", include((tem_legacy_urlpatterns, "tem"))),
-    path("processes/", include("processes.urls")),
-    path("cryo_grids/", include("cryo_grids.urls"), name="cryo_grids"),
-    path("workflow/", include("workflow.urls"), name="workflow pipeline"),
+    path("processes/", include(("processes.urls", "processes"), namespace="legacy_processes")),
+    path("cryo_grids/", include(("cryo_grids.urls", "cryo_grids"), namespace="legacy_cryo_grids")),
+    path("workflow/", include(("workflow.urls", "workflow"), namespace="legacy_workflow")),
 ]
 
 urlpatterns = (
@@ -168,10 +169,12 @@ urlpatterns = (
         # Note: These also include legacy template routes which should eventually move to /legacy/
         path("workflow/", include("workflow.urls"), name="workflow"),
         path("cryo_grids/", include("cryo_grids.urls"), name="cryo_grids"),
+        path("depositions/", include("depositions.urls"), name="depositions"),
         path("processes/", include("processes.urls"), name="processes"),
         path("projects/", include("projects.urls"), name="projects"),
         path("tem/", include(tem_v1_urlpatterns)),
         path("copick/", include("workflow.processors.copick.api_urls")),
+        path("people/", include("people.urls")),
     ]
     + api_patterns  # API endpoints
 )

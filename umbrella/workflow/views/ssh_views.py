@@ -50,7 +50,7 @@ def check_ssh_setup(request):
     test the actual SSH connection to detect cases where the credentials
     row exists but the service-user key was removed from authorized_keys.
     """
-    from users.usernames import MissingClusterCredentialsError, resolve_cluster_username
+    from accounts.cluster_usernames import MissingClusterCredentialsError, resolve_cluster_username
 
     try:
         cluster_id = request.data.get("cluster_id")
@@ -162,8 +162,9 @@ def setup_ssh_key(request):
         # Persist the user's cluster username on success so future SSH
         # connections look up this row instead of guessing from the email.
         if result["success"] and result["can_connect"]:
+            from accounts.models import UserClusterCredentials
             from stores.models import Cluster
-            from users.models import UserClusterCredentials
+
             cluster = Cluster.objects.get(cluster_id=cluster_id)
             UserClusterCredentials.objects.update_or_create(
                 user=request.user,
