@@ -177,6 +177,7 @@ def setup_ssh_key(request):
         if result["success"] and result["can_connect"]:
             from accounts.models import UserClusterCredentials
             from stores.models import Cluster
+
             cluster = Cluster.objects.get(cluster_id=cluster_id)
             UserClusterCredentials.objects.update_or_create(
                 user=request.user,

@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -16,36 +15,83 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Institution',
+            name="Institution",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255)),
-                ('ror_id', models.CharField(blank=True, help_text='Research Organization Registry id (optional).', max_length=32)),
-                ('address', models.CharField(blank=True, max_length=255)),
-                ('city', models.CharField(blank=True, max_length=128)),
-                ('country', models.CharField(blank=True, max_length=128)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=255)),
+                (
+                    "ror_id",
+                    models.CharField(
+                        blank=True, help_text="Research Organization Registry id (optional).", max_length=32
+                    ),
+                ),
+                ("address", models.CharField(blank=True, max_length=255)),
+                ("city", models.CharField(blank=True, max_length=128)),
+                ("country", models.CharField(blank=True, max_length=128)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='Person',
+            name="Person",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('orcid', models.CharField(blank=True, help_text="ORCID iD as xxxx-xxxx-xxxx-xxxx. Null so records without an ORCID don't collide.", max_length=19, null=True, unique=True, validators=[django.core.validators.RegexValidator(message='ORCID iD must be formatted as xxxx-xxxx-xxxx-xxxx.', regex='^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$')])),
-                ('given_name', models.CharField(max_length=128)),
-                ('family_name', models.CharField(max_length=128)),
-                ('contact_email', models.EmailField(blank=True, help_text='Preferred contact email; may differ from the email used to sign in to the app.', max_length=254)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('institution', models.ForeignKey(blank=True, help_text='The single institution this person is affiliated with.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='people', to='people.institution')),
-                ('user', models.OneToOneField(blank=True, help_text='Optional link to a logged-in account.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='person', to=settings.AUTH_USER_MODEL)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "orcid",
+                    models.CharField(
+                        blank=True,
+                        help_text="ORCID iD as xxxx-xxxx-xxxx-xxxx. Null so records without an ORCID don't collide.",
+                        max_length=19,
+                        null=True,
+                        unique=True,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                message="ORCID iD must be formatted as xxxx-xxxx-xxxx-xxxx.",
+                                regex="^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$",
+                            )
+                        ],
+                    ),
+                ),
+                ("given_name", models.CharField(max_length=128)),
+                ("family_name", models.CharField(max_length=128)),
+                (
+                    "contact_email",
+                    models.EmailField(
+                        blank=True,
+                        help_text="Preferred contact email; may differ from the email used to sign in to the app.",
+                        max_length=254,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "institution",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="The single institution this person is affiliated with.",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="people",
+                        to="people.institution",
+                    ),
+                ),
+                (
+                    "user",
+                    models.OneToOneField(
+                        blank=True,
+                        help_text="Optional link to a logged-in account.",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="person",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['family_name', 'given_name'],
+                "ordering": ["family_name", "given_name"],
             },
         ),
     ]

@@ -37,11 +37,13 @@ class TestSetupSshKeyPersistsCredentials:
 
         request = factory.post(
             "/workflow/v1/ssh/setup_key/",
-            data=json.dumps({
-                "cluster_id": "bruno",
-                "username": "dora-bruno",
-                "password": base64.b64encode(b"hunter2").decode("utf-8"),
-            }),
+            data=json.dumps(
+                {
+                    "cluster_id": "bruno",
+                    "username": "dora-bruno",
+                    "password": base64.b64encode(b"hunter2").decode("utf-8"),
+                }
+            ),
             content_type="application/json",
         )
         force_authenticate(request, user=user)
@@ -67,11 +69,13 @@ class TestSetupSshKeyPersistsCredentials:
 
         request = factory.post(
             "/workflow/v1/ssh/setup_key/",
-            data=json.dumps({
-                "cluster_id": "bruno",
-                "username": "new-name",
-                "password": base64.b64encode(b"hunter2").decode("utf-8"),
-            }),
+            data=json.dumps(
+                {
+                    "cluster_id": "bruno",
+                    "username": "new-name",
+                    "password": base64.b64encode(b"hunter2").decode("utf-8"),
+                }
+            ),
             content_type="application/json",
         )
         force_authenticate(request, user=user)
@@ -94,11 +98,13 @@ class TestSetupSshKeyPersistsCredentials:
 
         request = factory.post(
             "/workflow/v1/ssh/setup_key/",
-            data=json.dumps({
-                "cluster_id": "bruno",
-                "username": "dora-bruno",
-                "password": base64.b64encode(b"wrong").decode("utf-8"),
-            }),
+            data=json.dumps(
+                {
+                    "cluster_id": "bruno",
+                    "username": "dora-bruno",
+                    "password": base64.b64encode(b"wrong").decode("utf-8"),
+                }
+            ),
             content_type="application/json",
         )
         force_authenticate(request, user=user)

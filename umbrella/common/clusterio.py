@@ -69,6 +69,7 @@ def _lookup_cluster(cluster_id):
     lru_cache does not cache exceptions, so failed lookups are re-attempted.
     """
     from stores.models import Cluster
+
     try:
         return Cluster.objects.get(cluster_id=cluster_id, is_active=True)
     except Cluster.DoesNotExist:
@@ -79,6 +80,7 @@ def _lookup_cluster(cluster_id):
 def _cluster_exists(cluster_id):
     """Return True if an active Cluster row exists for this id. Cached like _lookup_cluster."""
     from stores.models import Cluster
+
     return Cluster.objects.filter(cluster_id=cluster_id, is_active=True).exists()
 
 
@@ -431,8 +433,8 @@ def test_ssh_as_user(username, cluster_id):
     ssh = None
     try:
         # Try to connect as the user using service user's key
-        auth = _get_service_user_auth() # Using service user's key
-        auth['username'] = username # Connect AS the user
+        auth = _get_service_user_auth()  # Using service user's key
+        auth["username"] = username  # Connect AS the user
         ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
 
         # Test with a simple command
@@ -613,8 +615,7 @@ def setup_ssh_key_for_user(username, password, cluster_id):
 
         # Step 2: Connect using user's password
         try:
-            ssh = get_cluster_ssh_connection(cluster_id=cluster_id,
-                                             auth={ 'username': username, 'password': password })
+            ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth={"username": username, "password": password})
         except paramiko.AuthenticationException:
             return {
                 "success": False,
