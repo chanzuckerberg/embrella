@@ -115,7 +115,11 @@ export const EntityTable = <T extends EntityDataTypes>({
                 const canSort = header.column.getCanSort();
                 const sorted = header.column.getIsSorted();
                 return (
-                  <StyledHeaderCell key={header.id} width={width}>
+                  <StyledHeaderCell
+                    key={header.id}
+                    width={width}
+                    aria-sort={canSort ? (sorted === 'desc' ? 'descending' : sorted === 'asc' ? 'ascending' : 'none') : undefined}
+                  >
                     {canSort ? (
                       <TableSortLabel
                         active={!!sorted}
