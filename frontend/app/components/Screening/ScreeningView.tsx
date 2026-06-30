@@ -5,13 +5,18 @@ import { CircularProgress } from '@mui/material';
 import { parseAsInteger, useQueryState } from 'nuqs';
 
 import { EntityTable } from '@app/common/components/EntityTable/EntityTable';
+import { EntityTableFilters } from '@app/common/components/EntityTableFilters/EntityTableFilters';
+import { FilterableTableMain } from '@app/common/components/FilterableTableMain/FilterableTableMain';
+import { Sidebar } from '@app/common/components/Sidebar/Sidebar';
 import { TableStateProvider } from '@app/common/components/TableStateProvider/TableStateProvider';
 import { TableWrapper } from '@app/common/components/TableWrapper/TableWrapper';
 import { API } from '@app/common/constants/api';
 import { GridDetailDialogContext } from '@app/components/GridsView/context/GridDetailDialogContext';
 
 import { SCREENING_COLUMN_DEFS, SCREENING_COLUMN_IDS } from './constants/columns';
+import { SCREENING_FILTER_CATEGORIES, SCREENING_FILTER_CONFIGS } from './constants/filters';
 import { ScreeningLabelsProvider } from './context/ScreeningLabelsContext';
+import { ScreeningFilterCategory, ScreeningFilterId } from './types';
 
 const GridDetailDialog = React.lazy(() =>
   import('@app/components/GridDetailDialog/GridDetailDialog').then((mod) => ({
@@ -40,11 +45,22 @@ const ScreeningViewInner = (): React.JSX.Element => {
 
 export const ScreeningView = (): React.JSX.Element => {
   return (
-    <TableStateProvider filterCategories={[]} initialSortState={[{ desc: false, id: SCREENING_COLUMN_IDS.PRIORITY }]}>
+    <TableStateProvider
+      filterCategories={SCREENING_FILTER_CATEGORIES}
+      initialSortState={[{ desc: false, id: SCREENING_COLUMN_IDS.PRIORITY }]}
+    >
       <ScreeningLabelsProvider>
-        <TableWrapper>
-          <ScreeningViewInner />
-        </TableWrapper>
+        <FilterableTableMain>
+          <Sidebar>
+            <EntityTableFilters<ScreeningFilterId, ScreeningFilterCategory>
+              entityFilterConfigs={SCREENING_FILTER_CONFIGS}
+              entityFilterListApi={API.SCREENING_GRIDS_FILTERS_LIST}
+            />
+          </Sidebar>
+          <TableWrapper>
+            <ScreeningViewInner />
+          </TableWrapper>
+        </FilterableTableMain>
       </ScreeningLabelsProvider>
     </TableStateProvider>
   );

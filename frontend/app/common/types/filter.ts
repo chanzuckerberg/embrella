@@ -12,6 +12,7 @@ import {
 } from '@app/components/DirectoryExplorerView/types';
 import { ReviewFilterCategory } from '@app/components/ReviewsView/types';
 import { JobFilterCategory, JobFilterConfig, JobFilterId } from '@app/processing/jobs/monitor/types';
+import { ScreeningFilterCategory, ScreeningFilterConfig, ScreeningFilterId } from '@app/components/Screening/types';
 // EntityFilterCategory extends EntityFilterCategories
 export interface FiltersList<FilterCategory extends EntityFilterCategories> {
   filters: Record<FilterCategory, FilterOption[]>;
@@ -29,7 +30,8 @@ export type EntityFilterIdTypes =
   | TomogramFilterId
   | GridFilterId
   | DirectoryFilterId
-  | JobFilterId;
+  | JobFilterId
+  | ScreeningFilterId;
 
 export type EntityFilterCategories =
   | AnnotationFilterCategory
@@ -37,14 +39,16 @@ export type EntityFilterCategories =
   | TomogramFilterCategory
   | DirectoryFilterCategory
   | ReviewFilterCategory
-  | JobFilterCategory;
+  | JobFilterCategory
+  | ScreeningFilterCategory;
 
 export type EntityFilterConfigs =
   | AnnotationFilterConfig
   | TomogramFilterConfig
   | GridFilterConfig
   | DirectoryFilterConfig
-  | JobFilterConfig;
+  | JobFilterConfig
+  | ScreeningFilterConfig;
 
 export interface FilterConfig<FilterId, FilterCategory extends string> {
   filterCategory: FilterCategory; // Key in result set row values to filter on.

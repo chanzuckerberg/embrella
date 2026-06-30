@@ -2352,6 +2352,75 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
         "To Be Milled",
     ]
 
+    # Filter groups map a display name
+    STATUS_FILTER_GROUPS = {
+        "To Be Screened": ["TBS", "To Be Screened"],
+        "To Be Collected": ["TBC", "To Be Collected"],
+        "To Be Milled": ["TBM", "To Be Milled"],
+    }
+    MICROSCOPE_FILTER_GROUPS = {
+        "Arctis": ["Arctis"],
+        "Hydra 1": ["Hydra1"],
+        "Hydra 2": ["Hydra2"],
+        "Krios 1": ["Krios1"],
+        "Krios 2": ["Krios2"],
+    }
+    PRIORITY_FILTER_GROUPS = {
+        "P1": ["P1"],
+        "P2": ["P2"],
+        "P3": ["P3"],
+    }
+
+    # Filter category -> the label group map it draws its options from.
+    LABEL_FILTER_GROUPS = {
+        "screeningStatus": STATUS_FILTER_GROUPS,
+        "microscope": MICROSCOPE_FILTER_GROUPS,
+        "priority": PRIORITY_FILTER_GROUPS,
+    }
+
+    @classmethod
+    def _base_screening_queryset(cls):
+        """Non-trashed grids that carry at least one screening status label."""
+        return CryoGrid.objects.filter(trashed=False).filter(
+            Exists(
+                GridLabel.objects.filter(
+                    grid=OuterRef("pk"),
+                    label__name__in=cls.STATUS_LABELS,
+                )
+            )
+        )
+
+    @classmethod
+    def _apply_screening_filters(cls, queryset, q_params):
+        """Narrow a screening queryset by the sidebar filter categories.
+
+        Label-based categories (screeningStatus/microscope/priority) reverse-map the
+        selected display names to label names
+        """
+        for item in q_params:
+            category = item.get("category")
+            values = item.get("value")
+            if category in ("page", "pageSize", "sort", "asc") or not values:
+                continue
+            if not isinstance(values, list):
+                values = [values]
+
+            if category in cls.LABEL_FILTER_GROUPS:
+                groups = cls.LABEL_FILTER_GROUPS[category]
+                label_names = [name for value in values for name in groups.get(value, [value])]
+                queryset = queryset.filter(
+                    Exists(
+                        GridLabel.objects.filter(
+                            grid=OuterRef("pk"),
+                            label__name__in=label_names,
+                        )
+                    )
+                )
+            elif category == "project":
+                queryset = queryset.filter(intended_project__name__in=values)
+
+        return queryset
+
     @extend_schema(
         summary="List grids in the screening pipeline",
         description=(
@@ -2370,9 +2439,12 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
                 location=OpenApiParameter.QUERY,
                 required=False,
                 description=(
-                    "JSON-encoded array of `{category, value}` entries. Supported categories: "
+                    "JSON-encoded array of `{category, value}` entries. Sort/pagination categories: "
                     "`page` (int), `pageSize` (int), `sort` (one of `priority`, `status`, "
-                    "`microscope`, `name`, `project`, `updatedAt`), `asc` (bool)."
+                    "`microscope`, `name`, `project`, `updatedAt`), `asc` (bool). Filter categories "
+                    "(values are lists): `screeningStatus`, `microscope`, `priority` (display names "
+                    "from the corresponding label groups) and `project` (intended project name). "
+                    "Filter categories combine with AND."
                 ),
                 examples=[
                     OpenApiExample(
@@ -2380,6 +2452,10 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
                         value='[{"category":"sort","value":"priority"},'
                         '{"category":"asc","value":true},'
                         '{"category":"page","value":1}]',
+                    ),
+                    OpenApiExample(
+                        "Filter by microscope (Arctis or Krios 1)",
+                        value='[{"category":"microscope","value":["Arctis","Krios 1"]}]',
                     ),
                 ],
             ),
@@ -2421,15 +2497,7 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
         sort_order = db_sort_field if asc else f"-{db_sort_field}"
 
         queryset = (
-            CryoGrid.objects.filter(trashed=False)
-            .filter(
-                Exists(
-                    GridLabel.objects.filter(
-                        grid=OuterRef("pk"),
-                        label__name__in=self.STATUS_LABELS,
-                    )
-                )
-            )
+            self._apply_screening_filters(self._base_screening_queryset(), q_params)
             .select_related("intended_project", "specimen", "user", "freezing_session__user")
             .prefetch_related("labels", "specimen__samples")
             .annotate(
@@ -2519,3 +2587,51 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
                 },
             },
         )
+
+    @action(detail=False, methods=["get"])
+    def filterlist(self, request):
+        """Return available screening filter options with counts.
+
+        Powers the screening sidebar: Status, Microscope, Priority (label-based) and
+        Project. Label options use display names matching the table chips; counts are
+        over non-trashed grids that carry a screening status label.
+        """
+        raw_q = request.GET.get("q", "[]")
+        q_params = json.loads(raw_q)
+        selected_filters = parse_selected_filters(q_params)
+
+        base_qs = self._base_screening_queryset()
+
+        def group_count(label_names):
+            return base_qs.filter(
+                Exists(
+                    GridLabel.objects.filter(
+                        grid=OuterRef("pk"),
+                        label__name__in=label_names,
+                    )
+                )
+            ).count()
+
+        filters = {}
+        for category, groups in self.LABEL_FILTER_GROUPS.items():
+            options = []
+            for display_name, label_names in groups.items():
+                count = group_count(label_names)
+                if count > 0:
+                    options.append({"name": display_name, "count": count})
+            filters[category] = options
+
+        filters["project"] = [
+            {"name": row["project_name"], "count": row["count"]}
+            for row in (
+                base_qs.filter(intended_project__isnull=False)
+                .values(project_name=F("intended_project__name"))
+                .annotate(count=Count("id", distinct=True))
+                .order_by("project_name")
+            )
+        ]
+
+        for key, filter_list in filters.items():
+            add_selected_status(filter_list, key, selected_filters)
+
+        return Response({"filters": filters})
