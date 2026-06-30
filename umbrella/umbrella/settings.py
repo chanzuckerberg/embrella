@@ -246,8 +246,6 @@ ACCOUNT_ADAPTER = "umbrella.adapters.UmbrellaAccountAdapter"
 # Restrict SSO to these email domains
 SSO_ALLOWED_DOMAINS = ["czii.org", "czbiohub.org", "biohub.org"]
 
-# TODO: update secret keys #934
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = [
     "localhost",

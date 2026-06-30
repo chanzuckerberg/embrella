@@ -813,7 +813,7 @@ deployv2 stage envfile branch tag="latest":
       if [[ -z \"\$GHCR_USER\" || -z \"\$GHCR_TOKEN\" ]]; then echo '  ✗ GHCR_USER/GHCR_TOKEN not set in .env.$ENVNAME (need a PAT with read:packages)'; exit 1; fi; \
       echo \"\$GHCR_TOKEN\" | podman login ghcr.io -u \"\$GHCR_USER\" --password-stdin && \
       export IMAGE_REGISTRY=ghcr.io/czimaginginstitute/embrella IMAGE_TAG={{tag}} && \
-      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml pull && \
+      for svc in backend frontend db; do podman pull \"\$IMAGE_REGISTRY/\$svc:\$IMAGE_TAG\"; done && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d --remove-orphans"
 
 # Restore a specific SQL snapshot into the prod/staging *container* db, then apply
