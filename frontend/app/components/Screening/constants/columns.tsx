@@ -47,7 +47,7 @@ export const SCREENING_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnTyp
     id: SCREENING_COLUMN_IDS.NAME,
     accessorFn: (rowData: EntityDataTypes): string => (rowData as ScreeningGridData).grid.name,
     cell: ({ row }) => <NameCell row={row.original as ScreeningGridData} />,
-    enableSorting: false,
+    enableSorting: true,
     header: 'Name',
     size: 180,
   },
@@ -74,7 +74,7 @@ export const SCREENING_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnTyp
       const data = row.original as ScreeningGridData;
       return <CategoricalLabelChip gridId={data.grid.id} labels={data.labels} category="status" />;
     },
-    enableSorting: false,
+    enableSorting: true,
     header: 'Status',
     size: 125,
   },
@@ -86,7 +86,7 @@ export const SCREENING_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnTyp
       const data = row.original as ScreeningGridData;
       return <CategoricalLabelChip gridId={data.grid.id} labels={data.labels} category="microscope" />;
     },
-    enableSorting: false,
+    enableSorting: true,
     header: 'Microscope',
     size: 75,
   },
@@ -100,7 +100,7 @@ export const SCREENING_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnTyp
     },
     enableSorting: true,
     header: 'Priority',
-    size: 75,
+    size: 70,
   },
   {
     id: SCREENING_COLUMN_IDS.CLIPPED,
@@ -125,7 +125,7 @@ export const SCREENING_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnTyp
     },
     enableSorting: false,
     header: 'Freezing Session',
-    size: 150,
+    size: 140,
   },
   {
     id: SCREENING_COLUMN_IDS.LABELS,
@@ -146,7 +146,7 @@ export const SCREENING_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnTyp
     },
     enableSorting: true,
     header: 'Updated At',
-    size: 100,
+    size: 105,
   },
   {
     id: SCREENING_COLUMN_IDS.DETAILS,

@@ -93,6 +93,7 @@ export enum API {
   GRID_BOXES = '/cryo_grids/v1/grid-boxes/',
   STANDARD_SAMPLES = '/cryo_grids/v1/standard-samples/',
   SCREENING_GRIDS = '/cryo_grids/v1/screening-grids/',
+  SCREENING_GRIDS_FILTERS_LIST = '/cryo_grids/v1/screening-grids/filterlist/',
   GRID_BOXES_FILTERS_LIST = '/cryo_grids/v1/grid-boxes/filterlist/',
   GRID_BOXES_SEARCH_SUGGESTIONS = '/cryo_grids/v1/grid-boxes/search_suggestions/',
   PUCKS_VIEW = '/cryo_grids/v1/pucks/',
