@@ -24,9 +24,9 @@ def _lookup_username(user_pk, cluster_id):
     callers raise MissingClusterCredentialsError on None.
     """
     from .models import UserClusterCredentials
+
     row = (
-        UserClusterCredentials.objects
-        .filter(user_id=user_pk, cluster_id=cluster_id)
+        UserClusterCredentials.objects.filter(user_id=user_pk, cluster_id=cluster_id)
         .values_list("username", flat=True)
         .first()
     )

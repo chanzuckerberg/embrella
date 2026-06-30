@@ -1,6 +1,8 @@
+from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
 
 
+@login_not_required
 def get_user_info(request):
     """
     Returns the current user's ID and username.

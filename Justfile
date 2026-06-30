@@ -483,7 +483,8 @@ builddocs:
 # Deployment Helpers
 #############################################
 
-# Backs up mysql db to /srv/dbbackups on passed host (default: umbrella). Assumes ssh access as svc.czii.umbrella to host, and that MYSQL_USER and MYSQL_PASSWORD are in .env.
+# Backs up mysql db to /srv/dbbackups on passed host (default: umbrella). Assumes ssh access as svc.czii.umbrella to host, and that MYSQL_USER, MYSQL_PASSWORD, and MYSQL_NAME are in .env.
+# Dumps ONLY the application database ($MYSQL_NAME), not the mysql system DB, preventing access issues when restoring.
 backupdb envfile +host="umbrella" :
     #!/bin/bash
     set -euo pipefail
@@ -491,8 +492,8 @@ backupdb envfile +host="umbrella" :
     ssh svc.czii.umbrella@{{host}} "mkdir -p /srv/dbbackups"
     scp ./.scratch/.dbenv svc.czii.umbrella@{{host}}:/srv/dbbackups/.dbenv
     ssh svc.czii.umbrella@{{host}} "chmod 600 /srv/dbbackups/.dbenv"
-    echo "Backup up all databases on {{host}}... to /srv/dbbackups/..."
-    ssh svc.czii.umbrella@{{host}} 'export $(cat /srv/dbbackups/.dbenv | xargs) && mysqldump -u $MYSQL_USER --all-databases --add-drop-database --verbose > /srv/dbbackups/backup_$(date +%F.%H%M%S).sql'
+    echo 'Backing up application db ($MYSQL_NAME) on {{host}}... to /srv/dbbackups/...'
+    ssh svc.czii.umbrella@{{host}} 'export $(cat /srv/dbbackups/.dbenv | xargs) && mysqldump -u $MYSQL_USER --databases "$MYSQL_NAME" --add-drop-database --verbose > /srv/dbbackups/backup_$(date +%F.%H%M%S).sql'
     echo "Done. Backups:"
     ssh svc.czii.umbrella@{{host}} "rm /srv/dbbackups/.dbenv && ls -alh /srv/dbbackups/backup_*.sql"
 

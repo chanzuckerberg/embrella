@@ -48,7 +48,7 @@ http {
         }
 
         # ===== DJANGO BACKEND ROUTES =====
-        location ~ ^/(admin|google_sso|api|user|ping|version|docs|legacy|workflow|cryo_grids|processes|projects|people/v1|depositions/v1|copick|tem/v1|get_grids_by_user|get_grids_by_cassette|get_tomo_by_msi_session|available_grids|annotations)(/|$) {
+        location ~ ^/(admin|accounts|api|user|ping|version|docs|legacy|workflow|cryo_grids|processes|projects|people/v1|depositions/v1|copick|tem/v1|get_grids_by_user|get_grids_by_cassette|get_tomo_by_msi_session|available_grids|annotations)(/|$) {
             # Variable forces nginx to use the resolver instead of caching at startup.
             set $upstream_backend backend;
             proxy_pass http://$upstream_backend:8000;

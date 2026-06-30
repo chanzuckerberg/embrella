@@ -11,6 +11,7 @@ Provides processor-specific endpoints for:
 import json
 import os
 
+from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from drf_spectacular.types import OpenApiTypes
@@ -802,6 +803,7 @@ def _build_copick_project(proc_run) -> dict:
     ],
     responses={200: OpenApiTypes.OBJECT},
 )
+@login_not_required
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @require_http_methods(["GET"])
@@ -846,6 +848,7 @@ def list_copick_projects(request) -> JsonResponse:
     description="Return a single copick project by (session_name, run_name).",
     responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
 )
+@login_not_required
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @require_http_methods(["GET"])

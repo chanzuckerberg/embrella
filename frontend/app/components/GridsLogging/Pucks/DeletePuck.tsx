@@ -5,6 +5,7 @@ import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
 import { PuckSlotsResponse, PuckList } from '@app/common/types/gridLogging';
 import { DJANGO_URL } from '@app/common/constants/api';
+import { deleteResource } from '@app/common/queries/fetchResource';
 
 interface DeletePuckProps {
   open: boolean;
@@ -29,13 +30,7 @@ export const DeletePuck: React.FC<DeletePuckProps> = ({ open, onClose, selectedP
     setError(null);
 
     try {
-      const response = await fetch(`${DJANGO_URL}/api/list/pucks/${selectedPuck.id}/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
+      const response = await deleteResource(`${DJANGO_URL}/api/list/pucks/${selectedPuck.id}/`);
 
       const data = await response.json();
 

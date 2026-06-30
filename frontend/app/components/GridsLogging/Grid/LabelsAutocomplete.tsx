@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Autocomplete, Chip, TextField, Box, Typography, SxProps, Theme } from '@mui/material';
 import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
+import { postResource } from '@app/common/queries/fetchResource';
 import { LabelData } from '@app/components/GridsView/components/LabelEditor/LabelChip';
 
 interface LabelsAutocompleteProps {
@@ -37,12 +38,7 @@ export const LabelsAutocomplete: React.FC<LabelsAutocompleteProps> = ({ value, o
           resolved.push(existing);
         } else {
           try {
-            const res = await fetch(`${DJANGO_URL}${POST_API.CREATE_LABEL}`, {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: trimmed }),
-            });
+            const res = await postResource(`${DJANGO_URL}${POST_API.CREATE_LABEL}`, { name: trimmed });
             if (res.ok) {
               const label: LabelData = await res.json();
               setAllLabels((prev) => [...prev, label]);

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Box, Chip, ClickAwayListener, Paper, Popper, Typography } from '@mui/material';
 
 import { API, DJANGO_URL, POST_API } from '@app/common/constants/api';
+import { patchResource } from '@app/common/queries/fetchResource';
 import { ScreeningLabel } from '@app/components/Screening/types';
 import {
   LABEL_CATEGORIES,
@@ -50,12 +51,7 @@ export const CategoricalLabelChip = ({ gridId, labels: initialLabels, category }
     setSharedLabels(gridId, next);
     const url = `${DJANGO_URL}${POST_API.UPDATE_GRID_LABELS.replace('grid_id', String(gridId))}`;
     try {
-      const res = await fetch(url, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label_ids: next.map((l) => l.id) }),
-      });
+      const res = await patchResource(url, { label_ids: next.map((l) => l.id) });
       if (!res.ok) {
         console.error('Failed to update labels:', res.status, await res.text());
       }

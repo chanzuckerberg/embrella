@@ -5,50 +5,51 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function redirectIfUnauthenticated(response: Response): void {
+  if (response.status === 401 || response.status === 302 || response.url?.includes('/accounts/login')) {
+    window.location.href = `${DJANGO_URL}/accounts/login/?next=${encodeURI(window.location.href)}`;
+    throw new Error('Authentication required');
+  }
+}
+
+/** Shared core for state-changing requests: attaches CSRF token + credentials. */
+async function mutateResource(
+  method: 'POST' | 'PATCH' | 'DELETE',
+  requestURL: string,
+  body?: Record<string, unknown>
+): Promise<Response> {
+  const csrfToken = getCsrfToken();
+  const response = await fetch(requestURL, {
+    method,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(csrfToken && { 'X-CSRFToken': csrfToken }),
+    },
+    ...(body !== undefined && { body: JSON.stringify(body) }),
+  });
+
+  redirectIfUnauthenticated(response);
+  return response;
+}
+
 export async function fetchResource(requestURL: string): Promise<Response> {
   const response = await fetch(requestURL, {
     credentials: 'include', // Include cookies in the request
   });
 
-  // Check for authentication errors - redirect to login
-  if (response.status === 401 || response.status === 302 || response.url.includes('/admin/login')) {
-    window.location.href = `${DJANGO_URL}/admin/login/?next=${encodeURI(window.location.href)}`;
-    return Promise.reject(new Error('Authentication required'));
-  }
-
+  redirectIfUnauthenticated(response);
   return response;
 }
 
-export async function postResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {
-  const csrfToken = getCsrfToken();
-  const response = await fetch(requestURL, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken && { 'X-CSRFToken': csrfToken }),
-    },
-    body: JSON.stringify(body),
-  });
-
-  // Check for authentication errors - redirect to login
-  if (response.status === 401 || response.status === 302 || response.url.includes('/admin/login')) {
-    window.location.href = `${DJANGO_URL}/admin/login/?next=${encodeURI(window.location.href)}`;
-    return Promise.reject(new Error('Authentication required'));
-  }
-
-  return response;
+export function postResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {
+  return mutateResource('POST', requestURL, body);
 }
 
-export const patchResource = async (url: string, body: object): Promise<Response> => {
-  const csrfToken = getCsrfToken();
-  return fetch(url, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken && { 'X-CSRFToken': csrfToken }),
-    },
-    credentials: 'include',
-    body: JSON.stringify(body),
-  });
-};
+export function patchResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {
+  return mutateResource('PATCH', requestURL, body);
+}
+
+export function deleteResource(requestURL: string, body?: Record<string, unknown>): Promise<Response> {
+  return mutateResource('DELETE', requestURL, body);
+}

@@ -4,10 +4,6 @@
       "command": "npx",
       "args": ["@playwright/mcp@latest", "--headless"]
     },
-    "next-devtools": {
-      "command": "npx",
-      "args": ["-y", "next-devtools-mcp@latest"]
-    },
     "sds-mcp": {
       "type": "stdio",
       "command": "npx",

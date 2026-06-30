@@ -17,13 +17,12 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from processes.models import JobLog, PipeExecution, SyncerLog, SyncerProcess
 from processes.services.cluster_resolver import cluster_id_from_parameters
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from stores.models import Cluster
 from umbrella_logger import logger
 
 from common import clusterio
-from common.auth import CsrfExemptSessionAuthentication
 from workflow.constants import DEFAULT_CLUSTER_ID
 
 from ..agent import RemoteJobSubmitter, StatusChecker
@@ -787,7 +786,6 @@ def get_jobs_filterlist(request):
 
 
 @api_view(["POST"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 @extend_schema(
     summary="Cancel multiple jobs",
@@ -978,7 +976,6 @@ def _get_syncer_status_for_job(job_id: str, pipe_execution: PipeExecution = None
 
 
 @api_view(["GET"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 @extend_schema(
     summary="Get syncer logs for a job",
@@ -1069,7 +1066,6 @@ def get_syncer_logs(request, job_id: str):
 
 
 @api_view(["POST"])
-@authentication_classes([CsrfExemptSessionAuthentication])
 @permission_classes([IsAuthenticated])
 @extend_schema(
     summary="Re-run syncer for a job",

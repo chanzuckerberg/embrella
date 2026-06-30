@@ -1,0 +1,210 @@
+/* ---------------------------------------------------------------------------
+   Styling for the django-allauth auth pages (login, Google interstitial,
+   password reset). Mirrors the Next.js app palette + the jazzmin /admin/login
+   look. Source of truth: frontend/app/common/theme.ts and
+   umbrella/static/admin_theme/custom.css.
+--------------------------------------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --indigo: #6e4ff9;
+  --indigo-hover: #5a3ab8;
+  --page-bg: #eef0f2;
+  --text: #1b1b1b;
+  --muted: #6c6c6c;
+  --border: #dadce0;
+  --error: #b00020;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.auth-shell {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+}
+
+.auth-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.auth-logo img {
+  height: 40px;
+  width: auto;
+}
+
+.card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 32px;
+  box-shadow:
+    0 2px 4px 0 rgba(0, 0, 0, 0.15),
+    0 2px 10px 0 rgba(0, 0, 0, 0.15);
+}
+
+.welcome {
+  text-align: center;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 24px;
+}
+
+.errors {
+  background: #fdecef;
+  border: 1px solid #f5c2cb;
+  color: var(--error);
+  font-size: 0.85rem;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+/* Input groups with a trailing icon box (matches admin login) */
+.field {
+  display: flex;
+  margin-bottom: 12px;
+}
+
+.field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 11px 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-right: 0;
+  border-radius: 6px 0 0 6px;
+  outline: none;
+}
+
+.field input:focus {
+  border-color: var(--indigo);
+}
+
+.field .icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  border: 1px solid var(--border);
+  border-radius: 0 6px 6px 0;
+  background: #fafafa;
+  color: var(--muted);
+}
+
+.field .icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Buttons */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  margin-top: 4px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.btn-primary {
+  background: var(--indigo);
+  border-color: var(--indigo);
+  color: #fff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background: var(--indigo-hover);
+  border-color: var(--indigo-hover);
+}
+
+/* Secondary / neutral outline button (local login) */
+.btn-secondary {
+  background: #fff;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus {
+  background: #f3f3f3;
+}
+
+.btn .g-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+/* Divider */
+.sep {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 20px 0 16px;
+}
+
+.sep::before,
+.sep::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.sep span {
+  padding: 0 12px;
+}
+
+/* Plain informational text + links */
+.info {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.backlink {
+  display: inline-block;
+  color: var(--indigo);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.backlink:hover {
+  color: var(--indigo-hover);
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
