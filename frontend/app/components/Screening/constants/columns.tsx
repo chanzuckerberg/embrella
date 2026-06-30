@@ -125,7 +125,7 @@ export const SCREENING_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnTyp
     },
     enableSorting: false,
     header: 'Freezing Session',
-    size: 150,
+    size: 140,
   },
   {
     id: SCREENING_COLUMN_IDS.LABELS,
