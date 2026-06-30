@@ -18,6 +18,7 @@ from django.db.models import (
     Count,
     Exists,
     F,
+    IntegerField,
     OuterRef,
     Prefetch,
     Q,
@@ -2370,8 +2371,8 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
                 required=False,
                 description=(
                     "JSON-encoded array of `{category, value}` entries. Supported categories: "
-                    "`page` (int), `pageSize` (int), `sort` (one of `priority`, `name`, "
-                    "`project`, `updatedAt`), `asc` (bool)."
+                    "`page` (int), `pageSize` (int), `sort` (one of `priority`, `status`, "
+                    "`microscope`, `name`, `project`, `updatedAt`), `asc` (bool)."
                 ),
                 examples=[
                     OpenApiExample(
@@ -2410,6 +2411,8 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
 
         sort_field_map = {
             "priority": "priority_rank",
+            "status": "status_rank",
+            "microscope": "microscope_rank",
             "name": "name",
             "project": "intended_project__name",
             "updatedAt": "updated_on",
@@ -2438,7 +2441,32 @@ class ScreeningGridsViewSet(viewsets.ViewSet):
                         )
                     ),
                     Value("ZZZ"),
-                )
+                ),
+                # Rank by screening status in workflow order (screened -> collected -> milled)
+                status_rank=Coalesce(
+                    models.Min(
+                        Case(
+                            When(labels__name__in=["TBS", "To Be Screened"], then=Value(1)),
+                            When(labels__name__in=["TBC", "To Be Collected"], then=Value(2)),
+                            When(labels__name__in=["TBM", "To Be Milled"], then=Value(3)),
+                            output_field=IntegerField(),
+                        )
+                    ),
+                    Value(99),
+                ),
+                # Rank by microscope label name (Arctis < Hydra1 < Hydra2 < Krios1 < Krios2
+                microscope_rank=Coalesce(
+                    models.Min(
+                        Case(
+                            When(
+                                labels__name__in=["Arctis", "Hydra1", "Hydra2", "Krios1", "Krios2"],
+                                then=F("labels__name"),
+                            ),
+                            output_field=CharField(),
+                        )
+                    ),
+                    Value("ZZZ"),
+                ),
             )
             .order_by(sort_order, "id")
         )
