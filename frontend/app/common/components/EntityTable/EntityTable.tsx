@@ -70,6 +70,17 @@ export const StyledHeaderCell = styled(TableCell, {
   background-color: #f5f5f5;
 `;
 
+// aria-sort for a column header (avoids a nested ternary — sonarjs/no-nested-conditional).
+function getAriaSort(
+  canSort: boolean,
+  sorted: false | 'asc' | 'desc'
+): 'ascending' | 'descending' | 'none' | undefined {
+  if (!canSort) return undefined;
+  if (sorted === 'desc') return 'descending';
+  if (sorted === 'asc') return 'ascending';
+  return 'none';
+}
+
 export const EntityTable = <T extends EntityDataTypes>({
   entityApi,
   entityApiResponseField,
@@ -114,16 +125,14 @@ export const EntityTable = <T extends EntityDataTypes>({
                 const width = header.column.columnDef.size;
                 const canSort = header.column.getCanSort();
                 const sorted = header.column.getIsSorted();
+                // Extracted to its own statement to satisfy sonarjs/no-nested-conditional.
+                const sortDirection = sorted === 'desc' ? 'desc' : 'asc';
                 return (
-                  <StyledHeaderCell
-                    key={header.id}
-                    width={width}
-                    aria-sort={canSort ? (sorted === 'desc' ? 'descending' : sorted === 'asc' ? 'ascending' : 'none') : undefined}
-                  >
+                  <StyledHeaderCell key={header.id} width={width} aria-sort={getAriaSort(canSort, sorted)}>
                     {canSort ? (
                       <TableSortLabel
                         active={!!sorted}
-                        direction={sorted === 'desc' ? 'desc' : 'asc'}
+                        direction={sortDirection}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
