@@ -65,9 +65,6 @@ const eslintConfig = defineConfig([
     '.next/**',
     'out/**',
     'build/**',
-    // Never lint built/bundled output or the locally-vendored idetik viewer package.
-    '**/dist/**',
-    'idetik/**',
     'coverage/**',
     'playwright-report/**',
     'playwright-html-report/**',

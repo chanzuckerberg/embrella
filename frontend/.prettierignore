@@ -8,13 +8,8 @@ yarn.lock
 .next/
 out/
 build/
-dist/
-**/dist/
 coverage/
 next-env.d.ts
-
-# Locally-vendored viewer package (not part of the repo)
-idetik/
 
 # eslint
 .eslintcache
