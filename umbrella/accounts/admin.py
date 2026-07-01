@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import Profile, UserClusterCredentials
+from .models import Profile, SystemFeatureFlag, UserClusterCredentials
+
+@admin.register(SystemFeatureFlag)
+class SystemFeatureFlagAdmin(admin.ModelAdmin):
+    list_display = ("name", "enabled", "description")
+    list_editable = ("enabled",)  # toggle on/off straight from the list
+    search_fields = ("name", "description")
 
 
 @admin.register(Profile)

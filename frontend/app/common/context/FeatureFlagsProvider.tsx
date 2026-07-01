@@ -1,14 +1,16 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createContext, PropsWithChildren, useEffect } from 'react';
+import { createContext, PropsWithChildren, useContext, useEffect } from 'react';
 import { SEARCH_PARAM_NAME } from '../types/search';
 import { COOKIE_NAME } from '../types/cookies';
+import { UserContext } from './UserProvider';
 
 export enum FEATURE_FLAG {
   EXAMPLE = 'example',
   REVIEW = 'review',
   MANAGE_DATA = 'manage_data',
+  DEPOSITION = 'deposition',
 }
 
 const LAUNCHED_FEATURE_FLAGS: FEATURE_FLAG[] = [FEATURE_FLAG.EXAMPLE, FEATURE_FLAG.REVIEW];
@@ -21,6 +23,10 @@ export interface FeatureFlagsProviderProps extends PropsWithChildren {
 
 export const FeatureFlagsProvider = ({ children, featureFlagsCookie }: FeatureFlagsProviderProps) => {
   const manuallyEnabledFlags: FEATURE_FLAG[] = featureFlagsCookie?.split(',').filter(isFeatureFlag) ?? [];
+
+  // Server-driven flags from /user (global SystemFeatureFlag + per-user overrides).
+  const user = useContext(UserContext);
+  const serverFlags: FEATURE_FLAG[] = (user?.feature_flags ?? []).filter(isFeatureFlag);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -40,7 +46,9 @@ export const FeatureFlagsProvider = ({ children, featureFlagsCookie }: FeatureFl
   }, []);
 
   return (
-    <FeatureFlagsContext.Provider value={LAUNCHED_FEATURE_FLAGS.concat(manuallyEnabledFlags)}>
+    <FeatureFlagsContext.Provider
+      value={[...new Set([...LAUNCHED_FEATURE_FLAGS, ...manuallyEnabledFlags, ...serverFlags])]}
+    >
       {children}
     </FeatureFlagsContext.Provider>
   );

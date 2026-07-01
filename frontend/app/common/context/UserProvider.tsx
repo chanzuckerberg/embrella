@@ -7,6 +7,7 @@ import { API } from '../constants/api';
 export interface User {
   id: string;
   username: string;
+  feature_flags: string[];
 }
 
 export const UserContext = createContext<User | undefined>(undefined);

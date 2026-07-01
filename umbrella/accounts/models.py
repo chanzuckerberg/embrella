@@ -26,6 +26,25 @@ class Profile(models.Model):
         return f"Profile({self.user.username})"
 
 
+class SystemFeatureFlag(models.Model):
+    """Global feature flag, toggled in the admin.
+    Default OFF. Per-user overrides live on ``Profile.feature_flags`` — see
+    ``accounts.feature_flags.is_feature_enabled``: a feature is on for a user if
+    the global flag is enabled OR the user has it enabled in their profile.
+    """
+
+    name = models.SlugField(max_length=100, unique=True, help_text="Flag key, e.g. 'deposition'.")
+    enabled = models.BooleanField(default=False, help_text="On for everyone when True.")
+    description = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        app_label = "accounts"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name}={'on' if self.enabled else 'off'}"
+
+
 class UserClusterCredentials(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
