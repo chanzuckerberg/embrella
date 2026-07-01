@@ -141,10 +141,7 @@ export class EntityTablePage extends PageObject {
   public async toggleDateSort() {
     await Promise.all([
       this.clickDateHeader(),
-      this.page.waitForResponse(
-        // API.GRIDS is a prefix of /grids/filterlist/ etc.; the trailing "?" pins the list endpoint
-        (response) => response.url().includes(`${API.GRIDS}?`) && response.status() === 200
-      ),
+      this.page.waitForResponse((response) => response.url().includes(`${API.GRIDS}?`) && response.status() === 200),
     ]);
   }
 
@@ -170,10 +167,7 @@ export class EntityTablePage extends PageObject {
   // #region Verifications
   public async verifyPaginationPresence() {
     const [response] = await Promise.all([
-      this.page.waitForResponse(
-        // API.GRIDS is a prefix of /grids/filterlist/ etc.; the trailing "?" pins the list endpoint
-        (response) => response.url().includes(`${API.GRIDS}?`) && response.status() === 200
-      ),
+      this.page.waitForResponse((response) => response.url().includes(`${API.GRIDS}?`) && response.status() === 200),
       this.page.reload(),
     ]);
 
@@ -227,8 +221,6 @@ export class EntityTablePage extends PageObject {
 
   public async verifyFirstFilterOptionSelected() {
     const option = this.getFirstFilterOptionLocator();
-    // Awaited so the web-first assertion retries through the re-render that
-    // applying a filter triggers (URL/data refetch detaches options briefly).
     await expect(option).toHaveClass(MUI_SELECTED_CLASS_REGEX);
   }
 

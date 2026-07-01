@@ -83,7 +83,7 @@ describe('Grids', () => {
     test('displays a sorted header with sort icon', async () => {
       test.skip(noDataAvailable, DESCRIPTION);
 
-      // The grid list isn't sorted on load, so sort it first.
+      // The grid list is presorted but does not display sort icon until toggled.
       await gridsPage.toggleDateSort();
       await gridsPage.verifySortableDateHeader();
 

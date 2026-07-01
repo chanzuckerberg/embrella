@@ -70,7 +70,6 @@ export const StyledHeaderCell = styled(TableCell, {
   background-color: #f5f5f5;
 `;
 
-// aria-sort for a column header (avoids a nested ternary — sonarjs/no-nested-conditional).
 function getAriaSort(
   canSort: boolean,
   sorted: false | 'asc' | 'desc'
@@ -125,7 +124,6 @@ export const EntityTable = <T extends EntityDataTypes>({
                 const width = header.column.columnDef.size;
                 const canSort = header.column.getCanSort();
                 const sorted = header.column.getIsSorted();
-                // Extracted to its own statement to satisfy sonarjs/no-nested-conditional.
                 const sortDirection = sorted === 'desc' ? 'desc' : 'asc';
                 return (
                   <StyledHeaderCell key={header.id} width={width} aria-sort={getAriaSort(canSort, sorted)}>
