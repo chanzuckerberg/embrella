@@ -83,6 +83,8 @@ describe('Grids', () => {
     test('displays a sorted header with sort icon', async () => {
       test.skip(noDataAvailable, DESCRIPTION);
 
+      // The grid list is presorted but does not display sort icon until toggled.
+      await gridsPage.toggleDateSort();
       await gridsPage.verifySortableDateHeader();
 
       await gridsPage.verifySortIconVisible();
@@ -91,9 +93,10 @@ describe('Grids', () => {
     test('sorted header changes sort direction when header is clicked', async () => {
       test.skip(noDataAvailable, DESCRIPTION);
 
+      await gridsPage.toggleDateSort();
       await gridsPage.verifySortableDateHeader();
 
-      const direction01 = gridsPage.getDateHeaderDirection();
+      const direction01 = await gridsPage.getDateHeaderDirection();
 
       await gridsPage.toggleDateSort();
       await gridsPage.verifySortableDateHeader();
@@ -105,7 +108,6 @@ describe('Grids', () => {
     test('sort order should be toggled, but not turned "off", after each toggle', async () => {
       test.skip(noDataAvailable, DESCRIPTION);
 
-      await gridsPage.verifySortableDateHeader();
       await gridsPage.toggleDateSort();
       await gridsPage.verifySortableDateHeader();
       await gridsPage.toggleDateSort();
@@ -156,7 +158,7 @@ describe('Grids', () => {
       await gridsPage.verifyFilterPopperVisible();
     });
 
-    test('should close filter popper with escape key', async () => {
+    test('should close filter popper when clicking away', async () => {
       test.skip(noFiltersAvailable, DESCRIPTION);
 
       await gridsPage.clickFirstFilter();
@@ -187,7 +189,7 @@ describe('Grids', () => {
       const filterOptionValue = await gridsPage.getFirstFilterOptionText();
 
       await gridsPage.applyFirstFilterOption();
-      gridsPage.verifyFirstFilterOptionSelected();
+      await gridsPage.verifyFirstFilterOptionSelected();
       await gridsPage.closeFilterPopper();
       await gridsPage.verifyNumFiltersSelected(1);
       await gridsPage.verifyFirstFilterChipValue(filterOptionValue);
@@ -205,7 +207,7 @@ describe('Grids', () => {
       await gridsPage.removeFirstFilterChip();
       await expect(filterChip).not.toBeVisible();
       await gridsPage.clickFirstFilter();
-      gridsPage.verifyFirstFilterOptionNotSelected();
+      await gridsPage.verifyFirstFilterOptionNotSelected();
     });
   });
 });

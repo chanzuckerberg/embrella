@@ -70,6 +70,16 @@ export const StyledHeaderCell = styled(TableCell, {
   background-color: #f5f5f5;
 `;
 
+function getAriaSort(
+  canSort: boolean,
+  sorted: false | 'asc' | 'desc'
+): 'ascending' | 'descending' | 'none' | undefined {
+  if (!canSort) return undefined;
+  if (sorted === 'desc') return 'descending';
+  if (sorted === 'asc') return 'ascending';
+  return 'none';
+}
+
 export const EntityTable = <T extends EntityDataTypes>({
   entityApi,
   entityApiResponseField,
@@ -114,12 +124,13 @@ export const EntityTable = <T extends EntityDataTypes>({
                 const width = header.column.columnDef.size;
                 const canSort = header.column.getCanSort();
                 const sorted = header.column.getIsSorted();
+                const sortDirection = sorted === 'desc' ? 'desc' : 'asc';
                 return (
-                  <StyledHeaderCell key={header.id} width={width}>
+                  <StyledHeaderCell key={header.id} width={width} aria-sort={getAriaSort(canSort, sorted)}>
                     {canSort ? (
                       <TableSortLabel
                         active={!!sorted}
-                        direction={sorted === 'desc' ? 'desc' : 'asc'}
+                        direction={sortDirection}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}

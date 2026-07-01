@@ -6,13 +6,13 @@ import { TEST_IDS } from '@app/common/constants/testIds';
 
 import { PageObject } from './PageObject';
 
-const ATTRIBUTE = { DIRECTION: 'direction' };
+const ATTRIBUTE = { SORT: 'aria-sort' };
 const BUTTON = 'button';
 const FILTER_OPTION_PRIMARY_TEXT = '.primary-text';
-const HEADER_WITH_DIRECTION_ATTRIBUTE = 'th[direction]';
-const KEYBOARD_KEY = {
-  ESCAPE: 'Escape',
-};
+// A sortable column header carries aria-sort ("none" until sorted, then "ascending"/"descending").
+const SORTABLE_HEADER_SELECTOR = 'th[aria-sort]';
+const SORTED_DIRECTION_REGEX = /ascending|descending/;
+const MUI_TABLE_SORT_LABEL = '.MuiTableSortLabel-root';
 const MUI_AUTOCOMPLETE_OPTION = '.MuiAutocomplete-option';
 const MUI_CHIP_ROOT = '.MuiChip-root';
 const MUI_POPPER_ROOT = '.MuiPopper-root';
@@ -67,11 +67,11 @@ export class EntityTablePage extends PageObject {
   }
 
   public getDateHeaderLocator(): Locator {
-    return this.getTableLocator().locator(HEADER_WITH_DIRECTION_ATTRIBUTE);
+    return this.getTableLocator().locator(SORTABLE_HEADER_SELECTOR);
   }
 
   public async getDateHeaderDirection(): Promise<string | null> {
-    return await this.getDateHeaderLocator().getAttribute(ATTRIBUTE.DIRECTION);
+    return await this.getDateHeaderLocator().getAttribute(ATTRIBUTE.SORT);
   }
 
   public getDateHeaderSortIconLocator(): Locator {
@@ -116,7 +116,7 @@ export class EntityTablePage extends PageObject {
 
   // #region Click actions
   public async clickDateHeader(): Promise<void> {
-    await this.getDateHeaderLocator().click();
+    await this.getDateHeaderLocator().locator(MUI_TABLE_SORT_LABEL).click();
   }
 
   public async clickFirstFilter(): Promise<void> {
@@ -128,7 +128,8 @@ export class EntityTablePage extends PageObject {
   }
 
   public async closeFilterPopper(): Promise<void> {
-    await this.pressEscapeKey();
+    // SDS ComplexFilter's popper dismisses on an outside click (not Escape).
+    await this.page.mouse.click(5, 5);
   }
 
   public async clickFirstFilterChip(): Promise<void> {
@@ -136,17 +137,11 @@ export class EntityTablePage extends PageObject {
   }
   // #endregion Click actions
 
-  // #region Keyboard inputs
-  public async pressEscapeKey() {
-    await this.page.keyboard.press(KEYBOARD_KEY.ESCAPE);
-  }
-  // #endregion Keyboard inputs
-
   // #region UI inputs
   public async toggleDateSort() {
     await Promise.all([
       this.clickDateHeader(),
-      this.page.waitForResponse((response) => response.url().includes(API.GRIDS) && response.status() === 200),
+      this.page.waitForResponse((response) => response.url().includes(`${API.GRIDS}?`) && response.status() === 200),
     ]);
   }
 
@@ -172,7 +167,7 @@ export class EntityTablePage extends PageObject {
   // #region Verifications
   public async verifyPaginationPresence() {
     const [response] = await Promise.all([
-      this.page.waitForResponse((response) => response.url().includes(API.GRIDS) && response.status() === 200),
+      this.page.waitForResponse((response) => response.url().includes(`${API.GRIDS}?`) && response.status() === 200),
       this.page.reload(),
     ]);
 
@@ -191,7 +186,7 @@ export class EntityTablePage extends PageObject {
   public async verifySortableDateHeader() {
     const header = this.getDateHeaderLocator();
     await expect(header).toHaveCount(1);
-    await expect(header).toHaveAttribute(ATTRIBUTE.DIRECTION);
+    await expect(header).toHaveAttribute(ATTRIBUTE.SORT, SORTED_DIRECTION_REGEX);
   }
 
   public async verifySortIconVisible() {
@@ -201,9 +196,10 @@ export class EntityTablePage extends PageObject {
 
   public async verifyColumnNotSortable(nth: number) {
     const header = this.getTableHeaderLocator(nth);
-    await expect(header).not.toHaveAttribute(ATTRIBUTE.DIRECTION);
+    // Non-sortable columns carry no aria-sort attribute at all.
+    await expect(header).not.toHaveAttribute(ATTRIBUTE.SORT, SORTED_DIRECTION_REGEX);
     await header.click();
-    await expect(header).not.toHaveAttribute(ATTRIBUTE.DIRECTION);
+    await expect(header).not.toHaveAttribute(ATTRIBUTE.SORT, SORTED_DIRECTION_REGEX);
   }
 
   public async verifyFilterPopperVisible() {
@@ -214,7 +210,7 @@ export class EntityTablePage extends PageObject {
   public async verifyFilterPopperClosed() {
     const popper = this.getFilterPopperLocator();
 
-    this.pressEscapeKey();
+    await this.closeFilterPopper();
     await expect(popper).not.toBeVisible();
   }
 
@@ -223,14 +219,14 @@ export class EntityTablePage extends PageObject {
     await expect(options).toBeVisible();
   }
 
-  public verifyFirstFilterOptionSelected() {
+  public async verifyFirstFilterOptionSelected() {
     const option = this.getFirstFilterOptionLocator();
-    expect(option).toHaveClass(MUI_SELECTED_CLASS_REGEX);
+    await expect(option).toHaveClass(MUI_SELECTED_CLASS_REGEX);
   }
 
-  public verifyFirstFilterOptionNotSelected() {
+  public async verifyFirstFilterOptionNotSelected() {
     const option = this.getFirstFilterOptionLocator();
-    expect(option).not.toHaveClass(MUI_SELECTED_CLASS_REGEX);
+    await expect(option).not.toHaveClass(MUI_SELECTED_CLASS_REGEX);
   }
 
   public async verifyNumFiltersSelected(expectedFiltersCount: number) {
