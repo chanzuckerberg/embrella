@@ -15,6 +15,13 @@ def user(db):
 
 @pytest.mark.django_db
 class TestIsFeatureEnabled:
+    @pytest.fixture(autouse=True)
+    def _no_seeded_flags(self, db):
+        # Migration 0005 seeds rows (example/review/...); these tests control the
+        # full flag set themselves, so start from a clean slate. The delete is
+        # rolled back with the per-test transaction, so seeds survive elsewhere.
+        SystemFeatureFlag.objects.all().delete()
+
     def test_global_flag_on_enables_for_everyone(self, user):
         SystemFeatureFlag.objects.create(name="deposition", enabled=True)
         assert is_feature_enabled(user, "deposition") is True
@@ -65,6 +72,10 @@ class TestIsFeatureEnabled:
 
 @pytest.mark.django_db
 class TestEnabledFlagsFor:
+    @pytest.fixture(autouse=True)
+    def _no_seeded_flags(self, db):
+        SystemFeatureFlag.objects.all().delete()
+
     def test_union_of_global_and_overrides_sorted(self, user):
         SystemFeatureFlag.objects.create(name="alpha", enabled=True)
         SystemFeatureFlag.objects.create(name="zeta", enabled=False)
@@ -88,6 +99,10 @@ class TestEnabledFlagsFor:
 
 @pytest.mark.django_db
 class TestUserEndpointFlags:
+    @pytest.fixture(autouse=True)
+    def _no_seeded_flags(self, db):
+        SystemFeatureFlag.objects.all().delete()
+
     def test_user_endpoint_includes_enabled_flags(self, user):
         SystemFeatureFlag.objects.create(name="deposition", enabled=True)
         client = APIClient()
@@ -98,3 +113,14 @@ class TestUserEndpointFlags:
 
     def test_user_endpoint_unauthenticated_is_401(self):
         assert APIClient().get("/user").status_code == 401
+
+
+@pytest.mark.django_db
+def test_seed_migration_enables_launched_flags():
+    # Migration 0005 seeds the flags mirroring the frontend FEATURE_FLAG enum,
+    # with the previously-hardcoded launched flags on and the rest off.
+    flags = dict(SystemFeatureFlag.objects.values_list("name", "enabled"))
+    assert flags["example"] is True
+    assert flags["review"] is True
+    assert flags["manage_data"] is False
+    assert flags["deposition"] is False
