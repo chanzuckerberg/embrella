@@ -36,6 +36,23 @@ class TestIsFeatureEnabled:
         other = User.objects.create_user(username="other@example.com")
         assert is_feature_enabled(other, "deposition") is False
 
+    def test_per_user_override_off_wins_over_global_on(self, user):
+        # Precedence: an explicit False override disables a globally-on flag.
+        SystemFeatureFlag.objects.create(name="deposition", enabled=True)
+        user.profile.feature_flags = {"deposition": False}
+        user.profile.save()
+        assert is_feature_enabled(user, "deposition") is False
+        # A user without the override still sees the global on.
+        other = User.objects.create_user(username="other@example.com")
+        assert is_feature_enabled(other, "deposition") is True
+
+    def test_absent_override_key_falls_back_to_global(self, user):
+        # A profile dict that doesn't mention the flag falls through to the global.
+        SystemFeatureFlag.objects.create(name="deposition", enabled=True)
+        user.profile.feature_flags = {"something_else": False}
+        user.profile.save()
+        assert is_feature_enabled(user, "deposition") is True
+
     def test_anonymous_user_has_no_override(self):
         assert is_feature_enabled(AnonymousUser(), "deposition") is False
 
@@ -55,6 +72,14 @@ class TestEnabledFlagsFor:
         user.profile.save()
         # alpha (global on) + zeta (override on); gamma override is false -> excluded.
         assert enabled_flags_for(user) == ["alpha", "zeta"]
+
+    def test_override_off_removes_globally_on_flag(self, user):
+        # Precedence: a False override drops a flag that is on globally.
+        SystemFeatureFlag.objects.create(name="alpha", enabled=True)
+        SystemFeatureFlag.objects.create(name="beta", enabled=True)
+        user.profile.feature_flags = {"alpha": False}
+        user.profile.save()
+        assert enabled_flags_for(user) == ["beta"]
 
     def test_anonymous_returns_only_global(self):
         SystemFeatureFlag.objects.create(name="alpha", enabled=True)

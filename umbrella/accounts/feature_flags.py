@@ -1,30 +1,29 @@
-"""Feature-flag lookup: combines the system-wide flag with per-user overrides.
-A feature is ON for a user when EITHER:
-  - the global ``SystemFeatureFlag`` is enabled for everyone, OR
-  - the user enabled it in ``Profile.feature_flags``.
+"""Feature-flag lookup: per-user override wins, otherwise the system-wide flag.
+Resolving ``flag`` for a user:
+  - an explicit per-user value in ``Profile.feature_flags`` wins (on OR off), else
+  - fall back to whether the global ``SystemFeatureFlag`` is enabled.
 """
 
 from .models import Profile, SystemFeatureFlag
 
 
 def is_feature_enabled(user, flag: str) -> bool:
-    """Return whether ``flag`` is enabled for ``user`` (global OR per-user override)."""
-    if SystemFeatureFlag.objects.filter(name=flag, enabled=True).exists():
-        return True
+    """Return whether ``flag`` is enabled for ``user`` (per-user override wins)."""
+    # Authenticated users may have an explicit override that takes precedence.
+    if getattr(user, "is_authenticated", False):
+        try:
+            overrides = user.profile.feature_flags
+            if flag in overrides:
+                return bool(overrides[flag])
+        except Profile.DoesNotExist:
+            pass
 
-    # Anonymous users have no overrides.
-    if not getattr(user, "is_authenticated", False):
-        return False
-
-    # Per-user override.
-    try:
-        return bool(user.profile.feature_flags.get(flag))
-    except Profile.DoesNotExist:
-        return False
+    return SystemFeatureFlag.objects.filter(name=flag, enabled=True).exists()
 
 
 def enabled_flags_for(user) -> list[str]:
-    """All flags enabled for ``user`` — globally-on flags plus their profile overrides.
+    """All flags enabled for ``user`` — system-on flags with per-user overrides applied.
+    An explicit per-user override wins: it can add a flag or remove a system-on one.
     Used by the /user endpoint so the frontend knows which features to show.
     """
     flags = set(
@@ -32,7 +31,8 @@ def enabled_flags_for(user) -> list[str]:
     )
     if getattr(user, "is_authenticated", False):
         try:
-            flags |= {name for name, on in user.profile.feature_flags.items() if on}
+            for name, on in user.profile.feature_flags.items():
+                flags.add(name) if on else flags.discard(name)
         except Profile.DoesNotExist:
             pass
     return sorted(flags)
