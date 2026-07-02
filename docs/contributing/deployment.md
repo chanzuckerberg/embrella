@@ -73,8 +73,8 @@ To deploy to either staging or production, you can use:
 
 This does the following:
 
-1.  `git clone` a shallow 1-commit branch from the remote `github.com:czimaginginstitute/czii-umbrella-django` to the server
-1.  `git clone` a shallow 1-commit branch from the remote `github.com:czimaginginstitute/czii-umbrella-django` to the server
+1.  `git clone` a shallow 1-commit branch from the remote `github.com:chanzuckerberg/embrella` to the server
+1.  `git clone` a shallow 1-commit branch from the remote `github.com:chanzuckerberg/embrella` to the server
 1.  `scp` the <envfile> into the server deployment directory `/srv/czii-umbrella-django`
 1.  `scp` the `helpers/nginx.conf` file to server `/etc/nginx`
 1.  If deploying production: Runs `just backupdb` from production, and then runs django database migrations

@@ -2,8 +2,8 @@
 
 site_name: umbrella
 site_dir: docs_build
-repo_url: 'https://github.com/czimaginginstitute/czii-umbrella-django'
-repo_name: 'czimaginginstitute/czii-umbrella-django'
+repo_url: 'https://github.com/chanzuckerberg/embrella'
+repo_name: 'chanzuckerberg/embrella'
 copyright: '2026, Biohub'
 theme:
   name: material
