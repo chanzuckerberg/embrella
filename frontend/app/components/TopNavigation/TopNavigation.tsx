@@ -11,12 +11,14 @@ import { UserContext } from '@app/common/context/UserProvider';
 import { DJANGO_URL } from '@app/common/constants/api';
 
 // Main navigation structure
-type NavSection = 'home' | 'samples' | 'sessions' | 'processing';
+type NavSection = 'home' | 'samples' | 'sessions' | 'processing' | 'deposition';
 
 interface NavItem {
   label: string;
   href: string;
   section: NavSection;
+  // When set, the tab only renders if this flag is enabled for the user.
+  featureFlag?: FEATURE_FLAG;
 }
 
 interface SubNavItem {
@@ -28,6 +30,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   { label: 'Samples', href: '/samples/grids', section: 'samples' },
   { label: 'Sessions', href: '/sessions/browse', section: 'sessions' },
   { label: 'Processing', href: '/processing/jobs/monitor', section: 'processing' },
+  { label: 'Deposition', href: '/deposition/submissions', section: 'deposition', featureFlag: FEATURE_FLAG.DEPOSITION },
 ];
 
 // Processing section uses dropdowns instead of flat sub-nav items
@@ -72,6 +75,7 @@ const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
     { label: 'Browse Sessions', href: '/sessions/browse' },
   ],
   processing: [], // Will be populated dynamically
+  deposition: [],
 };
 
 const StyledNav = styled.nav`
@@ -254,6 +258,7 @@ export const TopNavigation = () => {
     if (pathname.startsWith('/samples')) return 'samples';
     if (pathname.startsWith('/sessions')) return 'sessions';
     if (pathname.startsWith('/processing')) return 'processing';
+    if (pathname.startsWith('/deposition')) return 'deposition';
     return 'home';
   };
 
@@ -312,13 +317,15 @@ export const TopNavigation = () => {
                 marginTop: '8px',
               }}
             >
-              {MAIN_NAV_ITEMS.map((item) => {
-                return (
-                  <StyledNavLink key={item.section} href={item.href} isActive={activeSection === item.section}>
-                    {item.label}
-                  </StyledNavLink>
-                );
-              })}
+              {MAIN_NAV_ITEMS.filter((item) => !item.featureFlag || featureFlags.includes(item.featureFlag)).map(
+                (item) => {
+                  return (
+                    <StyledNavLink key={item.section} href={item.href} isActive={activeSection === item.section}>
+                      {item.label}
+                    </StyledNavLink>
+                  );
+                }
+              )}
             </Box>
           </Box>
           <Box sx={{ flexShrink: 0 }}>

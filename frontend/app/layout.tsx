@@ -8,8 +8,6 @@ import { CustomThemeProvider } from './common/CustomThemeProvider';
 import { UserProvider } from './common/context/UserProvider';
 import { FeatureFlagsProvider } from './common/context/FeatureFlagsProvider';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
-import { cookies } from 'next/headers';
-import { COOKIE_NAME } from './common/types/cookies';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -39,15 +37,13 @@ const CACHE_PROVIDER_OPTIONS = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const featureFlagsCookie = (await cookies()).get(COOKIE_NAME.FEATURE_FLAGS)?.value;
-
   return (
     <html lang="en">
       <body className={inter.className}>
         <AppRouterCacheProvider options={CACHE_PROVIDER_OPTIONS}>
           <CustomThemeProvider>
             <UserProvider>
-              <FeatureFlagsProvider featureFlagsCookie={featureFlagsCookie}>
+              <FeatureFlagsProvider>
                 <NuqsAdapter>
                   <NavbarWrapper />
                   <ContentWrapper>{children}</ContentWrapper>
