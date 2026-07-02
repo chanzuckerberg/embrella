@@ -304,47 +304,7 @@ initenv:
       echo -e "${GREEN}Using environment variable file:${NC} ./.env"
     fi
 
-# Uses the github cli to fetch the service user credential. Asks for password.
-getserviceuserkey +kf="~/.ssh/svc_czii_umbrella":
-    #!/bin/bash
-    source ./helpers/shell_common.sh
-    echo "Getting service user key"
-    k=$(gh variable get SVCUSR --repo czimaginginstitute/czii-umbrella-django --env production)
-    echo $k | just decrypt > {{kf}}
-    chmod 600 {{kf}}
-    ssh-add {{kf}}
-
-[private]
-storeserviceuserkey +kf="~/.ssh/svc_czii_umbrella":
-    #!/bin/bash
-    source ./helpers/shell_common.sh
-    k=$(just encrypt {{kf}})
-    echo $k | gh variable set SVCUSR --repo czimaginginstitute/czii-umbrella-django --env production
-    echo "Stored."
-
-# Uses github cli to fetch the environment file .env cached in encrypted form as a github variable, for a particular deployment environment: development, staging, production. Asks for password.
-restoreencryptedenv +args="development":
-    #!/bin/bash
-    source ./helpers/shell_common.sh
-
-    echocolor $RED "You are about to overwrite the local file ./.env with contents from remote environment for {{args}}..."
-    if [[ "yes" == $(ask_if_really_sure) ]]
-    then
-      k=$(gh variable get ENV --repo czimaginginstitute/czii-umbrella-django --env {{args}})
-      echo $k | just decrypt > ./.env
-    fi
-
-# Uses github cli to store encrypted file .env to github variable for particular deployment environment. Asks for password.
-backupencryptedenv +args="development":
-    #!/bin/bash
-    source ./helpers/shell_common.sh
-
-    echocolor $RED "You are about to overwrite the remote environment for {{args}} with the contents of ./.env..."
-    if [[ "yes" == $(ask_if_really_sure) ]]
-    then
-      k=$(just encrypt ./.env)
-      echo $k | gh variable set ENV --repo czimaginginstitute/czii-umbrella-django --env {{args}}
-    fi
+# TODO: use 1Password to fetch secrets
 
 # Get/install backend development lib dependencies
 updatebackenddeps: initenv
@@ -679,10 +639,10 @@ deploy stage envfile branch:
         CONF=./infra/nginx_production.conf
     fi
 
-    # Git pull on host (or scp/rsync from here?)
+    # Git pull on host
     echocolor $GREEN "Pulling branch {{branch}}"
     scp ~/.ssh/svc_czii_umbrella svc.czii.umbrella@$HOST:~/.ssh/svc_czii_umbrella
-    ssh svc.czii.umbrella@$HOST "chmod 600 ~/.ssh/svc_czii_umbrella && export GIT_SSH_COMMAND='ssh -i ~/.ssh/umbrella_deployment -o IdentitiesOnly=yes' && cd /srv && rm -rf czii-umbrella-django && git clone --depth 1 git@github.com:czimaginginstitute/czii-umbrella-django.git -b {{branch}}"
+    ssh svc.czii.umbrella@$HOST "chmod 600 ~/.ssh/svc_czii_umbrella && export GIT_SSH_COMMAND='ssh -i ~/.ssh/umbrella_deployment -o IdentitiesOnly=yes' && cd /srv && rm -rf czii-umbrella-django && git clone --depth 1 git@github.com:chanzuckerberg/embrella.git czii-umbrella-django -b {{branch}}"
 
     echo "Copying .env to $HOST..."
     scp {{envfile}} svc.czii.umbrella@$HOST:/srv/czii-umbrella-django/.env
@@ -801,7 +761,7 @@ deployv2 stage envfile branch tag="latest":
       echo \"  ✓ found at \$KEY\""
     echo "Checking out branch {{branch}} on $HOST and pulling prebuilt images from ghcr.io..."
     # Images are built/pushed by .github/workflows/build-images.yaml to
-    # ghcr.io/czimaginginstitute/embrella/{backend,frontend,db}. The host still
+    # ghcr.io/chanzuckerberg/embrella/{backend,frontend,db}. The host still
     # needs the source checked out for infra/compose*.yaml + nginx templates.
     # TODO: get self-hosted runner set up to automate all of this, including the templates.
     ssh svc.czii.umbrella@$HOST "set -e; cd /srv/czii-umbrella-django && \
@@ -812,8 +772,13 @@ deployv2 stage envfile branch tag="latest":
       GHCR_TOKEN=\$(grep -E '^GHCR_TOKEN=' .env.$ENVNAME | tail -1 | cut -d= -f2- | tr -d '\"' | tr -d \"'\"); \
       if [[ -z \"\$GHCR_USER\" || -z \"\$GHCR_TOKEN\" ]]; then echo '  ✗ GHCR_USER/GHCR_TOKEN not set in .env.$ENVNAME (need a PAT with read:packages)'; exit 1; fi; \
       echo \"\$GHCR_TOKEN\" | podman login ghcr.io -u \"\$GHCR_USER\" --password-stdin && \
-      export IMAGE_REGISTRY=ghcr.io/czimaginginstitute/embrella IMAGE_TAG={{tag}} && \
-      for svc in backend frontend db; do podman pull \"\$IMAGE_REGISTRY/\$svc:\$IMAGE_TAG\"; done && \
+      export IMAGE_REGISTRY=ghcr.io/chanzuckerberg/embrella IMAGE_TAG={{tag}} && \
+      echo \"Pulling images at tag '{{tag}}' (reporting digest + build time per service):\" && \
+      for svc in backend frontend db; do \
+        IMG=\"\$IMAGE_REGISTRY/\$svc:\$IMAGE_TAG\"; \
+        podman pull \"\$IMG\" && \
+        podman image inspect \"\$IMG\" --format \"  ✓ \$svc  digest={{{{.Digest}} built={{{{.Created}}\"; \
+      done && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml up -d --remove-orphans"
 
 # Restore a specific SQL snapshot into the prod/staging *container* db, then apply
