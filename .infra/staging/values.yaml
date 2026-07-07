@@ -1,0 +1,45 @@
+###### Generated using `argus bootstrap` ######
+stack:
+  # Non-sensitive shared env kept at the global level *in this file* so backend +
+  # worker both get the DB connection. NOTE: global env only merges with
+  # service-level env within the same file — do not also define stack.global.env
+  # in common.yaml or a service-level env here will silently replace it.
+  #
+  # Secrets (DJANGO_SECRET_KEY, MYSQL_PWD, GOOGLE_SSO_CLIENT_ID/SECRET, and
+  # SLURM_* if the cluster integration is enabled) are NOT listed here. Set them
+  # with `argus set secret --app embrella --env staging <NAME> <value>`; Argus
+  # syncs them from AWS Secrets Manager and injects them as env vars at runtime.
+  global:
+    env:
+      - name: USE_MYSQL
+        value: "True"
+      - name: MYSQL_HOST
+        value: "REPLACE-with-managed-db-endpoint"
+      - name: MYSQL_PORT
+        value: "3306"
+      - name: MYSQL_NAME
+        value: "umbrella"
+      - name: MYSQL_USER
+        value: "umbrella"
+      - name: DJANGO_ENV
+        value: "staging"
+
+  services:
+    backend:
+      image:
+        tag: &backend-image-tag sha-TO-BE-REPLACED-BY-BUILDER-WORKFLOW
+      env:
+        - name: EMBRELLA_BUILD_STATIC
+          value: "1"
+
+    frontend:
+      image:
+        tag: sha-TO-BE-REPLACED-BY-BUILDER-WORKFLOW
+      env:
+        - name: BACKEND_URL
+          value: "http://$(__ARGUS_STACK_NAME)-stack-backend:8000"
+
+    worker:
+      # Not a built image — reuses the backend image
+      image:
+        tag: *backend-image-tag
