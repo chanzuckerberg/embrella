@@ -249,3 +249,40 @@ class DepositionSerializer(serializers.ModelSerializer):
 
     def validate_authors_json(self, value):
         return validate_authors_json(value)
+
+
+class SubmissionDatasetSerializer(serializers.ModelSerializer):
+    """Lightweight dataset row for the My Submissions list (GET /depositions/?scope=mine).
+    """
+
+    session_names = serializers.SerializerMethodField()
+    session_count = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Dataset
+        fields = ["id", "dataset_id", "title", "status", "updated_at", "session_count", "session_names", "type"]
+
+    def get_session_names(self, obj) -> list[str]:
+        sessions = sorted(
+            (s for s in obj.sessions.all() if s.msi_session_id),
+            key=lambda s: s.msi_session.name or "",
+        )
+        return [s.msi_session.name for s in sessions]
+
+    def get_session_count(self, obj) -> int:
+        return len(obj.sessions.all())
+
+    def get_type(self, obj) -> str:
+        has_annotations = any(a.is_selected for s in obj.sessions.all() for a in s.annotations.all())
+        return "Tomos + Annotations" if has_annotations else "Tomos only"
+
+
+class SubmissionDepositionSerializer(serializers.ModelSerializer):
+    """Deposition group for the My Submissions list — lean, with datasets summarized."""
+
+    datasets = SubmissionDatasetSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Deposition
+        fields = ["id", "deposition_id", "title", "description", "updated_at", "datasets"]
