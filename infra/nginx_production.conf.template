@@ -68,7 +68,7 @@ http {
             # prefix strip the trailing-slash proxy_pass URI used to do.
             set $upstream_copick copick-web;
             rewrite ^/viewer/copick-web/(.*)$ /$1 break;
-            proxy_pass http://$upstream_copick:8880;
+            proxy_pass http://$upstream_copick:80;
             proxy_http_version 1.1;
             proxy_set_header Upgrade           $http_upgrade;
             proxy_set_header Connection        'upgrade';
