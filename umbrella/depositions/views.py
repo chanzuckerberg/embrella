@@ -29,6 +29,7 @@ from .serializers import (
     DepositionAnnotationMethodLinkSerializer,
     DepositionSerializer,
     DepositionSessionSerializer,
+    SubmissionDepositionSerializer,
 )
 from .services import get_reservation_service
 
@@ -101,8 +102,13 @@ class DepositionViewSet(viewsets.ModelViewSet):
         serializer.save(submitter_user=self.request.user, deposition_id=deposition_id)
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
+        # My Submissions list: lean per-deposition rows with session names + derived type.
+        # Prefetch sessions -> msi_session (names) + annotations (type) to avoid N+1.
+        queryset = self.filter_queryset(self.get_queryset()).prefetch_related(
+            "datasets__sessions__msi_session",
+            "datasets__sessions__annotations",
+        )
+        serializer = SubmissionDepositionSerializer(queryset, many=True)
         return Response({"submissions": serializer.data, "total_count": queryset.count()})
 
 
