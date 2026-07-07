@@ -8,6 +8,7 @@ export enum FEATURE_FLAG {
   REVIEW = 'review',
   MANAGE_DATA = 'manage_data',
   DEPOSITION = 'deposition',
+  COPICK_WEB = 'copick-web',
 }
 
 export const FeatureFlagsContext = createContext<FEATURE_FLAG[]>([]);
