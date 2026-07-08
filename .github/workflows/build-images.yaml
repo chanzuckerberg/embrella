@@ -24,7 +24,7 @@ jobs:
           - { name: frontend, dockerfile: infra/frontend.Dockerfile }
           - { name: db, dockerfile: infra/db.Dockerfile }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Docker tags can't contain '/', so slugify the branch name
       # e.g. feat/ghcr-build-pipeline -> feat-ghcr-build-pipeline.
