@@ -20,6 +20,20 @@ stack:
         requests:
           cpu: 500m
           memory: 512Mi
+      readinessProbe:
+        httpGet:
+          path: /ping/
+          port: 8000
+          httpHeaders:
+            - name: Host
+              value: localhost
+      livenessProbe:
+        httpGet:
+          path: /ping/
+          port: 8000
+          httpHeaders:
+            - name: Host
+              value: localhost
       ingress:
         paths:
           - { path: /static, pathType: Prefix }
@@ -70,6 +84,8 @@ stack:
         repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/embrella/backend
       command: ["python", "umbrella/manage.py", "qcluster"]
       service:
+        enabled: false
+      ingress:
         enabled: false
       resources:
         limits:
