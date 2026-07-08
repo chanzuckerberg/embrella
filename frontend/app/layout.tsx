@@ -5,6 +5,7 @@ import '@app/globals.css';
 import { NavbarWrapper } from '@app/common/components/NavBarWrapper';
 import { ContentWrapper } from '@app/common/components/ContentWrapper';
 import { CustomThemeProvider } from './common/CustomThemeProvider';
+import { ReactQueryProvider } from './common/context/ReactQueryProvider';
 import { UserProvider } from './common/context/UserProvider';
 import { FeatureFlagsProvider } from './common/context/FeatureFlagsProvider';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
@@ -41,16 +42,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body className={inter.className}>
         <AppRouterCacheProvider options={CACHE_PROVIDER_OPTIONS}>
-          <CustomThemeProvider>
-            <UserProvider>
-              <FeatureFlagsProvider>
-                <NuqsAdapter>
-                  <NavbarWrapper />
-                  <ContentWrapper>{children}</ContentWrapper>
-                </NuqsAdapter>
-              </FeatureFlagsProvider>
-            </UserProvider>
-          </CustomThemeProvider>
+          <ReactQueryProvider>
+            <CustomThemeProvider>
+              <UserProvider>
+                <FeatureFlagsProvider>
+                  <NuqsAdapter>
+                    <NavbarWrapper />
+                    <ContentWrapper>{children}</ContentWrapper>
+                  </NuqsAdapter>
+                </FeatureFlagsProvider>
+              </UserProvider>
+            </CustomThemeProvider>
+          </ReactQueryProvider>
         </AppRouterCacheProvider>
       </body>
     </html>

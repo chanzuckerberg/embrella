@@ -35,6 +35,7 @@
     "@mui/x-date-pickers": "^8.29.0",
     "@tailwindcss/postcss": "^4.3.1",
     "@tanstack/react-query": "^5.101.0",
+    "@tanstack/react-query-devtools": "^5.101.2",
     "@tanstack/react-table": "^8.20.5",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/react-json-view": "^2.0.0-alpha.43",
