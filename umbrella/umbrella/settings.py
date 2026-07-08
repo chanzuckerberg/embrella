@@ -290,6 +290,21 @@ CSRF_TRUSTED_ORIGINS = [
     "http://umbrella.czbiohub.org",
     "http://umbrella-dev.czbiohub.org",
 ]
+
+# Argus/k8s ingress host, injected by the argus-config subchart from
+# global.ingress.host. Lets Django accept requests and trust CSRF behind the
+# cluster ingress without hardcoding the (per-stack) staging hostname. No-op for
+# self-hosters, who won't have this env var set.
+_ARGUS_INGRESS_HOST = os.environ.get("__ARGUS_STACK_INGRESS_HOST")
+if _ARGUS_INGRESS_HOST:
+    ALLOWED_HOSTS.append(_ARGUS_INGRESS_HOST)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{_ARGUS_INGRESS_HOST}")
+    CORS_ALLOWED_ORIGINS.append(f"https://{_ARGUS_INGRESS_HOST}")
+    # TLS terminates at the ingress; trust the forwarded proto so redirects,
+    # secure cookies, and CSRF see https and the external host.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
+
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
