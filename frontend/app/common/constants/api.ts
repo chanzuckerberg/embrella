@@ -110,6 +110,12 @@ export enum API {
   EXTERNAL_RESOURCES_DOC_SPACES = '/api/external-resources/doc_spaces/',
   EXTERNAL_RESOURCES_DOC_PAGES = '/api/external-resources/doc_pages/',
   EXTERNAL_RESOURCES_SYSTEMS = '/api/external-resources/systems/',
+
+  // Deposition
+  DEPOSITIONS = '/depositions/v1/depositions/',
+  DEPOSITION_DATASETS = '/depositions/v1/datasets/',
+  DEPOSITION_SESSIONS = '/depositions/v1/sessions/',
+  DEPOSITION_METHOD_LINKS = '/depositions/v1/method-links/',
 }
 
 export enum POST_API {
