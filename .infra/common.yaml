@@ -1,0 +1,80 @@
+###### Generated using `argus bootstrap`, then hand-edited ######
+stack:
+  global:
+    replicaCount: 1
+    autoscaling:
+      enabled: false
+    service:
+      port: 8000
+    nodeSelector:
+      kubernetes.io/arch: arm64
+
+  services:
+    backend:
+      image:
+        repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/embrella/backend
+      resources:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+        requests:
+          cpu: 500m
+          memory: 512Mi
+      ingress:
+        paths:
+          - { path: /static, pathType: Prefix }
+          - { path: /admin, pathType: Prefix }
+          - { path: /accounts, pathType: Prefix }
+          - { path: /api, pathType: Prefix }
+          - { path: /user, pathType: Prefix }
+          - { path: /ping, pathType: Prefix }
+          - { path: /version, pathType: Prefix }
+          - { path: /docs, pathType: Prefix }
+          - { path: /legacy, pathType: Prefix }
+          - { path: /workflow, pathType: Prefix }
+          - { path: /cryo_grids, pathType: Prefix }
+          - { path: /processes, pathType: Prefix }
+          - { path: /projects, pathType: Prefix }
+          - { path: /people, pathType: Prefix }
+          - { path: /depositions, pathType: Prefix }
+          - { path: /copick, pathType: Prefix }
+          - { path: /tem, pathType: Prefix }
+          - { path: /get_grids_by_user, pathType: Prefix }
+          - { path: /get_grids_by_cassette, pathType: Prefix }
+          - { path: /get_tomo_by_msi_session, pathType: Prefix }
+          - { path: /available_grids, pathType: Prefix }
+          - { path: /annotations, pathType: Prefix }
+
+    frontend:
+      image:
+        repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/embrella/frontend
+      service:
+        port: 3000
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+        requests:
+          cpu: 250m
+          memory: 256Mi
+      ingress:
+        paths:
+          - path: /
+            pathType: Prefix
+
+    # Django-Q background worker. Reuses the backend image.
+    # scaled to 0 — trying to deploy without db. unused worker for now
+    worker:
+      replicaCount: 0
+      image:
+        repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/embrella/backend
+      command: ["python", "umbrella/manage.py", "qcluster"]
+      service:
+        enabled: false
+      resources:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+        requests:
+          cpu: 500m
+          memory: 512Mi

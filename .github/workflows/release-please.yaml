@@ -1,0 +1,30 @@
+###### Generated using `argus bootstrap` command ######
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: arm64
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.GH_ACTIONS_HELPER_APP_ID }}
+          private-key: ${{ secrets.GH_ACTIONS_HELPER_PK }}
+
+      - uses: chanzuckerberg/github-actions/.github/actions/release-please-semvar@v6
+        with:
+          app_token: ${{steps.generate_token.outputs.token}}
+          include_component_in_tag: true
