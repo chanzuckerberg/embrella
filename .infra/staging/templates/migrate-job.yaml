@@ -1,0 +1,56 @@
+# One-shot schema migration, run after every sync (ArgoCD PostSync hook).
+# Reuses the backend image and its entrypoint: EMBRELLA_MIGRATE=1 makes
+# entrypoint.sh wait for MySQL, run migrations (stores -> projects -> all), then
+# exec the args below (`true`, a no-op) and exit. We override `args` (CMD), NOT
+# `command`, so the image ENTRYPOINT (tini -> entrypoint.sh) still runs.
+#
+# Schema only — no superuser/seed. The single demo test user + all seed data are
+# preloaded in the Phase-2b reset dump (auto-signup stays off; only that user
+# can log in). Requires secrets: MYSQL_PWD, DJANGO_SECRET_KEY (argus set secret).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: embrella-migrate
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 5
+  activeDeadlineSeconds: 600
+  template:
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: migrate
+          image: "{{ .Values.stack.services.backend.image.repository }}:{{ .Values.stack.services.backend.image.tag }}"
+          # Non-secret env (MYSQL_PWD + DJANGO_SECRET_KEY come from the Argus env
+          # secret via envFrom).
+          env:
+            - name: EMBRELLA_MIGRATE
+              value: "1"
+            - name: USE_MYSQL
+              value: "True"
+            - name: MYSQL_HOST
+              value: embrella-db
+            - name: MYSQL_PORT
+              value: "3306"
+            - name: MYSQL_NAME
+              value: umbrella
+            - name: MYSQL_USER
+              value: root
+            - name: DJANGO_ENV
+              value: staging
+          envFrom:
+            - secretRef:
+                name: argus-env-secret.embrella.staging.{{ .Release.Name }}
+                optional: true
+          args: ["true"]
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

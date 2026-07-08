@@ -1,0 +1,91 @@
+# In-cluster MariaDB for the staging demo.
+#
+# Deployed as RAW manifests (not a stack `service`) because the stack chart
+# forces an probe that is incompatible with MariaDB.
+# Raw manifests let us use an exec (`mariadb-admin ping`) probe instead.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: embrella-db-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embrella-db
+  labels:
+    app.kubernetes.io/name: embrella-db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: embrella-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: embrella-db
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: mariadb
+          image: docker.io/library/mariadb:10.5.22
+          env:
+            - name: MARIADB_DATABASE
+              value: umbrella
+            - name: MARIADB_ROOT_HOST
+              value: "%"
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: argus-env-secret.embrella.staging.{{ .Release.Name }}
+                  key: MYSQL_PWD
+          ports:
+            - name: mysql
+              containerPort: 3306
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", 'mariadb-admin ping -h127.0.0.1 -uroot -p"$MARIADB_ROOT_PASSWORD"']
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", 'mariadb-admin ping -h127.0.0.1 -uroot -p"$MARIADB_ROOT_PASSWORD"']
+            initialDelaySeconds: 45
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: embrella-db-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: embrella-db
+spec:
+  selector:
+    app.kubernetes.io/name: embrella-db
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
