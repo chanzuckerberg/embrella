@@ -1,26 +1,20 @@
 ###### Generated using `argus bootstrap` ######
 stack:
-  # Non-sensitive shared env kept at the global level *in this file* so backend +
-  # worker both get the DB connection. NOTE: global env only merges with
-  # service-level env within the same file — do not also define stack.global.env
-  # in common.yaml or a service-level env here will silently replace it.
+  # Non-sensitive shared env at the global level. NOTE: global env only merges
+  # with service-level env within the same file — do not also define
+  # stack.global.env in common.yaml or a service-level env here will silently
+  # replace it.
   #
-  # Secrets (DJANGO_SECRET_KEY, MYSQL_PWD, GOOGLE_SSO_CLIENT_ID/SECRET, and
-  # SLURM_* if the cluster integration is enabled) are NOT listed here. Set them
-  # with `argus set secret --app embrella --env staging <NAME> <value>`; Argus
-  # syncs them from AWS Secrets Manager and injects them as env vars at runtime.
+  # Secrets (DJANGO_SECRET_KEY, and later MYSQL_PWD / GOOGLE_SSO_CLIENT_ID/SECRET)
+  # are NOT listed here. Set them with
+  # `argus set secret --app embrella --env staging <NAME> <value>`; Argus syncs
+  # them from AWS Secrets Manager and injects them as env vars at runtime.
+  #
+  # PHASE 1 (reach the frontend): no DB. USE_MYSQL / MYSQL_* are intentionally
+  # omitted so entrypoint-backend.sh skips its MySQL wait-loop and the backend
+  # boots. DB-backed endpoints will 500 until Phase 2 adds the in-cluster db.
   global:
     env:
-      - name: USE_MYSQL
-        value: "True"
-      - name: MYSQL_HOST
-        value: "REPLACE-with-managed-db-endpoint"
-      - name: MYSQL_PORT
-        value: "3306"
-      - name: MYSQL_NAME
-        value: "umbrella"
-      - name: MYSQL_USER
-        value: "umbrella"
       - name: DJANGO_ENV
         value: "staging"
 

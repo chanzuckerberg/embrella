@@ -62,8 +62,10 @@ stack:
           - path: /
             pathType: Prefix
 
-    # Django-Q background worker. Reuses the backend image
+    # Django-Q background worker. Reuses the backend image.
+    # scaled to 0 — trying to deploy without db. unused worker for now
     worker:
+      replicaCount: 0
       image:
         repository: 533267185808.dkr.ecr.us-west-2.amazonaws.com/core-platform/embrella/backend
       command: ["python", "umbrella/manage.py", "qcluster"]
