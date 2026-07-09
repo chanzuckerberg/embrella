@@ -35,7 +35,6 @@
     "@mui/x-date-pickers": "^8.29.0",
     "@tailwindcss/postcss": "^4.3.1",
     "@tanstack/react-query": "^5.101.0",
-    "@tanstack/react-query-devtools": "^5.101.2",
     "@tanstack/react-table": "^8.20.5",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/react-json-view": "^2.0.0-alpha.43",
@@ -56,6 +55,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.0",
+    "@tanstack/react-query-devtools": "^5.101.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.0.0",
