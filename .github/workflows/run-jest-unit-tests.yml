@@ -10,8 +10,8 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version-file: "./frontend/.nvmrc"
       - name: Install dependencies
@@ -24,7 +24,7 @@ jobs:
           yarn test
       - name: Upload Jest test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: jest-test-results
           path: frontend/jest-test-results/
