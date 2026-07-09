@@ -69,6 +69,23 @@ class UmbrellaSocialAccountAdapter(DefaultSocialAccountAdapter):
 class UmbrellaAccountAdapter(DefaultAccountAdapter):
     """Disable local self-registration; redirect back to the frontend after auth."""
 
+    def populate_username(self, request, user):
+        # Default allauth picks the first non-empty of [first_name, last_name, ...],
+        # so people end up as just their first name
+        # Try "firstname.lastname"; allauth appends a numeric suffix
+        # on collision. Falls back to the email local part, then the defaults.
+        from allauth.account.utils import user_email, user_field, user_username
+
+        first_name = (user_field(user, "first_name") or "").strip()
+        last_name = (user_field(user, "last_name") or "").strip()
+        email = user_email(user)
+        username = user_username(user)
+        candidates = []
+        if first_name and last_name:
+            candidates.append(f"{first_name}.{last_name}")
+        candidates += [email, first_name, last_name, "unknown_user"]
+        user_username(user, username or self.generate_unique_username(candidates))
+
     def is_open_for_signup(self, request):
         # No open local account registration — accounts come from Google SSO or
         # are created by an admin. (allauth would otherwise expose /accounts/signup/.)
