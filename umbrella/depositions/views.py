@@ -107,6 +107,8 @@ class DepositionViewSet(viewsets.ModelViewSet):
         queryset = self.filter_queryset(self.get_queryset()).prefetch_related(
             "datasets__sessions__msi_session",
             "datasets__sessions__annotations",
+            "datasets__sessions__tiltseries_metadata",
+            "datasets__sessions__tomogram_metadata",
         )
         serializer = SubmissionDepositionSerializer(queryset, many=True)
         return Response({"submissions": serializer.data, "total_count": queryset.count()})

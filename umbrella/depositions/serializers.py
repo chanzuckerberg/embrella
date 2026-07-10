@@ -274,8 +274,14 @@ class SubmissionDatasetSerializer(serializers.ModelSerializer):
         return len(obj.sessions.all())
 
     def get_type(self, obj) -> str:
+        has_tomograms = any(
+            hasattr(s, "tiltseries_metadata") or hasattr(s, "tomogram_metadata")
+            for s in obj.sessions.all()
+        )
         has_annotations = any(a.is_selected for s in obj.sessions.all() for a in s.annotations.all())
-        return "Tomos + Annotations" if has_annotations else "Tomos only"
+        if has_annotations and not has_tomograms:
+            return "Annotations only"
+        return "Dataset" if has_annotations else "Tomos only"
 
 
 class SubmissionDepositionSerializer(serializers.ModelSerializer):
