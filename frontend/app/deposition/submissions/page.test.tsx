@@ -1,0 +1,45 @@
+import '@testing-library/jest-dom';
+import { render, screen } from '@testing-library/react';
+
+import SubmissionsPage from './page';
+import { useSubmissions } from '../hooks/useSubmissions';
+
+jest.mock('../hooks/useSubmissions', () => ({ useSubmissions: jest.fn() }));
+const mockUseSubmissions = useSubmissions as jest.Mock;
+
+const DATASETS = [
+  { id: 1, dataset_id: 100, title: 'A', status: 'pushed', type: 'Tomos only', session_names: [], session_count: 0, updated_at: '2026-07-01T00:00:00Z' },
+  { id: 2, dataset_id: 101, title: 'B', status: 'pushed', type: 'Dataset', session_names: ['s1'], session_count: 1, updated_at: '2026-07-01T00:00:00Z' },
+  { id: 3, dataset_id: 102, title: 'C', status: 'draft', type: 'Annotations only', session_names: ['s2'], session_count: 1, updated_at: '2026-07-01T00:00:00Z' },
+];
+const SUBMISSIONS = [{ id: 1, deposition_id: 10001, title: 'Test dep', datasets: DATASETS }];
+
+describe('SubmissionsPage', () => {
+  it('shows the empty state when there are no submissions', () => {
+    mockUseSubmissions.mockReturnValue({ data: { submissions: [], total_count: 0 }, isPending: false, isError: false });
+    render(<SubmissionsPage />);
+    expect(screen.getByText('No submissions yet.')).toBeInTheDocument();
+  });
+
+  it('shows a loader while pending', () => {
+    mockUseSubmissions.mockReturnValue({ data: undefined, isPending: true, isError: false });
+    render(<SubmissionsPage />);
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+  });
+
+  it('shows an error message on failure', () => {
+    mockUseSubmissions.mockReturnValue({ data: undefined, isPending: false, isError: true });
+    render(<SubmissionsPage />);
+    expect(screen.getByText(/Failed to load submissions/i)).toBeInTheDocument();
+  });
+
+  it('renders each dataset type and the deposition group', () => {
+    mockUseSubmissions.mockReturnValue({ data: { submissions: SUBMISSIONS, total_count: 1 }, isPending: false, isError: false });
+    render(<SubmissionsPage />);
+    expect(screen.getByText('Tomos only')).toBeInTheDocument();
+    expect(screen.getByText('Annotations only')).toBeInTheDocument();
+    // "Dataset" appears as both the column header and the type chip → expect ≥ 2
+    expect(screen.getAllByText('Dataset').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Deposition cdp-10001/)).toBeInTheDocument();
+  });
+});
