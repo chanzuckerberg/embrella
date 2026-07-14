@@ -35,3 +35,11 @@ export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'draft', label: 'Drafts' },
   { key: 'failed', label: 'Failed' },
 ];
+
+export type SortKey = 'recent' | 'oldest' | 'dataset_id';
+
+export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'recent', label: 'Recently updated' },
+  { key: 'oldest', label: 'Oldest updated' },
+  { key: 'dataset_id', label: 'Dataset ID' },
+];

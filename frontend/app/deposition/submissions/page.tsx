@@ -2,11 +2,16 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { Button } from '@czi-sds/components';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   Box,
   CircularProgress,
   Container,
+  FormControl,
+  InputAdornment,
+  MenuItem,
   Paper,
+  Select,
   Tab,
   Table,
   TableBody,
@@ -15,12 +20,14 @@ import {
   TableHead,
   TableRow,
   Tabs,
+  TextField,
   Typography,
 } from '@mui/material';
 
 import { useSubmissions } from '../hooks/useSubmissions';
 import type { Deposition } from '../types';
-import { COLS, FILTERS, type FilterKey } from './constants';
+import { COLS, FILTERS, SORT_OPTIONS, type FilterKey, type SortKey } from './constants';
+import { compareDatasets, datasetMatches, depositionMatches } from './utils';
 import { AddDatasetDialog } from './components/AddDatasetDialog';
 import { ColGroup } from './components/ColGroup';
 import { DatasetRow } from './components/DatasetRow';
@@ -31,6 +38,8 @@ export default function SubmissionsPage() {
   const [newOpen, setNewOpen] = useState(false);
   const [addDatasetFor, setAddDatasetFor] = useState<Deposition | null>(null);
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortKey>('recent');
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
 
   const { data, isPending, isError } = useSubmissions('mine');
@@ -58,12 +67,24 @@ export default function SubmissionsPage() {
 
   // Depositions whose datasets match the active filter.
   const visible = useMemo(() => {
-    const all = submissions ?? [];
-    if (filter === 'all') return all;
-    return all
-      .map((dep) => ({ ...dep, datasets: (dep.datasets ?? []).filter((ds) => ds.status === filter) }))
-      .filter((dep) => (dep.datasets ?? []).length > 0);
-  }, [submissions, filter]);
+    const q = search.trim().toLowerCase();
+    const groups = (submissions ?? [])
+      .map((dep) => {
+        const depHit = q !== '' && depositionMatches(dep, q);
+        let datasets = (dep.datasets ?? []).filter((ds) => filter === 'all' || ds.status === filter);
+        if (q !== '' && !depHit) datasets = datasets.filter((ds) => datasetMatches(ds, q));
+        datasets = [...datasets].sort((a, b) => compareDatasets(a, b, sort));
+        return { ...dep, datasets };
+      })
+      .filter((dep) => dep.datasets.length > 0);
+    // Order the groups by their representative dataset.
+    return groups.sort((a, b) => compareDatasets(a.datasets[0], b.datasets[0], sort));
+  }, [submissions, filter, search, sort]);
+
+  const visibleDatasetCount = useMemo(
+    () => visible.reduce((n, dep) => n + dep.datasets.length, 0),
+    [visible],
+  );
 
   const renderContent = () => {
     if (isError) {
@@ -102,7 +123,17 @@ export default function SubmissionsPage() {
               <TableHead>
                 <TableRow>
                   {COLS.map((c) => (
-                    <TableCell key={c.key} align={c.align} sx={{ fontWeight: 700 }}>
+                    <TableCell
+                      key={c.key}
+                      align={c.align}
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: 12,
+                        letterSpacing: 0.6,
+                        textTransform: 'uppercase',
+                        color: 'text.secondary',
+                      }}
+                    >
                       {c.label}
                     </TableCell>
                   ))}
@@ -112,7 +143,7 @@ export default function SubmissionsPage() {
                 {visible.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={COLS.length} sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
-                      No depositions match this filter.
+                      No datasets match your search or filter.
                     </TableCell>
                   </TableRow>
                 )}
@@ -142,8 +173,9 @@ export default function SubmissionsPage() {
             </Table>
           </TableContainer>
         </Paper>
-        <Typography  color="text.secondary" sx={{ mt: 2 }}>
-          Showing {visible.length} of {submissions.length} depositions
+        <Typography color="text.secondary" sx={{ mt: 2 }}>
+          Showing {visibleDatasetCount} {visibleDatasetCount === 1 ? 'dataset' : 'datasets'} across {visible.length}{' '}
+          {visible.length === 1 ? 'deposition' : 'depositions'}
         </Typography>
       </>
     );
@@ -152,9 +184,15 @@ export default function SubmissionsPage() {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-          My Submissions
-        </Typography>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            My Submissions
+          </Typography>
+          <Typography color="text.secondary">
+            {counts.all} {counts.all === 1 ? 'dataset' : 'datasets'} across {submissions?.length ?? 0}{' '}
+            {(submissions?.length ?? 0) === 1 ? 'deposition' : 'depositions'}
+          </Typography>
+        </Box>
         <Button sdsType="primary" sdsStyle="solid" onClick={() => setNewOpen(true)}>
           + New Submission
         </Button>
@@ -169,11 +207,62 @@ export default function SubmissionsPage() {
           <Tab
             key={f.key}
             value={f.key}
-            label={`${f.label} ${counts[f.key]}`}
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                {f.label}
+                <Box
+                  component="span"
+                  sx={{
+                    minWidth: 20,
+                    px: 0.75,
+                    borderRadius: 5,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    lineHeight: '18px',
+                    textAlign: 'center',
+                    bgcolor: filter === f.key ? 'primary.main' : 'action.selected',
+                    color: filter === f.key ? 'primary.contrastText' : 'text.secondary',
+                  }}
+                >
+                  {counts[f.key]}
+                </Box>
+              </Box>
+            }
             sx={{ minHeight: 40, textTransform: 'none' }}
           />
         ))}
       </Tabs>
+
+      {/* Client-side search + sort over the fetched list. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
+        <TextField
+          size="small"
+          placeholder="Search datasets or depositions"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ flex: 1, maxWidth: 400 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 220 }}>
+          <Select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            renderValue={(v) => `Sort: ${SORT_OPTIONS.find((o) => o.key === v)?.label ?? ''}`}
+          >
+            {SORT_OPTIONS.map((o) => (
+              <MenuItem key={o.key} value={o.key}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
       {renderContent()}
 
