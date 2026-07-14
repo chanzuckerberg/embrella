@@ -3,11 +3,27 @@
 import { useState } from 'react';
 import NextLink from 'next/link';
 import { Button } from '@czi-sds/components';
-import { Box, Chip, Link, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import { Box, Chip, CircularProgress, Link, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
 
-import type { Dataset } from '../../types';
+import type { Dataset, DatasetStatus } from '../../types';
 import { MAX_SESSION_NAMES, STATUS_META, TYPE_META } from '../constants';
 import { absDate, softChipSx, timeAgo } from '../utils';
+
+function statusIcon(status: DatasetStatus) {
+  switch (status) {
+    case 'draft':
+      return <RadioButtonUncheckedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />;
+    case 'syncing':
+      return <CircularProgress size={13} thickness={5} sx={{ color: 'warning.main' }} />;
+    case 'pushed':
+      return <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />;
+    case 'failed':
+      return <ErrorIcon sx={{ fontSize: 16, color: 'error.main' }} />;
+  }
+}
 
 export function DatasetRow({ dataset }: { dataset: Dataset }) {
   const [showAllSessions, setShowAllSessions] = useState(false);
@@ -69,7 +85,13 @@ export function DatasetRow({ dataset }: { dataset: Dataset }) {
         />
       </TableCell>
       <TableCell>
-        <Chip size="small" variant="outlined" label={meta.label} sx={softChipSx(meta.color)} />
+        <Chip
+          size="small"
+          variant="outlined"
+          icon={statusIcon(dataset.status)}
+          label={meta.label}
+          sx={softChipSx(meta.color)}
+        />
       </TableCell>
       <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
         <Tooltip title={absDate(dataset.updated_at)} placement="top">

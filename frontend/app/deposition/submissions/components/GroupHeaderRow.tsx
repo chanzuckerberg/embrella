@@ -28,18 +28,11 @@ export function GroupHeaderRow({
           <IconButton size="small" onClick={onToggle} aria-label={open ? 'Collapse' : 'Expand'}>
             {open ? <KeyboardArrowDownIcon /> : <KeyboardArrowRightIcon />}
           </IconButton>
-          <Typography  sx={{ fontWeight: 700 }}>
-            Deposition {idLabel}
+          <Typography sx={{ fontWeight: 700 }}>Deposition {idLabel}</Typography>
+          <Typography color="text.secondary" noWrap sx={{ flex: 1 }}>
+            — {deposition.title}
           </Typography>
-          <Typography  variant="subtitle1" color="text.secondary" noWrap sx={{ flex: 1,fontWeight: 500 }}>
-            - {deposition.title}
-          </Typography>
-          <Button
-            sdsType="primary"
-            sdsStyle="outline"
-            onClick={onAddDataset}
-            startIcon={<AddIcon fontSize="small" sx={{ color: 'black' }} />}
-          >
+          <Button sdsType="primary" sdsStyle="minimal" onClick={onAddDataset} startIcon={<AddIcon fontSize="small" />}>
             Add dataset
           </Button>
         </Box>
