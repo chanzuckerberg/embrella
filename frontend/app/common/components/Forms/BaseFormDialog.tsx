@@ -16,6 +16,7 @@ interface BaseFormDialogProps {
   isSubmitting?: boolean;
   saveButtonText?: string;
   disabled?: boolean;
+  sdsSize?: 'xs' | 's' | 'm' | 'l';
 }
 
 export const BaseFormDialog: React.FC<BaseFormDialogProps> = ({
@@ -29,9 +30,15 @@ export const BaseFormDialog: React.FC<BaseFormDialogProps> = ({
   isSubmitting = false,
   saveButtonText = 'Save',
   disabled = false,
+  sdsSize = 'xs',
 }) => {
   return (
-    <Dialog onClose={onClose} open={open} sdsSize="xs">
+    <Dialog
+      onClose={onClose}
+      open={open}
+      sdsSize={sdsSize}
+      sx={{ '& .MuiDialog-paper': { display: 'flex', flexDirection: 'column' } }}
+    >
       {titleExtra ? (
         <MuiDialogTitle
           sx={{
@@ -62,11 +69,11 @@ export const BaseFormDialog: React.FC<BaseFormDialogProps> = ({
       ) : (
         <DialogTitle title={title} subtitle={subtitle as string | undefined} onClose={onClose} />
       )}
-      <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2, pb: 2, mt: 2 }}>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2, pb: 2, mt: 2, flexGrow: 1 }}>
           {children}
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 'auto', pt: 2 }}>
             <Button sdsType="secondary" sdsStyle="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
