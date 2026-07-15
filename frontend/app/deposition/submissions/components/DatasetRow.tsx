@@ -101,7 +101,7 @@ export function DatasetRow({ dataset }: { dataset: Dataset }) {
       <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
         <Button
           component={NextLink}
-          href={`/deposition/datasets/${dataset.id}`}
+          href={`/deposition/wizard/${dataset.id}`}
           sdsType="secondary"
           sdsStyle="outline"
           size="small"
