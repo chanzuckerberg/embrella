@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+export interface AutoSaveState {
+  status: SaveStatus;
+  lastSavedAt: Date | null;
+  saveNow: () => void;
+}
+
 const DEFAULT_DEBOUNCE_MS = 5000;
 
 interface Options {
