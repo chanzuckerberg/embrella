@@ -28,11 +28,10 @@ import { useSubmissions } from '../hooks/useSubmissions';
 import type { Deposition } from '../types';
 import { COLS, FILTERS, SORT_OPTIONS, type FilterKey, type SortKey } from './constants';
 import { compareDatasets, datasetMatches, depositionMatches } from './utils';
-import { AddDatasetDialog } from './components/AddDatasetDialog';
 import { ColGroup } from './components/ColGroup';
 import { DatasetRow } from './components/DatasetRow';
 import { GroupHeaderRow } from './components/GroupHeaderRow';
-import { NewSubmissionDialog } from './components/NewSubmissionDialog';
+import { ReservationModal } from './components/ReservationModal';
 
 export default function SubmissionsPage() {
   const [newOpen, setNewOpen] = useState(false);
@@ -266,8 +265,15 @@ export default function SubmissionsPage() {
 
       {renderContent()}
 
-      <NewSubmissionDialog open={newOpen} onClose={() => setNewOpen(false)} />
-      <AddDatasetDialog deposition={addDatasetFor} onClose={() => setAddDatasetFor(null)} />
+      {newOpen && <ReservationModal open onClose={() => setNewOpen(false)} />}
+      {addDatasetFor && (
+        <ReservationModal
+          open
+          onClose={() => setAddDatasetFor(null)}
+          initialMode="existing_deposition"
+          lockedDeposition={addDatasetFor}
+        />
+      )}
     </Container>
   );
 }
