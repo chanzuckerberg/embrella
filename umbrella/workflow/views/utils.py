@@ -5,9 +5,6 @@ This module contains helper functions used across various workflow views,
 including data processing, formatting, parsing, and sorting utilities.
 """
 
-import re
-from io import StringIO
-
 import pandas as pd
 from processes.models import JobLog
 from umbrella_logger import logger
@@ -186,85 +183,6 @@ def parse_script_output(raw_output):
                 except Exception:
                     result[current_section][key.strip()] = val.strip()
     return result
-
-
-def natural_key(s):
-    """
-    Natural sorting key function.
-
-    Converts a string into a list of integers and strings for natural sorting.
-    Example: "run10" comes after "run2"
-    """
-    return [int(text) if text.isdigit() else text.lower() for text in re.split(r"(\d+)", s)]
-
-
-def preprocess_csv(metrics_path, timestamp_path, thumbnail_base_url, ctf_base_url, merge="continue", cluster_id=None):
-    """
-    Load and preprocess CSV data from remote server.
-
-    Args:
-        metrics_path: Remote path to metrics CSV
-        timestamp_path: Remote path to timestamp CSV
-        thumbnail_base_url: Base URL for thumbnail images
-        ctf_base_url: Base URL for CTF images
-        merge: Whether to merge with timestamp data ("True" or other)
-        cluster_id: Cluster to read from; falls back to the module default if unset.
-
-    Returns:
-        Preprocessed pandas DataFrame
-    """
-    from workflow.constants import DEFAULT_CLUSTER_ID
-
-    cluster_id = cluster_id or DEFAULT_CLUSTER_ID
-
-    try:
-        # Load data from remote server
-        logger.info(f"Attempting to read metrics file on {cluster_id}: {metrics_path}")
-        metrics_content = clusterio.read_remote_file(cluster_id, metrics_path)
-        logger.info("Successfully read metrics file")
-
-        # Convert string content to pandas DataFrame
-        metrics_df = pd.read_csv(StringIO(metrics_content))
-
-        # Normalize
-        metrics_df["Tilt_Series"] = metrics_df["Tilt_Series"].str.replace(".mrc", "", regex=False)
-
-        # Sort Tilt_Series using natural sort
-        metrics_df = metrics_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(
-            drop=True
-        )
-
-        if merge == "True":
-            logger.info(f"Attempting to read timestamp file on {cluster_id}: {timestamp_path}")
-            timestamp_content = clusterio.read_remote_file(cluster_id, timestamp_path)
-            logger.info("Successfully read timestamp file")
-
-            # Convert string content to pandas DataFrame
-            timestamp_df = pd.read_csv(StringIO(timestamp_content))
-
-            # Merge metrics with timestamp
-            merged_df = pd.merge(metrics_df, timestamp_df, on="Tilt_Series", how="left")
-
-            # Add thumbnail paths directly to the merged dataframe
-            merged_df["thumbnail_path"] = merged_df["Tilt_Series"].apply(
-                lambda ts: f"{thumbnail_base_url}{ts}.jpeg",
-            )
-            merged_df["ctf_path"] = merged_df["Tilt_Series"].apply(
-                lambda ts: f"{ctf_base_url}{ts}.jpeg",
-            )
-
-            # Sort Tilt_Series using natural sort
-            merged_df = merged_df.sort_values(by="Tilt_Series", key=lambda col: col.map(natural_key)).reset_index(
-                drop=True
-            )
-
-            return merged_df
-        else:
-            return metrics_df
-
-    except Exception as e:
-        logger.error(f"Error in preprocess_csv: {str(e)}")
-        raise
 
 
 def compute_stats(df: pd.DataFrame) -> list:
