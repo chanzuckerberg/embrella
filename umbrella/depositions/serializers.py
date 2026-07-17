@@ -237,15 +237,25 @@ class DatasetSerializer(serializers.ModelSerializer):
         dataset.sessions.exclude(id__in=seen).delete()
 
 
+def _is_owner(serializer, obj) -> bool:
+    request = serializer.context.get("request")
+    user = getattr(request, "user", None)
+    return bool(user and user.is_authenticated and obj.submitter_user_id == user.id)
+
+
 class DepositionSerializer(serializers.ModelSerializer):
     datasets = DatasetSerializer(many=True, read_only=True)
     submitter_username = serializers.CharField(source="submitter_user.username", read_only=True)
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Deposition
         fields = "__all__"
         # deposition_id is server-reserved; submitter_user set from request.user.
         read_only_fields = ["deposition_id", "submitter_user", "created_at", "updated_at"]
+
+    def get_is_owner(self, obj) -> bool:
+        return _is_owner(self, obj)
 
     def validate_authors_json(self, value):
         return validate_authors_json(value)
@@ -288,7 +298,11 @@ class SubmissionDepositionSerializer(serializers.ModelSerializer):
     """Deposition group for the My Submissions list — lean, with datasets summarized."""
 
     datasets = SubmissionDatasetSerializer(many=True, read_only=True)
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Deposition
-        fields = ["id", "deposition_id", "title", "description", "updated_at", "datasets"]
+        fields = ["id", "deposition_id", "title", "description", "updated_at", "datasets", "is_owner"]
+
+    def get_is_owner(self, obj) -> bool:
+        return _is_owner(self, obj)

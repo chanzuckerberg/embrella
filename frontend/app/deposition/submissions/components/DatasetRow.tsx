@@ -25,7 +25,7 @@ function statusIcon(status: DatasetStatus) {
   }
 }
 
-export function DatasetRow({ dataset }: { dataset: Dataset }) {
+export function DatasetRow({ dataset, isOwner = false }: { dataset: Dataset; isOwner?: boolean }) {
   const [showAllSessions, setShowAllSessions] = useState(false);
   const label = dataset.dataset_id ? `ds-${dataset.dataset_id}` : dataset.title || '(untitled draft)';
   const sessionNames = dataset.session_names ?? [];
@@ -33,7 +33,8 @@ export function DatasetRow({ dataset }: { dataset: Dataset }) {
   const hasMore = sessionNames.length > MAX_SESSION_NAMES;
   const shownNames = showAllSessions ? sessionNames : sessionNames.slice(0, MAX_SESSION_NAMES);
   const meta = STATUS_META[dataset.status];
-  const action = dataset.status === 'draft' ? 'Resume' : 'View';
+  // Only the deposition's owner can edit; everyone else gets a read-only View.
+  const action = isOwner && dataset.status === 'draft' ? 'Resume' : 'View';
   const typeLabel = dataset.type ?? 'Tomos only';
   const typeColor = TYPE_META[typeLabel] ?? 'default';
 

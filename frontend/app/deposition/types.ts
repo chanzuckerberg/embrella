@@ -94,6 +94,7 @@ export interface Deposition {
   authors_json?: AuthorRef[];
   release_date?: string | null;
   datasets?: Dataset[];
+  is_owner?: boolean;
   created_at?: string;
   updated_at?: string;
 }

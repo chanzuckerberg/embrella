@@ -5,9 +5,11 @@ import { Button } from '@czi-sds/components';
 import SearchIcon from '@mui/icons-material/Search';
 import {
   Box,
+  Checkbox,
   CircularProgress,
   Container,
   FormControl,
+  FormControlLabel,
   InputAdornment,
   MenuItem,
   Paper,
@@ -39,9 +41,10 @@ export default function SubmissionsPage() {
   const [filter, setFilter] = useState<FilterKey>('all');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('recent');
+  const [scope, setScope] = useState<'all' | 'mine'>('all');
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
 
-  const { data, isPending, isError } = useSubmissions('mine');
+  const { data, isPending, isError } = useSubmissions(scope === 'mine' ? 'mine' : undefined);
   const submissions = data?.submissions ?? null;
 
   const toggle = (id: number) =>
@@ -164,7 +167,7 @@ export default function SubmissionsPage() {
                           </TableCell>
                         </TableRow>
                       )}
-                      {open && datasets.map((ds) => <DatasetRow key={ds.id} dataset={ds} />)}
+                      {open && datasets.map((ds) => <DatasetRow key={ds.id} dataset={ds} isOwner={dep.is_owner} />)}
                     </Fragment>
                   );
                 })}
@@ -185,7 +188,7 @@ export default function SubmissionsPage() {
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            My Submissions
+            Submissions
           </Typography>
           <Typography color="text.secondary">
             {counts.all} {counts.all === 1 ? 'dataset' : 'datasets'} across {submissions?.length ?? 0}{' '}
@@ -232,22 +235,34 @@ export default function SubmissionsPage() {
         ))}
       </Tabs>
 
-      {/* Client-side search + sort over the fetched list. */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-        <TextField
-          size="small"
-          placeholder="Search datasets or depositions"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ flex: 1, maxWidth: 400 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                checked={scope === 'mine'}
+                onChange={(e) => setScope(e.target.checked ? 'mine' : 'all')}
+              />
+            }
+            label="Only Mine"
+            sx={{ whiteSpace: 'nowrap', mr: 0 }}
+          />
+          <TextField
+            size="small"
+            placeholder="Search datasets or depositions"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            sx={{ flex: 1, maxWidth: 400 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
         <FormControl size="small" sx={{ minWidth: 220 }}>
           <Select
             value={sort}
