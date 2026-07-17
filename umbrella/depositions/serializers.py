@@ -22,6 +22,7 @@ from .models import (
     TiltseriesMetadata,
     TomogramMetadata,
 )
+from .permissions import deposition_owner_id
 
 
 def validate_authors_json(value):
@@ -165,12 +166,16 @@ class DatasetSerializer(serializers.ModelSerializer):
     funding = DatasetFundingSerializer(many=True, required=False)
     sessions = DepositionSessionLinkSerializer(many=True, required=False)
     job = DatasetJobSerializer(read_only=True)
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Dataset
         fields = "__all__"
         # dataset_id is server-reserved; status is written by the syncer; dates auto-managed.
         read_only_fields = ["dataset_id", "status", "created_at", "updated_at"]
+
+    def get_is_owner(self, obj) -> bool:
+        return _is_owner(self, obj)
 
     def validate_authors_json(self, value):
         return validate_authors_json(value)
@@ -240,7 +245,9 @@ class DatasetSerializer(serializers.ModelSerializer):
 def _is_owner(serializer, obj) -> bool:
     request = serializer.context.get("request")
     user = getattr(request, "user", None)
-    return bool(user and user.is_authenticated and obj.submitter_user_id == user.id)
+    if not (user and user.is_authenticated):
+        return False
+    return deposition_owner_id(obj) == user.id
 
 
 class DepositionSerializer(serializers.ModelSerializer):

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import NextLink from 'next/link';
 import CloseIcon from '@mui/icons-material/Close';
-import { Box, Container, IconButton, Paper, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Container, IconButton, Paper, Tooltip, Typography } from '@mui/material';
 
 import type { Dataset } from '../types';
 import type { AutoSaveState } from '../hooks/useDraftAutoSave';
@@ -15,8 +15,9 @@ import { WizardStepper } from './WizardStepper';
 export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const [current, setCurrent] = useState(1);
   const [save, setSave] = useState<AutoSaveState | null>(null);
-
-  
+ // fail-open: only read-only when the backend explicitly says not owner.
+ // Missing/undefined → editable; backend 403 is the real enforcement boundary.
+  const readOnly = dataset.is_owner === false;
   const skippedNums = WIZARD_STEPS.filter((s) => isStepSkipped(s, dataset)).map((s) => s.num);
   const activeNums = WIZARD_STEPS.filter((s) => !skippedNums.includes(s.num)).map((s) => s.num);
   const pos = activeNums.indexOf(current);
@@ -43,7 +44,9 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {save && <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onSaveNow={save.saveNow} />}
+              {!readOnly && save && (
+                <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onSaveNow={save.saveNow} />
+              )}
               <Tooltip title="Close - your draft is saved">
                 <IconButton component={NextLink} href="/deposition/submissions" aria-label="Close wizard">
                   <CloseIcon />
@@ -56,7 +59,12 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
 
         {/* Content: each step renders its own body here. */}
         <Box sx={{ px: { xs: 3, md: 5 }, py: { xs: 4, md: 5 } }}>
-          <Body dataset={dataset} reportSave={setSave} />
+          {readOnly && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              You&apos;re viewing another user&apos;s submission - it&apos;s read-only.
+            </Alert>
+          )}
+          <Body dataset={dataset} reportSave={setSave} readOnly={readOnly} />
         </Box>
 
         {/* Footer actions. */}
