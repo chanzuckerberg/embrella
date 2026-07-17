@@ -115,14 +115,14 @@ def get_jobs_list(request):
                     filter_dict["DATE_RANGE"] = value
 
         # Fetch live jobs from SLURM
-        checker = StatusChecker(
-            cluster_id=cluster_id,
-            auth=clusterio.get_auth_service_user(),
-            remote_script_dir=ARETOMO3_SCRIPT_PATH,
-            local_template_path=ARETOMO3_TEMPLATE_PATH,
-        )
-
+        checker = None
         try:
+            checker = StatusChecker(
+                cluster_id=cluster_id,
+                auth=clusterio.get_auth_service_user(),
+                remote_script_dir=ARETOMO3_SCRIPT_PATH,
+                local_template_path=ARETOMO3_TEMPLATE_PATH,
+            )
             checker.connect()
             output, error = checker.track_jobs(job_name=None, all=True)
             live_jobs = format_job_output(output) if output else []
@@ -130,7 +130,8 @@ def get_jobs_list(request):
             logger.error(f"Error fetching live jobs from {cluster_id}: {str(e)}")
             live_jobs = []
         finally:
-            checker.close()
+            if checker is not None:
+                checker.close()
 
         # Fetch PipeExecution data for workflow-launched jobs
         pipe_executions = PipeExecution.objects.select_related(
@@ -904,6 +905,12 @@ def bulk_cancel_jobs(request):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON in request body"}, status=400)
+    except clusterio.SSHDisabledError:
+        # No cluster access (e.g. demo server) — cancelling jobs is unavailable.
+        return JsonResponse(
+            {"error": "SSH is disabled on this server", "ssh_disabled": True},
+            status=503,
+        )
     except Exception as e:
         logger.exception(f"Error in bulk_cancel_jobs: {str(e)}")
         return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)

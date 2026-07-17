@@ -22,6 +22,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent  # Build paths inside the proj
 ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
 DEBUG = ENVIRONMENT == "development"
 
+# When True, all SSH/SFTP cluster access is disabled and fails fast instead of
+# hanging on the connect timeout. Used for public-facing demo servers that have
+# no cluster access
+SSH_DISABLED = os.getenv("SSH_DISABLED") == "True"
+
 
 def run_with_args(args):
     try:

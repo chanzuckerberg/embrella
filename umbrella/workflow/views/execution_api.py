@@ -429,6 +429,16 @@ def execute_pipe(request):
             status=400,
         )
 
+    except clusterio.SSHDisabledError:
+        # No cluster access (e.g. demo server) — job submission is unavailable.
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "SSH is disabled on this server; job submission is unavailable.",
+                "ssh_disabled": True,
+            },
+            status=503,
+        )
     except Exception as e:
         logger.error(f"Error executing pipe: {e}", exc_info=True)
         return JsonResponse(

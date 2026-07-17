@@ -654,6 +654,12 @@ def get_directory_files(request, directory_id):
         finally:
             ssh.close()
 
+    except clusterio.SSHDisabledError:
+        # No cluster access (e.g. demo server) — degrade to an empty file list.
+        return JsonResponse(
+            {"files": [], "totalCount": 0, "totalPages": 0, "currentPage": 1, "ssh_disabled": True},
+            status=200,
+        )
     except Exception as e:
         logger.exception(f"Error fetching directory files: {e}")
         return JsonResponse({"error": str(e)}, status=500)
@@ -808,6 +814,12 @@ def get_survey_files(request, survey_id):
         finally:
             ssh.close()
 
+    except clusterio.SSHDisabledError:
+        # No cluster access (e.g. demo server) — degrade to an empty file list.
+        return JsonResponse(
+            {"files": [], "totalCount": 0, "totalPages": 0, "currentPage": 1, "ssh_disabled": True},
+            status=200,
+        )
     except Exception as e:
         logger.exception(f"Error fetching survey files: {e}")
         return JsonResponse({"error": str(e)}, status=500)
