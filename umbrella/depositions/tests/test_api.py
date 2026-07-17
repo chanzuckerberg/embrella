@@ -85,12 +85,46 @@ class TestDepositionCrud:
 
 @pytest.mark.django_db
 class TestScoping:
-    def test_user_cannot_see_anothers_deposition(self, auth_client):
+    def test_user_can_see_anothers_deposition(self, auth_client):
         other = User.objects.create_user(username="bob@example.com", password="pw")
         other_client = APIClient()
         other_client.force_login(other)
         dep = _make_deposition(other_client)
-        assert auth_client.get(f"{DEPOSITIONS}{dep['id']}/").status_code == 404
+        assert auth_client.get(f"{DEPOSITIONS}{dep['id']}/").status_code == 200
+
+    def test_scope_mine_excludes_others(self, auth_client):
+        other = User.objects.create_user(username="carol@example.com", password="pw")
+        other_client = APIClient()
+        other_client.force_login(other)
+        others_dep = _make_deposition(other_client)
+        mine = _make_deposition(auth_client)
+        body = auth_client.get(f"{DEPOSITIONS}?scope=mine").json()
+        ids = {s["id"] for s in body["submissions"]}
+        assert mine["id"] in ids
+        assert others_dep["id"] not in ids
+
+    def test_non_owner_cannot_edit_deposition(self, auth_client):
+        other = User.objects.create_user(username="dave@example.com", password="pw")
+        other_client = APIClient()
+        other_client.force_login(other)
+        dep = _make_deposition(auth_client)  # owned by alice
+        r = other_client.patch(f"{DEPOSITIONS}{dep['id']}/", {"description": "hax"}, format="json")
+        assert r.status_code == 403
+
+    def test_non_owner_cannot_delete_deposition(self, auth_client):
+        other = User.objects.create_user(username="erin@example.com", password="pw")
+        other_client = APIClient()
+        other_client.force_login(other)
+        dep = _make_deposition(auth_client)
+        assert other_client.delete(f"{DEPOSITIONS}{dep['id']}/").status_code == 403
+
+    def test_non_owner_cannot_add_dataset(self, auth_client):
+        other = User.objects.create_user(username="frank@example.com", password="pw")
+        other_client = APIClient()
+        other_client.force_login(other)
+        dep = _make_deposition(auth_client)
+        r = other_client.post(DATASETS, {"deposition": dep["id"], "title": "x"}, format="json")
+        assert r.status_code == 403
 
 
 @pytest.mark.django_db

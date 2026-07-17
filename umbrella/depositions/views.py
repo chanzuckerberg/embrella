@@ -15,6 +15,7 @@ import logging
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -24,6 +25,7 @@ from .models import (
     DepositionAnnotationMethodLink,
     DepositionSession,
 )
+from .permissions import IsDepositionOwnerOrReadOnly
 from .serializers import (
     DatasetSerializer,
     DepositionAnnotationMethodLinkSerializer,
@@ -80,18 +82,16 @@ def _not_implemented():
 class DepositionViewSet(viewsets.ModelViewSet):
     """Container CRUD. list returns depositions with datasets nested (My Submissions)."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DepositionSerializer
     queryset = Deposition.objects.all().prefetch_related("datasets", "datasets__funding", "datasets__sessions", "datasets__job")
 
     def get_queryset(self):
         qs = super().get_queryset()
-        user = self.request.user
         if self.request.query_params.get("scope") == "mine":
-            return qs.filter(submitter_user=user)
-        # default visibility — TODO: confirm All-vs-Mine product decision
-        return qs.filter(submitter_user=user)
+            return qs.filter(submitter_user=self.request.user)
+        return qs
 
     def perform_create(self, serializer):
         deposition_id = None
@@ -110,7 +110,9 @@ class DepositionViewSet(viewsets.ModelViewSet):
             "datasets__sessions__tiltseries_metadata",
             "datasets__sessions__tomogram_metadata",
         )
-        serializer = SubmissionDepositionSerializer(queryset, many=True)
+        serializer = SubmissionDepositionSerializer(
+            queryset, many=True, context=self.get_serializer_context()
+        )
         return Response({"submissions": serializer.data, "total_count": queryset.count()})
 
 
@@ -162,7 +164,7 @@ class DepositionViewSet(viewsets.ModelViewSet):
 class DatasetViewSet(viewsets.ModelViewSet):
     """Submit unit CRUD + per-dataset actions."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DatasetSerializer
     queryset = (
@@ -172,13 +174,16 @@ class DatasetViewSet(viewsets.ModelViewSet):
     )
 
     def get_queryset(self):
-        qs = super().get_queryset().filter(deposition__submitter_user=self.request.user)
+        qs = super().get_queryset()
         deposition_id = self.request.query_params.get("deposition")
         if deposition_id:
             qs = qs.filter(deposition_id=deposition_id)
         return qs
 
     def perform_create(self, serializer):
+        deposition = serializer.validated_data["deposition"]
+        if deposition.submitter_user_id != self.request.user.id:
+            raise PermissionDenied("You can only add datasets to your own depositions.")
         dataset_id = None
         try:
             dataset_id = get_reservation_service().reserve_new_dataset()
@@ -240,15 +245,10 @@ class DepositionSessionViewSet(
     `sessions`, and read via the deposition tree.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DepositionSessionSerializer
     queryset = DepositionSession.objects.all().select_related("dataset__deposition")
-
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            dataset__deposition__submitter_user=self.request.user
-        )
 
     @action(detail=True, methods=["post"], url_path="auto-fill")
     def auto_fill(self, request, pk=None):
@@ -279,12 +279,16 @@ class DepositionSessionViewSet(
 class MethodLinkViewSet(viewsets.ModelViewSet):
     """CRUD for annotation method links (kept out of nested writes)."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DepositionAnnotationMethodLinkSerializer
-    queryset = DepositionAnnotationMethodLink.objects.all()
+    queryset = DepositionAnnotationMethodLink.objects.select_related(
+        "annotation__session__dataset__deposition"
+    )
 
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            annotation__session__dataset__deposition__submitter_user=self.request.user
-        )
+    def perform_create(self, serializer):
+        annotation = serializer.validated_data["annotation"]
+        owner_id = annotation.session.dataset.deposition.submitter_user_id
+        if owner_id != self.request.user.id:
+            raise PermissionDenied("You can only add method links to your own depositions.")
+        serializer.save()

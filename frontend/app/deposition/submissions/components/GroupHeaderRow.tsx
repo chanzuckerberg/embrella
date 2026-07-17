@@ -32,9 +32,11 @@ export function GroupHeaderRow({
           <Typography color="text.secondary" noWrap sx={{ flex: 1 }}>
             — {deposition.title}
           </Typography>
-          <Button sdsType="primary" sdsStyle="minimal" onClick={onAddDataset} startIcon={<AddIcon fontSize="small" />}>
-            Add dataset
-          </Button>
+          {deposition.is_owner && (
+            <Button sdsType="primary" sdsStyle="minimal" onClick={onAddDataset} startIcon={<AddIcon fontSize="small" />}>
+              Add dataset
+            </Button>
+          )}
         </Box>
       </TableCell>
     </TableRow>
