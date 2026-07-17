@@ -40,11 +40,15 @@ def custom_run_octopi_page(request):
 
 def custom_workflow_cancel(request):
     """Render workflow cancel page."""
+    # TODO(legacy-removal): legacy page; superseded by the Next.js jobs UI. Remove
+    # with cancel_jobs/user_info in workflow/views/job_views.py. See TODO there.
     return render(request, "workflows/workflow_cancel.html")
 
 
 def custom_workflow_track(request):
     """Render workflow tracking page."""
+    # TODO(legacy-removal): legacy page; superseded by the Next.js jobs UI. Remove
+    # with track_jobs in workflow/views/job_views.py. See TODO there.
     return render(request, "workflows/workflow_track.html")
 
 

@@ -3,6 +3,18 @@ Job management views.
 
 These views handle job tracking, cancellation, and log retrieval
 for SLURM jobs running on compute clusters.
+
+TODO(legacy-removal): `user_info`, `cancel_jobs`, and `track_jobs` in this module
+are legacy — they are only used by the old Django template pages served under
+/workflow (`custom_workflow_cancel` -> workflows/workflow_cancel.html, and
+`custom_workflow_track` -> workflows/workflow_track.html in
+workflow/legacy/views/template_views.py). The Next.js app does NOT call them; it
+uses the newer job_api.py endpoints instead (/workflow/v1/jobs/,
+/workflow/v1/jobs/bulk_cancel/, ...). When the legacy template pages are retired,
+remove these three views + their url routes (workflow/urls.py: track_jobs,
+cancel_jobs, user_info, and the `track`/`cancel` template routes) + the two
+templates. NOTE: `get_job_logs` is NOT legacy — it backs the Next.js
+JobLogsModal (JOB_LOGS = /workflow/job_logs/) and must stay.
 """
 
 import base64
@@ -104,12 +116,17 @@ def track_jobs(request):
     if request.method == "GET":
         job_name = request.GET.get("job_name")  # None if not provided
 
-        checker = StatusChecker(
-            cluster_id="czii",
-            auth=clusterio.get_auth_service_user(),
-            remote_script_dir=ARETOMO3_SCRIPT_PATH,
-            local_template_path=ARETOMO3_TEMPLATE_PATH,
-        )
+        try:
+            checker = StatusChecker(
+                cluster_id="czii",
+                auth=clusterio.get_auth_service_user(),
+                remote_script_dir=ARETOMO3_SCRIPT_PATH,
+                local_template_path=ARETOMO3_TEMPLATE_PATH,
+            )
+        except clusterio.SSHDisabledError:
+            # No cluster access (e.g. demo server) — degrade to an empty job list.
+            return JsonResponse({"jobs": []})
+
         try:
             # Connect to the remote server
             checker.connect()

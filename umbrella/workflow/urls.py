@@ -12,6 +12,8 @@ urlpatterns = [
     # ============================================================================
     # Legacy template-based pages (server-side rendering)
     path("", views.custom_workflow_page, name="custom_workflow"),
+    # TODO(legacy-removal): `cancel`/`track` pages superseded by the Next.js jobs
+    # UI; remove with their views in workflow/legacy/views/template_views.py.
     path("cancel", views.custom_workflow_cancel, name="cancle workflow jobs"),
     path("track", views.custom_workflow_track, name="track workflow jobs"),
     path("logs", views.custom_workflow_logs, name="job logs"),
@@ -38,6 +40,9 @@ urlpatterns = [
     # path("run-import-tomogram-copick/", views.run_import_tomogram_copick, name="run_import_tomogram_copick"),
     # path("run-copick-add-object/", views.run_copick_add_object, name="run_add_object_copick"),
     # Legacy utility endpoints (used by dashboard and legacy pages)
+    # TODO(legacy-removal): the next three back legacy template pages only (not the
+    # Next.js app); remove with cancel_jobs/track_jobs/user_info in
+    # workflow/views/job_views.py. See TODO there. (job_logs below is NOT legacy.)
     path("cancel_jobs", views.cancel_jobs, name="cancel_jobs"),
     path("track_jobs", views.track_jobs, name="track_jobs"),
     path("user_info", views.user_info, name="user_details"),
