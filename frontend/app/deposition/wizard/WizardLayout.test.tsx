@@ -1,9 +1,12 @@
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { WizardLayout } from './WizardLayout';
 import type { Dataset } from '../types';
+
+const mockPush = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 
 const DATASET = { id: 5, deposition: 1, dataset_id: 100, title: 'My dataset', status: 'draft', funding: [] } as Dataset;
 const TOMOS_ONLY = { ...DATASET, type: 'Tomos only' } as Dataset;
@@ -37,9 +40,10 @@ describe('WizardLayout', () => {
     expect(screen.getByRole('heading', { name: 'Dataset' })).toBeInTheDocument();
   });
 
-  it('has a close button that returns to submissions', () => {
+  it('closes back to submissions', async () => {
     renderWizard();
-    expect(screen.getByRole('link', { name: /Close wizard/ })).toHaveAttribute('href', '/deposition/submissions');
+    fireEvent.click(screen.getByRole('button', { name: /Close wizard/ }));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/deposition/submissions'));
   });
 
   it('skips Annotations for a tomograms-only dataset', () => {
