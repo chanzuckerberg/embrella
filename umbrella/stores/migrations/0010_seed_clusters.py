@@ -1,6 +1,6 @@
 from django.db import migrations
 
-
+# TODO: remove this seed and manually create clusters in the admin panel
 CLUSTERS = [
     {
         "cluster_id": "czii",
@@ -31,7 +31,6 @@ def unseed_clusters(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("stores", "0009_cluster"),
     ]

@@ -52,6 +52,7 @@ KEYS = (
     "Wbp",
 )
 
+# TODO: remove these constants and use Cluster model
 # SSH Connection Configuration
 HOST = "10.50.120.90"
 HOST_BRUNO = "192.168.98.229"
