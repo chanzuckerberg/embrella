@@ -81,6 +81,7 @@ export interface Dataset {
   session_names?: string[];
   session_count?: number;
   type?: string;
+  is_owner?: boolean;
 }
 
 export interface Deposition {

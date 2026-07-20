@@ -46,4 +46,14 @@ describe('WizardLayout', () => {
     renderWizard(TOMOS_ONLY);
     expect(screen.getByRole('button', { name: /Step 5: Annotations \(skipped\)/ })).toBeDisabled();
   });
+
+  it('shows a read-only notice when the user is not the deposition owner', () => {
+    renderWizard({ ...DATASET, is_owner: false } as Dataset);
+    expect(screen.getByText(/read-only/i)).toBeInTheDocument();
+  });
+
+  it('shows no read-only notice for the owner', () => {
+    renderWizard({ ...DATASET, is_owner: true } as Dataset);
+    expect(screen.queryByText(/read-only/i)).not.toBeInTheDocument();
+  });
 });

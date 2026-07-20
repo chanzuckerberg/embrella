@@ -6,6 +6,7 @@ import type { AutoSaveState } from '../hooks/useDraftAutoSave';
 export interface StepProps {
   dataset: Dataset;
   reportSave: (state: AutoSaveState) => void;
+  readOnly: boolean;
 }
 
 export type StepKey = 'sources' | 'deposition' | 'dataset' | 'autofill' | 'annotations' | 'submit';
