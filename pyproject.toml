@@ -5,9 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = "~=3.11.0"
 dependencies = [
+    "aiohttp>=3.10.0",
     "cryptography>=47.0.0",
     "dask>=2025.10.0",
     "duckdb>=1.1.0",
+    "fsspec>=2024.6.0",
     "django==5.2.15",
     "django-cors-headers>=4.9.0",
     "django-extensions==4.1",
@@ -30,6 +32,7 @@ dependencies = [
     "pyarrow>=18.0.0",
     "pydantic==2.7.1",
     "pyyaml>=6.0",
+    "requests>=2.32.0",
     "scikit-learn>=1.7.2",
     "scipy>=1.16.2",
     "setuptools==82.0.1",
