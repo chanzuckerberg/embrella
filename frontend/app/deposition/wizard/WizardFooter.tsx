@@ -1,6 +1,5 @@
 'use client';
 
-import NextLink from 'next/link';
 import { Button } from '@czi-sds/components';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -11,18 +10,20 @@ export function WizardFooter({
   disableNext,
   onBack,
   onNext,
+  onSaveAndExit,
 }: {
   disableBack: boolean;
   disableNext: boolean;
   onBack: () => void;
   onNext: () => void;
+  onSaveAndExit: () => void;
 }) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <Button sdsType="secondary" sdsStyle="solid" startIcon={<ChevronLeftIcon />} disabled={disableBack} onClick={onBack}>
         Back
       </Button>
-      <Button component={NextLink} href="/deposition/submissions" sdsType="primary" sdsStyle="minimal">
+      <Button sdsType="primary" sdsStyle="minimal" onClick={onSaveAndExit}>
         Save draft &amp; exit
       </Button>
       <Button sdsType="primary" sdsStyle="solid" endIcon={<ChevronRightIcon />} disabled={disableNext} onClick={onNext}>

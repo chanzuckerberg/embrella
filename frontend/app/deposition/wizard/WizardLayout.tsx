@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import NextLink from 'next/link';
+import { useRouter } from 'next/navigation';
 import CloseIcon from '@mui/icons-material/Close';
 import { Alert, Box, Container, IconButton, Paper, Tooltip, Typography } from '@mui/material';
 
@@ -12,7 +12,10 @@ import { WIZARD_STEPS, isStepSkipped } from './steps';
 import { WizardFooter } from './WizardFooter';
 import { WizardStepper } from './WizardStepper';
 
+const SUBMISSIONS_HREF = '/deposition/submissions';
+
 export function WizardLayout({ dataset }: { dataset: Dataset }) {
+  const router = useRouter();
   const [current, setCurrent] = useState(1);
   const [save, setSave] = useState<AutoSaveState | null>(null);
  // fail-open: only read-only when the backend explicitly says not owner.
@@ -28,6 +31,14 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const go = (n: number) => {
     setSave(null);
     setCurrent(n);
+  };
+
+  const saveAndExit = async () => {
+    try {
+      if (!readOnly) await save?.saveNow();
+    } finally {
+      router.push(SUBMISSIONS_HREF);
+    }
   };
 
   return (
@@ -48,7 +59,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
                 <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onSaveNow={save.saveNow} />
               )}
               <Tooltip title="Close - your draft is saved">
-                <IconButton component={NextLink} href="/deposition/submissions" aria-label="Close wizard">
+                <IconButton onClick={saveAndExit} aria-label="Close wizard">
                   <CloseIcon />
                 </IconButton>
               </Tooltip>
@@ -74,6 +85,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
             disableNext={pos < 0 || pos >= activeNums.length - 1}
             onBack={() => pos > 0 && go(activeNums[pos - 1])}
             onNext={() => pos >= 0 && pos < activeNums.length - 1 && go(activeNums[pos + 1])}
+            onSaveAndExit={saveAndExit}
           />
         </Box>
       </Paper>

@@ -5,7 +5,7 @@ export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 export interface AutoSaveState {
   status: SaveStatus;
   lastSavedAt: Date | null;
-  saveNow: () => void;
+  saveNow: () => Promise<void>;
 }
 
 const DEFAULT_DEBOUNCE_MS = 5000;
