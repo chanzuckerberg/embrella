@@ -6,6 +6,7 @@ import { Box, Typography } from '@mui/material';
 
 import type { Dataset } from '../types';
 import type { StepDef, StepProps } from './wizardTypes';
+import { DepositionStep } from './steps/DepositionStep';
 
 function placeholder(label: string): ComponentType<StepProps> {
   function PlaceholderStep(_props: StepProps) {
@@ -48,7 +49,7 @@ function placeholder(label: string): ComponentType<StepProps> {
 
 export const WIZARD_STEPS: StepDef[] = [
   { num: 1, key: 'sources', title: 'Sources', Component: placeholder('Sources') },
-  { num: 2, key: 'deposition', title: 'Deposition', Component: placeholder('Deposition') },
+  { num: 2, key: 'deposition', title: 'Deposition', Component: DepositionStep },
   { num: 3, key: 'dataset', title: 'Dataset', Component: placeholder('Dataset') },
   { num: 4, key: 'autofill', title: 'Auto-fill', Component: placeholder('Auto-fill') },
   { num: 5, key: 'annotations', title: 'Annotations', Component: placeholder('Annotations') },
