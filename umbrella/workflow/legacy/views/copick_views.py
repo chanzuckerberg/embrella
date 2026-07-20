@@ -557,6 +557,9 @@ def get_template_map_json(request):
     except ValueError as ve:
         logger.exception(f"Invalid JSON content: {ve}")
         return JsonResponse({"error": f"Invalid JSON: {ve}"}, status=500)
+    except clusterio.SSHDisabledError:
+        # No cluster access (e.g. demo server) — degrade to an empty template list.
+        return JsonResponse({"basePath": "", "templates": []}, status=200)
     except Exception as e:
         logger.exception(f"Unexpected error in get_template_map_json: {e}")
         return JsonResponse({"error": str(e)}, status=500)

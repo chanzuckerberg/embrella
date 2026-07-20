@@ -88,6 +88,9 @@ def workflow_get_data(request):
                 name_counts[job_name] = name_counts.get(job_name, 0) + 1
             result = name_counts
 
+    except clusterio.SSHDisabledError:
+        # No cluster access (e.g. demo server) — degrade to empty job counts.
+        result = {}
     except Exception as e:
         logger.exception("An error occurred while fetching or processing data.")
         result = {"error": str(e)}
@@ -167,6 +170,9 @@ def status_check_api(request):
 
         return JsonResponse(response_data, status=200, json_dumps_params={"indent": 4})
 
+    except clusterio.SSHDisabledError:
+        # No cluster access (e.g. demo server) — degrade to an empty status result.
+        return JsonResponse({"result": {}}, status=200, json_dumps_params={"indent": 4})
     except Exception as e:
         logger.exception("Error during status check API")
         return JsonResponse({"error": str(e)}, status=500)

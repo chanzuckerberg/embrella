@@ -108,6 +108,12 @@ def get_aretomo3_json(request):
         error_msg = "File not found"
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=404)
+    except clusterio.SSHDisabledError:
+        # No cluster access (e.g. demo server) — this detail is unavailable.
+        return JsonResponse(
+            {"error": "SSH is disabled on this server", "ssh_disabled": True},
+            status=503,
+        )
     except Exception as err:
         error_msg = f"Please check the server status: {str(err)}"
         logger.error(error_msg)

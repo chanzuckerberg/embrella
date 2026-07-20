@@ -10,6 +10,21 @@ import paramiko
 from umbrella_logger import logger
 
 
+class SSHDisabledError(Exception):
+    """Raised when SSH/SFTP cluster access is attempted while SSH_DISABLED is set.
+
+    Lets request-path callers fail fast (no connect timeout)
+    """
+
+
+def _ensure_ssh_enabled():
+    """Raise SSHDisabledError immediately if SSH is disabled via settings."""
+    from django.conf import settings
+
+    if getattr(settings, "SSH_DISABLED", False):
+        raise SSHDisabledError("SSH is disabled (SSH_DISABLED=True); cluster access is unavailable.")
+
+
 def _get_service_user_auth():
     """
     Lazy-load service user authentication.
@@ -58,6 +73,7 @@ def get_auth_service_user():
     Returns a dictionary with 'username' and 'pkey' keys.
     The authentication is cached after the first call.
     """
+    _ensure_ssh_enabled()
     return _get_cached_auth()
 
 
@@ -91,6 +107,7 @@ def clear_cluster_cache():
 
 
 def get_cluster_ssh_connection(cluster_id, auth=None):
+    _ensure_ssh_enabled()
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -456,6 +473,11 @@ def test_ssh_as_user(username, cluster_id):
                 "cluster_id": cluster_id,
                 "username": username,
             }
+
+    except SSHDisabledError:
+        # SSH is disabled (e.g. demo server) — let callers distinguish this from
+        # an auth failure so they don't wrongly report setup as required.
+        raise
 
     except paramiko.AuthenticationException:
         logger.info(f"SSH setup not complete: service user cannot authenticate as {username} on {cluster_id}")

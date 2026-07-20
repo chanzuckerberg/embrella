@@ -88,6 +88,17 @@ def check_ssh_setup(request):
             },
         )
 
+    except clusterio.SSHDisabledError:
+        # No cluster access (e.g. demo server) — don't prompt for SSH setup.
+        return JsonResponse(
+            {
+                "setup_required": False,
+                "cluster_id": request.data.get("cluster_id"),
+                "username": None,
+                "error": None,
+                "ssh_disabled": True,
+            },
+        )
     except Exception as e:
         logger.exception(f"Error in check_ssh_setup: {str(e)}")
         return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)

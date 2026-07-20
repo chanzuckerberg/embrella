@@ -22,6 +22,7 @@ DATA_TYPES = [
     ("seg", "segmentation"),
     ("galr", "particle gallery"),
     ("proc_dir", "processing directory on cluster filesystem"),
+    ("proc_url", "processing directory URL"),
     ("zarr_url", "zarr volume URL for tomogram viewer"),
     ("thumb_url", "thumbnail/CTF-thumbnail URL base"),
     ("copick_url", "copick project root URL"),
