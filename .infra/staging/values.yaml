@@ -36,6 +36,9 @@ stack:
       env:
         - name: EMBRELLA_BUILD_STATIC
           value: '1'
+      ingress:
+        rules:
+          - host: &staging-host embrella.apps-staging.czbiohub.org
 
     frontend:
       image:
@@ -43,6 +46,9 @@ stack:
       env:
         - name: BACKEND_URL
           value: 'http://$(__ARGUS_STACK_NAME)-stack-backend:8000'
+      ingress:
+        rules:
+          - host: *staging-host
 
     worker:
       # Not a built image — reuses the backend image

@@ -229,6 +229,7 @@ JAZZMIN_UI_TWEAKS = {
 # --- django-allauth (Google SSO) ---------------------------------------------
 # Provider credentials are sourced from env vars (reusing the existing
 # GOOGLE_SSO_* names) so no DB SocialApp row / admin step is required.
+# TODO: add https://embrella.apps-staging.czbiohub.org/accounts/google/login/callback/
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
@@ -258,6 +259,7 @@ ALLOWED_HOSTS = [
     "*.czbiohub.org",
     "umbrella.czbiohub.org",
     "umbrella-dev.czbiohub.org",
+    "embrella.apps-staging.czbiohub.org",
     "host.containers.internal",
     "host.docker.internal",
     "nginx",
@@ -272,6 +274,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
     "https://umbrella.czbiohub.org",
     "https://umbrella-dev.czbiohub.org",
+    "https://embrella.apps-staging.czbiohub.org",
     # HTTP versions for staging (if not behind HTTPS termination)
     "http://umbrella.czbiohub.org",
     "http://umbrella-dev.czbiohub.org",
@@ -291,6 +294,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3000",
     "https://umbrella.czbiohub.org",
     "https://umbrella-dev.czbiohub.org",
+    "https://embrella.apps-staging.czbiohub.org",
     # HTTP versions for staging (if not behind HTTPS termination)
     "http://umbrella.czbiohub.org",
     "http://umbrella-dev.czbiohub.org",
