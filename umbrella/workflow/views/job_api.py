@@ -16,14 +16,13 @@ from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from processes.models import JobLog, PipeExecution, SyncerLog, SyncerProcess
-from processes.services.cluster_resolver import cluster_id_from_parameters
+from processes.services.cluster_resolver import cluster_id_from_parameters, get_default_cluster_id
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from stores.models import Cluster
 from umbrella_logger import logger
 
 from common import clusterio
-from workflow.constants import DEFAULT_CLUSTER_ID
 
 from ..agent import RemoteJobSubmitter, StatusChecker
 from .constants import (
@@ -67,7 +66,7 @@ def get_jobs_list(request):
     5. Includes historical jobs (completed/failed) from PipeExecution
     """
     try:
-        cluster_id = request.GET.get("cluster_id", DEFAULT_CLUSTER_ID)
+        cluster_id = request.GET.get("cluster_id") or get_default_cluster_id()
         if not Cluster.objects.filter(cluster_id=cluster_id, is_active=True).exists():
             return JsonResponse({"error": f"Unknown or inactive cluster_id: {cluster_id}"}, status=400)
 
@@ -546,7 +545,7 @@ def get_jobs_filterlist(request):
     - Date ranges
     """
     try:
-        cluster_id = request.GET.get("cluster_id", DEFAULT_CLUSTER_ID)
+        cluster_id = request.GET.get("cluster_id") or get_default_cluster_id()
 
         # SLURM state to label mapping
         SLURM_STATE_TO_LABEL_LOCAL = {

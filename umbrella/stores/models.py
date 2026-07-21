@@ -91,12 +91,30 @@ class Cluster(models.Model):
     ssh_port = models.PositiveIntegerField(default=22)
 
     is_active = models.BooleanField(default=True)
+    is_default = models.BooleanField(
+        default=False,
+        help_text="Fallback cluster for records with no explicit cluster (file URLs, review resolution).",
+    )
 
     class Meta:
         app_label = "stores"
 
     def __str__(self):
         return self.cluster_id
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Enforce a single default
+        if self.is_default:
+            Cluster.objects.exclude(pk=self.pk).filter(is_default=True).update(is_default=False)
+
+    @classmethod
+    def get_default(cls):
+        """Return the designated default cluster, else the first active one (or None)."""
+        return (
+            cls.objects.filter(is_default=True).first()
+            or cls.objects.filter(is_active=True).order_by("cluster_id").first()
+        )
 
 
 @receiver([post_save, post_delete], sender=Cluster)

@@ -860,8 +860,14 @@ class ReviewTomogramView(View):
                 vol_suffix = ""  # denoised
                 job_name = "denoise"
 
-            # Resolve zarr URL against the review's cluster (falls back to czii if not set).
-            cluster = review.cluster or Cluster.objects.get(cluster_id="czii")
+            # Resolve zarr URL against the review's cluster (falls back to the default cluster if not set).
+            cluster = review.cluster or Cluster.get_default()
+            if cluster is None:
+                logger.warning("Review has no cluster and no default cluster is configured")
+                return JsonResponse(
+                    {"error": "No default cluster is configured. Set one in the admin (Stores → Clusters)."},
+                    status=500,
+                )
             response_data["zarrPath"] = resolve_review_path(
                 "zarr_url",
                 cluster=cluster,

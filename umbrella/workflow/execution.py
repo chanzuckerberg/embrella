@@ -22,10 +22,10 @@ from processes.models import (
     ProcRun,
     RunPipeData,
 )
+from processes.services.cluster_resolver import get_default_cluster_id
 from umbrella_logger import logger
 
 from .agent import RemoteJobSubmitter
-from .constants import DEFAULT_CLUSTER_ID
 from .context import RunContext
 from .processors import get_processor
 
@@ -170,7 +170,7 @@ class PipelineExecutor:
         # Add heterogeneous job info + cluster_id to parameters
         hetjob_info = processor.get_hetjob_info()
         parameters_with_metadata = parameters.copy()
-        parameters_with_metadata["cluster_id"] = context.cluster_id or DEFAULT_CLUSTER_ID
+        parameters_with_metadata["cluster_id"] = context.cluster_id or get_default_cluster_id()
         if hetjob_info:
             parameters_with_metadata["_hetjob_info"] = hetjob_info
 

@@ -10,6 +10,7 @@ admin.site.register(StaticPath)
 
 @admin.register(Cluster)
 class ClusterAdmin(admin.ModelAdmin):
-    list_display = ("cluster_id", "name", "http_base_url", "ssh_hostname", "ssh_port", "is_active")
-    list_filter = ("is_active",)
+    list_display = ("cluster_id", "name", "http_base_url", "ssh_hostname", "ssh_port", "is_active", "is_default")
+    list_editable = ("is_active", "is_default")
+    list_filter = ("is_active", "is_default")
     search_fields = ("cluster_id", "name", "ssh_hostname")
