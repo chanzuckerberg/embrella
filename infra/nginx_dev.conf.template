@@ -74,6 +74,19 @@ http {
             proxy_cache_bypass $http_upgrade;
         }
 
+        # ===== DEMO FILE SERVER (optional `caddy` service, `demo` profile) =====
+        # Same-origin so the browser (zarr viewer / thumbnails) needs no CORS.
+        # Mirrors the k8s `handle_path /tomodata/*` prefix strip. Only reachable
+        # when the caddy service is up (`just devup-demo`).
+        location /tomodata/ {
+            set $upstream_caddy caddy;
+            rewrite ^/tomodata/(.*)$ /$1 break;
+            proxy_pass http://$upstream_caddy:80;
+            proxy_set_header Host              $http_host;
+            proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
         # Next.js (yarn dev) needs websocket upgrade for HMR.
         location / {
             set $upstream_frontend frontend;

@@ -1,0 +1,7 @@
+# Static file server for the local demo (tomogram zarr, thumbnails, copick).
+# nginx strips the /tomodata/ prefix before proxying here, so files are served
+# from the root of /srv
+:80 {
+	root * /srv
+	file_server browse
+}

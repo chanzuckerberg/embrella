@@ -1,0 +1,18 @@
+# Optional demo file server (tomogram zarr, thumbnails, copick). Layer this on
+# top of the dev stack to serve ${EMBRELLA_TOMODATA_DIR} at /tomodata/ (routed by
+# nginx, same-origin — no CORS). Including this file *is* the opt-in switch, so
+# plain `just devup` and staging/prod deploys never start it:
+#
+#   podman compose -f infra/compose.yaml -f infra/compose.build.yaml \
+#                  -f infra/compose.dev.yaml -f infra/compose.demo.yaml up -d
+#
+# Wired up by `just devup-demo` and the "Embrella (demo + Caddy)" devcontainer.
+services:
+  caddy:
+    image: docker.io/library/caddy:2
+    networks: [internal]
+    volumes:
+      # The served tree = what you mirror to S3. Relative paths resolve from infra/.
+      - ${EMBRELLA_TOMODATA_DIR:-../.scratch/tomodata}:/srv:ro
+      - ./caddy_demo.Caddyfile:/etc/caddy/Caddyfile:ro
+    restart: unless-stopped
