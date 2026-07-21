@@ -310,6 +310,15 @@ if _ARGUS_INGRESS_HOST:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     USE_X_FORWARDED_HOST = True
 
+# File-server base-URL allowlist. stores.Cluster.http_base_url is admin-editable
+# and is both embedded in the frontend (image/zarr/config URLs) and fetched
+# server-side, so a tampered value is a content-injection + SSRF risk. Only these
+# origins (scheme://host[:port], comma-separated) may be used as a cluster base
+# URL. Empty = no restriction (backwards compatible); set it in staging/prod.
+FILESERVER_ALLOWED_HOSTS = [
+    h.strip().rstrip("/") for h in os.environ.get("FILESERVER_ALLOWED_HOSTS", "").split(",") if h.strip()
+]
+
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
