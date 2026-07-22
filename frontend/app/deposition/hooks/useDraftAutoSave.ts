@@ -68,5 +68,18 @@ export function useDraftAutoSave<T>(
     };
   }, [data, enabled, debounceMs, flush]);
 
+
+  // Flush pending debounced save on unmount so step/exit navigation doesn't drop edits.
+  useEffect(() => {
+    return () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+        // Fire-and-forget; swallow errors since the component is going away.
+        saveRef.current(dataRef.current).catch(() => {});
+      }
+    };
+  }, []);
+
   return { status, lastSavedAt, saveNow: flush };
 }
