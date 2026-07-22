@@ -11,6 +11,8 @@ when nested under an annotation.
 
 from rest_framework import serializers
 
+from cryo_grids.models import Sample
+
 from .models import (
     Dataset,
     DatasetFunding,
@@ -27,10 +29,6 @@ from .permissions import deposition_owner_id
 
 def validate_authors_json(value):
     """Light shape check for the authors_json column on Deposition/Dataset.
-
-    Expects a list of {author_id, author_list_order, is_primary, is_corresponding}.
-    `author_id` soft-references people.Person — we validate the SHAPE only, not that
-    the id exists. the soft-ref design intentionally avoids author lookups.
     """
     if not isinstance(value, list):
         raise serializers.ValidationError("authors_json must be a list of author entries.")
@@ -162,16 +160,40 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
                 existing.delete()
 
 
+class DatasetSampleSerializer(serializers.ModelSerializer):
+    """Nested writable cryo_grids.Sample fields. Sample.name is auto-set, cell-component id is `ontology`."""
+    class Meta:
+        model = Sample
+        fields = [
+            "sample_type",
+            "organism_name",
+            "organism_taxid",
+            "tissue_name",
+            "tissue_id",
+            "cell_name",
+            "cell_type_id",
+            "cell_strain_name",
+            "cell_strain_id",
+            "cell_component_name",
+            "ontology",
+            "development_stage_name",
+            "development_stage_ontology_id",
+            "disease_name",
+            "disease_ontology_id",
+        ]
+
+
 class DatasetSerializer(serializers.ModelSerializer):
     funding = DatasetFundingSerializer(many=True, required=False)
     sessions = DepositionSessionLinkSerializer(many=True, required=False)
+    sample = DatasetSampleSerializer(required=False)
     job = DatasetJobSerializer(read_only=True)
     is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Dataset
         fields = "__all__"
-        # dataset_id is server-reserved; status is written by the syncer; dates auto-managed.
+        # dataset_id reserved; status/dates set by syncer/system.
         read_only_fields = ["dataset_id", "status", "created_at", "updated_at"]
 
     def get_is_owner(self, obj) -> bool:
@@ -181,13 +203,15 @@ class DatasetSerializer(serializers.ModelSerializer):
         return validate_authors_json(value)
 
     def create(self, validated_data):
-        # Create is shallow by design (POST reserves the id; nested funding/sessions
-        # arrive via PATCH), but handle them here too.
+        # Nested funding/sessions/sample usually come via PATCH, handle them on create too.
         funding = validated_data.pop("funding", None)
         sessions = validated_data.pop("sessions", None)
+        sample = validated_data.pop("sample", None)
 
         dataset = Dataset.objects.create(**validated_data)
 
+        if sample is not None:
+            self._sync_sample(dataset, sample)
         if funding is not None:
             self._sync_funding(dataset, funding)
         if sessions is not None:
@@ -197,23 +221,37 @@ class DatasetSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         funding = validated_data.pop("funding", None)
         sessions = validated_data.pop("sessions", None)
+        sample = validated_data.pop("sample", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
+        if sample is not None:
+            self._sync_sample(instance, sample)
         if funding is not None:
             self._sync_funding(instance, funding)
         if sessions is not None:
             self._sync_sessions(instance, sessions)
         return instance
 
+    def _sync_sample(self, dataset, sample_data):
+        """Update a deposition-owned Sample only (name=deposition-dataset-<id>), never mutate shared grid samples."""
+        owned_name = f"deposition-dataset-{dataset.id}"
+        sample = dataset.sample
+        if sample is None or sample.name != owned_name:
+            sample, _ = Sample.objects.get_or_create(name=owned_name)
+            dataset.sample = sample
+            dataset.save(update_fields=["sample"])
+        for attr, value in sample_data.items():
+            setattr(sample, attr, value)
+        sample.save()
+
     def _sync_funding(self, dataset, funding):
         seen = set()
         for row in funding:
             fid = row.pop("id", None)
-            # Only reuse an id that actually belongs to THIS dataset; a stray/foreign
-            # id falls through to create (never forces an explicit PK ).
+            # Reuse id only if it belongs to this dataset, otherwise create new.
             existing = dataset.funding.filter(id=fid).first() if fid else None
             if existing:
                 for attr, value in row.items():
@@ -226,7 +264,7 @@ class DatasetSerializer(serializers.ModelSerializer):
         dataset.funding.exclude(id__in=seen).delete()
 
     def _sync_sessions(self, dataset, sessions):
-        """Create/update the session-selection links; delete deselected ones."""
+        """Upsert session links by msi_session, drop deselected ones."""
         seen = set()
         for row in sessions:
             row.pop("id", None)
@@ -302,7 +340,7 @@ class SubmissionDatasetSerializer(serializers.ModelSerializer):
 
 
 class SubmissionDepositionSerializer(serializers.ModelSerializer):
-    """Deposition group for the My Submissions list — lean, with datasets summarized."""
+    """Deposition group for the My Submissions list."""
 
     datasets = SubmissionDatasetSerializer(many=True, read_only=True)
     is_owner = serializers.SerializerMethodField()
