@@ -19,7 +19,6 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const [current, setCurrent] = useState(1);
   const [save, setSave] = useState<AutoSaveState | null>(null);
  // fail-open: only read-only when the backend explicitly says not owner.
- // Missing/undefined → editable; backend 403 is the real enforcement boundary.
   const readOnly = dataset.is_owner === false;
   const skippedNums = WIZARD_STEPS.filter((s) => isStepSkipped(s, dataset)).map((s) => s.num);
   const activeNums = WIZARD_STEPS.filter((s) => !skippedNums.includes(s.num)).map((s) => s.num);
@@ -27,7 +26,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
 
   const step = WIZARD_STEPS.find((s) => s.num === current) ?? WIZARD_STEPS[0];
   const Body = step.Component;
-
+// Step change "Next/Back button"- unmounts the body; autosave flushes pending edits on unmount 
   const go = (n: number) => {
     setSave(null);
     setCurrent(n);
