@@ -5,7 +5,7 @@
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { deleteResource, fetchResource, patchResource, postResource } from '@app/common/queries/fetchResource';
 
-import type { Dataset, Deposition, DepositionMethodLink, DepositionSession, SubmissionList } from '../types';
+import type { Dataset, Deposition, DepositionMethodLink, DepositionSession, Person, SubmissionList } from '../types';
 
 const url = (path: string): string => `${DJANGO_URL}${path}`;
 
@@ -21,6 +21,22 @@ async function parse<T>(response: Response): Promise<T> {
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+export async function createPerson(data: Partial<Person>): Promise<Person> {
+  return parse(await postResource(url(API.PEOPLE), data as Record<string, unknown>));
+}
+
+export async function searchPeople(term: string): Promise<Person[]> {
+  const data = await parse<Person[] | { results: Person[] }>(
+    await fetchResource(url(`${API.PEOPLE}?search=${encodeURIComponent(term)}`)),
+  );
+  return Array.isArray(data) ? data : (data.results ?? []);
+}
+
+export async function fetchPeopleByIds(ids: number[]): Promise<Person[]> {
+  if (ids.length === 0) return [];
+  return parse(await fetchResource(url(`${API.PEOPLE}by-ids?ids=${ids.join(',')}`)));
 }
 
 // Depositions (container) 

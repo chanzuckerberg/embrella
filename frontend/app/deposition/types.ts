@@ -32,7 +32,19 @@ export interface DatasetJob {
   push_slurm_job_id?: string | null;
   error_message?: string | null;
 }
+export interface Person {
+  id: number;
+  orcid?: string | null;
+  given_name: string;
+  family_name: string;
+  contact_email?: string | null;
+}
 
+export type CrossRefType = 'publication' | 'related_db';
+export interface CrossRef {
+  type: CrossRefType;
+  value: string;
+}
 export type MethodLinkType = 'documentation' | 'models_weights' | 'other' | 'source_code' | 'website';
 
 export interface DepositionMethodLink {
