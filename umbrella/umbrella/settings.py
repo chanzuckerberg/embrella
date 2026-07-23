@@ -242,7 +242,7 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 # Signup off by default so self-hosters keep open, domain-gated SSO signup.
-EMBRELLA_DISABLE_SIGNUP = os.environ.get("EMBRELLA_DISABLE_SIGNUP") == "1"
+EMBRELLA_DISABLE_SIGNUP = os.environ.get("EMBRELLA_DISABLE_SIGNUP") == "True"
 # Google emails are trusted; skip allauth's signup/email-confirm interstitials.
 SOCIALACCOUNT_AUTO_SIGNUP = not EMBRELLA_DISABLE_SIGNUP
 ACCOUNT_EMAIL_VERIFICATION = "none"

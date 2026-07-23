@@ -28,7 +28,7 @@ stack:
         value: 'True'
       # Demo auth: only the preloaded user may log in (no SSO self-signup)
       - name: EMBRELLA_DISABLE_SIGNUP
-        value: '1'
+        value: 'True'
       - name: FILESERVER_ALLOWED_HOSTS
         value: 'https://$(__ARGUS_STACK_INGRESS_HOST)'
       - name: EMBRELLA_DEMO_BASE_URL
