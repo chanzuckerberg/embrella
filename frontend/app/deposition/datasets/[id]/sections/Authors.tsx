@@ -1,17 +1,23 @@
 'use client';
 
-import { FormControlLabel, Radio, RadioGroup, Typography } from '@mui/material';
+import { FormControlLabel, Radio, RadioGroup } from '@mui/material';
 
+import type { AuthorRef } from '../../../types';
+import { AuthorTable } from '../../../depositions/AuthorTable';
 import { SectionCard } from './SectionCard';
 
 export function Authors({
   sameAsDeposition,
   onChangeSameAsDeposition,
+  authors,
+  onChangeAuthors,
   readOnly,
   innerRef,
 }: {
   sameAsDeposition: boolean;
   onChangeSameAsDeposition: (value: boolean) => void;
+  authors: AuthorRef[];
+  onChangeAuthors: (authors: AuthorRef[]) => void;
   readOnly: boolean;
   innerRef: (el: HTMLDivElement | null) => void;
 }) {
@@ -35,9 +41,7 @@ export function Authors({
         />
       </RadioGroup>
       {!sameAsDeposition && (
-        <Typography variant="body2" color="text.secondary">
-          Custom author editing is added with the shared AuthorTable (#1003).
-        </Typography>
+        <AuthorTable authors={authors} onChange={onChangeAuthors} disabled={readOnly} />
       )}
     </SectionCard>
   );
