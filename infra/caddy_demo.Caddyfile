@@ -3,5 +3,7 @@
 # from the root of /srv
 :80 {
 	root * /srv
-	file_server browse
+	file_server browse {
+		hide .DS_Store
+	}
 }
