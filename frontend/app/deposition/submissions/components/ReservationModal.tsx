@@ -210,7 +210,7 @@ export function ReservationModal({
     ? `Add a dataset to ${depositionLabel(lockedDeposition?.deposition_id)}`
     : 'Reserve or select IDs';
 
-  // Reservation paths (new deposition / new dataset) create records via the backend
+  // New deposition/dataset create records via the backend.
   const willReserve = mode === 'new' || (mode === 'existing_deposition' && datasetChoice === 'new');
 
   const handleContinue = () => {

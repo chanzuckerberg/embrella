@@ -113,7 +113,7 @@ export default function SubmissionsPage() {
           <TableContainer
             sx={{
               overflowX: 'auto',
-              // macOS hides overlay scrollbars until you scroll, so users don't realizethe table is scrollable 
+              // Keep a visible horizontal scrollbar (macOS overlay scrollbars are easy to miss).
               '&::-webkit-scrollbar': { height: 8, WebkitAppearance: 'none' },
               '&::-webkit-scrollbar-thumb': { borderRadius: 4, backgroundColor: 'rgba(0, 0, 0, 0.35)' },
               '&::-webkit-scrollbar-track': { backgroundColor: 'rgba(0, 0, 0, 0.06)' },

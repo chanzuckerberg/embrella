@@ -28,8 +28,7 @@ from .permissions import deposition_owner_id
 
 
 def validate_authors_json(value):
-    """Light shape check for the authors_json column on Deposition/Dataset.
-    """
+    """Shape-check authors_json only (soft-ref author_id)."""
     if not isinstance(value, list):
         raise serializers.ValidationError("authors_json must be a list of author entries.")
     for i, entry in enumerate(value):
@@ -87,7 +86,7 @@ class DepositionAnnotationSerializer(serializers.ModelSerializer):
 
 
 class DatasetJobSerializer(serializers.ModelSerializer):
-    """Read-only — job state is driven by the processors, never set via the API."""
+    """Read-only — job state is set by processors, not the API."""
 
     class Meta:
         model = DatasetJob
@@ -95,7 +94,7 @@ class DatasetJobSerializer(serializers.ModelSerializer):
 
 
 class DepositionSessionLinkSerializer(serializers.ModelSerializer):
-    """Shallow session view used when nested under a Dataset (selection only — no metadata)."""
+    """Shallow session selection nested under Dataset."""
 
     id = serializers.IntegerField(required=False)
 
@@ -112,7 +111,7 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
 
 
 class DepositionSessionSerializer(serializers.ModelSerializer):
-    """Full session view used at /sessions/[id] — writable metadata + annotations."""
+    """Full /sessions/[id] view — writable metadata + annotations."""
 
     tiltseries_metadata = TiltseriesMetadataSerializer(required=False)
     tomogram_metadata = TomogramMetadataSerializer(required=False)
@@ -147,7 +146,7 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
         return instance
 
     def _sync_annotations(self, session, annotations):
-        """Upsert annotations by (copick_kind, copick_ref); delete any no longer present."""
+        """Upsert annotations by (copick_kind, copick_ref); drop removed ones."""
         seen = set()
         for ann in annotations:
             kind, ref = ann.get("copick_kind"), ann.get("copick_ref")
@@ -307,8 +306,7 @@ class DepositionSerializer(serializers.ModelSerializer):
 
 
 class SubmissionDatasetSerializer(serializers.ModelSerializer):
-    """Lightweight dataset row for the My Submissions list (GET /depositions/?scope=mine).
-    """
+    """Lean dataset row for My Submissions list."""
 
     session_names = serializers.SerializerMethodField()
     session_count = serializers.SerializerMethodField()
@@ -340,7 +338,7 @@ class SubmissionDatasetSerializer(serializers.ModelSerializer):
 
 
 class SubmissionDepositionSerializer(serializers.ModelSerializer):
-    """Deposition group for the My Submissions list."""
+    """Deposition group for My Submissions list."""
 
     datasets = SubmissionDatasetSerializer(many=True, read_only=True)
     is_owner = serializers.SerializerMethodField()

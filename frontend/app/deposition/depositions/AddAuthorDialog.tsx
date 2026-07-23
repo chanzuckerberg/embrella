@@ -37,7 +37,6 @@ export function AddAuthorDialog({
   });
   const options = (results ?? []).filter((p) => !existingIds.includes(p.id));
 
-  // Debounce the typed term (in the input handler, not an effect).
   const onInput = (value: string) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setTerm(value), 300);
