@@ -37,7 +37,7 @@ spec:
             - name: MYSQL_PORT
               value: "3306"
             - name: MYSQL_NAME
-              value: umbrella
+              value: production
             - name: MYSQL_USER
               value: root
             - name: DJANGO_ENV
