@@ -70,6 +70,7 @@ export function Sample({
           fullWidth
           size="small"
           disabled={readOnly}
+          sx={{ '& textarea': { resize: 'vertical' } }}
         />
         <TextField
           label="Grid preparation"
@@ -81,6 +82,7 @@ export function Sample({
           size="small"
           disabled={readOnly}
           placeholder="e.g. glow discharge + blot 3s + plunge in ethane"
+          sx={{ '& textarea': { resize: 'vertical' } }}
         />
       </Stack>
 

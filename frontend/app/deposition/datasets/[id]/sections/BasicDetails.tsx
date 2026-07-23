@@ -41,6 +41,7 @@ export function BasicDetails({
         size="small"
         disabled={readOnly}
         helperText="2–3 sentences"
+        sx={{ '& textarea': { resize: 'vertical' } }}
       />
     </SectionCard>
   );
