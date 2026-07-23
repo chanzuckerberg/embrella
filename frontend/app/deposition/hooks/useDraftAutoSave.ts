@@ -15,10 +15,7 @@ interface Options {
   enabled?: boolean; // skip while there's no draft yet (e.g. no id)
 }
 
-/**
- * autosave for a draft form.
- * Returns { status, lastSavedAt, saveNow }. Call `saveNow()` to flush immediately.
- */
+/** Draft autosave. Returns { status, lastSavedAt, saveNow }. */
 export function useDraftAutoSave<T>(
   data: T,
   save: (data: T) => Promise<unknown>,
@@ -29,7 +26,6 @@ export function useDraftAutoSave<T>(
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRun = useRef(true);
-  // Keep the latest data/save without re-arming the debounce on identity changes.
   const dataRef = useRef(data);
   const saveRef = useRef(save);
   useEffect(() => {
@@ -54,7 +50,6 @@ export function useDraftAutoSave<T>(
 
   useEffect(() => {
     if (!enabled) return undefined;
-    // Don't autosave the data we just loaded into the form.
     if (isFirstRun.current) {
       isFirstRun.current = false;
       return undefined;
@@ -67,15 +62,12 @@ export function useDraftAutoSave<T>(
       if (timer.current) clearTimeout(timer.current);
     };
   }, [data, enabled, debounceMs, flush]);
-
-
-  // Flush pending debounced save on unmount so step/exit navigation doesn't drop edits.
+  // Flush pending save on unmount so step/exit navigation doesn't drop edits.
   useEffect(() => {
     return () => {
       if (timer.current) {
         clearTimeout(timer.current);
         timer.current = null;
-        // Fire-and-forget; swallow errors since the component is going away.
         saveRef.current(dataRef.current).catch(() => {});
       }
     };

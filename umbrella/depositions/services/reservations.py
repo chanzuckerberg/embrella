@@ -1,6 +1,4 @@
-"""
-Reservation service for deposition + dataset IDs.
-"""
+"""Reservation service for deposition + dataset IDs."""
 
 import os
 from abc import ABC, abstractmethod
@@ -10,15 +8,13 @@ import requests
 
 
 class ReservationService(ABC):
-    """Abstract base class interface for reservation backends."""
+    """Abstract interface for reservation backends."""
 
     @abstractmethod
-    def reserve_new_deposition(self) -> int:
-        """Reserve and return a new deposition ID."""
+    def reserve_new_deposition(self) -> int: ...
 
     @abstractmethod
-    def reserve_new_dataset(self) -> int:
-        """Reserve and return a new dataset ID."""
+    def reserve_new_dataset(self) -> int: ...
 
     @abstractmethod
     def validate_deposition(self, deposition_id: int) -> Dict[str, Any]:
@@ -34,16 +30,11 @@ class ReservationService(ABC):
 
     @abstractmethod
     def list_reservations(self, detail: bool = False) -> Dict[str, Any]:
-        """List all reservations. If detail=True, includes full datasets/depositions dicts."""
+        """List reservations. If detail=True, includes full datasets/depositions dicts."""
 
 
 class StubReservationService(ReservationService):
-    """In-memory stub for local development.
-
-    Counters start at 10000 and increment with each reservation call.
-    All counters are class-level so they persist across instances within a
-    process, but reset on restart.
-    """
+    """In-memory stub for local dev. Class-level counters from 10000; reset on process restart."""
 
     _next_deposition_id = 10000
     _next_dataset_id = 10000
@@ -84,9 +75,7 @@ class StubReservationService(ReservationService):
 
 
 class LambdaReservationService(ReservationService):
-    """Hits the cryoet-data-portal reservation lambda via HTTPS.
-    The lambda's Function URL is provided via the RESERVATION_LAMBDA_URL env var.
-    """
+    """HTTPS client for the cryoet-data-portal reservation lambda (RESERVATION_LAMBDA_URL)."""
 
     DEFAULT_TIMEOUT_SECONDS = 30
 
@@ -121,10 +110,7 @@ class LambdaReservationService(ReservationService):
 
 
 def get_reservation_service() -> ReservationService:
-    """Factory — Read RESERVATION_LAMBDA_URL env var.
-    Unset (or empty string) → StubReservationService (for development).
-    Set to a Function URL → LambdaReservationService (for staging/prod).
-    """
+    """Factory: RESERVATION_LAMBDA_URL set → lambda client; else stub (local dev)."""
     lambda_url = os.environ.get("RESERVATION_LAMBDA_URL", "").strip()
     if lambda_url:
         return LambdaReservationService(lambda_url)

@@ -14,7 +14,7 @@ import { AddAuthorDialog } from './AddAuthorDialog';
 const personName = (p?: Person) => (p ? `${p.given_name} ${p.family_name}`.trim() : 'Unknown author');
 
 const AUTHORS_HELP =
-  'Drag rows by the handle to reorder. Set one Primary and one Corresponding author — the same person can be both. Click a selected button again to clear it.';
+  'Drag rows by the handle to reorder. Set one Primary and one Corresponding author - the same person can be both. Click a selected button again to clear it.';
 
 export function AuthorTable({
   authors,
@@ -33,10 +33,7 @@ export function AuthorTable({
 
   const renumber = (list: AuthorRef[]) => list.map((a, i) => ({ ...a, author_list_order: i }));
 
-  // Primary and Corresponding are two INDEPENDENT single-select columns: setting
-  // one author clears that same flag on every other author, and re-clicking the
-  // selected radio clears it (toggle off). The columns never touch each other, so
-  // one author can be Primary while a different author is Corresponding.
+  // Primary/Corresponding: independent single-selects; re-click clears; columns don't affect each other.
   const toggleFlag = (idx: number, key: 'is_primary' | 'is_corresponding') => {
     const wasOn = authors[idx][key];
     onChange(authors.map((a, i) => ({ ...a, [key]: wasOn ? false : i === idx })));

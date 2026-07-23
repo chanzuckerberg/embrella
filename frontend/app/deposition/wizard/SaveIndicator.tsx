@@ -20,7 +20,6 @@ export function SaveIndicator({
   lastSavedAt: Date | null;
   onSaveNow: () => void;
 }) {
-  // Nothing to show until there's an actual save state — no default "autosave" label.
   let icon: ReactNode = null;
   let label = '';
   let color: 'text.secondary' | 'error.main' = 'text.secondary';

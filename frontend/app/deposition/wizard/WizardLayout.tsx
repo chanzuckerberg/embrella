@@ -18,7 +18,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const router = useRouter();
   const [current, setCurrent] = useState(1);
   const [save, setSave] = useState<AutoSaveState | null>(null);
- // fail-open: only read-only when the backend explicitly says not owner.
+  // Fail-open: read-only only when is_owner === false.
   const readOnly = dataset.is_owner === false;
   const skippedNums = WIZARD_STEPS.filter((s) => isStepSkipped(s, dataset)).map((s) => s.num);
   const activeNums = WIZARD_STEPS.filter((s) => !skippedNums.includes(s.num)).map((s) => s.num);
@@ -26,7 +26,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
 
   const step = WIZARD_STEPS.find((s) => s.num === current) ?? WIZARD_STEPS[0];
   const Body = step.Component;
-// Step change "Next/Back button"- unmounts the body; autosave flushes pending edits on unmount 
+// Step change "Next/Back button" unmounts the body; autosave flushes pending edits.
   const go = (n: number) => {
     setSave(null);
     setCurrent(n);
@@ -67,7 +67,6 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           <WizardStepper steps={WIZARD_STEPS} current={current} skipped={skippedNums} onSelect={go} />
         </Box>
 
-        {/* Content: each step renders its own body here. */}
         <Box sx={{ px: { xs: 3, md: 5 }, py: { xs: 4, md: 5 } }}>
           {readOnly && (
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -77,7 +76,6 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           <Body dataset={dataset} reportSave={setSave} readOnly={readOnly} />
         </Box>
 
-        {/* Footer actions. */}
         <Box sx={{ px: { xs: 3, md: 5 }, py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
           <WizardFooter
             disableBack={pos <= 0}

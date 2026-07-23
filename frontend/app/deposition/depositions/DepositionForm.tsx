@@ -77,7 +77,6 @@ export function DepositionForm({
 
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-      {/* Left: Basic + Cross References */}
       <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 6 }}>
           Basic
@@ -127,7 +126,6 @@ export function DepositionForm({
         />
       </Paper>
 
-      {/* Right: Authors */}
       <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
         <AuthorTable authors={form.authors} onChange={(authors) => set('authors', authors)} disabled={readOnly} />
       </Paper>

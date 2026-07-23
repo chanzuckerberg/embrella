@@ -1,6 +1,4 @@
-/**
- * API service functions for the deposition flow
- */
+/** Typed fetch helpers for the deposition API. */
 
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { deleteResource, fetchResource, patchResource, postResource } from '@app/common/queries/fetchResource';

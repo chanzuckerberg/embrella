@@ -1,15 +1,3 @@
-"""DRF viewsets for the depositions app.
-
-  DepositionViewSet  -> /depositions/v1/depositions/   (container CRUD)
-  DatasetViewSet     -> /depositions/v1/datasets/      (submit unit CRUD + actions)
-  DepositionSessionViewSet -> /depositions/v1/sessions/  (session detail save + actions)
-  MethodLinkViewSet  -> /depositions/v1/method-links/  (+ nested create under an annotation)
-
-IDs are reserved from the ReservationService on create. Action endpoints that depend on
-the processors / auto-fill service (submit, job-status, logs, config.yaml, auto-fill,
-subset-csv) are stubbed with 501 until those in place.
-"""
-
 import logging
 
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
@@ -37,8 +25,7 @@ from .services import get_reservation_service
 
 logger = logging.getLogger(__name__)
 
-# Intentionally do not support PUT (full-replace). The wizard autosaves
-# partial updates step by step, so updates go through PATCH only.
+# Wizard autosaves via PATCH only — no PUT full-replace.
 HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
 
 
@@ -80,7 +67,7 @@ def _not_implemented():
     ),
 )
 class DepositionViewSet(viewsets.ModelViewSet):
-    """Container CRUD. list returns depositions with datasets nested (My Submissions)."""
+    """Container CRUD; list nests datasets (My Submissions)."""
 
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
@@ -102,8 +89,7 @@ class DepositionViewSet(viewsets.ModelViewSet):
         serializer.save(submitter_user=self.request.user, deposition_id=deposition_id)
 
     def list(self, request, *args, **kwargs):
-        # My Submissions list: lean per-deposition rows with session names + derived type.
-        # Prefetch sessions -> msi_session (names) + annotations (type) to avoid N+1.
+        # Lean list rows; prefetch sessions/annotations to avoid N+1.
         queryset = self.filter_queryset(self.get_queryset()).prefetch_related(
             "datasets__sessions__msi_session",
             "datasets__sessions__annotations",
@@ -162,7 +148,7 @@ class DepositionViewSet(viewsets.ModelViewSet):
     ),
 )
 class DatasetViewSet(viewsets.ModelViewSet):
-    """Submit unit CRUD + per-dataset actions."""
+    """Submit-unit CRUD + per-dataset actions."""
 
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
@@ -239,11 +225,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 class DepositionSessionViewSet(
     mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
 ):
-    """Session detail save (metadata + annotations) + per-session actions.
-
-    No create/list/delete — sessions are selected/removed via the dataset's nested
-    `sessions`, and read via the deposition tree.
-    """
+    """Session detail save. No create/list/delete — managed via dataset nested sessions."""
 
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
@@ -277,7 +259,7 @@ class DepositionSessionViewSet(
     ),
 )
 class MethodLinkViewSet(viewsets.ModelViewSet):
-    """CRUD for annotation method links (kept out of nested writes)."""
+    """CRUD for annotation method links (not nested writes)."""
 
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
