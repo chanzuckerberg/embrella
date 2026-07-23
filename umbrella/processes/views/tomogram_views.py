@@ -23,7 +23,6 @@ from pydantic import ValidationError
 from rest_framework.decorators import api_view
 from tem.models import MsiSession
 
-from common import clusterio
 from processes.models import ProcRun, Review, ReviewTomogram
 from processes.validation import (
     GridModel,
@@ -247,6 +246,7 @@ def get_tomo_details(request):
                 )
                 run_name = entry.get("name")
                 session_name = entry.get("msi_session_name")
+                user_name = entry.get("user_name")
                 response_model = ResponseModel(
                     tomograms=TomogramModel(
                         id=procrun_id,
@@ -277,9 +277,7 @@ def get_tomo_details(request):
                     ),
                     user=UserModel(
                         id=entry.get("user_id"),
-                        name=entry.get("user_name").split("@")[0]
-                        if "@" in entry.get("user_name")
-                        else entry.get("user_name"),
+                        name=user_name.split("@")[0] if user_name and "@" in user_name else user_name,
                     ),
                     msiSession=MSISessionModel(
                         id=entry.get("msi_session_id"),
