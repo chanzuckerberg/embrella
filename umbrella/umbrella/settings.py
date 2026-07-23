@@ -241,8 +241,10 @@ SOCIALACCOUNT_PROVIDERS = {
         "OAUTH_PKCE_ENABLED": True,
     }
 }
+# Signup off by default so self-hosters keep open, domain-gated SSO signup.
+EMBRELLA_DISABLE_SIGNUP = os.environ.get("EMBRELLA_DISABLE_SIGNUP") == "1"
 # Google emails are trusted; skip allauth's signup/email-confirm interstitials.
-SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_AUTO_SIGNUP = not EMBRELLA_DISABLE_SIGNUP
 ACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True  # match existing local users by email
 ACCOUNT_LOGOUT_ON_GET = True
