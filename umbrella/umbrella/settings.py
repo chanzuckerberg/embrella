@@ -321,6 +321,11 @@ FILESERVER_ALLOWED_HOSTS = [
     h.strip().rstrip("/") for h in os.environ.get("FILESERVER_ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
 
+# Base URL the backend uses to build server-side-fetched file-server paths
+# used for compose with caddy, or in k8s stack
+# Leave unset when the backend can reach http_base_url directly.
+FILESERVER_INTERNAL_BASE_URL = os.environ.get("FILESERVER_INTERNAL_BASE_URL", "")
+
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",

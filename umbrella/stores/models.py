@@ -152,23 +152,30 @@ def _invalidate_clusterio_cache(sender, **kwargs):
     clear_cluster_cache()
 
 
-def resolve_review_path(data_type, cluster, msi_session, **context):
+def resolve_review_path(data_type, cluster, msi_session, *, backend_fetch=False, **context):
     """Resolve a review/metadata PathType template into a concrete URL or filesystem path.
 
     `data_type`    — StaticPath.data_type of the template row (e.g. 'proc_dir', 'zarr_url', 'thumb_url').
     `cluster`      — stores.Cluster instance; supplies {http_base}.
     `msi_session`  — tem.MsiSession instance; supplies {scope} (lowercased) and {msi_session}.
+    `backend_fetch`— set True when the *server* (not the browser) will fetch the resulting
+                     URL, so it uses the in-network base instead of the browser-facing one.
     `**context`    — additional placeholder values (e.g. workflow, run, position, vol_suffix).
     """
     pt = PathType.objects.select_related("static_path").get(static_path__data_type=data_type)
-    # Defense in depth: re-check the base URL here in case a disallowed value bypassed
-    # Cluster.clean() (raw SQL, a restored dump, a data migration). Only URL templates
-    # embed {http_base}; filesystem templates (e.g. proc_dir) don't and are left alone.
+    http_base = cluster.http_base_url
+    # Only URL templates embed {http_base}; filesystem templates (e.g. proc_dir) don't.
     if "{http_base}" in pt.overlay_path:
+        # Defense in depth: re-validate the admin-editable base in case a disallowed
+        # value bypassed Cluster.clean() (raw SQL, a restored dump, a data migration).
         validate_fileserver_base_url(cluster.http_base_url)
+        # Server-side fetches use the in-network base (trusted deploy setting) so the
+        # server can reach the file server even when http_base_url is browser-only.
+        if backend_fetch and settings.FILESERVER_INTERNAL_BASE_URL:
+            http_base = settings.FILESERVER_INTERNAL_BASE_URL
     scope = msi_session.session_plan.scope.name.lower()
     values = {
-        "http_base": cluster.http_base_url,
+        "http_base": http_base,
         "scope": scope,
         "msi_session": msi_session.name,
         **{k: str(v) for k, v in context.items() if v is not None},

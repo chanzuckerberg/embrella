@@ -33,6 +33,8 @@ stack:
         value: 'https://$(__ARGUS_STACK_INGRESS_HOST)'
       - name: EMBRELLA_DEMO_BASE_URL
         value: 'https://$(__ARGUS_STACK_INGRESS_HOST)/tomodata/'
+      - name: FILESERVER_INTERNAL_BASE_URL
+        value: 'http://embrella-tomodata/'
 
   services:
     backend:

@@ -313,7 +313,7 @@ class ReviewView(View):
             )
 
         except Exception as e:
-            logger.error(f"Error in get reviews: {str(e)}", exc_info=True)
+            logger.exception(f"Error in get reviews: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
 
     def get_review_metadata(self, request, review_id):
@@ -617,7 +617,7 @@ class ReviewView(View):
             )
 
         except Exception as e:
-            logger.error(f"Unexpected error in save_review: {str(e)}", exc_info=True)
+            logger.exception(f"Unexpected error in save_review: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
 
     def complete_review(self, request, review_id):
@@ -796,7 +796,7 @@ def get_review_tomograms(request, review_id):
         return JsonResponse(tomograms_data, safe=False)
 
     except Exception as e:
-        logger.error(f"Unexpected error in get_review_tomograms: {str(e)}", exc_info=True)
+        logger.exception(f"Unexpected error in get_review_tomograms: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
@@ -879,11 +879,20 @@ class ReviewTomogramView(View):
             )
             response_data["cluster"] = cluster.cluster_id
 
-            logger.debug(
-                f"Computing contrast limits for {review.reconstruction_type} reconstruction: {response_data['zarrPath']}"
+            zarr_fetch_url = resolve_review_path(
+                "zarr_url",
+                cluster=cluster,
+                msi_session=tomogram.session,
+                workflow=job_name,
+                run=run_id,
+                vol_suffix=vol_suffix,
+                position=tomogram.position_id,
+                backend_fetch=True,
             )
+
+            logger.debug(f"Computing contrast limits for {review.reconstruction_type} reconstruction: {zarr_fetch_url}")
             try:
-                contrast_limits = compute_optimal_contrast_limits(response_data["zarrPath"], method="gmm")
+                contrast_limits = compute_optimal_contrast_limits(zarr_fetch_url, method="gmm")
                 response_data["contrastLimits"] = contrast_limits
                 response_data["contrastMethod"] = "gmm"
                 response_data["contrastComputed"] = True
@@ -917,7 +926,7 @@ class ReviewTomogramView(View):
             return JsonResponse(response_data)
 
         except Exception as e:
-            logger.error(f"Unexpected error in GET tomogram: {str(e)}", exc_info=True)
+            logger.exception(f"Unexpected error in GET tomogram: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
 
     def post(self, request, review_id, tomogram_id):
@@ -982,5 +991,5 @@ class ReviewTomogramView(View):
             return JsonResponse({"ok": True})
 
         except Exception as e:
-            logger.error(f"Unexpected error in POST tomogram review: {str(e)}", exc_info=True)
+            logger.exception(f"Unexpected error in POST tomogram review: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)

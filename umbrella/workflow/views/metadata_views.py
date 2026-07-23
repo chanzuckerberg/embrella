@@ -67,6 +67,7 @@ def get_metadata_summary(request):
         msi_session=msi_session,
         workflow="aretomo3",
         run=run_number,
+        backend_fetch=True,
     )
     metrics_url = f"{base_proc_url}TiltSeries_Metrics.csv"
 
@@ -177,6 +178,7 @@ def get_metadata_viz_data(request):
             msi_session=msi_session,
             workflow="aretomo3",
             run=run_number,
+            backend_fetch=True,
         )
         metrics_url = f"{base_proc_url}TiltSeries_Metrics.csv"
 

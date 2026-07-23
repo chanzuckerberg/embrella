@@ -147,3 +147,40 @@ class ResolveReviewPathAllowlistTests(TestCase):
         with override_settings(FILESERVER_ALLOWED_HOSTS=["https://ok.example"]):
             path = resolve_review_path("proc_dir", cluster, self._mock_session(), workflow="aretomo3", run="001")
         self.assertIn("aretomo3", path)
+
+    def test_backend_fetch_uses_internal_base(self):
+        # A server-side fetch (backend_fetch=True) uses FILESERVER_INTERNAL_BASE_URL when set.
+        cluster = Cluster(cluster_id="x", name="X", http_base_url="https://public.example/", ssh_hostname="h")
+        with override_settings(
+            FILESERVER_ALLOWED_HOSTS=["https://public.example"],
+            FILESERVER_INTERNAL_BASE_URL="http://internal.svc/",
+        ):
+            url = resolve_review_path(
+                "proc_url", cluster, self._mock_session(), workflow="aretomo3", run="001", backend_fetch=True
+            )
+        self.assertTrue(url.startswith("http://internal.svc/"), url)
+
+    def test_browser_fetch_ignores_internal_base(self):
+        # The default (browser-fetched) resolution always uses the public http_base_url.
+        cluster = Cluster(cluster_id="x", name="X", http_base_url="https://public.example/", ssh_hostname="h")
+        with override_settings(
+            FILESERVER_ALLOWED_HOSTS=["https://public.example"],
+            FILESERVER_INTERNAL_BASE_URL="http://internal.svc/",
+        ):
+            url = resolve_review_path(
+                "zarr_url", cluster, self._mock_session(), workflow="aretomo3", run="001",
+                vol_suffix="vol003", position="P1",
+            )
+        self.assertTrue(url.startswith("https://public.example/"), url)
+
+    def test_backend_fetch_flag_ignored_when_no_internal_base(self):
+        # Without FILESERVER_INTERNAL_BASE_URL, backend_fetch falls back to the public base.
+        cluster = Cluster(cluster_id="x", name="X", http_base_url="https://public.example/", ssh_hostname="h")
+        with override_settings(
+            FILESERVER_ALLOWED_HOSTS=["https://public.example"],
+            FILESERVER_INTERNAL_BASE_URL="",
+        ):
+            url = resolve_review_path(
+                "proc_url", cluster, self._mock_session(), workflow="aretomo3", run="001", backend_fetch=True
+            )
+        self.assertTrue(url.startswith("https://public.example/"), url)
