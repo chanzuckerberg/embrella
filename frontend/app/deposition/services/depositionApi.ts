@@ -37,7 +37,6 @@ export async function fetchPeopleByIds(ids: number[]): Promise<Person[]> {
   return parse(await fetchResource(url(`${API.PEOPLE}by-ids?ids=${ids.join(',')}`)));
 }
 
-// Depositions (container) 
 export async function fetchSubmissions(scope?: 'mine'): Promise<SubmissionList> {
   const query = scope ? `?scope=${scope}` : '';
   return parse(await fetchResource(url(`${API.DEPOSITIONS}${query}`)));
@@ -59,7 +58,6 @@ export async function deleteDeposition(id: number): Promise<void> {
   return parse(await deleteResource(url(`${API.DEPOSITIONS}${id}/`)));
 }
 
-// Datasets 
 export async function createDataset(data: Partial<Dataset>): Promise<Dataset> {
   return parse(await postResource(url(API.DEPOSITION_DATASETS), data as Record<string, unknown>));
 }
@@ -84,7 +82,6 @@ export async function fetchDatasetJobStatus(id: number): Promise<unknown> {
   return parse(await fetchResource(url(`${API.DEPOSITION_DATASETS}${id}/job-status/`)));
 }
 
-// Sessions
 export async function fetchSession(id: number): Promise<DepositionSession> {
   return parse(await fetchResource(url(`${API.DEPOSITION_SESSIONS}${id}/`)));
 }
@@ -97,7 +94,6 @@ export async function autoFillSession(id: number): Promise<unknown> {
   return parse(await postResource(url(`${API.DEPOSITION_SESSIONS}${id}/auto-fill/`), {}));
 }
 
-// Annotation Method links 
 export async function createMethodLink(data: Partial<DepositionMethodLink>): Promise<DepositionMethodLink> {
   return parse(await postResource(url(API.DEPOSITION_METHOD_LINKS), data as Record<string, unknown>));
 }

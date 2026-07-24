@@ -164,8 +164,8 @@ export function DatasetForm({
     basic: !!form.title.trim() && !!form.description.trim(),
     sample: !!form.sample.sample_type,
     organism: !!form.sample.organism_name?.trim() && form.sample.organism_taxid != null,
-    bioclass: hasBio, // optional
-    authors: true, // defaults to deposition authors
+    bioclass: hasBio,
+    authors: true,
     funding: form.funding.length > 0,
   };
   const subLabel = (key: string): string => {
@@ -254,7 +254,6 @@ export function DatasetForm({
             }}
           />
 
-          {/* Funding + Cross references share one nav anchor. */}
           <Box
             ref={(el: HTMLDivElement | null) => {
               refs.current.funding = el;

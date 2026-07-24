@@ -22,14 +22,12 @@ export function useReserve(onDone: () => void) {
     mutationFn: async ({ mode, datasetChoice, depositionId, existingDatasetId }: ReserveParams): Promise<number> => {
       if (mode === 'reuse_dataset') return Number(existingDatasetId);
 
-      // A: reserve a new deposition, then a dataset under it.
       if (mode === 'new') {
         const dep = await createDeposition({ title: '' });
         const ds = await createDataset({ deposition: dep.id, title: '' });
         return ds.id;
       }
 
-      // B: existing deposition - either reuse a dataset in it or reserve a new one.
       if (datasetChoice === 'existing') return Number(existingDatasetId);
       const ds = await createDataset({ deposition: Number(depositionId), title: '' });
       return ds.id;
