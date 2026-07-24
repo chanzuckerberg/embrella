@@ -140,11 +140,23 @@ class TestAuthorsJsonValidation:
         )
         assert r.status_code == 200
 
-    def test_authors_json_missing_author_id_rejected(self, auth_client):
+    def test_free_form_snapshot_author_accepted(self, auth_client):
         dep = _make_deposition(auth_client)
         r = auth_client.patch(
             f"{DEPOSITIONS}{dep['id']}/",
-            {"authors_json": [{"author_list_order": 1}]},
+            {"authors_json": [
+                {"full_name": "Test Author", "affiliation": "CZ Biohub",
+                 "orcid": "0000-0002-1825-0097", "is_corresponding": True, "author_list_order": 0},
+            ]},
+            format="json",
+        )
+        assert r.status_code == 200, r.content
+
+    def test_authors_json_wrong_field_type_rejected(self, auth_client):
+        dep = _make_deposition(auth_client)
+        r = auth_client.patch(
+            f"{DEPOSITIONS}{dep['id']}/",
+            {"authors_json": [{"author_id": "seven"}]},
             format="json",
         )
         assert r.status_code == 400
