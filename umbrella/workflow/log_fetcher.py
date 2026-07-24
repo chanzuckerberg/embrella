@@ -180,15 +180,15 @@ def fetch_job_logs(execution) -> Dict[str, any]:
         return result
 
     # Determine cluster: prefer the stamp on parameters, else fall back to the software default.
-    from processes.services.cluster_resolver import cluster_id_from_parameters
-
-    from workflow.constants import DEFAULT_CLUSTER_ID
+    from processes.services.cluster_resolver import cluster_id_from_parameters, get_default_cluster_id
 
     cluster_id = cluster_id_from_parameters(execution.parameters, default=None)
     if not cluster_id:
         software = execution.pipe_in_plan.pipe.software
         cluster_id = (
-            getattr(software, "default_cluster", None) or getattr(software, "cluster", None) or DEFAULT_CLUSTER_ID
+            getattr(software, "default_cluster", None)
+            or getattr(software, "cluster", None)
+            or get_default_cluster_id()
         )
 
     logger.info(f"Fetching logs for job {execution.job_id} from cluster {cluster_id}")

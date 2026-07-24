@@ -1,12 +1,8 @@
+from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
-from drf_spectacular.utils import extend_schema
-from rest_framework.decorators import api_view
 
 
-@extend_schema(methods=["GET"], description="Ping endpoint that returns pong.")
-@api_view(["GET"])
+@login_not_required
 def ping(request):
-    return JsonResponse({'message': 'pong'})
-
-
-
+    """Unauthenticated liveness probe"""
+    return JsonResponse({"message": "pong"})

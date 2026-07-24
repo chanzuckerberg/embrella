@@ -38,7 +38,7 @@ spec:
           image: docker.io/library/mariadb:10.5.22
           env:
             - name: MARIADB_DATABASE
-              value: umbrella
+              value: production
             - name: MARIADB_ROOT_HOST
               value: "%"
             - name: MARIADB_ROOT_PASSWORD

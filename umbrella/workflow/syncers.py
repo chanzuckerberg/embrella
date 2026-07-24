@@ -125,9 +125,9 @@ def parse_zarr_filename(filename):
 
 
 def check_zarr_exists(full_path, cluster_id=None):
-    from workflow.constants import DEFAULT_CLUSTER_ID
+    from processes.services.cluster_resolver import get_default_cluster_id
 
-    cluster_id = cluster_id or DEFAULT_CLUSTER_ID
+    cluster_id = cluster_id or get_default_cluster_id()
     found_zarrs = []
     ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
     stdin, stdout, stderr = ssh.exec_command(f"ls {full_path}")

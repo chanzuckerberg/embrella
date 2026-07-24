@@ -62,8 +62,9 @@ class UmbrellaSocialAccountAdapter(DefaultSocialAccountAdapter):
             )
 
     def is_open_for_signup(self, request, sociallogin):
-        # Google sign-ups are allowed (domain-gated by pre_social_login above).
-        return True
+        # Google sign-ups are allowed (domain-gated by pre_social_login above),
+        # unless signup is locked for a curated demo.
+        return not getattr(settings, "EMBRELLA_DISABLE_SIGNUP", False)
 
 
 class UmbrellaAccountAdapter(DefaultAccountAdapter):

@@ -701,9 +701,15 @@ netinit:
 devup: netinit
     {{COMPOSE_DEV}} up -d --build
 
+# Like devup, plus the optional Caddy file server for the demo (adds compose.demo.yaml).
+# Serves ${EMBRELLA_TOMODATA_DIR:-.scratch/tomodata} at http://localhost:8080/tomodata/.
+devup-demo: netinit
+    {{COMPOSE_DEV}} -f infra/compose.demo.yaml up -d --build
+
 # Tear the dev stack down. Named volumes (db_data, frontend_node_modules, etc.) survive.
+# Includes compose.demo.yaml so the caddy container is torn down too (no-op if absent).
 devdown:
-    {{COMPOSE_DEV}} down
+    {{COMPOSE_DEV}} -f infra/compose.demo.yaml down
 
 # Tail logs from all dev services, or a specific one (e.g. `just devlogs backend`).
 devlogs service="":

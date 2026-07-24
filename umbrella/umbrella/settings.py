@@ -242,8 +242,10 @@ SOCIALACCOUNT_PROVIDERS = {
         "OAUTH_PKCE_ENABLED": True,
     }
 }
+# Signup off by default so self-hosters keep open, domain-gated SSO signup.
+EMBRELLA_DISABLE_SIGNUP = os.environ.get("EMBRELLA_DISABLE_SIGNUP") == "True"
 # Google emails are trusted; skip allauth's signup/email-confirm interstitials.
-SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_AUTO_SIGNUP = not EMBRELLA_DISABLE_SIGNUP
 ACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True  # match existing local users by email
 ACCOUNT_LOGOUT_ON_GET = True
@@ -313,6 +315,20 @@ if _ARGUS_INGRESS_HOST:
     # secure cookies, and CSRF see https and the external host.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     USE_X_FORWARDED_HOST = True
+
+# File-server base-URL allowlist. stores.Cluster.http_base_url is admin-editable
+# and is both embedded in the frontend (image/zarr/config URLs) and fetched
+# server-side, so a tampered value is a content-injection + SSRF risk. Only these
+# origins (scheme://host[:port], comma-separated) may be used as a cluster base
+# URL. Empty = no restriction (backwards compatible); set it in staging/prod.
+FILESERVER_ALLOWED_HOSTS = [
+    h.strip().rstrip("/") for h in os.environ.get("FILESERVER_ALLOWED_HOSTS", "").split(",") if h.strip()
+]
+
+# Base URL the backend uses to build server-side-fetched file-server paths
+# used for compose with caddy, or in k8s stack
+# Leave unset when the backend can reach http_base_url directly.
+FILESERVER_INTERNAL_BASE_URL = os.environ.get("FILESERVER_INTERNAL_BASE_URL", "")
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",

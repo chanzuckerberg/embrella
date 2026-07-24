@@ -1,0 +1,90 @@
+# Nightly demo reset. Wipes whatever demo visitors did and restores
+# the curated state from a SQL dump in S3.
+#
+# Curated dump locally: EMBRELLA_DEMO_BASE_URL sets the staging /tomodata/ URL,
+# uploaded replacement at s3://embrella-staging-demo/db/embrella_demo.sql
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: embrella-db-reset
+spec:
+  schedule: "0 8 * * *"   # 08:00 UTC ~ midnight PT
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1200
+      template:
+        spec:
+          serviceAccountName: embrella
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/arch: arm64
+          volumes:
+            - name: dump
+              emptyDir: {}
+          initContainers:
+            - name: fetch-dump
+              image: public.ecr.aws/aws-cli/aws-cli:latest
+              command: ["/bin/sh", "-c"]
+              args:
+                - aws s3 cp "s3://embrella-staging-demo/db/embrella_demo.sql" /dump/embrella_demo.sql --no-progress
+              env:
+                - name: AWS_DEFAULT_REGION
+                  value: us-west-2
+              volumeMounts:
+                - name: dump
+                  mountPath: /dump
+            - name: restore-db
+              image: docker.io/library/mariadb:10.5.22
+              # MYSQL_PWD is auto-read by the mariadb client, so no -p on the CLI.
+              command: ["/bin/sh", "-c"]
+              args:
+                - >
+                  mariadb -h "$MYSQL_HOST" -uroot -e
+                  "DROP DATABASE IF EXISTS $MYSQL_NAME; CREATE DATABASE $MYSQL_NAME CHARACTER SET utf8mb4;"
+                  && mariadb -h "$MYSQL_HOST" -uroot "$MYSQL_NAME" < /dump/embrella_demo.sql
+              env:
+                - name: MYSQL_PWD
+                  valueFrom:
+                    secretKeyRef:
+                      name: argus-env-secret.embrella.staging.{{ .Release.Name }}
+                      key: MYSQL_PWD
+                # DB host + name from values.yaml global env (single source of truth).
+                {{- range .Values.stack.global.env }}
+                {{- if has .name (list "MYSQL_HOST" "MYSQL_NAME") }}
+                - name: {{ .name }}
+                  value: {{ .value | quote }}
+                {{- end }}
+                {{- end }}
+              volumeMounts:
+                - name: dump
+                  mountPath: /dump
+          containers:
+            - name: migrate
+              image: "{{ .Values.stack.services.backend.image.repository }}:{{ .Values.stack.services.backend.image.tag }}"
+              # EMBRELLA_MIGRATE=1 -> entrypoint waits for MySQL, migrates, execs `true`.
+              env:
+                - name: EMBRELLA_MIGRATE
+                  value: "1"
+                # DB connection + DJANGO_ENV from values.yaml global env (single source).
+                {{- range .Values.stack.global.env }}
+                {{- if has .name (list "DJANGO_ENV" "USE_MYSQL" "MYSQL_HOST" "MYSQL_PORT" "MYSQL_NAME" "MYSQL_USER") }}
+                - name: {{ .name }}
+                  value: {{ .value | quote }}
+                {{- end }}
+                {{- end }}
+              envFrom:
+                - secretRef:
+                    name: argus-env-secret.embrella.staging.{{ .Release.Name }}
+                    optional: true
+              args: ["true"]
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
