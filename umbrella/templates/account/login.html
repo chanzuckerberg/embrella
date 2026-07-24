@@ -10,6 +10,7 @@
     <div class="errors">Invalid credentials. Please try again.</div>
   {% endif %}
 
+  {% if not EMBRELLA_DISABLE_SIGNUP %}
   <div class="actions">
     <form method="post" action="{% provider_login_url 'google' process='login' %}">
       {% csrf_token %}
@@ -29,6 +30,7 @@
   </div>
 
   <div class="sep"><span>or sign in with a username</span></div>
+  {% endif %}
 
   <form method="post" action="{% url 'account_login' %}">
     {% csrf_token %}
