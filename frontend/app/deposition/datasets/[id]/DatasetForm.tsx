@@ -8,8 +8,9 @@ import { Box, Stack } from '@mui/material';
 
 import { updateDataset } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
-import type { AuthorRef, CrossRef, Dataset, DatasetFunding, DatasetSample } from '../../types';
+import type { AuthorEntry, CrossRef, Dataset, DatasetFunding, DatasetSample } from '../../types';
 import { type AutoSaveState, useDraftAutoSave } from '../../hooks/useDraftAutoSave';
+import { useDeposition } from '../../hooks/useDeposition';
 import { CrossReferencesEditor } from '../../depositions/CrossReferencesEditor';
 import { Authors } from './sections/Authors';
 import { BasicDetails } from './sections/BasicDetails';
@@ -35,7 +36,7 @@ interface FormState {
   assay_label: string;
   assay_ontology_id: string;
   is_authors_same_as_deposition: boolean;
-  authors: AuthorRef[];
+  authors: AuthorEntry[];
   funding: DatasetFunding[];
   crossRefs: CrossRef[];
   sample: DatasetSample;
@@ -52,7 +53,9 @@ function toForm(d: Dataset): FormState {
     assay_label: d.assay_label ?? '',
     assay_ontology_id: d.assay_ontology_id ?? '',
     is_authors_same_as_deposition: d.is_authors_same_as_deposition ?? true,
-    authors: d.authors_json ?? [],
+    authors: (d.authors_json ?? []).filter(
+      (a) => a.full_name?.trim() || a.orcid?.trim() || a.affiliation?.trim(),
+    ),
     funding: d.funding ?? [],
     crossRefs: [
       ...splitCsv(d.dataset_publications).map((value): CrossRef => ({ type: 'publication', value })),
@@ -97,6 +100,8 @@ export function DatasetForm({
   readOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
+  const { data: deposition } = useDeposition(dataset.deposition);
+  const depositionAuthorCount = deposition?.authors_json?.length;
   const [form, setForm] = useState<FormState>(() => toForm(dataset));
   const readOnly = readOnlyProp || dataset.status !== 'draft';
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -246,6 +251,7 @@ export function DatasetForm({
           <Authors
             sameAsDeposition={form.is_authors_same_as_deposition}
             onChangeSameAsDeposition={(v) => set('is_authors_same_as_deposition', v)}
+            depositionAuthorCount={depositionAuthorCount}
             authors={form.authors}
             onChangeAuthors={(a) => set('authors', a)}
             readOnly={readOnly}

@@ -22,7 +22,9 @@ const DRAFT = {
   title: 'My dataset',
   status: 'draft',
   funding: [],
-  authors_json: [{ author_id: 7, is_primary: true, is_corresponding: false, author_list_order: 0 }],
+  authors_json: [
+    { full_name: 'Test Author', affiliation: 'CZ Biohub', orcid: '0000-0002-1825-0097', is_corresponding: true, author_list_order: 0 },
+  ],
 } as unknown as Dataset;
 
 function renderForm(dataset = DRAFT) {
@@ -38,12 +40,12 @@ describe('DatasetForm authors (#1003)', () => {
   beforeEach(() => updateDataset.mockResolvedValue({ ...DRAFT }));
   afterEach(() => jest.clearAllMocks());
 
-  it('shows the shared AuthorTable only when "Customize authors" is selected', () => {
+  it('shows the custom authors editor only when "Customize authors" is selected', () => {
     renderForm();
-    // Default is "Same as deposition authors" → no AuthorTable.
+    // Default is "Same as deposition authors".
     expect(screen.queryByRole('button', { name: /add author/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('radio', { name: /customize authors/i }));
+    fireEvent.click(screen.getByText('Customize authors'));
     expect(screen.getByRole('button', { name: /add author/i })).toBeInTheDocument();
   });
 

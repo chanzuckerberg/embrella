@@ -28,22 +28,26 @@ from .permissions import deposition_owner_id
 
 
 def validate_authors_json(value):
-    """Shape-check authors_json only (soft-ref author_id)."""
+    """Shape-check authors_json and allow partial rows for autosave."""
     if not isinstance(value, list):
         raise serializers.ValidationError("authors_json must be a list of author entries.")
+    int_fields = ("author_id", "author_list_order")
+    bool_fields = ("is_primary", "is_corresponding")
+    str_fields = ("full_name", "affiliation", "identifier_type", "orcid")
     for i, entry in enumerate(value):
         if not isinstance(entry, dict):
             raise serializers.ValidationError(f"authors_json[{i}] must be an object.")
-        author_id = entry.get("author_id")
-        # bool is a subclass of int — reject True/False masquerading as an id.
-        if not isinstance(author_id, int) or isinstance(author_id, bool):
-            raise serializers.ValidationError(f"authors_json[{i}].author_id must be an integer.")
-        order = entry.get("author_list_order")
-        if order is not None and (not isinstance(order, int) or isinstance(order, bool)):
-            raise serializers.ValidationError(f"authors_json[{i}].author_list_order must be an integer.")
-        for flag in ("is_primary", "is_corresponding"):
-            if flag in entry and not isinstance(entry[flag], bool):
-                raise serializers.ValidationError(f"authors_json[{i}].{flag} must be a boolean.")
+        for f in int_fields:
+            v = entry.get(f)
+            # bool is a subclass of int — reject True/False masquerading as a number.
+            if v is not None and (not isinstance(v, int) or isinstance(v, bool)):
+                raise serializers.ValidationError(f"authors_json[{i}].{f} must be an integer.")
+        for f in bool_fields:
+            if f in entry and not isinstance(entry[f], bool):
+                raise serializers.ValidationError(f"authors_json[{i}].{f} must be a boolean.")
+        for f in str_fields:
+            if f in entry and not isinstance(entry[f], str):
+                raise serializers.ValidationError(f"authors_json[{i}].{f} must be a string.")
     return value
 
 
