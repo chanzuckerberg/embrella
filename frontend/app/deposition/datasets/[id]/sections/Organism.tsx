@@ -21,7 +21,7 @@ export function Organism({
   innerRef: (el: HTMLDivElement | null) => void;
 }) {
   return (
-    <SectionCard title="Organism" subtitle="Always shown" sectionKey="organism" innerRef={innerRef}>
+    <SectionCard title="Organism" sectionKey="organism" innerRef={innerRef}>
       <Box
         sx={{
           display: 'grid',

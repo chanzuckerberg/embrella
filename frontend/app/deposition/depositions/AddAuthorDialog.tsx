@@ -57,7 +57,6 @@ export function AddAuthorDialog({
     },
   });
 
-  const creatingNew = picked === null && (givenName.trim() !== '' || familyName.trim() !== '');
   const canSave =
     !create.isPending && (picked !== null || (givenName.trim() !== '' && familyName.trim() !== ''));
 
@@ -141,14 +140,9 @@ export function AddAuthorDialog({
         />
       </Stack>
 
-      {creatingNew && (
-        <Typography variant="caption" color="text.secondary">
-          A new directory entry will be created.
-        </Typography>
-      )}
       {create.isError && (
         <Typography variant="body2" color="error.main">
-          Could not add the author — check the ORCID format (xxxx-xxxx-xxxx-xxxx) and try again.
+          Could not add the author - check the ORCID format (xxxx-xxxx-xxxx-xxxx) and try again.
         </Typography>
       )}
     </BaseFormDialog>

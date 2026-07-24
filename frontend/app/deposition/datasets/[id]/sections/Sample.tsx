@@ -88,7 +88,6 @@ export function Sample({
 
       <TextField
         label="Other setup"
-        placeholder="Optional notes about microscopes or conditions."
         value={otherSetup}
         onChange={(e) => onChangeOtherSetup(e.target.value)}
         fullWidth

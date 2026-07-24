@@ -17,8 +17,6 @@ import {
 import type { DatasetSample } from '../../../types';
 import { SectionCard } from './SectionCard';
 
-// Sample-backed ontology rows. Assay is dataset-level but lives here in the UI.
-// Order matches the mockup.
 const BIO_ROWS: {
   key: string;
   label: string;
@@ -113,7 +111,6 @@ export function BiologicalClassification({
   readOnly: boolean;
   innerRef: (el: HTMLDivElement | null) => void;
 }) {
-  // Mockup order: tissue → cell type → cell strain → cell component → assay → development → disease
   const rowsBeforeAssay = BIO_ROWS.slice(0, 4);
   const rowsAfterAssay = BIO_ROWS.slice(4);
 
@@ -127,10 +124,6 @@ export function BiologicalClassification({
       defaultExpanded
       innerRef={innerRef}
     >
-      <Typography variant="body2" color="text.secondary" sx={{ mt: -0.5 }}>
-        Expand only what applies to your sample. All fields support an ontology lookup.
-      </Typography>
-
       <Box
         sx={{
           border: '1px solid',

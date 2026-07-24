@@ -210,7 +210,6 @@ export function ReservationModal({
     ? `Add a dataset to ${depositionLabel(lockedDeposition?.deposition_id)}`
     : 'Reserve or select IDs';
 
-  // New deposition/dataset create records via the backend.
   const willReserve = mode === 'new' || (mode === 'existing_deposition' && datasetChoice === 'new');
 
   const handleContinue = () => {
@@ -235,12 +234,6 @@ export function ReservationModal({
         onSave={handleContinue}
       >
         {!isAddDataset && <OptionCards mode={mode} onSelect={setMode} />}
-
-        {mode === 'new' && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 5 }}>
-            A new deposition and dataset will be reserved - you’ll add the details in the next steps.
-          </Typography>
-        )}
 
         {mode === 'existing_deposition' && (
           <Box>

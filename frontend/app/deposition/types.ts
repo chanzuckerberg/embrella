@@ -1,5 +1,3 @@
-// Types for the deposition API 
-
 export type DatasetStatus = 'draft' | 'syncing' | 'pushed' | 'failed';
 
 export interface AuthorRef {
