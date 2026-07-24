@@ -2,19 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Button } from '@czi-sds/components';
+import AddIcon from '@mui/icons-material/Add';
 import { Box, Stack } from '@mui/material';
 
 import { updateDataset } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
-import type { Dataset, DatasetFunding, DatasetSample } from '../../types';
+import type { AuthorRef, CrossRef, Dataset, DatasetFunding, DatasetSample } from '../../types';
 import { type AutoSaveState, useDraftAutoSave } from '../../hooks/useDraftAutoSave';
+import { CrossReferencesEditor } from '../../depositions/CrossReferencesEditor';
 import { Authors } from './sections/Authors';
 import { BasicDetails } from './sections/BasicDetails';
 import { BiologicalClassification } from './sections/BiologicalClassification';
-import { CrossReferences, type CrossRefRow } from './sections/CrossReferences';
 import { Funding } from './sections/Funding';
 import { Organism } from './sections/Organism';
 import { Sample } from './sections/Sample';
+import { SectionCard } from './sections/SectionCard';
 import { type NavItem, SideNav } from './sections/SideNav';
 
 const splitCsv = (s?: string): string[] =>
@@ -32,8 +35,9 @@ interface FormState {
   assay_label: string;
   assay_ontology_id: string;
   is_authors_same_as_deposition: boolean;
+  authors: AuthorRef[];
   funding: DatasetFunding[];
-  crossRefs: CrossRefRow[];
+  crossRefs: CrossRef[];
   sample: DatasetSample;
 }
 
@@ -48,10 +52,11 @@ function toForm(d: Dataset): FormState {
     assay_label: d.assay_label ?? '',
     assay_ontology_id: d.assay_ontology_id ?? '',
     is_authors_same_as_deposition: d.is_authors_same_as_deposition ?? true,
+    authors: d.authors_json ?? [],
     funding: d.funding ?? [],
     crossRefs: [
-      ...splitCsv(d.dataset_publications).map((value): CrossRefRow => ({ type: 'publication', value })),
-      ...splitCsv(d.related_database_entries).map((value): CrossRefRow => ({ type: 'related_db', value })),
+      ...splitCsv(d.dataset_publications).map((value): CrossRef => ({ type: 'publication', value })),
+      ...splitCsv(d.related_database_entries).map((value): CrossRef => ({ type: 'related_db', value })),
     ],
     sample: {
       sample_type: s.sample_type ?? '',
@@ -114,11 +119,12 @@ export function DatasetForm({
 
   const save = useCallback(
     async (payload: FormState) => {
-      const { crossRefs, ...rest } = payload;
-      const csv = (t: CrossRefRow['type']) =>
+      const { crossRefs, authors, ...rest } = payload;
+      const csv = (t: CrossRef['type']) =>
         crossRefs.filter((r) => r.type === t).map((r) => r.value.trim()).filter(Boolean).join(', ');
       const updated = await updateDataset(dataset.id, {
         ...rest,
+        authors_json: authors,
         dataset_publications: csv('publication'),
         related_database_entries: csv('related_db'),
       });
@@ -144,9 +150,6 @@ export function DatasetForm({
   const removeFunding = (i: number) => set('funding', form.funding.filter((_, idx) => idx !== i));
 
   const addCrossRef = () => set('crossRefs', [...form.crossRefs, { type: 'publication', value: '' }]);
-  const setCrossRef = (i: number, patch: Partial<CrossRefRow>) =>
-    set('crossRefs', form.crossRefs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
-  const removeCrossRef = (i: number) => set('crossRefs', form.crossRefs.filter((_, idx) => idx !== i));
 
   const hasBio = [
     form.sample.tissue_id,
@@ -243,6 +246,8 @@ export function DatasetForm({
           <Authors
             sameAsDeposition={form.is_authors_same_as_deposition}
             onChangeSameAsDeposition={(v) => set('is_authors_same_as_deposition', v)}
+            authors={form.authors}
+            onChangeAuthors={(a) => set('authors', a)}
             readOnly={readOnly}
             innerRef={(el) => {
               refs.current.authors = el;
@@ -266,13 +271,24 @@ export function DatasetForm({
                 readOnly={readOnly}
                 innerRef={() => {}}
               />
-              <CrossReferences
-                crossRefs={form.crossRefs}
-                onAdd={addCrossRef}
-                onChange={setCrossRef}
-                onRemove={removeCrossRef}
-                readOnly={readOnly}
-              />
+              <SectionCard
+                title="Cross references"
+                sectionKey="crossrefs"
+                innerRef={() => {}}
+                action={
+                  !readOnly ? (
+                    <Button sdsType="primary" sdsStyle="minimal" size="small" startIcon={<AddIcon />} onClick={addCrossRef}>
+                      Add entry
+                    </Button>
+                  ) : undefined
+                }
+              >
+                <CrossReferencesEditor
+                  entries={form.crossRefs}
+                  onChange={(entries) => set('crossRefs', entries)}
+                  disabled={readOnly}
+                />
+              </SectionCard>
             </Stack>
           </Box>
         </Stack>

@@ -101,6 +101,7 @@ export function DepositionForm({
             size="small"
             disabled={readOnly}
             helperText="3–5 sentences."
+            sx={{ '& textarea': { resize: 'vertical' } }}
           />
         </Stack>
 
