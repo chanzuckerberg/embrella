@@ -131,11 +131,13 @@ metadata:
   name: embrella-tomodata
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
 spec:
   ingressClassName: nginx
+  # Serve /tomodata on both the friendly public host and the argus-generated one.
   rules:
-    - host: maximum-mastiff.staging-biohub.staging.czi.team
-      http:
+    - host: embrella.apps-staging.czbiohub.org
+      http: &tomodata-http
         paths:
           - path: /tomodata(/|$)(.*)
             pathType: ImplementationSpecific
@@ -144,3 +146,5 @@ spec:
                 name: embrella-tomodata
                 port:
                   number: 80
+    - host: maximum-mastiff.staging-biohub.staging.czi.team
+      http: *tomodata-http

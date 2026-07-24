@@ -30,9 +30,9 @@ stack:
       - name: EMBRELLA_DISABLE_SIGNUP
         value: 'True'
       - name: FILESERVER_ALLOWED_HOSTS
-        value: 'https://$(__ARGUS_STACK_INGRESS_HOST)'
+        value: 'https://embrella.apps-staging.czbiohub.org,https://$(__ARGUS_STACK_INGRESS_HOST)'
       - name: EMBRELLA_DEMO_BASE_URL
-        value: 'https://$(__ARGUS_STACK_INGRESS_HOST)/tomodata/'
+        value: 'https://embrella.apps-staging.czbiohub.org/tomodata/'
       - name: FILESERVER_INTERNAL_BASE_URL
         value: 'http://embrella-tomodata/'
 
