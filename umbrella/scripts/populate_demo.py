@@ -19,6 +19,7 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 
+from accounts.models import SystemFeatureFlag
 from django.contrib.auth import get_user_model
 from processes.models import ProcPlan, ProcRun, Review, ReviewTomogram
 from stores.models import Cluster, PathType
@@ -136,7 +137,16 @@ def run():
     user.set_password(DEMO_PASSWORD)
     user.save()
 
-    # 4) Shared session/scope chain (only session_plan is a required FK on MsiSession;
+    # 4) Demo mode on — the frontend reads this flag off /user to show the home-page
+    #    disclaimer (nightly reset, no cluster access). Seeded off by accounts
+    #    migration 0007; enabling it here bakes it into the curated dump, so the
+    #    nightly restore keeps it on without an /admin step.
+    SystemFeatureFlag.objects.update_or_create(
+        name="demo",
+        defaults={"enabled": True, "description": "Public demo server: nightly reset, no cluster access."},
+    )
+
+    # 5) Shared session/scope chain (only session_plan is a required FK on MsiSession;
     #    user must be set — the tomograms list view formats the session owner's
     #    username). Every demo session reuses this one plan.
     scope, _ = Microscope.objects.get_or_create(name=SCOPE_NAME)
@@ -152,15 +162,15 @@ def run():
         scope=scope, camera=camera, imaging_workflow=imaging_workflow, software=software
     )
 
-    # 5) Proc plan is shared: both the tomograms list API and the Summary button are
+    # 6) Proc plan is shared: both the tomograms list API and the Summary button are
     #    hard-gated on the plan name "czii-live".
     proc_plan, _ = ProcPlan.objects.get_or_create(name="czii-live")
 
-    # 6) One Review (+ tomograms) per spec.
+    # 7) One Review (+ tomograms) per spec.
     for spec in DEMO_TOMOGRAMS:
         _seed_tomogram(spec, session_plan=session_plan, user=user, cluster=cluster, proc_plan=proc_plan)
 
-    # 7) Review-less sessions/runs — just enough to appear on the metadata page.
+    # 8) Review-less sessions/runs — just enough to appear on the metadata page.
     for spec in METADATA_ONLY_RUNS:
         msi_session = _seed_session(spec["session_name"], session_plan=session_plan, user=user)
         _seed_proc_run(msi_session, spec["run_id"], proc_plan=proc_plan)
@@ -259,6 +269,7 @@ def _print_summary():
         # Metadata summary + thumbnails only matter for specs shown on the metadata page.
         if spec.get("in_metadata", True):
             print(f"    metadata summary : {thumb_base}/TiltSeries_Metrics.csv")
+            print(f"    parameters       : {thumb_base}/AreTomo3_Session.json")
             print(f"    thumbnail grid   : {thumb_base}/thumbnails/<Tilt_Series>.jpeg")
             print(f"                       {thumb_base}/ctf_thumbnails/<Tilt_Series>.jpeg")
         for position in spec["positions"]:
@@ -267,6 +278,7 @@ def _print_summary():
         base = f"aretomo3/{spec['session_name']}/{spec['run_id']}"
         print(f"\n  [metadata-only]  session={spec['session_name']} run={spec['run_id']}")
         print(f"    metadata summary : {base}/TiltSeries_Metrics.csv")
+        print(f"    parameters       : {base}/AreTomo3_Session.json")
         print(f"    thumbnail grid   : {base}/thumbnails/<Tilt_Series>.jpeg")
     print("\nView:")
     print("  tomograms: http://localhost:8080/processing/tomograms/metadata (rows with a Summary button)")

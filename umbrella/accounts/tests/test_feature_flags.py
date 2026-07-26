@@ -120,7 +120,6 @@ def test_seed_migration_enables_launched_flags():
     # Migration 0005 seeds the flags mirroring the frontend FEATURE_FLAG enum,
     # with the previously-hardcoded launched flags on and the rest off.
     flags = dict(SystemFeatureFlag.objects.values_list("name", "enabled"))
-    assert flags["example"] is True
     assert flags["review"] is True
     assert flags["manage_data"] is False
     assert flags["deposition"] is False

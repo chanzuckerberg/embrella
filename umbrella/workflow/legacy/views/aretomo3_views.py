@@ -21,11 +21,11 @@ from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from stores.models import Cluster, resolve_review_path
-from tem.models import MsiSession
 from umbrella_logger import logger
 
 from common import clusterio
 from common.clusterio import jsonify
+from common.httpio import fetch_remote_text
 from workflow.agent import Aretomo3
 from workflow.views.constants import (
     ARETOMO3_BASIC_TEMPLATE_PATH,
@@ -80,17 +80,19 @@ def get_aretomo3_json(request):
     except MsiSession.DoesNotExist:
         return JsonResponse({"error": f"Session not found: {session_name}"}, status=404)
 
-    base_proc_dir = resolve_review_path(
-        "proc_dir",
+    base_proc_url = resolve_review_path(
+        "proc_url",
         cluster,
         msi_session=msi_session,
         workflow="aretomo3",
         run=run_name,
+        backend_fetch=True,
     )
-    remote_path = os.path.join(base_proc_dir, "AreTomo3_Session.json")
+    session_json_url = f"{base_proc_url}AreTomo3_Session.json"
 
     try:
-        json_data = clusterio.read_remote_file(cluster.cluster_id, remote_path)
+        # Fetch the session JSON over HTTP from the Caddy file server (no SSH needed).
+        json_data = fetch_remote_text(session_json_url)
         full_data = jsonify(json_data)
 
         # Extract version and gain
@@ -108,12 +110,6 @@ def get_aretomo3_json(request):
         error_msg = "File not found"
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=404)
-    except clusterio.SSHDisabledError:
-        # No cluster access (e.g. demo server) — this detail is unavailable.
-        return JsonResponse(
-            {"error": "SSH is disabled on this server", "ssh_disabled": True},
-            status=503,
-        )
     except Exception as err:
         error_msg = f"Please check the server status: {str(err)}"
         logger.error(error_msg)

@@ -1,12 +1,11 @@
 from django.db import migrations
 
-# Flags mirror the frontend FEATURE_FLAG enum. `review` was previously hardcoded
-# as always-on in the frontend; seed it enabled here so the DB is the single
-# source of truth. The rest are seeded off so admins have a toggle.
+# Seeded off: only the public demo deployment turns this on (populate_demo bakes
+# enabled=True into the curated dump). get_or_create — never update_or_create —
+# because the nightly reset loads that dump and runs migrate afterwards, so an
+# update would switch the demo banner back off every night.
 SEED_FLAGS = [
-    ("review", True, "Tomogram review feature."),
-    ("manage_data", False, "Manage data feature."),
-    ("deposition", False, "Deposition feature."),
+    ("demo", False, "Public demo server: no cluster access."),
 ]
 
 
@@ -26,7 +25,7 @@ def unseed_flags(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("accounts", "0004_systemfeatureflag"),
+        ("accounts", "0006_seed_copick_web_flag"),
     ]
 
     operations = [
