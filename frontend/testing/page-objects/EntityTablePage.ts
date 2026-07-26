@@ -172,11 +172,12 @@ export class EntityTablePage extends PageObject {
     ]);
 
     const {
-      pagination: { pageSize, totalResults },
+      pagination: { totalPages },
     } = await response.json();
 
+    // the backend paginates with orphans=3, so use totalPages
     const paginationElement = this.getPaginationLocator();
-    if (pageSize < totalResults) {
+    if (totalPages > 1) {
       await expect(paginationElement).toBeVisible();
     } else {
       await expect(paginationElement).not.toBeVisible();
