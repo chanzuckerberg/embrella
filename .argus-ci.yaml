@@ -5,7 +5,7 @@ apps:
   embrella:
     build:
       filters:
-        branches: ["!main"]
+        branches: ["release-please--branches--main"]
       images:
         backend:
           context: .
