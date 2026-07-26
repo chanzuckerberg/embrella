@@ -4,7 +4,7 @@ import { useContext } from 'react';
 import { Box, Typography, Container, Alert } from '@mui/material';
 import { UserContext } from '@app/common/context/UserProvider';
 import { useDashboardData } from './hooks/useDashboardData';
-import { DemoBanner } from './components/DemoBanner';
+import { DemoBanner, DemoQuickLinks } from './components/demo';
 import { QuickActions } from './components/QuickActions';
 import { RecentJobsTable } from './components/RecentJobsTable';
 import { RecentSessionsTable } from './components/RecentSessionsTable';
@@ -15,8 +15,9 @@ export const DashboardView = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4, mt: -8 }}>
-      {/* Demo-server disclaimer (only when the `demo` feature flag is on) */}
+      {/* Demo-server disclaimer and sample-data links (only when the `demo` feature flag is on) */}
       <DemoBanner />
+      <DemoQuickLinks />
 
       {/* Welcome Header */}
       <Box sx={{ mb: 5 }}>

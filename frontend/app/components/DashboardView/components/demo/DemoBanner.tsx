@@ -5,9 +5,7 @@ import { Alert, AlertTitle, Box, Link, Typography } from '@mui/material';
 import { FEATURE_FLAG, FeatureFlagsContext } from '@app/common/context/FeatureFlagsProvider';
 import { DJANGO_URL } from '@app/common/constants/api';
 
-// Standing disclaimer for the public demo deployment: the DB is restored from a
-// curated dump nightly and SSH_DISABLED is set, so cluster-backed features are
-// dead ends. Rendered only when the `demo` feature flag is on.
+// disclaimer for the public demo deployment
 export const DemoBanner = () => {
   const featureFlags = useContext(FeatureFlagsContext);
 
