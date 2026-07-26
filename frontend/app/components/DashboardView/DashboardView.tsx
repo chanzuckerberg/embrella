@@ -4,6 +4,7 @@ import { useContext } from 'react';
 import { Box, Typography, Container, Alert } from '@mui/material';
 import { UserContext } from '@app/common/context/UserProvider';
 import { useDashboardData } from './hooks/useDashboardData';
+import { DemoBanner } from './components/DemoBanner';
 import { QuickActions } from './components/QuickActions';
 import { RecentJobsTable } from './components/RecentJobsTable';
 import { RecentSessionsTable } from './components/RecentSessionsTable';
@@ -14,12 +15,14 @@ export const DashboardView = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4, mt: -8 }}>
+      {/* Demo-server disclaimer (only when the `demo` feature flag is on) */}
+      <DemoBanner />
+
       {/* Welcome Header */}
       <Box sx={{ mb: 5 }}>
         <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
           Welcome{user?.username ? `, ${user.username}` : ''}
         </Typography>
-        <Typography variant="body1" color="text.secondary"></Typography>
       </Box>
 
       {/* Error Alert */}

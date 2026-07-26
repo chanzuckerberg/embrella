@@ -4,11 +4,11 @@ import { createContext, PropsWithChildren, useContext } from 'react';
 import { UserContext } from './UserProvider';
 
 export enum FEATURE_FLAG {
-  EXAMPLE = 'example',
   REVIEW = 'review',
   MANAGE_DATA = 'manage_data',
   DEPOSITION = 'deposition',
   COPICK_WEB = 'copick-web',
+  DEMO = 'demo',
 }
 
 export const FeatureFlagsContext = createContext<FEATURE_FLAG[]>([]);
