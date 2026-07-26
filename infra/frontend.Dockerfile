@@ -19,21 +19,26 @@ RUN chown node:node /app && mkdir -p /home/node/.yarn && chown -R node:node /hom
 COPY --chown=node:node frontend/.yarn ./.yarn
 COPY --chown=node:node frontend/.yarnrc.yml frontend/package.json frontend/yarn.lock ./
 
-RUN yarn install --immutable
+USER node
+RUN --mount=type=cache,target=/app/.yarn/cache,uid=1000,gid=1000 yarn install --immutable
+
+# ---- dev stage: full node_modules, seeds the frontend_node_modules volume ----
+FROM deps AS dev
 
 # ---- build stage ----
 FROM deps AS build
 COPY --chown=node:node frontend/ ./
 RUN yarn build
 
-# ---- runtime stage (prod) ----
+# ---- runtime stage (prod): Next.js standalone output only ----
 FROM node:24.16.0-slim AS runtime
 ENV NODE_ENV=production \
-    YARN_ENABLE_TELEMETRY=false
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
 WORKDIR /app
-RUN corepack enable && corepack prepare yarn@4.9.1 --activate
-ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-COPY --from=build --chown=node:node /app ./
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
 USER node
 EXPOSE 3000
-CMD ["yarn", "start"]
+CMD ["node", "server.js"]

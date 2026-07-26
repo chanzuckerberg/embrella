@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
     "lint": "eslint . --cache",
     "check": "eslint . --cache && yarn prettier --check . && yarn tsc",
     "fix": "eslint --fix . --cache && yarn prettier --write .",
