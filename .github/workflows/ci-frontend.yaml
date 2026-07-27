@@ -1,0 +1,57 @@
+name: Frontend
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      IMAGE: embrella-frontend-test:ci
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: infra/frontend.Dockerfile
+          target: test
+          load: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha,scope=frontend
+
+      - uses: actions/cache@v4
+        with:
+          path: .cache
+          key: fe-cache-${{ hashFiles('frontend/yarn.lock', 'frontend/eslint.config.mjs') }}-${{ github.sha }}
+          restore-keys: |
+            fe-cache-${{ hashFiles('frontend/yarn.lock', 'frontend/eslint.config.mjs') }}-
+            fe-cache-
+
+      - name: Prepare cache dirs
+        run: mkdir -p .cache/eslint .cache/tsc .cache/jest && chmod -R 777 .cache
+
+      - name: ESLint
+        run: |
+          docker run --rm -v "$PWD/.cache/eslint:/cache" \
+            -e ESLINT_CACHE=/cache/.eslintcache \
+            "$IMAGE" yarn lint:ci
+
+      - name: Prettier
+        run: docker run --rm "$IMAGE" yarn prettier:check
+
+      - name: Typecheck
+        run: |
+          docker run --rm -v "$PWD/.cache/tsc:/cache" \
+            "$IMAGE" yarn typecheck --tsBuildInfoFile /cache/tsc.tsbuildinfo
+
+      - name: Jest
+        run: |
+          docker run --rm -v "$PWD/.cache/jest:/cache" \
+            "$IMAGE" yarn test --ci --cacheDirectory /cache
