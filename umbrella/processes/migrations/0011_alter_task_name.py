@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0010_rename_pipelineplan_procplan_remove_pipe_input_pipe_and_more'),
+        ("processes", "0010_rename_pipelineplan_procplan_remove_pipe_input_pipe_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='name',
-            field=models.CharField(default='motion correction', max_length=255),
+            model_name="task",
+            name="name",
+            field=models.CharField(default="motion correction", max_length=255),
         ),
     ]

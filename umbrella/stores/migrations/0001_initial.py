@@ -4,27 +4,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Path',
+            name="Path",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('static_path', models.CharField(help_text='path referenced in program', max_length=255)),
-                ('overlay_path', models.CharField(help_text='filesystem path of the data', max_length=255)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("static_path", models.CharField(help_text="path referenced in program", max_length=255)),
+                ("overlay_path", models.CharField(help_text="filesystem path of the data", max_length=255)),
             ],
         ),
         migrations.CreateModel(
-            name='PathType',
+            name="PathType",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('static_path', models.CharField(help_text='path reference with placeholder', max_length=255)),
-                ('overlay_path', models.CharField(help_text='filesystem path with placeholder', max_length=255)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("static_path", models.CharField(help_text="path reference with placeholder", max_length=255)),
+                ("overlay_path", models.CharField(help_text="filesystem path with placeholder", max_length=255)),
             ],
         ),
     ]

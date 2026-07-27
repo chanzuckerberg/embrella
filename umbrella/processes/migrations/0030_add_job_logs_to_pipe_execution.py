@@ -4,46 +4,35 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("processes", "0029_fix_denoiset_copick_dependencies"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='pipeexecution',
-            name='stdout_log',
+            model_name="pipeexecution",
+            name="stdout_log",
             field=models.TextField(
-                null=True,
-                blank=True,
-                help_text='Standard output log content from SLURM job (max ~1MB)'
+                null=True, blank=True, help_text="Standard output log content from SLURM job (max ~1MB)"
             ),
         ),
         migrations.AddField(
-            model_name='pipeexecution',
-            name='stderr_log',
+            model_name="pipeexecution",
+            name="stderr_log",
             field=models.TextField(
-                null=True,
-                blank=True,
-                help_text='Standard error log content from SLURM job (max ~1MB)'
+                null=True, blank=True, help_text="Standard error log content from SLURM job (max ~1MB)"
             ),
         ),
         migrations.AddField(
-            model_name='pipeexecution',
-            name='logs_fetched_at',
+            model_name="pipeexecution",
+            name="logs_fetched_at",
             field=models.DateTimeField(
-                null=True,
-                blank=True,
-                help_text='Timestamp when logs were fetched from cluster'
+                null=True, blank=True, help_text="Timestamp when logs were fetched from cluster"
             ),
         ),
         migrations.AddField(
-            model_name='pipeexecution',
-            name='log_fetch_error',
-            field=models.TextField(
-                null=True,
-                blank=True,
-                help_text='Error message if log fetching failed'
-            ),
+            model_name="pipeexecution",
+            name="log_fetch_error",
+            field=models.TextField(null=True, blank=True, help_text="Error message if log fetching failed"),
         ),
     ]

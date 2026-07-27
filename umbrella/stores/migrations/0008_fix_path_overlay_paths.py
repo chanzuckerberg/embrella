@@ -15,9 +15,7 @@ def fix_overlay_paths(apps, schema_editor):
     """Replace incorrect path prefix in all Path records."""
     Path = apps.get_model("stores", "Path")
 
-    updated = Path.objects.filter(
-        overlay_path__startswith="/hpc/processing/group.czii"
-    ).update(
+    updated = Path.objects.filter(overlay_path__startswith="/hpc/processing/group.czii").update(
         overlay_path=Replace(
             "overlay_path",
             Value("/hpc/processing/group.czii"),
@@ -33,9 +31,7 @@ def reverse_overlay_paths(apps, schema_editor):
     """Reverse the path fix (for rollback)."""
     Path = apps.get_model("stores", "Path")
 
-    Path.objects.filter(
-        overlay_path__startswith="/hpc/projects/group.czii"
-    ).update(
+    Path.objects.filter(overlay_path__startswith="/hpc/projects/group.czii").update(
         overlay_path=Replace(
             "overlay_path",
             Value("/hpc/projects/group.czii"),
@@ -45,7 +41,6 @@ def reverse_overlay_paths(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("stores", "0007_alter_staticpath_data_type"),
     ]

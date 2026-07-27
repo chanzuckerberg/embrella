@@ -9,17 +9,16 @@ Method links have their own endpoint (avoids 2-level nesting), so they are read-
 when nested under an annotation.
 """
 
-from rest_framework import serializers
-
 from cryo_grids.models import Sample
+from rest_framework import serializers
 
 from .models import (
     Dataset,
     DatasetFunding,
+    DatasetJob,
     Deposition,
     DepositionAnnotation,
     DepositionAnnotationMethodLink,
-    DatasetJob,
     DepositionSession,
     TiltseriesMetadata,
     TomogramMetadata,
@@ -165,6 +164,7 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
 
 class DatasetSampleSerializer(serializers.ModelSerializer):
     """Nested writable cryo_grids.Sample fields. Sample.name is auto-set, cell-component id is `ontology`."""
+
     class Meta:
         model = Sample
         fields = [
@@ -273,12 +273,8 @@ class DatasetSerializer(serializers.ModelSerializer):
             row.pop("id", None)
             msi_session = row.pop("msi_session", None)
             if msi_session is None:
-                raise serializers.ValidationError(
-                    {"sessions": "Each session entry requires msi_session."}
-                )
-            obj, _ = DepositionSession.objects.update_or_create(
-                dataset=dataset, msi_session=msi_session, defaults=row
-            )
+                raise serializers.ValidationError({"sessions": "Each session entry requires msi_session."})
+            obj, _ = DepositionSession.objects.update_or_create(dataset=dataset, msi_session=msi_session, defaults=row)
             seen.add(obj.id)
         dataset.sessions.exclude(id__in=seen).delete()
 
@@ -332,8 +328,7 @@ class SubmissionDatasetSerializer(serializers.ModelSerializer):
 
     def get_type(self, obj) -> str:
         has_tomograms = any(
-            hasattr(s, "tiltseries_metadata") or hasattr(s, "tomogram_metadata")
-            for s in obj.sessions.all()
+            hasattr(s, "tiltseries_metadata") or hasattr(s, "tomogram_metadata") for s in obj.sessions.all()
         )
         has_annotations = any(a.is_selected for s in obj.sessions.all() for a in s.annotations.all())
         if has_annotations and not has_tomograms:

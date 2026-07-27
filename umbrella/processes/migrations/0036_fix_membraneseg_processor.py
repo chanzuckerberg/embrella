@@ -11,16 +11,16 @@ def fix_membraneseg_processor(apps, schema_editor):
     1. Update 'membraneseg' ProcSoftware to have processor_class='membraneseg'
     2. Remove PipeJoints for membraneseg (it uses parameter-based input selection)
     """
-    ProcSoftware = apps.get_model('processes', 'ProcSoftware')
-    PipeJoint = apps.get_model('processes', 'PipeJoint')
-    PipeInPlan = apps.get_model('processes', 'PipeInPlan')
+    ProcSoftware = apps.get_model("processes", "ProcSoftware")
+    PipeJoint = apps.get_model("processes", "PipeJoint")
+    PipeInPlan = apps.get_model("processes", "PipeInPlan")
 
     # 1. Update 'membraneseg' ProcSoftware to have processor_class='membraneseg'
     try:
-        membr_sw = ProcSoftware.objects.get(name='membraneseg')
-        membr_sw.processor_class = 'membraneseg'
-        membr_sw.default_cluster = 'bruno'
-        membr_sw.allowed_clusters = ['bruno', 'czii']
+        membr_sw = ProcSoftware.objects.get(name="membraneseg")
+        membr_sw.processor_class = "membraneseg"
+        membr_sw.default_cluster = "bruno"
+        membr_sw.allowed_clusters = ["bruno", "czii"]
         membr_sw.active = True
         membr_sw.save()
         print(f"✓ Updated membraneseg ProcSoftware: processor_class='membraneseg'")
@@ -29,10 +29,7 @@ def fix_membraneseg_processor(apps, schema_editor):
 
     # 2. Remove PipeJoints for membraneseg (uses parameter-based input selection)
     try:
-        membr_pip = PipeInPlan.objects.filter(
-            plan__name='membraneseg',
-            pipe__software__name='membraneseg'
-        ).first()
+        membr_pip = PipeInPlan.objects.filter(plan__name="membraneseg", pipe__software__name="membraneseg").first()
 
         if membr_pip:
             membr_joints = PipeJoint.objects.filter(pipe_in_plan=membr_pip)
@@ -50,10 +47,10 @@ def reverse_fix(apps, schema_editor):
     """
     Reverse the migration (note: this won't perfectly restore the old state).
     """
-    ProcSoftware = apps.get_model('processes', 'ProcSoftware')
+    ProcSoftware = apps.get_model("processes", "ProcSoftware")
 
     try:
-        membr_sw = ProcSoftware.objects.get(name='membraneseg')
+        membr_sw = ProcSoftware.objects.get(name="membraneseg")
         membr_sw.processor_class = None
         membr_sw.default_cluster = None
         membr_sw.allowed_clusters = None
@@ -66,7 +63,6 @@ def reverse_fix(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("processes", "0035_init_copick_action_procplans"),
     ]

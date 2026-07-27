@@ -5,64 +5,105 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0003_moleculartag_remove_plungefreezingplan_tag_and_more'),
+        ("cryo_grids", "0003_moleculartag_remove_plungefreezingplan_tag_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CryoGridCassette',
+            name="CryoGridCassette",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=20, unique=True)),
-                ('numbering', models.CharField(choices=[('bot', 'Number 1 at the bottom'), ('top', 'Number 1 at the top')], default='bot', help_text='numbering system on the cassette', max_length=3)),
-                ('max_positions', models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=20, unique=True)),
+                (
+                    "numbering",
+                    models.CharField(
+                        choices=[("bot", "Number 1 at the bottom"), ("top", "Number 1 at the top")],
+                        default="bot",
+                        help_text="numbering system on the cassette",
+                        max_length=3,
+                    ),
+                ),
+                ("max_positions", models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
             ],
         ),
         migrations.AddField(
-            model_name='cryogrid',
-            name='position_in_cassette',
+            model_name="cryogrid",
+            name="position_in_cassette",
             field=models.PositiveSmallIntegerField(blank=True, default=1, null=True),
         ),
         # Note: Original migration added FKs to confluence.page, but that app has been removed
         # These fields were later replaced by documentation_page FK to external_links.ExternalResource
         # Keeping this as a no-op since the fields were subsequently migrated in later migrations
         migrations.AddField(
-            model_name='sample',
-            name='ontology',
-            field=models.CharField(blank=True, help_text='ontology name and values to help database deposition. For example: "GO:0005764" for lysosome', max_length=32),
+            model_name="sample",
+            name="ontology",
+            field=models.CharField(
+                blank=True,
+                help_text='ontology name and values to help database deposition. For example: "GO:0005764" for lysosome',
+                max_length=32,
+            ),
         ),
         migrations.AlterField(
-            model_name='cryogrid',
-            name='freezing_plan',
-            field=models.ForeignKey(help_text='reusable grid freezing plan', on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.plungefreezingplan'),
+            model_name="cryogrid",
+            name="freezing_plan",
+            field=models.ForeignKey(
+                help_text="reusable grid freezing plan",
+                on_delete=django.db.models.deletion.CASCADE,
+                to="cryo_grids.plungefreezingplan",
+            ),
         ),
         migrations.AlterField(
-            model_name='cryogrid',
-            name='freezing_session',
-            field=models.ForeignKey(help_text='who and when the grid was frozen', on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.plungefreezingsession'),
+            model_name="cryogrid",
+            name="freezing_session",
+            field=models.ForeignKey(
+                help_text="who and when the grid was frozen",
+                on_delete=django.db.models.deletion.CASCADE,
+                to="cryo_grids.plungefreezingsession",
+            ),
         ),
         migrations.AlterField(
-            model_name='cryogrid',
-            name='grid_box',
-            field=models.ForeignKey(blank=True, help_text='cryo grid box fit in pucks', null=True, on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.cryogridbox'),
+            model_name="cryogrid",
+            name="grid_box",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="cryo grid box fit in pucks",
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="cryo_grids.cryogridbox",
+            ),
         ),
         migrations.AlterUniqueTogether(
-            name='cryogrid',
-            unique_together={('name', 'freezing_session', 'freezing_plan')},
+            name="cryogrid",
+            unique_together={("name", "freezing_session", "freezing_plan")},
         ),
         migrations.AddField(
-            model_name='cryogrid',
-            name='grid_cassette',
-            field=models.ForeignKey(blank=True, help_text='choose a microscope grid loader cassette when in use', null=True, on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.cryogridcassette'),
+            model_name="cryogrid",
+            name="grid_cassette",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="choose a microscope grid loader cassette when in use",
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="cryo_grids.cryogridcassette",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='cryogrid',
-            constraint=models.UniqueConstraint(condition=models.Q(('trashed', False)), fields=('grid_box', 'position_in_box'), name='unique_box_position', nulls_distinct=True),
+            model_name="cryogrid",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("trashed", False)),
+                fields=("grid_box", "position_in_box"),
+                name="unique_box_position",
+                nulls_distinct=True,
+            ),
         ),
         migrations.AddConstraint(
-            model_name='cryogrid',
-            constraint=models.UniqueConstraint(condition=models.Q(('trashed', False)), fields=('grid_cassette', 'position_in_cassette'), name='unique_cassette_position', nulls_distinct=True),
+            model_name="cryogrid",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("trashed", False)),
+                fields=("grid_cassette", "position_in_cassette"),
+                name="unique_cassette_position",
+                nulls_distinct=True,
+            ),
         ),
     ]

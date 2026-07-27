@@ -3,7 +3,6 @@ from django.db import models
 from django.utils import timezone
 from external_links.models import ExternalResource
 from projects.models import Project
-
 from umbrella.choices import CANE_COLORS, GRID_BOX_COLORS, GRID_BOX_NUMBERING, GRID_CASSETTE_NUMBERING, PUCK_COLORS
 
 
@@ -136,6 +135,7 @@ class PlungeFreezingSession(models.Model):
         username = self.user.username.split("@")[0] if self.user and self.user.username else "unknown"
         return f"{date_str}-{username}-{self.id}"
 
+
 SAMPLE_TYPE_CHOICES = [
     ("cell_line", "Cell Line"),
     ("in_silico", "In Silico"),
@@ -148,6 +148,7 @@ SAMPLE_TYPE_CHOICES = [
     ("tissue", "Tissue"),
     ("virus", "Virus"),
 ]
+
 
 class Sample(models.Model):
     name = models.CharField(

@@ -6,16 +6,16 @@ from django.db import IntegrityError
 
 def detect_system_name(url):
     """Detect the documentation system based on URL."""
-    if 'atlassian.net' in url or 'confluence' in url.lower():
-        return 'Confluence'
-    elif 'benchling.com' in url:
-        return 'Benchling'
-    elif 'docs.google.com' in url:
-        return 'Google Docs'
-    elif 'drive.google.com' in url:
-        return 'Google Drive'
+    if "atlassian.net" in url or "confluence" in url.lower():
+        return "Confluence"
+    elif "benchling.com" in url:
+        return "Benchling"
+    elif "docs.google.com" in url:
+        return "Google Docs"
+    elif "drive.google.com" in url:
+        return "Google Drive"
     else:
-        return 'Other'
+        return "Other"
 
 
 def migrate_legacy_docs(apps, schema_editor):
@@ -30,9 +30,9 @@ def migrate_legacy_docs(apps, schema_editor):
     connection = schema_editor.connection
     tables = connection.introspection.table_names()
 
-    has_confluence_space = 'confluence_space' in tables
-    has_confluence_page = 'confluence_page' in tables
-    has_clouddocs = 'clouddocs_drivefolder' in tables
+    has_confluence_space = "confluence_space" in tables
+    has_confluence_page = "confluence_page" in tables
+    has_clouddocs = "clouddocs_drivefolder" in tables
 
     if not (has_confluence_space or has_confluence_page or has_clouddocs):
         print("Legacy tables not found - skipping data migration")
@@ -47,17 +47,15 @@ def migrate_legacy_docs(apps, schema_editor):
             for pk, name, url, space_id in cursor.fetchall():
                 # Check if already migrated (idempotent check)
                 if not ExternalResource.objects.filter(
-                    resource_type='doc_space',
-                    system_name='Confluence',
-                    url=url
+                    resource_type="doc_space", system_name="Confluence", url=url
                 ).exists():
                     try:
                         ExternalResource.objects.create(
-                            resource_type='doc_space',
-                            system_name='Confluence',
+                            resource_type="doc_space",
+                            system_name="Confluence",
                             name=name,
                             url=url,
-                            metadata={'space_id': space_id, 'migrated_from': 'confluence.Space'}
+                            metadata={"space_id": space_id, "migrated_from": "confluence.Space"},
                         )
                         migrated_spaces += 1
                     except IntegrityError:
@@ -72,11 +70,11 @@ def migrate_legacy_docs(apps, schema_editor):
         with schema_editor.connection.cursor() as cursor:
             # Check which columns exist in the table
             confluence_page_columns = {
-                col.name for col in connection.introspection.get_table_description(cursor, 'confluence_page')
+                col.name for col in connection.introspection.get_table_description(cursor, "confluence_page")
             }
 
             # Build SELECT query based on available columns
-            has_page_id = 'page_id' in confluence_page_columns
+            has_page_id = "page_id" in confluence_page_columns
             if has_page_id:
                 cursor.execute("SELECT id, name, url, page_id FROM confluence_page")
                 for page_pk, name, url, page_id in cursor.fetchall():
@@ -85,11 +83,11 @@ def migrate_legacy_docs(apps, schema_editor):
                     if not ExternalResource.objects.filter(url=url).exists():
                         try:
                             ExternalResource.objects.create(
-                                resource_type='doc_page',
+                                resource_type="doc_page",
                                 system_name=system_name,
                                 name=name,
                                 url=url,
-                                metadata={'page_id': page_id, 'migrated_from': 'confluence.Page'}
+                                metadata={"page_id": page_id, "migrated_from": "confluence.Page"},
                             )
                             migrated_pages += 1
                         except IntegrityError:
@@ -105,19 +103,19 @@ def migrate_legacy_docs(apps, schema_editor):
                         # Extract page_id from URL if possible (Confluence URLs typically contain page ID)
                         # e.g., https://confluence.example.com/pages/123456/PageTitle
                         page_id = None
-                        if '/pages/' in url:
+                        if "/pages/" in url:
                             try:
-                                page_id = url.split('/pages/')[1].split('/')[0]
+                                page_id = url.split("/pages/")[1].split("/")[0]
                             except (IndexError, ValueError):
                                 pass
 
                         try:
                             ExternalResource.objects.create(
-                                resource_type='doc_page',
+                                resource_type="doc_page",
                                 system_name=system_name,
                                 name=name,
                                 url=url,
-                                metadata={'page_id': page_id, 'migrated_from': 'confluence.Page'}
+                                metadata={"page_id": page_id, "migrated_from": "confluence.Page"},
                             )
                             migrated_pages += 1
                         except IntegrityError:
@@ -132,11 +130,11 @@ def migrate_legacy_docs(apps, schema_editor):
         with schema_editor.connection.cursor() as cursor:
             # Check which columns exist in the table
             clouddocs_columns = {
-                col.name for col in connection.introspection.get_table_description(cursor, 'clouddocs_drivefolder')
+                col.name for col in connection.introspection.get_table_description(cursor, "clouddocs_drivefolder")
             }
 
             # Build SELECT query based on available columns
-            has_folder_id = 'folder_id' in clouddocs_columns
+            has_folder_id = "folder_id" in clouddocs_columns
             if has_folder_id:
                 cursor.execute("SELECT id, name, url, folder_id FROM clouddocs_drivefolder")
                 for folder_pk, name, url, folder_id in cursor.fetchall():
@@ -145,11 +143,11 @@ def migrate_legacy_docs(apps, schema_editor):
                     if not ExternalResource.objects.filter(url=url).exists():
                         try:
                             ExternalResource.objects.create(
-                                resource_type='doc_space',
+                                resource_type="doc_space",
                                 system_name=system_name,
                                 name=name,
                                 url=url,
-                                metadata={'folder_id': folder_id, 'migrated_from': 'clouddocs.DriveFolder'}
+                                metadata={"folder_id": folder_id, "migrated_from": "clouddocs.DriveFolder"},
                             )
                             migrated_folders += 1
                         except IntegrityError:
@@ -165,26 +163,28 @@ def migrate_legacy_docs(apps, schema_editor):
                         # Extract folder_id from URL if possible (Google Drive URLs typically contain folder ID)
                         # e.g., https://drive.google.com/drive/folders/1abc123
                         folder_id = None
-                        if '/folders/' in url:
+                        if "/folders/" in url:
                             try:
-                                folder_id = url.split('/folders/')[1].split('?')[0].split('/')[0]
+                                folder_id = url.split("/folders/")[1].split("?")[0].split("/")[0]
                             except (IndexError, ValueError):
                                 pass
 
                         try:
                             ExternalResource.objects.create(
-                                resource_type='doc_space',
+                                resource_type="doc_space",
                                 system_name=system_name,
                                 name=name,
                                 url=url,
-                                metadata={'folder_id': folder_id, 'migrated_from': 'clouddocs.DriveFolder'}
+                                metadata={"folder_id": folder_id, "migrated_from": "clouddocs.DriveFolder"},
                             )
                             migrated_folders += 1
                         except IntegrityError:
                             # URL already exists from another source - skip
                             pass
 
-    print(f"Migrated {migrated_spaces} Confluence spaces, {migrated_pages} Confluence pages, {migrated_folders} Google Drive folders")
+    print(
+        f"Migrated {migrated_spaces} Confluence spaces, {migrated_pages} Confluence pages, {migrated_folders} Google Drive folders"
+    )
     if migrated_spaces == 0 and migrated_pages == 0 and migrated_folders == 0:
         print("(No new records migrated - data already exists)")
 
@@ -193,13 +193,12 @@ def reverse_migration(apps, schema_editor):
     """Reverse migration - delete migrated ExternalResources."""
     ExternalResource = apps.get_model("external_links", "ExternalResource")
     deleted = ExternalResource.objects.filter(
-        metadata__migrated_from__in=['confluence.Space', 'confluence.Page', 'clouddocs.DriveFolder']
+        metadata__migrated_from__in=["confluence.Space", "confluence.Page", "clouddocs.DriveFolder"]
     ).delete()
     print(f"Deleted {deleted[0]} migrated ExternalResources")
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("external_links", "0002_alter_externalresource_unique_together_and_more"),
     ]

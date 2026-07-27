@@ -5,9 +5,8 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('projects', '0004_alter_project_confluence_space_and_more'),
+        ("projects", "0004_alter_project_confluence_space_and_more"),
     ]
 
     operations = [

@@ -5,19 +5,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0008_annotationmethod_annotation_particlegallery'),
+        ("processes", "0008_annotationmethod_annotation_particlegallery"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='annotation',
-            name='method',
+            model_name="annotation",
+            name="method",
         ),
         migrations.AlterField(
-            model_name='annotation',
-            name='annotation_method',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.annotationmethod'),
+            model_name="annotation",
+            name="annotation_method",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.annotationmethod"),
         ),
     ]

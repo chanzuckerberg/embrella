@@ -5,8 +5,6 @@ Tests for MDOC magnification reader.
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from workflow.processors.aretomo3.mdoc_reader import (
     parse_mdoc_magnification,
     read_mdoc_magnification,

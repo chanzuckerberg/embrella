@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("processes", "0031_procsoftware_active"),
     ]
@@ -121,9 +120,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "job_id",
-                    models.CharField(
-                        blank=True, db_index=True, max_length=32, null=True
-                    ),
+                    models.CharField(blank=True, db_index=True, max_length=32, null=True),
                 ),
                 ("syncer_type", models.CharField(max_length=50)),
                 ("session_name", models.CharField(max_length=100)),
@@ -159,12 +156,8 @@ class Migration(migrations.Migration):
             ],
             options={
                 "indexes": [
-                    models.Index(
-                        fields=["job_id"], name="processes_s_job_id_154c3e_idx"
-                    ),
-                    models.Index(
-                        fields=["status"], name="processes_s_status_905b5e_idx"
-                    ),
+                    models.Index(fields=["job_id"], name="processes_s_job_id_154c3e_idx"),
+                    models.Index(fields=["status"], name="processes_s_status_905b5e_idx"),
                 ],
             },
         ),

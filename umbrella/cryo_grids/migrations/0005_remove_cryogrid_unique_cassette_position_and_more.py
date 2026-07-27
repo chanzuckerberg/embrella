@@ -4,41 +4,49 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0004_cryogridcassette_cryogrid_position_in_cassette_and_more'),
+        ("cryo_grids", "0004_cryogridcassette_cryogrid_position_in_cassette_and_more"),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='cryogrid',
-            name='unique_cassette_position',
+            model_name="cryogrid",
+            name="unique_cassette_position",
         ),
         migrations.RemoveField(
-            model_name='cryogrid',
-            name='position_in_cassette',
+            model_name="cryogrid",
+            name="position_in_cassette",
         ),
         migrations.RemoveField(
-            model_name='cryogridcassette',
-            name='max_positions',
+            model_name="cryogridcassette",
+            name="max_positions",
         ),
         migrations.AddField(
-            model_name='cryogrid',
-            name='slot_number_in_cassette',
-            field=models.PositiveSmallIntegerField(blank=True, default=1, help_text='The slot the grid is put in the cryo cassette if exists', null=True),
+            model_name="cryogrid",
+            name="slot_number_in_cassette",
+            field=models.PositiveSmallIntegerField(
+                blank=True, default=1, help_text="The slot the grid is put in the cryo cassette if exists", null=True
+            ),
         ),
         migrations.AddField(
-            model_name='cryogridcassette',
-            name='max_slots',
-            field=models.PositiveSmallIntegerField(blank=True, default=12, help_text='number of slots available for grids', null=True),
+            model_name="cryogridcassette",
+            name="max_slots",
+            field=models.PositiveSmallIntegerField(
+                blank=True, default=12, help_text="number of slots available for grids", null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='plungefreezingplan',
-            name='tags',
-            field=models.ManyToManyField(blank=True, to='cryo_grids.moleculartag'),
+            model_name="plungefreezingplan",
+            name="tags",
+            field=models.ManyToManyField(blank=True, to="cryo_grids.moleculartag"),
         ),
         migrations.AddConstraint(
-            model_name='cryogrid',
-            constraint=models.UniqueConstraint(condition=models.Q(('trashed', False)), fields=('grid_cassette', 'slot_number_in_cassette'), name='unique_cassette_slot', nulls_distinct=True),
+            model_name="cryogrid",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("trashed", False)),
+                fields=("grid_cassette", "slot_number_in_cassette"),
+                name="unique_cassette_slot",
+                nulls_distinct=True,
+            ),
         ),
     ]

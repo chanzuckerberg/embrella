@@ -2,4 +2,4 @@
 
 from workflow.processors.denoiset.processor import DenoisETProcessor
 
-__all__ = ['DenoisETProcessor']
+__all__ = ["DenoisETProcessor"]

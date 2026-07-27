@@ -25,22 +25,49 @@ class Aretomo3(object):
         self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
         logger.info(f"Connected to {self.cluster_id}")
 
-    def run_advanced_script(self, project_name, use_old_gain, run_number, pixel_size, dose_number, frame_dose, gain_file_name=None, denoise_training=None, use_advanced_params=None, tilt_axis=None, tilt_axis_refine=None, align_z=None, vol_z=None, imod_option=None, local_shift=None, tilt_offset=None, thickness_mesaure=None, user_id=None):
+    def run_advanced_script(
+        self,
+        project_name,
+        use_old_gain,
+        run_number,
+        pixel_size,
+        dose_number,
+        frame_dose,
+        gain_file_name=None,
+        denoise_training=None,
+        use_advanced_params=None,
+        tilt_axis=None,
+        tilt_axis_refine=None,
+        align_z=None,
+        vol_z=None,
+        imod_option=None,
+        local_shift=None,
+        tilt_offset=None,
+        thickness_mesaure=None,
+        user_id=None,
+    ):
         if self.ssh is None:
             raise Exception("SSH connection not established. Call connect() first.")
 
         try:
             # Log input parameters
-            logger.info(f"Input Parameters: project_name={project_name}, use_old_gain={use_old_gain}, run_number={run_number}, pixel_size={pixel_size}, dose_number={dose_number}, frame_dose={frame_dose}, gain_file_name={gain_file_name}, denoise_training={denoise_training}, use_advanced_params={use_advanced_params}, tilt_axis={tilt_axis}, tilt_axis_refine={tilt_axis_refine}, align_z={align_z}, vol_z={vol_z}, imod_option={imod_option}, local_shift={local_shift}, tilt_offset={tilt_offset}, thickness_mesaure={thickness_mesaure}")
+            logger.info(
+                f"Input Parameters: project_name={project_name}, use_old_gain={use_old_gain}, run_number={run_number}, pixel_size={pixel_size}, dose_number={dose_number}, frame_dose={frame_dose}, gain_file_name={gain_file_name}, denoise_training={denoise_training}, use_advanced_params={use_advanced_params}, tilt_axis={tilt_axis}, tilt_axis_refine={tilt_axis_refine}, align_z={align_z}, vol_z={vol_z}, imod_option={imod_option}, local_shift={local_shift}, tilt_offset={tilt_offset}, thickness_mesaure={thickness_mesaure}"
+            )
 
             # Validate required parameters
             if not all([project_name, use_old_gain, run_number, pixel_size, dose_number]):
                 missing_params = []
-                if not project_name: missing_params.append("project_name")
-                if not use_old_gain: missing_params.append("use_old_gain")
-                if not run_number: missing_params.append("run_number")
-                if not pixel_size: missing_params.append("pixel_size")
-                if not dose_number: missing_params.append("dose_number")
+                if not project_name:
+                    missing_params.append("project_name")
+                if not use_old_gain:
+                    missing_params.append("use_old_gain")
+                if not run_number:
+                    missing_params.append("run_number")
+                if not pixel_size:
+                    missing_params.append("pixel_size")
+                if not dose_number:
+                    missing_params.append("dose_number")
                 raise ValueError(f"Missing required parameters: {', '.join(missing_params)}")
 
             # Set up the Jinja2 environment using the directory of the template
@@ -75,7 +102,7 @@ class Aretomo3(object):
                     run_number=run_number,
                     pixel_size=pixel_size,
                     dose_number=dose_number,
-                    frame_dose=frame_dose if frame_dose and frame_dose.lower() != 'none' else '',
+                    frame_dose=frame_dose if frame_dose and frame_dose.lower() != "none" else "",
                     gain_file_name=gain_file_name,
                     denoise_training=denoise_training,
                     use_advanced_params=use_advanced_params,
@@ -125,8 +152,8 @@ class Aretomo3(object):
                 submit_cmd = f"cd {self.remote_script_dir} && sbatch {remote_script_filename}"
                 logger.info(f"Executing command: {submit_cmd}")
                 stdin, stdout, stderr = self.ssh.exec_command(submit_cmd)
-                submit_output = stdout.read().decode('utf-8')
-                submit_error = stderr.read().decode('utf-8')
+                submit_output = stdout.read().decode("utf-8")
+                submit_error = stderr.read().decode("utf-8")
 
                 logger.info(f"Submission Output: {submit_output}")
                 if submit_error:
@@ -152,7 +179,9 @@ class Aretomo3(object):
         """Execute the AreTomo3 script using a Jinja2 template."""
         try:
             logger.info(f"Running AreTomo3 script for project {project_name}")
-            logger.info(f"Input parameters: run_number={run_number}, pix_size={pix_size}, total_dose={total_dose}, frame_dose={frame_dose}")
+            logger.info(
+                f"Input parameters: run_number={run_number}, pix_size={pix_size}, total_dose={total_dose}, frame_dose={frame_dose}"
+            )
 
             # Set up Jinja2 environment
             env = Environment(loader=FileSystemLoader(os.path.dirname(self.local_template_path)))
@@ -176,14 +205,14 @@ class Aretomo3(object):
 
             # Upload the rendered script to the remote server
             remote_script_path = f"{self.remote_script_dir}/run_aretomo3_basic_{project_name}_{run_number}.sh"
-            with self.ssh.open_sftp().file(remote_script_path, 'w') as f:
+            with self.ssh.open_sftp().file(remote_script_path, "w") as f:
                 f.write(rendered_script)
 
             # Make the script executable
-            self.ssh.exec_command(f'chmod 755 {remote_script_path}')
+            self.ssh.exec_command(f"chmod 755 {remote_script_path}")
 
             # Submit the job using sbatch
-            stdin, stdout, stderr = self.ssh.exec_command(f'sbatch {remote_script_path}')
+            stdin, stdout, stderr = self.ssh.exec_command(f"sbatch {remote_script_path}")
             output = stdout.read().decode()
             error = stderr.read().decode()
 
@@ -198,7 +227,6 @@ class Aretomo3(object):
             error_msg = f"Error in run_script: {str(e)}"
             logger.error(error_msg)
             return "", error_msg
-
 
 
 class Denoiset(object):
@@ -257,7 +285,7 @@ class Denoiset(object):
             # --- NEW LOGIC: Remove existing file if it exists ---
             try:
                 sftp.stat(remote_script_path)  # Check if file exists
-                sftp.remove(remote_script_path) # Remove it if it does
+                sftp.remove(remote_script_path)  # Remove it if it does
                 logger.info(f"Removed existing script file: {remote_script_path}")
             except FileNotFoundError:
                 # This just means the file doesn't exist—safe to ignore
@@ -272,8 +300,8 @@ class Denoiset(object):
             # Submit the job using sbatch.
             submit_cmd = f"cd {self.remote_script_dir} && sbatch {remote_script_filename}"
             stdin, stdout, stderr = self.ssh.exec_command(submit_cmd)
-            submit_output = stdout.read().decode('utf-8')
-            submit_error = stderr.read().decode('utf-8')
+            submit_output = stdout.read().decode("utf-8")
+            submit_error = stderr.read().decode("utf-8")
 
             logger.info(f"Submission Output: {submit_output}")
             if submit_error:
@@ -309,7 +337,7 @@ class StatusChecker(object):
         """
         Establish an SSH connection to the remote server.
         """
-        self.auth["username"] = os.getenv("SLURM_USER") # force to be service user
+        self.auth["username"] = os.getenv("SLURM_USER")  # force to be service user
         self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
         logger.info(f"Connected to {self.cluster_id}")
 
@@ -359,8 +387,8 @@ class StatusChecker(object):
             check_cmd = f"cd {self.remote_script_dir} && bash {remote_script_filename} {session_name}"
             stdin, stdout, stderr = self.ssh.exec_command(check_cmd)
 
-            script_output = stdout.read().decode('utf-8', errors='replace')
-            script_error = stderr.read().decode('utf-8', errors='replace')
+            script_output = stdout.read().decode("utf-8", errors="replace")
+            script_error = stderr.read().decode("utf-8", errors="replace")
 
             # Log results
             if script_output.strip():
@@ -392,8 +420,8 @@ class StatusChecker(object):
         stdin, stdout, stderr = self.ssh.exec_command(squeue_cmd)
 
         # Read the output and error streams
-        output = stdout.read().decode('utf-8')
-        error = stderr.read().decode('utf-8')
+        output = stdout.read().decode("utf-8")
+        error = stderr.read().decode("utf-8")
 
         if error:
             logger.error(f"Track Jobs Error: {error}")
@@ -409,7 +437,9 @@ class StatusChecker(object):
             self.ssh = None
             logger.info("SSH connection closed.")
 
+
 # A generic class to submit remote jobs using a Jinja2 template
+
 
 class RemoteJobSubmitter:
     def __init__(self, cluster_id, auth, remote_script_dir):
@@ -422,8 +452,8 @@ class RemoteJobSubmitter:
         self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
 
     def run_script(self, template_path: str, job_name: str, **kwargs):
-        if template_path is None and 'script_content' in kwargs:
-            rendered = kwargs['script_content']
+        if template_path is None and "script_content" in kwargs:
+            rendered = kwargs["script_content"]
         else:
             # Render any Jinja template with arbitrary parameters
             env = Environment(loader=FileSystemLoader(os.path.dirname(template_path)))
@@ -441,7 +471,7 @@ class RemoteJobSubmitter:
                 # Directory doesn't exist, create it (and any parent directories)
                 parent_dirs = []
                 current_path = self.remote_script_dir
-                while current_path and current_path != '/':
+                while current_path and current_path != "/":
                     try:
                         sftp.stat(current_path)
                         break  # This directory exists, stop
@@ -469,20 +499,18 @@ class RemoteJobSubmitter:
             raise Exception("SSH connection not established. Call connect() first.")
 
         # Execute the scancel command with the given job number
-        stdin, stdout, stderr = self.ssh.exec_command(f'scancel {job_number}')
+        stdin, stdout, stderr = self.ssh.exec_command(f"scancel {job_number}")
 
         # Read the output and error streams
-        output = stdout.read().decode('utf-8')
-        error = stderr.read().decode('utf-8')
+        output = stdout.read().decode("utf-8")
+        error = stderr.read().decode("utf-8")
 
         if error:
             logger.error(f"Cancel Error: {error}")
 
-        return output == '' and error == '', error
+        return output == "" and error == "", error
 
     def close(self):
         if self.ssh:
             self.ssh.close()
             self.ssh = None
-
-

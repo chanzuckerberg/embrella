@@ -4,23 +4,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0028_alter_cane_color_alter_cryogrid_freezing_session_and_more'),
+        ("cryo_grids", "0028_alter_cane_color_alter_cryogrid_freezing_session_and_more"),
     ]
 
     operations = [
         migrations.AlterUniqueTogether(
-            name='cryogridbox',
+            name="cryogridbox",
             unique_together=set(),
         ),
         migrations.AlterField(
-            model_name='cryogridbox',
-            name='name',
+            model_name="cryogridbox",
+            name="name",
             field=models.CharField(max_length=100),
         ),
         migrations.AlterUniqueTogether(
-            name='cryogridbox',
-            unique_together={('puck', 'position_in_puck', 'name')},
+            name="cryogridbox",
+            unique_together={("puck", "position_in_puck", "name")},
         ),
     ]

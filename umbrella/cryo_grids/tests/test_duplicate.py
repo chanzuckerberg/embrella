@@ -88,15 +88,11 @@ class TestDuplicateGridService:
         assert new_grid.slot_number_in_cassette is None
 
     def test_multi_copy_assigns_distinct_positions(self, source_grid, dest_box, user):
-        copies = duplicate_grid(
-            source_grid=source_grid, destination_box=dest_box, number_to_copy=3, request_user=user
-        )
+        copies = duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=3, request_user=user)
         assert sorted(c.position_in_box for c in copies) == [1, 2, 3]
         assert sorted(c.copy_number for c in copies) == [2, 3, 4]
 
-    def test_copy_skips_occupied_positions(
-        self, source_grid, dest_box, user, original_user, session, specimen
-    ):
+    def test_copy_skips_occupied_positions(self, source_grid, dest_box, user, original_user, session, specimen):
         # Pre-occupy positions 1 and 3 in dest_box.
         CryoGrid.objects.create(
             name="other1",
@@ -114,37 +110,27 @@ class TestDuplicateGridService:
             grid_box=dest_box,
             position_in_box=3,
         )
-        copies = duplicate_grid(
-            source_grid=source_grid, destination_box=dest_box, number_to_copy=2, request_user=user
-        )
+        copies = duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=2, request_user=user)
         assert sorted(c.position_in_box for c in copies) == [2, 4]
 
     def test_too_many_copies_raises(self, source_grid, dest_box, user):
         with pytest.raises(DuplicateGridError):
-            duplicate_grid(
-                source_grid=source_grid, destination_box=dest_box, number_to_copy=5, request_user=user
-            )
+            duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=5, request_user=user)
 
     def test_partial_failure_rolls_back(self, source_grid, dest_box, user):
         """Fail mid-way: no copies should exist after the exception."""
         before = CryoGrid.objects.count()
         with pytest.raises(DuplicateGridError):
-            duplicate_grid(
-                source_grid=source_grid, destination_box=dest_box, number_to_copy=99, request_user=user
-            )
+            duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=99, request_user=user)
         assert CryoGrid.objects.count() == before
 
     def test_trashed_source_rejected(self, source_grid, dest_box, user):
         source_grid.trashed = True
         source_grid.save()
         with pytest.raises(DuplicateGridError):
-            duplicate_grid(
-                source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user
-            )
+            duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user)
 
-    def test_labels_copied_with_duplicator_as_added_by(
-        self, source_grid, dest_box, user, original_user
-    ):
+    def test_labels_copied_with_duplicator_as_added_by(self, source_grid, dest_box, user, original_user):
         label = Label.objects.create(name="lbl", color="#fff")
         GridLabel.objects.create(grid=source_grid, label=label, added_by=original_user)
 
@@ -156,9 +142,7 @@ class TestDuplicateGridService:
         assert new_labels.first().added_by == user
         assert new_labels.first().label == label
 
-    def test_trashed_grid_position_is_reused(
-        self, source_grid, dest_box, user, original_user, session, specimen
-    ):
+    def test_trashed_grid_position_is_reused(self, source_grid, dest_box, user, original_user, session, specimen):
         CryoGrid.objects.create(
             name="ghost",
             user=original_user,
@@ -168,16 +152,12 @@ class TestDuplicateGridService:
             position_in_box=1,
             trashed=True,
         )
-        [copy] = duplicate_grid(
-            source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user
-        )
+        [copy] = duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user)
         assert copy.position_in_box == 1
 
     def test_zero_copies_rejected(self, source_grid, dest_box, user):
         with pytest.raises(DuplicateGridError):
-            duplicate_grid(
-                source_grid=source_grid, destination_box=dest_box, number_to_copy=0, request_user=user
-            )
+            duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=0, request_user=user)
 
     def test_copy_number_follows_family_max(
         self, source_grid, dest_box, user, original_user, session, specimen, source_box
@@ -186,12 +166,22 @@ class TestDuplicateGridService:
         # Pre-create siblings at copy_number 2 and 3. They share name/session/specimen
         # with source_grid (which is copy 1) but live in the source box at positions 2 and 3.
         CryoGrid.objects.create(
-            name=source_grid.name, user=original_user, freezing_session=session, specimen=specimen,
-            grid_box=source_box, position_in_box=2, copy_number=2,
+            name=source_grid.name,
+            user=original_user,
+            freezing_session=session,
+            specimen=specimen,
+            grid_box=source_box,
+            position_in_box=2,
+            copy_number=2,
         )
         CryoGrid.objects.create(
-            name=source_grid.name, user=original_user, freezing_session=session, specimen=specimen,
-            grid_box=source_box, position_in_box=3, copy_number=3,
+            name=source_grid.name,
+            user=original_user,
+            freezing_session=session,
+            specimen=specimen,
+            grid_box=source_box,
+            position_in_box=3,
+            copy_number=3,
         )
         [new_grid] = duplicate_grid(
             source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user
@@ -204,22 +194,28 @@ class TestDuplicateGridService:
         """Duplicating a source that is itself a later copy still uses the family max, not source.copy_number."""
         # Family has copies 1, 2. Source is copy 2.
         CryoGrid.objects.create(
-            name="family", user=original_user, freezing_session=session, specimen=specimen,
-            grid_box=source_box, position_in_box=1, copy_number=1,
+            name="family",
+            user=original_user,
+            freezing_session=session,
+            specimen=specimen,
+            grid_box=source_box,
+            position_in_box=1,
+            copy_number=1,
         )
         source = CryoGrid.objects.create(
-            name="family", user=original_user, freezing_session=session, specimen=specimen,
-            grid_box=source_box, position_in_box=2, copy_number=2,
+            name="family",
+            user=original_user,
+            freezing_session=session,
+            specimen=specimen,
+            grid_box=source_box,
+            position_in_box=2,
+            copy_number=2,
         )
-        [new_grid] = duplicate_grid(
-            source_grid=source, destination_box=dest_box, number_to_copy=1, request_user=user
-        )
+        [new_grid] = duplicate_grid(source_grid=source, destination_box=dest_box, number_to_copy=1, request_user=user)
         assert new_grid.copy_number == 3
 
     def test_consecutive_duplicates_keep_climbing(self, source_grid, dest_box, user):
-        [first] = duplicate_grid(
-            source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user
-        )
+        [first] = duplicate_grid(source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user)
         [second] = duplicate_grid(
             source_grid=source_grid, destination_box=dest_box, number_to_copy=1, request_user=user
         )
@@ -234,12 +230,21 @@ class TestGetAvailablePositions:
 
     def test_with_used_and_trashed(self, dest_box, original_user, session, specimen):
         CryoGrid.objects.create(
-            name="a", user=original_user, freezing_session=session, specimen=specimen,
-            grid_box=dest_box, position_in_box=2,
+            name="a",
+            user=original_user,
+            freezing_session=session,
+            specimen=specimen,
+            grid_box=dest_box,
+            position_in_box=2,
         )
         CryoGrid.objects.create(
-            name="b", user=original_user, freezing_session=session, specimen=specimen,
-            grid_box=dest_box, position_in_box=3, trashed=True,
+            name="b",
+            user=original_user,
+            freezing_session=session,
+            specimen=specimen,
+            grid_box=dest_box,
+            position_in_box=3,
+            trashed=True,
         )
         assert get_available_positions(dest_box) == [1, 3, 4]
 
@@ -312,8 +317,12 @@ class TestAvailablePositionsEndpoint:
 
     def test_partial(self, dest_box, user, original_user, session, specimen):
         CryoGrid.objects.create(
-            name="x", user=original_user, freezing_session=session, specimen=specimen,
-            grid_box=dest_box, position_in_box=2,
+            name="x",
+            user=original_user,
+            freezing_session=session,
+            specimen=specimen,
+            grid_box=dest_box,
+            position_in_box=2,
         )
         client = APIClient()
         client.force_login(user)

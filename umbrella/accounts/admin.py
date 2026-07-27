@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import Profile, SystemFeatureFlag, UserClusterCredentials
 
+
 @admin.register(SystemFeatureFlag)
 class SystemFeatureFlagAdmin(admin.ModelAdmin):
     list_display = ("name", "enabled", "description")

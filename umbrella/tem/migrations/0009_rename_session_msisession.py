@@ -5,19 +5,18 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0005_remove_cryogrid_unique_cassette_position_and_more'),
-        ('processes', '0003_rename_tomo_session_procrun_msi_session_and_more'),
-        ('projects', '0005_alter_project_confluence_space_and_more'),
-        ('stores', '0004_alter_staticpath_data_type'),
-        ('tem', '0008_alter_session_atlas_alter_session_frames_and_more'),
+        ("cryo_grids", "0005_remove_cryogrid_unique_cassette_position_and_more"),
+        ("processes", "0003_rename_tomo_session_procrun_msi_session_and_more"),
+        ("projects", "0005_alter_project_confluence_space_and_more"),
+        ("stores", "0004_alter_staticpath_data_type"),
+        ("tem", "0008_alter_session_atlas_alter_session_frames_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RenameModel(
-            old_name='Session',
-            new_name='MsiSession',
+            old_name="Session",
+            new_name="MsiSession",
         ),
     ]

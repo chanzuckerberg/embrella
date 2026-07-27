@@ -5,16 +5,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0005_remove_cryogrid_unique_cassette_position_and_more'),
-        ('projects', '0005_alter_project_confluence_space_and_more'),
+        ("cryo_grids", "0005_remove_cryogrid_unique_cassette_position_and_more"),
+        ("projects", "0005_alter_project_confluence_space_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cryogrid',
-            name='intended_project',
-            field=models.ForeignKey(help_text='Optionally assign the project this grid is made for. This makes the grid easier to find.', null=True, on_delete=django.db.models.deletion.SET_NULL, to='projects.project'),
+            model_name="cryogrid",
+            name="intended_project",
+            field=models.ForeignKey(
+                help_text="Optionally assign the project this grid is made for. This makes the grid easier to find.",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="projects.project",
+            ),
         ),
     ]

@@ -601,8 +601,8 @@ class BaseProcessor(ABC):
             if views_module and hasattr(views_module, 'get_dynamic_options'):
                 options = views_module.get_dynamic_options(request, session_id)
         """
-        import inspect
         import importlib
+        import inspect
         from pathlib import Path
 
         try:

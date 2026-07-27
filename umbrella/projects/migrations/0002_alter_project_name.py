@@ -4,15 +4,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('projects', '0001_initial'),
+        ("projects", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='project',
-            name='name',
-            field=models.CharField(choices=[('BD01', 'BD01 Human Organelle Library'), ('TRD05', 'TRD05 Data Integration'), ('TRD??', 'TRD?? ML Challenge')], default='TRD05', max_length=6, unique=True),
+            model_name="project",
+            name="name",
+            field=models.CharField(
+                choices=[
+                    ("BD01", "BD01 Human Organelle Library"),
+                    ("TRD05", "TRD05 Data Integration"),
+                    ("TRD??", "TRD?? ML Challenge"),
+                ],
+                default="TRD05",
+                max_length=6,
+                unique=True,
+            ),
         ),
     ]

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("cryo_grids", "0035_seed_long_form_screening_labels"),
     ]
@@ -98,9 +97,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="cryogrid",
             name="blot_time",
-            field=models.FloatField(
-                default=0.0, help_text="Blot time in seconds", null=True
-            ),
+            field=models.FloatField(default=0.0, help_text="Blot time in seconds", null=True),
         ),
         migrations.AlterField(
             model_name="plungefreezingsession",

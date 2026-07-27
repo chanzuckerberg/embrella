@@ -5,94 +5,134 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0003_rename_tomo_session_procrun_msi_session_and_more'),
-        ('stores', '0004_alter_staticpath_data_type'),
-        ('tem', '0018_msisession_user'),
+        ("processes", "0003_rename_tomo_session_procrun_msi_session_and_more"),
+        ("stores", "0004_alter_staticpath_data_type"),
+        ("tem", "0018_msisession_user"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ReconMethod',
+            name="ReconMethod",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='weighted back projection', max_length=32)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="weighted back projection", max_length=32)),
             ],
         ),
         migrations.CreateModel(
-            name='TomogramVoxelSpacing',
+            name="TomogramVoxelSpacing",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('spacing', models.FloatField(default=10.0, help_text='uniform voxel spacing in angstroms')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("spacing", models.FloatField(default=10.0, help_text="uniform voxel spacing in angstroms")),
             ],
         ),
         migrations.AddField(
-            model_name='planpipe',
-            name='input_pipe_step',
-            field=models.PositiveSmallIntegerField(default=1, help_text='The pipe step it needs to wait for input in order to run'),
+            model_name="planpipe",
+            name="input_pipe_step",
+            field=models.PositiveSmallIntegerField(
+                default=1, help_text="The pipe step it needs to wait for input in order to run"
+            ),
         ),
         migrations.AddField(
-            model_name='runpipedata',
-            name='pathtype',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='stores.pathtype'),
+            model_name="runpipedata",
+            name="pathtype",
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to="stores.pathtype"),
             preserve_default=False,
         ),
         migrations.CreateModel(
-            name='Frames',
+            name="Frames",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('frame_path', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='processing_frame_path', to='stores.path')),
-                ('session_plan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='tem.sessionplan')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "frame_path",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="processing_frame_path",
+                        to="stores.path",
+                    ),
+                ),
+                ("session_plan", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="tem.sessionplan")),
             ],
         ),
         migrations.CreateModel(
-            name='RawTiltSeries',
+            name="RawTiltSeries",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('frames', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.frames')),
-                ('pipe_data', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.runpipedata')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("frames", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.frames")),
+                (
+                    "pipe_data",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.runpipedata"),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Ctf',
+            name="Ctf",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('pipe_data', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.runpipedata')),
-                ('tiltseries', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.rawtiltseries')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "pipe_data",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.runpipedata"),
+                ),
+                (
+                    "tiltseries",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.rawtiltseries"),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Alignment',
+            name="Alignment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('pipe_data', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.runpipedata')),
-                ('tiltseries', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.rawtiltseries')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "pipe_data",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.runpipedata"),
+                ),
+                (
+                    "tiltseries",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.rawtiltseries"),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='TiltAngles',
+            name="TiltAngles",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('pipe_data', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.runpipedata')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "pipe_data",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.runpipedata"),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='rawtiltseries',
-            name='angles',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.tiltangles'),
+            model_name="rawtiltseries",
+            name="angles",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.tiltangles"),
         ),
         migrations.CreateModel(
-            name='Tomograms',
+            name="Tomograms",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('denoised', models.BooleanField(default=False, help_text='Is this a denoised tomogram ?')),
-                ('alignment', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.alignment')),
-                ('ctf', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='processes.ctf')),
-                ('msi_session', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='tem.msisession')),
-                ('pipe_data', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.runpipedata')),
-                ('recon_method', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.reconmethod')),
-                ('voxel_spacing', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.tomogramvoxelspacing')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("denoised", models.BooleanField(default=False, help_text="Is this a denoised tomogram ?")),
+                ("alignment", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.alignment")),
+                (
+                    "ctf",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="processes.ctf"
+                    ),
+                ),
+                ("msi_session", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="tem.msisession")),
+                (
+                    "pipe_data",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.runpipedata"),
+                ),
+                (
+                    "recon_method",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.reconmethod"),
+                ),
+                (
+                    "voxel_spacing",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.tomogramvoxelspacing"),
+                ),
             ],
         ),
     ]

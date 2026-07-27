@@ -37,11 +37,16 @@ def grid(db, user):
     device = PlungeFreezingDevice.objects.create(name="dev", site=site)
     session = PlungeFreezingSession.objects.create(user=user, device=device)
     specimen = Specimen.objects.create()
-    box = CryoGridBox.objects.create(name="b", puck=Puck.objects.create(name="2", user=user),
-                                     position_in_puck=1, max_grids=4)
+    box = CryoGridBox.objects.create(
+        name="b", puck=Puck.objects.create(name="2", user=user), position_in_puck=1, max_grids=4
+    )
     return CryoGrid.objects.create(
-        name="g", user=user, freezing_session=session, specimen=specimen,
-        grid_box=box, position_in_box=1,
+        name="g",
+        user=user,
+        freezing_session=session,
+        specimen=specimen,
+        grid_box=box,
+        position_in_box=1,
     )
 
 
@@ -78,7 +83,8 @@ class TestCsrfEnforcement:
         client.force_login(user)
         resp = client.patch(
             f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
-            {"label_ids": [label.id]}, format="json",
+            {"label_ids": [label.id]},
+            format="json",
         )
         assert resp.status_code == 403, resp.content
 
@@ -88,7 +94,9 @@ class TestCsrfEnforcement:
         client.force_login(user)
         resp = client.patch(
             f"/cryo_grids/v1/grids/{grid.id}/update-labels/",
-            {"label_ids": [label.id]}, format="json", HTTP_X_CSRFTOKEN=token,
+            {"label_ids": [label.id]},
+            format="json",
+            HTTP_X_CSRFTOKEN=token,
         )
         assert resp.status_code != 403, resp.content
 
@@ -99,7 +107,8 @@ class TestCsrfEnforcement:
         client.force_login(user)
         resp = client.post(
             f"/cryo_grids/update-grid-trashed/{grid.id}/",
-            {"trashed": True}, format="json",
+            {"trashed": True},
+            format="json",
         )
         assert resp.status_code == 403, resp.content
 
@@ -109,6 +118,8 @@ class TestCsrfEnforcement:
         client.force_login(user)
         resp = client.post(
             f"/cryo_grids/update-grid-trashed/{grid.id}/",
-            {"trashed": True}, format="json", HTTP_X_CSRFTOKEN=token,
+            {"trashed": True},
+            format="json",
+            HTTP_X_CSRFTOKEN=token,
         )
         assert resp.status_code != 403, resp.content

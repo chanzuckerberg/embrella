@@ -5,26 +5,39 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stores', '0001_initial'),
-        ('tem', '0005_remove_sessionplan_frame_format_and_more'),
+        ("stores", "0001_initial"),
+        ("tem", "0005_remove_sessionplan_frame_format_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='session',
-            name='atlas',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='atlas', to='stores.path'),
+            model_name="session",
+            name="atlas",
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="atlas", to="stores.path"
+            ),
         ),
         migrations.AddField(
-            model_name='session',
-            name='parents',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='parents', to='stores.path'),
+            model_name="session",
+            name="parents",
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="parents", to="stores.path"
+            ),
         ),
         migrations.AlterField(
-            model_name='imagingworkflow',
-            name='workflow',
-            field=models.CharField(choices=[('scrn', 'Grid Screening'), ('sngl', 'Single Tilt SPA'), ('tomo', 'Tomography'), ('ptyc', 'Ptychography'), ('idpc', 'iDPC'), ('clem', 'CLEM Mapping')], max_length=20),
+            model_name="imagingworkflow",
+            name="workflow",
+            field=models.CharField(
+                choices=[
+                    ("scrn", "Grid Screening"),
+                    ("sngl", "Single Tilt SPA"),
+                    ("tomo", "Tomography"),
+                    ("ptyc", "Ptychography"),
+                    ("idpc", "iDPC"),
+                    ("clem", "CLEM Mapping"),
+                ],
+                max_length=20,
+            ),
         ),
     ]

@@ -81,7 +81,12 @@ def run_denoiset(request):
 
             # Run the denoising script and get the output.
             output, error = denoiset.run_script(
-                session_name, run_number, denoise_run_number, model_name, user_id, live_denoising,
+                session_name,
+                run_number,
+                denoise_run_number,
+                model_name,
+                user_id,
+                live_denoising,
             )
 
             # Extract the job ID(s) from the output.

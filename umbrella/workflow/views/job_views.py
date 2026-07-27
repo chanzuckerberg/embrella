@@ -82,7 +82,9 @@ def cancel_jobs(request):
             decoded_password = base64.b64decode(encoded_password).decode("utf-8")
 
         canceler = RemoteJobSubmitter(
-            cluster_id="czii", auth={"username": user_id, "password": decoded_password}, remote_script_dir=None,
+            cluster_id="czii",
+            auth={"username": user_id, "password": decoded_password},
+            remote_script_dir=None,
         )
         try:
             # Connect to the remote server
@@ -93,9 +95,9 @@ def cancel_jobs(request):
             # Update PipeExecution record with correct timestamp
             pipe_exec = PipeExecution.objects.filter(job_id=job_number).first()
             if pipe_exec:
-                pipe_exec.status = 'cancelled'
+                pipe_exec.status = "cancelled"
                 pipe_exec.completed_at = dj_timezone.now()
-                pipe_exec.save(update_fields=['status', 'completed_at'])
+                pipe_exec.save(update_fields=["status", "completed_at"])
                 logger.info(f"Updated PipeExecution for cancelled job {job_number}")
 
             return JsonResponse({"message": f"Job - {job_number} for canceled successfully"})
@@ -152,7 +154,10 @@ def track_jobs(request):
     description="Returns job logs for all users or filters by a specific username if provided.",
     parameters=[
         OpenApiParameter(
-            name="user_name", required=False, type=OpenApiTypes.STR, description="Filter logs by user name",
+            name="user_name",
+            required=False,
+            type=OpenApiTypes.STR,
+            description="Filter logs by user name",
         ),
     ],
     responses={

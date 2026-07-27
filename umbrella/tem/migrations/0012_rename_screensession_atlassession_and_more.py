@@ -4,21 +4,20 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0005_remove_cryogrid_unique_cassette_position_and_more'),
-        ('stores', '0004_alter_staticpath_data_type'),
-        ('tem', '0011_alter_msisession_grid_session'),
+        ("cryo_grids", "0005_remove_cryogrid_unique_cassette_position_and_more"),
+        ("stores", "0004_alter_staticpath_data_type"),
+        ("tem", "0011_alter_msisession_grid_session"),
     ]
 
     operations = [
         migrations.RenameModel(
-            old_name='ScreenSession',
-            new_name='AtlasSession',
+            old_name="ScreenSession",
+            new_name="AtlasSession",
         ),
         migrations.RenameField(
-            model_name='msisession',
-            old_name='grid_session',
-            new_name='atlas_session',
+            model_name="msisession",
+            old_name="grid_session",
+            new_name="atlas_session",
         ),
     ]

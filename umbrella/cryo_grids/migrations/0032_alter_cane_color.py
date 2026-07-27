@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("cryo_grids", "0031_migrate_to_unified_documentation"),
     ]

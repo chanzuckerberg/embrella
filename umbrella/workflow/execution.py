@@ -342,7 +342,7 @@ class PipelineExecutor:
         Returns:
             Created PipeExecution instance
         """
-        from processes.models import JobLog, PipeExecution
+        from processes.models import PipeExecution
 
         pipe_exec = PipeExecution.objects.create(
             proc_run=proc_run,

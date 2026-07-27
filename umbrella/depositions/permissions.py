@@ -9,6 +9,7 @@ from .models import (
     DepositionSession,
 )
 
+
 def deposition_owner_id(obj):
     if isinstance(obj, Deposition):
         return obj.submitter_user_id

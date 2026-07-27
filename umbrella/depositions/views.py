@@ -40,30 +40,34 @@ def _not_implemented():
     create=extend_schema(
         summary="Create a deposition",
         description="Creates a deposition draft. `deposition_id` is reserved server-side; "
-                    "`submitter_user` is set from the request — don't send them.",
-        examples=[OpenApiExample(
-            "New deposition",
-            request_only=True,
-            value={
-                "title": "In situ cryo-ET of bacterial cells",
-                "description": "Tomograms of whole cells imaged by cryo-ET.",
-                "deposition_publications": "https://doi.org/10.1234/example",
-                "related_database_entries": "EMPIAR-12345, EMD-67890",
-                "authors_json": [
-                    {"author_id": 1, "author_list_order": 1, "is_primary": True, "is_corresponding": True},
-                    {"author_id": 2, "author_list_order": 2, "is_primary": False, "is_corresponding": False},
-                ],
-                "release_date": "2026-12-01",
-            },
-        )],
+        "`submitter_user` is set from the request — don't send them.",
+        examples=[
+            OpenApiExample(
+                "New deposition",
+                request_only=True,
+                value={
+                    "title": "In situ cryo-ET of bacterial cells",
+                    "description": "Tomograms of whole cells imaged by cryo-ET.",
+                    "deposition_publications": "https://doi.org/10.1234/example",
+                    "related_database_entries": "EMPIAR-12345, EMD-67890",
+                    "authors_json": [
+                        {"author_id": 1, "author_list_order": 1, "is_primary": True, "is_corresponding": True},
+                        {"author_id": 2, "author_list_order": 2, "is_primary": False, "is_corresponding": False},
+                    ],
+                    "release_date": "2026-12-01",
+                },
+            )
+        ],
     ),
     partial_update=extend_schema(
         summary="Update a deposition",
-        examples=[OpenApiExample(
-            "Patch fields",
-            request_only=True,
-            value={"description": "Updated description.", "release_date": "2027-01-15"},
-        )],
+        examples=[
+            OpenApiExample(
+                "Patch fields",
+                request_only=True,
+                value={"description": "Updated description.", "release_date": "2027-01-15"},
+            )
+        ],
     ),
 )
 class DepositionViewSet(viewsets.ModelViewSet):
@@ -72,7 +76,9 @@ class DepositionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DepositionSerializer
-    queryset = Deposition.objects.all().prefetch_related("datasets", "datasets__funding", "datasets__sessions", "datasets__job")
+    queryset = Deposition.objects.all().prefetch_related(
+        "datasets", "datasets__funding", "datasets__sessions", "datasets__job"
+    )
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -96,9 +102,7 @@ class DepositionViewSet(viewsets.ModelViewSet):
             "datasets__sessions__tiltseries_metadata",
             "datasets__sessions__tomogram_metadata",
         )
-        serializer = SubmissionDepositionSerializer(
-            queryset, many=True, context=self.get_serializer_context()
-        )
+        serializer = SubmissionDepositionSerializer(queryset, many=True, context=self.get_serializer_context())
         return Response({"submissions": serializer.data, "total_count": queryset.count()})
 
 
@@ -106,45 +110,49 @@ class DepositionViewSet(viewsets.ModelViewSet):
     create=extend_schema(
         summary="Create a dataset",
         description="Create a dataset under a deposition. Pass the deposition's `id` (from its "
-                    "create response) as `deposition` — not the `deposition_id`. `dataset_id` "
-                    "and `status` are set for you.",
-        examples=[OpenApiExample(
-            "New dataset",
-            request_only=True,
-            value={
-                "deposition": 1,
-                "title": "Dataset 1 — strain ABC",
-                "description": "Single-axis tilt series, 3.0 A/px.",
-                "sample_preparation": "Plunge-frozen on Quantifoil grids.",
-                "grid_preparation": "Glow-discharged 30 s.",
-                "assay_label": "cryo-electron tomography",
-                "assay_ontology_id": "EFO:0010961",
-            },
-        )],
+        "create response) as `deposition` — not the `deposition_id`. `dataset_id` "
+        "and `status` are set for you.",
+        examples=[
+            OpenApiExample(
+                "New dataset",
+                request_only=True,
+                value={
+                    "deposition": 1,
+                    "title": "Dataset 1 — strain ABC",
+                    "description": "Single-axis tilt series, 3.0 A/px.",
+                    "sample_preparation": "Plunge-frozen on Quantifoil grids.",
+                    "grid_preparation": "Glow-discharged 30 s.",
+                    "assay_label": "cryo-electron tomography",
+                    "assay_ontology_id": "EFO:0010961",
+                },
+            )
+        ],
     ),
     partial_update=extend_schema(
         summary="Update a dataset (fields + nested funding / sessions)",
         description="Nested `funding` and `sessions` are FULL-REPLACE: any row omitted from the "
-                    "array is deleted. Each session entry must include `msi_session` (the MsiSession's id).",
-        examples=[OpenApiExample(
-            "Patch with funding + sessions",
-            request_only=True,
-            value={
-                "description": "Updated experimental notes.",
-                "funding": [
-                    {"funding_agency_name": "Chan Zuckerberg Initiative", "grant_id": "CZI-2026-001"},
-                    {"funding_agency_name": "NIH", "grant_id": "R01-GM-123456"},
-                ],
-                "sessions": [
-                    {
-                        "msi_session": 42,
-                        "aretomo_run_name": "run001",
-                        "denoise_run_name": "",
-                        "selected_copick_runs": [],
-                    },
-                ],
-            },
-        )],
+        "array is deleted. Each session entry must include `msi_session` (the MsiSession's id).",
+        examples=[
+            OpenApiExample(
+                "Patch with funding + sessions",
+                request_only=True,
+                value={
+                    "description": "Updated experimental notes.",
+                    "funding": [
+                        {"funding_agency_name": "Chan Zuckerberg Initiative", "grant_id": "CZI-2026-001"},
+                        {"funding_agency_name": "NIH", "grant_id": "R01-GM-123456"},
+                    ],
+                    "sessions": [
+                        {
+                            "msi_session": 42,
+                            "aretomo_run_name": "run001",
+                            "denoise_run_name": "",
+                            "selected_copick_runs": [],
+                        },
+                    ],
+                },
+            )
+        ],
     ),
 )
 class DatasetViewSet(viewsets.ModelViewSet):
@@ -153,11 +161,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DatasetSerializer
-    queryset = (
-        Dataset.objects.all()
-        .select_related("deposition", "job")
-        .prefetch_related("funding", "sessions")
-    )
+    queryset = Dataset.objects.all().select_related("deposition", "job").prefetch_related("funding", "sessions")
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -198,33 +202,41 @@ class DatasetViewSet(viewsets.ModelViewSet):
     partial_update=extend_schema(
         summary="Save a session (metadata + annotations)",
         description="Saves session metadata and copick annotations in one PATCH. `annotations` "
-                    "upsert by (copick_kind, copick_ref) and are full-replace — any omitted is "
-                    "removed. Method links are managed via their own endpoint.",
-        examples=[OpenApiExample(
-            "Save metadata + annotations",
-            request_only=True,
-            value={
-                "tiltseries_metadata": {
-                    "acceleration_voltage": 300, "pixel_spacing": 1.5,
-                    "tilt_min": -60, "tilt_max": 60, "tilt_step": 3,
-                },
-                "tomogram_metadata": {
-                    "voxel_spacing": 7.84, "reconstruction_method": "WBP", "ctf_corrected": True,
-                },
-                "annotations": [
-                    {
-                        "copick_kind": "picks", "copick_ref": "ribosome-0",
-                        "object_name": "ribosome", "object_count": 1200,
-                        "method_type": "automated", "is_selected": True,
+        "upsert by (copick_kind, copick_ref) and are full-replace — any omitted is "
+        "removed. Method links are managed via their own endpoint.",
+        examples=[
+            OpenApiExample(
+                "Save metadata + annotations",
+                request_only=True,
+                value={
+                    "tiltseries_metadata": {
+                        "acceleration_voltage": 300,
+                        "pixel_spacing": 1.5,
+                        "tilt_min": -60,
+                        "tilt_max": 60,
+                        "tilt_step": 3,
                     },
-                ],
-            },
-        )],
+                    "tomogram_metadata": {
+                        "voxel_spacing": 7.84,
+                        "reconstruction_method": "WBP",
+                        "ctf_corrected": True,
+                    },
+                    "annotations": [
+                        {
+                            "copick_kind": "picks",
+                            "copick_ref": "ribosome-0",
+                            "object_name": "ribosome",
+                            "object_count": 1200,
+                            "method_type": "automated",
+                            "is_selected": True,
+                        },
+                    ],
+                },
+            )
+        ],
     ),
 )
-class DepositionSessionViewSet(
-    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
-):
+class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
     """Session detail save. No create/list/delete — managed via dataset nested sessions."""
 
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
@@ -245,17 +257,19 @@ class DepositionSessionViewSet(
     create=extend_schema(
         summary="Add a method link to an annotation",
         description="`annotation` is the annotation's `id`. `link_type` is one of: "
-                    "documentation / models_weights / other / source_code / website.",
-        examples=[OpenApiExample(
-            "New method link",
-            request_only=True,
-            value={
-                "annotation": 1,
-                "link_type": "source_code",
-                "link": "https://github.com/example/picking-model",
-                "custom_name": "Picking model repo",
-            },
-        )],
+        "documentation / models_weights / other / source_code / website.",
+        examples=[
+            OpenApiExample(
+                "New method link",
+                request_only=True,
+                value={
+                    "annotation": 1,
+                    "link_type": "source_code",
+                    "link": "https://github.com/example/picking-model",
+                    "custom_name": "Picking model repo",
+                },
+            )
+        ],
     ),
 )
 class MethodLinkViewSet(viewsets.ModelViewSet):
@@ -264,9 +278,7 @@ class MethodLinkViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DepositionAnnotationMethodLinkSerializer
-    queryset = DepositionAnnotationMethodLink.objects.select_related(
-        "annotation__session__dataset__deposition"
-    )
+    queryset = DepositionAnnotationMethodLink.objects.select_related("annotation__session__dataset__deposition")
 
     def perform_create(self, serializer):
         annotation = serializer.validated_data["annotation"]

@@ -9,14 +9,13 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 
 
-
 def create_group_with_permission_ids(name, permission_ids=None):
     # Create a new group or get the existing one
     group, created = Group.objects.get_or_create(name=name)
 
     if permission_ids:
         # Get existing permissions of the group to avoid duplicates
-        existing_permission_ids = set(group.permissions.values_list('id', flat=True))
+        existing_permission_ids = set(group.permissions.values_list("id", flat=True))
         # Filter out the existing permission IDs from the new ones to prevent duplicates
         new_permissions = Permission.objects.filter(id__in=permission_ids).exclude(id__in=existing_permission_ids)
 
@@ -48,14 +47,15 @@ def add_user_to_group(username, group_name):
 def run():
     try:
         users = User.objects.all()
-        user = users[len(users)-1]
+        user = users[len(users) - 1]
     except:
-        print('Error: create some users first')
+        print("Error: create some users first")
         sys.exit(1)
-    #permission_ids = [1, 2, 3, 4]  # Assume these are valid permission IDs
-    #create_group_with_permission_ids("Scientist", permission_ids)
-    add_user_to_group(user, 'Scientist')
-    print('added last user to Scientist group')
+    # permission_ids = [1, 2, 3, 4]  # Assume these are valid permission IDs
+    # create_group_with_permission_ids("Scientist", permission_ids)
+    add_user_to_group(user, "Scientist")
+    print("added last user to Scientist group")
+
 
 if __name__ == "__main__":
     run()

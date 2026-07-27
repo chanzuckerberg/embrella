@@ -1,5 +1,4 @@
-"""API tests for the deposition CRUD endpoints.
-"""
+"""API tests for the deposition CRUD endpoints."""
 
 import itertools
 from unittest import mock
@@ -133,9 +132,11 @@ class TestAuthorsJsonValidation:
         dep = _make_deposition(auth_client)
         r = auth_client.patch(
             f"{DEPOSITIONS}{dep['id']}/",
-            {"authors_json": [
-                {"author_id": 7, "author_list_order": 1, "is_primary": True, "is_corresponding": False},
-            ]},
+            {
+                "authors_json": [
+                    {"author_id": 7, "author_list_order": 1, "is_primary": True, "is_corresponding": False},
+                ]
+            },
             format="json",
         )
         assert r.status_code == 200
@@ -144,10 +145,17 @@ class TestAuthorsJsonValidation:
         dep = _make_deposition(auth_client)
         r = auth_client.patch(
             f"{DEPOSITIONS}{dep['id']}/",
-            {"authors_json": [
-                {"full_name": "Test Author", "affiliation": "CZ Biohub",
-                 "orcid": "0000-0002-1825-0097", "is_corresponding": True, "author_list_order": 0},
-            ]},
+            {
+                "authors_json": [
+                    {
+                        "full_name": "Test Author",
+                        "affiliation": "CZ Biohub",
+                        "orcid": "0000-0002-1825-0097",
+                        "is_corresponding": True,
+                        "author_list_order": 0,
+                    },
+                ]
+            },
             format="json",
         )
         assert r.status_code == 200, r.content
@@ -164,9 +172,7 @@ class TestAuthorsJsonValidation:
 
     def test_authors_json_not_a_list_rejected(self, auth_client):
         dep = _make_deposition(auth_client)
-        r = auth_client.patch(
-            f"{DEPOSITIONS}{dep['id']}/", {"authors_json": "nope"}, format="json"
-        )
+        r = auth_client.patch(f"{DEPOSITIONS}{dep['id']}/", {"authors_json": "nope"}, format="json")
         assert r.status_code == 400
 
 

@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0020_remove_review_session_review_msi_session_and_more'),
+        ("processes", "0020_remove_review_session_review_msi_session_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='review',
-            name='objects_of_interest',
+            model_name="review",
+            name="objects_of_interest",
             field=models.TextField(null=True),
         ),
     ]

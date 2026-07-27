@@ -6,61 +6,68 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0001_initial'),
+        ("cryo_grids", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='cryogrid',
-            old_name='session',
-            new_name='freezing_session',
+            model_name="cryogrid",
+            old_name="session",
+            new_name="freezing_session",
         ),
         migrations.AddField(
-            model_name='cryogrid',
-            name='trashed',
-            field=models.BooleanField(default=False, help_text='Is this cryo-grid discarded ?'),
+            model_name="cryogrid",
+            name="trashed",
+            field=models.BooleanField(default=False, help_text="Is this cryo-grid discarded ?"),
         ),
         migrations.AddField(
-            model_name='plungefreezingsession',
-            name='user',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL),
+            model_name="plungefreezingsession",
+            name="user",
+            field=models.ForeignKey(
+                null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL
+            ),
         ),
         migrations.AlterField(
-            model_name='cryogrid',
-            name='name',
-            field=models.CharField(default='Grid1', max_length=32),
+            model_name="cryogrid",
+            name="name",
+            field=models.CharField(default="Grid1", max_length=32),
         ),
         migrations.AlterField(
-            model_name='cryogrid',
-            name='notes',
-            field=models.TextField(blank=True, help_text='notes about freezing and grid condition on this grid', max_length=255, null=True),
+            model_name="cryogrid",
+            name="notes",
+            field=models.TextField(
+                blank=True, help_text="notes about freezing and grid condition on this grid", max_length=255, null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='plungefreezingplan',
-            name='sample_application_protocol',
+            model_name="plungefreezingplan",
+            name="sample_application_protocol",
             field=models.TextField(blank=True, max_length=255),
         ),
         migrations.AlterField(
-            model_name='plungefreezingplan',
-            name='tag',
+            model_name="plungefreezingplan",
+            name="tag",
             field=models.CharField(blank=True, max_length=100),
         ),
         migrations.AlterField(
-            model_name='plungefreezingplan',
-            name='wash_step',
+            model_name="plungefreezingplan",
+            name="wash_step",
             field=models.TextField(blank=True, max_length=255),
         ),
         migrations.AlterField(
-            model_name='plungefreezingsession',
-            name='device_temperature',
-            field=models.FloatField(default=4.0, help_text='Temperature of the freezing chamber in degree Celsius'),
+            model_name="plungefreezingsession",
+            name="device_temperature",
+            field=models.FloatField(default=4.0, help_text="Temperature of the freezing chamber in degree Celsius"),
         ),
         migrations.AlterField(
-            model_name='sample',
-            name='name',
-            field=models.CharField(help_text='unique sample name that you may use to search your grid for later. For example, lysosome', max_length=100, unique=True),
+            model_name="sample",
+            name="name",
+            field=models.CharField(
+                help_text="unique sample name that you may use to search your grid for later. For example, lysosome",
+                max_length=100,
+                unique=True,
+            ),
         ),
     ]

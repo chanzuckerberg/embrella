@@ -16,19 +16,21 @@ from processes.models import (
 )
 from stores.models import PathType, StaticPath
 
-#from tem.models import *
+# from tem.models import *
 
 
 def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
 
+
 def create_static_path(data_type):
-    for data_type in ['pick','seg','galr']:
+    for data_type in ["pick", "seg", "galr"]:
         instance = StaticPath.objects.create(
-                data_type=data_type,
-                static_path='/{msi_session}/{run}/%s/{proc_software}/{proc_run}/{pipe}/' % data_type,
+            data_type=data_type,
+            static_path="/{msi_session}/{run}/%s/{proc_software}/{proc_run}/{pipe}/" % data_type,
         )
     return instance
+
 
 def get_static_path(data_type):
     qset = StaticPath.objects.filter(data_type=data_type)
@@ -39,72 +41,78 @@ def get_static_path(data_type):
         qset = StaticPath.objects.filter(data_type=data_type)
         return qset[0]
 
+
 def add_pipe_joints(pipe_in_plan, input_pipe_in_plan, data_types):
     pathtypes_in_input = input_pipe_in_plan.pipe.output.all()
-    dtypes = list(map((lambda x:x.static_path.data_type), pathtypes_in_input))
+    dtypes = list(map((lambda x: x.static_path.data_type), pathtypes_in_input))
     for t in data_types:
         dindex = dtypes.index(t)
         input_pathtype = pathtypes_in_input[dindex]
         PipeJoint.objects.create(
-                pipe_in_plan=pipe_in_plan,
-                input_pipe_in_plan=input_pipe_in_plan,
-                input_pathtype=input_pathtype)
+            pipe_in_plan=pipe_in_plan, input_pipe_in_plan=input_pipe_in_plan, input_pathtype=input_pathtype
+        )
+
 
 def createStandardTasks():
-    task_names = ['pick particles',
-                    'make particle 2d gallery',
-                    'segmentate volume',
+    task_names = [
+        "pick particles",
+        "make particle 2d gallery",
+        "segmentate volume",
     ]
     current_tasks = Task.objects.all()
     task_count = len(current_tasks)
     tasks = []
     for i, n in enumerate(task_names):
-        tasks.append(Task.objects.create(name=n, step=i+task_count+1))
+        tasks.append(Task.objects.create(name=n, step=i + task_count + 1))
     return tasks
+
 
 def create_pipeline_plan():
     tasks = createStandardTasks()
-    pytom = ProcSoftware.objects.create(name='pytom',
-                version='2024-03-10')
-    gallery = ProcSoftware.objects.create(name='slabpick',
-                version='2024-03-10')
-    membr = ProcSoftware.objects.create(name='membraneseg',
-                version='2024-03-10')
+    pytom = ProcSoftware.objects.create(name="pytom", version="2024-03-10")
+    gallery = ProcSoftware.objects.create(name="slabpick", version="2024-03-10")
+    membr = ProcSoftware.objects.create(name="membraneseg", version="2024-03-10")
     for t in tasks[0:1]:
         pytom.capable_tasks.add(t)
     for t in tasks[1:2]:
         gallery.capable_tasks.add(t)
     for t in tasks[2:3]:
         membr.capable_tasks.add(t)
-    plan1 = ProcPlan.objects.create(name='pytom-pick')
-    plan2 = ProcPlan.objects.create(name='make-minislab')
-    plan3 = ProcPlan.objects.create(name='membraneseg')
+    plan1 = ProcPlan.objects.create(name="pytom-pick")
+    plan2 = ProcPlan.objects.create(name="make-minislab")
+    plan3 = ProcPlan.objects.create(name="membraneseg")
     # pipes
-    pipe1 = Pipe.objects.create(name='ribosome-80S',software=pytom)
-    pipe2 = Pipe.objects.create(name='gallery',software=gallery)
-    pipe3 = Pipe.objects.create(name='membrane',software=membr)
+    pipe1 = Pipe.objects.create(name="ribosome-80S", software=pytom)
+    pipe2 = Pipe.objects.create(name="gallery", software=gallery)
+    pipe3 = Pipe.objects.create(name="membrane", software=membr)
     # PyTom
-    plan1_pipe1 = PipeInPlan.objects.create(name='pick1',plan=plan1,step=1,pipe=pipe1)
+    plan1_pipe1 = PipeInPlan.objects.create(name="pick1", plan=plan1, step=1, pipe=pipe1)
     # Gallery
-    plan2_pipe2 = PipeInPlan.objects.create(name='galr1',plan=plan2,step=1,pipe=pipe2)
+    plan2_pipe2 = PipeInPlan.objects.create(name="galr1", plan=plan2, step=1, pipe=pipe2)
     # Membrane segamentation
-    plan3_pipe3 = PipeInPlan.objects.create(name='mask1',plan=plan3,step=1,pipe=pipe3)
-    #input
+    plan3_pipe3 = PipeInPlan.objects.create(name="mask1", plan=plan3, step=1, pipe=pipe3)
+    # input
     input_path_types = []
-    #output
+    # output
     output_path_types = []
-    output_path_types.append(PathType.objects.create(
-                static_path=get_static_path('pick'),
-                overlay_path='/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.txt',
-    ))
-    output_path_types.append(PathType.objects.create(
-                static_path=get_static_path('galr'),
-                overlay_path='/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc',
-    ))
-    output_path_types.append(PathType.objects.create(
-                static_path=get_static_path('seg'),
-                overlay_path='/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc',
-    ))
+    output_path_types.append(
+        PathType.objects.create(
+            static_path=get_static_path("pick"),
+            overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.txt",
+        )
+    )
+    output_path_types.append(
+        PathType.objects.create(
+            static_path=get_static_path("galr"),
+            overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc",
+        )
+    )
+    output_path_types.append(
+        PathType.objects.create(
+            static_path=get_static_path("seg"),
+            overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{pipe}/{proc_run}/{run}/output.mrc",
+        )
+    )
     for t in tasks[0:1]:
         # picking ribosome
         pipe1.tasks_performed.add(t)
@@ -117,16 +125,16 @@ def create_pipeline_plan():
     # input/output
     for p in output_path_types[0:1]:
         pipe1.output.add(p)
-    for p in output_path_types[1:2]: #recon
-       pipe2.output.add(p)
+    for p in output_path_types[1:2]:  # recon
+        pipe2.output.add(p)
     for p in output_path_types[2:3]:
-       pipe3.output.add(p)
+        pipe3.output.add(p)
     # where the input are from
-    input_rec = Pipe.objects.filter(name='vol002')[0]
-    pipe1.input.add(get_static_path('rec')) # pick
-    pipe2.input.add(get_static_path('pick')) # gallery
-    pipe2.input.add(get_static_path('deno')) # gallery
-    pipe3.input.add(get_static_path('rec')) # seg
+    input_rec = Pipe.objects.filter(name="vol002")[0]
+    pipe1.input.add(get_static_path("rec"))  # pick
+    pipe2.input.add(get_static_path("pick"))  # gallery
+    pipe2.input.add(get_static_path("deno"))  # gallery
+    pipe3.input.add(get_static_path("rec"))  # seg
     # save
     pipe1.save()
     pipe2.save()
@@ -134,28 +142,31 @@ def create_pipeline_plan():
 
     plan_live = ProcPlan.objects.get(pk=1)
     plan_deno = ProcPlan.objects.get(pk=2)
-    plan_live_v001 = PipeInPlan.objects.filter(plan=plan_live,pipe__name='vol001')[0]
-    plan_deno_den001 = PipeInPlan.objects.filter(plan=plan_deno,pipe__name='epoch001')[0]
-    add_pipe_joints(plan1_pipe1, plan_live_v001,['rec'])
-    add_pipe_joints(plan2_pipe2, plan_deno_den001,['deno'])
-    add_pipe_joints(plan2_pipe2, plan1_pipe1,['pick'])
-    add_pipe_joints(plan3_pipe3, plan_live_v001,['rec'])
+    plan_live_v001 = PipeInPlan.objects.filter(plan=plan_live, pipe__name="vol001")[0]
+    plan_deno_den001 = PipeInPlan.objects.filter(plan=plan_deno, pipe__name="epoch001")[0]
+    add_pipe_joints(plan1_pipe1, plan_live_v001, ["rec"])
+    add_pipe_joints(plan2_pipe2, plan_deno_den001, ["deno"])
+    add_pipe_joints(plan2_pipe2, plan1_pipe1, ["pick"])
+    add_pipe_joints(plan3_pipe3, plan_live_v001, ["rec"])
+
 
 def create_default_anno_methods():
-    AnnotationMethod.objects.create(name='template matching')
-    AnnotationMethod.objects.create(name='ml semantic segmentation')
+    AnnotationMethod.objects.create(name="template matching")
+    AnnotationMethod.objects.create(name="ml semantic segmentation")
+
 
 def run():
     try:
-        r = get_static_path('rec')
+        r = get_static_path("rec")
     except r.DoesNotExist:
-        print('Please run init_processes first')
+        print("Please run init_processes first")
         sys.exit(1)
     except Exception:
-        print('Error: %s. Need reconstruction StaticPath instances to run')
+        print("Error: %s. Need reconstruction StaticPath instances to run")
         sys.exit(1)
     create_pipeline_plan()
     create_default_anno_methods()
+
 
 if __name__ == "__main__":
     run()

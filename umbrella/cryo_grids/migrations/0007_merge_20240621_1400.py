@@ -4,11 +4,9 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0006_cryogrid_intended_project'),
-        ('cryo_grids', '0006_cryogrid_user'),
+        ("cryo_grids", "0006_cryogrid_intended_project"),
+        ("cryo_grids", "0006_cryogrid_user"),
     ]
 
-    operations = [
-    ]
+    operations = []

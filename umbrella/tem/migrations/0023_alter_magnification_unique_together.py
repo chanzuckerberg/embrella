@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tem", "0022_remove_calibratedpixelsize_current_and_more"),
     ]

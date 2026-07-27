@@ -5,6 +5,7 @@ This module contains User-related serializers.
 For model-specific serializers, see respective Django apps:
 - cryo_grids.serializers - Puck, CryoGridBox, CryoGrid serializers
 """
+
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
@@ -13,19 +14,20 @@ class UserSerializer(serializers.ModelSerializer):
     """
     Serializer for User model
     """
+
     full_name = serializers.SerializerMethodField()
     clean_username = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = [
-            'id',
-            'username',
-            'clean_username',
-            'first_name',
-            'last_name',
-            'full_name',
-            'email',
+            "id",
+            "username",
+            "clean_username",
+            "first_name",
+            "last_name",
+            "full_name",
+            "email",
         ]
 
     def get_full_name(self, obj):
@@ -36,6 +38,6 @@ class UserSerializer(serializers.ModelSerializer):
     def get_clean_username(self, obj):
         """Remove domain part from username if present"""
         username = obj.username
-        if '@' in username:
-            return username.split('@')[0]
+        if "@" in username:
+            return username.split("@")[0]
         return username

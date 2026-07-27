@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("cryo_grids", "0032_alter_cane_color"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),

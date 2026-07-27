@@ -5,39 +5,52 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0007_pipe_alter_pipeparam_pipe_alter_runpipedata_pipe_and_more'),
+        ("processes", "0007_pipe_alter_pipeparam_pipe_alter_runpipedata_pipe_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AnnotationMethod',
+            name="AnnotationMethod",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='template matching', max_length=32)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="template matching", max_length=32)),
             ],
         ),
         migrations.CreateModel(
-            name='Annotation',
+            name="Annotation",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='ribosome', max_length=32)),
-                ('ontology_term', models.CharField(default='GO:0005840', max_length=20)),
-                ('annotation_type', models.CharField(default='point', max_length=12)),
-                ('annotation_method', models.CharField(default='', max_length=12)),
-                ('parent_anno', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='processes.annotation')),
-                ('pipe_data', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.runpipedata')),
-                ('tomograms', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.tomograms')),
-                ('method', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.annotationmethod')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="ribosome", max_length=32)),
+                ("ontology_term", models.CharField(default="GO:0005840", max_length=20)),
+                ("annotation_type", models.CharField(default="point", max_length=12)),
+                ("annotation_method", models.CharField(default="", max_length=12)),
+                (
+                    "parent_anno",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="processes.annotation"
+                    ),
+                ),
+                (
+                    "pipe_data",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.runpipedata"),
+                ),
+                ("tomograms", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.tomograms")),
+                (
+                    "method",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.annotationmethod"),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ParticleGallery',
+            name="ParticleGallery",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('pick', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.annotation')),
-                ('pipe_data', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.runpipedata')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("pick", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.annotation")),
+                (
+                    "pipe_data",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.runpipedata"),
+                ),
             ],
         ),
     ]

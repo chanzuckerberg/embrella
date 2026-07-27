@@ -186,9 +186,7 @@ def fetch_job_logs(execution) -> Dict[str, any]:
     if not cluster_id:
         software = execution.pipe_in_plan.pipe.software
         cluster_id = (
-            getattr(software, "default_cluster", None)
-            or getattr(software, "cluster", None)
-            or get_default_cluster_id()
+            getattr(software, "default_cluster", None) or getattr(software, "cluster", None) or get_default_cluster_id()
         )
 
     logger.info(f"Fetching logs for job {execution.job_id} from cluster {cluster_id}")

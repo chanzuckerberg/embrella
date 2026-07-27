@@ -67,7 +67,9 @@ class Migration(migrations.Migration):
             model_name="cryogrid",
             name="blot_time",
             field=models.FloatField(
-                default=6.0, help_text="Blot time in seconds", null=True,
+                default=6.0,
+                help_text="Blot time in seconds",
+                null=True,
             ),
         ),
         migrations.AddField(

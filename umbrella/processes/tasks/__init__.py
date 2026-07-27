@@ -34,16 +34,16 @@ from processes.tasks.syncer_tasks import (
 
 __all__ = [
     # Job tasks
-    'check_job_status',
-    'poll_pipe_execution_status',
-    'schedule_pipe_execution_monitoring',
+    "check_job_status",
+    "poll_pipe_execution_status",
+    "schedule_pipe_execution_monitoring",
     # Syncer tasks
-    'run_syncer_iteration',
-    'start_syncer_monitoring',
-    'run_job_status_syncer',
-    'start_job_status_syncer',
+    "run_syncer_iteration",
+    "start_syncer_monitoring",
+    "run_job_status_syncer",
+    "start_job_status_syncer",
     # Survey tasks
-    'run_survey_status_syncer',
-    'start_survey_status_syncer',
-    'process_survey_results',
+    "run_survey_status_syncer",
+    "start_survey_status_syncer",
+    "process_survey_results",
 ]

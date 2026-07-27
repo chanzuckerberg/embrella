@@ -6,5 +6,5 @@ app_name = "custom"
 
 
 urlpatterns = [
-    path("", views.custom_page, name='custom'),
+    path("", views.custom_page, name="custom"),
 ]

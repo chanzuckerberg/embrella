@@ -3,6 +3,7 @@ Run-related view functions for processing workflows.
 
 This module contains views for creating, reserving, and managing processing runs.
 """
+
 import json
 
 from django.contrib.auth.decorators import login_required
@@ -24,8 +25,8 @@ from ..forms import ReserveFrameProcRunForm, ReserveTomoProcRunForm, UpdateNotes
 
 def detail(request, run_id):
     run = get_object_or_404(ProcRun, pk=run_id)
-    if request.method == 'POST':
-        new_notes=request.POST['notes']
+    if request.method == "POST":
+        new_notes = request.POST["notes"]
         run.notes = new_notes
         run.save()
     field_objs = run._meta.get_fields()
@@ -39,25 +40,25 @@ def detail(request, run_id):
         except TypeError:
             print(f)
             continue
-        #ManyToManyField
-        if hasattr(fields[f.name],'all'):
-            fields[f.name] = list(map((lambda x: x.__str__()),fields[f.name].all()))
+        # ManyToManyField
+        if hasattr(fields[f.name], "all"):
+            fields[f.name] = list(map((lambda x: x.__str__()), fields[f.name].all()))
     all_pipe_data = RunPipeData.objects.filter(run=run)
     form = UpdateNotesForm(instance=run)
     context = {
-            "data": run,
-            "fields": fields,
-            "pipe_data": all_pipe_data,
-            "paths": {
-                    "update_notes": form,
-            },
+        "data": run,
+        "fields": fields,
+        "pipe_data": all_pipe_data,
+        "paths": {
+            "update_notes": form,
+        },
     }
     return render(request, "processes/detail.html", context)
 
 
 @login_required
 def reserve_run(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = ReserveFrameProcRunForm(request.POST)
         return render(request, reverse("processes:create"))
     else:
@@ -87,12 +88,12 @@ def reserve_run(request):
 @api_view(["POST"])
 @require_http_methods(["POST"])
 def create_run(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
-            data = request.data #json.loads(request.body.decode('utf-8'))  # Parse JSON data
-            plan_id = int(data.get('proc_plan'))  # Extract `proc_plan`
-            session_id = int(data.get('msi_session'))  # Extract `msi_session`
-            run_number = data.get('run_number')  # Extract the actual run number specified by user
+            data = request.data  # json.loads(request.body.decode('utf-8'))  # Parse JSON data
+            plan_id = int(data.get("proc_plan"))  # Extract `proc_plan`
+            session_id = int(data.get("msi_session"))  # Extract `msi_session`
+            run_number = data.get("run_number")  # Extract the actual run number specified by user
 
             msi_session = MsiSession.objects.get(pk=session_id)
             proc_plan = ProcPlan.objects.get(pk=plan_id)
@@ -100,7 +101,7 @@ def create_run(request):
             # Use the specified run number if provided, otherwise generate one
             if run_number:
                 # Ensure the run number has the correct format (e.g., "run001")
-                if not run_number.startswith('run'):
+                if not run_number.startswith("run"):
                     run_number = f"run{run_number.zfill(3)}"
                 name = run_number
 
@@ -113,12 +114,13 @@ def create_run(request):
 
                 if existing_run:
                     return JsonResponse(
-                        {'error': f'Run {name} already exists for this session and plan.'},
+                        {"error": f"Run {name} already exists for this session and plan."},
                         status=409,
                     )
             else:
                 # Generate a name using suggest_name if run_number not specified
                 from processes.models import suggest_name
+
                 name = suggest_name(proc_plan, msi_session)
 
             # Create the ProcRun instance
@@ -129,13 +131,13 @@ def create_run(request):
             )
 
             # Return the detail URL as a 302 redirect
-            return HttpResponseRedirect(reverse('processes:detail', args=(run_instance.id,)))
+            return HttpResponseRedirect(reverse("processes:detail", args=(run_instance.id,)))
         except (ProcPlan.DoesNotExist, MsiSession.DoesNotExist) as e:
-            return JsonResponse({'error': f'Invalid proc_plan or msi_session: {str(e)}'}, status=400)
+            return JsonResponse({"error": f"Invalid proc_plan or msi_session: {str(e)}"}, status=400)
         except Exception as e:
-            return JsonResponse({'error': f'Unexpected error: {str(e)}'}, status=500)
+            return JsonResponse({"error": f"Unexpected error: {str(e)}"}, status=500)
     else:
-        return JsonResponse({'error': 'Only POST requests are allowed.'}, status=405)
+        return JsonResponse({"error": "Only POST requests are allowed."}, status=405)
 
 
 @extend_schema(
@@ -240,46 +242,51 @@ def create_run(request):
 @require_http_methods(["POST"])
 def reserve_generic_run(request):
     try:
-        data = request.data # json.loads(request.body.decode("utf-8"))
+        data = request.data  # json.loads(request.body.decode("utf-8"))
         plan_id = int(data.get("proc_plan"))
         session_id = int(data.get("msi_session"))
         run_number = (data.get("run_number") or "").strip()
 
         if not run_number:
-            return JsonResponse({'error': 'run_number is required'}, status=400)
+            return JsonResponse({"error": "run_number is required"}, status=400)
 
         # normalize like create_run (allow raw "002")
-        if not run_number.startswith('run'):
+        if not run_number.startswith("run"):
             run_number = f"run{run_number.zfill(3)}"
 
         proc_plan = ProcPlan.objects.get(pk=plan_id)
         msi_session = MsiSession.objects.get(pk=session_id)
 
         exists = ProcRun.objects.filter(
-            name=run_number, proc_plan=proc_plan, msi_session=msi_session,
+            name=run_number,
+            proc_plan=proc_plan,
+            msi_session=msi_session,
         ).exists()
         if exists:
             return JsonResponse(
-                {'error': f'Run {run_number} already exists for this session and plan.'},
+                {"error": f"Run {run_number} already exists for this session and plan."},
                 status=409,
             )
 
         # No DB write here—just confirming availability
-        return JsonResponse({
-            'message': 'Reservation available.',
-            'proc_plan': proc_plan.id,
-            'msi_session': msi_session.id,
-            'run_number': run_number,
-        }, status=200)
+        return JsonResponse(
+            {
+                "message": "Reservation available.",
+                "proc_plan": proc_plan.id,
+                "msi_session": msi_session.id,
+                "run_number": run_number,
+            },
+            status=200,
+        )
 
     except ProcPlan.DoesNotExist:
-        return JsonResponse({'error': 'Invalid proc_plan'}, status=404)
+        return JsonResponse({"error": "Invalid proc_plan"}, status=404)
     except MsiSession.DoesNotExist:
-        return JsonResponse({'error': 'Invalid msi_session'}, status=404)
+        return JsonResponse({"error": "Invalid msi_session"}, status=404)
     except (ValueError, TypeError, json.JSONDecodeError):
-        return JsonResponse({'error': 'Invalid payload'}, status=400)
+        return JsonResponse({"error": "Invalid payload"}, status=400)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @extend_schema(
@@ -404,24 +411,24 @@ def create_generic_run(request):
     Optional JSON: pipeline (e.g., "copick"), notes
     """
     try:
-        data = request.data # json.loads(request.body.decode('utf-8'))
+        data = request.data  # json.loads(request.body.decode('utf-8'))
 
         # Validate inputs
         try:
-            plan_id = int(data.get('proc_plan'))
-            session_id = int(data.get('msi_session'))
+            plan_id = int(data.get("proc_plan"))
+            session_id = int(data.get("msi_session"))
         except (TypeError, ValueError):
-            return JsonResponse({'error': 'proc_plan and msi_session must be integers'}, status=400)
+            return JsonResponse({"error": "proc_plan and msi_session must be integers"}, status=400)
 
-        run_number = (data.get('run_number') or '').strip()
-        pipeline = (data.get('pipeline') or 'generic').strip()
-        notes = data.get('notes') or ''
+        run_number = (data.get("run_number") or "").strip()
+        pipeline = (data.get("pipeline") or "generic").strip()
+        notes = data.get("notes") or ""
 
         if not run_number:
-            return JsonResponse({'error': 'run_number is required'}, status=400)
+            return JsonResponse({"error": "run_number is required"}, status=400)
 
         # Normalize: run### format
-        if not run_number.startswith('run'):
+        if not run_number.startswith("run"):
             run_number = f"run{run_number.zfill(3)}"
         name = run_number
 
@@ -430,32 +437,35 @@ def create_generic_run(request):
 
         # Uniqueness guard
         if ProcRun.objects.filter(name=name, msi_session=msi_session, proc_plan=proc_plan).exists():
-            return JsonResponse({'error': f'Run {name} already exists for this session and plan.'}, status=409)
+            return JsonResponse({"error": f"Run {name} already exists for this session and plan."}, status=409)
 
         run_instance = ProcRun.objects.create(
             name=name,
             msi_session=msi_session,
             proc_plan=proc_plan,
-            notes=notes or f'pipeline={pipeline}',
+            notes=notes or f"pipeline={pipeline}",
         )
 
-        return JsonResponse({
-            'message': 'Generic run created (no tomograms).',
-            'run_id': run_instance.id,
-            'run_number': run_instance.name,
-            'session_id': msi_session.id,
-            'plan_id': proc_plan.id,
-            'detail_url': reverse('processes:detail', args=(run_instance.id,)),
-        }, status=201)
+        return JsonResponse(
+            {
+                "message": "Generic run created (no tomograms).",
+                "run_id": run_instance.id,
+                "run_number": run_instance.name,
+                "session_id": msi_session.id,
+                "plan_id": proc_plan.id,
+                "detail_url": reverse("processes:detail", args=(run_instance.id,)),
+            },
+            status=201,
+        )
 
     except ProcPlan.DoesNotExist:
-        return JsonResponse({'error': 'Invalid proc_plan'}, status=404)
+        return JsonResponse({"error": "Invalid proc_plan"}, status=404)
     except MsiSession.DoesNotExist:
-        return JsonResponse({'error': 'Invalid msi_session'}, status=404)
+        return JsonResponse({"error": "Invalid msi_session"}, status=404)
     except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 # ============================================================================
@@ -463,11 +473,12 @@ def create_generic_run(request):
 # Legacy views for post-tomogram processing runs (integrated from views_post_tomo.py)
 # ============================================================================
 
+
 def detail_post_tomo(request, run_id):
     """Legacy template view for post-tomogram run details"""
     run = get_object_or_404(ProcRun, pk=run_id)
-    if request.method == 'POST':
-        new_notes=request.POST['notes']
+    if request.method == "POST":
+        new_notes = request.POST["notes"]
         run.notes = new_notes
         run.save()
     field_objs = run._meta.get_fields()
@@ -481,64 +492,68 @@ def detail_post_tomo(request, run_id):
         except TypeError:
             print(f)
             continue
-        #ManyToManyField
-        if hasattr(fields[f.name],'all'):
-            fields[f.name] = list(map((lambda x: x.__str__()),fields[f.name].all()))
+        # ManyToManyField
+        if hasattr(fields[f.name], "all"):
+            fields[f.name] = list(map((lambda x: x.__str__()), fields[f.name].all()))
     all_pipe_data = RunPipeData.objects.filter(run=run)
     form = UpdateNotesForm(instance=run)
     context = {
-            "data": run,
-            "fields": fields,
-            "pipe_data": all_pipe_data,
-            "paths": {
-                    "update_notes": form,
-            },
+        "data": run,
+        "fields": fields,
+        "pipe_data": all_pipe_data,
+        "paths": {
+            "update_notes": form,
+        },
     }
     return render(request, "processes/ptdetail.html", context)
 
+
 def reserve_run_post_tomo(request):
     """Legacy template view for reserving a post-tomogram processing run"""
-    print('Reserving')
-    if request.method == 'POST':
-        print('Post-----')
+    print("Reserving")
+    if request.method == "POST":
+        print("Post-----")
         form = ReserveTomoProcRunForm(request.POST)
         print(request.POST)
-        if ('input_tomo' not in request.POST.keys() or not request.POST['input_tomo']) and 'msi_session' in request.POST.keys():
-            session_id=int(request.POST['msi_session'])
-            msi_session=MsiSession.objects.get(pk=session_id)
+        if (
+            "input_tomo" not in request.POST.keys() or not request.POST["input_tomo"]
+        ) and "msi_session" in request.POST.keys():
+            session_id = int(request.POST["msi_session"])
+            msi_session = MsiSession.objects.get(pk=session_id)
             input_tomo = ModelChoiceField(queryset=Tomograms.objects.filter(msi_session=msi_session))
             return render(request, "processes/ptselect.html", {"form": form, "input_tomo_field": input_tomo})
         else:
-            print('reserve success', request.POST)
+            print("reserve success", request.POST)
             return render(request, reverse("processes:ptselect"))
     else:
         form = ReserveTomoProcRunForm()
         input_tomo = ModelChoiceField(queryset=Tomograms.objects.all())
-        return render(request, "processes/ptreserve.html", {"form": form, "input_tomo_field": input_tomo })
+        return render(request, "processes/ptreserve.html", {"form": form, "input_tomo_field": input_tomo})
+
 
 def create_run_post_tomo(request):
     """Legacy template view for creating a post-tomogram processing run"""
-    if request.method == 'POST':
-        plan_id=int(request.POST['proc_plan'])
-        session_id=int(request.POST['msi_session'])
-        input_tomo_id=int(request.POST['input_tomo'])
-        input_tomo=Tomograms.objects.get(pk=input_tomo_id)
-        input_objects = {'tomo':input_tomo}
-        if 'input_pick' in request.POST.keys():
-            input_pick_id=int(request.POST['input_pick'])
-            input_pick=Annotation.objects.get(pk=input_pick_id)
-            input_objects['pick']=input_pick
+    if request.method == "POST":
+        plan_id = int(request.POST["proc_plan"])
+        session_id = int(request.POST["msi_session"])
+        input_tomo_id = int(request.POST["input_tomo"])
+        input_tomo = Tomograms.objects.get(pk=input_tomo_id)
+        input_objects = {"tomo": input_tomo}
+        if "input_pick" in request.POST.keys():
+            input_pick_id = int(request.POST["input_pick"])
+            input_pick = Annotation.objects.get(pk=input_pick_id)
+            input_objects["pick"] = input_pick
         else:
             input_pick_id = False
-            input_objects['pick']=False
-        msi_session=MsiSession.objects.get(pk=session_id)
-        proc_plan=ProcPlan.objects.get(pk=plan_id)
+            input_objects["pick"] = False
+        msi_session = MsiSession.objects.get(pk=session_id)
+        proc_plan = ProcPlan.objects.get(pk=plan_id)
 
         # Use the specified run number if provided, otherwise generate one
-        run_number = request.POST.get('run_number')
+        run_number = request.POST.get("run_number")
         if run_number:
             # Ensure the run number has the correct format (e.g., "run001")
-            if not run_number.startswith('run'):
+            if not run_number.startswith("run"):
                 run_number = f"run{run_number.zfill(3)}"
             name = run_number
 
@@ -550,18 +565,21 @@ def create_run_post_tomo(request):
             ).first()
 
             if existing_run:
-                return JsonResponse({
-                    'error': f'Run number {name} already exists for this session and plan. Please choose a different run number.',
-                }, status=400)
+                return JsonResponse(
+                    {
+                        "error": f"Run number {name} already exists for this session and plan. Please choose a different run number.",
+                    },
+                    status=400,
+                )
         else:
             # Fallback to the old behavior if no run number is specified
-            name = suggest_name('run',msi_session,proc_plan)
+            name = suggest_name("run", msi_session, proc_plan)
         run_instance = ProcRun.objects.create(
-                    name=name,
-                    msi_session=msi_session,
-                    proc_plan=proc_plan,
+            name=name,
+            msi_session=msi_session,
+            proc_plan=proc_plan,
         )
         run_instance.save()
         run_instance.save_pipe_run_data()
         run_instance.create_tomogram_collection(input_objects)
-        return HttpResponseRedirect(reverse('processes:ptdetail', args=(run_instance.id,)))
+        return HttpResponseRedirect(reverse("processes:ptdetail", args=(run_instance.id,)))

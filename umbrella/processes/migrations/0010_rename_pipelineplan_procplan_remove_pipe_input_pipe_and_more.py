@@ -5,82 +5,111 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0009_remove_annotation_method_and_more'),
-        ('stores', '0006_alter_staticpath_data_type'),
-        ('tem', '0020_magnification_mode_and_more'),
+        ("processes", "0009_remove_annotation_method_and_more"),
+        ("stores", "0006_alter_staticpath_data_type"),
+        ("tem", "0020_magnification_mode_and_more"),
     ]
 
     operations = [
         migrations.RenameModel(
-            old_name='PipelinePlan',
-            new_name='ProcPlan',
+            old_name="PipelinePlan",
+            new_name="ProcPlan",
         ),
         migrations.RemoveField(
-            model_name='pipe',
-            name='input_pipe',
+            model_name="pipe",
+            name="input_pipe",
         ),
         migrations.AddField(
-            model_name='alignment',
-            name='msi_session',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='tem.msisession'),
+            model_name="alignment",
+            name="msi_session",
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to="tem.msisession"),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='annotation',
-            name='msi_session',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='tem.msisession'),
+            model_name="annotation",
+            name="msi_session",
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to="tem.msisession"),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='ctf',
-            name='msi_session',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='tem.msisession'),
+            model_name="ctf",
+            name="msi_session",
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to="tem.msisession"),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='frames',
-            name='msi_session',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, related_name='session_of_frames', to='tem.msisession'),
+            model_name="frames",
+            name="msi_session",
+            field=models.ForeignKey(
+                default=1,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="session_of_frames",
+                to="tem.msisession",
+            ),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='particlegallery',
-            name='msi_session',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='tem.msisession'),
+            model_name="particlegallery",
+            name="msi_session",
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to="tem.msisession"),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='particlegallery',
-            name='tomograms',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='processes.tomograms'),
+            model_name="particlegallery",
+            name="tomograms",
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to="processes.tomograms"),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='procrun',
-            name='json_path',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='stores.path'),
+            model_name="procrun",
+            name="json_path",
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to="stores.path"),
         ),
         migrations.AddField(
-            model_name='rawtiltseries',
-            name='msi_session',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='tem.msisession'),
+            model_name="rawtiltseries",
+            name="msi_session",
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to="tem.msisession"),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='tiltangles',
-            name='msi_session',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='tem.msisession'),
+            model_name="tiltangles",
+            name="msi_session",
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to="tem.msisession"),
             preserve_default=False,
         ),
         migrations.CreateModel(
-            name='PipeJoint',
+            name="PipeJoint",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('input_pathtype', models.ForeignKey(blank=True, help_text='The output pathtype from input_pipe used as the input', null=True, on_delete=django.db.models.deletion.SET_NULL, to='stores.pathtype')),
-                ('input_pipe_in_plan', models.ForeignKey(help_text='Relates where the pipe is used as input is in its plan', on_delete=django.db.models.deletion.CASCADE, related_name='plan_of_input_pipe', to='processes.pipeinplan')),
-                ('pipe_in_plan', models.ForeignKey(help_text='Relates where the pipt is that needing input is in its plan', on_delete=django.db.models.deletion.CASCADE, related_name='plan_of_pipe', to='processes.pipeinplan')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "input_pathtype",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="The output pathtype from input_pipe used as the input",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="stores.pathtype",
+                    ),
+                ),
+                (
+                    "input_pipe_in_plan",
+                    models.ForeignKey(
+                        help_text="Relates where the pipe is used as input is in its plan",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="plan_of_input_pipe",
+                        to="processes.pipeinplan",
+                    ),
+                ),
+                (
+                    "pipe_in_plan",
+                    models.ForeignKey(
+                        help_text="Relates where the pipt is that needing input is in its plan",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="plan_of_pipe",
+                        to="processes.pipeinplan",
+                    ),
+                ),
             ],
         ),
     ]

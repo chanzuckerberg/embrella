@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tem', '0020_magnification_mode_and_more'),
+        ("tem", "0020_magnification_mode_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='magnification',
-            name='mode',
-            field=models.CharField(default='SA', help_text='projection mode', max_length=8),
+            model_name="magnification",
+            name="mode",
+            field=models.CharField(default="SA", help_text="projection mode", max_length=8),
         ),
     ]

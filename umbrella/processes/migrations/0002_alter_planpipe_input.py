@@ -4,16 +4,15 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0001_initial'),
-        ('stores', '0002_staticpath_alter_pathtype_static_path'),
+        ("processes", "0001_initial"),
+        ("stores", "0002_staticpath_alter_pathtype_static_path"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='planpipe',
-            name='input',
-            field=models.ManyToManyField(related_name='staticpath_in_input', to='stores.staticpath'),
+            model_name="planpipe",
+            name="input",
+            field=models.ManyToManyField(related_name="staticpath_in_input", to="stores.staticpath"),
         ),
     ]

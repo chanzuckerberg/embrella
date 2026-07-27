@@ -20,8 +20,8 @@ class WorkflowConfig(AppConfig):
     eliminating the need for manual setup_*_processor management commands.
     """
 
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'workflow'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "workflow"
 
     def ready(self):
         """
@@ -31,12 +31,11 @@ class WorkflowConfig(AppConfig):
         processor class definitions, ensuring database stays in sync with code.
         """
         # Import here to avoid AppRegistryNotReady errors
-        from processes.models import ProcSoftware, Task
-        from workflow.processors import list_processors
 
         # Only run sync during normal operation, not during migrations
         import sys
-        if 'migrate' in sys.argv or 'makemigrations' in sys.argv:
+
+        if "migrate" in sys.argv or "makemigrations" in sys.argv:
             return
 
         try:
@@ -61,6 +60,7 @@ class WorkflowConfig(AppConfig):
         Mark any ProcSoftware records not in current registry as active=False.
         """
         from processes.models import ProcSoftware, Task
+
         from workflow.processors import list_processors
 
         logger.info("Syncing processor metadata to database...")
@@ -76,7 +76,7 @@ class WorkflowConfig(AppConfig):
                     metadata = processor.get_database_metadata()
 
                     # Validate metadata
-                    if not metadata.get('task_name'):
+                    if not metadata.get("task_name"):
                         logger.warning(
                             f"Processor '{processor_name}' has no task_name defined. "
                             f"Skipping database sync for this processor."
@@ -85,8 +85,8 @@ class WorkflowConfig(AppConfig):
 
                     # Create/update Task record
                     task, task_created = Task.objects.get_or_create(
-                        name=metadata['task_name'],
-                        defaults={'step': 1}  # Default step, can be adjusted manually
+                        name=metadata["task_name"],
+                        defaults={"step": 1},  # Default step, can be adjusted manually
                     )
 
                     if task_created:
@@ -96,15 +96,15 @@ class WorkflowConfig(AppConfig):
 
                     # Create/update ProcSoftware record (always overwrite with class values)
                     proc_software, software_created = ProcSoftware.objects.update_or_create(
-                        name=metadata['name'],
+                        name=metadata["name"],
                         defaults={
-                            'version': metadata['version'],
-                            'processor_class': metadata['processor_class'],
-                            'default_cluster': metadata['default_cluster'],
-                            'allowed_clusters': metadata['allowed_clusters'],
-                            'script_directory': metadata['script_directory'],
-                            'active': True,
-                        }
+                            "version": metadata["version"],
+                            "processor_class": metadata["processor_class"],
+                            "default_cluster": metadata["default_cluster"],
+                            "allowed_clusters": metadata["allowed_clusters"],
+                            "script_directory": metadata["script_directory"],
+                            "active": True,
+                        },
                     )
 
                     if software_created:
@@ -121,31 +121,23 @@ class WorkflowConfig(AppConfig):
                     # Associate Task with ProcSoftware via capable_tasks
                     if task not in proc_software.capable_tasks.all():
                         proc_software.capable_tasks.add(task)
-                        logger.info(
-                            f"  Associated Task '{task.name}' with "
-                            f"ProcSoftware '{proc_software.name}'"
-                        )
+                        logger.info(f"  Associated Task '{task.name}' with ProcSoftware '{proc_software.name}'")
 
-                    synced_processor_names.append(metadata['name'])
+                    synced_processor_names.append(metadata["name"])
 
                 except Exception as e:
-                    logger.error(
-                        f"Failed to sync processor '{processor_name}' to database: {e}",
-                        exc_info=True
-                    )
+                    logger.error(f"Failed to sync processor '{processor_name}' to database: {e}", exc_info=True)
 
             # Mark processors not in current registry as inactive
             orphaned = ProcSoftware.objects.exclude(name__in=synced_processor_names)
             orphaned_count = orphaned.filter(active=True).count()
             if orphaned_count > 0:
                 orphaned.update(active=False)
-                orphaned_names = list(orphaned.values_list('name', flat=True))
+                orphaned_names = list(orphaned.values_list("name", flat=True))
                 logger.warning(
-                    f"  Marked {orphaned_count} processor(s) as inactive "
-                    f"(no longer in codebase): {orphaned_names}"
+                    f"  Marked {orphaned_count} processor(s) as inactive (no longer in codebase): {orphaned_names}"
                 )
 
         logger.info(
-            f"Processor sync complete: {len(synced_processor_names)} active processor(s) "
-            f"synchronized to database."
+            f"Processor sync complete: {len(synced_processor_names)} active processor(s) synchronized to database."
         )

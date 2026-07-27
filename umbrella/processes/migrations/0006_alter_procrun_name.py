@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0005_remove_tomograms_denoised_tomograms_parent_tomo_and_more'),
+        ("processes", "0005_remove_tomograms_denoised_tomograms_parent_tomo_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='procrun',
-            name='name',
-            field=models.CharField(default='run001', max_length=20),
+            model_name="procrun",
+            name="name",
+            field=models.CharField(default="run001", max_length=20),
         ),
     ]

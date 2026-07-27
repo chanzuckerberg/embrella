@@ -29,8 +29,8 @@ class MembranesegProcessor(BaseProcessor):
     display_name = "Membrane Segmentation"
     version = "1.0"
     cluster = "bruno"
-    allowed_clusters = ['bruno', 'czii']
-    task_name = 'membrane_segmentation'
+    allowed_clusters = ["bruno", "czii"]
+    task_name = "membrane_segmentation"
 
     def validate_parameters(self, params: Dict[str, Any]) -> List[str]:
         """
@@ -45,13 +45,13 @@ class MembranesegProcessor(BaseProcessor):
         errors = []
 
         # Required fields
-        required_fields = ['copick_session', 'copick_procrun', 'tomo_type', 'tomo_voxel_size']
+        required_fields = ["copick_session", "copick_procrun", "tomo_type", "tomo_voxel_size"]
         for field in required_fields:
             if not params.get(field):
                 errors.append(f"{field} is required")
 
         # Validate voxel size if provided
-        tomo_voxel_size = params.get('tomo_voxel_size')
+        tomo_voxel_size = params.get("tomo_voxel_size")
         if tomo_voxel_size is not None:
             try:
                 voxel_size = float(tomo_voxel_size)
@@ -61,8 +61,8 @@ class MembranesegProcessor(BaseProcessor):
                 errors.append("tomo_voxel_size must be a valid number")
 
         # Validate threshold if provided (must be numeric)
-        threshold = params.get('threshold')
-        if threshold is not None and threshold != '':
+        threshold = params.get("threshold")
+        if threshold is not None and threshold != "":
             try:
                 float(threshold)
             except (ValueError, TypeError):
@@ -82,31 +82,31 @@ class MembranesegProcessor(BaseProcessor):
             Rendered bash script for SLURM submission
         """
         # Get template from processor's templates directory
-        template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+        template_dir = os.path.join(os.path.dirname(__file__), "templates")
         env = Environment(loader=FileSystemLoader(template_dir))
-        template = env.get_template('membraneseg.sh.j2')
+        template = env.get_template("membraneseg.sh.j2")
 
         # Get structured template context (includes SLURM directives)
         context = self.get_template_context(params, run_context)
 
         # Build template variables
         # Use copick_session from params (not MSI session)
-        session_name = params.get('copick_session')
-        copick_procrun = params.get('copick_procrun')
+        session_name = params.get("copick_session")
+        copick_procrun = params.get("copick_procrun")
 
         # Generate a unique session ID for this membraneseg run
         membraneseg_session_id = run_context.run_number
 
         template_vars = {
-            'job_name': f'{session_name}_membraneseg_{copick_procrun}_{membraneseg_session_id}',
-            'session': session_name,
-            'copick_procrun': copick_procrun,
-            'tomo_type': params['tomo_type'],
-            'tomo_voxel_size': params['tomo_voxel_size'],
-            'membraneseg_session_id': membraneseg_session_id,
-            'threshold': params.get('threshold', ''),
-            'slurm_directives': context.get('slurm_directives', []),
-            'context_vars': context.get('context_vars', {}),
+            "job_name": f"{session_name}_membraneseg_{copick_procrun}_{membraneseg_session_id}",
+            "session": session_name,
+            "copick_procrun": copick_procrun,
+            "tomo_type": params["tomo_type"],
+            "tomo_voxel_size": params["tomo_voxel_size"],
+            "membraneseg_session_id": membraneseg_session_id,
+            "threshold": params.get("threshold", ""),
+            "slurm_directives": context.get("slurm_directives", []),
+            "context_vars": context.get("context_vars", {}),
         }
 
         # Render template with parameters
@@ -133,14 +133,14 @@ class MembranesegProcessor(BaseProcessor):
         # The actual session and run will be determined by the parameters
         return [
             {
-                'type': 'segmentation',
-                'pattern': '*/segmentations/*.zarr',
-                'description': 'Membrane segmentation volumes in Zarr format',
+                "type": "segmentation",
+                "pattern": "*/segmentations/*.zarr",
+                "description": "Membrane segmentation volumes in Zarr format",
             },
             {
-                'type': 'logs',
-                'pattern': '*.log',
-                'description': 'Processing logs',
+                "type": "logs",
+                "pattern": "*.log",
+                "description": "Processing logs",
             },
         ]
 
@@ -152,13 +152,13 @@ class MembranesegProcessor(BaseProcessor):
             Dictionary of SLURM options
         """
         return {
-            'partition': 'gpu',
-            'gpus': 4,
-            'nodes': 1,
-            'cpus_per_task': 4,
-            'mem_per_cpu': '32G',
-            'time': '72:00:00',
-            'job_name': 'membraneseg',
+            "partition": "gpu",
+            "gpus": 4,
+            "nodes": 1,
+            "cpus_per_task": 4,
+            "mem_per_cpu": "32G",
+            "time": "72:00:00",
+            "job_name": "membraneseg",
         }
 
     def on_job_submit(self, run_context: RunContext, job_id: str) -> None:
@@ -199,7 +199,7 @@ class MembranesegProcessor(BaseProcessor):
         Returns:
             List of prerequisite processor names
         """
-        return ['copick']
+        return ["copick"]
 
 
 # Register the processor after the class is fully defined to avoid circular imports

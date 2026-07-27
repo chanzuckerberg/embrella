@@ -14,7 +14,8 @@ from umbrella_logger import logger
 from common.clusterio import get_cluster_ssh_connection
 
 # Default gain directory for CZII krios1 microscope
-DEFAULT_GAIN_DIRECTORY = '/hpc/instruments/czii.krios1/OffloadData/ImagesForProcessing/EF-Falcon/300kV/'
+DEFAULT_GAIN_DIRECTORY = "/hpc/instruments/czii.krios1/OffloadData/ImagesForProcessing/EF-Falcon/300kV/"
+
 
 def _format_file_size(size_bytes: int) -> str:
     """
@@ -27,16 +28,17 @@ def _format_file_size(size_bytes: int) -> str:
         Human-readable string like '11.8 MB' or '1.2 GB'
     """
     if size_bytes < 1024:
-        return f'{size_bytes} B'
+        return f"{size_bytes} B"
     elif size_bytes < 1024 * 1024:
-        return f'{size_bytes / 1024:.1f} KB'
+        return f"{size_bytes / 1024:.1f} KB"
     elif size_bytes < 1024 * 1024 * 1024:
-        return f'{size_bytes / (1024 * 1024):.1f} MB'
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
     else:
-        return f'{size_bytes / (1024 * 1024 * 1024):.1f} GB'
+        return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+
 
 def list_gain_files(
-    cluster_id: str = 'czii',
+    cluster_id: str = "czii",
     gain_directory: str = DEFAULT_GAIN_DIRECTORY,
 ) -> Dict[str, Any]:
     """
@@ -84,17 +86,17 @@ def list_gain_files(
             entries = sftp.listdir_attr(gain_directory)
         except FileNotFoundError:
             return {
-                'success': False,
-                'files': [],
-                'directory': gain_directory,
-                'error': f'Directory not found: {gain_directory}',
+                "success": False,
+                "files": [],
+                "directory": gain_directory,
+                "error": f"Directory not found: {gain_directory}",
             }
         except PermissionError:
             return {
-                'success': False,
-                'files': [],
-                'directory': gain_directory,
-                'error': f'Permission denied: {gain_directory}',
+                "success": False,
+                "files": [],
+                "directory": gain_directory,
+                "error": f"Permission denied: {gain_directory}",
             }
 
         # Filter for gain files and collect metadata
@@ -103,7 +105,7 @@ def list_gain_files(
             filename = entry.filename
 
             # Skip hidden files and directories
-            if filename.startswith('.'):
+            if filename.startswith("."):
                 continue
 
             # Check if it's a regular file with valid extension
@@ -116,39 +118,41 @@ def list_gain_files(
 
             try:
                 mod_time = datetime.fromtimestamp(entry.st_mtime, tz=timezone.utc)
-                mod_time_str = mod_time.strftime('%Y-%m-%d %H:%M:%S')
+                mod_time_str = mod_time.strftime("%Y-%m-%d %H:%M:%S")
             except (ValueError, OSError):
-                mod_time_str = 'Unknown'
+                mod_time_str = "Unknown"
             size_bytes = entry.st_size
             size_human = _format_file_size(size_bytes)
 
-            gain_files.append({
-                'filename': filename,
-                'modified_time': mod_time_str,
-                'modified_timestamp': entry.st_mtime,
-                'size_bytes': size_bytes,
-                'size_human': size_human,
-            })
+            gain_files.append(
+                {
+                    "filename": filename,
+                    "modified_time": mod_time_str,
+                    "modified_timestamp": entry.st_mtime,
+                    "size_bytes": size_bytes,
+                    "size_human": size_human,
+                }
+            )
 
         # Sort by modification time (most recent first)
-        gain_files.sort(key=lambda x: x['modified_timestamp'], reverse=True)
+        gain_files.sort(key=lambda x: x["modified_timestamp"], reverse=True)
         for file_info in gain_files:
-            del file_info['modified_timestamp']
+            del file_info["modified_timestamp"]
 
-        logger.info(f'Found {len(gain_files)} gain files in {gain_directory}')
+        logger.info(f"Found {len(gain_files)} gain files in {gain_directory}")
         return {
-            'success': True,
-            'files': gain_files,
-            'directory': gain_directory,
-            'error': None,
+            "success": True,
+            "files": gain_files,
+            "directory": gain_directory,
+            "error": None,
         }
     except Exception as e:
-        logger.error(f'Error listing gain files from {gain_directory}: {e}')
+        logger.error(f"Error listing gain files from {gain_directory}: {e}")
         return {
-            'success': False,
-            'files': [],
-            'directory': gain_directory,
-            'error': str(e),
+            "success": False,
+            "files": [],
+            "directory": gain_directory,
+            "error": str(e),
         }
     finally:
         if sftp:

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("stores", "0008_fix_path_overlay_paths"),
     ]
@@ -24,9 +23,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(
-                        help_text="Human-readable display name", max_length=64
-                    ),
+                    models.CharField(help_text="Human-readable display name", max_length=64),
                 ),
                 (
                     "http_base_url",

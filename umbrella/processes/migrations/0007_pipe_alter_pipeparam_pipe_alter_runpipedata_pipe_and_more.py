@@ -5,46 +5,57 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0006_alter_procrun_name'),
-        ('stores', '0004_alter_staticpath_data_type'),
+        ("processes", "0006_alter_procrun_name"),
+        ("stores", "0004_alter_staticpath_data_type"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Pipe',
+            name="Pipe",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='voxelspacing10.000a', max_length=32)),
-                ('input', models.ManyToManyField(related_name='staticpath_in_input', to='stores.staticpath')),
-                ('input_pipe', models.ForeignKey(blank=True, help_text='The pipe it needs to wait for input in order to run', null=True, on_delete=django.db.models.deletion.CASCADE, to='processes.pipe')),
-                ('output', models.ManyToManyField(related_name='pathtype_in_output', to='stores.pathtype')),
-                ('software', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.procsoftware')),
-                ('tasks_performed', models.ManyToManyField(to='processes.task')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="voxelspacing10.000a", max_length=32)),
+                ("input", models.ManyToManyField(related_name="staticpath_in_input", to="stores.staticpath")),
+                (
+                    "input_pipe",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="The pipe it needs to wait for input in order to run",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="processes.pipe",
+                    ),
+                ),
+                ("output", models.ManyToManyField(related_name="pathtype_in_output", to="stores.pathtype")),
+                (
+                    "software",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.procsoftware"),
+                ),
+                ("tasks_performed", models.ManyToManyField(to="processes.task")),
             ],
         ),
         migrations.AlterField(
-            model_name='pipeparam',
-            name='pipe',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.pipe'),
+            model_name="pipeparam",
+            name="pipe",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.pipe"),
         ),
         migrations.AlterField(
-            model_name='runpipedata',
-            name='pipe',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.pipe'),
+            model_name="runpipedata",
+            name="pipe",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.pipe"),
         ),
         migrations.CreateModel(
-            name='PipeInPlan',
+            name="PipeInPlan",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='vol001', max_length=32)),
-                ('step', models.PositiveSmallIntegerField(default=1)),
-                ('pipe', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.pipe')),
-                ('plan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.pipelineplan')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="vol001", max_length=32)),
+                ("step", models.PositiveSmallIntegerField(default=1)),
+                ("pipe", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.pipe")),
+                ("plan", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.pipelineplan")),
             ],
         ),
         migrations.DeleteModel(
-            name='PlanPipe',
+            name="PlanPipe",
         ),
     ]

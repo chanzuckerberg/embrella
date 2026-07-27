@@ -10,15 +10,15 @@ def populate_documentation_space(apps, schema_editor):
     Migrate Project FKs from old confluence_space/google_drive_folder to new documentation_space.
     This is idempotent - safe to run multiple times.
     """
-    Project = apps.get_model('projects', 'Project')
-    ExternalResource = apps.get_model('external_links', 'ExternalResource')
+    Project = apps.get_model("projects", "Project")
+    ExternalResource = apps.get_model("external_links", "ExternalResource")
 
     # Check if old columns still exist using Django's introspection API (works with SQLite, MySQL, PostgreSQL)
     connection = schema_editor.connection
 
     # Check if table exists first
     tables = connection.introspection.table_names()
-    has_project_table = 'projects_project' in tables
+    has_project_table = "projects_project" in tables
 
     # Check if old columns exist
     has_confluence_col = False
@@ -26,9 +26,9 @@ def populate_documentation_space(apps, schema_editor):
 
     if has_project_table:
         with connection.cursor() as cursor:
-            columns = {col.name for col in connection.introspection.get_table_description(cursor, 'projects_project')}
-            has_confluence_col = 'confluence_space_id' in columns
-            has_drive_col = 'google_drive_folder_id' in columns
+            columns = {col.name for col in connection.introspection.get_table_description(cursor, "projects_project")}
+            has_confluence_col = "confluence_space_id" in columns
+            has_drive_col = "google_drive_folder_id" in columns
 
     if not has_confluence_col and not has_drive_col:
         print("Old FK columns not found - skipping Project FK migration")
@@ -57,10 +57,7 @@ def populate_documentation_space(apps, schema_editor):
             # Find matching ExternalResource by URL (system_name detected from URL during creation)
             try:
                 with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT url FROM confluence_space WHERE id = %s",
-                        [confluence_space_id]
-                    )
+                    cursor.execute("SELECT url FROM confluence_space WHERE id = %s", [confluence_space_id])
                     row = cursor.fetchone()
                     if row:
                         space_url = row[0]
@@ -78,10 +75,7 @@ def populate_documentation_space(apps, schema_editor):
         if has_drive_col and google_drive_folder_id:
             try:
                 with connection.cursor() as cursor:
-                    cursor.execute(
-                        "SELECT url FROM clouddocs_drivefolder WHERE id = %s",
-                        [google_drive_folder_id]
-                    )
+                    cursor.execute("SELECT url FROM clouddocs_drivefolder WHERE id = %s", [google_drive_folder_id])
                     row = cursor.fetchone()
                     if row:
                         folder_url = row[0]
@@ -99,42 +93,41 @@ def populate_documentation_space(apps, schema_editor):
         if not confluence_space_id and not google_drive_folder_id:
             no_old_fk += 1
 
-    print(f"Projects: Migrated {migrated} documentation links, skipped {skipped} (already migrated), {no_old_fk} had no old FK")
+    print(
+        f"Projects: Migrated {migrated} documentation links, skipped {skipped} (already migrated), {no_old_fk} had no old FK"
+    )
 
 
 def reverse_migration(apps, schema_editor):
     """Reverse migration - clear documentation_space FKs."""
-    Project = apps.get_model('projects', 'Project')
+    Project = apps.get_model("projects", "Project")
     updated = Project.objects.filter(documentation_space__isnull=False).update(documentation_space=None)
     print(f"Cleared documentation_space for {updated} projects")
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('projects', '0006_project_project_leader'),
-        ('external_links', '0003_migrate_legacy_docs'),
+        ("projects", "0006_project_project_leader"),
+        ("external_links", "0003_migrate_legacy_docs"),
     ]
 
     operations = [
         # Step 1: Add new unified documentation_space field
         migrations.AddField(
-            model_name='project',
-            name='documentation_space',
+            model_name="project",
+            name="documentation_space",
             field=models.ForeignKey(
                 blank=True,
-                help_text='Project documentation workspace (Confluence, Google Drive, Benchling, etc.)',
-                limit_choices_to={'resource_type': 'doc_space'},
+                help_text="Project documentation workspace (Confluence, Google Drive, Benchling, etc.)",
+                limit_choices_to={"resource_type": "doc_space"},
                 null=True,
                 on_delete=django.db.models.deletion.PROTECT,
-                related_name='project_doc_spaces',
-                to='external_links.externalresource',
+                related_name="project_doc_spaces",
+                to="external_links.externalresource",
             ),
         ),
-
         # Step 2: Migrate data from old columns to new column
         migrations.RunPython(populate_documentation_space, reverse_migration),
-
         # Step 3 & 4: Drop old foreign key constraints and columns
         # Note: These are intentionally noops. The columns can be removed manually in production
         # after verifying the migration. SQLite doesn't support DROP FOREIGN KEY and this
