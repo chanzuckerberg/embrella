@@ -62,7 +62,7 @@ export default function SubmissionsPage() {
       (dep.datasets ?? []).forEach((ds) => {
         c.all += 1;
         c[ds.status] += 1;
-      }),
+      })
     );
     return c;
   }, [submissions]);
@@ -83,10 +83,7 @@ export default function SubmissionsPage() {
     return groups.sort((a, b) => compareDatasets(a.datasets[0], b.datasets[0], sort));
   }, [submissions, filter, search, sort]);
 
-  const visibleDatasetCount = useMemo(
-    () => visible.reduce((n, dep) => n + dep.datasets.length, 0),
-    [visible],
-  );
+  const visibleDatasetCount = useMemo(() => visible.reduce((n, dep) => n + dep.datasets.length, 0), [visible]);
 
   const renderContent = () => {
     if (isError) {

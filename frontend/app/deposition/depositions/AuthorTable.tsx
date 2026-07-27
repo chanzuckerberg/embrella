@@ -5,7 +5,18 @@ import { Button } from '@czi-sds/components';
 import CloseIcon from '@mui/icons-material/Close';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { Box, IconButton, Radio, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import {
+  Box,
+  IconButton,
+  Radio,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 
 import type { AuthorRef, Person } from '../types';
 import { usePeopleByIds } from '../hooks/usePeopleByIds';
@@ -59,7 +70,7 @@ export function AuthorTable({
       renumber([
         ...authors,
         { author_id: personId, is_primary: false, is_corresponding: false, author_list_order: authors.length },
-      ]),
+      ])
     );
 
   return (
@@ -127,9 +138,7 @@ export function AuthorTable({
                   onDrop={() => handleDrop(idx)}
                   sx={{
                     opacity: dragIdx === idx ? 0.4 : 1,
-                    ...(isDropTarget
-                      ? { boxShadow: (theme) => `inset 0 2px 0 0 ${theme.palette.primary.main}` }
-                      : {}),
+                    ...(isDropTarget ? { boxShadow: (theme) => `inset 0 2px 0 0 ${theme.palette.primary.main}` } : {}),
                   }}
                 >
                   <TableCell sx={{ px: 0.5 }}>

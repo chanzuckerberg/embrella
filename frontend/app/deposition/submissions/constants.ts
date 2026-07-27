@@ -11,7 +11,7 @@ export const COLS = [
   { key: 'actions', label: 'Actions', width: '16%', align: 'right' as const },
 ];
 
-export const MAX_SESSION_NAMES = 2; 
+export const MAX_SESSION_NAMES = 2;
 
 export type ChipColor = 'default' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
 
@@ -24,7 +24,7 @@ export const STATUS_META: Record<DatasetStatus, { label: string; color: ChipColo
 
 export const TYPE_META: Record<string, ChipColor> = {
   'Tomos only': 'secondary',
-  'Dataset': 'info',
+  Dataset: 'info',
   'Annotations only': 'warning',
 };
 

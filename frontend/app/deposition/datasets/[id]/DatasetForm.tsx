@@ -53,9 +53,7 @@ function toForm(d: Dataset): FormState {
     assay_label: d.assay_label ?? '',
     assay_ontology_id: d.assay_ontology_id ?? '',
     is_authors_same_as_deposition: d.is_authors_same_as_deposition ?? true,
-    authors: (d.authors_json ?? []).filter(
-      (a) => a.full_name?.trim() || a.orcid?.trim() || a.affiliation?.trim(),
-    ),
+    authors: (d.authors_json ?? []).filter((a) => a.full_name?.trim() || a.orcid?.trim() || a.affiliation?.trim()),
     funding: d.funding ?? [],
     crossRefs: [
       ...splitCsv(d.dataset_publications).map((value): CrossRef => ({ type: 'publication', value })),
@@ -126,7 +124,11 @@ export function DatasetForm({
     async (payload: FormState) => {
       const { crossRefs, authors, ...rest } = payload;
       const csv = (t: CrossRef['type']) =>
-        crossRefs.filter((r) => r.type === t).map((r) => r.value.trim()).filter(Boolean).join(', ');
+        crossRefs
+          .filter((r) => r.type === t)
+          .map((r) => r.value.trim())
+          .filter(Boolean)
+          .join(', ');
       const updated = await updateDataset(dataset.id, {
         ...rest,
         authors_json: authors,
@@ -136,7 +138,7 @@ export function DatasetForm({
       queryClient.setQueryData(depositionKeys.dataset(dataset.id), updated);
       queryClient.invalidateQueries({ queryKey: [...depositionKeys.all, 'submissions'] });
     },
-    [dataset.id, queryClient],
+    [dataset.id, queryClient]
   );
 
   const { status, lastSavedAt, saveNow } = useDraftAutoSave(form, save, { enabled: !readOnly });
@@ -150,9 +152,16 @@ export function DatasetForm({
     setForm((prev) => ({ ...prev, sample: { ...prev.sample, [key]: value } }));
 
   const setFunding = (i: number, patch: Partial<DatasetFunding>) =>
-    set('funding', form.funding.map((f, idx) => (idx === i ? { ...f, ...patch } : f)));
+    set(
+      'funding',
+      form.funding.map((f, idx) => (idx === i ? { ...f, ...patch } : f))
+    );
   const addFunding = () => set('funding', [...form.funding, { funding_agency_name: '', grant_id: '' }]);
-  const removeFunding = (i: number) => set('funding', form.funding.filter((_, idx) => idx !== i));
+  const removeFunding = (i: number) =>
+    set(
+      'funding',
+      form.funding.filter((_, idx) => idx !== i)
+    );
 
   const addCrossRef = () => set('crossRefs', [...form.crossRefs, { type: 'publication', value: '' }]);
 
@@ -282,7 +291,13 @@ export function DatasetForm({
                 innerRef={() => {}}
                 action={
                   !readOnly ? (
-                    <Button sdsType="primary" sdsStyle="minimal" size="small" startIcon={<AddIcon />} onClick={addCrossRef}>
+                    <Button
+                      sdsType="primary"
+                      sdsStyle="minimal"
+                      size="small"
+                      startIcon={<AddIcon />}
+                      onClick={addCrossRef}
+                    >
                       Add entry
                     </Button>
                   ) : undefined

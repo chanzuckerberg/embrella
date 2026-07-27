@@ -24,7 +24,7 @@ function renderModal(props: Partial<React.ComponentProps<typeof ReservationModal
   return render(
     <QueryClientProvider client={client}>
       <ReservationModal open onClose={jest.fn()} {...props} />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 

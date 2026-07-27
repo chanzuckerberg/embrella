@@ -15,14 +15,9 @@ const renderHeader = (is_owner: boolean) =>
   render(
     <table>
       <tbody>
-        <GroupHeaderRow
-          deposition={deposition(is_owner)}
-          open
-          onToggle={() => {}}
-          onAddDataset={() => {}}
-        />
+        <GroupHeaderRow deposition={deposition(is_owner)} open onToggle={() => {}} onAddDataset={() => {}} />
       </tbody>
-    </table>,
+    </table>
   );
 
 describe('GroupHeaderRow ownership gating', () => {

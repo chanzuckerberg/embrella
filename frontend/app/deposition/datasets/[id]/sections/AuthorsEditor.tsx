@@ -101,7 +101,15 @@ export function AuthorsEditor({
             <Paper key={i} variant="outlined" sx={{ p: 2.5, borderRadius: 2, bgcolor: 'grey.50' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Avatar sx={{ width: 25, height: 25, fontSize: 14,mr:2, bgcolor: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>
+                  <Avatar
+                    sx={{
+                      width: 25,
+                      height: 25,
+                      fontSize: 14,
+                      mr: 2,
+                      bgcolor: AVATAR_COLORS[i % AVATAR_COLORS.length],
+                    }}
+                  >
                     {initials(a.full_name)}
                   </Avatar>
                   <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.5 }}>
@@ -111,7 +119,12 @@ export function AuthorsEditor({
                     <Chip
                       label="Corresponding"
                       size="small"
-                      sx={{ height: 22, fontWeight: 600, bgcolor: (t) => `${t.palette.success.main}1f`, color: 'success.dark' }}
+                      sx={{
+                        height: 22,
+                        fontWeight: 600,
+                        bgcolor: (t) => `${t.palette.success.main}1f`,
+                        color: 'success.dark',
+                      }}
                     />
                   )}
                 </Box>
@@ -141,7 +154,7 @@ export function AuthorsEditor({
                 />
               </Stack>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}  mt={5} alignItems={{ sm: 'flex-end' }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={5} alignItems={{ sm: 'flex-end' }}>
                 <TextField
                   select
                   label="Identifier"

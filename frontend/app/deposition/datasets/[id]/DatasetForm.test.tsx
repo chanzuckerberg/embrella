@@ -23,7 +23,13 @@ const DRAFT = {
   status: 'draft',
   funding: [],
   authors_json: [
-    { full_name: 'Test Author', affiliation: 'CZ Biohub', orcid: '0000-0002-1825-0097', is_corresponding: true, author_list_order: 0 },
+    {
+      full_name: 'Test Author',
+      affiliation: 'CZ Biohub',
+      orcid: '0000-0002-1825-0097',
+      is_corresponding: true,
+      author_list_order: 0,
+    },
   ],
 } as unknown as Dataset;
 
@@ -32,7 +38,7 @@ function renderForm(dataset = DRAFT) {
   return render(
     <QueryClientProvider client={client}>
       <DatasetForm dataset={dataset} />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 

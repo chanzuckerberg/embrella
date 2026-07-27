@@ -8,17 +8,70 @@ jest.mock('../hooks/useSubmissions', () => ({ useSubmissions: jest.fn() }));
 const mockUseSubmissions = useSubmissions as jest.Mock;
 
 const DATASETS = [
-  { id: 1, dataset_id: 100, title: 'A', status: 'pushed', type: 'Tomos only', session_names: [], session_count: 0, updated_at: '2026-07-01T00:00:00Z' },
-  { id: 2, dataset_id: 101, title: 'B', status: 'pushed', type: 'Dataset', session_names: ['s1'], session_count: 1, updated_at: '2026-07-01T00:00:00Z' },
-  { id: 3, dataset_id: 102, title: 'C', status: 'draft', type: 'Annotations only', session_names: ['s2'], session_count: 1, updated_at: '2026-07-01T00:00:00Z' },
+  {
+    id: 1,
+    dataset_id: 100,
+    title: 'A',
+    status: 'pushed',
+    type: 'Tomos only',
+    session_names: [],
+    session_count: 0,
+    updated_at: '2026-07-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    dataset_id: 101,
+    title: 'B',
+    status: 'pushed',
+    type: 'Dataset',
+    session_names: ['s1'],
+    session_count: 1,
+    updated_at: '2026-07-01T00:00:00Z',
+  },
+  {
+    id: 3,
+    dataset_id: 102,
+    title: 'C',
+    status: 'draft',
+    type: 'Annotations only',
+    session_names: ['s2'],
+    session_count: 1,
+    updated_at: '2026-07-01T00:00:00Z',
+  },
 ];
 const SUBMISSIONS = [{ id: 1, deposition_id: 10001, title: 'Test dep', datasets: DATASETS }];
 
-
 const ORDER_DATASETS = [
-  { id: 1, dataset_id: 100, title: 'Alpha', status: 'pushed', type: 'Tomos only', session_names: [], session_count: 0, updated_at: '2026-07-01T00:00:00Z' },
-  { id: 2, dataset_id: 102, title: 'Gamma', status: 'draft', type: 'Tomos only', session_names: [], session_count: 0, updated_at: '2026-07-05T00:00:00Z' },
-  { id: 3, dataset_id: 101, title: 'Beta', status: 'pushed', type: 'Tomos only', session_names: [], session_count: 0, updated_at: '2026-07-03T00:00:00Z' },
+  {
+    id: 1,
+    dataset_id: 100,
+    title: 'Alpha',
+    status: 'pushed',
+    type: 'Tomos only',
+    session_names: [],
+    session_count: 0,
+    updated_at: '2026-07-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    dataset_id: 102,
+    title: 'Gamma',
+    status: 'draft',
+    type: 'Tomos only',
+    session_names: [],
+    session_count: 0,
+    updated_at: '2026-07-05T00:00:00Z',
+  },
+  {
+    id: 3,
+    dataset_id: 101,
+    title: 'Beta',
+    status: 'pushed',
+    type: 'Tomos only',
+    session_names: [],
+    session_count: 0,
+    updated_at: '2026-07-03T00:00:00Z',
+  },
 ];
 const ORDER_SUBMISSIONS = [{ id: 1, deposition_id: 10001, title: 'Test dep', datasets: ORDER_DATASETS }];
 
@@ -44,7 +97,11 @@ describe('SubmissionsPage', () => {
   });
 
   it('renders each dataset type and the deposition group', () => {
-    mockUseSubmissions.mockReturnValue({ data: { submissions: SUBMISSIONS, total_count: 1 }, isPending: false, isError: false });
+    mockUseSubmissions.mockReturnValue({
+      data: { submissions: SUBMISSIONS, total_count: 1 },
+      isPending: false,
+      isError: false,
+    });
     render(<SubmissionsPage />);
     expect(screen.getByText('Tomos only')).toBeInTheDocument();
     expect(screen.getByText('Annotations only')).toBeInTheDocument();
@@ -54,7 +111,11 @@ describe('SubmissionsPage', () => {
   });
 
   it('filters rows by search (dataset id)', () => {
-    mockUseSubmissions.mockReturnValue({ data: { submissions: SUBMISSIONS, total_count: 1 }, isPending: false, isError: false });
+    mockUseSubmissions.mockReturnValue({
+      data: { submissions: SUBMISSIONS, total_count: 1 },
+      isPending: false,
+      isError: false,
+    });
     render(<SubmissionsPage />);
     fireEvent.change(screen.getByPlaceholderText('Search datasets or depositions'), { target: { value: '102' } });
     expect(screen.getByText('ds-102')).toBeInTheDocument();
@@ -62,14 +123,22 @@ describe('SubmissionsPage', () => {
   });
 
   it('keeps all a deposition’s datasets when the search matches the deposition', () => {
-    mockUseSubmissions.mockReturnValue({ data: { submissions: SUBMISSIONS, total_count: 1 }, isPending: false, isError: false });
+    mockUseSubmissions.mockReturnValue({
+      data: { submissions: SUBMISSIONS, total_count: 1 },
+      isPending: false,
+      isError: false,
+    });
     render(<SubmissionsPage />);
     fireEvent.change(screen.getByPlaceholderText('Search datasets or depositions'), { target: { value: 'Test dep' } });
     expect(dsLabels()).toEqual(['ds-100', 'ds-101', 'ds-102']);
   });
 
   it('reorders rows when sorting by Dataset ID', () => {
-    mockUseSubmissions.mockReturnValue({ data: { submissions: ORDER_SUBMISSIONS, total_count: 1 }, isPending: false, isError: false });
+    mockUseSubmissions.mockReturnValue({
+      data: { submissions: ORDER_SUBMISSIONS, total_count: 1 },
+      isPending: false,
+      isError: false,
+    });
     render(<SubmissionsPage />);
     // Default sort is "recently updated" → newest first.
     expect(dsLabels()).toEqual(['ds-102', 'ds-101', 'ds-100']);

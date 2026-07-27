@@ -20,11 +20,5 @@ export function DepositionStep({ dataset, reportSave, readOnly }: StepProps) {
     return <Alert severity="error">Could not load the deposition for this dataset.</Alert>;
   }
 
-  return (
-    <DepositionForm
-      deposition={data}
-      reportSave={reportSave}
-      readOnly={readOnly || dataset.status !== 'draft'}
-    />
-  );
+  return <DepositionForm deposition={data} reportSave={reportSave} readOnly={readOnly || dataset.status !== 'draft'} />;
 }

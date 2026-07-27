@@ -78,12 +78,7 @@ export function DatasetRow({ dataset, isOwner = false }: { dataset: Dataset; isO
         )}
       </TableCell>
       <TableCell>
-        <Chip
-          size="small"
-          variant="outlined"
-          label={typeLabel}
-          sx={[softChipSx(typeColor), { borderRadius: '4px' }]}
-        />
+        <Chip size="small" variant="outlined" label={typeLabel} sx={[softChipSx(typeColor), { borderRadius: '4px' }]} />
       </TableCell>
       <TableCell>
         <Chip

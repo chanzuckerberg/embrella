@@ -57,8 +57,7 @@ export function AddAuthorDialog({
     },
   });
 
-  const canSave =
-    !create.isPending && (picked !== null || (givenName.trim() !== '' && familyName.trim() !== ''));
+  const canSave = !create.isPending && (picked !== null || (givenName.trim() !== '' && familyName.trim() !== ''));
 
   const handleSave = () => {
     if (picked) {

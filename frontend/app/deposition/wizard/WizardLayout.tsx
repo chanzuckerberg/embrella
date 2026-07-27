@@ -26,7 +26,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
 
   const step = WIZARD_STEPS.find((s) => s.num === current) ?? WIZARD_STEPS[0];
   const Body = step.Component;
-// Step change "Next/Back button" unmounts the body; autosave flushes pending edits.
+  // Step change "Next/Back button" unmounts the body; autosave flushes pending edits.
   const go = (n: number) => {
     setSave(null);
     setCurrent(n);
@@ -43,7 +43,9 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Paper variant="outlined" sx={{ borderRadius: 3 }}>
-        <Box sx={{ px: { xs: 3, md: 5 }, pt: { xs: 3, md: 4 }, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box
+          sx={{ px: { xs: 3, md: 5 }, pt: { xs: 3, md: 4 }, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}
+        >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
             <Box>
               <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: 1.2, fontWeight: 600 }}>

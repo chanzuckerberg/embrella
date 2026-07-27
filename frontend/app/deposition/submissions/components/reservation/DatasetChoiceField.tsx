@@ -31,7 +31,7 @@ export function DatasetChoiceField({
           value="existing"
           control={<Radio size="small" />}
           label={
-            <FormControl size="small" sx={{ minWidth: 260, mb:6 }} disabled={choice !== 'existing'}>
+            <FormControl size="small" sx={{ minWidth: 260, mb: 6 }} disabled={choice !== 'existing'}>
               <Select
                 displayEmpty
                 value={existingDatasetId}
