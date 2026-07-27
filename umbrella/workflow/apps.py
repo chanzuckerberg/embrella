@@ -126,7 +126,7 @@ class WorkflowConfig(AppConfig):
                     synced_processor_names.append(metadata["name"])
 
                 except Exception as e:
-                    logger.error(f"Failed to sync processor '{processor_name}' to database: {e}", exc_info=True)
+                    logger.exception(f"Failed to sync processor '{processor_name}' to database: {e}")
 
             # Mark processors not in current registry as inactive
             orphaned = ProcSoftware.objects.exclude(name__in=synced_processor_names)

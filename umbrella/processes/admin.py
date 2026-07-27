@@ -71,7 +71,9 @@ class ProcSoftwareAdmin(admin.ModelAdmin):
         form = super().get_form(request, obj, **kwargs)
         # Add help text for allowed_clusters in the form
         if "allowed_clusters" in form.base_fields:
-            form.base_fields["allowed_clusters"].help_text = (
+            form.base_fields[
+                "allowed_clusters"
+            ].help_text = (
                 'Enter a JSON list of cluster IDs, e.g., ["czii", "bruno"]. Leave empty to allow all clusters.'
             )
         return form

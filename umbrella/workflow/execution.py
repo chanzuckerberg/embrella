@@ -27,7 +27,7 @@ from umbrella_logger import logger
 
 from .agent import RemoteJobSubmitter
 from .context import RunContext
-from .processors import get_processor
+from .processors import BaseProcessor, get_processor
 
 
 class ValidationError(Exception):
@@ -222,7 +222,7 @@ class PipelineExecutor:
         pipe_in_plan: PipeInPlan,
         proc_run: ProcRun,
         user: User,
-        processor: "BaseProcessor",
+        processor: BaseProcessor,
         cluster_id: Optional[str] = None,
     ) -> RunContext:
         """
