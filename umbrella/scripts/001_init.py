@@ -26,8 +26,7 @@ from stores.models import PathType, StaticPath
 
 # from tem.models import *
 from tem.models import Camera, ImagingWorkflow, Microscope, SessionPlan, Software
-
-from umbrella.umbrella.choices import PUCK_COLORS
+from umbrella.choices import PUCK_COLORS
 
 
 def _get_first_of(model_class):
