@@ -7,7 +7,7 @@ const olsKeys = {
   term: (ontology: string, id: string) => ['ols', 'term', ontology, id] as const,
 };
 
-const STALE = 5 * 60 * 1000; 
+const STALE = 5 * 60 * 1000;
 
 /** Autocomplete matches */
 export function useOntologySearch(term: string, ontology: string) {

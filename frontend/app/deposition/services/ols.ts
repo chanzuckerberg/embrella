@@ -2,7 +2,7 @@ const OLS_BASE = 'https://www.ebi.ac.uk/ols4/api';
 
 export interface OntologyTerm {
   id: string; // OBO id, e.g. "UBERON:0000955"
-  label: string; 
+  label: string;
   synonyms: string[];
   iri?: string;
 }
