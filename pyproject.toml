@@ -54,6 +54,7 @@ target-version = "py311"
 exclude = [
     "mkdocs.yml",
     "frontend/",
+    "**/migrations/**",
 ]
 
 [tool.ruff.lint]
