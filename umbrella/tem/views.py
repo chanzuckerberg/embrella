@@ -24,7 +24,6 @@ from tem.models import (
 
 from . import models
 from .forms import (
-    ReserveMsiSessionForm,
     ReserveScreenSessionGroupForm,
     UpdateNotesForm,
 )

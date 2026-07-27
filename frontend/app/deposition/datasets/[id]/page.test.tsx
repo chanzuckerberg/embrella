@@ -18,7 +18,7 @@ function renderPage() {
   return render(
     <QueryClientProvider client={client}>
       <DatasetDetailPage />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 

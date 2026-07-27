@@ -5,35 +5,44 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0004_reconmethod_tomogramvoxelspacing_and_more'),
+        ("processes", "0004_reconmethod_tomogramvoxelspacing_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='tomograms',
-            name='denoised',
+            model_name="tomograms",
+            name="denoised",
         ),
         migrations.AddField(
-            model_name='tomograms',
-            name='parent_tomo',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='processes.tomograms'),
+            model_name="tomograms",
+            name="parent_tomo",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="processes.tomograms"
+            ),
         ),
         migrations.CreateModel(
-            name='TomoPostProcessMethod',
+            name="TomoPostProcessMethod",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='denoised', max_length=32)),
-                ('software', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.procsoftware')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="denoised", max_length=32)),
+                (
+                    "software",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.procsoftware"),
+                ),
             ],
             options={
-                'unique_together': {('name', 'software')},
+                "unique_together": {("name", "software")},
             },
         ),
         migrations.AddField(
-            model_name='tomograms',
-            name='post_process',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='processes.tomopostprocessmethod'),
+            model_name="tomograms",
+            name="post_process",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="processes.tomopostprocessmethod",
+            ),
         ),
     ]

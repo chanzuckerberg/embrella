@@ -1,5 +1,4 @@
-"""Unit tests for SubmissionDatasetSerializer.get_type ".
-"""
+"""Unit tests for SubmissionDatasetSerializer.get_type "."""
 
 from types import SimpleNamespace
 

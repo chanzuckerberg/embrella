@@ -12,15 +12,16 @@ import uuid
 from datetime import datetime
 
 from django.http import HttpRequest
-from processes.models import Review, ReviewTomogram
 from tem.models import MsiSession
 from workflow.views import track_jobs
 
 from common import clusterio
+from processes.models import Review, ReviewTomogram
 
 
 def generate_uuid():
     return str(uuid.uuid4())
+
 
 def fix_run_id(run_id):
     """Format run_id to ensure it has 'run' prefix and 3 digits"""
@@ -29,8 +30,10 @@ def fix_run_id(run_id):
         run_id = run_id[3:]
     return f"run{str(int(run_id)).zfill(3)}"
 
+
 def is_slurm_state_active(state):
-    return state in ['PENDING', 'CONFIGURING', 'RUNNING', 'COMPLETING']
+    return state in ["PENDING", "CONFIGURING", "RUNNING", "COMPLETING"]
+
 
 def setup_logging(log_path):
     """Setup logging configuration"""
@@ -39,7 +42,7 @@ def setup_logging(log_path):
 
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
+        format="%(asctime)s - %(levelname)s - %(message)s",
         handlers=[
             logging.FileHandler(log_path),
             logging.StreamHandler(),  # Also print to console
@@ -55,7 +58,7 @@ def check_job_status(job_id):
     """Check if the job is still running"""
     # Create a mock request object
     request = HttpRequest()
-    request.method = 'GET'
+    request.method = "GET"
     # Don't specify job_name to get all jobs, then filter by job_id
     request.GET = {}
 
@@ -66,17 +69,17 @@ def check_job_status(job_id):
         return False
 
     jobs_data = json.loads(response.content)
-    if 'jobs' not in jobs_data:
+    if "jobs" not in jobs_data:
         log.error("No jobs data in response")
         return False
 
     # Check if job exists and its status
     log.info(f"Checking {len(jobs_data['jobs'])} jobs for job_id: {job_id}")
-    for job in jobs_data['jobs']:
+    for job in jobs_data["jobs"]:
         log.debug(f"Checking job: {job['JOBID']} (looking for {job_id})")
-        if job['JOBID'] == job_id:
-            status = job['ST']
-            is_running = is_slurm_state_active(job['ST'])
+        if job["JOBID"] == job_id:
+            status = job["ST"]
+            is_running = is_slurm_state_active(job["ST"])
             log.info(f"Job {job_id} status: {status} ({'Running' if is_running else 'Not running'})")
 
             # Log additional job details
@@ -90,9 +93,10 @@ def check_job_status(job_id):
 
     return False
 
+
 def parse_zarr_filename(filename):
     # Match both formats: Position_1_2_Vol.zarr or Position_15_Vol.zarr
-    match = re.match(r'^Position_(\d+)(?:_(\d+))?_Vol\.zarr$', filename)
+    match = re.match(r"^Position_(\d+)(?:_(\d+))?_Vol\.zarr$", filename)
     if match:
         if match.group(2):  # If second number exists
             return f"Position_{match.group(1)}_{match.group(2)}"
@@ -100,10 +104,11 @@ def parse_zarr_filename(filename):
             return f"Position_{match.group(1)}"
     return None
 
+
 def check_zarr_exists(full_path):
     found_zarrs = []
-    ssh = clusterio.get_cluster_ssh_connection(cluster_id='czii')
-    stdin, stdout, stderr = ssh.exec_command(f'ls {full_path}')
+    ssh = clusterio.get_cluster_ssh_connection(cluster_id="czii")
+    stdin, stdout, stderr = ssh.exec_command(f"ls {full_path}")
 
     # Read the output
     output = stdout.readlines()
@@ -117,10 +122,10 @@ def check_zarr_exists(full_path):
     for line in output:
         line = line.strip()
         # Remove trailing slash if present
-        if line.endswith('/'):
+        if line.endswith("/"):
             line = line[:-1]
 
-        if line.endswith('.zarr'):
+        if line.endswith(".zarr"):
             log.info(f"Found ZARR file: {line}")
             position_id = parse_zarr_filename(line)
             if position_id:
@@ -130,6 +135,7 @@ def check_zarr_exists(full_path):
 
     log.info(f"Found {len(found_zarrs)} ZARR files in {full_path}")
     return found_zarrs
+
 
 class ProcessSyncer(object):
     def __init__(self, base_path, log_dir):
@@ -147,7 +153,7 @@ class ProcessSyncer(object):
             run_id=self.run_id,
             reconstruction_type=reconstruction_type,
             position_id=position_id,  # Using parsed position_id
-            quality='pending',
+            quality="pending",
         )
         print(f"Created tomogram: {tomogram_id} with position_id: {position_id}")
         return tomogram
@@ -176,7 +182,8 @@ class ProcessSyncer(object):
             review.save()
 
             log.info(
-                f"Updated review {review.review_id} total_count: {old_count} -> {tomogram_count} (reconstruction_type: {review.reconstruction_type})")
+                f"Updated review {review.review_id} total_count: {old_count} -> {tomogram_count} (reconstruction_type: {review.reconstruction_type})"
+            )
 
     def process_zarr_directory(self, recon_type, path_to_zarrs, processed_tomograms=set()):
         """Check remote directory path_to_zarrsm and create reviewtomogram objects for them if not present."""
@@ -193,7 +200,8 @@ class ProcessSyncer(object):
 
                 if existing_tomogram:
                     log.info(
-                        f"Found existing tomogram with same position_id ({position_id}), reconstruction_type ({recon_type}), run_id ({self.run_id}), and session ({self.session.name})")
+                        f"Found existing tomogram with same position_id ({position_id}), reconstruction_type ({recon_type}), run_id ({self.run_id}), and session ({self.session.name})"
+                    )
                     processed_tomograms.add(existing_tomogram.tomogram_id)
                 else:
                     # Create new tomogram
@@ -214,15 +222,15 @@ class ProcessSyncer(object):
         self.session = MsiSession.objects.filter(name=self.session_name).first()
 
     def run(self):
-        parser = argparse.ArgumentParser(description=f'{self.syncer_type} results')
-        parser.add_argument('--session', help='Session name (e.g., 25apr21a)')
-        parser.add_argument('--run', help='Run ID (e.g., run001)')
-        parser.add_argument('--continuous', action='store_true', help='Run continuously every minute')
-        parser.add_argument('--job-id', help='Job ID to track')
+        parser = argparse.ArgumentParser(description=f"{self.syncer_type} results")
+        parser.add_argument("--session", help="Session name (e.g., 25apr21a)")
+        parser.add_argument("--run", help="Run ID (e.g., run001)")
+        parser.add_argument("--continuous", action="store_true", help="Run continuously every minute")
+        parser.add_argument("--job-id", help="Job ID to track")
         args = parser.parse_args()
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        if args.run and not args.run.startswith('run'):
+        if args.run and not args.run.startswith("run"):
             parser.error("--run must be in format 'run001' (e.g., run001, run002, etc.)")
 
         self.job_id = args.job_id
@@ -233,7 +241,7 @@ class ProcessSyncer(object):
             return False
 
         # Setup logging
-        log_file = f'{self.syncer_type}_{self.session_name}_{self.run_id}_{timestamp}.log'
+        log_file = f"{self.syncer_type}_{self.session_name}_{self.run_id}_{timestamp}.log"
         setup_logging(log_path=os.path.join(self.log_dir, log_file))
         log.info(f"args.run: {args.run}")
         if not args.continuous:

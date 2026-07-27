@@ -27,7 +27,7 @@ export async function createPerson(data: Partial<Person>): Promise<Person> {
 
 export async function searchPeople(term: string): Promise<Person[]> {
   const data = await parse<Person[] | { results: Person[] }>(
-    await fetchResource(url(`${API.PEOPLE}?search=${encodeURIComponent(term)}`)),
+    await fetchResource(url(`${API.PEOPLE}?search=${encodeURIComponent(term)}`))
   );
   return Array.isArray(data) ? data : (data.results ?? []);
 }
@@ -98,10 +98,7 @@ export async function createMethodLink(data: Partial<DepositionMethodLink>): Pro
   return parse(await postResource(url(API.DEPOSITION_METHOD_LINKS), data as Record<string, unknown>));
 }
 
-export async function updateMethodLink(
-  id: number,
-  data: Partial<DepositionMethodLink>,
-): Promise<DepositionMethodLink> {
+export async function updateMethodLink(id: number, data: Partial<DepositionMethodLink>): Promise<DepositionMethodLink> {
   return parse(await patchResource(url(`${API.DEPOSITION_METHOD_LINKS}${id}/`), data));
 }
 

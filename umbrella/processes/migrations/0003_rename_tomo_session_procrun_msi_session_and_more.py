@@ -4,25 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0002_alter_planpipe_input'),
+        ("processes", "0002_alter_planpipe_input"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='procrun',
-            old_name='tomo_session',
-            new_name='msi_session',
+            model_name="procrun",
+            old_name="tomo_session",
+            new_name="msi_session",
         ),
         migrations.AddField(
-            model_name='planpipe',
-            name='name',
-            field=models.CharField(default='voxelspacing10.000a', max_length=32),
+            model_name="planpipe",
+            name="name",
+            field=models.CharField(default="voxelspacing10.000a", max_length=32),
         ),
         migrations.AlterField(
-            model_name='procsoftware',
-            name='name',
-            field=models.CharField(default='aretomo3', max_length=32),
+            model_name="procsoftware",
+            name="name",
+            field=models.CharField(default="aretomo3", max_length=32),
         ),
     ]

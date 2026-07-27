@@ -168,8 +168,13 @@ class ResolveReviewPathAllowlistTests(TestCase):
             FILESERVER_INTERNAL_BASE_URL="http://internal.svc/",
         ):
             url = resolve_review_path(
-                "zarr_url", cluster, self._mock_session(), workflow="aretomo3", run="001",
-                vol_suffix="vol003", position="P1",
+                "zarr_url",
+                cluster,
+                self._mock_session(),
+                workflow="aretomo3",
+                run="001",
+                vol_suffix="vol003",
+                position="P1",
             )
         self.assertTrue(url.startswith("https://public.example/"), url)
 

@@ -16,7 +16,7 @@ function renderWizard(dataset: Dataset = DATASET) {
   return render(
     <QueryClientProvider client={client}>
       <WizardLayout dataset={dataset} />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 

@@ -5,137 +5,219 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='CryoGridBox',
+            name="CryoGridBox",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('color', models.CharField(choices=[('CF1E01', 'Red'), ('fdb000', 'Orange'), ('fff500', 'Yellow'), ('9eef66', 'Green'), ('00cdf5', 'Sky'), ('366de1', 'Blue'), ('d728c9', 'Purple'), ('fd5c9f', 'Neon Pink'), ('FFFFFF', 'White'), ('d4d2c5', 'Grey'), ('ffc08a', 'Brown'), ('000000', 'Black')], default='FFFFFF', max_length=40)),
-                ('numbering', models.CharField(choices=[('ucw', 'U-clockwise'), ('uccw', 'U-counter-clockwise'), ('z', 'Z-top-left')], default='ucw', help_text="numbering system with notch at 12-o'clock orientation", max_length=20)),
-                ('position_in_puck', models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=100, unique=True)),
+                (
+                    "color",
+                    models.CharField(
+                        choices=[
+                            ("CF1E01", "Red"),
+                            ("fdb000", "Orange"),
+                            ("fff500", "Yellow"),
+                            ("9eef66", "Green"),
+                            ("00cdf5", "Sky"),
+                            ("366de1", "Blue"),
+                            ("d728c9", "Purple"),
+                            ("fd5c9f", "Neon Pink"),
+                            ("FFFFFF", "White"),
+                            ("d4d2c5", "Grey"),
+                            ("ffc08a", "Brown"),
+                            ("000000", "Black"),
+                        ],
+                        default="FFFFFF",
+                        max_length=40,
+                    ),
+                ),
+                (
+                    "numbering",
+                    models.CharField(
+                        choices=[("ucw", "U-clockwise"), ("uccw", "U-counter-clockwise"), ("z", "Z-top-left")],
+                        default="ucw",
+                        help_text="numbering system with notch at 12-o'clock orientation",
+                        max_length=20,
+                    ),
+                ),
+                ("position_in_puck", models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Dewar',
+            name="Dewar",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=20, unique=True)),
-                ('shipper', models.BooleanField(default=False, help_text='Is this a dry-shipper ?')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=20, unique=True)),
+                ("shipper", models.BooleanField(default=False, help_text="Is this a dry-shipper ?")),
             ],
         ),
         migrations.CreateModel(
-            name='PlungeFreezingDevice',
+            name="PlungeFreezingDevice",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('maker_model', models.CharField(default='Leica GP2', max_length=32)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=100, unique=True)),
+                ("maker_model", models.CharField(default="Leica GP2", max_length=32)),
             ],
         ),
         migrations.CreateModel(
-            name='PlungeFreezingPlan',
+            name="PlungeFreezingPlan",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('sample_application_protocol', models.TextField(max_length=255)),
-                ('blot_time', models.FloatField(default=6.0, help_text='Blot time in seconds')),
-                ('wash_step', models.TextField(max_length=255)),
-                ('tag', models.CharField(max_length=100)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("sample_application_protocol", models.TextField(max_length=255)),
+                ("blot_time", models.FloatField(default=6.0, help_text="Blot time in seconds")),
+                ("wash_step", models.TextField(max_length=255)),
+                ("tag", models.CharField(max_length=100)),
             ],
         ),
         migrations.CreateModel(
-            name='Sample',
+            name="Sample",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=100, unique=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Site',
+            name="Site",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='3400Bridge', max_length=20, unique=True)),
-                ('address', models.CharField(default='', max_length=100)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="3400Bridge", max_length=20, unique=True)),
+                ("address", models.CharField(default="", max_length=100)),
             ],
         ),
         migrations.CreateModel(
-            name='Cane',
+            name="Cane",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=20)),
-                ('color', models.CharField(choices=[('CF1E01', 'Red'), ('B9BAB2', 'Silver'), ('FFC0CB', 'Pink')], default='CF1E01', max_length=40)),
-                ('position_in_dewar', models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
-                ('dewar', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.dewar')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=20)),
+                (
+                    "color",
+                    models.CharField(
+                        choices=[("CF1E01", "Red"), ("B9BAB2", "Silver"), ("FFC0CB", "Pink")],
+                        default="CF1E01",
+                        max_length=40,
+                    ),
+                ),
+                ("position_in_dewar", models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
+                (
+                    "dewar",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="cryo_grids.dewar"
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('dewar', 'position_in_dewar'), ('name', 'color')},
+                "unique_together": {("dewar", "position_in_dewar"), ("name", "color")},
             },
         ),
         migrations.CreateModel(
-            name='PlungeFreezingSession',
+            name="PlungeFreezingSession",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('datetime', models.DateTimeField(auto_now_add=True)),
-                ('device_temperature', models.FloatField(default=-4.0, help_text='Temperature of the freezing chamber in degree Celsius')),
-                ('humidity', models.PositiveSmallIntegerField(default=95)),
-                ('number_of_grids', models.PositiveSmallIntegerField(default=1)),
-                ('device', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.plungefreezingdevice')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("datetime", models.DateTimeField(auto_now_add=True)),
+                (
+                    "device_temperature",
+                    models.FloatField(default=-4.0, help_text="Temperature of the freezing chamber in degree Celsius"),
+                ),
+                ("humidity", models.PositiveSmallIntegerField(default=95)),
+                ("number_of_grids", models.PositiveSmallIntegerField(default=1)),
+                (
+                    "device",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="cryo_grids.plungefreezingdevice"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='CryoGrid',
+            name="CryoGrid",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('create_on', models.DateField(auto_now_add=True)),
-                ('name', models.CharField(max_length=32)),
-                ('notes', models.TextField(max_length=255)),
-                ('position_in_box', models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
-                ('clipped', models.BooleanField(default=False, help_text='Is this cryo-grid clipped ?')),
-                ('grid_box', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.cryogridbox')),
-                ('freezing_plan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.plungefreezingplan')),
-                ('session', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.plungefreezingsession')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("create_on", models.DateField(auto_now_add=True)),
+                ("name", models.CharField(max_length=32)),
+                ("notes", models.TextField(max_length=255)),
+                ("position_in_box", models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
+                ("clipped", models.BooleanField(default=False, help_text="Is this cryo-grid clipped ?")),
+                (
+                    "grid_box",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="cryo_grids.cryogridbox"),
+                ),
+                (
+                    "freezing_plan",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="cryo_grids.plungefreezingplan"),
+                ),
+                (
+                    "session",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="cryo_grids.plungefreezingsession"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Puck',
+            name="Puck",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('color', models.CharField(choices=[('CF1E01', 'Red'), ('dc6d0e', 'Orange'), ('416633', 'Green'), ('0000CC', 'Ultramarine Blue'), ('817B93', 'Lavendar'), ('000000', 'Black'), ('B9BAB2', 'Silver'), ('996699', 'Purple'), ('5C6C90', 'Silver Blue'), ('E5C100', 'Gold')], default='CF1E01', max_length=40)),
-                ('position_in_cane', models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
-                ('cane', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.cane')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=100)),
+                (
+                    "color",
+                    models.CharField(
+                        choices=[
+                            ("CF1E01", "Red"),
+                            ("dc6d0e", "Orange"),
+                            ("416633", "Green"),
+                            ("0000CC", "Ultramarine Blue"),
+                            ("817B93", "Lavendar"),
+                            ("000000", "Black"),
+                            ("B9BAB2", "Silver"),
+                            ("996699", "Purple"),
+                            ("5C6C90", "Silver Blue"),
+                            ("E5C100", "Gold"),
+                        ],
+                        default="CF1E01",
+                        max_length=40,
+                    ),
+                ),
+                ("position_in_cane", models.PositiveSmallIntegerField(blank=True, default=1, null=True)),
+                (
+                    "cane",
+                    models.ForeignKey(
+                        blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="cryo_grids.cane"
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('cane', 'position_in_cane'), ('name', 'color')},
+                "unique_together": {("cane", "position_in_cane"), ("name", "color")},
             },
         ),
         migrations.AddField(
-            model_name='cryogridbox',
-            name='puck',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.puck'),
+            model_name="cryogridbox",
+            name="puck",
+            field=models.ForeignKey(
+                blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to="cryo_grids.puck"
+            ),
         ),
         migrations.AddField(
-            model_name='plungefreezingplan',
-            name='sample',
-            field=models.ManyToManyField(to='cryo_grids.sample'),
+            model_name="plungefreezingplan",
+            name="sample",
+            field=models.ManyToManyField(to="cryo_grids.sample"),
         ),
         migrations.AddField(
-            model_name='plungefreezingdevice',
-            name='site',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.site'),
+            model_name="plungefreezingdevice",
+            name="site",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="cryo_grids.site"),
         ),
         migrations.AddField(
-            model_name='dewar',
-            name='site',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cryo_grids.site'),
+            model_name="dewar",
+            name="site",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="cryo_grids.site"),
         ),
         migrations.AlterUniqueTogether(
-            name='cryogridbox',
-            unique_together={('puck', 'position_in_puck')},
+            name="cryogridbox",
+            unique_together={("puck", "position_in_puck")},
         ),
     ]

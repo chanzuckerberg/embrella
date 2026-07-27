@@ -5,118 +5,126 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('stores', '0002_staticpath_alter_pathtype_static_path'),
-        ('tem', '0006_session_atlas_session_parents_and_more'),
+        ("stores", "0002_staticpath_alter_pathtype_static_path"),
+        ("tem", "0006_session_atlas_session_parents_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='MetaKey',
+            name="MetaKey",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='cs', max_length=32)),
-                ('definition', models.TextField(default='Spherical aberration constant', max_length=255)),
-                ('unit', models.CharField(default='mm', max_length=32)),
-                ('data_type', models.CharField(default='float', help_text='python type', max_length=6)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="cs", max_length=32)),
+                ("definition", models.TextField(default="Spherical aberration constant", max_length=255)),
+                ("unit", models.CharField(default="mm", max_length=32)),
+                ("data_type", models.CharField(default="float", help_text="python type", max_length=6)),
             ],
         ),
         migrations.CreateModel(
-            name='PipelinePlan',
+            name="PipelinePlan",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='czii-live', max_length=32)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="czii-live", max_length=32)),
             ],
         ),
         migrations.CreateModel(
-            name='ProcSoftware',
+            name="ProcSoftware",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='AreTomo3', max_length=32)),
-                ('version', models.CharField(default='2024-03-10', max_length=32)),
-                ('callback_function', models.CharField(default='run_aretomo3', max_length=32)),
-                ('logger', models.CharField(default='my_log', max_length=32)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="AreTomo3", max_length=32)),
+                ("version", models.CharField(default="2024-03-10", max_length=32)),
+                ("callback_function", models.CharField(default="run_aretomo3", max_length=32)),
+                ("logger", models.CharField(default="my_log", max_length=32)),
             ],
         ),
         migrations.CreateModel(
-            name='Task',
+            name="Task",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='motion correction', max_length=32)),
-                ('step', models.PositiveSmallIntegerField(default=1)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="motion correction", max_length=32)),
+                ("step", models.PositiveSmallIntegerField(default=1)),
             ],
         ),
         migrations.CreateModel(
-            name='GlobalParam',
+            name="GlobalParam",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('key', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.metakey')),
-                ('pipeline', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.pipelineplan')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("key", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.metakey")),
+                (
+                    "pipeline",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.pipelineplan"),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='PlanPipe',
+            name="PlanPipe",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('step', models.PositiveSmallIntegerField(default=1)),
-                ('input', models.ManyToManyField(to='stores.staticpath')),
-                ('output', models.ManyToManyField(related_name='pathtype_in_output', to='stores.pathtype')),
-                ('plan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.pipelineplan')),
-                ('software', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.procsoftware')),
-                ('tasks_performed', models.ManyToManyField(to='processes.task')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("step", models.PositiveSmallIntegerField(default=1)),
+                ("input", models.ManyToManyField(to="stores.staticpath")),
+                ("output", models.ManyToManyField(related_name="pathtype_in_output", to="stores.pathtype")),
+                ("plan", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.pipelineplan")),
+                (
+                    "software",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.procsoftware"),
+                ),
+                ("tasks_performed", models.ManyToManyField(to="processes.task")),
             ],
         ),
         migrations.CreateModel(
-            name='PipeParam',
+            name="PipeParam",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('key', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.metakey')),
-                ('pipe', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.planpipe')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("key", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.metakey")),
+                ("pipe", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.planpipe")),
             ],
         ),
         migrations.CreateModel(
-            name='ProcRun',
+            name="ProcRun",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(default='1', max_length=20)),
-                ('notes', models.TextField(blank=True, max_length=255, null=True)),
-                ('proc_plan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.pipelineplan')),
-                ('tomo_session', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='tem.session')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(default="1", max_length=20)),
+                ("notes", models.TextField(blank=True, max_length=255, null=True)),
+                (
+                    "proc_plan",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.pipelineplan"),
+                ),
+                ("tomo_session", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="tem.session")),
             ],
         ),
         migrations.CreateModel(
-            name='RunGlobalValue',
+            name="RunGlobalValue",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('value', models.CharField(default='100', max_length=255)),
-                ('param', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.globalparam')),
-                ('run', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.procrun')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("value", models.CharField(default="100", max_length=255)),
+                ("param", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.globalparam")),
+                ("run", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.procrun")),
             ],
         ),
         migrations.CreateModel(
-            name='RunPipeData',
+            name="RunPipeData",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('path', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='stores.path')),
-                ('pipe', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.planpipe')),
-                ('run', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.procrun')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("path", models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to="stores.path")),
+                ("pipe", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.planpipe")),
+                ("run", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.procrun")),
             ],
         ),
         migrations.CreateModel(
-            name='RunPipeValue',
+            name="RunPipeValue",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('value', models.CharField(default='100', max_length=255)),
-                ('param', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.pipeparam')),
-                ('run', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='processes.procrun')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("value", models.CharField(default="100", max_length=255)),
+                ("param", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.pipeparam")),
+                ("run", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="processes.procrun")),
             ],
         ),
         migrations.AddField(
-            model_name='procsoftware',
-            name='capable_tasks',
-            field=models.ManyToManyField(to='processes.task'),
+            model_name="procsoftware",
+            name="capable_tasks",
+            field=models.ManyToManyField(to="processes.task"),
         ),
     ]

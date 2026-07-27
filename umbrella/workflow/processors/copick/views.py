@@ -185,7 +185,7 @@ def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
             {
                 "value": session.name,
                 "label": session.name,
-                "description": f"Session with Copick project",
+                "description": "Session with Copick project",
             }
             for session in sessions_with_copick
         ]

@@ -25,9 +25,15 @@ RUN --mount=type=cache,target=/app/.yarn/cache,uid=1000,gid=1000 yarn install --
 # ---- dev stage: full node_modules, seeds the frontend_node_modules volume ----
 FROM deps AS dev
 
-# ---- build stage ----
-FROM deps AS build
+# ---- source stage: deps + app source, shared by `test` and `build` ----
+FROM deps AS source
 COPY --chown=node:node frontend/ ./
+
+# ---- test stage: source without `yarn build` (jest / eslint / tsc / prettier) ----
+FROM source AS test
+
+# ---- build stage ----
+FROM source AS build
 RUN yarn build
 
 # ---- runtime stage (prod): Next.js standalone output only ----

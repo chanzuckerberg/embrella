@@ -9,14 +9,15 @@ from pathlib import Path
 BASE_DIR = str(Path(__file__).resolve().parent.parent.parent.parent)
 PROJ_DIR = str(Path(BASE_DIR).resolve().parent)
 sys.path.append(BASE_DIR)
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'umbrella.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 sys.path = [p for p in sys.path if p != PROJ_DIR]  # pycharm IDE fix
 
 import django
 
 django.setup()
-from workflow import syncers
 from processes.models import ReviewTomogram
+
+from workflow import syncers
 from workflow.syncers import log
 
 
@@ -53,6 +54,6 @@ class DenoiseSyncer(syncers.ProcessSyncer):
 if __name__ == "__main__":
     syncer = DenoiseSyncer(
         base_path="/hpc/projects/krios1.processing/denoise",
-        log_dir=os.path.join(os.path.dirname(__file__), 'logs'),
+        log_dir=os.path.join(os.path.dirname(__file__), "logs"),
     )
     sys.exit(0 if syncer.run() else 1)

@@ -105,7 +105,7 @@ export function SideNav({
       </Box>
 
       <Paper variant="outlined" sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: 'background.paper' }}>
-        <Box sx={{p:3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 700 }}>
             Required sections
           </Typography>
@@ -119,7 +119,7 @@ export function SideNav({
           sx={{
             borderRadius: 1,
             height: 6,
-            mb:4,
+            mb: 4,
             bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
             '& .MuiLinearProgress-bar': { borderRadius: 1 },
           }}

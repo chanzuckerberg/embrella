@@ -5,23 +5,27 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tem', '0009_rename_session_msisession'),
+        ("tem", "0009_rename_session_msisession"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='screensession',
-            name='project',
+            model_name="screensession",
+            name="project",
         ),
         migrations.RemoveField(
-            model_name='screensession',
-            name='user',
+            model_name="screensession",
+            name="user",
         ),
         migrations.AddField(
-            model_name='msisession',
-            name='grid_session',
-            field=models.ForeignKey(help_text='Seperate grid screen atlas if exists', null=True, on_delete=django.db.models.deletion.SET_NULL, to='tem.screensession'),
+            model_name="msisession",
+            name="grid_session",
+            field=models.ForeignKey(
+                help_text="Seperate grid screen atlas if exists",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="tem.screensession",
+            ),
         ),
     ]

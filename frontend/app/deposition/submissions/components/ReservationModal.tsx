@@ -54,7 +54,7 @@ function OptionCards({ mode, onSelect }: { mode: Mode; onSelect: (mode: Mode) =>
               transition: 'border-color 120ms, background-color 120ms',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, pt:4,pb:3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, pt: 4, pb: 3 }}>
               <Radio
                 checked={selected}
                 size="small"
@@ -199,11 +199,10 @@ export function ReservationModal({
     if (mode === 'new') return true;
     if (mode === 'reuse_dataset') return existingDatasetId !== '';
     // existing_deposition
-    if (tab === 'manual') return false; 
+    if (tab === 'manual') return false;
     if (depositionId === '') return false;
     return datasetChoice === 'new' || existingDatasetId !== '';
   })();
-
 
   const subtitle = isAddDataset ? 'Add dataset' : 'New submission';
   const title = isAddDataset
@@ -214,7 +213,7 @@ export function ReservationModal({
 
   const handleContinue = () => {
     if (willReserve) {
-      setNotice(true); 
+      setNotice(true);
       return;
     }
     reserve.mutate({ mode, datasetChoice, depositionId, existingDatasetId });
@@ -248,19 +247,19 @@ export function ReservationModal({
                 onManualIdChange={setManualId}
               />
             )}
-              <DatasetChoiceField
-                choice={datasetChoice}
-                onChoiceChange={setDatasetChoice}
-                existingDatasetId={existingDatasetId}
-                onExistingDatasetIdChange={setExistingDatasetId}
-                datasets={datasetsInSelected}
-              />
+            <DatasetChoiceField
+              choice={datasetChoice}
+              onChoiceChange={setDatasetChoice}
+              existingDatasetId={existingDatasetId}
+              onExistingDatasetIdChange={setExistingDatasetId}
+              datasets={datasetsInSelected}
+            />
           </Box>
         )}
 
         {mode === 'reuse_dataset' && (
           <Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75, mt:5 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75, mt: 5 }}>
               Select dataset
             </Typography>
             <FormControl fullWidth size="small">

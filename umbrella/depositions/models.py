@@ -8,14 +8,16 @@ class Deposition(models.Model):
     deposition_id = models.IntegerField(null=True, unique=True, blank=True, help_text="Assigned by reservation service")
     title = models.CharField(max_length=256)
     description = models.TextField(blank=True)
-    submitter_user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="depositions")
+    submitter_user = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="depositions"
+    )
     deposition_publications = models.TextField(blank=True)
     related_database_entries = models.TextField(blank=True)
     authors_json = models.JSONField(
         default=list,
         blank=True,
         help_text="Ordered list of {author_id, is_primary, is_corresponding, author_list_order}; "
-                  "author_id soft-references users.Author (not a FK).",
+        "author_id soft-references users.Author (not a FK).",
     )
     release_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -60,14 +62,13 @@ class Dataset(models.Model):
         on_delete=models.PROTECT,
         related_name="datasets",
         help_text="The biological sample this dataset describes. Sample identity fields "
-                  "(organism, tissue, cell_type, cell_strain, cell_component, sample_type) "
-                  "live on cryo_grids.Sample.",
+        "(organism, tissue, cell_type, cell_strain, cell_component, sample_type) "
+        "live on cryo_grids.Sample.",
     )
     authors_json = models.JSONField(
         default=list,
         blank=True,
-        help_text="Only used when is_authors_same_as_deposition=False. "
-                  "Same shape as Deposition.authors_json.",
+        help_text="Only used when is_authors_same_as_deposition=False. Same shape as Deposition.authors_json.",
     )
     dataset_publications = models.TextField(blank=True)
     related_database_entries = models.TextField(blank=True)
@@ -143,9 +144,7 @@ class DepositionSession(models.Model):
 class TiltseriesMetadata(models.Model):
     QUALITY_CHOICES = [(i, str(i)) for i in range(1, 6)]
 
-    session = models.OneToOneField(
-        DepositionSession, on_delete=models.CASCADE, related_name="tiltseries_metadata"
-    )
+    session = models.OneToOneField(DepositionSession, on_delete=models.CASCADE, related_name="tiltseries_metadata")
     acceleration_voltage = models.FloatField(null=True, blank=True)
     spherical_aberration_constant = models.FloatField(null=True, blank=True)
     microscope_manufacturer = models.CharField(max_length=256, blank=True)
@@ -176,9 +175,7 @@ class TiltseriesMetadata(models.Model):
 
 
 class TomogramMetadata(models.Model):
-    session = models.OneToOneField(
-        DepositionSession, on_delete=models.CASCADE, related_name="tomogram_metadata"
-    )
+    session = models.OneToOneField(DepositionSession, on_delete=models.CASCADE, related_name="tomogram_metadata")
     voxel_spacing = models.FloatField(null=True, blank=True)
     ctf_corrected = models.BooleanField(null=True, blank=True)
     fiducial_alignment_status = models.CharField(max_length=256, blank=True)
@@ -196,7 +193,6 @@ class TomogramMetadata(models.Model):
 
 
 class DepositionAnnotation(models.Model):
-
     COPICK_KIND_CHOICES = [
         ("picks", "Picks"),
         ("segmentations", "Segmentations"),
@@ -208,9 +204,7 @@ class DepositionAnnotation(models.Model):
         ("hybrid", "Hybrid"),
         ("simulated", "Simulated"),
     ]
-    session = models.ForeignKey(
-        DepositionSession, on_delete=models.CASCADE, related_name="annotations"
-    )
+    session = models.ForeignKey(DepositionSession, on_delete=models.CASCADE, related_name="annotations")
     copick_kind = models.CharField(max_length=256, choices=COPICK_KIND_CHOICES)
     copick_ref = models.CharField(max_length=256)
     object_id = models.CharField(max_length=256, blank=True)
@@ -223,7 +217,9 @@ class DepositionAnnotation(models.Model):
     annotation_publication = models.TextField(blank=True)
     method_type = models.CharField(max_length=256, blank=True, choices=METHOD_TYPE_CHOICES)
     ground_truth_status = models.BooleanField(default=False)
-    is_visualization_default = models.BooleanField(default=False, help_text="should this annotation be the DEFAULT shown in the portal viewer?")
+    is_visualization_default = models.BooleanField(
+        default=False, help_text="should this annotation be the DEFAULT shown in the portal viewer?"
+    )
     is_selected = models.BooleanField(default=True, help_text="should this annotation be INCLUDED in the deposition")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -237,7 +233,6 @@ class DepositionAnnotation(models.Model):
 
 
 class DepositionAnnotationMethodLink(models.Model):
-
     LINK_TYPE_CHOICES = [
         ("documentation", "Documentation"),
         ("models_weights", "Models/Weights"),
@@ -245,9 +240,7 @@ class DepositionAnnotationMethodLink(models.Model):
         ("source_code", "Source Code"),
         ("website", "Website"),
     ]
-    annotation = models.ForeignKey(
-        DepositionAnnotation, on_delete=models.CASCADE, related_name="method_links"
-    )
+    annotation = models.ForeignKey(DepositionAnnotation, on_delete=models.CASCADE, related_name="method_links")
     link_type = models.CharField(max_length=256, choices=LINK_TYPE_CHOICES)
     link = models.URLField(max_length=1024)
     custom_name = models.CharField(max_length=256, blank=True)

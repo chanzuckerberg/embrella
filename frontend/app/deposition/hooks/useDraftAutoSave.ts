@@ -19,7 +19,7 @@ interface Options {
 export function useDraftAutoSave<T>(
   data: T,
   save: (data: T) => Promise<unknown>,
-  { debounceMs = DEFAULT_DEBOUNCE_MS, enabled = true }: Options = {},
+  { debounceMs = DEFAULT_DEBOUNCE_MS, enabled = true }: Options = {}
 ) {
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);

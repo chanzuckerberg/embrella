@@ -33,7 +33,12 @@ export function GroupHeaderRow({
             — {deposition.title}
           </Typography>
           {deposition.is_owner && (
-            <Button sdsType="primary" sdsStyle="minimal" onClick={onAddDataset} startIcon={<AddIcon fontSize="small" />}>
+            <Button
+              sdsType="primary"
+              sdsStyle="minimal"
+              onClick={onAddDataset}
+              startIcon={<AddIcon fontSize="small" />}
+            >
               Add dataset
             </Button>
           )}

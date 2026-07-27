@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tem', '0016_msisession_user'),
+        ("tem", "0016_msisession_user"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='msisession',
-            name='user',
+            model_name="msisession",
+            name="user",
         ),
     ]

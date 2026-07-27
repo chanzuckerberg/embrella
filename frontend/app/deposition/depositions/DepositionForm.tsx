@@ -63,7 +63,7 @@ export function DepositionForm({
       queryClient.setQueryData(depositionKeys.deposition(deposition.id), updated);
       queryClient.invalidateQueries({ queryKey: [...depositionKeys.all, 'submissions'] });
     },
-    [deposition.id, queryClient],
+    [deposition.id, queryClient]
   );
 
   const { status, lastSavedAt, saveNow } = useDraftAutoSave(form, save, { enabled: !readOnly });

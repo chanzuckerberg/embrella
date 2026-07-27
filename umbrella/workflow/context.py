@@ -71,10 +71,9 @@ class RunContext:
             return self.inputs[data_type]
 
         if required:
-            available = ', '.join(sorted(self.inputs.keys()))
+            available = ", ".join(sorted(self.inputs.keys()))
             raise ValueError(
-                f"Required input '{data_type}' not found. "
-                f"Available inputs: {available if available else 'none'}",
+                f"Required input '{data_type}' not found. Available inputs: {available if available else 'none'}",
             )
 
         return None
@@ -111,13 +110,13 @@ class RunContext:
             }
         """
         return {
-            'proc_plan': self.proc_run.proc_plan.name,
-            'proc_run': self.proc_run.name,
-            'msi_session': self.msi_session.name,
-            'proc_software': self.pipe_in_plan.pipe.software.name,
-            'pipe': self.pipe_in_plan.pipe.name,
-            'scope': self.msi_session.session_plan.scope.name,
-            'cluster': self.cluster_id,
+            "proc_plan": self.proc_run.proc_plan.name,
+            "proc_run": self.proc_run.name,
+            "msi_session": self.msi_session.name,
+            "proc_software": self.pipe_in_plan.pipe.software.name,
+            "pipe": self.pipe_in_plan.pipe.name,
+            "scope": self.msi_session.session_plan.scope.name,
+            "cluster": self.cluster_id,
         }
 
     def format_paths(self, template: str) -> str:

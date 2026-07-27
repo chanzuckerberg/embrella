@@ -5,20 +5,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tem', '0002_rename_root_dir_software_image_root_dir_and_more'),
+        ("tem", "0002_rename_root_dir_software_image_root_dir_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='session',
-            name='session_plan',
+            model_name="session",
+            name="session_plan",
         ),
         migrations.AddField(
-            model_name='session',
-            name='session_plan',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='tem.sessionplan'),
+            model_name="session",
+            name="session_plan",
+            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to="tem.sessionplan"),
             preserve_default=False,
         ),
     ]

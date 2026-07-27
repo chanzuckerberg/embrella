@@ -6,16 +6,21 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0026_sample_rename_protocol_specimen_notes_and_more'),
+        ("cryo_grids", "0026_sample_rename_protocol_specimen_notes_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='puck',
-            name='user',
-            field=models.ForeignKey(blank=True, help_text='User who created or is responsible for this puck', null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL),
+            model_name="puck",
+            name="user",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="User who created or is responsible for this puck",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

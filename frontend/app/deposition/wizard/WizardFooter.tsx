@@ -20,7 +20,13 @@ export function WizardFooter({
 }) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Button sdsType="secondary" sdsStyle="solid" startIcon={<ChevronLeftIcon />} disabled={disableBack} onClick={onBack}>
+      <Button
+        sdsType="secondary"
+        sdsStyle="solid"
+        startIcon={<ChevronLeftIcon />}
+        disabled={disableBack}
+        onClick={onBack}
+      >
         Back
       </Button>
       <Button sdsType="primary" sdsStyle="minimal" onClick={onSaveAndExit}>

@@ -5,20 +5,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tem', '0013_alter_msisession_atlas_session'),
+        ("tem", "0013_alter_msisession_atlas_session"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='msisession',
-            name='created_at',
+            model_name="msisession",
+            name="created_at",
             field=models.DateTimeField(default=django.utils.timezone.now, editable=False),
         ),
         migrations.AddField(
-            model_name='msisession',
-            name='updated_at',
+            model_name="msisession",
+            name="updated_at",
             field=models.DateTimeField(default=django.utils.timezone.now),
         ),
     ]

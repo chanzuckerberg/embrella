@@ -5,15 +5,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tem', '0010_remove_screensession_project_and_more'),
+        ("tem", "0010_remove_screensession_project_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='msisession',
-            name='grid_session',
-            field=models.ForeignKey(blank=True, help_text='Seperate grid screen atlas if exists', null=True, on_delete=django.db.models.deletion.SET_NULL, to='tem.screensession'),
+            model_name="msisession",
+            name="grid_session",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Seperate grid screen atlas if exists",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="tem.screensession",
+            ),
         ),
     ]

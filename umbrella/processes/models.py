@@ -10,13 +10,15 @@ from django.utils.timezone import now
 from stores.models import Cluster, Path, PathType, StaticPath
 from tem.models import MsiSession, SessionPlan
 
-'''
+"""
 from stores.models import DataRecord, 
 class ArrayData(DataRecord):
     unit_cell_dimension
     is_stack
     sub_array_of    
-'''
+"""
+
+
 def getattr_from_globals(attr_name):
     # get attributes of this python module
     all_attrs = globals()
@@ -26,34 +28,39 @@ def getattr_from_globals(attr_name):
             my_attr = value
             break
     if not my_attr:
-        raise ValueError('%s not an attribute of module %s' % (attr_name, __file__))
+        raise ValueError("%s not an attribute of module %s" % (attr_name, __file__))
     return my_attr
+
 
 class MetaKey(models.Model):
     """
     Goes into stores.Version.metadata
     """
-    name = models.CharField(max_length=32, default='cs')
-    definition = models.TextField(max_length=255, default='Spherical aberration constant')
-    unit = models.CharField(max_length=32, default='mm')
-    data_type = models.CharField(max_length=6, default='float',help_text='python type')
+
+    name = models.CharField(max_length=32, default="cs")
+    definition = models.TextField(max_length=255, default="Spherical aberration constant")
+    unit = models.CharField(max_length=32, default="mm")
+    data_type = models.CharField(max_length=6, default="float", help_text="python type")
 
     def __str__(self):
-       return '%s in unit of %s' % (self.name, self.unit)
+        return "%s in unit of %s" % (self.name, self.unit)
 
-'''
+
+"""
 PathData
     name
     variables
     pattern
-'''
+"""
+
 
 class Task(models.Model):
-    name = models.CharField(max_length=255, default='motion correction')
+    name = models.CharField(max_length=255, default="motion correction")
     step = models.PositiveSmallIntegerField(default=1)
 
     def __str__(self):
-        return '%d-%s' % (self.step,self.name)
+        return "%d-%s" % (self.step, self.name)
+
 
 class ProcSoftware(models.Model):
     """
@@ -65,12 +72,15 @@ class ProcSoftware(models.Model):
     - allowed_clusters: List of clusters this software can run on
     - script_directory: Remote directory for script uploads
     """
-    name = models.CharField(max_length=32, default='aretomo3')
-    version = models.CharField(max_length=32, default='2024-03-10')
+
+    name = models.CharField(max_length=32, default="aretomo3")
+    version = models.CharField(max_length=32, default="2024-03-10")
     capable_tasks = models.ManyToManyField(Task)
 
     # Legacy field - deprecated in favor of processor_class
-    callback_function = models.CharField(max_length=32, default='run_aretomo3', help_text='Deprecated: use processor_class')
+    callback_function = models.CharField(
+        max_length=32, default="run_aretomo3", help_text="Deprecated: use processor_class"
+    )
 
     # New generic execution fields
     processor_class = models.CharField(
@@ -81,9 +91,9 @@ class ProcSoftware(models.Model):
     )
     default_cluster = models.CharField(
         max_length=16,
-        choices=[('czii', 'CZII'), ('bruno', 'Bruno')],
-        default='czii',
-        help_text='Default cluster for job submission',
+        choices=[("czii", "CZII"), ("bruno", "Bruno")],
+        default="czii",
+        help_text="Default cluster for job submission",
     )
     allowed_clusters = models.JSONField(
         default=list,
@@ -94,91 +104,122 @@ class ProcSoftware(models.Model):
         max_length=256,
         null=True,
         blank=True,
-        help_text='Remote script directory (e.g., /hpc/projects/.../scripts)',
+        help_text="Remote script directory (e.g., /hpc/projects/.../scripts)",
     )
     active = models.BooleanField(
         default=True,
-        help_text='Whether this processor is currently active in the codebase',
+        help_text="Whether this processor is currently active in the codebase",
     )
 
-    logger = models.CharField(max_length=32, default='my_log')
+    logger = models.CharField(max_length=32, default="my_log")
 
     def __str__(self):
-        return '%s @ (%s)' % (self.name, self.version)
+        return "%s @ (%s)" % (self.name, self.version)
+
 
 class ProcPlan(models.Model):
     """
     A plan for running a single software and producing outputs based on the
     pipes in the plan.
     """
-    name = models.CharField(max_length=32, default='czii-live')
+
+    name = models.CharField(max_length=32, default="czii-live")
 
     def __str__(self):
         return self.name
+
 
 class Pipe(models.Model):
     """
     A subset of tasks performed by the software that leads to distinguishable outputs
     in the same plan.
     """
-    name = models.CharField(max_length=32, default='voxelspacing10.000a')
+
+    name = models.CharField(max_length=32, default="voxelspacing10.000a")
     software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
     tasks_performed = models.ManyToManyField(Task)
-    input = models.ManyToManyField(StaticPath,related_name='staticpath_in_input')
-    output = models.ManyToManyField(PathType,related_name='pathtype_in_output')
+    input = models.ManyToManyField(StaticPath, related_name="staticpath_in_input")
+    output = models.ManyToManyField(PathType, related_name="pathtype_in_output")
 
     def __str__(self):
-        return 'pipe %s using %s' % (self.name, self.software.name)
+        return "pipe %s using %s" % (self.name, self.software.name)
+
 
 class PipeInPlan(models.Model):
     """
     The pipes executed in a plan.
     """
-    name = models.CharField(max_length=32, default='vol001')
+
+    name = models.CharField(max_length=32, default="vol001")
     plan = models.ForeignKey(ProcPlan, on_delete=models.CASCADE)
     step = models.PositiveSmallIntegerField(default=1)
     pipe = models.ForeignKey(Pipe, on_delete=models.CASCADE)
 
     def __str__(self):
-        return '[%s] %s' % (self.plan, self.pipe)
+        return "[%s] %s" % (self.plan, self.pipe)
 
-    def get_replacement_map(self,proc_run=None,msi_session=None):
+    def get_replacement_map(self, proc_run=None, msi_session=None):
         mapping = {
-            'proc_plan': self.plan.name,
-            'pipe': self.pipe.name,
+            "proc_plan": self.plan.name,
+            "pipe": self.pipe.name,
         }
         if proc_run:
-            mapping['proc_run'] = proc_run.name
-            mapping['proc_software'] = self.pipe.software.name
+            mapping["proc_run"] = proc_run.name
+            mapping["proc_software"] = self.pipe.software.name
         if msi_session:
-            mapping['msi_session'] = msi_session.name
-            mapping['scope'] = msi_session.session_plan.scope.name
+            mapping["msi_session"] = msi_session.name
+            mapping["scope"] = msi_session.session_plan.scope.name
         return mapping
+
 
 class PipeJoint(models.Model):
     """
     Joint to connect a pipe needing input with an output static path of another pipe.
     This format allows multiple single direction inputs to be defined on pipes.
     """
-    pipe_in_plan = models.ForeignKey(PipeInPlan, related_name='plan_of_pipe', on_delete=models.CASCADE, help_text='Relates where the pipt is that needing input is in its plan')
-    input_pipe_in_plan = models.ForeignKey(PipeInPlan, related_name='plan_of_input_pipe', on_delete=models.CASCADE, help_text='Relates where the pipe is used as input is in its plan')
-    input_pathtype = models.ForeignKey(PathType, null=True, blank=True, on_delete=models.SET_NULL, help_text='The output pathtype from input_pipe used as the input')
+
+    pipe_in_plan = models.ForeignKey(
+        PipeInPlan,
+        related_name="plan_of_pipe",
+        on_delete=models.CASCADE,
+        help_text="Relates where the pipt is that needing input is in its plan",
+    )
+    input_pipe_in_plan = models.ForeignKey(
+        PipeInPlan,
+        related_name="plan_of_input_pipe",
+        on_delete=models.CASCADE,
+        help_text="Relates where the pipe is used as input is in its plan",
+    )
+    input_pathtype = models.ForeignKey(
+        PathType,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="The output pathtype from input_pipe used as the input",
+    )
 
     def __str__(self):
-        return '%s needs %s from %s' % (self.pipe_in_plan, self.input_pathtype.static_path.data_type, self.input_pipe_in_plan)
+        return "%s needs %s from %s" % (
+            self.pipe_in_plan,
+            self.input_pathtype.static_path.data_type,
+            self.input_pipe_in_plan,
+        )
+
 
 class GlobalParam(models.Model):
     key = models.ForeignKey(MetaKey, on_delete=models.CASCADE)
     pipeline = models.ForeignKey(ProcPlan, on_delete=models.CASCADE)
 
     def __str__(self):
-        return '(%s,  %s)' % (self.pipeline, self.key)
+        return "(%s,  %s)" % (self.pipeline, self.key)
+
 
 class PipeParam(models.Model):
     key = models.ForeignKey(MetaKey, on_delete=models.CASCADE)
     pipe = models.ForeignKey(Pipe, on_delete=models.CASCADE)
+
     def __str__(self):
-        return '(%s, %s)' % (self.pipe, self.key)
+        return "(%s, %s)" % (self.pipe, self.key)
 
 
 # record
@@ -187,7 +228,8 @@ class ProcRun(models.Model):
     A single execution of a processing plan. It gives a json file describing the
     options used.  All output are saved under the rundir.
     """
-    name = models.CharField(max_length=20, default='run001')
+
+    name = models.CharField(max_length=20, default="run001")
     proc_plan = models.ForeignKey(ProcPlan, on_delete=models.CASCADE)
     msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)
     notes = models.TextField(max_length=255, blank=True, null=True)
@@ -196,7 +238,7 @@ class ProcRun(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return '%s-%s' % (self.proc_plan, self.name)
+        return "%s-%s" % (self.proc_plan, self.name)
 
     def save_pipe_run_data(self):
         """
@@ -206,21 +248,25 @@ class ProcRun(models.Model):
         Delegates to PipelineDataService for actual implementation.
         """
         from processes.services import PipelineDataService
+
         return PipelineDataService.save_pipe_run_data(self)
 
     def create_frames_runpipedata(self, msi_session):
         """Delegates to RunCreationService."""
         from processes.services import RunCreationService
+
         return RunCreationService.create_frames_runpipedata(self, msi_session)
 
     def _get_pipe_joints(self, pipe):
         """Delegates to RunCreationService."""
         from processes.services import RunCreationService
+
         return RunCreationService.get_pipe_joints(pipe)
 
     def _get_input_pipe_pks(self, pipe):
         """Delegates to RunCreationService."""
         from processes.services import RunCreationService
+
         return RunCreationService.get_input_pipe_pks(self, pipe)
 
     def create_tomogram_collection(self, input_objects={}):
@@ -230,67 +276,78 @@ class ProcRun(models.Model):
         Delegates to RunCreationService for actual implementation.
         """
         from processes.services import RunCreationService
+
         return RunCreationService.create_tomogram_collection(self, input_objects)
 
     def _add_other_objects(self, class_name, my_rpdata, input_pipe_pks):
         """Delegates to RunCreationService."""
         from processes.services import RunCreationService
+
         return RunCreationService.add_other_objects(self, class_name, my_rpdata, input_pipe_pks)
 
     def is_recon_ctf_deconvolved(self, pipe):
         """Delegates to RunCreationService."""
         from processes.services import RunCreationService
+
         return RunCreationService.is_recon_ctf_deconvolved(self, pipe)
 
     def _get_tomo_pipe(self, pipe_joints):
         """Delegates to RunCreationService."""
         from processes.services import RunCreationService
+
         return RunCreationService.get_tomo_pipe(pipe_joints)
 
     def _save_instance(self, pdata, input_pipe_pks, input_objects={}):
         """Delegates to RunCreationService."""
         from processes.services import RunCreationService
+
         return RunCreationService.save_instance(self, pdata, input_pipe_pks, input_objects)
 
     def _get_pipe_range(self, all_input_pipe_pks, my_pipe, input_objects):
         """Delegates to RunCreationService."""
         from processes.services import RunCreationService
+
         return RunCreationService.get_pipe_range(self, all_input_pipe_pks, my_pipe, input_objects)
+
 
 class RunGlobalValue(models.Model):
     run = models.ForeignKey(ProcRun, on_delete=models.CASCADE)
     param = models.ForeignKey(GlobalParam, on_delete=models.CASCADE)
-    value = models.CharField(max_length=255, default='100')
+    value = models.CharField(max_length=255, default="100")
+
     def __str__(self):
-        if self.value and self.param.key.data_type in ('dir','file'):
+        if self.value and self.param.key.data_type in ("dir", "file"):
             display_value = Path.objects.get(pk=int(self.value))
         else:
             display_value = self.value
-        return '%s : %s' % (self.param.key.name,display_value)
+        return "%s : %s" % (self.param.key.name, display_value)
+
 
 class RunPipeValue(models.Model):
     run = models.ForeignKey(ProcRun, on_delete=models.CASCADE)
     param = models.ForeignKey(PipeParam, on_delete=models.CASCADE)
-    value = models.CharField(max_length=255, default='100')
+    value = models.CharField(max_length=255, default="100")
 
     def __str__(self):
-        if self.value and self.param.key.data_type in ('dir','file'):
+        if self.value and self.param.key.data_type in ("dir", "file"):
             display_value = Path.objects.get(pk=int(self.value))
         else:
             display_value = self.value
-        return 'pipe%d %s : %s' % (self.param.pipe.step, self.param.key.name,display_value)
+        return "pipe%d %s : %s" % (self.param.pipe.step, self.param.key.name, display_value)
+
 
 class RunPipeData(models.Model):
-    '''
+    """
     Output data path record of the processing run
-    '''
+    """
+
     run = models.ForeignKey(ProcRun, on_delete=models.CASCADE)
     pipe = models.ForeignKey(Pipe, on_delete=models.CASCADE)
     path = models.ForeignKey(Path, on_delete=models.CASCADE, null=True)
     pathtype = models.ForeignKey(PathType, on_delete=models.CASCADE)
 
     def __str__(self):
-        return '%s %s: %s' % (self.run, self.pipe.name, self.path)
+        return "%s %s: %s" % (self.run, self.pipe.name, self.path)
 
 
 class PipeExecution(models.Model):
@@ -310,19 +367,20 @@ class PipeExecution(models.Model):
     - Retry of failed steps
     - Parameter history
     """
-    proc_run = models.ForeignKey(ProcRun, on_delete=models.CASCADE, related_name='pipe_executions')
+
+    proc_run = models.ForeignKey(ProcRun, on_delete=models.CASCADE, related_name="pipe_executions")
     pipe_in_plan = models.ForeignKey(PipeInPlan, on_delete=models.CASCADE)
 
     status = models.CharField(
         max_length=20,
         choices=[
-            ('pending', 'Pending'),
-            ('submitted', 'Submitted'),
-            ('running', 'Running'),
-            ('completed', 'Completed'),
-            ('failed', 'Failed'),
+            ("pending", "Pending"),
+            ("submitted", "Submitted"),
+            ("running", "Running"),
+            ("completed", "Completed"),
+            ("failed", "Failed"),
         ],
-        default='pending',
+        default="pending",
         db_index=True,
     )
 
@@ -343,23 +401,31 @@ class PipeExecution(models.Model):
     error_message = models.TextField(null=True, blank=True)
 
     # Syncer tracking
-    syncer_active = models.BooleanField(default=False, help_text='Whether a JobStatusSyncer is actively monitoring this job')
+    syncer_active = models.BooleanField(
+        default=False, help_text="Whether a JobStatusSyncer is actively monitoring this job"
+    )
 
     # Job execution logs (stdout/stderr from SLURM)
-    stdout_log = models.TextField(null=True, blank=True, help_text='Standard output log content from SLURM job (max ~1MB)')
-    stderr_log = models.TextField(null=True, blank=True, help_text='Standard error log content from SLURM job (max ~1MB)')
-    logs_fetched_at = models.DateTimeField(null=True, blank=True, help_text='Timestamp when logs were fetched from cluster')
-    log_fetch_error = models.TextField(null=True, blank=True, help_text='Error message if log fetching failed')
+    stdout_log = models.TextField(
+        null=True, blank=True, help_text="Standard output log content from SLURM job (max ~1MB)"
+    )
+    stderr_log = models.TextField(
+        null=True, blank=True, help_text="Standard error log content from SLURM job (max ~1MB)"
+    )
+    logs_fetched_at = models.DateTimeField(
+        null=True, blank=True, help_text="Timestamp when logs were fetched from cluster"
+    )
+    log_fetch_error = models.TextField(null=True, blank=True, help_text="Error message if log fetching failed")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['pipe_in_plan__step']
-        unique_together = [['proc_run', 'pipe_in_plan']]
+        ordering = ["pipe_in_plan__step"]
+        unique_together = [["proc_run", "pipe_in_plan"]]
 
     def __str__(self):
-        return f'{self.proc_run} - {self.pipe_in_plan.pipe.name} ({self.status})'
+        return f"{self.proc_run} - {self.pipe_in_plan.pipe.name} ({self.status})"
 
 
 class SyncerLog(models.Model):
@@ -370,28 +436,29 @@ class SyncerLog(models.Model):
     tomogram creation/deletion, and errors. Used to display syncer progress
     in the job logs modal.
     """
+
     ACTION_TYPE_CHOICES = [
-        ('init', 'Initialization'),
-        ('sync_start', 'Sync Started'),
-        ('sync_complete', 'Sync Completed'),
-        ('file_found', 'File Found'),
-        ('tomogram_created', 'Tomogram Created'),
-        ('tomogram_deleted', 'Tomogram Deleted'),
-        ('review_updated', 'Review Updated'),
-        ('job_check', 'Job Status Check'),
-        ('error', 'Error'),
-        ('warning', 'Warning'),
-        ('stopped', 'Syncer Stopped'),
+        ("init", "Initialization"),
+        ("sync_start", "Sync Started"),
+        ("sync_complete", "Sync Completed"),
+        ("file_found", "File Found"),
+        ("tomogram_created", "Tomogram Created"),
+        ("tomogram_deleted", "Tomogram Deleted"),
+        ("review_updated", "Review Updated"),
+        ("job_check", "Job Status Check"),
+        ("error", "Error"),
+        ("warning", "Warning"),
+        ("stopped", "Syncer Stopped"),
     ]
 
     # Link to the job execution
     pipe_execution = models.ForeignKey(
         PipeExecution,
         on_delete=models.CASCADE,
-        related_name='syncer_logs',
+        related_name="syncer_logs",
         null=True,
         blank=True,
-        help_text='PipeExecution this log belongs to',
+        help_text="PipeExecution this log belongs to",
     )
 
     # Alternative: link by job_id for legacy syncers
@@ -400,19 +467,19 @@ class SyncerLog(models.Model):
         null=True,
         blank=True,
         db_index=True,
-        help_text='SLURM job ID (for legacy syncers without PipeExecution)',
+        help_text="SLURM job ID (for legacy syncers without PipeExecution)",
     )
 
     # Log details
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
     action_type = models.CharField(max_length=20, choices=ACTION_TYPE_CHOICES, db_index=True)
-    message = models.TextField(help_text='Human-readable log message')
+    message = models.TextField(help_text="Human-readable log message")
 
     # Structured metadata (JSON) for additional context
     metadata = models.JSONField(
         default=dict,
         blank=True,
-        help_text='Additional structured data (e.g., file paths, counts, error details)',
+        help_text="Additional structured data (e.g., file paths, counts, error details)",
     )
 
     # Syncer identification
@@ -420,21 +487,21 @@ class SyncerLog(models.Model):
         max_length=50,
         null=True,
         blank=True,
-        help_text='Syncer class name (e.g., AretomoSyncer, DenoiseSyncer)',
+        help_text="Syncer class name (e.g., AretomoSyncer, DenoiseSyncer)",
     )
     session_name = models.CharField(max_length=100, null=True, blank=True)
     run_id = models.CharField(max_length=50, null=True, blank=True)
 
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ["-timestamp"]
         indexes = [
-            models.Index(fields=['pipe_execution', '-timestamp']),
-            models.Index(fields=['job_id', '-timestamp']),
-            models.Index(fields=['session_name', 'run_id', '-timestamp']),
+            models.Index(fields=["pipe_execution", "-timestamp"]),
+            models.Index(fields=["job_id", "-timestamp"]),
+            models.Index(fields=["session_name", "run_id", "-timestamp"]),
         ]
 
     def __str__(self):
-        return f'{self.action_type}: {self.message[:50]}...'
+        return f"{self.action_type}: {self.message[:50]}..."
 
 
 class SyncerProcess(models.Model):
@@ -446,18 +513,19 @@ class SyncerProcess(models.Model):
     the last_heartbeat field periodically. If the job is still running but the
     syncer has stopped (no recent heartbeat), the syncer can be re-run.
     """
+
     STATUS_CHOICES = [
-        ('running', 'Running'),
-        ('stopped', 'Stopped'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
+        ("running", "Running"),
+        ("stopped", "Stopped"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
     ]
 
     # Link to job
     pipe_execution = models.OneToOneField(
         PipeExecution,
         on_delete=models.CASCADE,
-        related_name='syncer_process',
+        related_name="syncer_process",
         null=True,
         blank=True,
     )
@@ -471,7 +539,7 @@ class SyncerProcess(models.Model):
     run_id = models.CharField(max_length=50)
 
     # Status tracking
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='running')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="running")
     started_at = models.DateTimeField(auto_now_add=True)
     last_heartbeat = models.DateTimeField(auto_now=True)
     stopped_at = models.DateTimeField(null=True, blank=True)
@@ -484,156 +552,175 @@ class SyncerProcess(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['job_id']),
-            models.Index(fields=['status']),
+            models.Index(fields=["job_id"]),
+            models.Index(fields=["status"]),
         ]
 
     def __str__(self):
-        return f'{self.syncer_type} for job {self.job_id} ({self.status})'
+        return f"{self.syncer_type} for job {self.job_id} ({self.status})"
 
     def is_unexpectedly_stopped(self) -> bool:
         """
         Check if syncer stopped unexpectedly (job still running but syncer is not).
         """
-        if self.status != 'stopped':
+        if self.status != "stopped":
             return False
 
         # Check if the associated job is still running
         if self.pipe_execution:
-            return self.pipe_execution.status in ['submitted', 'running']
+            return self.pipe_execution.status in ["submitted", "running"]
         return False
 
 
 # models to record the final relationship. Path should have everything except tomo_run
 class TiltAngles(models.Model):
     pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
-    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE) # included here for easy query
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)  # included here for easy query
+
 
 class Frames(models.Model):
     session_plan = models.ForeignKey(SessionPlan, on_delete=models.CASCADE)
-    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name='session_of_frames') # included here for easy query
-    frame_path = models.ForeignKey(Path, related_name='processing_frame_path',on_delete=models.CASCADE)
+    msi_session = models.ForeignKey(
+        MsiSession, on_delete=models.CASCADE, related_name="session_of_frames"
+    )  # included here for easy query
+    frame_path = models.ForeignKey(Path, related_name="processing_frame_path", on_delete=models.CASCADE)
 
     def __str__(self):
-        return '%s' % (self.frame_path)
+        return "%s" % (self.frame_path)
+
 
 class RawTiltSeries(models.Model):
     pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
-    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE) # included here for easy query
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)  # included here for easy query
     angles = models.ForeignKey(TiltAngles, on_delete=models.CASCADE)
     frames = models.ForeignKey(Frames, on_delete=models.CASCADE)
 
     def __str__(self):
-        return '%s' % (self.pipe_data)
+        return "%s" % (self.pipe_data)
+
 
 class Ctf(models.Model):
     pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
-    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE) # included here for easy query
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)  # included here for easy query
     tiltseries = models.ForeignKey(RawTiltSeries, on_delete=models.CASCADE)
 
     def __str__(self):
-        return '%s' % (self.pipe_data)
+        return "%s" % (self.pipe_data)
+
 
 class Alignment(models.Model):
     pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
-    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE) # included here for easy query
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)  # included here for easy query
     tiltseries = models.ForeignKey(RawTiltSeries, on_delete=models.CASCADE)
 
     def __str__(self):
-        return '%s' % (self.pipe_data)
+        return "%s" % (self.pipe_data)
+
 
 class TomogramVoxelSpacing(models.Model):
-    spacing = models.FloatField(default=10.0, help_text='uniform voxel spacing in angstroms')
+    spacing = models.FloatField(default=10.0, help_text="uniform voxel spacing in angstroms")
 
     def __str__(self):
-        return '%.3f' % (self.spacing)
+        return "%.3f" % (self.spacing)
+
 
 class ReconMethod(models.Model):
     """
     Processing Method that creates tomogram from alignment
     """
-    name = models.CharField(max_length=32, default='weighted back projection')
+
+    name = models.CharField(max_length=32, default="weighted back projection")
 
     def __str__(self):
-        return '%s' % (self.name)
+        return "%s" % (self.name)
+
 
 class TomoPostProcessMethod(models.Model):
     """
     Processing Method that converts one tomogram into another through filtering, denoising etc.
     """
-    name = models.CharField(max_length=32, default='denoised')
+
+    name = models.CharField(max_length=32, default="denoised")
     software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
-    
+
     class Meta:
-        unique_together = [["name","software"]]
+        unique_together = [["name", "software"]]
 
     def __str__(self):
-        return '%s by %s' % (self.name, self.software)
+        return "%s by %s" % (self.name, self.software)
+
 
 class Tomograms(models.Model):
-    '''
+    """
     Tomogram collection within the msi_session
-    '''
+    """
+
     # This allows denoise or other type of tomograms to be included
     pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
     recon_method = models.ForeignKey(ReconMethod, on_delete=models.CASCADE)
     voxel_spacing = models.ForeignKey(TomogramVoxelSpacing, on_delete=models.CASCADE)
     alignment = models.ForeignKey(Alignment, on_delete=models.CASCADE)
     ctf = models.ForeignKey(Ctf, on_delete=models.CASCADE, null=True, blank=True)
-    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE) # included here for easy query
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)  # included here for easy query
     post_process = models.ForeignKey(TomoPostProcessMethod, on_delete=models.SET_NULL, null=True, blank=True)
-    parent_tomo = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
+    parent_tomo = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
-        return 'tomo @ %s' % (self.pipe_data)
+        return "tomo @ %s" % (self.pipe_data)
+
 
 class AnnotationMethod(models.Model):
-    name = models.CharField(max_length=32, default='template matching')
+    name = models.CharField(max_length=32, default="template matching")
 
     def __str__(self):
-        return '%s' % (self.name)
+        return "%s" % (self.name)
+
 
 class Annotation(models.Model):
     pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
-    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE) # included here for easy query
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)  # included here for easy query
     tomograms = models.ForeignKey(Tomograms, on_delete=models.CASCADE)
-    name = models.CharField(max_length=32, default='ribosome')
-    ontology_term = models.CharField(max_length=20, default='GO:0005840')
-    annotation_type = models.CharField(max_length=12, default='point')
+    name = models.CharField(max_length=32, default="ribosome")
+    ontology_term = models.CharField(max_length=20, default="GO:0005840")
+    annotation_type = models.CharField(max_length=12, default="point")
     annotation_method = models.ForeignKey(AnnotationMethod, on_delete=models.CASCADE)
-    parent_anno = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
+    parent_anno = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True)
     notes = models.TextField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return '%s' % (self.pipe_data)
+        return "%s" % (self.pipe_data)
+
 
 class ParticleGallery(models.Model):
     pipe_data = models.ForeignKey(RunPipeData, on_delete=models.CASCADE)
-    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE) # included here for easy query
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE)  # included here for easy query
     tomograms = models.ForeignKey(Tomograms, on_delete=models.CASCADE)
     pick = models.ForeignKey(Annotation, on_delete=models.CASCADE)
 
     def __str__(self):
-        return '%s' % (self.pipe_data)
+        return "%s" % (self.pipe_data)
 
-def suggest_name(prefix, msi_session, plan, model_name='ProcRun'):
+
+def suggest_name(prefix, msi_session, plan, model_name="ProcRun"):
     """
     Make unique name by advancing to next integer.
     """
     model_instance = getattr(sys.modules[__name__], model_name)
     if prefix:
         prefix_search = prefix
-        old_runs = model_instance.objects.filter(Q(name__startswith=prefix_search), proc_plan=plan, msi_session=msi_session)
+        old_runs = model_instance.objects.filter(
+            Q(name__startswith=prefix_search), proc_plan=plan, msi_session=msi_session
+        )
         used_names = list(map((lambda x: x.name), old_runs))
         if not used_names:
             # first session of the day
-            return prefix_search + '%03d' % 1
+            return prefix_search + "%03d" % 1
         used_numbers = list(map((lambda x: int(x.split(prefix_search)[-1])), used_names))
-        return '%s%03d' % (prefix,max(used_numbers)+1)
+        return "%s%03d" % (prefix, max(used_numbers) + 1)
     else:
-        raise ValueError('Prefix must not be empty string for run name')
+        raise ValueError("Prefix must not be empty string for run name")
 
 
 def select_plan_ids_by_input_data_types(selected_data_types):
@@ -642,8 +729,6 @@ def select_plan_ids_by_input_data_types(selected_data_types):
     pipe_in_plans = PipeInPlan.objects.filter(pipe__in=selected_pipes)
     plan_ids = list(map((lambda x: x.plan.id), pipe_in_plans))
     return plan_ids
-
-
 
 
 class JobLog(models.Model):
@@ -662,10 +747,12 @@ class JobLog(models.Model):
     def __str__(self):
         return f"Aretomo Job {self.job_id} by {self.user.username}"
 
+
 class Review(models.Model):
     """
     A review record for an MSI session, containing review metadata and status.
     """
+
     review_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     review_name = models.CharField(max_length=255)
     review_type = models.CharField(max_length=100)
@@ -673,20 +760,24 @@ class Review(models.Model):
     reconstruction_type = models.CharField(max_length=100)
     total_count = models.IntegerField(default=0)
     reviewed_count = models.IntegerField(default=0)
-    status = models.CharField(max_length=32, default='pending')  # pending, in_progress, completed, rejected
+    status = models.CharField(max_length=32, default="pending")  # pending, in_progress, completed, rejected
     save_path = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name='raw_tomograms')
-    requestor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_reviews')
+    msi_session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name="raw_tomograms")
+    requestor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="requested_reviews")
     objects_of_interest = models.TextField(null=True)
     cluster = models.ForeignKey(
-        Cluster, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='reviews',
+        Cluster,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviews",
     )
 
     def __str__(self):
-        return f'Review {self.review_name} for {self.msi_session.name}'
+        return f"Review {self.review_name} for {self.msi_session.name}"
+
 
 class ReviewTomogram(models.Model):
     """
@@ -695,8 +786,12 @@ class ReviewTomogram(models.Model):
 
     tomogram_id = models.CharField(max_length=100, primary_key=True)
 
-    session = models.ForeignKey(MsiSession, on_delete=models.CASCADE, related_name='review_tomograms', null=True, blank=True)
-    review = models.ForeignKey(Review, on_delete=models.SET_NULL, null=True, blank=True, related_name='review_tomograms')
+    session = models.ForeignKey(
+        MsiSession, on_delete=models.CASCADE, related_name="review_tomograms", null=True, blank=True
+    )
+    review = models.ForeignKey(
+        Review, on_delete=models.SET_NULL, null=True, blank=True, related_name="review_tomograms"
+    )
 
     run_id = models.CharField(max_length=100, null=True, blank=True)  # e.g., UUID or filename-based ID
     reconstruction_type = models.CharField(max_length=100, null=True, blank=True)  # e.g., 'WBP', 'SIRT', 'SGD'
@@ -705,25 +800,24 @@ class ReviewTomogram(models.Model):
     quality = models.CharField(
         max_length=20,
         choices=[
-            ('', ''),
-            ('pending', 'Pending'),
-            ('accepted', 'Accepted'),
-            ('rejected', 'Rejected'),
-            ('uncertain', 'Uncertain'),
+            ("", ""),
+            ("pending", "Pending"),
+            ("accepted", "Accepted"),
+            ("rejected", "Rejected"),
+            ("uncertain", "Uncertain"),
         ],
-        default='pending',
+        default="pending",
     )
     rejection_reasons = models.JSONField(default=list, blank=True)
     object_labels = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-
     class Meta:
-        unique_together = ['review', 'tomogram_id']
+        unique_together = ["review", "tomogram_id"]
 
     def __str__(self):
-        return f'Tomogram Review {self.tomogram_id} in {self.review}'
+        return f"Tomogram Review {self.tomogram_id} in {self.review}"
 
 
 class FilesystemSurvey(models.Model):
@@ -736,33 +830,33 @@ class FilesystemSurvey(models.Model):
     """
 
     CLUSTER_CHOICES = [
-        ('czii', 'CZII'),
-        ('bruno', 'Bruno'),
+        ("czii", "CZII"),
+        ("bruno", "Bruno"),
     ]
 
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('submitted', 'Submitted'),
-        ('running', 'Running'),
-        ('processing', 'Processing Results'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
+        ("pending", "Pending"),
+        ("submitted", "Submitted"),
+        ("running", "Running"),
+        ("processing", "Processing Results"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
     ]
 
     # Survey identification
     cluster = models.CharField(max_length=16, choices=CLUSTER_CHOICES, db_index=True)
-    base_path = models.CharField(max_length=500, help_text='Root path that was surveyed')
+    base_path = models.CharField(max_length=500, help_text="Root path that was surveyed")
 
     # SLURM job tracking
     job_id = models.CharField(max_length=32, null=True, blank=True, db_index=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending", db_index=True)
 
     # External file storage (Parquet file on cluster)
     results_parquet_path = models.CharField(
         max_length=500,
         null=True,
         blank=True,
-        help_text='Path to Parquet file on cluster containing file-level details',
+        help_text="Path to Parquet file on cluster containing file-level details",
     )
 
     # Aggregate statistics (computed during post-processing)
@@ -794,27 +888,27 @@ class FilesystemSurvey(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='submitted_surveys',
+        related_name="submitted_surveys",
     )
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=['cluster', 'status']),
-            models.Index(fields=['cluster', '-created_at']),
+            models.Index(fields=["cluster", "status"]),
+            models.Index(fields=["cluster", "-created_at"]),
         ]
 
     def __str__(self):
-        return f'Survey {self.id} on {self.cluster} ({self.status})'
+        return f"Survey {self.id} on {self.cluster} ({self.status})"
 
     def get_size_display(self):
         """Return human-readable total size"""
         size = self.total_size_bytes
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        for unit in ["B", "KB", "MB", "GB", "TB"]:
             if size < 1024.0:
-                return f'{size:.2f} {unit}'
+                return f"{size:.2f} {unit}"
             size /= 1024.0
-        return f'{size:.2f} PB'
+        return f"{size:.2f} PB"
 
 
 class DirectorySummary(models.Model):
@@ -827,47 +921,47 @@ class DirectorySummary(models.Model):
     """
 
     ORIGIN_CHOICES = [
-        ('app_generated', 'App Generated'),
-        ('synced_from_czii', 'Synced from CZII'),
-        ('user_created', 'User Created'),
-        ('unknown', 'Unknown'),
+        ("app_generated", "App Generated"),
+        ("synced_from_czii", "Synced from CZII"),
+        ("user_created", "User Created"),
+        ("unknown", "Unknown"),
     ]
 
     PRESERVE_STATUS_CHOICES = [
-        ('unset', 'Unset'),
-        ('preserve', 'Preserve'),
-        ('delete', 'Delete'),
-        ('review', 'Needs Review'),
+        ("unset", "Unset"),
+        ("preserve", "Preserve"),
+        ("delete", "Delete"),
+        ("review", "Needs Review"),
     ]
 
     # Link to survey
     survey = models.ForeignKey(
         FilesystemSurvey,
         on_delete=models.CASCADE,
-        related_name='directory_summaries',
+        related_name="directory_summaries",
     )
     cluster = models.CharField(max_length=16, db_index=True)
-    path = models.CharField(max_length=500, help_text='Directory path')
+    path = models.CharField(max_length=500, help_text="Directory path")
 
     # Aggregates
     file_count = models.IntegerField(default=0)
     total_size_bytes = models.BigIntegerField(default=0)
-    owner_username = models.CharField(max_length=64, null=True, blank=True, help_text='Most common owner')
+    owner_username = models.CharField(max_length=64, null=True, blank=True, help_text="Most common owner")
     owner_uid = models.IntegerField(null=True, blank=True)
 
     # Origin (computed from path matching domain entities or survey comparison)
-    origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default='unknown', db_index=True)
+    origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default="unknown", db_index=True)
 
     # Linked content (if this directory matches a known domain entity path)
     content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
     object_id = models.PositiveIntegerField(null=True, blank=True)
-    content_object = GenericForeignKey('content_type', 'object_id')
+    content_object = GenericForeignKey("content_type", "object_id")
 
     # Preservation status (user decisions)
     preserve_status = models.CharField(
         max_length=20,
         choices=PRESERVE_STATUS_CHOICES,
-        default='unset',
+        default="unset",
         db_index=True,
     )
     status_updated_at = models.DateTimeField(null=True, blank=True)
@@ -876,12 +970,12 @@ class DirectorySummary(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='directory_status_updates',
+        related_name="directory_status_updates",
     )
     status_notes = models.TextField(null=True, blank=True)
 
     # Depth (for hierarchical queries)
-    depth = models.IntegerField(default=0, help_text='Directory depth from base_path')
+    depth = models.IntegerField(default=0, help_text="Directory depth from base_path")
 
     # Timestamps from filesystem
     newest_file_mtime = models.DateTimeField(null=True, blank=True)
@@ -891,23 +985,23 @@ class DirectorySummary(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ['survey', 'path']
+        unique_together = ["survey", "path"]
         indexes = [
-            models.Index(fields=['cluster', 'origin', 'preserve_status']),
-            models.Index(fields=['survey', 'depth']),
-            models.Index(fields=['cluster', 'path']),
-            models.Index(fields=['owner_username']),
+            models.Index(fields=["cluster", "origin", "preserve_status"]),
+            models.Index(fields=["survey", "depth"]),
+            models.Index(fields=["cluster", "path"]),
+            models.Index(fields=["owner_username"]),
         ]
-        ordering = ['path']
+        ordering = ["path"]
 
     def __str__(self):
-        return f'{self.path} ({self.file_count} files, {self.get_size_display()})'
+        return f"{self.path} ({self.file_count} files, {self.get_size_display()})"
 
     def get_size_display(self):
         """Return human-readable total size"""
         size = self.total_size_bytes
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        for unit in ["B", "KB", "MB", "GB", "TB"]:
             if size < 1024.0:
-                return f'{size:.2f} {unit}'
+                return f"{size:.2f} {unit}"
             size /= 1024.0
-        return f'{size:.2f} PB'
+        return f"{size:.2f} PB"

@@ -5,18 +5,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Project',
+            name="Project",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(choices=[('BD01', 'BD01 Human Organelle Library'), ('TRD05', 'TRD05 Data Integration')], default='TRD05', max_length=6, unique=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "name",
+                    models.CharField(
+                        choices=[("BD01", "BD01 Human Organelle Library"), ("TRD05", "TRD05 Data Integration")],
+                        default="TRD05",
+                        max_length=6,
+                        unique=True,
+                    ),
+                ),
                 # Note: Original FKs to confluence.space and clouddocs.drivefolder removed
                 # These were later replaced by documentation_space FK to external_links.ExternalResource
             ],

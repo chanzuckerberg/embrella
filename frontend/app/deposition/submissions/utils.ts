@@ -19,7 +19,6 @@ export function absDate(iso?: string): string {
   return iso ? new Date(iso).toLocaleString() : '';
 }
 
-
 const ts = (d?: string): number => (d ? new Date(d).getTime() : 0);
 
 export function compareDatasets(a: Dataset, b: Dataset, sort: SortKey): number {
@@ -49,9 +48,7 @@ export function depositionMatches(dep: Deposition, q: string): boolean {
 export function softChipSx(color: ChipColor) {
   return (theme: Theme) => {
     const paletteEntry =
-      color === 'default'
-        ? { main: theme.palette.grey[500], dark: theme.palette.grey[700] }
-        : theme.palette[color];
+      color === 'default' ? { main: theme.palette.grey[500], dark: theme.palette.grey[700] } : theme.palette[color];
     return {
       backgroundColor: alpha(paletteEntry.main, 0.14),
       color: paletteEntry.dark,

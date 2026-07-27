@@ -6,14 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint . --cache",
-    "check": "eslint . --cache && yarn prettier --check . && yarn tsc",
+    "lint:ci": "eslint . --cache --cache-strategy content --cache-location ${ESLINT_CACHE:-.eslintcache}",
+    "typecheck": "tsc --project tsconfig.json",
+    "prettier:check": "prettier --check .",
+    "check": "yarn lint && yarn prettier:check && yarn typecheck",
     "fix": "eslint --fix . --cache && yarn prettier --write .",
     "test": "jest --runInBand",
     "e2e": "playwright test --project chromium",
     "e2e:chrome": "playwright test --project chromium",
     "e2e:ff": "playwright test --project firefox",
     "e2e:ie": "playwright test --project edge",
-    "prepare": "cd .. && husky install frontend/.husky",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -35,11 +37,9 @@
     "@tailwindcss/postcss": "^4.3.1",
     "@tanstack/react-query": "^5.101.0",
     "@tanstack/react-table": "^8.20.5",
-    "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/react-json-view": "^2.0.0-alpha.43",
     "date-fns": "^3.6.0",
     "echarts": "^5.6.0",
-    "lint-staged": "^15.5.2",
     "next": "^16.2.11",
     "nuqs": "^2.8.9",
     "postcss": "^8.5.18",
@@ -63,13 +63,13 @@
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@types/react-window": "^1",
     "eslint": "^10.5.0",
     "eslint-config-next": "^16.2.9",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-sonarjs": "^4.0.3",
-    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "prettier": ">=3.8.4",
@@ -97,15 +97,6 @@
     "yaml@^2.7.0": "^2.9.0",
     "js-yaml@^3.13.1": "^4.2.0",
     "glob@^10.2.2": "^10.5.0"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "prettier --write",
-      "eslint --fix"
-    ],
-    "*.{json,md}": [
-      "prettier --write"
-    ]
   },
   "packageManager": "yarn@4.9.1",
   "engines": {

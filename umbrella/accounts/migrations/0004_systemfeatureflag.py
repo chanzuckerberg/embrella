@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("accounts", "0003_profile"),
     ]
@@ -32,9 +31,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "enabled",
-                    models.BooleanField(
-                        default=False, help_text="On for everyone when True."
-                    ),
+                    models.BooleanField(default=False, help_text="On for everyone when True."),
                 ),
                 ("description", models.CharField(blank=True, max_length=255)),
             ],

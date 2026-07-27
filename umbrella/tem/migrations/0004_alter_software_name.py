@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tem', '0003_remove_session_session_plan_session_session_plan'),
+        ("tem", "0003_remove_session_session_plan_session_session_plan"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='software',
-            name='name',
+            model_name="software",
+            name="name",
             field=models.CharField(max_length=50, unique=True),
         ),
     ]

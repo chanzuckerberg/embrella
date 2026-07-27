@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
         ("processes", "0033_add_syncer_active_to_pipeexecution"),
@@ -36,15 +35,11 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "base_path",
-                    models.CharField(
-                        help_text="Root path that was surveyed", max_length=500
-                    ),
+                    models.CharField(help_text="Root path that was surveyed", max_length=500),
                 ),
                 (
                     "job_id",
-                    models.CharField(
-                        blank=True, db_index=True, max_length=32, null=True
-                    ),
+                    models.CharField(blank=True, db_index=True, max_length=32, null=True),
                 ),
                 (
                     "status",
@@ -76,9 +71,7 @@ class Migration(migrations.Migration):
                 ("total_size_bytes", models.BigIntegerField(default=0)),
                 (
                     "size_by_user",
-                    models.JSONField(
-                        blank=True, default=dict, help_text='{"username": bytes, ...}'
-                    ),
+                    models.JSONField(blank=True, default=dict, help_text='{"username": bytes, ...}'),
                 ),
                 (
                     "count_by_user",
@@ -184,9 +177,7 @@ class Migration(migrations.Migration):
                 ("status_notes", models.TextField(blank=True, null=True)),
                 (
                     "depth",
-                    models.IntegerField(
-                        default=0, help_text="Directory depth from base_path"
-                    ),
+                    models.IntegerField(default=0, help_text="Directory depth from base_path"),
                 ),
                 ("newest_file_mtime", models.DateTimeField(blank=True, null=True)),
                 ("oldest_file_mtime", models.DateTimeField(blank=True, null=True)),
@@ -226,15 +217,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="filesystemsurvey",
-            index=models.Index(
-                fields=["cluster", "status"], name="processes_f_cluster_e92a3d_idx"
-            ),
+            index=models.Index(fields=["cluster", "status"], name="processes_f_cluster_e92a3d_idx"),
         ),
         migrations.AddIndex(
             model_name="filesystemsurvey",
-            index=models.Index(
-                fields=["cluster", "-created_at"], name="processes_f_cluster_b1e040_idx"
-            ),
+            index=models.Index(fields=["cluster", "-created_at"], name="processes_f_cluster_b1e040_idx"),
         ),
         migrations.AddIndex(
             model_name="directorysummary",
@@ -245,21 +232,15 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="directorysummary",
-            index=models.Index(
-                fields=["survey", "depth"], name="processes_d_survey__f93e40_idx"
-            ),
+            index=models.Index(fields=["survey", "depth"], name="processes_d_survey__f93e40_idx"),
         ),
         migrations.AddIndex(
             model_name="directorysummary",
-            index=models.Index(
-                fields=["cluster", "path"], name="processes_d_cluster_65d811_idx"
-            ),
+            index=models.Index(fields=["cluster", "path"], name="processes_d_cluster_65d811_idx"),
         ),
         migrations.AddIndex(
             model_name="directorysummary",
-            index=models.Index(
-                fields=["owner_username"], name="processes_d_owner_u_77b1a6_idx"
-            ),
+            index=models.Index(fields=["owner_username"], name="processes_d_owner_u_77b1a6_idx"),
         ),
         migrations.AlterUniqueTogether(
             name="directorysummary",

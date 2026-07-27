@@ -9,51 +9,98 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0004_cryogridcassette_cryogrid_position_in_cassette_and_more'),
-        ('projects', '0003_project_description_alter_project_name'),
-        ('stores', '0002_staticpath_alter_pathtype_static_path'),
-        ('tem', '0006_session_atlas_session_parents_and_more'),
+        ("cryo_grids", "0004_cryogridcassette_cryogrid_position_in_cassette_and_more"),
+        ("projects", "0003_project_description_alter_project_name"),
+        ("stores", "0002_staticpath_alter_pathtype_static_path"),
+        ("tem", "0006_session_atlas_session_parents_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ScreenSessionGroup',
+            name="ScreenSessionGroup",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=20, unique=True)),
-                ('order', models.CharField(default='1,2,3,4,5,6,7,8,9,10,11,12', help_text='comma separated list ofgrid positions to screen, i.e. 1,2,5', max_length=36, validators=[django.core.validators.RegexValidator(re.compile('^\\d+(?:,\\d+)*\\Z'), code='invalid', message='Enter only digits separated by commas.')])),
-                ('cassette', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, to='cryo_grids.cryogridcassette')),
-                ('session_plan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='tem.sessionplan')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=20, unique=True)),
+                (
+                    "order",
+                    models.CharField(
+                        default="1,2,3,4,5,6,7,8,9,10,11,12",
+                        help_text="comma separated list ofgrid positions to screen, i.e. 1,2,5",
+                        max_length=36,
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                re.compile("^\\d+(?:,\\d+)*\\Z"),
+                                code="invalid",
+                                message="Enter only digits separated by commas.",
+                            )
+                        ],
+                    ),
+                ),
+                (
+                    "cassette",
+                    models.ForeignKey(
+                        null=True, on_delete=django.db.models.deletion.PROTECT, to="cryo_grids.cryogridcassette"
+                    ),
+                ),
+                ("session_plan", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="tem.sessionplan")),
             ],
         ),
         migrations.CreateModel(
-            name='ScreenSession',
+            name="ScreenSession",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(help_text='software-dependent name for the screen session for the grid', max_length=20)),
-                ('order_in_screen', models.PositiveSmallIntegerField(default=1)),
-                ('quality', models.SmallIntegerField(default=-1, help_text='grid quality score 0-5 5=highest, -1=not started, 0=failed')),
-                ('notes', models.TextField(blank=True, max_length=255, null=True)),
-                ('atlas', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='screenatlas', to='stores.path')),
-                ('grid', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, to='cryo_grids.cryogrid')),
-                ('project', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='projects.project')),
-                ('user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
-                ('group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='tem.screensessiongroup')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "name",
+                    models.CharField(
+                        help_text="software-dependent name for the screen session for the grid", max_length=20
+                    ),
+                ),
+                ("order_in_screen", models.PositiveSmallIntegerField(default=1)),
+                (
+                    "quality",
+                    models.SmallIntegerField(
+                        default=-1, help_text="grid quality score 0-5 5=highest, -1=not started, 0=failed"
+                    ),
+                ),
+                ("notes", models.TextField(blank=True, max_length=255, null=True)),
+                (
+                    "atlas",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="screenatlas",
+                        to="stores.path",
+                    ),
+                ),
+                (
+                    "grid",
+                    models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, to="cryo_grids.cryogrid"),
+                ),
+                (
+                    "project",
+                    models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to="projects.project"),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL
+                    ),
+                ),
+                ("group", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="tem.screensessiongroup")),
             ],
         ),
         migrations.AddConstraint(
-            model_name='screensession',
-            constraint=models.CheckConstraint(check=models.Q(('quality__lte', 5)), name='quality_score_exceed_max'),
+            model_name="screensession",
+            constraint=models.CheckConstraint(check=models.Q(("quality__lte", 5)), name="quality_score_exceed_max"),
         ),
         migrations.AddConstraint(
-            model_name='screensession',
-            constraint=models.CheckConstraint(check=models.Q(('quality__gte', -1)), name='quality_score_not_valid'),
+            model_name="screensession",
+            constraint=models.CheckConstraint(check=models.Q(("quality__gte", -1)), name="quality_score_not_valid"),
         ),
         migrations.AlterUniqueTogether(
-            name='screensession',
-            unique_together={('name', 'group')},
+            name="screensession",
+            unique_together={("name", "group")},
         ),
     ]

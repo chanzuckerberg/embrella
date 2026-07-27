@@ -29,8 +29,8 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-install-project --no-default-groups
 
-# ---- runtime stage ----
-FROM python:3.11-slim AS runtime
+# ---- app stage: everything both `runtime` and `test` need ----
+FROM python:3.11-slim AS app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -66,6 +66,14 @@ RUN groupadd -g 1000 embrella \
  && chown -R embrella:embrella /app /entrypoint.sh
 
 USER embrella
+
+# ---- test stage: adds the `dev` group (pytest, ruff) of packages
+FROM app AS test
+ENV UV_LINK_MODE=copy
+RUN --mount=type=cache,target=/home/embrella/.cache/uv,uid=1000,gid=1000 uv sync --locked
+
+# ---- runtime stage ----
+FROM app AS runtime
 
 EXPOSE 8000
 

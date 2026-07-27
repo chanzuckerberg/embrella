@@ -12,16 +12,16 @@ def fix_denoiset_copick_dependencies(apps, schema_editor):
     2. Delete duplicate 'denoiset' ProcSoftware entry if it exists
     3. Remove PipeJoints for denoiset and copick (they use parameter-based input selection)
     """
-    ProcSoftware = apps.get_model('processes', 'ProcSoftware')
-    PipeJoint = apps.get_model('processes', 'PipeJoint')
-    PipeInPlan = apps.get_model('processes', 'PipeInPlan')
+    ProcSoftware = apps.get_model("processes", "ProcSoftware")
+    PipeJoint = apps.get_model("processes", "PipeJoint")
+    PipeInPlan = apps.get_model("processes", "PipeInPlan")
 
     # 1. Update 'denoise' ProcSoftware to have processor_class='denoiset'
     try:
-        denoise_sw = ProcSoftware.objects.get(name='denoise')
-        denoise_sw.processor_class = 'denoiset'
-        denoise_sw.default_cluster = 'czii'
-        denoise_sw.allowed_clusters = ['czii', 'bruno']
+        denoise_sw = ProcSoftware.objects.get(name="denoise")
+        denoise_sw.processor_class = "denoiset"
+        denoise_sw.default_cluster = "czii"
+        denoise_sw.allowed_clusters = ["czii", "bruno"]
         denoise_sw.save()
         print(f"✓ Updated denoise ProcSoftware: processor_class='denoiset'")
     except ProcSoftware.DoesNotExist:
@@ -29,7 +29,7 @@ def fix_denoiset_copick_dependencies(apps, schema_editor):
 
     # 2. Delete duplicate 'denoiset' ProcSoftware if it exists
     try:
-        denoiset_sw = ProcSoftware.objects.get(name='denoiset')
+        denoiset_sw = ProcSoftware.objects.get(name="denoiset")
         denoiset_sw.delete()
         print(f"✓ Deleted duplicate 'denoiset' ProcSoftware")
     except ProcSoftware.DoesNotExist:
@@ -37,10 +37,7 @@ def fix_denoiset_copick_dependencies(apps, schema_editor):
 
     # 3. Remove PipeJoints for denoiset
     try:
-        denoise_pip = PipeInPlan.objects.filter(
-            plan__name='czii-denoise',
-            pipe__software__name='denoise'
-        ).first()
+        denoise_pip = PipeInPlan.objects.filter(plan__name="czii-denoise", pipe__software__name="denoise").first()
 
         if denoise_pip:
             denoise_joints = PipeJoint.objects.filter(pipe_in_plan=denoise_pip)
@@ -55,10 +52,7 @@ def fix_denoiset_copick_dependencies(apps, schema_editor):
 
     # 4. Remove PipeJoints for copick
     try:
-        copick_pip = PipeInPlan.objects.filter(
-            plan__name='czii-copick',
-            pipe__software__name='copick'
-        ).first()
+        copick_pip = PipeInPlan.objects.filter(plan__name="czii-copick", pipe__software__name="copick").first()
 
         if copick_pip:
             copick_joints = PipeJoint.objects.filter(pipe_in_plan=copick_pip)
@@ -79,11 +73,11 @@ def reverse_fix(apps, schema_editor):
     We can restore the ProcSoftware changes, but recreating PipeJoints
     would require knowing the exact configuration, which varies by environment.
     """
-    ProcSoftware = apps.get_model('processes', 'ProcSoftware')
+    ProcSoftware = apps.get_model("processes", "ProcSoftware")
 
     # Reverse: Remove processor_class from denoise
     try:
-        denoise_sw = ProcSoftware.objects.get(name='denoise')
+        denoise_sw = ProcSoftware.objects.get(name="denoise")
         denoise_sw.processor_class = None
         denoise_sw.default_cluster = None
         denoise_sw.allowed_clusters = None
@@ -96,7 +90,6 @@ def reverse_fix(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("processes", "0028_add_script_content_to_pipe_execution"),
     ]

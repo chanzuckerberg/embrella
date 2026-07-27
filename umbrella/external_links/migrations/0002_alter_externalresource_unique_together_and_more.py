@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("external_links", "0001_initial"),
     ]
@@ -17,8 +16,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name="externalresource",
             name="url",
-            field=models.URLField(
-                help_text="Full URL to the documentation resource", unique=True
-            ),
+            field=models.URLField(help_text="Full URL to the documentation resource", unique=True),
         ),
     ]

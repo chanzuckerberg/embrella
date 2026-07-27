@@ -4,15 +4,33 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stores', '0003_alter_staticpath_data_type'),
+        ("stores", "0003_alter_staticpath_data_type"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='staticpath',
-            name='data_type',
-            field=models.CharField(choices=[('atlas', 'grid atlas'), ('satlas', 'grid atlas from screening'), ('parents', 'parent image of the tomography images'), ('sums', 'sum image of the frames'), ('frames', 'frames'), ('rawst', 'raw tilt image stack'), ('tangl', 'tilt angles'), ('mdoc', 'mdoc'), ('ctf', 'ctf values'), ('aln', 'tilt alignments'), ('rec', 'all frame tomo recon'), ('evn', 'even frame tomo recon'), ('odd', 'odd frame tomo recon'), ('deno', 'denoised recon')], max_length=8, unique=True),
+            model_name="staticpath",
+            name="data_type",
+            field=models.CharField(
+                choices=[
+                    ("atlas", "grid atlas"),
+                    ("satlas", "grid atlas from screening"),
+                    ("parents", "parent image of the tomography images"),
+                    ("sums", "sum image of the frames"),
+                    ("frames", "frames"),
+                    ("rawst", "raw tilt image stack"),
+                    ("tangl", "tilt angles"),
+                    ("mdoc", "mdoc"),
+                    ("ctf", "ctf values"),
+                    ("aln", "tilt alignments"),
+                    ("rec", "all frame tomo recon"),
+                    ("evn", "even frame tomo recon"),
+                    ("odd", "odd frame tomo recon"),
+                    ("deno", "denoised recon"),
+                ],
+                max_length=8,
+                unique=True,
+            ),
         ),
     ]

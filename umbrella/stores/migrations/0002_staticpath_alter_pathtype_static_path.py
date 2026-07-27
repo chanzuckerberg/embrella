@@ -5,23 +5,40 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('stores', '0001_initial'),
+        ("stores", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='StaticPath',
+            name="StaticPath",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('data_type', models.CharField(choices=[('frames', 'frames'), ('rawst', 'raw tilt image stack'), ('tangl', 'tilt angles'), ('mdoc', 'mdoc'), ('ctf', 'ctf values'), ('aln', 'tilt alignments'), ('rec', 'all frame tomo recon'), ('evn', 'even frame tomo recon'), ('odd', 'odd frame tomo recon'), ('deno', 'denoised recon')], max_length=8, unique=True)),
-                ('static_path', models.CharField(help_text='path reference with placeholder', max_length=255)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "data_type",
+                    models.CharField(
+                        choices=[
+                            ("frames", "frames"),
+                            ("rawst", "raw tilt image stack"),
+                            ("tangl", "tilt angles"),
+                            ("mdoc", "mdoc"),
+                            ("ctf", "ctf values"),
+                            ("aln", "tilt alignments"),
+                            ("rec", "all frame tomo recon"),
+                            ("evn", "even frame tomo recon"),
+                            ("odd", "odd frame tomo recon"),
+                            ("deno", "denoised recon"),
+                        ],
+                        max_length=8,
+                        unique=True,
+                    ),
+                ),
+                ("static_path", models.CharField(help_text="path reference with placeholder", max_length=255)),
             ],
         ),
         migrations.AlterField(
-            model_name='pathtype',
-            name='static_path',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='stores.staticpath'),
+            model_name="pathtype",
+            name="static_path",
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="stores.staticpath"),
         ),
     ]

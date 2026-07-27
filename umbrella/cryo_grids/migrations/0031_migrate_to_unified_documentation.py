@@ -10,17 +10,17 @@ def populate_documentation_pages(apps, schema_editor):
     Migrate cryo_grids FKs from old notes_page to new documentation_page.
     This is idempotent - safe to run multiple times.
     """
-    PlungeFreezingSession = apps.get_model('cryo_grids', 'PlungeFreezingSession')
-    Specimen = apps.get_model('cryo_grids', 'Specimen')
-    ExternalResource = apps.get_model('external_links', 'ExternalResource')
+    PlungeFreezingSession = apps.get_model("cryo_grids", "PlungeFreezingSession")
+    Specimen = apps.get_model("cryo_grids", "Specimen")
+    ExternalResource = apps.get_model("external_links", "ExternalResource")
 
     # Check if old columns still exist using Django's introspection API (works with SQLite, MySQL, PostgreSQL)
     connection = schema_editor.connection
 
     # Check if tables exist first
     tables = connection.introspection.table_names()
-    has_session_table = 'cryo_grids_plungefreezingsession' in tables
-    has_specimen_table = 'cryo_grids_specimen' in tables
+    has_session_table = "cryo_grids_plungefreezingsession" in tables
+    has_specimen_table = "cryo_grids_specimen" in tables
 
     # Check if old columns exist
     has_session_notes_col = False
@@ -28,19 +28,23 @@ def populate_documentation_pages(apps, schema_editor):
 
     if has_session_table:
         with connection.cursor() as cursor:
-            columns = {col.name for col in connection.introspection.get_table_description(cursor, 'cryo_grids_plungefreezingsession')}
-            has_session_notes_col = 'notes_page_id' in columns
+            columns = {
+                col.name
+                for col in connection.introspection.get_table_description(cursor, "cryo_grids_plungefreezingsession")
+            }
+            has_session_notes_col = "notes_page_id" in columns
 
     if has_specimen_table:
         with connection.cursor() as cursor:
-            columns = {col.name for col in connection.introspection.get_table_description(cursor, 'cryo_grids_specimen')}
-            has_specimen_notes_col = 'notes_page_id' in columns
+            columns = {
+                col.name for col in connection.introspection.get_table_description(cursor, "cryo_grids_specimen")
+            }
+            has_specimen_notes_col = "notes_page_id" in columns
 
     if not has_session_notes_col and not has_specimen_notes_col:
         print("Old notes_page columns not found - skipping cryo_grids FK migration")
         print("(This is expected if columns were already dropped)")
         return
-
 
     # Migrate PlungeFreezingSession.notes_page -> documentation_page
     session_migrated = 0
@@ -52,11 +56,8 @@ def populate_documentation_pages(apps, schema_editor):
     if has_session_notes_col:
         # Use raw SQL to get notes_page_id values since historical model may not have the field
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT id, notes_page_id, documentation_page_id FROM cryo_grids_plungefreezingsession"
-            )
+            cursor.execute("SELECT id, notes_page_id, documentation_page_id FROM cryo_grids_plungefreezingsession")
             session_rows = cursor.fetchall()
-
 
         for session_id, notes_page_id, documentation_page_id in session_rows:
             # Skip if already migrated (idempotent check)
@@ -68,10 +69,7 @@ def populate_documentation_pages(apps, schema_editor):
             if notes_page_id:
                 try:
                     with connection.cursor() as cursor:
-                        cursor.execute(
-                            "SELECT url FROM confluence_page WHERE id = %s",
-                            [notes_page_id]
-                        )
+                        cursor.execute("SELECT url FROM confluence_page WHERE id = %s", [notes_page_id])
                         row = cursor.fetchone()
                         if row:
                             page_url = row[0]
@@ -79,9 +77,7 @@ def populate_documentation_pages(apps, schema_editor):
                             # if it was in multiple legacy tables
                             external = ExternalResource.objects.filter(url=page_url).first()
                             if external:
-                                PlungeFreezingSession.objects.filter(id=session_id).update(
-                                    documentation_page=external
-                                )
+                                PlungeFreezingSession.objects.filter(id=session_id).update(documentation_page=external)
                                 session_migrated += 1
                             else:
                                 session_no_external += 1
@@ -100,9 +96,7 @@ def populate_documentation_pages(apps, schema_editor):
     if has_specimen_notes_col:
         # Use raw SQL to get notes_page_id values since historical model may not have the field
         with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT id, notes_page_id, documentation_page_id FROM cryo_grids_specimen"
-            )
+            cursor.execute("SELECT id, notes_page_id, documentation_page_id FROM cryo_grids_specimen")
             specimen_rows = cursor.fetchall()
 
         for specimen_id, notes_page_id, documentation_page_id in specimen_rows:
@@ -115,10 +109,7 @@ def populate_documentation_pages(apps, schema_editor):
             if notes_page_id:
                 try:
                     with connection.cursor() as cursor:
-                        cursor.execute(
-                            "SELECT url FROM confluence_page WHERE id = %s",
-                            [notes_page_id]
-                        )
+                        cursor.execute("SELECT url FROM confluence_page WHERE id = %s", [notes_page_id])
                         row = cursor.fetchone()
                         if row:
                             page_url = row[0]
@@ -126,69 +117,68 @@ def populate_documentation_pages(apps, schema_editor):
                             # if it was in multiple legacy tables
                             external = ExternalResource.objects.filter(url=page_url).first()
                             if external:
-                                Specimen.objects.filter(id=specimen_id).update(
-                                    documentation_page=external
-                                )
+                                Specimen.objects.filter(id=specimen_id).update(documentation_page=external)
                                 specimen_migrated += 1
                 except Exception as e:
                     print(f"Warning: Could not migrate notes_page for specimen {specimen_id}: {e}")
             else:
                 specimen_no_notes += 1
 
-    print(f"Cryo grids: Migrated {session_migrated} freezing session docs (skipped {session_skipped}, no_notes={session_no_notes}, no_url={session_no_url}, no_external={session_no_external})")
+    print(
+        f"Cryo grids: Migrated {session_migrated} freezing session docs (skipped {session_skipped}, no_notes={session_no_notes}, no_url={session_no_url}, no_external={session_no_external})"
+    )
     print(f"Cryo grids: Migrated {specimen_migrated} specimen docs (skipped {specimen_skipped})")
 
 
 def reverse_migration(apps, schema_editor):
     """Reverse migration - clear documentation_page FKs."""
-    PlungeFreezingSession = apps.get_model('cryo_grids', 'PlungeFreezingSession')
-    Specimen = apps.get_model('cryo_grids', 'Specimen')
+    PlungeFreezingSession = apps.get_model("cryo_grids", "PlungeFreezingSession")
+    Specimen = apps.get_model("cryo_grids", "Specimen")
 
-    session_cleared = PlungeFreezingSession.objects.filter(documentation_page__isnull=False).update(documentation_page=None)
+    session_cleared = PlungeFreezingSession.objects.filter(documentation_page__isnull=False).update(
+        documentation_page=None
+    )
     specimen_cleared = Specimen.objects.filter(documentation_page__isnull=False).update(documentation_page=None)
 
     print(f"Cleared documentation_page for {session_cleared} sessions and {specimen_cleared} specimens")
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0030_alter_plungefreezingsession_datetime'),
-        ('external_links', '0003_migrate_legacy_docs'),
+        ("cryo_grids", "0030_alter_plungefreezingsession_datetime"),
+        ("external_links", "0003_migrate_legacy_docs"),
     ]
 
     operations = [
         # Step 1: Add new unified documentation_page fields
         migrations.AddField(
-            model_name='plungefreezingsession',
-            name='documentation_page',
+            model_name="plungefreezingsession",
+            name="documentation_page",
             field=models.ForeignKey(
                 blank=True,
-                help_text='Documentation page for freezing session (Confluence, Benchling, etc.)',
-                limit_choices_to={'resource_type': 'doc_page'},
+                help_text="Documentation page for freezing session (Confluence, Benchling, etc.)",
+                limit_choices_to={"resource_type": "doc_page"},
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                related_name='freezing_session_docs',
-                to='external_links.externalresource',
+                related_name="freezing_session_docs",
+                to="external_links.externalresource",
             ),
         ),
         migrations.AddField(
-            model_name='specimen',
-            name='documentation_page',
+            model_name="specimen",
+            name="documentation_page",
             field=models.ForeignKey(
                 blank=True,
-                help_text='Documentation page for sample prep (Confluence, Benchling, etc.)',
-                limit_choices_to={'resource_type': 'doc_page'},
+                help_text="Documentation page for sample prep (Confluence, Benchling, etc.)",
+                limit_choices_to={"resource_type": "doc_page"},
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                related_name='specimen_docs',
-                to='external_links.externalresource',
+                related_name="specimen_docs",
+                to="external_links.externalresource",
             ),
         ),
-
         # Step 2: Migrate data from old columns to new columns
         migrations.RunPython(populate_documentation_pages, reverse_migration),
-
         # Step 3 & 4: Drop old foreign key constraints and columns
         # Note: These are intentionally noops. The columns can be removed manually in production
         # after verifying the migration. SQLite doesn't support DROP FOREIGN KEY and this

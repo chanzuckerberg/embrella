@@ -53,6 +53,8 @@ const config: PlaywrightTestConfig = {
           timeout: 120 * 1000,
           url: 'http://localhost:3000/',
         },
-  workers: '25%',
+  // 25% keeps parallel chromium off podman's 64 MB /dev/shm in the devcontainer.
+  // A CI runner has no such limit, and 25% of 4 vCPUs would serialise the suite.
+  workers: process.env.CI ? '100%' : '25%',
 };
 export default config;

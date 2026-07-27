@@ -5,9 +5,8 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('projects', '0003_project_description_alter_project_name'),
+        ("projects", "0003_project_description_alter_project_name"),
     ]
 
     operations = [

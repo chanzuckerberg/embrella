@@ -4,11 +4,9 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('processes', '0013_annotation_created_at_annotation_updated_at_and_more'),
-        ('processes', '0013_procrun_updated_at'),
+        ("processes", "0013_annotation_created_at_annotation_updated_at_and_more"),
+        ("processes", "0013_procrun_updated_at"),
     ]
 
-    operations = [
-    ]
+    operations = []

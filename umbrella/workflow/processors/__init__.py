@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from .base import BaseProcessor
 
 # Global registry mapping processor names to classes
-_PROCESSOR_REGISTRY: Dict[str, Type['BaseProcessor']] = {}
+_PROCESSOR_REGISTRY: Dict[str, Type["BaseProcessor"]] = {}
 
 from .base import BaseProcessor  # noqa: E402
 
@@ -48,10 +48,9 @@ def register_processor(cls: Type[BaseProcessor]) -> Type[BaseProcessor]:
             name = "aretomo3"
             # ... implementation
     """
-    if not hasattr(cls, 'name') or cls.name is None:
+    if not hasattr(cls, "name") or cls.name is None:
         raise ValueError(
-            f"{cls.__name__} must define a 'name' class attribute. "
-            f"Example: name = 'aretomo3'",
+            f"{cls.__name__} must define a 'name' class attribute. Example: name = 'aretomo3'",
         )
 
     if cls.name in _PROCESSOR_REGISTRY:
@@ -83,10 +82,9 @@ def get_processor(name: str) -> BaseProcessor:
         schema = processor.get_parameter_schema()
     """
     if name not in _PROCESSOR_REGISTRY:
-        available = ', '.join(sorted(_PROCESSOR_REGISTRY.keys()))
+        available = ", ".join(sorted(_PROCESSOR_REGISTRY.keys()))
         raise ValueError(
-            f"Unknown processor: '{name}'. "
-            f"Available processors: {available if available else 'none'}",
+            f"Unknown processor: '{name}'. Available processors: {available if available else 'none'}",
         )
 
     processor_class = _PROCESSOR_REGISTRY[name]

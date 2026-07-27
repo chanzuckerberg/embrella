@@ -22,7 +22,7 @@ const renderRow = (isOwner: boolean) =>
       <tbody>
         <DatasetRow dataset={draft} isOwner={isOwner} />
       </tbody>
-    </table>,
+    </table>
   );
 
 describe('DatasetRow ownership gating', () => {

@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("processes", "0030_add_job_logs_to_pipe_execution"),
     ]

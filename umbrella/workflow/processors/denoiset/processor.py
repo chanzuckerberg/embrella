@@ -29,8 +29,8 @@ class DenoisETProcessor(BaseProcessor):
     display_name = "DenoisET"
     version = "1.0"
     cluster = "czii"
-    allowed_clusters = ['czii', 'bruno']
-    task_name = 'denoising'
+    allowed_clusters = ["czii", "bruno"]
+    task_name = "denoising"
 
     # Schema is now loaded from schema.yaml file
 
@@ -47,11 +47,11 @@ class DenoisETProcessor(BaseProcessor):
         errors = []
 
         # Validate aretomo_run is provided
-        if not params.get('aretomo_run'):
+        if not params.get("aretomo_run"):
             errors.append("aretomo_run is required and must not be empty")
 
         # Validate model_name is provided
-        if not params.get('model_name'):
+        if not params.get("model_name"):
             errors.append("model_name is required and must not be empty")
 
         return errors
@@ -68,8 +68,8 @@ class DenoisETProcessor(BaseProcessor):
             Rendered bash script for SLURM submission
         """
         # Get template from processor's templates directory
-        template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-        template_file = 'denoiset.sh.j2'
+        template_dir = os.path.join(os.path.dirname(__file__), "templates")
+        template_file = "denoiset.sh.j2"
 
         env = Environment(loader=FileSystemLoader(template_dir))
         template = env.get_template(template_file)
@@ -82,8 +82,8 @@ class DenoisETProcessor(BaseProcessor):
         context = self.get_template_context(params, run_context)
 
         # Add DenoisET-specific context variables
-        context['context_vars']['session'] = session_name
-        context['context_vars']['denoise_run'] = denoise_run
+        context["context_vars"]["session"] = session_name
+        context["context_vars"]["denoise_run"] = denoise_run
 
         # For backwards compatibility with old template (temporary):
         # Flatten context into template_vars for the old hardcoded template
@@ -91,20 +91,20 @@ class DenoisETProcessor(BaseProcessor):
         template_vars = {}
 
         # Add flattened variables at top level for backwards compatibility
-        template_vars.update(context['context_vars'])
-        template_vars.update(context['calculated_vars'])
-        for var_name, var_info in context['schema_vars'].items():
-            template_vars[var_name] = var_info['value']
-        template_vars.update(context['control_vars'])
+        template_vars.update(context["context_vars"])
+        template_vars.update(context["calculated_vars"])
+        for var_name, var_info in context["schema_vars"].items():
+            template_vars[var_name] = var_info["value"]
+        template_vars.update(context["control_vars"])
 
         # Add structured context for new Jinja loop-based template
-        template_vars['context_vars'] = context['context_vars']
-        template_vars['calculated_vars'] = context['calculated_vars']
-        template_vars['schema_vars'] = context['schema_vars']
-        template_vars['control_vars'] = context['control_vars']
-        template_vars['cli_args'] = context['cli_args']
-        template_vars['slurm_directives'] = context.get('slurm_directives', [])
-        template_vars['cluster'] = run_context.cluster_id
+        template_vars["context_vars"] = context["context_vars"]
+        template_vars["calculated_vars"] = context["calculated_vars"]
+        template_vars["schema_vars"] = context["schema_vars"]
+        template_vars["control_vars"] = context["control_vars"]
+        template_vars["cli_args"] = context["cli_args"]
+        template_vars["slurm_directives"] = context.get("slurm_directives", [])
+        template_vars["cluster"] = run_context.cluster_id
 
         # Render template with schema-driven variables
         script = template.render(**template_vars)
@@ -133,24 +133,24 @@ class DenoisETProcessor(BaseProcessor):
 
         return [
             {
-                'type': 'denoised_volumes',
-                'pattern': f"{base_path}/*.mrc",
-                'description': 'Denoised tomographic volumes',
+                "type": "denoised_volumes",
+                "pattern": f"{base_path}/*.mrc",
+                "description": "Denoised tomographic volumes",
             },
             {
-                'type': 'rechunked',
-                'pattern': f"{base_path}/rechunked/*.zarr",
-                'description': 'Rechunked Zarr arrays',
+                "type": "rechunked",
+                "pattern": f"{base_path}/rechunked/*.zarr",
+                "description": "Rechunked Zarr arrays",
             },
             {
-                'type': 'plots',
-                'pattern': f"{base_path}/plots/*.png",
-                'description': 'Quality control plots',
+                "type": "plots",
+                "pattern": f"{base_path}/plots/*.png",
+                "description": "Quality control plots",
             },
             {
-                'type': 'logs',
-                'pattern': f"{base_path}/logs/*.log",
-                'description': 'Processing logs',
+                "type": "logs",
+                "pattern": f"{base_path}/logs/*.log",
+                "description": "Processing logs",
             },
         ]
 
@@ -165,7 +165,7 @@ class DenoisETProcessor(BaseProcessor):
         Returns:
             Absolute path on remote cluster (without /scripts suffix)
         """
-        return f"/hpc/projects/group.czii/krios1.processing/denoise"
+        return "/hpc/projects/group.czii/krios1.processing/denoise"
 
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
@@ -175,13 +175,13 @@ class DenoisETProcessor(BaseProcessor):
             Dictionary of SLURM options
         """
         return {
-            'partition': 'gpu',
-            'gpus': 1,  # DenoisET uses single GPU
-            'nodes': 1,
-            'cpus_per_task': 8,
-            'mem_per_gpu': '32G',
-            'time': '12:00:00',  # 12 hours
-            'job_name': 'denoiset',
+            "partition": "gpu",
+            "gpus": 1,  # DenoisET uses single GPU
+            "nodes": 1,
+            "cpus_per_task": 8,
+            "mem_per_gpu": "32G",
+            "time": "12:00:00",  # 12 hours
+            "job_name": "denoiset",
         }
 
     def on_job_submit(self, run_context: RunContext, job_id: str) -> None:
@@ -195,14 +195,13 @@ class DenoisETProcessor(BaseProcessor):
             job_id: SLURM job ID
         """
         logger.info(
-            f"DenoisET job {job_id} submitted for session {run_context.msi_session.name}, "
-            f"run {run_context.run_number}",
+            f"DenoisET job {job_id} submitted for session {run_context.msi_session.name}, run {run_context.run_number}",
         )
 
         # Start denoise syncer as Django-Q task to monitor for output files
         # Note: base_path defaults to get_processing_base_path() in BaseProcessor
         self._start_syncer_task(
-            syncer_class_path='workflow.processors.denoiset.syncer.DenoiseSyncer',
+            syncer_class_path="workflow.processors.denoiset.syncer.DenoiseSyncer",
             run_context=run_context,
             job_id=job_id,
         )
@@ -222,8 +221,7 @@ class DenoisETProcessor(BaseProcessor):
             )
         else:
             logger.warning(
-                f"DenoisET job failed for session {run_context.msi_session.name}, "
-                f"run {run_context.run_number}",
+                f"DenoisET job failed for session {run_context.msi_session.name}, run {run_context.run_number}",
             )
 
     def get_input_dependencies(self) -> List[str]:
@@ -243,4 +241,5 @@ class DenoisETProcessor(BaseProcessor):
 
 # Register the processor after the class is fully defined to avoid circular imports
 from workflow.processors import register_processor
+
 register_processor(DenoisETProcessor)

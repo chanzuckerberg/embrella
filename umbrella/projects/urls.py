@@ -2,7 +2,7 @@ from django.urls import path
 
 from . import views
 
-#register app namespace
+# register app namespace
 app_name = "projects"
 
 urlpatterns = [

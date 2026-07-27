@@ -27,7 +27,6 @@ def remove_screening_labels(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("cryo_grids", "0033_label_gridlabel_cryogrid_labels"),
     ]

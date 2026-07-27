@@ -26,9 +26,7 @@ def enabled_flags_for(user) -> list[str]:
     An explicit per-user override wins: it can add a flag or remove a system-on one.
     Used by the /user endpoint so the frontend knows which features to show.
     """
-    flags = set(
-        SystemFeatureFlag.objects.filter(enabled=True).values_list("name", flat=True)
-    )
+    flags = set(SystemFeatureFlag.objects.filter(enabled=True).values_list("name", flat=True))
     if getattr(user, "is_authenticated", False):
         try:
             for name, on in user.profile.feature_flags.items():

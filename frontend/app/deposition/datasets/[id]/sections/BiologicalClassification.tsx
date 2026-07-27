@@ -25,12 +25,54 @@ const BIO_ROWS: {
   idKey: keyof DatasetSample;
   lookup: string;
 }[] = [
-  { key: 'tissue', label: 'Tissue', prefix: 'UBERON', nameKey: 'tissue_name', idKey: 'tissue_id', lookup: 'https://www.ebi.ac.uk/ols4/ontologies/uberon' },
-  { key: 'cell_type', label: 'Cell type', prefix: 'CL', nameKey: 'cell_name', idKey: 'cell_type_id', lookup: 'https://www.ebi.ac.uk/ols4/ontologies/cl' },
-  { key: 'cell_strain', label: 'Cell strain', prefix: 'CL', nameKey: 'cell_strain_name', idKey: 'cell_strain_id', lookup: 'https://www.ebi.ac.uk/ols4/ontologies/cl' },
-  { key: 'cell_component', label: 'Cell component', prefix: 'GO', nameKey: 'cell_component_name', idKey: 'ontology', lookup: 'https://www.ebi.ac.uk/ols4/ontologies/go' },
-  { key: 'development_stage', label: 'Development stage', prefix: 'UBERON', nameKey: 'development_stage_name', idKey: 'development_stage_ontology_id', lookup: 'https://www.ebi.ac.uk/ols4/ontologies/uberon' },
-  { key: 'disease', label: 'Disease', prefix: 'CDPO', nameKey: 'disease_name', idKey: 'disease_ontology_id', lookup: 'https://www.ebi.ac.uk/ols4/ontologies/mondo' },
+  {
+    key: 'tissue',
+    label: 'Tissue',
+    prefix: 'UBERON',
+    nameKey: 'tissue_name',
+    idKey: 'tissue_id',
+    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/uberon',
+  },
+  {
+    key: 'cell_type',
+    label: 'Cell type',
+    prefix: 'CL',
+    nameKey: 'cell_name',
+    idKey: 'cell_type_id',
+    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/cl',
+  },
+  {
+    key: 'cell_strain',
+    label: 'Cell strain',
+    prefix: 'CL',
+    nameKey: 'cell_strain_name',
+    idKey: 'cell_strain_id',
+    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/cl',
+  },
+  {
+    key: 'cell_component',
+    label: 'Cell component',
+    prefix: 'GO',
+    nameKey: 'cell_component_name',
+    idKey: 'ontology',
+    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/go',
+  },
+  {
+    key: 'development_stage',
+    label: 'Development stage',
+    prefix: 'UBERON',
+    nameKey: 'development_stage_name',
+    idKey: 'development_stage_ontology_id',
+    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/uberon',
+  },
+  {
+    key: 'disease',
+    label: 'Disease',
+    prefix: 'CDPO',
+    nameKey: 'disease_name',
+    idKey: 'disease_ontology_id',
+    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/mondo',
+  },
 ];
 
 function OntologyRow({
@@ -136,13 +178,7 @@ export function BiologicalClassification({
         {rowsBeforeAssay.map((row) => {
           const idVal = (sample[row.idKey] as string) || '';
           return (
-            <OntologyRow
-              key={row.key}
-              label={row.label}
-              summary={idVal || 'Not set'}
-              set={!!idVal}
-              readOnly={readOnly}
-            >
+            <OntologyRow key={row.key} label={row.label} summary={idVal || 'Not set'} set={!!idVal} readOnly={readOnly}>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
                 <TextField
                   label={`${row.label} name`}
@@ -166,7 +202,13 @@ export function BiologicalClassification({
                   target="_blank"
                   rel="noopener"
                   variant="body2"
-                  sx={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 0.25, fontWeight: 600 }}
+                  sx={{
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.25,
+                    fontWeight: 600,
+                  }}
                 >
                   {row.prefix} lookup <OpenInNewIcon sx={{ fontSize: 14 }} />
                 </Link>
@@ -175,12 +217,7 @@ export function BiologicalClassification({
           );
         })}
 
-        <OntologyRow
-          label="Assay"
-          summary={assayLabel || 'Not set'}
-          set={!!assayLabel}
-          readOnly={readOnly}
-        >
+        <OntologyRow label="Assay" summary={assayLabel || 'Not set'} set={!!assayLabel} readOnly={readOnly}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
             <TextField
               label="Assay label"
@@ -237,7 +274,13 @@ export function BiologicalClassification({
                   target="_blank"
                   rel="noopener"
                   variant="body2"
-                  sx={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 0.25, fontWeight: 600 }}
+                  sx={{
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.25,
+                    fontWeight: 600,
+                  }}
                 >
                   {row.prefix} lookup <OpenInNewIcon sx={{ fontSize: 14 }} />
                 </Link>

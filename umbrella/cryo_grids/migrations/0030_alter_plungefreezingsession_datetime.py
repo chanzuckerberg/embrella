@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("cryo_grids", "0029_alter_cryogridbox_unique_together_and_more"),
     ]

@@ -373,7 +373,7 @@ def format_queryset_results(queryset):
 
         # Attach label
         if item.get("label_id"):
-            existing_label_ids = {l["id"] for l in formatted_result[grid_id]["labels"]}
+            existing_label_ids = {label["id"] for label in formatted_result[grid_id]["labels"]}
             if item["label_id"] not in existing_label_ids:
                 formatted_result[grid_id]["labels"].append(
                     {

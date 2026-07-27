@@ -20,7 +20,6 @@ def unseed_flags(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("accounts", "0005_seed_feature_flags"),
     ]

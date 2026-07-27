@@ -4,35 +4,36 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cryo_grids', '0011_alter_cryogrid_updated_on'),
+        ("cryo_grids", "0011_alter_cryogrid_updated_on"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cane',
-            name='max_pucks',
-            field=models.PositiveSmallIntegerField(default=10, help_text='Maximum number of pucks fit in the cane'),
+            model_name="cane",
+            name="max_pucks",
+            field=models.PositiveSmallIntegerField(default=10, help_text="Maximum number of pucks fit in the cane"),
         ),
         migrations.AddField(
-            model_name='cryogridbox',
-            name='max_grids',
-            field=models.PositiveSmallIntegerField(default=4, help_text='Maximum number of grids fit in the box'),
+            model_name="cryogridbox",
+            name="max_grids",
+            field=models.PositiveSmallIntegerField(default=4, help_text="Maximum number of grids fit in the box"),
         ),
         migrations.AddField(
-            model_name='dewar',
-            name='max_canes',
-            field=models.PositiveSmallIntegerField(default=6, help_text='Maximum number of canes fit in the dewar'),
+            model_name="dewar",
+            name="max_canes",
+            field=models.PositiveSmallIntegerField(default=6, help_text="Maximum number of canes fit in the dewar"),
         ),
         migrations.AddField(
-            model_name='puck',
-            name='max_boxes',
-            field=models.PositiveSmallIntegerField(default=12, help_text='Maximum number of boxes fit on the puck'),
+            model_name="puck",
+            name="max_boxes",
+            field=models.PositiveSmallIntegerField(default=12, help_text="Maximum number of boxes fit on the puck"),
         ),
         migrations.AlterField(
-            model_name='puck',
-            name='position_in_cane',
-            field=models.PositiveSmallIntegerField(blank=True, default=1, help_text='position 1 is at the top of the cane', null=True),
+            model_name="puck",
+            name="position_in_cane",
+            field=models.PositiveSmallIntegerField(
+                blank=True, default=1, help_text="position 1 is at the top of the cane", null=True
+            ),
         ),
     ]

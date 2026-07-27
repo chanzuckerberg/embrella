@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("processes", "0022_alter_review_msi_session"),
     ]
@@ -80,7 +79,10 @@ class Migration(migrations.Migration):
                 (
                     "job_id",
                     models.CharField(
-                        blank=True, db_index=True, max_length=32, null=True,
+                        blank=True,
+                        db_index=True,
+                        max_length=32,
+                        null=True,
                     ),
                 ),
                 (

@@ -30,7 +30,10 @@ class Migration(migrations.Migration):
                 (
                     "job_id",
                     models.CharField(
-                        blank=True, max_length=100, null=True, unique=True,
+                        blank=True,
+                        max_length=100,
+                        null=True,
+                        unique=True,
                     ),
                 ),
                 ("created_at", models.DateTimeField(default=django.utils.timezone.now)),

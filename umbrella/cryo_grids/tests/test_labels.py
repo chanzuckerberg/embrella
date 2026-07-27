@@ -2,6 +2,7 @@ import datetime
 
 import pytest
 from django.contrib.auth.models import User
+from django.db.utils import IntegrityError
 from django.utils import timezone
 
 from cryo_grids.models import CryoGrid, GridLabel, Label, PlungeFreezingDevice, PlungeFreezingSession, Site
@@ -62,7 +63,7 @@ class TestLabelModel:
         assert label_a.color == "#43a047"
 
     def test_label_unique_name(self, label_a):
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             Label.objects.create(name="good", color="#000000")
 
     def test_random_color_default(self, db):
@@ -88,7 +89,7 @@ class TestGridLabelModel:
 
     def test_unique_together(self, grid, label_a, test_user):
         GridLabel.objects.create(grid=grid, label=label_a, added_by=test_user)
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             GridLabel.objects.create(grid=grid, label=label_a, added_by=test_user)
 
     def test_multiple_labels_on_grid(self, grid, label_a, label_b, test_user):
@@ -107,7 +108,7 @@ class TestLabelViewSet:
         response = client.get("/api/list/labels/")
         assert response.status_code == 200
         data = response.json()
-        names = [l["name"] for l in data]
+        names = [label["name"] for label in data]
         assert "good" in names
         assert "bad" in names
 
