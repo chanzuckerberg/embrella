@@ -19,10 +19,10 @@ function toTerm(doc: OlsDoc): OntologyTerm | null {
   return { id: doc.obo_id, label: doc.label, synonyms: doc.synonym ?? [], iri: doc.iri };
 }
 
-async function olsSearch(params: Record<string, string>): Promise<OntologyTerm[]> {
+async function olsQuery(endpoint: 'search' | 'select', params: Record<string, string>): Promise<OntologyTerm[]> {
   const qs = new URLSearchParams({ rows: '10', fieldList: 'obo_id,label,synonym,iri', ...params }).toString();
-  const res = await fetch(`${OLS_BASE}/search?${qs}`);
-  if (!res.ok) throw new Error(`OLS search failed: ${res.status}`);
+  const res = await fetch(`${OLS_BASE}/${endpoint}?${qs}`);
+  if (!res.ok) throw new Error(`OLS ${endpoint} failed: ${res.status}`);
   const data = await res.json();
   const docs: OlsDoc[] = data?.response?.docs ?? [];
   return docs.map(toTerm).filter((t): t is OntologyTerm => t !== null);
@@ -32,14 +32,14 @@ async function olsSearch(params: Record<string, string>): Promise<OntologyTerm[]
 export function searchOntology(term: string, ontology: string): Promise<OntologyTerm[]> {
   const q = term.trim();
   if (!q) return Promise.resolve([]);
-  return olsSearch({ q, ontology: ontology.toLowerCase() });
+  return olsQuery('select', { q, ontology: ontology.toLowerCase() });
 }
 
 /** Validate an OBO id */
 export async function validateOntologyId(id: string, ontology: string): Promise<OntologyTerm | null> {
   const q = id.trim();
   if (!q) return null;
-  const results = await olsSearch({
+  const results = await olsQuery('search', {
     q,
     ontology: ontology.toLowerCase(),
     exact: 'true',

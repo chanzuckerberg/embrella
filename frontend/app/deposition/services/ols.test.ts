@@ -55,6 +55,23 @@ describe('OLS service', () => {
 
   it('throws on a non-ok response', async () => {
     mockFetch([], false, 500);
-    await expect(searchOntology('brain', 'uberon')).rejects.toThrow(/OLS search failed: 500/);
+    await expect(searchOntology('brain', 'uberon')).rejects.toThrow(/OLS select failed: 500/);
+  });
+
+  it('searchOntology uses the fast /select endpoint with synonyms requested', async () => {
+    mockFetch([DOC]);
+    await searchOntology('brain', 'uberon');
+    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('/ols4/api/select?');
+    expect(url).toContain('fieldList=obo_id%2Clabel%2Csynonym%2Ciri');
+  });
+
+  it('validateOntologyId uses /search with an exact obo_id query', async () => {
+    mockFetch([DOC]);
+    await validateOntologyId('UBERON:0000955', 'uberon');
+    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('/ols4/api/search?');
+    expect(url).toContain('exact=true');
+    expect(url).toContain('queryFields=obo_id');
   });
 });

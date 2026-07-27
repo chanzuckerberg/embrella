@@ -1,79 +1,12 @@
 'use client';
 
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Chip,
-  Link,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Accordion, AccordionDetails, AccordionSummary, Box, Typography } from '@mui/material';
 
 import type { DatasetSample } from '../../../types';
+import { BIO_ROWS, type BioRow } from './bioClassificationRows';
+import { OntologyIdInput } from './OntologyIdInput';
 import { SectionCard } from './SectionCard';
-
-const BIO_ROWS: {
-  key: string;
-  label: string;
-  prefix: string;
-  nameKey: keyof DatasetSample;
-  idKey: keyof DatasetSample;
-  lookup: string;
-}[] = [
-  {
-    key: 'tissue',
-    label: 'Tissue',
-    prefix: 'UBERON',
-    nameKey: 'tissue_name',
-    idKey: 'tissue_id',
-    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/uberon',
-  },
-  {
-    key: 'cell_type',
-    label: 'Cell type',
-    prefix: 'CL',
-    nameKey: 'cell_name',
-    idKey: 'cell_type_id',
-    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/cl',
-  },
-  {
-    key: 'cell_strain',
-    label: 'Cell strain',
-    prefix: 'CL',
-    nameKey: 'cell_strain_name',
-    idKey: 'cell_strain_id',
-    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/cl',
-  },
-  {
-    key: 'cell_component',
-    label: 'Cell component',
-    prefix: 'GO',
-    nameKey: 'cell_component_name',
-    idKey: 'ontology',
-    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/go',
-  },
-  {
-    key: 'development_stage',
-    label: 'Development stage',
-    prefix: 'UBERON',
-    nameKey: 'development_stage_name',
-    idKey: 'development_stage_ontology_id',
-    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/uberon',
-  },
-  {
-    key: 'disease',
-    label: 'Disease',
-    prefix: 'CDPO',
-    nameKey: 'disease_name',
-    idKey: 'disease_ontology_id',
-    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/mondo',
-  },
-];
 
 function OntologyRow({
   label,
@@ -156,6 +89,37 @@ export function BiologicalClassification({
   const rowsBeforeAssay = BIO_ROWS.slice(0, 4);
   const rowsAfterAssay = BIO_ROWS.slice(4);
 
+  const renderRow = (row: BioRow, isLast?: boolean) => {
+    const idVal = (sample[row.idKey] as string) || '';
+    return (
+      <OntologyRow
+        key={row.key}
+        label={row.label}
+        summary={idVal || 'Not set'}
+        set={!!idVal}
+        readOnly={readOnly}
+        isLast={isLast}
+      >
+        <OntologyIdInput
+          label={row.label}
+          ontology={row.ontology}
+          pattern={row.pattern}
+          prefix={row.prefix}
+          lookup={row.lookup}
+          manualOnly={row.manualOnly}
+          idPlaceholder={row.idPlaceholder}
+          name={(sample[row.nameKey] as string) ?? ''}
+          id={idVal}
+          onChange={({ name, id }) => {
+            if (name !== undefined) onChangeSample(row.nameKey, name);
+            if (id !== undefined) onChangeSample(row.idKey, id);
+          }}
+          disabled={readOnly}
+        />
+      </OntologyRow>
+    );
+  };
+
   return (
     <SectionCard
       title="Biological classification"
@@ -175,119 +139,26 @@ export function BiologicalClassification({
           bgcolor: 'background.paper',
         }}
       >
-        {rowsBeforeAssay.map((row) => {
-          const idVal = (sample[row.idKey] as string) || '';
-          return (
-            <OntologyRow key={row.key} label={row.label} summary={idVal || 'Not set'} set={!!idVal} readOnly={readOnly}>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-                <TextField
-                  label={`${row.label} name`}
-                  value={(sample[row.nameKey] as string) ?? ''}
-                  onChange={(e) => onChangeSample(row.nameKey, e.target.value)}
-                  size="small"
-                  fullWidth
-                  disabled={readOnly}
-                />
-                <Chip label={row.prefix} size="small" />
-                <TextField
-                  label={`${row.label} ID`}
-                  value={idVal}
-                  onChange={(e) => onChangeSample(row.idKey, e.target.value)}
-                  size="small"
-                  fullWidth
-                  disabled={readOnly}
-                />
-                <Link
-                  href={row.lookup}
-                  target="_blank"
-                  rel="noopener"
-                  variant="body2"
-                  sx={{
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.25,
-                    fontWeight: 600,
-                  }}
-                >
-                  {row.prefix} lookup <OpenInNewIcon sx={{ fontSize: 14 }} />
-                </Link>
-              </Stack>
-            </OntologyRow>
-          );
-        })}
+        {rowsBeforeAssay.map((row) => renderRow(row))}
 
-        <OntologyRow label="Assay" summary={assayLabel || 'Not set'} set={!!assayLabel} readOnly={readOnly}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-            <TextField
-              label="Assay label"
-              value={assayLabel}
-              onChange={(e) => onChangeAssayLabel(e.target.value)}
-              size="small"
-              fullWidth
-              disabled={readOnly}
-            />
-            <Chip label="CDPO" size="small" />
-            <TextField
-              label="Assay ontology ID"
-              value={assayOntologyId}
-              onChange={(e) => onChangeAssayOntologyId(e.target.value)}
-              size="small"
-              fullWidth
-              disabled={readOnly}
-            />
-          </Stack>
+        <OntologyRow label="Assay" summary={assayOntologyId || 'Not set'} set={!!assayOntologyId} readOnly={readOnly}>
+          <OntologyIdInput
+            label="Assay"
+            ontology="efo"
+            pattern="^EFO:[0-9]{7}$"
+            prefix="EFO"
+            lookup="https://www.ebi.ac.uk/ols4/ontologies/efo"
+            name={assayLabel}
+            id={assayOntologyId}
+            onChange={({ name, id }) => {
+              if (name !== undefined) onChangeAssayLabel(name);
+              if (id !== undefined) onChangeAssayOntologyId(id);
+            }}
+            disabled={readOnly}
+          />
         </OntologyRow>
 
-        {rowsAfterAssay.map((row, i) => {
-          const idVal = (sample[row.idKey] as string) || '';
-          const isLast = i === rowsAfterAssay.length - 1;
-          return (
-            <OntologyRow
-              key={row.key}
-              label={row.label}
-              summary={idVal || 'Not set'}
-              set={!!idVal}
-              readOnly={readOnly}
-              isLast={isLast}
-            >
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-                <TextField
-                  label={`${row.label} name`}
-                  value={(sample[row.nameKey] as string) ?? ''}
-                  onChange={(e) => onChangeSample(row.nameKey, e.target.value)}
-                  size="small"
-                  fullWidth
-                  disabled={readOnly}
-                />
-                <Chip label={row.prefix} size="small" />
-                <TextField
-                  label={`${row.label} ID`}
-                  value={idVal}
-                  onChange={(e) => onChangeSample(row.idKey, e.target.value)}
-                  size="small"
-                  fullWidth
-                  disabled={readOnly}
-                />
-                <Link
-                  href={row.lookup}
-                  target="_blank"
-                  rel="noopener"
-                  variant="body2"
-                  sx={{
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.25,
-                    fontWeight: 600,
-                  }}
-                >
-                  {row.prefix} lookup <OpenInNewIcon sx={{ fontSize: 14 }} />
-                </Link>
-              </Stack>
-            </OntologyRow>
-          );
-        })}
+        {rowsAfterAssay.map((row, i) => renderRow(row, i === rowsAfterAssay.length - 1))}
       </Box>
     </SectionCard>
   );
