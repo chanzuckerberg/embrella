@@ -131,7 +131,9 @@ export function OntologyIdInput({
           renderInput={(params) => <TextField {...params} label={`${label} name`} size="small" />}
         />
       )}
-      <Chip label={prefix} size="small" sx={{ mt: { sm: 1 } }} />
+      <Box sx={{ display: 'flex', alignItems: 'center', minHeight: { sm: 40 } }}>
+        <Chip label={prefix} size="small" />
+      </Box>
       <TextField
         label={`${label} ID`}
         value={id}
@@ -144,22 +146,23 @@ export function OntologyIdInput({
         helperText={idHelper}
         FormHelperTextProps={{ sx: idValid ? { color: 'success.main' } : undefined }}
       />
-      <Link
-        href={lookup}
-        target="_blank"
-        rel="noopener"
-        variant="body2"
-        sx={{
-          whiteSpace: 'nowrap',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 0.25,
-          fontWeight: 600,
-          mt: { sm: 1 },
-        }}
-      >
-        {prefix} lookup <OpenInNewIcon sx={{ fontSize: 14 }} />
-      </Link>
+      <Box sx={{ display: 'flex', alignItems: 'center', minHeight: { sm: 35 } }}>
+        <Link
+          href={lookup}
+          target="_blank"
+          rel="noopener"
+          variant="body2"
+          sx={{
+            whiteSpace: 'nowrap',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.25,
+            fontWeight: 600,
+          }}
+        >
+          {prefix} lookup <OpenInNewIcon sx={{ fontSize: 14 }} />
+        </Link>
+      </Box>
     </Stack>
   );
 }
