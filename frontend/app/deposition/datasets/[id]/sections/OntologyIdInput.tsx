@@ -1,20 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import { Autocomplete, Box, Chip, Link, Stack, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, Chip, Link, Stack, TextField } from '@mui/material';
 
+import { useDebounced } from '../../../hooks/useDebounced';
 import { useOntologySearch, useOntologyTerm } from '../../../hooks/useOntology';
 import type { OntologyTerm } from '../../../services/ols';
-
-function useDebounced<T>(value: T, ms: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return debounced;
-}
+import { OntologyOption } from './OntologyOption';
 
 export function OntologyIdInput({
   label,
@@ -108,24 +101,7 @@ export function OntologyIdInput({
           }}
           renderOption={(props, o: OntologyTerm) => (
             <Box component="li" {...props} key={o.id}>
-              <Box>
-                <Typography variant="body2">
-                  {o.label}{' '}
-                  <Typography
-                    component="span"
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ fontFamily: 'monospace' }}
-                  >
-                    {o.id}
-                  </Typography>
-                </Typography>
-                {o.synonyms.length > 0 && (
-                  <Typography variant="caption" color="text.secondary">
-                    syn: {o.synonyms.slice(0, 3).join(', ')}
-                  </Typography>
-                )}
-              </Box>
+              <OntologyOption term={o} />
             </Box>
           )}
           renderInput={(params) => <TextField {...params} label={`${label} name`} size="small" />}
