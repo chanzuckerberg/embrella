@@ -196,7 +196,7 @@ export function AuthorsEditor({
                   </Link>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <FormControlLabel
-                      sx={{ whiteSpace: 'nowrap',ml:2.5 }}
+                      sx={{ whiteSpace: 'nowrap', ml: 2.5 }}
                       control={
                         <Checkbox
                           size="small"
