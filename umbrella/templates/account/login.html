@@ -10,7 +10,7 @@
     <div class="errors">Invalid credentials. Please try again.</div>
   {% endif %}
 
-  {% if not EMBRELLA_DISABLE_SIGNUP %}
+  {% if GOOGLE_SSO_ENABLED %}
   <div class="actions">
     <form method="post" action="{% provider_login_url 'google' process='login' %}">
       {% csrf_token %}

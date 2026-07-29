@@ -55,16 +55,17 @@ class UmbrellaSocialAccountAdapter(DefaultSocialAccountAdapter):
         email = sociallogin.user.email or sociallogin.account.extra_data.get("email", "")
         domain = _email_domain(email)
         allowed = getattr(settings, "SSO_ALLOWED_DOMAINS", [])
-        if domain not in allowed:
+        # "*" (the public demo) admits any Google account, but still requires a
+        # usable email — allauth keys accounts off it.
+        if not domain or (domain not in allowed and "*" not in allowed):
             logger.warning(f"Rejected SSO login for disallowed domain: {email!r}")
             raise ImmediateHttpResponse(
                 HttpResponseForbidden("Your email domain is not permitted to access this application.")
             )
 
     def is_open_for_signup(self, request, sociallogin):
-        # Google sign-ups are allowed (domain-gated by pre_social_login above),
-        # unless signup is locked for a curated demo.
-        return not getattr(settings, "EMBRELLA_DISABLE_SIGNUP", False)
+        # Google sign-ups are allowed; pre_social_login above is the gate.
+        return True
 
 
 class UmbrellaAccountAdapter(DefaultAccountAdapter):

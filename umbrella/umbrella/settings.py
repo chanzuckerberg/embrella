@@ -135,7 +135,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "umbrella.context_processors.demo_flags",
+                "umbrella.context_processors.auth_flags",
             ],
         },
     },
@@ -230,12 +230,13 @@ JAZZMIN_UI_TWEAKS = {
 # --- django-allauth (Google SSO) ---------------------------------------------
 # Provider credentials are sourced from env vars (reusing the existing
 # GOOGLE_SSO_* names) so no DB SocialApp row / admin step is required.
-# TODO: add https://embrella.apps-staging.czbiohub.org/accounts/google/login/callback/
+GOOGLE_SSO_CLIENT_ID = os.environ.get("GOOGLE_SSO_CLIENT_ID", "")
+GOOGLE_SSO_CLIENT_SECRET = os.environ.get("GOOGLE_SSO_CLIENT_SECRET", "")
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
-            "client_id": os.environ.get("GOOGLE_SSO_CLIENT_ID"),
-            "secret": os.environ.get("GOOGLE_SSO_CLIENT_SECRET"),
+            "client_id": GOOGLE_SSO_CLIENT_ID,
+            "secret": GOOGLE_SSO_CLIENT_SECRET,
             "key": "",
         },
         "SCOPE": ["profile", "email"],
@@ -243,17 +244,22 @@ SOCIALACCOUNT_PROVIDERS = {
         "OAUTH_PKCE_ENABLED": True,
     }
 }
-# Signup off by default so self-hosters keep open, domain-gated SSO signup.
-EMBRELLA_DISABLE_SIGNUP = os.environ.get("EMBRELLA_DISABLE_SIGNUP") == "True"
+# Only offer the Google button where credentials are configured, so self-hosters
+# without an OAuth client don't get a login page that errors on click.
+GOOGLE_SSO_ENABLED = bool(GOOGLE_SSO_CLIENT_ID and GOOGLE_SSO_CLIENT_SECRET)
 # Google emails are trusted; skip allauth's signup/email-confirm interstitials.
-SOCIALACCOUNT_AUTO_SIGNUP = not EMBRELLA_DISABLE_SIGNUP
+SOCIALACCOUNT_AUTO_SIGNUP = True
 ACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True  # match existing local users by email
 ACCOUNT_LOGOUT_ON_GET = True
 SOCIALACCOUNT_ADAPTER = "umbrella.adapters.UmbrellaSocialAccountAdapter"
 ACCOUNT_ADAPTER = "umbrella.adapters.UmbrellaAccountAdapter"
-# Restrict SSO to these email domains
-SSO_ALLOWED_DOMAINS = ["czii.org", "czbiohub.org", "biohub.org"]
+# Restrict SSO to these email domains. Unset -> the CZI domains below; a bare "*"
+# opens SSO to any Google account (the public demo).
+_sso_allowed_domains = [
+    d.strip().lower().lstrip("@") for d in os.environ.get("SSO_ALLOWED_DOMAINS", "").split(",") if d.strip()
+]
+SSO_ALLOWED_DOMAINS = _sso_allowed_domains or ["czii.org", "czbiohub.org", "biohub.org"]
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = [
