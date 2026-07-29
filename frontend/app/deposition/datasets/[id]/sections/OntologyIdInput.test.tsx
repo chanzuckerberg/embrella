@@ -60,7 +60,7 @@ it('manualOnly field: format-validates a registry id and never calls OLS', async
     idPlaceholder: 'e.g. CVCL_1234',
     id: 'CVCL_1234',
   });
-  expect(await screen.findByText(/^✓ valid format$/i)).toBeInTheDocument();
+  expect(await screen.findByText(/^valid format$/i)).toBeInTheDocument();
   expect(mockValidate).not.toHaveBeenCalled();
   expect(mockSearch).not.toHaveBeenCalled();
 });
@@ -68,7 +68,7 @@ it('manualOnly field: format-validates a registry id and never calls OLS', async
 it('resolves a valid OLS id to its label', async () => {
   mockValidate.mockResolvedValue({ id: 'CL:0000540', label: 'neuron', synonyms: [] });
   renderInput({ ...CL, id: 'CL:0000540' });
-  expect(await screen.findByText(/✓ neuron/i)).toBeInTheDocument();
+  expect(await screen.findByText(/neuron/i)).toBeInTheDocument();
 });
 
 it('flags a well-formed id OLS cannot resolve', async () => {
@@ -86,5 +86,5 @@ it('does not block when OLS is unreachable (lookup error)', async () => {
 it('accepts a UBERON id in the multi-ontology Cell type field', async () => {
   mockValidate.mockResolvedValue({ id: 'UBERON:0000955', label: 'brain', synonyms: [] });
   renderInput({ ...CELL_TYPE, id: 'UBERON:0000955' });
-  expect(await screen.findByText(/✓ brain/i)).toBeInTheDocument();
+  expect(await screen.findByText(/brain/i)).toBeInTheDocument();
 });

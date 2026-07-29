@@ -1,8 +1,6 @@
 'use client';
 
-import { Button } from '@czi-sds/components';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { Button, Icon } from '@czi-sds/components';
 import { IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material';
 
 import type { DatasetFunding } from '../../../types';
@@ -32,7 +30,13 @@ export function Funding({
       innerRef={innerRef}
       action={
         !readOnly ? (
-          <Button sdsType="primary" sdsStyle="minimal" size="small" startIcon={<AddIcon />} onClick={onAdd}>
+          <Button
+            sdsType="primary"
+            sdsStyle="minimal"
+            size="small"
+            startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
+            onClick={onAdd}
+          >
             Add
           </Button>
         ) : undefined
@@ -66,7 +70,7 @@ export function Funding({
           {!readOnly && (
             <Tooltip title="Remove">
               <IconButton aria-label="Remove funding" onClick={() => onRemove(i)} size="small">
-                <DeleteOutlineIcon fontSize="small" />
+                <Icon sdsIcon="TrashCan" sdsSize="s" color="gray" />
               </IconButton>
             </Tooltip>
           )}

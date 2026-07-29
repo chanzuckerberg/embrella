@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
+import { Icon } from '@czi-sds/components';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Autocomplete, Box, Chip, Link, Stack, TextField } from '@mui/material';
 
@@ -46,11 +47,11 @@ export function Organism({
   const taxidSet = organismTaxid != null;
   const taxidResolved = !!resolved && resolved.id.toLowerCase() === taxidStr.toLowerCase();
 
-  let taxidHelper = ' ';
+  let taxidHelper: ReactNode = ' ';
   if (taxidSet) {
     if (validating || debouncedTaxid !== taxidStr) taxidHelper = 'Checking…';
-    else if (taxidResolved) taxidHelper = `✓ ${resolved?.label ?? ''}`;
-    else if (lookupError) taxidHelper = '✓ lookup unavailable';
+    else if (taxidResolved) taxidHelper = resolved?.label ?? '';
+    else if (lookupError) taxidHelper = 'lookup unavailable';
     else taxidHelper = 'Tax ID not found';
   }
   const taxidError = taxidSet && !validating && debouncedTaxid === taxidStr && !lookupError && !taxidResolved;
@@ -103,8 +104,19 @@ export function Organism({
           sx={{ flex: 1 }}
           disabled={readOnly}
           error={taxidError}
-          helperText={taxidHelper}
-          FormHelperTextProps={{ sx: taxidValid ? { color: 'success.main' } : undefined }}
+          helperText={
+            taxidValid ? (
+              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'flex-start', gap: 0.5 }}>
+                <Box component="span" sx={{ display: 'inline-flex', mt: '2px' }}>
+                  <Icon sdsIcon="Check" sdsSize="xxs" color="green" />
+                </Box>
+                {taxidHelper}
+              </Box>
+            ) : (
+              taxidHelper
+            )
+          }
+          FormHelperTextProps={{ component: 'div', sx: taxidValid ? { color: 'success.main' } : undefined }}
         />
         <Box sx={{ display: 'flex', alignItems: 'center', minHeight: { sm: 40 } }}>
           <Link

@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Callout } from '@czi-sds/components';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { Callout, Icon } from '@czi-sds/components';
 import {
   alpha,
   Box,
@@ -151,7 +150,7 @@ function ExistingDepositionPicker({
       )}
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
-        <InfoOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+        <Icon sdsIcon="InfoCircle" sdsSize="s" color="gray" />
         <Typography variant="caption" color="text.secondary">
           Live preview via lambda lookup
         </Typography>

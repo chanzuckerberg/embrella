@@ -1,6 +1,6 @@
 'use client';
 
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { Icon } from '@czi-sds/components';
 import { Accordion, AccordionDetails, AccordionSummary, Box, Typography } from '@mui/material';
 
 import type { DatasetSample } from '../../../types';
@@ -37,7 +37,7 @@ function OntologyRow({
       }}
     >
       <AccordionSummary
-        expandIcon={<ChevronRightIcon sx={{ color: 'text.secondary', fontSize: 20 }} />}
+        expandIcon={<Icon sdsIcon="ChevronRight" sdsSize="xs" color="gray" />}
         sx={{
           px: 2,
           minHeight: 48,

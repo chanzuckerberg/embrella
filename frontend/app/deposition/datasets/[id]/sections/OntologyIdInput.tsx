@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
+import { Icon } from '@czi-sds/components';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Autocomplete, Box, Chip, Link, Stack, TextField } from '@mui/material';
 
@@ -58,13 +59,13 @@ export function OntologyIdInput({
   const idResolved = !!resolved && resolved.id.toLowerCase() === trimmedId.toLowerCase();
   const idValid = formatOk && (isOlsPrefix ? idResolved || lookupError : true);
 
-  let idHelper = ' ';
+  let idHelper: ReactNode = ' ';
   if (idSet) {
     if (!formatOk) idHelper = 'Invalid ID format for this field';
-    else if (!isOlsPrefix) idHelper = '✓ valid format';
+    else if (!isOlsPrefix) idHelper = 'valid format';
     else if (validating || debouncedId !== id) idHelper = 'Checking…';
-    else if (idResolved) idHelper = `✓ ${resolved?.label ?? ''}`;
-    else if (lookupError) idHelper = '✓ valid format (lookup unavailable)';
+    else if (idResolved) idHelper = resolved?.label ?? '';
+    else if (lookupError) idHelper = 'valid format (lookup unavailable)';
     else idHelper = 'ID not found';
   }
   const idError =
@@ -119,8 +120,19 @@ export function OntologyIdInput({
         sx={{ flex: 1 }}
         disabled={disabled}
         error={idError}
-        helperText={idHelper}
-        FormHelperTextProps={{ sx: idValid ? { color: 'success.main' } : undefined }}
+        helperText={
+          idValid ? (
+            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box component="span" sx={{ display: 'inline-flex', mt: '2px' }}>
+                <Icon sdsIcon="Check" sdsSize="xxs" color="green" />
+              </Box>
+              {idHelper}
+            </Box>
+          ) : (
+            idHelper
+          )
+        }
+        FormHelperTextProps={{ component: 'div', sx: idValid ? { color: 'success.main' } : undefined }}
       />
       <Box sx={{ display: 'flex', alignItems: 'center', minHeight: { sm: 35 } }}>
         <Link

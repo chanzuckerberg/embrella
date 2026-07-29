@@ -1,7 +1,6 @@
 'use client';
 
-import { Button } from '@czi-sds/components';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { Button, Icon } from '@czi-sds/components';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import {
@@ -140,7 +139,7 @@ export function AuthorsEditor({
                 </Box>
                 {!disabled && (
                   <IconButton aria-label={`Remove author ${i + 1}`} size="small" onClick={() => remove(i)}>
-                    <DeleteOutlineIcon fontSize="small" />
+                    <Icon sdsIcon="TrashCan" sdsSize="s" color="gray" />
                   </IconButton>
                 )}
               </Box>

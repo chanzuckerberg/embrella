@@ -1,6 +1,6 @@
 'use client';
 
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { Icon } from '@czi-sds/components';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { Box, LinearProgress, Paper, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -38,7 +38,7 @@ export function SideNav({
         />
       );
     }
-    if (done[n.key]) return <CheckCircleIcon sx={{ fontSize: 22, color: 'success.main' }} />;
+    if (done[n.key]) return <Icon sdsIcon="CheckCircle" sdsSize="l" color="green" />;
     if (isActive) {
       return (
         <Box

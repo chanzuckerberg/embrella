@@ -44,7 +44,7 @@ function renderOrganism(props: Partial<ComponentProps<typeof Organism>> = {}) {
 it('resolves a set tax ID to its organism name', async () => {
   mockValidate.mockResolvedValue({ id: 'NCBITaxon:9606', label: 'Homo sapiens', synonyms: [] });
   renderOrganism({ organismTaxid: 9606 });
-  expect(await screen.findByText(/✓ Homo sapiens/i)).toBeInTheDocument();
+  expect(await screen.findByText(/Homo sapiens/i)).toBeInTheDocument();
 });
 
 it('flags a tax ID that cannot be resolved', async () => {

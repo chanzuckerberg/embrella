@@ -1,15 +1,12 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Button } from '@czi-sds/components';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import { Button, Icon } from '@czi-sds/components';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
 import type { SaveStatus } from '../hooks/useDraftAutoSave';
 
 const TIME = { hour: '2-digit', minute: '2-digit', second: '2-digit' } as const;
-const ICON_SX = { fontSize: 16 } as const;
 
 export function SaveIndicator({
   status,
@@ -28,11 +25,11 @@ export function SaveIndicator({
     icon = <CircularProgress size={14} />;
     label = 'Saving…';
   } else if (status === 'error') {
-    icon = <ErrorOutlineIcon sx={{ ...ICON_SX, color: 'error.main' }} />;
+    icon = <Icon sdsIcon="ExclamationMarkCircle" sdsSize="s" color="red" />;
     label = 'Save failed — retry';
     color = 'error.main';
   } else if (status === 'saved' || lastSavedAt) {
-    icon = <CheckCircleOutlineIcon sx={{ ...ICON_SX, color: 'success.main' }} />;
+    icon = <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />;
     const at = lastSavedAt ? ` · ${lastSavedAt.toLocaleTimeString([], TIME)}` : '';
     label = `Saved${at}`;
   }

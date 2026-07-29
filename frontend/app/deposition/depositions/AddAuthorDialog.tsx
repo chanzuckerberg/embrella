@@ -5,7 +5,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Autocomplete, Box, Divider, Stack, TextField, Typography } from '@mui/material';
 
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
+import { IdentifierField } from '../components/IdentifierField';
 import { createPerson, searchPeople } from '../services/depositionApi';
+import { ORCID_RE, orcidChecksumOk } from '../services/identifiers';
 import type { Person } from '../types';
 
 const personName = (p: Person) => `${p.given_name} ${p.family_name}`.trim();
@@ -57,7 +59,10 @@ export function AddAuthorDialog({
     },
   });
 
-  const canSave = !create.isPending && (picked !== null || (givenName.trim() !== '' && familyName.trim() !== ''));
+  const orcidTrimmed = orcid.trim();
+  const orcidOk = orcidTrimmed === '' || (ORCID_RE.test(orcidTrimmed) && orcidChecksumOk(orcidTrimmed));
+  const canSave =
+    !create.isPending && orcidOk && (picked !== null || (givenName.trim() !== '' && familyName.trim() !== ''));
 
   const handleSave = () => {
     if (picked) {
@@ -119,11 +124,12 @@ export function AddAuthorDialog({
             disabled={picked !== null || create.isPending}
           />
         </Stack>
-        <TextField
+        <IdentifierField
+          kind="orcid"
           label="ORCID"
           placeholder="xxxx-xxxx-xxxx-xxxx"
           value={orcid}
-          onChange={(e) => setOrcid(e.target.value)}
+          onChange={setOrcid}
           size="small"
           fullWidth
           disabled={picked !== null || create.isPending}
