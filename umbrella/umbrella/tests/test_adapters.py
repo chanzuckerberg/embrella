@@ -1,9 +1,10 @@
-"""Tests for the allauth adapters, focused on username generation."""
+"""Tests for the allauth adapters: username generation and SSO domain gating."""
 
 import pytest
+from allauth.core.exceptions import ImmediateHttpResponse
 from django.contrib.auth.models import User
 
-from umbrella.adapters import UmbrellaAccountAdapter
+from umbrella.adapters import UmbrellaAccountAdapter, UmbrellaSocialAccountAdapter
 
 
 def _populate(first_name="", last_name="", email=""):
@@ -36,3 +37,41 @@ class TestPopulateUsername:
         user = User(username="preset", first_name="Test", last_name="Me")
         adapter.populate_username(request=None, user=user)
         assert user.username == "preset"
+
+
+class _FakeSocialLogin:
+    """Minimal stand-in — pre_social_login only reads the email off these two."""
+
+    def __init__(self, email="", extra_email=None):
+        self.user = User(email=email)
+        self.account = type("account", (), {"extra_data": {"email": extra_email} if extra_email else {}})()
+
+
+class TestSocialLoginDomainGate:
+    CZI_DOMAINS = ["czii.org", "czbiohub.org", "biohub.org"]
+
+    def _login(self, email, extra_email=None):
+        UmbrellaSocialAccountAdapter().pre_social_login(request=None, sociallogin=_FakeSocialLogin(email, extra_email))
+
+    def test_allowed_domain_passes(self, settings):
+        settings.SSO_ALLOWED_DOMAINS = self.CZI_DOMAINS
+        self._login("someone@czii.org")
+
+    def test_email_from_extra_data_is_used(self, settings):
+        settings.SSO_ALLOWED_DOMAINS = self.CZI_DOMAINS
+        self._login("", extra_email="someone@czbiohub.org")
+
+    def test_disallowed_domain_rejected(self, settings):
+        settings.SSO_ALLOWED_DOMAINS = self.CZI_DOMAINS
+        with pytest.raises(ImmediateHttpResponse):
+            self._login("someone@gmail.com")
+
+    def test_wildcard_admits_any_domain(self, settings):
+        settings.SSO_ALLOWED_DOMAINS = ["*"]
+        self._login("someone@gmail.com")
+
+    @pytest.mark.parametrize("email", ["", "not-an-email"])
+    def test_wildcard_still_requires_a_usable_email(self, settings, email):
+        settings.SSO_ALLOWED_DOMAINS = ["*"]
+        with pytest.raises(ImmediateHttpResponse):
+            self._login(email)

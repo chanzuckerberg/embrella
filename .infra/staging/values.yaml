@@ -5,7 +5,7 @@ stack:
   # stack.global.env in common.yaml or a service-level env here will silently
   # replace it.
   #
-  # Secrets (DJANGO_SECRET_KEY, MYSQL_PWD, and later GOOGLE_SSO_CLIENT_ID/SECRET)
+  # Secrets (DJANGO_SECRET_KEY, MYSQL_PWD, GOOGLE_SSO_CLIENT_ID/SECRET)
   # are NOT listed here. Set them with
   # `argus set secret --app embrella --env staging <NAME> <value>`; Argus syncs
   # them from AWS Secrets Manager and injects them as env vars at runtime.
@@ -26,9 +26,9 @@ stack:
         value: root
       - name: SSH_DISABLED
         value: 'True'
-      # Demo auth: only the preloaded user may log in (no SSO self-signup)
-      - name: EMBRELLA_DISABLE_SIGNUP
-        value: 'True'
+      # Public demo: any Google account may sign in (no email-domain gate)
+      - name: SSO_ALLOWED_DOMAINS
+        value: '*'
       - name: FILESERVER_ALLOWED_HOSTS
         value: 'https://embrella.apps-staging.czbiohub.org,https://$(__ARGUS_STACK_INGRESS_HOST)'
       - name: EMBRELLA_DEMO_BASE_URL
