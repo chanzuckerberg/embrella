@@ -34,7 +34,6 @@ const initials = (name?: string) =>
 const blankAuthor = (order: number): AuthorEntry => ({
   full_name: '',
   affiliation: '',
-  identifier_type: 'ORCID',
   orcid: '',
   is_corresponding: false,
   is_primary: false,
