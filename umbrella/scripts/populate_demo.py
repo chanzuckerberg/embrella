@@ -75,6 +75,15 @@ DEMO_TOMOGRAMS = [
         objects_of_interest="",
         in_metadata=False,  # review tomograms only; don't surface on the metadata page
     ),
+    dict(
+        session_name="p26jun25a",
+        run_id="run001",
+        recon_type="DCTF",
+        positions=["pt22_ts_002", "pt23_ts_001", "pt32_ts_001"],
+        review_name="Crossed laser phase plate (xLPP) tomograms of E. coli overexpressing VLP",
+        objects_of_interest="VLP",
+        in_metadata=False,  # review tomograms only; don't surface on the metadata page
+    ),
 ]
 
 # Sessions/runs to surface on the metadata page WITHOUT a review or tomograms — just
