@@ -1,8 +1,9 @@
 'use client';
 
 import CloseIcon from '@mui/icons-material/Close';
-import { FormControl, IconButton, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Box, FormControl, IconButton, MenuItem, Select, Stack, Typography } from '@mui/material';
 
+import { IdentifierField } from '../components/IdentifierField';
 import type { CrossRef, CrossRefType } from '../types';
 
 const TYPE_LABEL: Record<CrossRefType, string> = {
@@ -39,8 +40,8 @@ export function CrossReferencesEditor({
   return (
     <Stack spacing={1.5}>
       {entries.map((entry, i) => (
-        <Stack key={i} direction="row" spacing={1} alignItems="center">
-          <FormControl size="small" sx={{ minWidth: 170 }}>
+        <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
+          <FormControl size="small" sx={{ minWidth: 170, height: 40 }}>
             <Select
               value={entry.type}
               disabled={disabled}
@@ -50,17 +51,20 @@ export function CrossReferencesEditor({
               <MenuItem value="related_db">{TYPE_LABEL.related_db}</MenuItem>
             </Select>
           </FormControl>
-          <TextField
+          <IdentifierField
+            kind={entry.type === 'publication' ? 'doi' : 'related_db'}
             size="small"
             fullWidth
             placeholder={PLACEHOLDER[entry.type]}
             value={entry.value}
             disabled={disabled}
-            onChange={(e) => patch(i, { value: e.target.value })}
+            onChange={(v) => patch(i, { value: v })}
           />
-          <IconButton aria-label="Remove entry" size="small" disabled={disabled} onClick={() => remove(i)}>
-            <CloseIcon fontSize="small" sx={{ color: 'error.main' }} />
-          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', height: 40 }}>
+            <IconButton aria-label="Remove entry" size="small" disabled={disabled} onClick={() => remove(i)}>
+              <CloseIcon fontSize="small" sx={{ color: 'error.main' }} />
+            </IconButton>
+          </Box>
         </Stack>
       ))}
     </Stack>

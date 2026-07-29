@@ -12,16 +12,15 @@ import {
   FormControlLabel,
   IconButton,
   Link,
-  MenuItem,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 
+import { IdentifierField } from '../../../components/IdentifierField';
 import type { AuthorEntry } from '../../../types';
 
-// per-card avatar colors
 const AVATAR_COLORS = ['#6C5CE7', '#00B894', '#0984E3', '#E17055', '#E84393', '#00CEC9'];
 
 const initials = (name?: string) =>
@@ -154,47 +153,49 @@ export function AuthorsEditor({
                 />
               </Stack>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={5} alignItems={{ sm: 'flex-end' }}>
-                <TextField
-                  select
-                  label="Identifier"
-                  value={a.identifier_type ?? 'ORCID'}
-                  onChange={(e) => patch(i, { identifier_type: e.target.value })}
-                  size="small"
-                  sx={{ minWidth: 120 }}
-                  disabled={disabled}
-                >
-                  <MenuItem value="ORCID">ORCID</MenuItem>
-                </TextField>
-                <TextField
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mt={5} alignItems={{ sm: 'flex-start' }}>
+                <IdentifierField
+                  kind="orcid"
+                  label="ORCID"
                   value={a.orcid ?? ''}
-                  onChange={(e) => patch(i, { orcid: e.target.value })}
+                  onChange={(v) => patch(i, { orcid: v })}
                   placeholder="0000-0000-0000-0000"
                   size="small"
-                  sx={{ minWidth: 220 }}
+                  sx={{ minWidth: 260 }}
                   disabled={disabled}
                 />
-                <Link
-                  href="https://orcid.org"
-                  target="_blank"
-                  rel="noopener"
-                  variant="body2"
-                  sx={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 0.25, pb: 1 }}
+                <Box
+                  sx={{
+                    ml: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    flexWrap: 'nowrap',
+                    minHeight: { sm: 40 },
+                  }}
                 >
-                  ORCID <OpenInNewIcon sx={{ fontSize: 14 }} />
-                </Link>
-                <FormControlLabel
-                  sx={{ ml: 'auto' }}
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={a.is_corresponding}
-                      onChange={(e) => patch(i, { is_corresponding: e.target.checked })}
-                      disabled={disabled}
-                    />
-                  }
-                  label="Corresponding author"
-                />
+                  <Link
+                    href="https://orcid.org"
+                    target="_blank"
+                    rel="noopener"
+                    variant="body2"
+                    sx={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 0.25 }}
+                  >
+                    ORCID <OpenInNewIcon sx={{ fontSize: 14 }} />
+                  </Link>
+                  <FormControlLabel
+                    sx={{ whiteSpace: 'nowrap' }}
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={a.is_corresponding}
+                        onChange={(e) => patch(i, { is_corresponding: e.target.checked })}
+                        disabled={disabled}
+                      />
+                    }
+                    label="Corresponding author"
+                  />
+                </Box>
               </Stack>
             </Paper>
           ))}
