@@ -33,39 +33,37 @@ it('flags an invalid ORCID format live, before any lookup', async () => {
   expect(mockValidate).not.toHaveBeenCalled();
 });
 
-it('resolves a valid ORCID to its owner name on blur', async () => {
+it('resolves a valid ORCID to its owner name once the value is complete', async () => {
   mockValidate.mockResolvedValue({ label: 'Josiah Carberry' });
   render(<Harness kind="orcid" />);
-  const input = screen.getByLabelText('id');
-  await userEvent.type(input, '0000-0002-1825-0097');
-  await userEvent.tab(); // blur triggers the lookup
+  await userEvent.type(screen.getByLabelText('id'), '0000-0002-1825-0097');
   expect(await screen.findByText(/✓ Josiah Carberry/)).toBeInTheDocument();
 });
 
-it('shows not-found for an unresolvable DOI on blur', async () => {
+it('shows not-found for an unresolvable DOI', async () => {
   mockValidate.mockResolvedValue(null);
   render(<Harness kind="doi" />);
-  const input = screen.getByLabelText('id');
-  await userEvent.type(input, '10.9999/nope');
-  await userEvent.tab();
+  await userEvent.type(screen.getByLabelText('id'), '10.9999/nope');
   expect(await screen.findByText(/doi not found/i)).toBeInTheDocument();
 });
 
 it('does not block when the API is unreachable', async () => {
   mockValidate.mockRejectedValue(new Error('network'));
   render(<Harness kind="doi" />);
-  const input = screen.getByLabelText('id');
-  await userEvent.type(input, '10.1038/nature12373');
-  await userEvent.tab();
+  await userEvent.type(screen.getByLabelText('id'), '10.1038/nature12373');
   expect(await screen.findByText(/lookup unavailable/i)).toBeInTheDocument();
 });
 
-it('resolves an EMPIAR related-DB entry on blur', async () => {
+it('resolves a valid ORCID pre-filled on mount (no interaction)', async () => {
+  mockValidate.mockResolvedValue({ label: 'Josiah Carberry' });
+  render(<Harness kind="orcid" initial="0000-0002-1825-0097" />);
+  expect(await screen.findByText(/✓ Josiah Carberry/)).toBeInTheDocument();
+});
+
+it('resolves an EMPIAR related-DB entry', async () => {
   mockValidate.mockResolvedValue({ label: 'EMPIAR entry' });
   render(<Harness kind="related_db" />);
-  const input = screen.getByLabelText('id');
-  await userEvent.type(input, 'EMPIAR-10943');
-  await userEvent.tab();
+  await userEvent.type(screen.getByLabelText('id'), 'EMPIAR-10943');
   expect(await screen.findByText(/✓ EMPIAR entry/)).toBeInTheDocument();
 });
 

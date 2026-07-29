@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { TextField, type TextFieldProps } from '@mui/material';
 
+import { useDebounced } from '../hooks/useDebounced';
 import { useIdentifierLookup } from '../hooks/useIdentifier';
 import { DOI_RE, ORCID_RE, orcidChecksumOk, RELATED_DB_RE, type IdentifierKind } from '../services/identifiers';
 
@@ -32,23 +32,21 @@ export function IdentifierField({
   disabled?: boolean;
 } & Omit<TextFieldProps, 'value' | 'onChange' | 'error' | 'helperText'>) {
   const trimmed = value.trim();
-  const [committed, setCommitted] = useState('');
+  const debounced = useDebounced(trimmed, 400);
   const formatOk = formatOkFor(kind, value);
 
-  const q = useIdentifierLookup(kind, committed, committed !== '' && formatOk);
+  const q = useIdentifierLookup(kind, debounced, formatOk && debounced.length > 0);
 
-  const checked = trimmed !== '' && committed === trimmed;
-  const settled = checked && !q.isFetching;
+  const settled = formatOk && debounced === trimmed && !q.isFetching;
   const resolved = settled && !!q.data;
   const notFound = settled && !q.isError && q.data === null;
   const lookupError = settled && q.isError;
 
   let helperText = ' ';
   let isValid = false;
-  if (trimmed && !formatOk) {
-    helperText = LABELS[kind].invalid;
-  } else if (checked) {
-    if (q.isFetching) helperText = 'Checking…';
+  if (trimmed) {
+    if (!formatOk) helperText = LABELS[kind].invalid;
+    else if (q.isFetching || debounced !== trimmed) helperText = 'Checking…';
     else if (resolved) {
       helperText = `✓ ${q.data?.label ?? ''}`;
       isValid = true;
@@ -65,7 +63,6 @@ export function IdentifierField({
     <TextField
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      onBlur={() => setCommitted(trimmed)}
       disabled={disabled}
       error={error}
       helperText={helperText}
