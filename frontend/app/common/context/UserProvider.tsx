@@ -7,6 +7,7 @@ import { API } from '../constants/api';
 export interface User {
   id: string;
   username: string;
+  is_staff: boolean;
   feature_flags: string[];
 }
 
