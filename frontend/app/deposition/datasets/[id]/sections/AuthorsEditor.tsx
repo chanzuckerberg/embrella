@@ -113,6 +113,18 @@ export function AuthorsEditor({
                   <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.5 }}>
                     AUTHOR {i + 1}
                   </Typography>
+                  {a.is_primary && (
+                    <Chip
+                      label="Primary"
+                      size="small"
+                      sx={{
+                        height: 22,
+                        fontWeight: 600,
+                        bgcolor: (t) => `${t.palette.primary.main}1f`,
+                        color: 'primary.dark',
+                      }}
+                    />
+                  )}
                   {a.is_corresponding && (
                     <Chip
                       label="Corresponding"
@@ -168,9 +180,9 @@ export function AuthorsEditor({
                     ml: 'auto',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 1.5,
+                    gap: 1,
                     flexWrap: 'nowrap',
-                    minHeight: { sm: 40 },
+                    minHeight: { sm: 30 },
                   }}
                 >
                   <Link
@@ -182,18 +194,32 @@ export function AuthorsEditor({
                   >
                     ORCID <OpenInNewIcon sx={{ fontSize: 14 }} />
                   </Link>
-                  <FormControlLabel
-                    sx={{ whiteSpace: 'nowrap' }}
-                    control={
-                      <Checkbox
-                        size="small"
-                        checked={a.is_corresponding}
-                        onChange={(e) => patch(i, { is_corresponding: e.target.checked })}
-                        disabled={disabled}
-                      />
-                    }
-                    label="Corresponding author"
-                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <FormControlLabel
+                      sx={{ whiteSpace: 'nowrap', ml: 2.5 }}
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={!!a.is_primary}
+                          onChange={(e) => patch(i, { is_primary: e.target.checked })}
+                          disabled={disabled}
+                        />
+                      }
+                      label="Primary author"
+                    />
+                    <FormControlLabel
+                      sx={{ whiteSpace: 'nowrap', mr: 0 }}
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={a.is_corresponding}
+                          onChange={(e) => patch(i, { is_corresponding: e.target.checked })}
+                          disabled={disabled}
+                        />
+                      }
+                      label="Corresponding author"
+                    />
+                  </Box>
                 </Box>
               </Stack>
             </Paper>
