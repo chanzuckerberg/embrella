@@ -2,8 +2,6 @@
 Tests for processes views (after refactoring into modular structure).
 """
 
-from unittest.mock import patch
-
 from django.test import SimpleTestCase
 
 from processes.views import msi_session_sort_key
@@ -11,31 +9,6 @@ from processes.views import msi_session_sort_key
 
 class TestConstantsAndUtils(SimpleTestCase):
     """Tests for constants and utility functions."""
-
-    def test_get_base_url_development(self):
-        """Test get_base_url returns correct URL for development."""
-        with patch("processes.views.constants.ENVIRONMENT", "development"):
-            # Need to reload to get new ENVIRONMENT value
-            from processes.views.constants import get_base_url as gbu
-
-            url = gbu()
-            self.assertIn("localhost", url)
-
-    def test_get_base_url_staging(self):
-        """Test get_base_url returns correct URL for staging."""
-        with patch("processes.views.constants.ENVIRONMENT", "staging"):
-            from processes.views.constants import get_base_url as gbu
-
-            url = gbu()
-            self.assertIn("umbrella-dev", url)
-
-    def test_get_base_url_production(self):
-        """Test get_base_url returns correct URL for production."""
-        with patch("processes.views.constants.ENVIRONMENT", "production"):
-            from processes.views.constants import get_base_url as gbu
-
-            url = gbu()
-            self.assertIn("umbrella.czbiohub.org", url)
 
     def test_msi_session_sort_key_valid_format(self):
         """Test msi_session_sort_key with valid session name."""
@@ -86,8 +59,6 @@ class TestModularStructure(SimpleTestCase):
         from processes import views
 
         self.assertTrue(hasattr(views, "ENVIRONMENT"))
-        self.assertTrue(hasattr(views, "get_base_url"))
-        self.assertTrue(hasattr(views, "base_url"))
 
     def test_utils_accessible_from_package(self):
         """Test that utils are accessible from processes.views."""

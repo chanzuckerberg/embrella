@@ -83,13 +83,9 @@ export const RecentSessionsTable = ({ isLoading: parentLoading }: RecentSessions
         </TableHeader>
         <TableBody>
           {sessions.map((session) => (
-            <TableRow
-              key={session.id}
-              onClick={() => (window.location.href = `${DJANGO_URL}/admin/tem/msisession/${session.id}/`)}
-              style={{ cursor: 'pointer' }}
-            >
+            <TableRow key={session.id}>
               <CellComponent>
-                <span style={{ fontWeight: 500, color: '#6E4FF9' }}>{session.name}</span>
+                <span style={{ fontWeight: 500 }}>{session.name}</span>
               </CellComponent>
               <CellComponent>{session.projectName}</CellComponent>
               <CellComponent>{formatDate(session.createdAt)}</CellComponent>

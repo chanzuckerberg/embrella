@@ -114,6 +114,16 @@ class TestUserEndpointFlags:
     def test_user_endpoint_unauthenticated_is_401(self):
         assert APIClient().get("/user").status_code == 401
 
+    def test_user_endpoint_reports_staff_status(self, user):
+        # The frontend hides admin entry points for non-staff, so /user must report it.
+        client = APIClient()
+        client.force_login(user)
+        assert client.get("/user").json()["is_staff"] is False
+
+        user.is_staff = True
+        user.save()
+        assert client.get("/user").json()["is_staff"] is True
+
 
 @pytest.mark.django_db
 def test_seed_migration_enables_launched_flags():

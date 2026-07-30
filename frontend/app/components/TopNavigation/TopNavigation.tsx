@@ -332,22 +332,24 @@ export const TopNavigation = () => {
           </Box>
           <Box sx={{ flexShrink: 0 }}>
             <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-              <Button
-                sdsType="secondary"
-                sdsStyle="outline"
-                size="small"
-                onClick={() => (window.location.href = `${DJANGO_URL}/admin/`)}
-                sx={{
-                  color: '#ffffff !important',
-                  borderColor: '#ffffff !important',
-                  '&:hover': {
-                    borderColor: '#a78bfa !important',
-                    color: '#a78bfa !important',
-                  },
-                }}
-              >
-                Admin
-              </Button>
+              {user?.is_staff && (
+                <Button
+                  sdsType="secondary"
+                  sdsStyle="outline"
+                  size="small"
+                  onClick={() => (window.location.href = `${DJANGO_URL}/admin/`)}
+                  sx={{
+                    color: '#ffffff !important',
+                    borderColor: '#ffffff !important',
+                    '&:hover': {
+                      borderColor: '#a78bfa !important',
+                      color: '#a78bfa !important',
+                    },
+                  }}
+                >
+                  Admin
+                </Button>
+              )}
               <Button
                 sdsType="secondary"
                 sdsStyle="outline"

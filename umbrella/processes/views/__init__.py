@@ -22,7 +22,7 @@ compatibility with existing URL configurations.
 # Import and re-export constants and utilities
 # Annotation views
 from .annotation_views import get_annotation_details
-from .constants import ENVIRONMENT, base_url, get_base_url
+from .constants import ENVIRONMENT
 
 # Directory/Survey views
 from .directory_views import (
@@ -68,8 +68,6 @@ from .utils import msi_session_sort_key
 __all__ = [
     # Constants and utilities
     "ENVIRONMENT",
-    "base_url",
-    "get_base_url",
     "msi_session_sort_key",
     # Run views
     "detail",

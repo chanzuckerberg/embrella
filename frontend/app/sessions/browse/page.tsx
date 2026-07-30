@@ -2,7 +2,6 @@
 
 import { Box, Container, Typography } from '@mui/material';
 import { Button, Icon } from '@czi-sds/components';
-import { DJANGO_URL } from '@app/common/constants/api';
 
 export default function BrowseSessionsPage() {
   return (
@@ -10,23 +9,14 @@ export default function BrowseSessionsPage() {
       <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
         Browse TEM Sessions
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Access and manage your TEM data collection sessions.
+      <Typography variant="body1" color="text.secondary">
+        A full session browser is on the way. In the meantime, tomogram summaries cover session-level processing
+        results.
       </Typography>
-
-      <Box sx={{ display: 'flex', gap: 2 }}>
-        <Button
-          sdsType="primary"
-          sdsStyle="solid"
-          onClick={() => (window.location.href = `${DJANGO_URL}/admin/tem/msisession/`)}
-        >
-          View Sessions
-        </Button>
-      </Box>
 
       <Box
         sx={{
-          mt: 8,
+          mt: 4,
           px: 3,
           py: 2.5,
           backgroundColor: 'grey.50',
