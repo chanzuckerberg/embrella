@@ -52,6 +52,7 @@ export function Sample({
         size="small"
         disabled={readOnly}
         sx={{ maxWidth: { sm: 320 } }}
+        SelectProps={{ MenuProps: { PaperProps: { sx: { maxHeight: 190 } } } }}
       >
         {SAMPLE_TYPES.map((t) => (
           <MenuItem key={t} value={t}>
