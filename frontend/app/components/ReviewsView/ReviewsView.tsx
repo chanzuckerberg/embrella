@@ -9,7 +9,6 @@ import { ReviewsViewHeader } from './components/ReviewsViewHeader';
 import { ColumnDef, createColumnHelper } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { ReviewData } from './types';
-import { CellLink } from '@app/common/components/EntityTable/utils/linkUtils';
 import { AccessorReturnType } from '@app/common/components/EntityTable/types';
 import { ReviewActionButton } from './components/ReviewActionButton';
 import { ReviewsEmptyStateCard } from './components/ReviewsEmptyStateCard';
@@ -31,7 +30,7 @@ export const ReviewsView = () => {
       }),
       columnHelper.accessor('session', {
         header: 'Processing Session',
-        cell: ({ getValue }) => <CellLink linkField={getValue()} />,
+        cell: ({ getValue }) => getValue().name,
       }),
       columnHelper.accessor('updatedAt', {
         header: 'Updated At',

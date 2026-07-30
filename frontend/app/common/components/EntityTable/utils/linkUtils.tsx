@@ -10,6 +10,9 @@ const DEFAULT_LINK_PROPS = {
   target: '_blank',
 };
 
+// The tomogram, annotation and review columns render `<field>.name` as plain text instead of
+// using these helpers: their urls point at Django admin, which does not work for non-staff users.
+// TODO: swap them back to these helpers once a real browser view exists for those entities.
 export const getLinkPropsFromLinkField = (linkField: EntityLinkField): LinkCellProps => ({
   children: linkField.name,
   href: linkField.url,

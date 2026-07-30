@@ -2,11 +2,6 @@ import { ColumnDef } from '@tanstack/react-table';
 
 import { AccessorReturnType } from '@app/common/components/EntityTable/types';
 import { EntityDataTypes } from '@app/common/types/tableState';
-import {
-  getLinkPropsFromLinkField,
-  getLinkCellFromCellContext,
-} from '@app/common/components/EntityTable/utils/linkUtils';
-import { LinkCellProps } from '@app/common/components/EntityTable/types';
 import { humanize } from '@app/common/utils/string';
 import { AnnotationData } from '../types';
 
@@ -23,49 +18,37 @@ export const ANNOTATION_COLUMN_IDS = {
 export const ANNOTATION_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] = [
   {
     id: ANNOTATION_COLUMN_IDS.ANNOTATIONS,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as AnnotationData).annotations),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'annotations.name',
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.ANNOTATIONS),
   },
   {
     id: ANNOTATION_COLUMN_IDS.PROC_PLAN,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as AnnotationData).procPlan),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'procPlan.name',
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.PROC_PLAN),
   },
   {
     id: ANNOTATION_COLUMN_IDS.INPUT_TOMORGRAM,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as AnnotationData).inputTomogram),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'inputTomogram.name',
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.INPUT_TOMORGRAM),
   },
   {
     id: ANNOTATION_COLUMN_IDS.MSI_SESSION,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as AnnotationData).msiSession),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'msiSession.name',
     enableSorting: false,
     header: 'MSI Session',
   },
   {
     id: ANNOTATION_COLUMN_IDS.PROJECT,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as AnnotationData).project),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'project.name',
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.PROJECT),
   },
   {
     id: ANNOTATION_COLUMN_IDS.GRID,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as AnnotationData).grid),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'grid.name',
     enableSorting: false,
     header: humanize(ANNOTATION_COLUMN_IDS.GRID),
   },

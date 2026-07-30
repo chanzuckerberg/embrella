@@ -3,11 +3,6 @@ import { ColumnDef } from '@tanstack/react-table';
 import { AccessorReturnType } from '@app/common/components/EntityTable/types';
 import { humanize } from '@app/common/utils/string';
 import { EntityDataTypes } from '@app/common/types/tableState';
-import {
-  getLinkPropsFromLinkField,
-  getLinkCellFromCellContext,
-} from '@app/common/components/EntityTable/utils/linkUtils';
-import { LinkCellProps } from '@app/common/components/EntityTable/types';
 import { TomogramData } from '../types';
 import { ParametersCell } from '../ParametersCell';
 import { MetadataCell } from '../MetadataCell';
@@ -26,25 +21,19 @@ export const TOMOGRAM_COLUMN_IDS = {
 export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] = [
   {
     id: TOMOGRAM_COLUMN_IDS.TOMOGRAMS,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as TomogramData).tomograms),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'tomograms.name',
     enableSorting: false,
     header: humanize(TOMOGRAM_COLUMN_IDS.TOMOGRAMS),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROC_PLAN,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as TomogramData).procPlan),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'procPlan.name',
     enableSorting: false,
     header: humanize(TOMOGRAM_COLUMN_IDS.PROC_PLAN),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.MSI_SESSION,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as TomogramData).msiSession),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'msiSession.name',
     enableSorting: false,
     header: 'MSI Session',
   },
@@ -63,16 +52,13 @@ export const TOMOGRAM_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType
   },
   {
     id: TOMOGRAM_COLUMN_IDS.PROJECT,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps =>
-      getLinkPropsFromLinkField((rowData as TomogramData).project),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'project.name',
     enableSorting: false,
     header: humanize(TOMOGRAM_COLUMN_IDS.PROJECT),
   },
   {
     id: TOMOGRAM_COLUMN_IDS.GRID,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps => getLinkPropsFromLinkField((rowData as TomogramData).grid),
-    cell: getLinkCellFromCellContext,
+    accessorKey: 'grid.name',
     enableSorting: false,
     header: humanize(TOMOGRAM_COLUMN_IDS.GRID),
   },
