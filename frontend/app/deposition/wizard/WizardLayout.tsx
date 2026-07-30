@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import CloseIcon from '@mui/icons-material/Close';
+import { Icon } from '@czi-sds/components';
 import { Alert, Box, Container, IconButton, Paper, Tooltip, Typography } from '@mui/material';
 
 import type { Dataset } from '../types';
@@ -61,7 +61,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
               )}
               <Tooltip title="Close - your draft is saved">
                 <IconButton onClick={saveAndExit} aria-label="Close wizard">
-                  <CloseIcon />
+                  <Icon sdsIcon="XMark" sdsSize="l" />
                 </IconButton>
               </Tooltip>
             </Box>

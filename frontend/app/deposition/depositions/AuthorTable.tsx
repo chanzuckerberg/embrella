@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@czi-sds/components';
-import CloseIcon from '@mui/icons-material/Close';
+import { Button, Icon } from '@czi-sds/components';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   Box,
   IconButton,
@@ -82,11 +80,13 @@ export function AuthorTable({
           </Typography>
           {authors.length > 0 && (
             <Tooltip title={AUTHORS_HELP} placement="top" arrow>
-              <InfoOutlinedIcon
-                fontSize="small"
+              <Box
+                component="span"
                 aria-label="How authors work"
-                sx={{ color: 'text.secondary', cursor: 'help' }}
-              />
+                sx={{ display: 'inline-flex', color: 'text.secondary', cursor: 'help' }}
+              >
+                <Icon sdsIcon="InfoCircle" sdsSize="s" color="gray" />
+              </Box>
             </Tooltip>
           )}
         </Box>
@@ -181,7 +181,7 @@ export function AuthorTable({
                   </TableCell>
                   <TableCell>
                     <IconButton size="small" aria-label="Remove author" disabled={disabled} onClick={() => remove(idx)}>
-                      <CloseIcon fontSize="small" sx={{ color: 'error.main' }} />
+                      <Icon sdsIcon="XMark" sdsSize="s" color="red" />
                     </IconButton>
                   </TableCell>
                 </TableRow>

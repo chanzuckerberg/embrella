@@ -37,7 +37,7 @@ it('resolves a valid ORCID to its owner name once the value is complete', async 
   mockValidate.mockResolvedValue({ label: 'Josiah Carberry' });
   render(<Harness kind="orcid" />);
   await userEvent.type(screen.getByLabelText('id'), '0000-0002-1825-0097');
-  expect(await screen.findByText(/✓ Josiah Carberry/)).toBeInTheDocument();
+  expect(await screen.findByText(/Josiah Carberry/)).toBeInTheDocument();
 });
 
 it('shows not-found for an unresolvable DOI', async () => {
@@ -57,14 +57,14 @@ it('does not block when the API is unreachable', async () => {
 it('resolves a valid ORCID pre-filled on mount (no interaction)', async () => {
   mockValidate.mockResolvedValue({ label: 'Josiah Carberry' });
   render(<Harness kind="orcid" initial="0000-0002-1825-0097" />);
-  expect(await screen.findByText(/✓ Josiah Carberry/)).toBeInTheDocument();
+  expect(await screen.findByText(/Josiah Carberry/)).toBeInTheDocument();
 });
 
 it('resolves an EMPIAR related-DB entry', async () => {
   mockValidate.mockResolvedValue({ label: 'EMPIAR entry' });
   render(<Harness kind="related_db" />);
   await userEvent.type(screen.getByLabelText('id'), 'EMPIAR-10943');
-  expect(await screen.findByText(/✓ EMPIAR entry/)).toBeInTheDocument();
+  expect(await screen.findByText(/EMPIAR entry/)).toBeInTheDocument();
 });
 
 it('flags an unrecognised related-DB format live', async () => {

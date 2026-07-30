@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '@czi-sds/components';
-import AddIcon from '@mui/icons-material/Add';
+import { Button, Icon } from '@czi-sds/components';
 import { Box, Stack } from '@mui/material';
 
 import { updateDataset } from '../../services/depositionApi';
@@ -295,7 +294,7 @@ export function DatasetForm({
                       sdsType="primary"
                       sdsStyle="minimal"
                       size="small"
-                      startIcon={<AddIcon />}
+                      startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
                       onClick={addCrossRef}
                     >
                       Add entry

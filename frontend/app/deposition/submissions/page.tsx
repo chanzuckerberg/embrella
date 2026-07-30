@@ -1,8 +1,7 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { Button } from '@czi-sds/components';
-import SearchIcon from '@mui/icons-material/Search';
+import { Button, Icon } from '@czi-sds/components';
 import {
   Box,
   Checkbox,
@@ -254,7 +253,7 @@ export default function SubmissionsPage() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
+                  <Icon sdsIcon="Search" sdsSize="s" color="gray" />
                 </InputAdornment>
               ),
             }}

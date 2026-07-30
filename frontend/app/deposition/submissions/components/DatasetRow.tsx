@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import NextLink from 'next/link';
-import { Button } from '@czi-sds/components';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
+import { Button, Icon } from '@czi-sds/components';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { Box, Chip, CircularProgress, Link, TableCell, TableRow, Tooltip, Typography } from '@mui/material';
 
@@ -19,9 +17,9 @@ function statusIcon(status: DatasetStatus) {
     case 'syncing':
       return <CircularProgress size={13} thickness={5} sx={{ color: 'warning.main' }} />;
     case 'pushed':
-      return <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />;
+      return <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />;
     case 'failed':
-      return <ErrorIcon sx={{ fontSize: 16, color: 'error.main' }} />;
+      return <Icon sdsIcon="ExclamationMarkCircle" sdsSize="s" color="red" />;
   }
 }
 

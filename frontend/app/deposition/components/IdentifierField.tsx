@@ -1,6 +1,8 @@
 'use client';
 
-import { TextField, type TextFieldProps } from '@mui/material';
+import { type ReactNode } from 'react';
+import { Icon } from '@czi-sds/components';
+import { Box, TextField, type TextFieldProps } from '@mui/material';
 
 import { useDebounced } from '../hooks/useDebounced';
 import { useIdentifierLookup } from '../hooks/useIdentifier';
@@ -42,16 +44,16 @@ export function IdentifierField({
   const notFound = settled && !q.isError && q.data === null;
   const lookupError = settled && q.isError;
 
-  let helperText = ' ';
+  let helperText: ReactNode = ' ';
   let isValid = false;
   if (trimmed) {
     if (!formatOk) helperText = LABELS[kind].invalid;
     else if (q.isFetching || debounced !== trimmed) helperText = 'Checking…';
     else if (resolved) {
-      helperText = `✓ ${q.data?.label ?? ''}`;
+      helperText = q.data?.label ?? '';
       isValid = true;
     } else if (lookupError) {
-      helperText = '✓ valid format (lookup unavailable)';
+      helperText = 'valid format (lookup unavailable)';
       isValid = true;
     } else {
       helperText = `${LABELS[kind].name} not found`;
@@ -65,8 +67,17 @@ export function IdentifierField({
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       error={error}
-      helperText={helperText}
-      FormHelperTextProps={{ sx: isValid ? { color: 'success.main' } : undefined }}
+      helperText={
+        isValid ? (
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+            <Icon sdsIcon="Check" sdsSize="xxs" color="green" />
+            {helperText}
+          </Box>
+        ) : (
+          helperText
+        )
+      }
+      FormHelperTextProps={{ component: 'div', sx: isValid ? { color: 'success.main' } : undefined }}
       {...rest}
     />
   );

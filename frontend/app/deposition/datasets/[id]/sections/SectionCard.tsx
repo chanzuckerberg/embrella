@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { Icon } from '@czi-sds/components';
 import { Box, Chip, Collapse, IconButton, Paper, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
@@ -78,14 +78,11 @@ export function SectionCard({
                 setExpanded((v) => !v);
               }}
               sx={{
-                p: 0.25,
-                mr: -0.25,
-                color: 'text.secondary',
                 transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
                 transition: 'transform 120ms',
               }}
             >
-              <ExpandMoreIcon fontSize="small" />
+              <Icon sdsIcon="ChevronDown" sdsSize="xs" />
             </IconButton>
           )}
           <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.125rem', lineHeight: 1.3 }}>

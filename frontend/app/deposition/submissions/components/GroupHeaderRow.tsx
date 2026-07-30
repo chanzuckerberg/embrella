@@ -1,9 +1,6 @@
 'use client';
 
-import { Button } from '@czi-sds/components';
-import AddIcon from '@mui/icons-material/Add';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import { Button, Icon } from '@czi-sds/components';
 import { Box, IconButton, TableCell, TableRow, Typography } from '@mui/material';
 
 import type { Deposition } from '../../types';
@@ -26,7 +23,11 @@ export function GroupHeaderRow({
       <TableCell colSpan={COLS.length} sx={{ py: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <IconButton size="small" onClick={onToggle} aria-label={open ? 'Collapse' : 'Expand'}>
-            {open ? <KeyboardArrowDownIcon /> : <KeyboardArrowRightIcon />}
+            {open ? (
+              <Icon sdsIcon="ChevronDown" sdsSize="xs" color="gray" />
+            ) : (
+              <Icon sdsIcon="ChevronRight" sdsSize="xs" color="gray" />
+            )}
           </IconButton>
           <Typography sx={{ fontWeight: 700 }}>Deposition {idLabel}</Typography>
           <Typography color="text.secondary" noWrap sx={{ flex: 1 }}>
@@ -37,7 +38,8 @@ export function GroupHeaderRow({
               sdsType="primary"
               sdsStyle="minimal"
               onClick={onAddDataset}
-              startIcon={<AddIcon fontSize="small" />}
+              size="small"
+              startIcon={<Icon sdsIcon="Plus" sdsSize="xs" />}
             >
               Add dataset
             </Button>

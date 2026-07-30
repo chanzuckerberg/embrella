@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import NextLink from 'next/link';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import { Icon } from '@czi-sds/components';
 import { Alert, Box, Chip, CircularProgress, Container, Link, Typography } from '@mui/material';
 
 import { useDataset } from '../../hooks/useDataset';
@@ -65,7 +65,7 @@ export default function DatasetDetailPage() {
         sx={{ display: 'inline-flex', alignItems: 'center', mb: 2 }}
         underline="hover"
       >
-        <ChevronLeftIcon fontSize="small" />
+        <Icon sdsIcon="ChevronLeft" sdsSize="s" />
         Back to submissions
       </Link>
       {renderBody()}

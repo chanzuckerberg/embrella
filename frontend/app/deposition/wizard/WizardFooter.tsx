@@ -1,8 +1,6 @@
 'use client';
 
-import { Button } from '@czi-sds/components';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { Button, Icon } from '@czi-sds/components';
 import { Box } from '@mui/material';
 
 export function WizardFooter({
@@ -23,7 +21,7 @@ export function WizardFooter({
       <Button
         sdsType="secondary"
         sdsStyle="solid"
-        startIcon={<ChevronLeftIcon />}
+        startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="xs" />}
         disabled={disableBack}
         onClick={onBack}
       >
@@ -32,7 +30,13 @@ export function WizardFooter({
       <Button sdsType="primary" sdsStyle="minimal" onClick={onSaveAndExit}>
         Save draft &amp; exit
       </Button>
-      <Button sdsType="primary" sdsStyle="solid" endIcon={<ChevronRightIcon />} disabled={disableNext} onClick={onNext}>
+      <Button
+        sdsType="primary"
+        sdsStyle="solid"
+        endIcon={<Icon sdsIcon="ChevronRight" sdsSize="xs" />}
+        disabled={disableNext}
+        onClick={onNext}
+      >
         Next
       </Button>
     </Box>

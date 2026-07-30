@@ -1,6 +1,6 @@
 'use client';
 
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { Icon } from '@czi-sds/components';
 import { Box, FormControl, IconButton, MenuItem, Select, Stack, Typography } from '@mui/material';
 
 import { IdentifierField } from '../components/IdentifierField';
@@ -62,7 +62,7 @@ export function CrossReferencesEditor({
           />
           <Box sx={{ display: 'flex', alignItems: 'center', height: 40 }}>
             <IconButton aria-label="Remove entry" size="small" disabled={disabled} onClick={() => remove(i)}>
-              <DeleteOutlineIcon fontSize="small" />
+              <Icon sdsIcon="TrashCan" sdsSize="s" color="gray" />
             </IconButton>
           </Box>
         </Stack>
