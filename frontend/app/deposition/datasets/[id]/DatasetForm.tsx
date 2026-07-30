@@ -14,6 +14,7 @@ import { CrossReferencesEditor } from '../../depositions/CrossReferencesEditor';
 import { Authors } from './sections/Authors';
 import { BasicDetails } from './sections/BasicDetails';
 import { BiologicalClassification } from './sections/BiologicalClassification';
+import { bioRequirements, isRequiredBioFieldMet } from './sections/bioRequirements';
 import { Funding } from './sections/Funding';
 import { Organism } from './sections/Organism';
 import { Sample } from './sections/Sample';
@@ -164,25 +165,30 @@ export function DatasetForm({
 
   const addCrossRef = () => set('crossRefs', [...form.crossRefs, { type: 'publication', value: '' }]);
 
-  const hasBio = [
-    form.sample.tissue_id,
-    form.sample.cell_type_id,
-    form.sample.cell_strain_id,
-    form.sample.ontology,
-    form.sample.development_stage_ontology_id,
-    form.sample.disease_ontology_id,
-    form.assay_ontology_id,
-  ].some(Boolean);
+  const req = bioRequirements(form.sample.sample_type);
+  const bioMet = isRequiredBioFieldMet(form.sample, req);
+  const organismMet = !!form.sample.organism_name?.trim() && form.sample.organism_taxid != null;
+
+  const nav = NAV.map((n) => {
+    if (n.key === 'organism') return { ...n, required: req.organismRequired };
+    if (n.key === 'bioclass') return { ...n, required: req.requiredBioField != null };
+    return n;
+  });
+
   const done: Record<string, boolean> = {
     basic: !!form.title.trim() && !!form.description.trim(),
     sample: !!form.sample.sample_type,
-    organism: !!form.sample.organism_name?.trim() && form.sample.organism_taxid != null,
-    bioclass: hasBio,
+    organism: req.organismRequired ? organismMet : true,
+    bioclass: bioMet,
     authors: true,
     funding: form.funding.length > 0,
   };
   const subLabel = (key: string): string => {
-    if (key === 'bioclass') return 'Optional';
+    if (key === 'bioclass') {
+      if (!req.requiredBioField) return 'Optional';
+      return bioMet ? 'Complete' : 'Required';
+    }
+    if (key === 'organism' && !req.organismRequired) return 'Optional';
     if (key === 'authors') return form.is_authors_same_as_deposition ? 'Deposition authors' : 'Custom';
     if (key === 'funding') return `${form.funding.length} ${form.funding.length === 1 ? 'entry' : 'entries'}`;
     return done[key] ? 'Complete' : 'Incomplete';
@@ -192,7 +198,7 @@ export function DatasetForm({
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-      <SideNav nav={NAV} active={active} done={done} subLabel={subLabel} onJump={jump} />
+      <SideNav nav={nav} active={active} done={done} subLabel={subLabel} onJump={jump} />
 
       <Box
         sx={{
@@ -237,6 +243,7 @@ export function DatasetForm({
             organismTaxid={form.sample.organism_taxid ?? null}
             onChangeOrganismName={(v) => setSample('organism_name', v)}
             onChangeOrganismTaxid={(v) => setSample('organism_taxid', v)}
+            taxidRequired={req.organismRequired}
             readOnly={readOnly}
             innerRef={(el) => {
               refs.current.organism = el;
@@ -245,6 +252,7 @@ export function DatasetForm({
 
           <BiologicalClassification
             sample={form.sample}
+            requiredBioField={req.requiredBioField}
             assayLabel={form.assay_label}
             assayOntologyId={form.assay_ontology_id}
             onChangeSample={setSample}
