@@ -4,11 +4,6 @@
   --md-primary-fg-color--dark:  #9b51e0;
 }
 
-[data-md-color-scheme="biohub-dark"] {
-  --md-primary-fg-color:        #0D0001;
-  --md-primary-fg-color--light: #6E4FF9;
-  --md-primary-fg-color--dark:  #9b51e0;
-}
 .center-table {
   text-align: center;
 }

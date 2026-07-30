@@ -1,24 +1,22 @@
-# Note: this MkDocs setup was copied from https://github.com/copick/copick.
-
-site_name: umbrella
+site_name: Embrella
 site_dir: docs_build
+dev_addr: '127.0.0.1:8001'
 repo_url: 'https://github.com/chanzuckerberg/embrella'
 repo_name: 'chanzuckerberg/embrella'
 copyright: '2026, Biohub'
 theme:
   name: material
+  variant: modern
   palette:
     - scheme: biohub
       toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-
-    # Palette toggle for dark mode
-    - scheme: slate
-      toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-  #logo: assets/umbrella.svg
+
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
     - content.code.copy
 extra_css:
@@ -34,57 +32,3 @@ nav:
       - Running/Deploying: 'contributing/deployment.md'
       - Updating Documentation: 'contributing/documentation.md'
       - Version Control/Release Convention: 'contributing/convention.md'
-
-plugins:
-  - search
-  - autorefs
-  - mkdocstrings:
-      enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
-      default_handler: python
-      handlers:
-        python:
-          options:
-            # General
-            show_source: false
-            preload_modules: [pydantic]
-            # Headings
-            show_symbol_type_toc: true
-            show_symbol_type_heading: true
-            show_root_full_path: true
-            show_root_heading: true
-            # Members
-            group_by_category: true
-            show_labels: false
-            inherited_members: false
-            members_order: source
-            # Docstrings
-            docstring_section_style: list
-            merge_init_into_class: false
-            docstring_style: google
-            # Signatures
-            show_signature_annotations: true
-            signature_crossrefs: false
-            separate_signature: true
-            line_length: 60
-
-markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
-      line_spans: __span
-      pygments_lang_class: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
-  - attr_list
-  - md_in_html
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
-  - admonition
-  - pymdownx.details
-  - pymdownx.snippets:
-      check_paths: true
-      base_path: [docs/snippets, docs/templates, '.']

@@ -47,6 +47,6 @@ umbrella/          Django backend
   stores/          Data storage / path abstraction layer
   projects/        Project management
 frontend/          Next.js frontend
-docs/              MkDocs documentation source
+docs/              Zensical documentation source
 infra/             Container / compose configuration
 ```

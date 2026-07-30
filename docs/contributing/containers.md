@@ -70,7 +70,7 @@ The services read these. Defaults come from `.env` / `.env.<stage>` at repo root
 | `DJANGO_ENV`               | settings.py                        | `development` enables DEBUG.                                                                                                  |
 | `USE_MYSQL`                | settings.py + entrypoint           | `True` to use MySQL/MariaDB.                                                                                                  |
 | `MYSQL_HOST/USER/PWD/NAME` | settings.py                        | `MYSQL_HOST=db` inside the network.                                                                                           |
-| `EMBRELLA_BUILD_STATIC`    | entrypoint                         | `1` → collectstatic + mkdocs build. Set only on prod/staging web.                                                             |
+| `EMBRELLA_BUILD_STATIC`    | entrypoint                         | `1` → collectstatic + zensical build. Set only on prod/staging web.                                                             |
 | `EMBRELLA_MIGRATE`         | entrypoint                         | `1` → run DB migrations. Set only on the one-shot `migrate` service; backend + worker wait on it.                             |
 | `SLURM_KEYFILE`            | clusterio.py                       | In-container path. Dev overrides to `/run/secrets/slurm_key`.                                                                 |
 | `DEBUGPY_LISTEN`           | manage.py                          | `1` opens a debugpy listener on `DEBUGPY_PORT`.                                                                               |

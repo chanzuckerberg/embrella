@@ -1,6 +1,6 @@
 
-## MkDocs
-Manual documentation for the project is in `/docs` and uses MkDocs. 
+## Zensical
+Manual documentation for the project is in `/docs` and uses [Zensical](https://zensical.org). 
 
 The following helper is provided to run a local live-reload server:
 
