@@ -5,6 +5,7 @@ import { Accordion, AccordionDetails, AccordionSummary, Box, Typography } from '
 
 import type { DatasetSample } from '../../../types';
 import { BIO_ROWS, type BioRow } from './bioClassificationRows';
+import type { RequiredBioField } from './bioRequirements';
 import { OntologyIdInput } from './OntologyIdInput';
 import { SectionCard } from './SectionCard';
 
@@ -15,6 +16,7 @@ function OntologyRow({
   readOnly,
   children,
   isLast,
+  required = false,
 }: {
   label: string;
   summary: string;
@@ -22,6 +24,7 @@ function OntologyRow({
   readOnly: boolean;
   children: React.ReactNode;
   isLast?: boolean;
+  required?: boolean;
 }) {
   return (
     <Accordion
@@ -53,13 +56,20 @@ function OntologyRow({
           },
         }}
       >
-        <Typography sx={{ fontWeight: 600 }}>{label}</Typography>
+        <Typography sx={{ fontWeight: 600 }}>
+          {label}
+          {required && (
+            <Box component="span" sx={{ color: 'error.main', ml: 0.5 }}>
+              *
+            </Box>
+          )}
+        </Typography>
         <Typography
           variant="body2"
-          color="text.secondary"
+          color={required && !set ? 'error.main' : 'text.secondary'}
           sx={{ fontFamily: set ? 'monospace' : 'inherit', fontSize: '0.8125rem' }}
         >
-          {summary}
+          {required && !set ? 'Required' : summary}
         </Typography>
       </AccordionSummary>
       <AccordionDetails sx={{ px: 2, pb: 2, pt: 0 }}>{children}</AccordionDetails>
@@ -69,6 +79,7 @@ function OntologyRow({
 
 export function BiologicalClassification({
   sample,
+  requiredBioField,
   assayLabel,
   assayOntologyId,
   onChangeSample,
@@ -78,6 +89,7 @@ export function BiologicalClassification({
   innerRef,
 }: {
   sample: DatasetSample;
+  requiredBioField: RequiredBioField;
   assayLabel: string;
   assayOntologyId: string;
   onChangeSample: <K extends keyof DatasetSample>(key: K, value: DatasetSample[K]) => void;
@@ -91,6 +103,7 @@ export function BiologicalClassification({
 
   const renderRow = (row: BioRow, isLast?: boolean) => {
     const idVal = (sample[row.idKey] as string) || '';
+    const required = row.key === requiredBioField;
     return (
       <OntologyRow
         key={row.key}
@@ -99,6 +112,7 @@ export function BiologicalClassification({
         set={!!idVal}
         readOnly={readOnly}
         isLast={isLast}
+        required={required}
       >
         <OntologyIdInput
           label={row.label}
@@ -108,6 +122,7 @@ export function BiologicalClassification({
           lookup={row.lookup}
           manualOnly={row.manualOnly}
           idPlaceholder={row.idPlaceholder}
+          required={required}
           name={(sample[row.nameKey] as string) ?? ''}
           id={idVal}
           onChange={({ name, id }) => {
@@ -123,7 +138,7 @@ export function BiologicalClassification({
   return (
     <SectionCard
       title="Biological classification"
-      badge="Optional"
+      badge={requiredBioField ? undefined : 'Optional'}
       badgeTone="primary"
       sectionKey="bioclass"
       collapsible

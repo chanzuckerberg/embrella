@@ -23,6 +23,7 @@ export function Organism({
   organismTaxid,
   onChangeOrganismName,
   onChangeOrganismTaxid,
+  taxidRequired = true,
   readOnly,
   innerRef,
 }: {
@@ -30,6 +31,7 @@ export function Organism({
   organismTaxid: number | null;
   onChangeOrganismName: (value: string) => void;
   onChangeOrganismTaxid: (value: number | null) => void;
+  taxidRequired?: boolean;
   readOnly: boolean;
   innerRef: (el: HTMLDivElement | null) => void;
 }) {
@@ -97,7 +99,7 @@ export function Organism({
         </Box>
         <TextField
           label="NCBI tax ID"
-          required
+          required={taxidRequired}
           value={organismTaxid ?? ''}
           onChange={(e) => onChangeOrganismTaxid(e.target.value === '' ? null : Number(e.target.value))}
           size="small"

@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 import { Icon } from '@czi-sds/components';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Autocomplete, Box, Chip, Link, Stack, TextField } from '@mui/material';
@@ -22,6 +22,7 @@ export function OntologyIdInput({
   disabled = false,
   manualOnly = false,
   idPlaceholder,
+  required = false,
 }: {
   label: string;
   ontology: string;
@@ -34,6 +35,7 @@ export function OntologyIdInput({
   disabled?: boolean;
   manualOnly?: boolean;
   idPlaceholder?: string;
+  required?: boolean;
 }) {
   const [query, setQuery] = useState(name);
   const debouncedQuery = useDebounced(query, 300);
@@ -59,8 +61,11 @@ export function OntologyIdInput({
   const idResolved = !!resolved && resolved.id.toLowerCase() === trimmedId.toLowerCase();
   const idValid = formatOk && (isOlsPrefix ? idResolved || lookupError : true);
 
-  let idHelper: ReactNode = ' ';
-  if (idSet) {
+  const requiredMissing = required && !idSet;
+  let idHelper = ' ';
+  if (requiredMissing) {
+    idHelper = 'Required';
+  } else if (idSet) {
     if (!formatOk) idHelper = 'Invalid ID format for this field';
     else if (!isOlsPrefix) idHelper = 'valid format';
     else if (validating || debouncedId !== id) idHelper = 'Checking…';
@@ -69,7 +74,8 @@ export function OntologyIdInput({
     else idHelper = 'ID not found';
   }
   const idError =
-    idSet && (!formatOk || (isOlsPrefix && !validating && debouncedId === id && !lookupError && !idResolved));
+    requiredMissing ||
+    (idSet && (!formatOk || (isOlsPrefix && !validating && debouncedId === id && !lookupError && !idResolved)));
 
   return (
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'flex-start' }}>
@@ -81,6 +87,7 @@ export function OntologyIdInput({
           size="small"
           sx={{ flex: 1 }}
           disabled={disabled}
+          required={required}
         />
       ) : (
         <Autocomplete
@@ -105,7 +112,7 @@ export function OntologyIdInput({
               <OntologyOption term={o} />
             </Box>
           )}
-          renderInput={(params) => <TextField {...params} label={`${label} name`} size="small" />}
+          renderInput={(params) => <TextField {...params} label={`${label} name`} size="small" required={required} />}
         />
       )}
       <Box sx={{ display: 'flex', alignItems: 'center', minHeight: { sm: 40 } }}>
@@ -119,6 +126,7 @@ export function OntologyIdInput({
         size="small"
         sx={{ flex: 1 }}
         disabled={disabled}
+        required={required}
         error={idError}
         helperText={
           idValid ? (
