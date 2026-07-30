@@ -38,8 +38,6 @@ from processes.validation import (
     tomoQueryParams,
 )
 
-from .constants import get_base_url
-
 logger = logging.getLogger(__name__)
 
 
@@ -230,7 +228,6 @@ def get_tomo_details(request):
 
         # Prepare unique results for the response
         unique_results = {}
-        base_url = get_base_url()
         for entry in queryset:
             procrun_id = entry.get("id")
             if procrun_id not in unique_results:
@@ -251,12 +248,12 @@ def get_tomo_details(request):
                     tomograms=TomogramModel(
                         id=procrun_id,
                         name=run_name,
-                        url=f"{base_url}/admin/processes/procrun/{procrun_id}",
+                        url=f"/admin/processes/procrun/{procrun_id}",
                     ),
                     procPlan=ProcPlanModel(
                         id=entry.get("proc_plan_plan_id"),
                         name=entry.get("proc_plan_name"),
-                        url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_plan_id')}",
+                        url=f"/admin/processes/procplan/{entry.get('proc_plan_plan_id')}",
                     ),
                     procRun=ProcRunModel(
                         id=procrun_id,
@@ -267,13 +264,13 @@ def get_tomo_details(request):
                         id=entry.get("cryogrid_id"),
                         name="{} (id={})".format(entry.get("cryogrid_name"), entry.get("cryogrid_id")),
                         trashed=entry.get("cryogrid_trashed"),
-                        url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
+                        url=f"/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
                         createdAt=str(cryogrid_created_at),
                     ),
                     project=ProjectModel(
                         id=entry.get("project_id"),
                         name=entry.get("project_name"),
-                        url=f"{base_url}/admin/projects/project/{entry.get('project_id')}",
+                        url=f"/admin/projects/project/{entry.get('project_id')}",
                     ),
                     user=UserModel(
                         id=entry.get("user_id"),
@@ -282,12 +279,12 @@ def get_tomo_details(request):
                     msiSession=MSISessionModel(
                         id=entry.get("msi_session_id"),
                         name=session_name,
-                        url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_id')}",
+                        url=f"/admin/tem/msisession/{entry.get('msi_session_id')}",
                     ),
                 )
                 result = response_model.model_dump()
                 if session_name and run_name:
-                    result["metadata_url"] = f"{base_url}/metadata/view/{session_name}/{run_name}"
+                    result["metadata_url"] = f"/metadata/view/{session_name}/{run_name}"
                 else:
                     result["metadata_url"] = None
                 unique_results[procrun_id] = result

@@ -1,5 +1,4 @@
 import logging
-import os
 
 from django.contrib import admin
 from django.http import HttpResponseRedirect
@@ -23,21 +22,9 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-# Add this function to get the correct frontend URL
-def get_frontend_url():
-    """Get the frontend URL based on environment"""
-    environment = os.getenv("DJANGO_ENV", "development")
-    if environment == "staging":
-        return "http://umbrella-dev.czbiohub.org/next"
-    elif environment == "production":
-        return "http://umbrella.czbiohub.org/next"
-    else:  # development
-        return "http://localhost:3000/next"
-
-
-def build_frontend_url_with_state(request, base_path="/grid_logging"):
-    """Build frontend URL with state parameters from request"""
-    frontend_url = f"{get_frontend_url()}{base_path}"
+def build_frontend_url_with_state(request, base_path="/samples/grid_logging"):
+    """Build a same-origin frontend URL with state parameters from request"""
+    frontend_url = base_path
 
     # Get state parameters from request
     state_params = []

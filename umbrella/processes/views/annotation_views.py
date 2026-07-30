@@ -33,8 +33,6 @@ from processes.validation import (
     annotationQueryParams,
 )
 
-from .constants import get_base_url
-
 logger = logging.getLogger(__name__)
 
 
@@ -221,7 +219,6 @@ def get_annotation_details(request):
         queryset = queryset.filter(filter_criteria)
 
         # Prepare unique results for the response
-        base_url = get_base_url()
         response_data = []
         for entry in queryset:
             procrun_id = entry.get("proc_run_id")  # Using `proc_run_id` from the query
@@ -242,19 +239,19 @@ def get_annotation_details(request):
                 annotations=AnnotationModel(
                     id=entry.get("annotation_id"),
                     name=f"{entry.get('proc_run_display_name')} (id={entry.get('annotation_id')})",
-                    url=f"{base_url}/admin/processes/annotation/{entry.get('annotation_id')}/",
+                    url=f"/admin/processes/annotation/{entry.get('annotation_id')}/",
                     updatedAt=datetime.fromisoformat(str(entry.get("annotation_updated_at"))).strftime("%Y-%m-%d"),
                     notes=f"{entry.get('notes')}",
                 ),
                 procPlan=ProcPlanModel(
                     id=entry.get("proc_plan_id"),
                     name=entry.get("proc_plan_name"),
-                    url=f"{base_url}/admin/processes/procplan/{entry.get('proc_plan_id')}",
+                    url=f"/admin/processes/procplan/{entry.get('proc_plan_id')}",
                 ),
                 inputTomogram=InputTomogramModel(
                     id=entry.get("tomogram_id"),
                     name="{} (id={})".format(entry.get("tomogram_name"), entry.get("tomogram_id")),
-                    url=f"{base_url}/admin/processes/tomograms/{entry.get('tomogram_id')}",
+                    url=f"/admin/processes/tomograms/{entry.get('tomogram_id')}",
                 ),
                 json=JsonModel(
                     id=1,
@@ -264,13 +261,13 @@ def get_annotation_details(request):
                     id=entry.get("cryogrid_id"),
                     name=f"{entry.get('cryogrid_name')} (id={entry.get('cryogrid_id')})",
                     trashed=entry.get("cryogrid_trashed"),
-                    url=f"{base_url}/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
+                    url=f"/admin/cryo_grids/cryogrid/{entry.get('cryogrid_id')}",
                     createdAt=cryogrid_created_at,
                 ),
                 project=ProjectModel(
                     id=entry.get("project_id"),
                     name=entry.get("project_name"),
-                    url=f"{base_url}/admin/projects/project/{entry.get('project_id')}",
+                    url=f"/admin/projects/project/{entry.get('project_id')}",
                 ),
                 user=UserModel(
                     id=entry.get("user_id"),
@@ -281,7 +278,7 @@ def get_annotation_details(request):
                 msiSession=MSISessionModel(
                     id=entry.get("msi_session_identifier"),
                     name=entry.get("msi_session_name"),
-                    url=f"{base_url}/admin/tem/msisession/{entry.get('msi_session_identifier')}",
+                    url=f"/admin/tem/msisession/{entry.get('msi_session_identifier')}",
                 ),
             )
             response_data.append(response_model.dict())

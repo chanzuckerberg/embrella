@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import re
 
 # python library import
@@ -30,26 +29,12 @@ from .utils import (
     UserModel,
 )
 
-# from umbrella.settings import ENVIRONMENT
 logger = logging.getLogger(__name__)
-
-ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
-
-
-def get_frontend_url():
-    """Get the frontend URL based on environment"""
-    environment = os.getenv("DJANGO_ENV", "development")
-    if environment == "staging":
-        return "http://umbrella-dev.czbiohub.org/"
-    elif environment == "production":
-        return "http://umbrella.czbiohub.org/"
-    else:  # development
-        return "http://localhost:3000/"
 
 
 def build_frontend_url_with_state(request, base_path="/samples/grid_logging"):
-    """Build frontend URL with state parameters from request"""
-    frontend_url = f"{get_frontend_url()}{base_path}"
+    """Build a same-origin frontend URL with state parameters from request"""
+    frontend_url = base_path
 
     # Get state parameters from request (check both GET and POST)
     state_params = []
@@ -132,15 +117,6 @@ def msi_session_sort_key(name):
     except (ValueError, IndexError):
         # If name doesn't match expected format, put it at the end
         return (0, 0, 0, "z")
-
-
-def get_base_url():
-    if ENVIRONMENT == "staging":
-        return "http://umbrella-dev.czbiohub.org"
-    elif ENVIRONMENT == "production":
-        return "http://umbrella.czbiohub.org"
-    else:  # development
-        return "http://localhost:8000"
 
 
 # If you want to test locally, you can comment out the @login_required decorator
@@ -390,9 +366,8 @@ def get_specimen_list(specimen_id):
     try:
         specimen = Specimen.objects.get(id=specimen_id)
         specimen_list = []
-        base_url = get_base_url()
         for sample in specimen.samples.all():
-            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
+            sample_url = f"/admin/cryo_grids/sample/{sample.id}"
             specimen_list.append(
                 {
                     "id": sample.id,
@@ -447,8 +422,7 @@ def filter_by_sample_name(formatted_result, sample_name_input):
 
 
 def format_grid(item):
-    base_url = get_base_url()
-    grid_url = f"{base_url}/cryo_grids/grid_detail/{item['id']}"
+    grid_url = f"/cryo_grids/grid_detail/{item['id']}"
     return GridModel(
         id=item["id"],
         name=f"{item['grid_name']} (id={item['id']})",
@@ -464,8 +438,7 @@ def format_cassette(item):
 
 
 def format_project(item):
-    base_url = get_base_url()
-    project_url = f"{base_url}/admin/projects/project/{item['project_id']}"
+    project_url = f"/admin/projects/project/{item['project_id']}"
     return ProjectModel(id=item["project_id"], name=item["project_name"], url=project_url)
 
 
@@ -474,11 +447,10 @@ def format_freezing_session_link(freezing_session):
     where url points at the Django admin change page. Returns None if input is None."""
     if freezing_session is None:
         return None
-    base_url = get_base_url()
     return {
         "id": freezing_session.id,
         "name": str(freezing_session),
-        "url": f"{base_url}/admin/cryo_grids/plungefreezingsession/{freezing_session.id}/change/",
+        "url": f"/admin/cryo_grids/plungefreezingsession/{freezing_session.id}/change/",
     }
 
 
@@ -487,11 +459,10 @@ def format_project_link(project):
     url points at the Django admin change page. Returns None if input is None."""
     if project is None:
         return None
-    base_url = get_base_url()
     return {
         "id": project.id,
         "name": project.name,
-        "url": f"{base_url}/admin/projects/project/{project.id}",
+        "url": f"/admin/projects/project/{project.id}",
     }
 
 
@@ -508,10 +479,9 @@ def format_user(item):
 def get_specimen_info(specimen_id):
     try:
         specimen = Specimen.objects.get(id=specimen_id)
-        base_url = get_base_url()
         samples_list = []
         for sample in specimen.samples.all():
-            sample_url = f"{base_url}/admin/cryo_grids/sample/{sample.id}"
+            sample_url = f"/admin/cryo_grids/sample/{sample.id}"
             samples_list.append(
                 {
                     "id": sample.id,
@@ -543,11 +513,10 @@ def format_freezing_session(item):
 
 
 def add_msi_session(msi_session_list, item):
-    base_url = get_base_url()
     msi_session_entry = MSISessionModel(
         id=item["msisession_id"],
         name=item["msisession_name"],
-        url=f"{base_url}/legacy/tem/{item['msisession_id']}",
+        url=f"/legacy/tem/{item['msisession_id']}",
     ).model_dump()
     if msi_session_entry not in msi_session_list:
         msi_session_list.append(msi_session_entry)

@@ -11,18 +11,6 @@ from umbrella_logger import logger
 
 from common import clusterio
 
-from .constants import ENVIRONMENT
-
-
-def get_base_url():
-    """Get the base URL for job tracking based on the environment."""
-    if ENVIRONMENT == "staging":
-        return "http://umbrella-dev.czbiohub.org/workflow/track_jobs"
-    elif ENVIRONMENT == "production":
-        return "http://umbrella.czbiohub.org/workflow/track_jobs"
-    else:  # development
-        return "http://localhost:8000/workflow/track_jobs"
-
 
 def track_jobs_internal(cluster_id="czii"):
     """

@@ -36,7 +36,6 @@ from processes.models import (
 )
 from processes.services.cluster_resolver import cluster_id_for_run
 from processes.validation import SortMetadataModel
-from processes.views import get_base_url
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +271,7 @@ class ReviewView(View):
                             "id": str(review.review_id),
                             "name": review.review_name,
                             "type": review.review_type,
-                            "url": f"{get_base_url()}/admin/processes/review/{review.review_id}",
+                            "url": f"/admin/processes/review/{review.review_id}",
                             "annotationObjects": review.objects_of_interest.split(",")
                             if review.objects_of_interest is not None
                             else [],
@@ -280,7 +279,7 @@ class ReviewView(View):
                         "session": {
                             "id": review.msi_session.pk,
                             "name": review.msi_session.name,
-                            "url": f"{get_base_url()}/admin/tem/msisession/{review.msi_session.pk}",
+                            "url": f"/admin/tem/msisession/{review.msi_session.pk}",
                         },
                         "runId": review.run_id,
                         "reconstructionType": review.reconstruction_type,
