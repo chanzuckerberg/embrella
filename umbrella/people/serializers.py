@@ -43,7 +43,6 @@ class PersonSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
-    affiliation = serializers.CharField(required=False, allow_blank=True, allow_null=True, write_only=True)
 
     class Meta:
         model = Person
@@ -56,7 +55,6 @@ class PersonSerializer(serializers.ModelSerializer):
             "contact_email",
             "institution",
             "institution_id",
-            "affiliation",
             "created_at",
             "updated_at",
         ]
@@ -70,34 +68,3 @@ class PersonSerializer(serializers.ModelSerializer):
         if not ORCID_RE.match(value):
             raise serializers.ValidationError("ORCID iD must be formatted as xxxx-xxxx-xxxx-xxxx.")
         return value
-
-    def _resolve_affiliation(self, validated_data):
-        """Map the convenience `affiliation` string to `Person.institution`.
-
-        A blank/empty affiliation clears the institution; otherwise it is matched
-        by exact name (or created). Only applied when `affiliation` was supplied,
-        so it never clobbers an explicit `institution_id`.
-        """
-        if "affiliation" not in validated_data:
-            return
-        name = (validated_data.pop("affiliation") or "").strip()
-        if not name:
-            validated_data["institution"] = None
-            return
-        institution = Institution.objects.filter(name=name).first()
-        if institution is None:
-            institution = Institution.objects.create(name=name)
-        validated_data["institution"] = institution
-
-    def create(self, validated_data):
-        self._resolve_affiliation(validated_data)
-        return super().create(validated_data)
-
-    def update(self, instance, validated_data):
-        self._resolve_affiliation(validated_data)
-        return super().update(instance, validated_data)
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["affiliation"] = instance.institution.name if instance.institution else None
-        return data

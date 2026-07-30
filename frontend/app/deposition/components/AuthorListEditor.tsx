@@ -1,10 +1,11 @@
 'use client';
 
 import { forwardRef, Fragment, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Icon } from '@czi-sds/components';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import {
+  Autocomplete,
   Avatar,
   Box,
   Checkbox,
@@ -23,9 +24,10 @@ import {
   Typography,
 } from '@mui/material';
 
-import type { AuthorRef, Person } from '../types';
+import type { AuthorRef, Institution, Person } from '../types';
 import { usePeopleByIds } from '../hooks/usePeopleByIds';
-import { updatePerson } from '../services/depositionApi';
+import { useDebounced } from '../hooks/useDebounced';
+import { createInstitution, searchInstitutions, updatePerson } from '../services/depositionApi';
 import { ORCID_RE, orcidChecksumOk } from '../services/identifiers';
 import { AddAuthorDialog } from '../depositions/AddAuthorDialog';
 import { IdentifierField } from './IdentifierField';
@@ -139,28 +141,51 @@ const AuthorEditPanel = forwardRef<
   const queryClient = useQueryClient();
   const [fullName, setFullName] = useState(personName(person) === 'Unknown author' ? '' : personName(person));
   const [orcid, setOrcid] = useState(person?.orcid ?? '');
-  const [affiliation, setAffiliation] = useState(person?.affiliation ?? '');
+  const [institution, setInstitution] = useState<Institution | null>(person?.institution ?? null);
+  const [institutionInput, setInstitutionInput] = useState(person?.institution?.name ?? '');
 
   const orcidTrimmed = orcid.trim();
   const orcidOk = orcidTrimmed === '' || (ORCID_RE.test(orcidTrimmed) && orcidChecksumOk(orcidTrimmed));
   const { given_name, family_name } = splitFullName(fullName);
 
+  const debouncedInstitution = useDebounced(institutionInput.trim(), 300);
+  const { data: institutionOptions = [] } = useQuery({
+    queryKey: ['institutions', 'search', debouncedInstitution],
+    queryFn: () => searchInstitutions(debouncedInstitution),
+    enabled: !disabled && debouncedInstitution.length >= 1,
+  });
+
+  const affiliationName = (institution?.name ?? institutionInput).trim();
   const dirty =
     !!person &&
     (given_name !== (person.given_name ?? '') ||
       family_name !== (person.family_name ?? '') ||
       orcidTrimmed !== (person.orcid ?? '') ||
-      affiliation.trim() !== (person.affiliation ?? ''));
+      affiliationName !== (person.institution?.name ?? ''));
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      updatePerson(authorRef.author_id, {
+    mutationFn: async () => {
+      // Resolve the affiliation to an Institution id: use the picked one, else
+      // reuse an existing institution with the same name, else create one.
+      let institutionId: number | null = null;
+      if (institution && institution.name === affiliationName) {
+        institutionId = institution.id;
+      } else if (affiliationName) {
+        const matches = await searchInstitutions(affiliationName);
+        const exact = matches.find((i) => i.name.toLowerCase() === affiliationName.toLowerCase());
+        institutionId = exact ? exact.id : (await createInstitution(affiliationName)).id;
+      }
+      return updatePerson(authorRef.author_id, {
         given_name: given_name.trim(),
         family_name: family_name.trim(),
         orcid: orcidTrimmed || null,
-        affiliation: affiliation.trim() || null,
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['people', 'by-ids'] }),
+        institution_id: institutionId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['people', 'by-ids'] });
+      queryClient.invalidateQueries({ queryKey: ['institutions'] });
+    },
   });
 
   useImperativeHandle(
@@ -226,13 +251,31 @@ const AuthorEditPanel = forwardRef<
           fullWidth
           disabled={disabled}
         />
-        <TextField
-          label="Affiliation"
-          value={affiliation}
-          onChange={(e) => setAffiliation(e.target.value)}
+        <Autocomplete
+          freeSolo
           size="small"
-          fullWidth
           disabled={disabled}
+          options={institutionOptions}
+          value={institution}
+          inputValue={institutionInput}
+          getOptionLabel={(o) => (typeof o === 'string' ? o : o.name)}
+          isOptionEqualToValue={(o, v) => o.id === v.id}
+          filterOptions={(x) => x}
+          onInputChange={(_, v) => {
+            setInstitutionInput(v);
+            if (institution && v !== institution.name) setInstitution(null);
+          }}
+          onChange={(_, val) => {
+            if (val && typeof val !== 'string') {
+              setInstitution(val);
+              setInstitutionInput(val.name);
+            } else {
+              setInstitution(null);
+            }
+          }}
+          renderInput={(params) => (
+            <TextField {...params} label="Affiliation" placeholder="Search or add institution" fullWidth />
+          )}
         />
       </Box>
 
@@ -345,7 +388,7 @@ export function AuthorListEditor({
           !q ||
           personName(p).toLowerCase().includes(q) ||
           p?.orcid?.toLowerCase().includes(q) ||
-          p?.affiliation?.toLowerCase().includes(q)
+          p?.institution?.name?.toLowerCase().includes(q)
       );
   }, [authors, byId, search]);
 
@@ -511,11 +554,11 @@ export function AuthorListEditor({
                           </Box>
                         </Box>
                       </TableCell>
-                      <TableCell sx={{ ...cellSx, color: p?.affiliation ? 'text.primary' : 'text.disabled' }}>
-                        {p?.affiliation ? (
-                          <Tooltip title={p.affiliation} enterDelay={400}>
+                      <TableCell sx={{ ...cellSx, color: p?.institution?.name ? 'text.primary' : 'text.disabled' }}>
+                        {p?.institution?.name ? (
+                          <Tooltip title={p.institution.name} enterDelay={400}>
                             <Typography component="span" variant="body2" sx={ellipsisSx}>
-                              {p.affiliation}
+                              {p.institution.name}
                             </Typography>
                           </Tooltip>
                         ) : (

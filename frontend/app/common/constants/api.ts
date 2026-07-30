@@ -117,6 +117,7 @@ export enum API {
   DEPOSITION_SESSIONS = '/depositions/v1/sessions/',
   DEPOSITION_METHOD_LINKS = '/depositions/v1/method-links/',
   PEOPLE = '/people/v1/people/',
+  INSTITUTIONS = '/people/v1/institutions/',
 }
 
 export enum POST_API {

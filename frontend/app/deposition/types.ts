@@ -30,13 +30,22 @@ export interface DatasetJob {
   push_slurm_job_id?: string | null;
   error_message?: string | null;
 }
+export interface Institution {
+  id: number;
+  name: string;
+  ror_id?: string | null;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+}
+
 export interface Person {
   id: number;
   orcid?: string | null;
   given_name: string;
   family_name: string;
   contact_email?: string | null;
-  affiliation?: string | null; // resolved from Person.institution.name by the People API
+  institution?: Institution | null; // canonical affiliation (nested by the People API)
 }
 
 export type CrossRefType = 'publication' | 'related_db';
