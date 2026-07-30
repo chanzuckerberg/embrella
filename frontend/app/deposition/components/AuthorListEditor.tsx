@@ -13,7 +13,6 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
-  Link,
   Table,
   TableBody,
   TableCell,
@@ -289,7 +288,7 @@ const AuthorEditPanel = forwardRef<
       >
         <IdentifierField
           kind="orcid"
-          label="ORCID iD"
+          label="ORCID ID"
           value={orcid}
           onChange={setOrcid}
           placeholder="0000-0000-0000-0000"
@@ -589,23 +588,26 @@ export function AuthorListEditor({
                       </TableCell>
                       <TableCell align="right" sx={{ ...cellSx, overflow: 'visible' }}>
                         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, whiteSpace: 'nowrap' }}>
-                          <Link
-                            component="button"
-                            type="button"
-                            variant="body2"
-                            underline="hover"
-                            sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}
-                            onClick={async () => {
-                              if (isEditing) {
-                                await editPanelRef.current?.save();
-                                setEditingIdx(null);
-                              } else {
-                                setEditingIdx(idx);
-                              }
-                            }}
-                          >
-                            {isEditing ? 'Done' : 'Edit'}
-                          </Link>
+                          <Tooltip title={isEditing ? 'Done' : 'Edit'}>
+                            <IconButton
+                              size="small"
+                              aria-label={isEditing ? `Done editing author ${idx + 1}` : `Edit author ${idx + 1}`}
+                              onClick={async () => {
+                                if (isEditing) {
+                                  await editPanelRef.current?.save();
+                                  setEditingIdx(null);
+                                } else {
+                                  setEditingIdx(idx);
+                                }
+                              }}
+                            >
+                              <Icon
+                                sdsIcon={isEditing ? 'Check' : 'Edit'}
+                                sdsSize="s"
+                                color={isEditing ? 'blue' : 'gray'}
+                              />
+                            </IconButton>
+                          </Tooltip>
                           {!disabled && (
                             <IconButton
                               size="small"
