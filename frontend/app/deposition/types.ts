@@ -7,16 +7,6 @@ export interface AuthorRef {
   author_list_order: number;
 }
 
-export interface AuthorEntry {
-  full_name: string;
-  affiliation?: string;
-  identifier_type?: string; // e.g. 'ORCID'
-  orcid?: string;
-  is_corresponding: boolean;
-  is_primary?: boolean;
-  author_list_order: number;
-}
-
 export interface DatasetFunding {
   id?: number;
   funding_agency_name: string;
@@ -46,6 +36,7 @@ export interface Person {
   given_name: string;
   family_name: string;
   contact_email?: string | null;
+  affiliation?: string | null; // resolved from Person.institution.name by the People API
 }
 
 export type CrossRefType = 'publication' | 'related_db';
@@ -109,7 +100,7 @@ export interface Dataset {
   is_authors_same_as_deposition?: boolean;
   status: DatasetStatus;
   sample?: DatasetSample | null;
-  authors_json?: AuthorEntry[];
+  authors_json?: AuthorRef[];
   dataset_publications?: string;
   related_database_entries?: string;
   funding?: DatasetFunding[];

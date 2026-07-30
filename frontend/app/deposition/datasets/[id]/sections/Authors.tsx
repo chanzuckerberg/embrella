@@ -1,9 +1,9 @@
 'use client';
 
-import { Box, Divider, Radio, Typography } from '@mui/material';
+import { Box, Radio, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
-import type { AuthorEntry } from '../../../types';
+import type { AuthorRef } from '../../../types';
 import { AuthorsEditor } from './AuthorsEditor';
 import { SectionCard } from './SectionCard';
 
@@ -28,7 +28,8 @@ function ChoiceCard({
       sx={{
         display: 'flex',
         gap: 1,
-        p: 2,
+        px: 2,
+        py: 1.5,
         borderRadius: 2,
         border: '1px solid',
         borderColor: selected ? 'primary.main' : 'divider',
@@ -39,8 +40,8 @@ function ChoiceCard({
     >
       <Radio size="small" checked={selected} disabled={disabled} sx={{ p: 0, mt: '2px' }} />
       <Box>
-        <Typography sx={{ fontWeight: 700 }}>{title}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography sx={{ fontWeight: 700, lineHeight: 1.35 }}>{title}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, lineHeight: 1.4 }}>
           {description}
         </Typography>
       </Box>
@@ -60,8 +61,8 @@ export function Authors({
   sameAsDeposition: boolean;
   onChangeSameAsDeposition: (value: boolean) => void;
   depositionAuthorCount?: number;
-  authors: AuthorEntry[];
-  onChangeAuthors: (authors: AuthorEntry[]) => void;
+  authors: AuthorRef[];
+  onChangeAuthors: (authors: AuthorRef[]) => void;
   readOnly: boolean;
   innerRef: (el: HTMLDivElement | null) => void;
 }) {
@@ -89,10 +90,9 @@ export function Authors({
         />
       </Box>
       {!sameAsDeposition && (
-        <>
-          <Divider />
+        <Box sx={{ pt: 0.5 }}>
           <AuthorsEditor authors={authors} onChange={onChangeAuthors} disabled={readOnly} />
-        </>
+        </Box>
       )}
     </SectionCard>
   );

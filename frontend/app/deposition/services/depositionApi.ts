@@ -25,6 +25,10 @@ export async function createPerson(data: Partial<Person>): Promise<Person> {
   return parse(await postResource(url(API.PEOPLE), data as Record<string, unknown>));
 }
 
+export async function updatePerson(id: number, data: Partial<Person>): Promise<Person> {
+  return parse(await patchResource(url(`${API.PEOPLE}${id}/`), data as Record<string, unknown>));
+}
+
 export async function searchPeople(term: string): Promise<Person[]> {
   const data = await parse<Person[] | { results: Person[] }>(
     await fetchResource(url(`${API.PEOPLE}?search=${encodeURIComponent(term)}`))
