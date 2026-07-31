@@ -18,6 +18,7 @@ interface SideBarProps {
   onNext: () => void;
   onSelectTomogram: (tomogramId: string) => void;
   showSliderSection?: boolean;
+  assessmentSlot?: React.ReactNode;
   // Z-navigation props
   currentZIndex?: number;
   zAxisMetadata?: { min: number; max: number; count: number };
@@ -37,6 +38,7 @@ export const SideBar = ({
   onNext,
   onSelectTomogram,
   showSliderSection = true,
+  assessmentSlot,
   currentZIndex,
   zAxisMetadata,
   onZIndexChange,
@@ -63,13 +65,17 @@ export const SideBar = ({
 
       <SideBarSection className="min-h-0">
         <TomogramTable tomograms={tomograms} selectedTomogram={selectedTomogram} onSelectTomogram={onSelectTomogram} />
-        <NavigationButtons
-          currentIndex={currentIndex}
-          totalItems={tomograms.length}
-          onPrevious={onPrevious}
-          onNext={onNext}
-        />
+        {!assessmentSlot && (
+          <NavigationButtons
+            currentIndex={currentIndex}
+            totalItems={tomograms.length}
+            onPrevious={onPrevious}
+            onNext={onNext}
+          />
+        )}
       </SideBarSection>
+
+      {assessmentSlot}
 
       <SideBarSection>
         <TomogramInfo tomogramDetail={tomogramDetail} open={infoOpen} setOpen={setInfoOpen} />

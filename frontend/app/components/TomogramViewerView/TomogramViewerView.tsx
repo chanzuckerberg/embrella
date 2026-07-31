@@ -476,10 +476,11 @@ const TomogramViewerContent = ({
               Close
             </Button>
           </div>
-          <SideBar {...sideBarProps} showSliderSection={false} />
-          <div className="border-t-[2px] border-gray-300">
-            <AssessmentPanel {...assessmentProps} />
-          </div>
+          <SideBar
+            {...sideBarProps}
+            showSliderSection={false}
+            assessmentSlot={<AssessmentPanel {...assessmentProps} />}
+          />
         </Drawer>
       )}
     </div>
