@@ -671,7 +671,7 @@ deploy stage envfile branch:
     echocolor $GREEN "Updating frontend dependencies"
     ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && conda activate umbrella && time just updatefrontenddeps'
 
-    # Build MkDocs documentation
+    # Build documentation (zensical)
     ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && conda activate umbrella && time just builddocs'
 
     echocolor $GREEN "Running any migrations..."

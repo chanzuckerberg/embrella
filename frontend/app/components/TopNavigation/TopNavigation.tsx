@@ -354,7 +354,7 @@ export const TopNavigation = () => {
                 sdsType="secondary"
                 sdsStyle="outline"
                 size="small"
-                onClick={() => window.open(`${DJANGO_URL}/docs/tutorials/userguide/`, '_blank')}
+                onClick={() => window.open(`${DJANGO_URL}/docs/userguide/overview/`, '_blank')}
                 sx={{
                   color: '#ffffff !important',
                   borderColor: '#ffffff !important',

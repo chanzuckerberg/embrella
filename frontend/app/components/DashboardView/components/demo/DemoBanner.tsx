@@ -30,7 +30,7 @@ export const DemoBanner = () => {
         </Typography>
       </Box>
       <Typography variant="body2" sx={{ mt: 1 }}>
-        <Link href={`${DJANGO_URL}/docs/tutorials/userguide/`} target="_blank" rel="noopener">
+        <Link href={`${DJANGO_URL}/docs/userguide/overview/`} target="_blank" rel="noopener">
           Read the user guide
         </Link>{' '}
         to see what Embrella does with a real cluster behind it.

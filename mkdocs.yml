@@ -7,28 +7,44 @@ copyright: '2026, Biohub'
 theme:
   name: material
   variant: modern
+  logo: assets/embrella_logo.png
   palette:
-    - scheme: biohub
+    - media: "(prefers-color-scheme)"
+      primary: indigo
       toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-
-    - scheme: slate
-      toggle:
-        icon: material/brightness-4
+        icon: lucide/sun-moon
         name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: lucide/sun
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: lucide/moon
+        name: Switch system preference
   features:
     - content.code.copy
 extra_css:
   - stylesheets/extras.css
+extra_javascript:
+  - javascripts/video.js
 nav:
   - Home: index.md
-  - Tutorials:
-      - User Guide: 'tutorials/userguide.md'
+  - User Guide:
+      - Overview: 'userguide/overview.md'
+      - Grid Logging: 'userguide/gridlogging.md'
+      - Grid Inventory: 'userguide/gridinventory.md'
+      - Create Imaging Session: 'userguide/createimagingsession.md'
+      - Launch Processing: 'userguide/launchprocessing.md'
+      - View Metadata: 'userguide/metadataapp.md'
+      - Review Tomograms: 'userguide/reviewapp.md'
   - Contributing:
       - Getting Started: 'contributing/gettingstarted.md'
       - Container Layout: 'contributing/containers.md'
       - Managing Environment Secrets: 'contributing/environments.md'
       - Running/Deploying: 'contributing/deployment.md'
-      - Updating Documentation: 'contributing/documentation.md'
       - Version Control/Release Convention: 'contributing/convention.md'
