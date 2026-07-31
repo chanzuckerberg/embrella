@@ -3,6 +3,10 @@ export interface User {
   name: string;
 }
 
+export type QualityValue = 'pending' | 'accepted' | 'rejected' | 'uncertain' | 'exemplary';
+
+export type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
+
 export interface ReviewTomogramSummary {
   tomogramId: string;
   position: string;
