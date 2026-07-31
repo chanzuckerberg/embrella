@@ -93,22 +93,20 @@ export const AuthorEditPanel = forwardRef<
         bgcolor: 'grey.50',
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-          <Avatar
-            sx={{ width: 24, height: 24, fontSize: 11, bgcolor: AVATAR_COLORS[(order - 1) % AVATAR_COLORS.length] }}
-          >
-            {initials(name)}
-          </Avatar>
-          <Typography
-            variant="body2"
-            sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.6, fontSize: '0.75rem' }}
-          >
-            AUTHOR {order}
-          </Typography>
-          {authorRef.is_primary && <RolePill kind="primary" />}
-          {authorRef.is_corresponding && <RolePill kind="corresponding" />}
-        </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
+        <Avatar
+          sx={{ width: 24, height: 24, fontSize: 11, bgcolor: AVATAR_COLORS[(order - 1) % AVATAR_COLORS.length] }}
+        >
+          {initials(name)}
+        </Avatar>
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.6, fontSize: '0.75rem' }}
+        >
+          AUTHOR {order}
+        </Typography>
+        {authorRef.is_primary && <RolePill kind="primary" />}
+        {authorRef.is_corresponding && <RolePill kind="corresponding" />}
       </Box>
 
       <Box

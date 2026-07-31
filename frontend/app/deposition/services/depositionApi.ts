@@ -1,5 +1,3 @@
-/** Typed fetch helpers for the deposition API. */
-
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { deleteResource, fetchResource, patchResource, postResource } from '@app/common/queries/fetchResource';
 
@@ -13,7 +11,6 @@ import type {
   SubmissionList,
 } from '../types';
 
-/** Writable Person fields. `institution_id` sets the affiliation by Institution id. */
 export interface PersonUpdate {
   given_name?: string;
   family_name?: string;

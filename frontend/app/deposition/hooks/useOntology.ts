@@ -9,7 +9,6 @@ const olsKeys = {
 
 const STALE = 5 * 60 * 1000;
 
-/** Autocomplete matches */
 export function useOntologySearch(term: string, ontology: string, enabled = true) {
   return useQuery<OntologyTerm[]>({
     queryKey: olsKeys.search(ontology, term.trim()),

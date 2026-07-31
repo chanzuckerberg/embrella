@@ -15,7 +15,6 @@ interface Options {
   enabled?: boolean; // skip while there's no draft yet (e.g. no id)
 }
 
-/** Draft autosave. Returns { status, lastSavedAt, saveNow }. */
 export function useDraftAutoSave<T>(
   data: T,
   save: (data: T) => Promise<unknown>,
