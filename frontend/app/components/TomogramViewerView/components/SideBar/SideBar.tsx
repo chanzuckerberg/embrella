@@ -17,6 +17,7 @@ interface SideBarProps {
   onPrevious: () => void;
   onNext: () => void;
   onSelectTomogram: (tomogramId: string) => void;
+  showSliderSection?: boolean;
   // Z-navigation props
   currentZIndex?: number;
   zAxisMetadata?: { min: number; max: number; count: number };
@@ -35,6 +36,7 @@ export const SideBar = ({
   onPrevious,
   onNext,
   onSelectTomogram,
+  showSliderSection = true,
   currentZIndex,
   zAxisMetadata,
   onZIndexChange,
@@ -47,7 +49,7 @@ export const SideBar = ({
   const [sliderOpen, setSliderOpen] = useState(true);
 
   return (
-    <div className="basis-[280px] shrink-0 flex flex-col justify-start divide-y-[2px]">
+    <div className="basis-[280px] max-lg:basis-auto max-lg:w-full shrink-0 flex flex-col justify-start divide-y-[2px]">
       <SideBarSection>
         <div className="flex flex-col gap-[10px]">
           <h2 className="font-bold text-xl leading-tight">
@@ -72,15 +74,17 @@ export const SideBar = ({
       <SideBarSection>
         <TomogramInfo tomogramDetail={tomogramDetail} open={infoOpen} setOpen={setInfoOpen} />
       </SideBarSection>
-      <SideBarSection>
-        <SliderControls
-          open={sliderOpen}
-          setOpen={setSliderOpen}
-          currentZIndex={currentZIndex}
-          zAxisMetadata={zAxisMetadata}
-          onZIndexChange={onZIndexChange}
-        />
-      </SideBarSection>
+      {showSliderSection && (
+        <SideBarSection>
+          <SliderControls
+            open={sliderOpen}
+            setOpen={setSliderOpen}
+            currentZIndex={currentZIndex}
+            zAxisMetadata={zAxisMetadata}
+            onZIndexChange={onZIndexChange}
+          />
+        </SideBarSection>
+      )}
       <SideBarSection className="overflow-visible [&_#channel-controls]:w-full [&_.MuiAccordionSummary-content]:!m-0 [&_.MuiAccordionSummary-root]:!p-0 [&_.MuiAccordionSummary-root]:!min-h-0 [&_.MuiAccordionDetails-root]:!p-0 [&_.MuiAccordionDetails-root]:!pt-4 [&_.MuiAccordion-root]:!bg-transparent [&_.MuiAccordion-root]:before:!hidden [&_.MuiAccordionSummary-expandIconWrapper]:!hidden [&_.MuiCollapse-root]:!block [&_.MuiCollapse-root]:!h-auto [&_.MuiCollapse-root]:!visible [&_.MuiCollapse-wrapper]:!block">
         {channelLayer && extraControlProps && extraControlProps.length > 0 ? (
           <ChannelControlsList
