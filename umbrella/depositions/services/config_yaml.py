@@ -1,5 +1,4 @@
-"""Serialize a deposition Dataset to the cryoET portal dataset-config metadata block.
-"""
+"""Serialize a deposition Dataset to the cryoET portal dataset-config metadata block."""
 
 import yaml
 
@@ -24,8 +23,7 @@ def _name_id(name, oid):
 
 
 def _map_author(entry):
-    """Map a authors to the portal author shape.
-    """
+    """Map a authors to the portal author shape."""
     if not isinstance(entry, dict):
         return None
     name = (entry.get("full_name") or "").strip()
@@ -67,7 +65,6 @@ def build_dataset_metadata(dataset) -> dict:
             block = _name_id(getattr(sample, name_attr, "") or "", getattr(sample, id_attr, "") or "")
             if block:
                 meta[key] = block
-
 
     assay = _name_id(dataset.assay_label, dataset.assay_ontology_id)
     if assay:
