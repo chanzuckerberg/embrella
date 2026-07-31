@@ -1,16 +1,11 @@
 'use client';
 
-import { forwardRef, Fragment, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Fragment, useMemo, useRef, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import {
-  Autocomplete,
   Avatar,
   Box,
-  Checkbox,
-  Chip,
-  FormControlLabel,
   IconButton,
   InputAdornment,
   Table,
@@ -23,32 +18,11 @@ import {
   Typography,
 } from '@mui/material';
 
-import type { AuthorRef, Institution, Person } from '../types';
+import type { AuthorRef } from '../types';
 import { usePeopleByIds } from '../hooks/usePeopleByIds';
-import { useDebounced } from '../hooks/useDebounced';
-import { createInstitution, searchInstitutions, updatePerson } from '../services/depositionApi';
-import { ORCID_RE, orcidChecksumOk } from '../services/identifiers';
 import { AddAuthorDialog } from '../depositions/AddAuthorDialog';
-import { IdentifierField } from './IdentifierField';
-
-const AVATAR_COLORS = ['#6C5CE7', '#00B894', '#0984E3', '#E17055', '#E84393', '#00CEC9'];
-
-const personName = (p?: Person) => (p ? `${p.given_name} ${p.family_name}`.trim() : 'Unknown author');
-
-const initials = (name: string) =>
-  name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('') || '?';
-
-const splitFullName = (full: string) => {
-  const parts = full.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { given_name: '', family_name: '' };
-  if (parts.length === 1) return { given_name: parts[0], family_name: '' };
-  return { given_name: parts[0], family_name: parts.slice(1).join(' ') };
-};
+import { AuthorEditPanel, type AuthorEditPanelHandle } from './AuthorEditPanel';
+import { AVATAR_COLORS, initials, personName, RoleChip } from './authorHelpers';
 
 const cellSx = {
   py: 1.25,
@@ -75,256 +49,6 @@ const ellipsisSx = {
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 };
-
-/** Compact P/C badge used in the table name column + footer legend. */
-function RoleChip({ kind }: { kind: 'P' | 'C' }) {
-  const primary = kind === 'P';
-  return (
-    <Box
-      component="span"
-      aria-label={primary ? 'Primary' : 'Corresponding'}
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 18,
-        height: 18,
-        flexShrink: 0,
-        borderRadius: '4px',
-        fontWeight: 700,
-        fontSize: 11,
-        lineHeight: 1,
-        bgcolor: (t) => `${primary ? t.palette.primary.main : t.palette.success.main}24`,
-        color: primary ? 'primary.main' : 'success.dark',
-      }}
-    >
-      {kind}
-    </Box>
-  );
-}
-
-/** Full-word role pill used in the expanded edit card header. */
-function RolePill({ kind }: { kind: 'primary' | 'corresponding' }) {
-  const primary = kind === 'primary';
-  return (
-    <Chip
-      label={primary ? 'Primary' : 'Corresponding'}
-      size="small"
-      sx={{
-        height: 22,
-        fontWeight: 600,
-        fontSize: 12,
-        bgcolor: (t) => `${primary ? t.palette.primary.main : t.palette.success.main}24`,
-        color: primary ? 'primary.main' : 'success.dark',
-      }}
-    />
-  );
-}
-
-type AuthorEditPanelHandle = { save: () => Promise<void> };
-
-// Expanded per-row editor. Identity (name/affiliation/orcid) edits the shared
-// People.Person via updatePerson — directory-wide. Primary/Corresponding are
-// per-list flags on the AuthorRef and toggle immediately.
-const AuthorEditPanel = forwardRef<
-  AuthorEditPanelHandle,
-  {
-    person?: Person;
-    authorRef: AuthorRef;
-    order: number;
-    disabled: boolean;
-    onToggle: (key: 'is_primary' | 'is_corresponding') => void;
-    onRemove: () => void;
-  }
->(function AuthorEditPanel({ person, authorRef, order, disabled, onToggle, onRemove }, ref) {
-  const queryClient = useQueryClient();
-  const [fullName, setFullName] = useState(personName(person) === 'Unknown author' ? '' : personName(person));
-  const [orcid, setOrcid] = useState(person?.orcid ?? '');
-  const [institution, setInstitution] = useState<Institution | null>(person?.institution ?? null);
-  const [institutionInput, setInstitutionInput] = useState(person?.institution?.name ?? '');
-
-  const orcidTrimmed = orcid.trim();
-  const orcidOk = orcidTrimmed === '' || (ORCID_RE.test(orcidTrimmed) && orcidChecksumOk(orcidTrimmed));
-  const { given_name, family_name } = splitFullName(fullName);
-
-  const debouncedInstitution = useDebounced(institutionInput.trim(), 300);
-  const { data: institutionOptions = [] } = useQuery({
-    queryKey: ['institutions', 'search', debouncedInstitution],
-    queryFn: () => searchInstitutions(debouncedInstitution),
-    enabled: !disabled && debouncedInstitution.length >= 1,
-  });
-
-  const affiliationName = (institution?.name ?? institutionInput).trim();
-  const dirty =
-    !!person &&
-    (given_name !== (person.given_name ?? '') ||
-      family_name !== (person.family_name ?? '') ||
-      orcidTrimmed !== (person.orcid ?? '') ||
-      affiliationName !== (person.institution?.name ?? ''));
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      // Resolve the affiliation to an Institution id: use the picked one, else
-      // reuse an existing institution with the same name, else create one.
-      let institutionId: number | null = null;
-      if (institution && institution.name === affiliationName) {
-        institutionId = institution.id;
-      } else if (affiliationName) {
-        const matches = await searchInstitutions(affiliationName);
-        const exact = matches.find((i) => i.name.toLowerCase() === affiliationName.toLowerCase());
-        institutionId = exact ? exact.id : (await createInstitution(affiliationName)).id;
-      }
-      return updatePerson(authorRef.author_id, {
-        given_name: given_name.trim(),
-        family_name: family_name.trim(),
-        orcid: orcidTrimmed || null,
-        institution_id: institutionId,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['people', 'by-ids'] });
-      queryClient.invalidateQueries({ queryKey: ['institutions'] });
-    },
-  });
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      save: async () => {
-        if (!disabled && dirty && orcidOk) await saveMutation.mutateAsync();
-      },
-    }),
-    [disabled, dirty, orcidOk, saveMutation]
-  );
-
-  const name = personName(person);
-
-  return (
-    <Box
-      sx={{
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2,
-        p: 2.5,
-        pb: 3,
-        bgcolor: 'grey.50',
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-          <Avatar
-            sx={{ width: 24, height: 24, fontSize: 11, bgcolor: AVATAR_COLORS[(order - 1) % AVATAR_COLORS.length] }}
-          >
-            {initials(name)}
-          </Avatar>
-          <Typography
-            variant="body2"
-            sx={{ fontWeight: 700, color: 'text.secondary', letterSpacing: 0.6, fontSize: '0.75rem' }}
-          >
-            AUTHOR {order}
-          </Typography>
-          {authorRef.is_primary && <RolePill kind="primary" />}
-          {authorRef.is_corresponding && <RolePill kind="corresponding" />}
-        </Box>
-        {!disabled && (
-          <IconButton size="small" aria-label={`Remove author ${order}`} onClick={onRemove}>
-            <Icon sdsIcon="TrashCan" sdsSize="s" color="gray" />
-          </IconButton>
-        )}
-      </Box>
-
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-          gap: 2,
-          mb: 2,
-          mt: 5,
-        }}
-      >
-        <TextField
-          label="Full name"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          size="small"
-          fullWidth
-          disabled={disabled}
-        />
-        <Autocomplete
-          freeSolo
-          size="small"
-          disabled={disabled}
-          options={institutionOptions}
-          value={institution}
-          inputValue={institutionInput}
-          getOptionLabel={(o) => (typeof o === 'string' ? o : o.name)}
-          isOptionEqualToValue={(o, v) => o.id === v.id}
-          filterOptions={(x) => x}
-          onInputChange={(_, v) => {
-            setInstitutionInput(v);
-            if (institution && v !== institution.name) setInstitution(null);
-          }}
-          onChange={(_, val) => {
-            if (val && typeof val !== 'string') {
-              setInstitution(val);
-              setInstitutionInput(val.name);
-            } else {
-              setInstitution(null);
-            }
-          }}
-          renderInput={(params) => (
-            <TextField {...params} label="Affiliation" placeholder="Search or add institution" fullWidth />
-          )}
-        />
-      </Box>
-
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'stretch', sm: 'center' },
-          gap: { xs: 1.5, sm: 2.5 },
-        }}
-      >
-        <IdentifierField
-          kind="orcid"
-          label="ORCID ID"
-          value={orcid}
-          onChange={setOrcid}
-          placeholder="0000-0000-0000-0000"
-          size="small"
-          disabled={disabled}
-          inputProps={{ 'aria-label': 'ORCID iD' }}
-          sx={{ width: { xs: '100%', sm: 260 }, mt: 3, flexShrink: 0 }}
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              size="small"
-              checked={authorRef.is_primary}
-              onChange={() => onToggle('is_primary')}
-              disabled={disabled}
-            />
-          }
-          label="Primary author"
-          sx={{ mr: 0, ml: 0, my: 0, mt: -2, flexShrink: 0 }}
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              size="small"
-              checked={authorRef.is_corresponding}
-              onChange={() => onToggle('is_corresponding')}
-              disabled={disabled}
-            />
-          }
-          label="Corresponding author"
-          sx={{ mr: 0, ml: 0, my: 0, mt: -2, flexShrink: 0 }}
-        />
-      </Box>
-    </Box>
-  );
-});
 
 export function AuthorListEditor({
   authors,
@@ -372,8 +96,6 @@ export function AuthorListEditor({
     setOverIdx(null);
   };
 
-  // Reorder operates on the full list; disable drag while a search filter is active
-  // so drag indices can't drift from the underlying array.
   const filtering = search.trim() !== '';
   const canReorder = !disabled && !filtering;
 
@@ -466,10 +188,11 @@ export function AuthorListEditor({
             borderColor: 'divider',
             borderRadius: 2,
             overflow: 'auto',
+            maxHeight: 480,
             minWidth: 0,
           }}
         >
-          <Table size="small" sx={{ tableLayout: 'fixed', width: '100%', minWidth: 680 }}>
+          <Table stickyHeader size="small" sx={{ tableLayout: 'fixed', width: '100%', minWidth: 680 }}>
             <TableHead>
               <TableRow>
                 <TableCell sx={{ ...headCellSx, width: 64 }}>ORDER</TableCell>
@@ -632,7 +355,6 @@ export function AuthorListEditor({
                             order={idx + 1}
                             disabled={disabled}
                             onToggle={(key) => toggle(idx, key)}
-                            onRemove={() => remove(idx)}
                           />
                         </TableCell>
                       </TableRow>

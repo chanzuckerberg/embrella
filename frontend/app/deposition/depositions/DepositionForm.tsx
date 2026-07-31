@@ -10,7 +10,7 @@ import { depositionKeys } from '../queryKeys';
 import type { AuthorRef, CrossRef, Deposition } from '../types';
 import { type AutoSaveState, useDraftAutoSave } from '../hooks/useDraftAutoSave';
 import { CrossReferencesEditor } from './CrossReferencesEditor';
-import { AuthorTable } from './AuthorTable';
+import { AuthorListEditor } from '../components/AuthorListEditor';
 
 interface FormState {
   title: string;
@@ -130,7 +130,7 @@ export function DepositionForm({
       </Box>
 
       <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, minWidth: 0 }}>
-        <AuthorTable authors={form.authors} onChange={(authors) => set('authors', authors)} disabled={readOnly} />
+        <AuthorListEditor authors={form.authors} onChange={(authors) => set('authors', authors)} disabled={readOnly} />
       </Paper>
     </Stack>
   );

@@ -8,9 +8,16 @@ import type { Dataset } from '../../types';
 
 jest.mock('../../services/depositionApi', () => ({
   updateDataset: jest.fn(),
-  fetchPeopleByIds: jest.fn().mockResolvedValue([]),
+  fetchPeopleByIds: jest
+    .fn()
+    .mockResolvedValue([
+      { id: 7, given_name: 'Test', family_name: 'Author', orcid: '0000-0002-1825-0097', institution: null },
+    ]),
   searchPeople: jest.fn().mockResolvedValue([]),
   createPerson: jest.fn(),
+  updatePerson: jest.fn(),
+  searchInstitutions: jest.fn().mockResolvedValue([]),
+  createInstitution: jest.fn(),
 }));
 
 const updateDataset = api.updateDataset as jest.Mock;
@@ -22,16 +29,8 @@ const DRAFT = {
   title: 'My dataset',
   status: 'draft',
   funding: [],
-  authors_json: [
-    {
-      full_name: 'Test Author',
-      affiliation: 'CZ Biohub',
-      orcid: '0000-0002-1825-0097',
-      is_corresponding: true,
-      author_list_order: 0,
-    },
-  ],
-} as unknown as Dataset;
+  authors_json: [{ author_id: 7, is_primary: false, is_corresponding: true, author_list_order: 0 }],
+} as Dataset;
 
 function renderForm(dataset = DRAFT) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

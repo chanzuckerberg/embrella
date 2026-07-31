@@ -4,7 +4,7 @@ import { Box, Radio, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
 import type { AuthorRef } from '../../../types';
-import { AuthorsEditor } from './AuthorsEditor';
+import { AuthorListEditor } from '../../../components/AuthorListEditor';
 import { SectionCard } from './SectionCard';
 
 function ChoiceCard({
@@ -91,7 +91,7 @@ export function Authors({
       </Box>
       {!sameAsDeposition && (
         <Box sx={{ pt: 0.5 }}>
-          <AuthorsEditor authors={authors} onChange={onChangeAuthors} disabled={readOnly} />
+          <AuthorListEditor authors={authors} onChange={onChangeAuthors} disabled={readOnly} />
         </Box>
       )}
     </SectionCard>
