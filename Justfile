@@ -417,7 +417,7 @@ backenddev: initenv
 servedev: initenv
     #!/bin/bash
     source ./helpers/shell_common.sh
-    uv run mkdocs build
+    uv run zensical build --clean
     just manage migrate
     just manage qcluster &
     just backenddev &
@@ -429,15 +429,16 @@ servedev: initenv
 # Documentation Helpers
 #############################################
 
-# Serves development server for viewing docs on port 8000 with live-reload.
+# Serves development server for viewing docs on port 8001 with live-reload.
+# override with `just servedocs -a localhost:PORT`.)
 servedocs +args="":
     #!/bin/bash
-    uv run mkdocs serve --livereload --watch ./ {{args}}
+    uv run zensical serve {{args}}
 
 # Build documents into docs_build/
 builddocs:
     #!/bin/bash
-    uv run mkdocs build
+    uv run zensical build --clean
 
 #############################################
 # Deployment Helpers
@@ -670,7 +671,7 @@ deploy stage envfile branch:
     echocolor $GREEN "Updating frontend dependencies"
     ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && conda activate umbrella && time just updatefrontenddeps'
 
-    # Build MkDocs documentation
+    # Build documentation (zensical)
     ssh svc.czii.umbrella@$HOST 'cd /srv/czii-umbrella-django && conda activate umbrella && time just builddocs'
 
     echocolor $GREEN "Running any migrations..."

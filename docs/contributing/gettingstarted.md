@@ -1,4 +1,4 @@
-# Getting Started
+# Getting Started: Developers
 
 The project supports two local-development paths. Pick whichever fits.
 

@@ -1,17 +1,96 @@
-[data-md-color-scheme="biohub"] {
-  --md-primary-fg-color:        #0D0001;
-  --md-primary-fg-color--light: #6E4FF9;
-  --md-primary-fg-color--dark:  #9b51e0;
+[data-md-color-scheme='biohub'] {
+  --md-primary-fg-color: #0d0001;
+  --md-primary-fg-color--light: #6e4ff9;
+  --md-primary-fg-color--dark: #9b51e0;
 }
 
-[data-md-color-scheme="biohub-dark"] {
-  --md-primary-fg-color:        #0D0001;
-  --md-primary-fg-color--light: #6E4FF9;
-  --md-primary-fg-color--dark:  #9b51e0;
+/* Biohub periwinkle, matching the frontend SDS theme (indigo/blue 500). */
+:root {
+  --embrella-periwinkle: #6e4ff9;
+  --embrella-periwinkle-dark: #33029c;
+  --embrella-periwinkle-light: #9d8bff;
 }
+
+.md-typeset .md-button {
+  color: var(--embrella-periwinkle);
+  border-color: var(--embrella-periwinkle);
+}
+.md-typeset .md-button--primary {
+  background-color: var(--embrella-periwinkle);
+  border-color: var(--embrella-periwinkle);
+  color: #fff;
+}
+.md-typeset .md-button:is(:focus, :hover) {
+  background-color: var(--embrella-periwinkle-dark);
+  border-color: var(--embrella-periwinkle-dark);
+  color: #fff;
+}
+
+[data-md-color-scheme='slate'] .md-typeset .md-button {
+  color: var(--embrella-periwinkle-light);
+  border-color: var(--embrella-periwinkle-light);
+}
+[data-md-color-scheme='slate'] .md-typeset .md-button--primary {
+  background-color: var(--embrella-periwinkle);
+  border-color: var(--embrella-periwinkle);
+  color: #fff;
+}
+[data-md-color-scheme='slate'] .md-typeset .md-button:is(:focus, :hover) {
+  background-color: var(--embrella-periwinkle-light);
+  border-color: var(--embrella-periwinkle-light);
+  color: #1d004d;
+}
+
+/* Video: a 16:9 poster with a play badge, swapped for the player on click. */
+.md-typeset .video-embed {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 40rem;
+  aspect-ratio: 16 / 9;
+  margin: 1em 0;
+  border: 0;
+  border-radius: 0.2rem;
+  overflow: hidden;
+  line-height: 0;
+}
+.md-typeset .video-embed[data-video] {
+  cursor: pointer;
+}
+.md-typeset .video-embed img,
+.md-typeset .video-embed iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+  display: block;
+}
+.md-typeset .video-embed[data-video]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3.4rem;
+  height: 3.4rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--embrella-periwinkle)
+    url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>')
+    no-repeat 55% 50%;
+  background-size: 1.6rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 125ms,
+    background-color 125ms;
+}
+.md-typeset .video-embed[data-video]:hover::after {
+  background-color: var(--embrella-periwinkle-dark);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
 .center-table {
   text-align: center;
 }
-.md-typeset .center-table :is(td,th):not([align]) {
+.md-typeset .center-table :is(td, th):not([align]) {
   text-align: initial; /* Reset alignment for table cells */
 }

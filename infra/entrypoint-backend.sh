@@ -4,7 +4,7 @@
 # Environment variables read:
 #   USE_MYSQL              "True" to wait for MYSQL_HOST:MYSQL_PORT before starting Django.
 #   MYSQL_HOST/USER/PWD/NAME/PORT   DB connection used for the wait probe.
-#   EMBRELLA_BUILD_STATIC  "1" → run collectstatic + mkdocs build before exec.
+#   EMBRELLA_BUILD_STATIC  "1" → run collectstatic + zensical build before exec.
 #                          Set on the gunicorn (web) container in staging/prod.
 #                          Unset everywhere else: workers, dev runserver, etc.
 #   EMBRELLA_MIGRATE       "1" → run DB migrations before exec. Set ONLY on the
@@ -41,7 +41,7 @@ if [ "$EMBRELLA_BUILD_STATIC" = "1" ]; then
   echo "Collecting static files..."
   python umbrella/manage.py collectstatic --noinput
   echo "Building docs..."
-  mkdocs build || echo "mkdocs build failed (non-fatal)"
+  zensical build --clean || echo "zensical build failed (non-fatal)"
   echo "Static files collected and docs built."
 fi
 
