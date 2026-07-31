@@ -44,7 +44,7 @@ export function IdentifierField({
   const notFound = settled && !q.isError && q.data === null;
   const lookupError = settled && q.isError;
 
-  let helperText: ReactNode = ' ';
+  let helperText: ReactNode = null;
   let isValid = false;
   if (trimmed) {
     if (!formatOk) helperText = LABELS[kind].invalid;
@@ -61,22 +61,24 @@ export function IdentifierField({
   }
   const error = !!trimmed && (!formatOk || notFound);
 
+  let helper: ReactNode;
+  if (helperText == null) helper = undefined;
+  else if (isValid) {
+    helper = (
+      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+        <Icon sdsIcon="Check" sdsSize="xxs" color="green" />
+        {helperText}
+      </Box>
+    );
+  } else helper = helperText;
+
   return (
     <TextField
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       error={error}
-      helperText={
-        isValid ? (
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-            <Icon sdsIcon="Check" sdsSize="xxs" color="green" />
-            {helperText}
-          </Box>
-        ) : (
-          helperText
-        )
-      }
+      helperText={helper}
       FormHelperTextProps={{ component: 'div', sx: isValid ? { color: 'success.main' } : undefined }}
       {...rest}
     />

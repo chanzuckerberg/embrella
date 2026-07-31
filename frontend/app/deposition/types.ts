@@ -7,16 +7,6 @@ export interface AuthorRef {
   author_list_order: number;
 }
 
-export interface AuthorEntry {
-  full_name: string;
-  affiliation?: string;
-  identifier_type?: string; // e.g. 'ORCID'
-  orcid?: string;
-  is_corresponding: boolean;
-  is_primary?: boolean;
-  author_list_order: number;
-}
-
 export interface DatasetFunding {
   id?: number;
   funding_agency_name: string;
@@ -40,12 +30,22 @@ export interface DatasetJob {
   push_slurm_job_id?: string | null;
   error_message?: string | null;
 }
+export interface Institution {
+  id: number;
+  name: string;
+  ror_id?: string | null;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+}
+
 export interface Person {
   id: number;
   orcid?: string | null;
   given_name: string;
   family_name: string;
   contact_email?: string | null;
+  institution?: Institution | null; // canonical affiliation (nested by the People API)
 }
 
 export type CrossRefType = 'publication' | 'related_db';
@@ -109,7 +109,7 @@ export interface Dataset {
   is_authors_same_as_deposition?: boolean;
   status: DatasetStatus;
   sample?: DatasetSample | null;
-  authors_json?: AuthorEntry[];
+  authors_json?: AuthorRef[];
   dataset_publications?: string;
   related_database_entries?: string;
   funding?: DatasetFunding[];

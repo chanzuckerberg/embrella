@@ -7,7 +7,7 @@ import { Box, Stack } from '@mui/material';
 
 import { updateDataset } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
-import type { AuthorEntry, CrossRef, Dataset, DatasetFunding, DatasetSample } from '../../types';
+import type { AuthorRef, CrossRef, Dataset, DatasetFunding, DatasetSample } from '../../types';
 import { type AutoSaveState, useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useDeposition } from '../../hooks/useDeposition';
 import { CrossReferencesEditor } from '../../depositions/CrossReferencesEditor';
@@ -36,7 +36,7 @@ interface FormState {
   assay_label: string;
   assay_ontology_id: string;
   is_authors_same_as_deposition: boolean;
-  authors: AuthorEntry[];
+  authors: AuthorRef[];
   funding: DatasetFunding[];
   crossRefs: CrossRef[];
   sample: DatasetSample;
@@ -53,7 +53,7 @@ function toForm(d: Dataset): FormState {
     assay_label: d.assay_label ?? '',
     assay_ontology_id: d.assay_ontology_id ?? '',
     is_authors_same_as_deposition: d.is_authors_same_as_deposition ?? true,
-    authors: (d.authors_json ?? []).filter((a) => a.full_name?.trim() || a.orcid?.trim() || a.affiliation?.trim()),
+    authors: d.authors_json ?? [],
     funding: d.funding ?? [],
     crossRefs: [
       ...splitCsv(d.dataset_publications).map((value): CrossRef => ({ type: 'publication', value })),

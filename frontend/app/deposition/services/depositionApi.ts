@@ -3,7 +3,23 @@
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { deleteResource, fetchResource, patchResource, postResource } from '@app/common/queries/fetchResource';
 
-import type { Dataset, Deposition, DepositionMethodLink, DepositionSession, Person, SubmissionList } from '../types';
+import type {
+  Dataset,
+  Deposition,
+  DepositionMethodLink,
+  DepositionSession,
+  Institution,
+  Person,
+  SubmissionList,
+} from '../types';
+
+/** Writable Person fields. `institution_id` sets the affiliation by Institution id. */
+export interface PersonUpdate {
+  given_name?: string;
+  family_name?: string;
+  orcid?: string | null;
+  institution_id?: number | null;
+}
 
 const url = (path: string): string => `${DJANGO_URL}${path}`;
 
@@ -25,11 +41,26 @@ export async function createPerson(data: Partial<Person>): Promise<Person> {
   return parse(await postResource(url(API.PEOPLE), data as Record<string, unknown>));
 }
 
+export async function updatePerson(id: number, data: PersonUpdate): Promise<Person> {
+  return parse(await patchResource(url(`${API.PEOPLE}${id}/`), data as Record<string, unknown>));
+}
+
 export async function searchPeople(term: string): Promise<Person[]> {
   const data = await parse<Person[] | { results: Person[] }>(
     await fetchResource(url(`${API.PEOPLE}?search=${encodeURIComponent(term)}`))
   );
   return Array.isArray(data) ? data : (data.results ?? []);
+}
+
+export async function searchInstitutions(term: string): Promise<Institution[]> {
+  const data = await parse<Institution[] | { results: Institution[] }>(
+    await fetchResource(url(`${API.INSTITUTIONS}?search=${encodeURIComponent(term)}`))
+  );
+  return Array.isArray(data) ? data : (data.results ?? []);
+}
+
+export async function createInstitution(name: string): Promise<Institution> {
+  return parse(await postResource(url(API.INSTITUTIONS), { name }));
 }
 
 export async function fetchPeopleByIds(ids: number[]): Promise<Person[]> {
