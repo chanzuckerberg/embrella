@@ -197,7 +197,6 @@ export function ReservationModal({
   const canContinue = (() => {
     if (mode === 'new') return true;
     if (mode === 'reuse_dataset') return existingDatasetId !== '';
-    // existing_deposition
     if (tab === 'manual') return false;
     if (depositionId === '') return false;
     return datasetChoice === 'new' || existingDatasetId !== '';

@@ -9,8 +9,7 @@ import { IdentifierField } from '../components/IdentifierField';
 import { createPerson, searchPeople } from '../services/depositionApi';
 import { ORCID_RE, orcidChecksumOk } from '../services/identifiers';
 import type { Person } from '../types';
-
-const personName = (p: Person) => `${p.given_name} ${p.family_name}`.trim();
+import { personName } from '../components/authorHelpers';
 
 export function AddAuthorDialog({
   open,

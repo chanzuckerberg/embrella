@@ -45,7 +45,7 @@ export interface Person {
   given_name: string;
   family_name: string;
   contact_email?: string | null;
-  institution?: Institution | null; // canonical affiliation (nested by the People API)
+  institution?: Institution | null;
 }
 
 export type CrossRefType = 'publication' | 'related_db';

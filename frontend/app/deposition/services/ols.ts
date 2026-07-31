@@ -28,7 +28,6 @@ async function olsQuery(endpoint: 'search' | 'select', params: Record<string, st
   return docs.map(toTerm).filter((t): t is OntologyTerm => t !== null);
 }
 
-/** Autocomplete search within an ontology */
 export function searchOntology(term: string, ontology: string): Promise<OntologyTerm[]> {
   const q = term.trim();
   if (!q) return Promise.resolve([]);
