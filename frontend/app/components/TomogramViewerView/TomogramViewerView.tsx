@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useCallback, useState, useMemo } from 'react';
+import { useReducer, useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
 import { AssessmentPanel } from './components/AssessmentPanel';
@@ -17,6 +17,7 @@ import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURLWithPathParams, getRequestURL } from '@app/common/queries/utils';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { useIsNarrowViewport } from '@app/common/hooks/useIsNarrowViewport';
+import { usePinchZoom } from './hooks/usePinchZoom';
 import { QualityValue, Review, ReviewTomogramDetail, SaveState } from './types';
 
 // Wrapper component - provider is now inside the inner component to allow remounting
@@ -120,6 +121,10 @@ const TomogramViewerContent = ({
 }: TomogramViewerProps & { state: TomogramState; dispatch: React.Dispatch<TomogramAction> }) => {
   const isNarrow = useIsNarrowViewport();
   const [menuOpen, setMenuOpen] = useState(false);
+  // Idetik has no multi-touch gesture support; this translates pinches into the wheel
+  // events its camera controls already handle.
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+  usePinchZoom(viewerContainerRef);
   const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
   const [zAxisMetadata, setZAxisMetadata] = useState<{ min: number; max: number; count: number } | null>(null);
   const [, setZMaxIndex] = useState<number | undefined>(undefined);
@@ -416,7 +421,10 @@ const TomogramViewerContent = ({
       <div className="flex-auto flex min-h-0 border-t border-gray-300">
         {/* Narrow screens render the sidebar and assessment panel inside the drawer below. */}
         {!isNarrow && <SideBar {...sideBarProps} />}
-        <div className="flex-auto min-w-0 flex flex-col p-6 max-lg:!p-1 border-x-[2px] max-lg:border-x-0 border-gray-300 bg-gray-200 h-full max-lg:touch-none">
+        <div
+          ref={viewerContainerRef}
+          className="flex-auto min-w-0 flex flex-col p-6 max-lg:!p-1 border-x-[2px] max-lg:border-x-0 border-gray-300 bg-gray-200 h-full max-lg:touch-none"
+        >
           {isStableMount && state.detail?.zarrPath !== undefined && zAxisMetadata !== null && zProp !== undefined ? (
             <OmeZarrChunkedImageViewer
               key={`${state.detail.zarrPath}-${state.selectedTomogramId}`}
