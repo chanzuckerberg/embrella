@@ -1,21 +1,24 @@
 'use client';
 
-import { useReducer, useEffect, useCallback, useState, useMemo } from 'react';
+import { useReducer, useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { TopBar } from './components/TopBar';
 import { SideBar } from './components/SideBar';
-import { QualityControls } from './components/QualityControls';
-import { ObjectLabelsSelector } from './components/ObjectLabelsSelector';
-import { RejectionReasonsSelector } from './components/RejectionReasonsSelector';
+import { AssessmentPanel } from './components/AssessmentPanel';
+import { MobileHeaderBar } from './components/MobileHeaderBar';
+import { SliderControls } from './components/SideBar/components/SliderControls';
 import { OmeZarrChunkedImageViewer, IdetikProvider } from '@idetik/react';
 import { ChunkedImageLayer, ChannelsEnabled, createImageSourcePolicy } from '@idetik/core';
 import { getZattrsData, getZAxisMetadata } from './utils';
 import { useHotkeys } from 'react-hotkeys-hook';
 import './TomogramViewerView.css';
 import { Button, Icon } from '@czi-sds/components';
+import { Drawer } from '@mui/material';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { getRequestURLWithPathParams, getRequestURL } from '@app/common/queries/utils';
 import { DJANGO_URL } from '@app/common/constants/api';
-import { Review, ReviewTomogramDetail } from './types';
+import { useIsNarrowViewport } from '@app/common/hooks/useIsNarrowViewport';
+import { usePinchZoom } from './hooks/usePinchZoom';
+import { QualityValue, Review, ReviewTomogramDetail, SaveState } from './types';
 
 // Wrapper component - provider is now inside the inner component to allow remounting
 export const TomogramViewerView = (props: TomogramViewerProps) => {
@@ -29,15 +32,13 @@ interface TomogramViewerProps {
   onReviewUpdate: (review: Review) => void;
 }
 
-type QualityValue = 'pending' | 'accepted' | 'rejected' | 'uncertain' | 'exemplary';
-
 interface TomogramState {
   selectedTomogramId: string;
   detail: ReviewTomogramDetail | null;
   quality: QualityValue;
   objectLabels: string[];
   rejectionReasons: string[];
-  saveState: 'idle' | 'saving' | 'saved' | 'failed';
+  saveState: SaveState;
   contrastLimits: [number, number];
   contrastRange: [number, number]; // Dynamic range for the slider
 }
@@ -58,7 +59,7 @@ type TomogramAction =
   | { type: 'SET_QUALITY'; payload: string }
   | { type: 'SET_OBJECT_LABELS'; payload: string[] }
   | { type: 'SET_REJECTION_REASONS'; payload: string[] }
-  | { type: 'SET_SAVE_STATE'; payload: 'idle' | 'saving' | 'saved' | 'failed' }
+  | { type: 'SET_SAVE_STATE'; payload: SaveState }
   | { type: 'SET_CONTRAST_LIMITS'; payload: [number, number] }
   | { type: 'SET_CONTRAST_RANGE'; payload: [number, number] }
   | { type: 'SET_SELECTED_TOMOGRAM'; payload: string };
@@ -118,6 +119,12 @@ const TomogramViewerContent = ({
   state,
   dispatch,
 }: TomogramViewerProps & { state: TomogramState; dispatch: React.Dispatch<TomogramAction> }) => {
+  const isNarrow = useIsNarrowViewport();
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Idetik has no multi-touch gesture support; this translates pinches into the wheel
+  // events its camera controls already handle.
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+  usePinchZoom(viewerContainerRef);
   const [currentZIndex, setCurrentZIndex] = useState<number>(0); // Track current z-slice
   const [zAxisMetadata, setZAxisMetadata] = useState<{ min: number; max: number; count: number } | null>(null);
   const [, setZMaxIndex] = useState<number | undefined>(undefined);
@@ -364,29 +371,60 @@ const TomogramViewerContent = ({
     );
   }
 
+  const sideBarProps = {
+    tomogramDetail: state.detail,
+    reviewName: review.reviewName,
+    tomograms: review.tomograms,
+    selectedTomogram: state.selectedTomogramId,
+    currentIndex,
+    onPrevious: () => changeTomogram(-1),
+    onNext: () => changeTomogram(1),
+    onSelectTomogram: (id: string) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: id }),
+    currentZIndex,
+    zAxisMetadata: zAxisMetadata || undefined,
+    onZIndexChange: handleZIndexChange,
+    channelLayer,
+    extraControlProps,
+  };
+
+  const assessmentProps = {
+    isDisabled: !userCanReview,
+    isSaving: state.saveState === 'saving',
+    quality: state.quality,
+    availableAnnotationObjects: review.availableAnnotationObjects,
+    objectLabels: state.objectLabels,
+    rejectionReasons: state.rejectionReasons,
+    canDownload: reviewedTomograms >= 1,
+    onQualityChange: (quality: QualityValue) => dispatch({ type: 'SET_QUALITY', payload: quality }),
+    onObjectLabelsChange: (labels: string[]) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels }),
+    onRejectionReasonsChange: (reasons: string[]) => dispatch({ type: 'SET_REJECTION_REASONS', payload: reasons }),
+    onPrevious: () => changeTomogram(-1),
+    onNext: () => changeTomogram(1),
+    onDownload: downloadReviewResults,
+  };
+
   return (
-    <div className="w-full h-screen flex flex-col items-stretch bg-white">
+    <div className="w-full h-screen max-lg:h-dvh flex flex-col items-stretch bg-white">
       <TopBar saveState={state.saveState} />
       {/* Permission banner intentionally disabled to allow everyone write access; kept for context. */}
       {/* eslint-disable-next-line sonarjs/no-commented-code */}
       {/* {!userCanReview && <PermissionBanner ownerName={review.owner.name} />} */}
-      <div className="flex-auto flex min-h-0 border-t border-gray-300">
-        <SideBar
-          tomogramDetail={state.detail}
+      {isNarrow && (
+        <MobileHeaderBar
           reviewName={review.reviewName}
-          tomograms={review.tomograms}
-          selectedTomogram={state.selectedTomogramId}
+          tomogramName={state.detail?.displayName ?? review.tomograms[currentIndex]?.position}
           currentIndex={currentIndex}
-          onPrevious={() => changeTomogram(-1)}
-          onNext={() => changeTomogram(1)}
-          onSelectTomogram={(id) => dispatch({ type: 'SET_SELECTED_TOMOGRAM', payload: id })}
-          currentZIndex={currentZIndex}
-          zAxisMetadata={zAxisMetadata || undefined}
-          onZIndexChange={handleZIndexChange}
-          channelLayer={channelLayer}
-          extraControlProps={extraControlProps}
+          totalTomograms={review.tomograms.length}
+          onOpenMenu={() => setMenuOpen(true)}
         />
-        <div className="flex-auto flex flex-col p-6 border-x-[2px] border-gray-300 bg-gray-200 h-full">
+      )}
+      <div className="flex-auto flex min-h-0 border-t border-gray-300">
+        {/* Narrow screens render the sidebar and assessment panel inside the drawer below. */}
+        {!isNarrow && <SideBar {...sideBarProps} />}
+        <div
+          ref={viewerContainerRef}
+          className="flex-auto min-w-0 flex flex-col p-6 max-lg:!p-1 border-x-[2px] max-lg:border-x-0 border-gray-300 bg-gray-200 h-full max-lg:touch-none"
+        >
           {isStableMount && state.detail?.zarrPath !== undefined && zAxisMetadata !== null && zProp !== undefined ? (
             <OmeZarrChunkedImageViewer
               key={`${state.detail.zarrPath}-${state.selectedTomogramId}`}
@@ -404,71 +442,47 @@ const TomogramViewerContent = ({
             </div>
           )}
         </div>
-        <div className="flex flex-col gap-3">
-          <div className="shrink-0 !pt-[20px] !pr-[20px] !pl-[20px] !pb-[20px]">
-            <QualityControls
-              isDisabled={!userCanReview}
-              selectedQuality={state.quality}
-              onAccept={() => dispatch({ type: 'SET_QUALITY', payload: 'accepted' })}
-              onReject={() => dispatch({ type: 'SET_QUALITY', payload: 'rejected' })}
-              onUncertain={() => dispatch({ type: 'SET_QUALITY', payload: 'uncertain' })}
-              onExemplary={() => dispatch({ type: 'SET_QUALITY', payload: 'exemplary' })}
-            />
-          </div>
-          {(state.quality === 'accepted' || state.quality === 'uncertain' || state.quality === 'exemplary') && (
-            <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
-              <ObjectLabelsSelector
-                isDisabled={!userCanReview}
-                availableObjects={review.availableAnnotationObjects}
-                selectedObjects={state.objectLabels}
-                setSelectedObjects={(labels) => dispatch({ type: 'SET_OBJECT_LABELS', payload: labels })}
-              />
-            </div>
-          )}
-          {state.quality === 'rejected' && (
-            <div className="shrink-0 !pb-[20px] !pr-[20px] !pl-[20px] !pt-0">
-              <RejectionReasonsSelector
-                isDisabled={!userCanReview}
-                selectedReasons={state.rejectionReasons}
-                setSelectedReasons={(reasons) => dispatch({ type: 'SET_REJECTION_REASONS', payload: reasons })}
-              />
-            </div>
-          )}
-          <div className="flex justify-center gap-4 !pt-[50px]">
-            <Button
-              disabled={state.saveState === 'saving'}
-              className="!w-32"
-              sdsStyle="outline"
-              sdsType="secondary"
-              startIcon={<Icon sdsIcon="ChevronLeft" sdsSize="xs" />}
-              onClick={() => changeTomogram(-1)}
-            >
-              Previous Tomo
-            </Button>
-            <Button
-              disabled={state.saveState === 'saving'}
-              className="!w-32"
-              sdsStyle="solid"
-              sdsType="primary"
-              endIcon={<Icon sdsIcon="ChevronRight" sdsSize="xs" />}
-              onClick={() => changeTomogram(1)}
-            >
-              Next Tomo
-            </Button>
-          </div>
-          <div className="flex justify-center !pt-[20px]">
-            <Button
-              disabled={state.saveState === 'saving' || reviewedTomograms < 1}
-              className="!w-60"
-              sdsStyle="outline"
-              sdsType="secondary"
-              onClick={downloadReviewResults}
-            >
-              Download Review
-            </Button>
-          </div>
-        </div>
+        {!isNarrow && <AssessmentPanel {...assessmentProps} />}
       </div>
+      {/* Z-slice navigation is the one control that has to stay reachable while
+          scrubbing through a tomogram, so it gets a persistent bar of its own. */}
+      {isNarrow && (
+        <div className="shrink-0 border-t-[2px] border-gray-300 !px-[16px] !py-[10px]">
+          <SliderControls
+            compact
+            currentZIndex={currentZIndex}
+            zAxisMetadata={zAxisMetadata || undefined}
+            onZIndexChange={handleZIndexChange}
+          />
+        </div>
+      )}
+      {isNarrow && (
+        <Drawer
+          anchor="left"
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          hideBackdrop={false}
+          ModalProps={{ keepMounted: true }}
+          PaperProps={{ sx: { width: 'min(80vw, 340px)', overflowY: 'auto' } }}
+        >
+          <div className="flex flex-row justify-end shrink-0 !px-[12px] !pt-[12px]">
+            <Button
+              sdsStyle="minimal"
+              sdsType="secondary"
+              aria-label="Close review controls"
+              startIcon={<Icon sdsIcon="XMark" sdsSize="s" />}
+              onClick={() => setMenuOpen(false)}
+            >
+              Close
+            </Button>
+          </div>
+          <SideBar
+            {...sideBarProps}
+            showSliderSection={false}
+            assessmentSlot={<AssessmentPanel {...assessmentProps} />}
+          />
+        </Drawer>
+      )}
     </div>
   );
 };

@@ -18,3 +18,11 @@
 .select-none.absolute.bottom-0 .text-white {
   color: white !important;
 }
+
+/* Narrow screens (below Tailwind's lg) have a much shorter canvas, where a 100px
+   offset floats the scale bar near the middle of the image. */
+@media (max-width: 1023.95px) {
+  .select-none.absolute.bottom-0 {
+    bottom: 8px !important;
+  }
+}

@@ -12,7 +12,7 @@ export const TomogramInfo = ({
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   return (
-    <div className="min-w-[300px] max-w-[450px] w-full">
+    <div className="min-w-[300px] max-lg:!min-w-0 max-w-[450px] w-full">
       <div className="flex items-center justify-between cursor-pointer w-full" onClick={() => setOpen((v) => !v)}>
         <h3 className="font-bold text-lg">Current Tomogram Info</h3>
         <span className="ml-2">
