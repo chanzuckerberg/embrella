@@ -42,9 +42,26 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper variant="outlined" sx={{ borderRadius: 3 }}>
+      <Paper
+        variant="outlined"
+        sx={{
+          borderRadius: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          height: 'calc(100vh - 194px)',
+          minHeight: 520,
+          overflow: 'hidden',
+        }}
+      >
         <Box
-          sx={{ px: { xs: 3, md: 5 }, pt: { xs: 3, md: 4 }, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}
+          sx={{
+            flexShrink: 0,
+            px: { xs: 3, md: 5 },
+            pt: { xs: 3, md: 4 },
+            pb: 3,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
             <Box>
@@ -69,7 +86,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           <WizardStepper steps={WIZARD_STEPS} current={current} skipped={skippedNums} onSelect={go} />
         </Box>
 
-        <Box sx={{ px: { xs: 3, md: 5 }, py: { xs: 4, md: 5 } }}>
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: { xs: 3, md: 5 }, py: { xs: 4, md: 5 } }}>
           {readOnly && (
             <Alert severity="info" sx={{ mb: 3 }}>
               You&apos;re viewing another user&apos;s submission - it&apos;s read-only.
@@ -78,7 +95,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           <Body dataset={dataset} reportSave={setSave} readOnly={readOnly} />
         </Box>
 
-        <Box sx={{ px: { xs: 3, md: 5 }, py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ flexShrink: 0, px: { xs: 3, md: 5 }, py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
           <WizardFooter
             disableBack={pos <= 0}
             disableNext={pos < 0 || pos >= activeNums.length - 1}

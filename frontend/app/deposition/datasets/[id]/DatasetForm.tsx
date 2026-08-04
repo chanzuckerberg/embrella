@@ -21,6 +21,16 @@ import { Sample } from './sections/Sample';
 import { SectionCard } from './sections/SectionCard';
 import { type NavItem, SideNav } from './sections/SideNav';
 
+function getScrollParent(el: HTMLElement | null): HTMLElement | null {
+  let node = el?.parentElement ?? null;
+  while (node) {
+    const oy = getComputedStyle(node).overflowY;
+    if (oy === 'auto' || oy === 'scroll') return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
 const splitCsv = (s?: string): string[] =>
   (s ?? '')
     .split(',')
@@ -106,18 +116,20 @@ export function DatasetForm({
   const [active, setActive] = useState('basic');
 
   useEffect(() => {
-    const ACTIVE_LINE = 140;
+    const scroller = getScrollParent(refs.current.basic);
     const onScroll = () => {
+      const line = scroller ? scroller.getBoundingClientRect().top + 24 : 140;
       let current = NAV[0].key;
       for (const n of NAV) {
         const el = refs.current[n.key];
-        if (el && el.getBoundingClientRect().top <= ACTIVE_LINE) current = n.key;
+        if (el && el.getBoundingClientRect().top <= line) current = n.key;
       }
       setActive(current);
     };
     onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const target: HTMLElement | Window = scroller ?? window;
+    target.addEventListener('scroll', onScroll, { passive: true });
+    return () => target.removeEventListener('scroll', onScroll);
   }, []);
 
   const save = useCallback(
