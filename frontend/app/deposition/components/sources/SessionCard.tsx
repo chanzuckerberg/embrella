@@ -173,7 +173,9 @@ export function SessionCard({
             />
 
             {subsetMode === 'custom' && (
-              <SubsetCsvField row={row} readOnly={readOnly} onChange={set} onUpload={onUploadSubset} />
+              <Box sx={{ gridColumn: 'span 2' }}>
+                <SubsetCsvField row={row} readOnly={readOnly} onChange={set} onUpload={onUploadSubset} />
+              </Box>
             )}
           </Box>
 

@@ -34,7 +34,16 @@ export function SubsetCsvField({
         value={mode}
         onChange={(_, v) => v && onChange({ subset_input_mode: v })}
         disabled={readOnly}
-        sx={{ mb: 1 }}
+        sx={{
+          mb: 1,
+          gap: 1,
+          '& .MuiToggleButtonGroup-grouped': {
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            '&:not(:first-of-type)': { ml: 0, borderLeft: '1px solid', borderColor: 'divider' },
+          },
+        }}
       >
         <ToggleButton value="upload" sx={{ textTransform: 'none' }}>
           Upload file
@@ -45,7 +54,7 @@ export function SubsetCsvField({
       </ToggleButtonGroup>
 
       {mode === 'upload' ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
           <TextField
             fullWidth
             size="small"
