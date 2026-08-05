@@ -57,10 +57,7 @@ const getTomogramsDropdownItems = (isReviewEnabled: boolean) => {
 };
 
 // Data dropdown items
-// const DATA_DROPDOWN_ITEMS = [
-//   { name: 'storage', label: 'Storage Explorer', href: '/processing/data/storage' },
-//   { name: 'export', label: 'Export', href: '/processing/data/export' },
-// ];
+const DATA_DROPDOWN_ITEMS = [{ name: 'storage', label: 'Storage Explorer', href: '/processing/data/storage' }];
 
 const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
   home: [],
@@ -232,12 +229,15 @@ export const TopNavigation = () => {
   const featureFlags = useContext(FeatureFlagsContext);
   const user = useContext(UserContext);
   const isReviewEnabled = featureFlags.includes(FEATURE_FLAG.REVIEW);
+  const isManageDataEnabled = featureFlags.includes(FEATURE_FLAG.MANAGE_DATA);
 
   // Dropdown states
   const [jobsButton, setJobsButton] = useState<HTMLButtonElement | null>(null);
   const [tomogramsButton, setTomogramsButton] = useState<HTMLButtonElement | null>(null);
   const [isJobsDropdownOpen, setIsJobsDropdownOpen] = useState(false);
   const [isTomogramsDropdownOpen, setIsTomogramsDropdownOpen] = useState(false);
+  const [dataButton, setDataButton] = useState<HTMLButtonElement | null>(null);
+  const [isDataDropdownOpen, setIsDataDropdownOpen] = useState(false);
 
   // Check if any Jobs route is active
   const isJobsActive = pathname.startsWith('/processing/jobs');
@@ -246,7 +246,7 @@ export const TopNavigation = () => {
   const isTomogramsActive = pathname.startsWith('/processing/tomograms');
 
   // Check if any Data route is active
-  // const isDataActive = pathname.startsWith('/processing/data');
+  const isDataActive = pathname.startsWith('/processing/data');
 
   const handleLogout = () => {
     // Redirect to logout and then back to frontend home page
@@ -463,35 +463,39 @@ export const TopNavigation = () => {
                 />
 
                 {/* Data Dropdown */}
-                {/* <StyledJobsButton
-                  ref={dataButtonRef}
-                  onClick={() => setIsDataDropdownOpen((prev) => !prev)}
-                  isActive={isDataActive}
-                >
-                  Data
-                  <Icon sdsIcon="ChevronDown" sdsSize="xs" />
-                </StyledJobsButton>
-                <DropdownMenu
-                  label="Data"
-                  options={DATA_DROPDOWN_ITEMS.map((item) => ({
-                    name: item.name,
-                    component: (
-                      <DropdownItemWrapper>
-                        <Link href={item.href}>{item.label}</Link>
-                      </DropdownItemWrapper>
-                    ),
-                  }))}
-                  open={isDataDropdownOpen}
-                  onClickAway={() => setIsDataDropdownOpen(false)}
-                  anchorEl={dataButtonRef.current}
-                  PopperBaseProps={{
-                    className: 'z-50 rounded-sds-m !w-[200px] [&_li]:list-none [&_svg]:hidden',
-                    popperOptions: {
-                      modifiers: [{ name: 'offset', options: { offset: [0, 4] } }],
-                      placement: 'bottom-start',
-                    },
-                  }}
-                /> */}
+                {isManageDataEnabled && (
+                  <>
+                    <StyledJobsButton
+                      ref={setDataButton}
+                      onClick={() => setIsDataDropdownOpen((prev) => !prev)}
+                      isActive={isDataActive}
+                    >
+                      Data
+                      <Icon sdsIcon="ChevronDown" sdsSize="xs" />
+                    </StyledJobsButton>
+                    <DropdownMenu
+                      label="Data"
+                      options={DATA_DROPDOWN_ITEMS.map((item) => ({
+                        name: item.name,
+                        component: (
+                          <DropdownItemWrapper>
+                            <Link href={item.href}>{item.label}</Link>
+                          </DropdownItemWrapper>
+                        ),
+                      }))}
+                      open={isDataDropdownOpen}
+                      onClickAway={() => setIsDataDropdownOpen(false)}
+                      anchorEl={dataButton}
+                      PopperBaseProps={{
+                        className: 'z-50 rounded-sds-m !w-[200px] [&_li]:list-none [&_svg]:hidden',
+                        popperOptions: {
+                          modifiers: [{ name: 'offset', options: { offset: [0, 4] } }],
+                          placement: 'bottom-start',
+                        },
+                      }}
+                    />
+                  </>
+                )}
               </>
             )}
             {/* Other sub-nav items */}
