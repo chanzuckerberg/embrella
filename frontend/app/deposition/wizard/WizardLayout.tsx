@@ -48,8 +48,8 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           borderRadius: 3,
           display: 'flex',
           flexDirection: 'column',
-          height: 'calc(100vh - 194px)',
-          minHeight: 520,
+          maxHeight: 'calc(100vh - 194px)',
+          minHeight: 620,
           overflow: 'hidden',
         }}
       >
