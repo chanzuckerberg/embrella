@@ -129,7 +129,6 @@ export async function autoFillSession(id: number): Promise<unknown> {
   return parse(await postResource(url(`${API.DEPOSITION_SESSIONS}${id}/auto-fill/`), {}));
 }
 
-
 export async function listMsiSessions(): Promise<string[]> {
   const data = await parse<{ session_names?: string[] }>(await fetchResource(url(API.MSI_SESSIONS_LIST)));
   return data.session_names ?? [];
