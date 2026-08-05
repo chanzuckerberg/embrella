@@ -45,6 +45,21 @@ export async function fetchResource(requestURL: string): Promise<Response> {
 export function postResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {
   return mutateResource('POST', requestURL, body);
 }
+/** Like postResource, but for multipart bodies. */
+export async function postFormData(requestURL: string, body: FormData): Promise<Response> {
+  const csrfToken = getCsrfToken();
+  const response = await fetch(requestURL, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      ...(csrfToken && { 'X-CSRFToken': csrfToken }),
+    },
+    body,
+  });
+
+  redirectIfUnauthenticated(response);
+  return response;
+}
 
 export function patchResource(requestURL: string, body: Record<string, unknown>): Promise<Response> {
   return mutateResource('PATCH', requestURL, body);
