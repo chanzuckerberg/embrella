@@ -51,7 +51,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--output-dir",
             type=str,
-            help="Output directory for survey results (default: /hpc/projects/<cluster>/surveys/)",
+            help="Output directory for survey results (default: /hpc/projects/group.czii/svc.czii.umbrella/file_surveys/)",
         )
         parser.add_argument(
             "--dry-run",
@@ -115,7 +115,7 @@ class Command(BaseCommand):
             output_dir = options["output_dir"]
         else:
             # Default output directory
-            output_dir = "/hpc/projects/group.czii/michael.souza/surveys"
+            output_dir = "/hpc/projects/group.czii/svc.czii.umbrella/file_surveys"
 
         # Get user
         if options["user"]:
