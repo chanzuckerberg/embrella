@@ -72,6 +72,17 @@ class Dataset(models.Model):
     )
     dataset_publications = models.TextField(blank=True)
     related_database_entries = models.TextField(blank=True)
+    TOMOGRAM_SUBSET_CHOICES = [
+        ("all", "All from AreTomo runs"),
+        ("annotated", "Only tomograms with annotations"),
+        ("custom", "Custom CSV (per-row override)"),
+    ]
+    tomogram_subset_mode = models.CharField(
+        max_length=16,
+        choices=TOMOGRAM_SUBSET_CHOICES,
+        default="all",
+        help_text="How the tomogram subset is chosen; applies to ALL sessions in this dataset.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

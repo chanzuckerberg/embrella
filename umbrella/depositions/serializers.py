@@ -100,12 +100,14 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
     """Shallow session selection nested under Dataset."""
 
     id = serializers.IntegerField(required=False)
+    msi_session_name = serializers.CharField(source="msi_session.name", read_only=True)
 
     class Meta:
         model = DepositionSession
         fields = [
             "id",
             "msi_session",
+            "msi_session_name",
             "aretomo_run_name",
             "denoise_run_name",
             "subset_csv_path",
