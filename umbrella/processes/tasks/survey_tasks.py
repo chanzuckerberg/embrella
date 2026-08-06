@@ -187,8 +187,7 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
     Process the Parquet file from a completed filesystem survey.
 
     Reads the Parquet file via SFTP, computes directory-level aggregates,
-    and creates DirectorySummary records in the database. Also computes
-    origin detection (app_generated, user_created, synced_from_czii).
+    and creates DirectorySummary records in the database.
 
     Args:
         survey_id: FilesystemSurvey ID
@@ -200,7 +199,6 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
     import duckdb
 
     from processes.models import DirectorySummary, FilesystemSurvey
-    from processes.services.domain_path_service import DomainPathService
 
     try:
         survey = FilesystemSurvey.objects.get(id=survey_id)
@@ -293,9 +291,6 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
 
             logger.info(f"Found {len(dir_aggregates)} directories to summarize")
 
-            # Get entity paths for origin detection and entity linking
-            entity_paths = DomainPathService.get_all_entity_paths()
-
             # Create DirectorySummary records
             summaries_created = 0
             base_path_depth = len(survey.base_path.rstrip("/").split("/"))
@@ -309,21 +304,14 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
                 # Calculate depth relative to base_path
                 dir_depth = len(parent_dir.rstrip("/").split("/")) - base_path_depth
 
-                # Detect origin and get entity link info
-                origin = "user_created"  # Default
-                content_type_id = None
-                object_id = None
-
-                if parent_dir in entity_paths:
-                    origin = "app_generated"
-                    entity_info = entity_paths[parent_dir]
-                    content_type_id = entity_info["content_type_id"]
-                    object_id = entity_info["object_id"]
-                elif cluster_id == "bruno":
-                    # For bruno, check if path exists on czii (synced)
-                    # This would require comparing against a czii survey
-                    # For now, we'll leave it as user_created and enhance later
-                    pass
+                # Origin classification is not implemented. The previous domain-entity
+                # index (DomainPathService) was removed: the models it read are no longer
+                # written by the processor flow, so it silently classified everything as
+                # user_created.
+                # TODO: reclassify by parent folder / processor type, or by MSI session.
+                # TODO: implement compare bruno survey with czii's (needs a czii survey
+                # to diff against to detect synced_from_czii directories).
+                origin = "unknown"
 
                 # Create or update DirectorySummary
                 DirectorySummary.objects.update_or_create(
@@ -337,8 +325,6 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
                         "owner_username": common_username,
                         "origin": origin,
                         "depth": max(0, dir_depth),
-                        "content_type_id": content_type_id,
-                        "object_id": object_id,
                         "newest_file_mtime": (datetime.fromtimestamp(newest_mtime, tz=UTC) if newest_mtime else None),
                         "oldest_file_mtime": (datetime.fromtimestamp(oldest_mtime, tz=UTC) if oldest_mtime else None),
                     },
