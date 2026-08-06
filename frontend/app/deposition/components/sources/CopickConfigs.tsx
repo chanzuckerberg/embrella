@@ -84,6 +84,7 @@ export function CopickConfigs({
       <Button
         sdsType="primary"
         sdsStyle="outline"
+        size="small"
         startIcon={<Icon sdsIcon="Plus" sdsSize="xs" />}
         disabled={readOnly || !row.msi_session_name}
         onClick={(e) => setAnchor(e.currentTarget)}

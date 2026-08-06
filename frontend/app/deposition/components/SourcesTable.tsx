@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useState } from 'react';
 import { Button, Callout, Icon } from '@czi-sds/components';
 import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 
@@ -51,7 +52,13 @@ export function SourcesTable({
   const removeRow = (key: string) => onChange(rows.filter((r) => r.key !== key));
   const addRow = () => onChange([...rows, emptyRow(`new-${rows.length}-${sessionOptions.length}`)]);
 
-  const stats = rollup(rows, subsetMode);
+  const [counts, setCounts] = useState<Record<string, number | undefined>>({});
+  const reportCount = useCallback((key: string, total: number | undefined) => {
+    setCounts((c) => (c[key] === total ? c : { ...c, [key]: total }));
+  }, []);
+  const rowsWithCounts = rows.map((r) => ({ ...r, tomogram_total: counts[r.key] }));
+
+  const stats = rollup(rowsWithCounts, subsetMode);
   const sessionLabel = `${stats.sessions} session${stats.sessions === 1 ? '' : 's'}`;
   const headerStats =
     stats.totalTomograms > 0 ? `${sessionLabel} · ${stats.selectedTomograms} tomograms selected` : sessionLabel;
@@ -73,24 +80,24 @@ export function SourcesTable({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            flexWrap: 'wrap',
+            flexWrap: 'nowrap',
             gap: 2,
             mb: 1,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, minWidth: 0 }}>
             <Typography
               variant="overline"
-              sx={{ fontWeight: 700, letterSpacing: 1.2, color: 'text.secondary', lineHeight: 1.2 }}
+              sx={{ fontWeight: 700, letterSpacing: 1.2, color: 'text.secondary', lineHeight: 1.2, flexShrink: 0 }}
             >
               Imaging sessions
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" noWrap>
               {headerStats}
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexShrink: 0 }}>
             <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
               Deposit
             </Typography>
@@ -102,18 +109,21 @@ export function SourcesTable({
               disabled={readOnly}
               sx={{
                 bgcolor: 'grey.100',
-                p: 0.35,
                 '& .MuiToggleButtonGroup-grouped': {
-                  border: 0,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: '6px !important',
                   textTransform: 'none',
                   fontWeight: 600,
                   fontSize: '0.8125rem',
-                  px: 1.75,
-                  py: 0.5,
                   color: 'text.secondary',
+                  bgcolor: 'background.paper',
+                  '&:not(:first-of-type)': { ml: 0 },
+                  '&:hover': { bgcolor: 'grey.50' },
                   '&.Mui-selected': {
                     bgcolor: 'primary.main',
                     color: 'primary.contrastText',
+                    borderColor: 'primary.main',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
                     '&:hover': { bgcolor: 'primary.dark' },
                   },
@@ -148,6 +158,7 @@ export function SourcesTable({
             onChange={(next) => updateRow(row.key, next)}
             onRemove={() => removeRow(row.key)}
             onUploadSubset={(file) => onUploadSubset(row, file)}
+            onCount={reportCount}
           />
         ))}
 
@@ -165,7 +176,7 @@ export function SourcesTable({
       </Box>
 
       <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-        <DepositionSummary rows={rows} subsetMode={subsetMode} />
+        <DepositionSummary rows={rowsWithCounts} subsetMode={subsetMode} />
       </Box>
     </Box>
   );
