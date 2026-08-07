@@ -124,9 +124,26 @@ class ProcPlan(models.Model):
     """
 
     name = models.CharField(max_length=32, default="czii-live")
+    display_name = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Human-readable label for the UI. Falls back to name when blank.",
+    )
 
     def __str__(self):
         return self.name
+
+    @property
+    def label(self):
+        """
+        UI-facing name for the plan.
+
+        `name` feeds path templates via PipeInPlan.get_replacement_map and is
+        compared against literals in several views, so it can't be prettified
+        in place -- display_name carries the readable label instead.
+        """
+        return self.display_name or self.name
 
 
 class Pipe(models.Model):

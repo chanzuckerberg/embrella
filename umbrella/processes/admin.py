@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Count
 
 from .models import (
     Alignment,
@@ -79,7 +80,31 @@ class ProcSoftwareAdmin(admin.ModelAdmin):
         return form
 
 
-admin.site.register(ProcPlan)
+@admin.register(ProcPlan)
+class ProcPlanAdmin(admin.ModelAdmin):
+    list_display = ("name", "display_name", "software_names", "run_count")
+    list_editable = ("display_name",)
+    search_fields = ("name", "display_name")
+    ordering = ("name",)
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .prefetch_related("pipeinplan_set__pipe__software")
+            .annotate(_run_count=Count("procrun", distinct=True))
+        )
+
+    @admin.display(description="Software (from pipes)")
+    def software_names(self, obj):
+        names = {pip.pipe.software.name for pip in obj.pipeinplan_set.all()}
+        return ", ".join(sorted(names)) or "—"
+
+    @admin.display(description="Runs", ordering="_run_count")
+    def run_count(self, obj):
+        return obj._run_count
+
+
 admin.site.register(Pipe)
 admin.site.register(PipeJoint)
 admin.site.register(PipeInPlan)
