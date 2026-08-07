@@ -7,7 +7,7 @@ const BASE = {
   '& .MuiChip-label': { px: 1.25 },
 } as const;
 
-export function softChipSx(bg: string, color: string): SxProps<Theme> {
+export function fillChipSx(bg: string, color: string): SxProps<Theme> {
   return { ...BASE, bgcolor: bg, color, border: 'none' };
 }
 

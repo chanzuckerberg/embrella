@@ -154,6 +154,17 @@ export async function listCopickRuns(sessionName: string): Promise<CopickRunOpti
   return data.copick_runs ?? [];
 }
 
+/* Total tomograms for a session + AreTomo run, from the metadata summary (num_tomograms). */
+export async function getTomogramCount(sessionName: string, runNumber: string): Promise<number> {
+  const run = runNumber.startsWith('run') ? runNumber : `run${runNumber}`;
+  const q = `?session_name=${encodeURIComponent(sessionName)}&run_number=${encodeURIComponent(run)}`;
+  const res = await fetchResource(url(`${API.METADATA_SUMMARY}${q}`));
+  if (!res.ok) return 0;
+  const text = (await res.text()).replace(/\bNaN\b/g, 'null');
+  const data = text ? (JSON.parse(text) as { num_tomograms?: number }) : {};
+  return data.num_tomograms ?? 0;
+}
+
 export async function uploadSubsetCsv(sessionId: number, file: File): Promise<{ subset_csv_path: string }> {
   const form = new FormData();
   form.append('file', file);

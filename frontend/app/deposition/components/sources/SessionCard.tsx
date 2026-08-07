@@ -1,21 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Icon } from '@czi-sds/components';
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Autocomplete,
-  Box,
-  Chip,
-  IconButton,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Autocomplete, Box, Chip, IconButton, TextField, Typography } from '@mui/material';
 
 import type { TomogramSubsetMode } from '../../types';
-import { usePlanRuns } from '../../hooks/useSources';
-import { softChipSx, outlineChipSx } from './chipStyles';
+import { usePlanRuns, useTomogramCount } from '../../hooks/useSources';
+import { fillChipSx, outlineChipSx } from './chipStyles';
 import { rowSelected } from './counts';
 import { CopickConfigs } from './CopickConfigs';
 import { RunSelect } from './RunSelect';
@@ -31,6 +22,7 @@ export function SessionCard({
   onChange,
   onRemove,
   onUploadSubset,
+  onCount,
 }: {
   index: number;
   row: SourceRow;
@@ -40,6 +32,7 @@ export function SessionCard({
   onChange: (row: SourceRow) => void;
   onRemove: () => void;
   onUploadSubset: (file: File) => void;
+  onCount?: (key: string, total: number | undefined) => void;
 }) {
   const session = row.msi_session_name;
   const aretomo = usePlanRuns('aretomo3', session);
@@ -55,42 +48,72 @@ export function SessionCard({
       selected_copick_runs: [],
     });
 
-  const total = row.tomogram_total;
-  const selected = rowSelected(row, subsetMode);
+  const tomoCount = useTomogramCount(session, row.aretomo_run_name);
+  const total = tomoCount.data;
+  useEffect(() => {
+    onCount?.(row.key, total);
+  }, [row.key, total, onCount]);
+
+  const rowWithCount = { ...row, tomogram_total: total };
+  const selected = rowSelected(rowWithCount, subsetMode);
   const tomoBadge = total != null ? `${selected ?? '—'} / ${total} tomograms` : '— tomograms';
-  const badgeWarn = subsetMode === 'custom' && !row.subset_csv_path;
+  const badgeWarn = selected === 0;
+  const [open, setOpen] = useState(index === 0);
 
   return (
-    <Accordion
-      defaultExpanded={index === 0}
-      disableGutters
-      elevation={0}
+    <Box
       sx={{
         border: '1px solid',
         borderColor: 'divider',
-        borderRadius: '12px !important',
+        borderRadius: 2,
         mb: 1.5,
-        overflow: 'hidden',
-        '&:before': { display: 'none' },
         bgcolor: 'background.paper',
+        overflow: 'hidden',
       }}
     >
-      <AccordionSummary
-        expandIcon={<Icon sdsIcon="ChevronDown" sdsSize="s" />}
+      {/* Header row — chevron toggle + session identity + status chips */}
+      <Box
         sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
           px: 2,
-          minHeight: 56,
-          flexDirection: 'row-reverse',
-          '& .MuiAccordionSummary-content': { my: 1, alignItems: 'center', gap: 1.5, overflow: 'hidden' },
-          '& .MuiAccordionSummary-expandIconWrapper': { mr: 1.5, color: 'text.secondary' },
+          py: 1.25,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'grey.50',
         }}
       >
         <Box
+          component="button"
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={open ? 'Collapse session' : 'Expand session'}
+          aria-expanded={open}
           sx={{
-            width: 28,
-            height: 28,
+            width: 26,
+            height: 26,
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            color: 'text.secondary',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            p: 0,
+          }}
+        >
+          <Icon sdsIcon={open ? 'ChevronDown' : 'ChevronRight'} sdsSize="xs" />
+        </Box>
+        <Box
+          sx={{
+            width: 26,
+            height: 26,
             borderRadius: '50%',
-            bgcolor: 'grey.100',
+            bgcolor: 'grey.200',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -104,35 +127,30 @@ export function SessionCard({
         <Typography sx={{ fontWeight: 700, flex: 1, minWidth: 0, fontFamily: 'monospace' }} noWrap>
           {session || 'Select a session…'}
         </Typography>
-        <Box
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}
-          onClick={(e) => e.stopPropagation()}
+        <Chip
+          size="small"
+          label={tomoBadge}
+          sx={badgeWarn ? fillChipSx('warning.light', 'text.primary') : fillChipSx('grey.100', 'text.secondary')}
+        />
+        {row.denoise_run_name ? (
+          <Chip size="small" label="denoised" sx={fillChipSx('success.light', 'success.dark')} />
+        ) : null}
+        {row.selected_copick_runs.length > 0 ? (
+          <Chip size="small" label={`${row.selected_copick_runs.length} copick`} sx={outlineChipSx('info.main')} />
+        ) : null}
+        <IconButton
+          size="small"
+          disabled={readOnly}
+          aria-label="Remove session"
+          onClick={onRemove}
+          sx={{ color: 'text.secondary' }}
         >
-          <Chip
-            size="small"
-            label={tomoBadge}
-            sx={softChipSx(badgeWarn ? 'warning.light' : 'grey.100', badgeWarn ? 'warning.dark' : 'text.secondary')}
-          />
-          {row.denoise_run_name ? (
-            <Chip size="small" label="denoised" sx={softChipSx('success.light', 'success.dark')} />
-          ) : null}
-          {row.selected_copick_runs.length > 0 ? (
-            <Chip size="small" label={`${row.selected_copick_runs.length} copick`} sx={outlineChipSx('info.main')} />
-          ) : null}
-          <IconButton
-            size="small"
-            disabled={readOnly}
-            aria-label="Remove session"
-            onClick={onRemove}
-            sx={{ color: 'text.secondary', ml: 0.25 }}
-          >
-            <Icon sdsIcon="TrashCan" sdsSize="s" />
-          </IconButton>
-        </Box>
-      </AccordionSummary>
+          <Icon sdsIcon="TrashCan" sdsSize="s" />
+        </IconButton>
+      </Box>
 
-      <AccordionDetails sx={{ px: 3, pb: 3, pt: 1 }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      {open && (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, px: 3, py: 2.5 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 2.5 }}>
             <Box>
               <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -181,7 +199,7 @@ export function SessionCard({
 
           <CopickConfigs row={row} readOnly={readOnly} onChange={set} />
         </Box>
-      </AccordionDetails>
-    </Accordion>
+      )}
+    </Box>
   );
 }
