@@ -165,7 +165,7 @@ export async function getTomogramCount(sessionName: string, runNumber: string): 
   return data.num_tomograms ?? 0;
 }
 
-export async function uploadSubsetCsv(sessionId: number, file: File): Promise<{ subset_csv_path: string }> {
+export async function uploadSubsetCsv(sessionId: number, file: File): Promise<{ subset_selection: unknown }> {
   const form = new FormData();
   form.append('file', file);
   return parse(await postFormData(url(`${API.DEPOSITION_SESSIONS}${sessionId}/subset-csv/`), form));

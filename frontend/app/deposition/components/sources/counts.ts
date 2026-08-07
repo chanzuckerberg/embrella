@@ -5,7 +5,7 @@ export function rowSelected(row: SourceRow, mode: TomogramSubsetMode): number | 
   if (row.tomogram_total == null) return undefined;
   if (mode === 'all') return row.tomogram_total;
   if (mode === 'annotated') return row.tomogram_selected;
-  return row.subset_csv_path ? row.tomogram_selected : 0;
+  return row.subset_csv_path || row.subset_selection != null ? row.tomogram_selected : 0;
 }
 
 export interface SourcesRollup {

@@ -111,6 +111,7 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
             "aretomo_run_name",
             "denoise_run_name",
             "subset_csv_path",
+            "subset_selection",
             "selected_copick_runs",
         ]
 

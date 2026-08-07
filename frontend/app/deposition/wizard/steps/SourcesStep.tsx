@@ -26,6 +26,8 @@ function toRows(dataset: Dataset): SourceRow[] {
     aretomo_run_name: s.aretomo_run_name ?? '',
     denoise_run_name: s.denoise_run_name ?? '',
     subset_csv_path: s.subset_csv_path ?? '',
+    subset_selection: s.subset_selection ?? undefined,
+    subset_input_mode: s.subset_csv_path ? 'path' : 'upload',
     selected_copick_runs: Array.isArray(s.selected_copick_runs) ? (s.selected_copick_runs as string[]) : [],
   }));
 }
@@ -47,6 +49,7 @@ export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: Ste
           aretomo_run_name: r.aretomo_run_name,
           denoise_run_name: r.denoise_run_name,
           subset_csv_path: r.subset_csv_path,
+          subset_selection: r.subset_selection,
           selected_copick_runs: r.selected_copick_runs,
         }))
       );
@@ -79,8 +82,13 @@ export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: Ste
 
   const handleUploadSubset = async (row: SourceRow, file: File) => {
     if (!row.id) return;
-    const { subset_csv_path } = await uploadSubsetCsv(row.id, file);
-    setRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, subset_csv_path } : r)));
+    // Upload mode stores the parsed selection in the DB, keep the filename for display only.
+    const { subset_selection } = await uploadSubsetCsv(row.id, file);
+    setRows((prev) =>
+      prev.map((r) =>
+        r.key === row.key ? { ...r, subset_selection, subset_filename: file.name, subset_csv_path: '' } : r
+      )
+    );
   };
 
   return (

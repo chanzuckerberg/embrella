@@ -1,4 +1,8 @@
+import csv
+import io
+import json
 import logging
+import os
 
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from rest_framework import mixins, status, viewsets
@@ -250,7 +254,35 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
 
     @action(detail=True, methods=["post"], url_path="subset-csv")
     def subset_csv(self, request, pk=None):
-        return _not_implemented()  # TODO: SCP subset CSV to cluster
+        """Parse uploaded subset into session.subset_selection. Cluster files are written at submit."""
+        session = self.get_object()
+        upload = request.FILES.get("file")
+        if upload is None:
+            return Response(
+                {"detail": "No file provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ext = os.path.splitext(upload.name)[1].lower()
+        if ext not in (".json", ".csv"):
+            return Response(
+                {"detail": "Unsupported file type - upload a .json or .csv."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            raw = upload.read().decode("utf-8")
+            selection = json.loads(raw) if ext == ".json" else list(csv.DictReader(io.StringIO(raw)))
+        except (UnicodeDecodeError, json.JSONDecodeError, csv.Error) as exc:
+            return Response(
+                {"detail": f"Could not parse {ext} file: {exc}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        session.subset_selection = selection
+        session.subset_csv_path = ""
+        session.save(update_fields=["subset_selection", "subset_csv_path", "updated_at"])
+        return Response({"subset_selection": selection})
 
 
 @extend_schema_view(
