@@ -274,8 +274,9 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
             raw = upload.read().decode("utf-8")
             selection = json.loads(raw) if ext == ".json" else list(csv.DictReader(io.StringIO(raw)))
         except (UnicodeDecodeError, json.JSONDecodeError, csv.Error) as exc:
+            logger.warning("subset file parse failed: %s", exc)
             return Response(
-                {"detail": f"Could not parse {ext} file: {exc}"},
+                {"detail": "Could not parse the uploaded file - check its format."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

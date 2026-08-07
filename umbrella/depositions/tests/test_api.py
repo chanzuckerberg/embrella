@@ -244,16 +244,15 @@ class TestDatasetSessionGuard:
 @pytest.fixture
 def owned_session(user):
     """A DepositionSession under a deposition owned by `user` (the auth_client user)."""
-    from depositions.models import Dataset, Deposition, DepositionSession
     from tem.models import Camera, ImagingWorkflow, Microscope, MsiSession, SessionPlan, Software
+
+    from depositions.models import Dataset, Deposition, DepositionSession
 
     dep = Deposition.objects.create(submitter_user=user, title="Dep")
     ds = Dataset.objects.create(deposition=dep, title="DS")
     session_plan = SessionPlan.objects.create(
         scope=Microscope.objects.create(name="TestScope", cs=2.7),
-        camera=Camera.objects.create(
-            name="TestCamera", root_dir="/r", frame_format="eer", initial_frame_base_dir="/f"
-        ),
+        camera=Camera.objects.create(name="TestCamera", root_dir="/r", frame_format="eer", initial_frame_base_dir="/f"),
         imaging_workflow=ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo"),
         software=Software.objects.create(name="SW"),
     )
