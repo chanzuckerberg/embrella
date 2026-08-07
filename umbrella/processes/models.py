@@ -11,11 +11,11 @@ from stores.models import Cluster, Path, PathType, StaticPath
 from tem.models import MsiSession, SessionPlan
 
 """
-from stores.models import DataRecord, 
+from stores.models import DataRecord,
 class ArrayData(DataRecord):
     unit_cell_dimension
     is_stack
-    sub_array_of    
+    sub_array_of
 """
 
 
@@ -73,7 +73,11 @@ class ProcSoftware(models.Model):
     - script_directory: Remote directory for script uploads
     """
 
-    name = models.CharField(max_length=32, default="aretomo3")
+    name = models.CharField(
+        max_length=32,
+        default="aretomo3",
+        help_text=("Filesystem token, not a display name: fills {proc_software} in stores.Path."),
+    )
     version = models.CharField(max_length=32, default="2024-03-10")
     capable_tasks = models.ManyToManyField(Task)
 
@@ -87,6 +91,7 @@ class ProcSoftware(models.Model):
         max_length=64,
         null=True,
         blank=True,
+        unique=True,
         help_text='Processor class name (e.g., "aretomo3" maps to AreTomo3Processor)',
     )
     default_cluster = models.CharField(
