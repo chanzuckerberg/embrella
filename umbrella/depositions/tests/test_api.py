@@ -1,14 +1,17 @@
 """API tests for the deposition CRUD endpoints."""
 
 import itertools
+import json
 from unittest import mock
 
 import pytest
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
 DEPOSITIONS = "/depositions/v1/depositions/"
 DATASETS = "/depositions/v1/datasets/"
+SESSIONS = "/depositions/v1/sessions/"
 
 
 @pytest.fixture(autouse=True)
@@ -236,3 +239,64 @@ class TestDatasetSessionGuard:
         )
         assert r.status_code == 400
         assert "sessions" in r.json()
+
+
+@pytest.fixture
+def owned_session(user):
+    """A DepositionSession under a deposition owned by `user` (the auth_client user)."""
+    from tem.models import Camera, ImagingWorkflow, Microscope, MsiSession, SessionPlan, Software
+
+    from depositions.models import Dataset, Deposition, DepositionSession
+
+    dep = Deposition.objects.create(submitter_user=user, title="Dep")
+    ds = Dataset.objects.create(deposition=dep, title="DS")
+    session_plan = SessionPlan.objects.create(
+        scope=Microscope.objects.create(name="TestScope", cs=2.7),
+        camera=Camera.objects.create(name="TestCamera", root_dir="/r", frame_format="eer", initial_frame_base_dir="/f"),
+        imaging_workflow=ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo"),
+        software=Software.objects.create(name="SW"),
+    )
+    msi = MsiSession.objects.create(name="24nov10", session_plan=session_plan)
+    return DepositionSession.objects.create(dataset=ds, msi_session=msi)
+
+
+@pytest.mark.django_db
+class TestSubsetUpload:
+    """POST /sessions/<id>/subset-csv/ parses + stores the selection in the DB."""
+
+    def _url(self, session):
+        return f"{SESSIONS}{session.id}/subset-csv/"
+
+    def test_upload_json_stores_selection_and_clears_path(self, auth_client, owned_session):
+        owned_session.subset_csv_path = "/old/path.csv"
+        owned_session.save(update_fields=["subset_csv_path"])
+        payload = {"Selected positions": ["Position_1", "Position_2"], "Filter type": "AND"}
+        upload = SimpleUploadedFile("Metadata.json", json.dumps(payload).encode(), content_type="application/json")
+        r = auth_client.post(self._url(owned_session), {"file": upload}, format="multipart")
+        assert r.status_code == 200, r.content
+        assert r.json()["subset_selection"] == payload
+        owned_session.refresh_from_db()
+        assert owned_session.subset_selection == payload
+        assert owned_session.subset_csv_path == ""  # upload clears any cluster path
+
+    def test_missing_file_returns_400(self, auth_client, owned_session):
+        r = auth_client.post(self._url(owned_session), {}, format="multipart")
+        assert r.status_code == 400
+
+    def test_unsupported_extension_returns_400(self, auth_client, owned_session):
+        upload = SimpleUploadedFile("subset.txt", b"nope", content_type="text/plain")
+        r = auth_client.post(self._url(owned_session), {"file": upload}, format="multipart")
+        assert r.status_code == 400
+
+    def test_malformed_json_returns_400(self, auth_client, owned_session):
+        upload = SimpleUploadedFile("Metadata.json", b"{not json", content_type="application/json")
+        r = auth_client.post(self._url(owned_session), {"file": upload}, format="multipart")
+        assert r.status_code == 400
+
+    def test_non_owner_cannot_upload(self, owned_session):
+        other = User.objects.create_user(username="grace@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        upload = SimpleUploadedFile("Metadata.json", b"{}", content_type="application/json")
+        r = client.post(f"{SESSIONS}{owned_session.id}/subset-csv/", {"file": upload}, format="multipart")
+        assert r.status_code == 403

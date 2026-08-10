@@ -7,6 +7,8 @@ export interface SourceRow {
   denoise_run_name: string;
   subset_csv_path: string;
   subset_input_mode?: 'upload' | 'path';
+  subset_selection?: unknown;
+  subset_filename?: string;
   selected_copick_runs: string[];
   tomogram_total?: number;
   tomogram_selected?: number;

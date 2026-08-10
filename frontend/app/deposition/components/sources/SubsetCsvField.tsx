@@ -23,7 +23,7 @@ export function SubsetCsvField({
   return (
     <Box>
       <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-        Subset CSV{' '}
+        Subset selection{' '}
         <Typography component="span" variant="body2" color="text.secondary">
           (this session)
         </Typography>
@@ -32,7 +32,14 @@ export function SubsetCsvField({
         exclusive
         size="small"
         value={mode}
-        onChange={(_, v) => v && onChange({ subset_input_mode: v })}
+        onChange={(_, v) =>
+          v &&
+          onChange(
+            v === 'path'
+              ? { subset_input_mode: 'path', subset_selection: null, subset_filename: undefined }
+              : { subset_input_mode: 'upload', subset_csv_path: '' }
+          )
+        }
         disabled={readOnly}
         sx={{
           mb: 1,
@@ -59,13 +66,13 @@ export function SubsetCsvField({
             fullWidth
             size="small"
             placeholder="No file selected"
-            value={row.subset_csv_path}
+            value={row.subset_filename ?? (row.subset_selection ? 'Selection uploaded' : '')}
             InputProps={{ readOnly: true }}
           />
           <input
             ref={fileInput}
             type="file"
-            accept=".csv"
+            accept=".json,.csv"
             hidden
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -73,7 +80,7 @@ export function SubsetCsvField({
               e.target.value = '';
             }}
           />
-          <Tooltip title={row.id ? 'Upload a subset CSV' : 'Save the session first, then upload'}>
+          <Tooltip title={row.id ? 'Upload a subset file' : 'Save the session first, then upload'}>
             <span>
               <Button
                 sdsType="secondary"

@@ -138,6 +138,11 @@ class DepositionSession(models.Model):
     aretomo_run_name = models.CharField(max_length=40, blank=True)
     denoise_run_name = models.CharField(max_length=40, blank=True, help_text="Blank means denoise was skipped")
     subset_csv_path = models.CharField(max_length=1024, blank=True)
+    subset_selection = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Draft custom-subset selection; written to the cluster at submit.",
+    )
     selected_copick_runs = models.JSONField(default=list, blank=True)
     last_autofill_at = models.DateTimeField(null=True, blank=True)
     last_autofill_duration_seconds = models.IntegerField(null=True, blank=True)
