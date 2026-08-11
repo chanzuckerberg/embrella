@@ -36,7 +36,7 @@ class EntityTablePagination(PageNumberPagination):
     ``{"result": [...], "pagination": {...}, "sortBy": {...}}``.
     """
 
-    page_size = 25
+    page_size = 10
     max_page_size = 200
     django_paginator_class = OrphanAwarePaginator
 
