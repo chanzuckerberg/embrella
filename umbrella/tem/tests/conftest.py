@@ -1,0 +1,68 @@
+"""
+Shared fixtures for tem tests.
+"""
+
+import pytest
+from cryo_grids.models import CryoGrid
+from django.contrib.auth.models import User
+from projects.models import Project
+
+from tem.models import (
+    Camera,
+    ImagingWorkflow,
+    Magnification,
+    Microscope,
+    SessionPlan,
+    Software,
+)
+
+
+@pytest.fixture
+def test_user(db):
+    return User.objects.create_user(username="testuser", password="testpass")
+
+
+@pytest.fixture
+def microscope(db):
+    return Microscope.objects.create(name="TestScope", cs=2.7)
+
+
+@pytest.fixture
+def camera(db):
+    return Camera.objects.create(
+        name="TestCam",
+        root_dir="/test/root",
+        frame_format="eer",
+        initial_frame_base_dir="/test/frames",
+    )
+
+
+@pytest.fixture
+def magnification(db, microscope):
+    return Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
+
+
+@pytest.fixture
+def software(db):
+    return Software.objects.create(name="TestSoftware")
+
+
+@pytest.fixture
+def session_plan(db, microscope, camera, software):
+    imaging_workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo")
+    return SessionPlan.objects.create(
+        scope=microscope,
+        camera=camera,
+        imaging_workflow=imaging_workflow,
+        software=software,
+    )
+
+
+@pytest.fixture
+def project(db):
+    return Project.objects.create(name="TestProject")
+
+
+@pytest.fixture
+def grid(db):
+    return CryoGrid.objects.create(name="TestGrid")
