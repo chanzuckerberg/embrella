@@ -67,8 +67,7 @@ print("COPICK_SCAN_JSON:" + json.dumps(out))
 
 
 def scan_copick_project(cluster_id: str, config_path: str, *, timeout: int = 120) -> dict:
-    """SSH to `cluster_id`, run copick over `config_path`, return {picks, segmentations, meshes}.
-    """
+    """SSH to `cluster_id`, run copick over `config_path`, return {picks, segmentations, meshes}."""
     try:
         ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
     except clusterio.SSHDisabledError:

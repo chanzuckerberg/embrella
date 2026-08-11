@@ -78,7 +78,9 @@ def _patch_ssh(ssh):
 def test_scan_parses_picks_segs_meshes():
     payload = {
         "picks": [{"run_name": "TS_1", "object_name": "ribosome", "user_id": "u", "session_id": "0", "count": 12}],
-        "segmentations": [{"run_name": "TS_1", "name": "membrane", "user_id": "u", "session_id": "0", "voxel_size": 10.0}],
+        "segmentations": [
+            {"run_name": "TS_1", "name": "membrane", "user_id": "u", "session_id": "0", "voxel_size": 10.0}
+        ],
         "meshes": [],
     }
     ssh = _FakeSSH(stdout="some conda noise\nCOPICK_SCAN_JSON:" + json.dumps(payload) + "\n")
@@ -91,9 +93,7 @@ def test_scan_parses_picks_segs_meshes():
 
 
 def test_scan_ssh_disabled_returns_empty():
-    with mock.patch.object(
-        clusterio, "get_cluster_ssh_connection", side_effect=clusterio.SSHDisabledError("off")
-    ):
+    with mock.patch.object(clusterio, "get_cluster_ssh_connection", side_effect=clusterio.SSHDisabledError("off")):
         result = scan.scan_copick_project("czii", "/hpc/.../config.json")
     assert result["scanned"] is False
     assert result["reason"] == "ssh_disabled"

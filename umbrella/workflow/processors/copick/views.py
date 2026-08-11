@@ -671,7 +671,6 @@ def get_copick_runs(request) -> JsonResponse:
             }
         )
 
-    
     try:
         plan = ProcPlan.objects.get(name=COPICK_PLAN_NAME)
         session_obj = MsiSession.objects.get(name=session_id)
