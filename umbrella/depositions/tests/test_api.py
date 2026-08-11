@@ -278,7 +278,7 @@ class TestSubsetUpload:
         assert r.json()["subset_filename"] == "Metadata.json"
         owned_session.refresh_from_db()
         assert owned_session.subset_selection == payload
-        assert owned_session.subset_filename == "Metadata.json" 
+        assert owned_session.subset_filename == "Metadata.json"
         assert owned_session.subset_csv_path == ""  # upload clears any cluster path
 
     def test_missing_file_returns_400(self, auth_client, owned_session):
