@@ -323,6 +323,119 @@ class TestFiltering:
         body = auth_client.get(URL, q([{"category": "nonsense", "value": ["x"]}])).json()
         assert body["pagination"]["totalResults"] == 1
 
+    def test_filter_by_processing_software_matches_plan_with_blank_display_name(self, auth_client, make_session):
+        # The row renders `["pytom-pick"]` via ProcPlan.label, so that value has
+        # to be filterable too -- otherwise the sidebar offers a dead option.
+        unlabeled = ProcPlan.objects.create(name="pytom-pick", display_name="")
+        matching = make_session("24mar01a")
+        make_session("24mar02a")
+        ProcRun.objects.create(name="run001", msi_session=matching, proc_plan=unlabeled)
+
+        body = auth_client.get(URL, q([{"category": "processingSoftware", "value": ["pytom-pick"]}])).json()
+
+        assert body["pagination"]["totalResults"] == 1
+        assert body["result"][0]["session"]["name"] == "24mar01a"
+
+    def test_filter_by_processing_software_does_not_duplicate_rows(
+        self, auth_client, make_session, live_plan, denoise_plan
+    ):
+        # Two runs on the filtered plan means two join rows; the callable
+        # filter still has to come back through TableQueryFilter's distinct().
+        session = make_session("24mar01a")
+        for name in ("run001", "run002"):
+            ProcRun.objects.create(name=name, msi_session=session, proc_plan=live_plan)
+        ProcRun.objects.create(name="run003", msi_session=session, proc_plan=denoise_plan)
+
+        body = auth_client.get(URL, q([{"category": "processingSoftware", "value": ["aretomo3"]}])).json()
+
+        assert body["pagination"]["totalResults"] == 1
+        assert len(body["result"]) == 1
+
+
+@pytest.mark.django_db
+class TestFilterList:
+    URL = f"{URL}filterlist/"
+
+    def test_unauthenticated_returns_401(self):
+        assert APIClient().get(self.URL, HTTP_ACCEPT="application/json").status_code == 401
+
+    def test_returns_every_configured_category(self, auth_client, make_session):
+        make_session("24mar01a")
+        body = auth_client.get(self.URL).json()
+
+        assert set(body) == {"filters"}
+        assert set(body["filters"]) == {"project", "user", "scope", "workflow", "processingSoftware"}
+        assert set(MsiSessionOverviewViewSet.table_filters) == set(body["filters"])
+
+    def test_option_shape(self, auth_client, make_session):
+        make_session("24mar01a")
+        option = auth_client.get(self.URL).json()["filters"]["project"][0]
+        assert option == {"name": "TestProject", "count": 1, "selected": False}
+
+    def test_counts_sessions_not_runs(self, auth_client, make_session, live_plan):
+        # Three runs on one plan is still one session behind the option.
+        session = make_session("24mar01a")
+        for name in ("run001", "run002", "run003"):
+            ProcRun.objects.create(name=name, msi_session=session, proc_plan=live_plan)
+
+        assert auth_client.get(self.URL).json()["filters"]["processingSoftware"] == [
+            {"name": "aretomo3", "count": 1, "selected": False},
+        ]
+
+    def test_processing_software_lists_blank_display_name_plans_under_their_name(self, auth_client, make_session):
+        unlabeled = ProcPlan.objects.create(name="pytom-pick", display_name="")
+        session = make_session("24mar01a")
+        ProcRun.objects.create(name="run001", msi_session=session, proc_plan=unlabeled)
+
+        names = [o["name"] for o in auth_client.get(self.URL).json()["filters"]["processingSoftware"]]
+        assert names == ["pytom-pick"]
+
+    def test_options_are_sorted_and_deduplicated(self, auth_client, make_session, live_plan, denoise_plan):
+        first = make_session("24mar01a")
+        second = make_session("24mar02a")
+        ProcRun.objects.create(name="run001", msi_session=first, proc_plan=denoise_plan)
+        ProcRun.objects.create(name="run001", msi_session=second, proc_plan=live_plan)
+        ProcRun.objects.create(name="run002", msi_session=second, proc_plan=denoise_plan)
+
+        assert auth_client.get(self.URL).json()["filters"]["processingSoftware"] == [
+            {"name": "aretomo3", "count": 1, "selected": False},
+            {"name": "denoise", "count": 2, "selected": False},
+        ]
+
+    def test_null_project_is_not_offered_as_an_option(self, auth_client, make_session):
+        make_session("24mar01a", project=None)
+        assert auth_client.get(self.URL).json()["filters"]["project"] == []
+
+    def test_selected_reflects_the_q_param(self, auth_client, make_session, live_plan, denoise_plan):
+        session = make_session("24mar01a")
+        ProcRun.objects.create(name="run001", msi_session=session, proc_plan=live_plan)
+        ProcRun.objects.create(name="run002", msi_session=session, proc_plan=denoise_plan)
+
+        filters = auth_client.get(
+            self.URL,
+            q([{"category": "processingSoftware", "value": ["denoise"]}]),
+        ).json()["filters"]
+
+        assert {o["name"]: o["selected"] for o in filters["processingSoftware"]} == {
+            "aretomo3": False,
+            "denoise": True,
+        }
+
+    def test_counts_ignore_the_active_filters(self, auth_client, make_session, live_plan, denoise_plan):
+        # Counts are totals -- narrowing to one plan must not zero out the other
+        # option, or the sidebar becomes a dead end.
+        first = make_session("24mar01a")
+        second = make_session("24mar02a")
+        ProcRun.objects.create(name="run001", msi_session=first, proc_plan=live_plan)
+        ProcRun.objects.create(name="run001", msi_session=second, proc_plan=denoise_plan)
+
+        filters = auth_client.get(
+            self.URL,
+            q([{"category": "processingSoftware", "value": ["aretomo3"]}]),
+        ).json()["filters"]
+
+        assert {o["name"]: o["count"] for o in filters["processingSoftware"]} == {"aretomo3": 1, "denoise": 1}
+
 
 @pytest.mark.django_db
 class TestQueryBudget:

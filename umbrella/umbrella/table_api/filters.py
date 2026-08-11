@@ -36,6 +36,19 @@ def traverses_to_many(model, lookup: str) -> bool:
     return False
 
 
+def q_lookups(q_object: Q) -> list[str]:
+    """
+    Every lookup path inside a ``Q``, including nested children.
+    """
+    lookups = []
+    for child in q_object.children:
+        if isinstance(child, Q):
+            lookups.extend(q_lookups(child))
+        elif isinstance(child, (list, tuple)) and child:
+            lookups.append(child[0])
+    return lookups
+
+
 class TableQueryFilter(BaseFilterBackend):
     """
     Applies filters, search and ordering from the ``q`` param.
@@ -44,6 +57,7 @@ class TableQueryFilter(BaseFilterBackend):
 
     ``table_filters``
         ``{category: orm_lookup}``, e.g. ``{"project": "project__name__in"}``.
+        or ``values -> Q`` for filters a single lookup can't express.
     ``table_search_fields``
         Fields matched with ``icontains`` for the ``search`` category: OR-ed
         across fields, AND-ed across terms.
@@ -78,8 +92,13 @@ class TableQueryFilter(BaseFilterBackend):
             lookup = table_filters.get(category)
             if not lookup or not values:
                 continue
-            queryset = queryset.filter(**{lookup: values})
-            applied.append(lookup)
+            if callable(lookup):
+                q_object = lookup(values)
+                queryset = queryset.filter(q_object)
+                applied.extend(q_lookups(q_object))
+            else:
+                queryset = queryset.filter(**{lookup: values})
+                applied.append(lookup)
 
         return queryset, applied
 

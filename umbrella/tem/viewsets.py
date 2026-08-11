@@ -15,6 +15,7 @@ from django.db.models import (
     Min,
     OuterRef,
     Prefetch,
+    Q,
     Subquery,
     Value,
 )
@@ -22,8 +23,10 @@ from django.db.models.functions import Coalesce, NullIf
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from processes.models import ProcRun, Review
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
-from umbrella.table_api import EntityTablePagination, TableQueryFilter
+from rest_framework.response import Response
+from umbrella.table_api import EntityTablePagination, TableQueryFilter, build_filters, value_counts
 
 from tem.models import MsiSession
 from tem.serializers import MsiSessionOverviewSerializer
@@ -32,6 +35,16 @@ from tem.serializers import MsiSessionOverviewSerializer
 _SESSION_RUNS = ProcRun.objects.filter(msi_session=OuterRef("pk")).order_by().values("msi_session")
 
 _PLAN_LABEL = Coalesce(NullIf("proc_plan__display_name", Value("")), "proc_plan__name")
+
+
+def _processing_software_q(labels) -> Q:
+    """
+    Match sessions with a run whose plan label is in ``labels``.
+    """
+    return Q(procrun__proc_plan__display_name__in=labels) | Q(
+        procrun__proc_plan__display_name="",
+        procrun__proc_plan__name__in=labels,
+    )
 
 
 @extend_schema_view(
@@ -68,7 +81,7 @@ class MsiSessionOverviewViewSet(viewsets.ReadOnlyModelViewSet):
         "scope": "session_plan__scope__name__in",
         "workflow": "session_plan__imaging_workflow__workflow__in",
         # Traverses a to-many, so TableQueryFilter applies distinct().
-        "processingSoftware": "procrun__proc_plan__display_name__in",
+        "processingSoftware": _processing_software_q,
     }
     table_search_fields = ["name", "project__name", "user__username", "grid__name"]
     table_sort_fields = {
@@ -139,4 +152,37 @@ class MsiSessionOverviewViewSet(viewsets.ReadOnlyModelViewSet):
                     Value(""),
                 ),
             )
+        )
+
+    @extend_schema(
+        tags=["TEM Sessions"],
+        summary="Filter options for the session browser sidebar",
+        description=(
+            "Available values for each filter category, with the number of sessions behind each. "
+            "Counts are totals and ignore the active filters; the `q` param only decides which "
+            "options come back marked `selected`."
+        ),
+    )
+    @action(detail=False, methods=["get"])
+    def filterlist(self, request):
+        """Sidebar filter options. Categories mirror `table_filters`."""
+        sessions = MsiSession.objects.all()
+
+        return Response(
+            {
+                "filters": build_filters(
+                    request,
+                    {
+                        "project": value_counts(sessions, "project__name"),
+                        "user": value_counts(sessions, "user__username"),
+                        "scope": value_counts(sessions, "session_plan__scope__name"),
+                        "workflow": value_counts(sessions, "session_plan__imaging_workflow__workflow"),
+                        "processingSoftware": value_counts(
+                            ProcRun.objects.all(),
+                            _PLAN_LABEL,
+                            count="msi_session",
+                        ),
+                    },
+                ),
+            },
         )

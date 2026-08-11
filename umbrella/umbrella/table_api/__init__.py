@@ -19,6 +19,7 @@ Usage::
         table_default_sort = ("name", True)
 """
 
+from .filterlist import build_filters, mark_selected, value_counts
 from .filters import TableQueryFilter
 from .pagination import EntityTablePagination, OrphanAwarePaginator
 from .query import TableQuery, parse_table_query
@@ -28,5 +29,8 @@ __all__ = [
     "EntityTablePagination",
     "TableQuery",
     "TableQueryFilter",
+    "build_filters",
+    "mark_selected",
     "parse_table_query",
+    "value_counts",
 ]

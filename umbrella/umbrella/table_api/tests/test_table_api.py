@@ -10,12 +10,13 @@ import json
 
 import pytest
 from django.contrib.auth.models import User
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
 
-from umbrella.table_api import EntityTablePagination, TableQueryFilter, parse_table_query
-from umbrella.table_api.filters import traverses_to_many
+from umbrella.table_api import EntityTablePagination, TableQueryFilter, mark_selected, parse_table_query
+from umbrella.table_api.filters import q_lookups, traverses_to_many
 
 
 def q(items):
@@ -184,6 +185,64 @@ class TestDistinct:
     )
     def test_traverses_to_many(self, lookup, expected):
         assert traverses_to_many(User, lookup) is expected
+
+
+class TestCallableFilters:
+    """
+    A `table_filters` value may be a callable returning a Q, for filters no
+    single lookup can express -- see `_processing_software_q` in tem/viewsets.py.
+    """
+
+    class CallableView(FakeView):
+        table_filters = {
+            "username": "username__in",
+            # Crosses a to-many on one side only.
+            "either": lambda values: Q(username__in=values) | Q(groups__name__in=values),
+            "local": lambda values: Q(username__in=values) | Q(first_name__in=values),
+        }
+
+    def test_callable_q_is_applied(self):
+        _, result = run_filter(q([{"category": "either", "value": ["ada"]}]), view=self.CallableView())
+        (applied,) = result.filters
+        (condition,) = applied
+        assert condition.connector == "OR"
+        assert sorted(condition.children) == [("groups__name__in", ["ada"]), ("username__in", ["ada"])]
+
+    def test_to_many_inside_the_q_still_triggers_distinct(self):
+        # The whole point of q_lookups: a callable must not silently opt out of
+        # the fan-out protection a string lookup gets for free.
+        _, result = run_filter(q([{"category": "either", "value": ["ada"]}]), view=self.CallableView())
+        assert result.distinct_called is True
+
+    def test_all_to_one_q_does_not_trigger_distinct(self):
+        _, result = run_filter(q([{"category": "local", "value": ["ada"]}]), view=self.CallableView())
+        assert result.distinct_called is False
+
+    def test_string_lookups_are_unaffected(self):
+        _, result = run_filter(q([{"category": "username", "value": ["ada"]}]), view=self.CallableView())
+        assert {"username__in": ["ada"]} in result.filters
+        assert result.distinct_called is False
+
+    def test_q_lookups_walks_nested_children(self):
+        nested = Q(a__in=[1]) | (Q(b="x") & Q(c__isnull=True))
+        assert sorted(q_lookups(nested)) == ["a__in", "b", "c__isnull"]
+
+
+class TestMarkSelected:
+    def test_marks_only_the_selected_values(self):
+        options = [{"name": "aretomo3", "count": 2}, {"name": "denoise", "count": 1}]
+        assert mark_selected(options, ["denoise"]) == [
+            {"name": "aretomo3", "count": 2, "selected": False},
+            {"name": "denoise", "count": 1, "selected": True},
+        ]
+
+    def test_comparison_is_case_and_whitespace_insensitive(self):
+        options = [{"name": "AreTomo3", "count": 1}]
+        assert mark_selected(options, [" aretomo3 "])[0]["selected"] is True
+
+    def test_no_selection_marks_everything_false(self):
+        options = [{"name": "aretomo3", "count": 1}]
+        assert mark_selected(options, None)[0]["selected"] is False
 
 
 class TestSearch:
