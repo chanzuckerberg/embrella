@@ -112,6 +112,7 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
             "denoise_run_name",
             "subset_csv_path",
             "subset_selection",
+            "subset_filename",
             "selected_copick_runs",
         ]
 

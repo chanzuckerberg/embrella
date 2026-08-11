@@ -27,6 +27,7 @@ function toRows(dataset: Dataset): SourceRow[] {
     denoise_run_name: s.denoise_run_name ?? '',
     subset_csv_path: s.subset_csv_path ?? '',
     subset_selection: s.subset_selection ?? undefined,
+    subset_filename: s.subset_filename || undefined,
     subset_input_mode: s.subset_csv_path ? 'path' : 'upload',
     selected_copick_runs: Array.isArray(s.selected_copick_runs) ? (s.selected_copick_runs as string[]) : [],
   }));
@@ -49,7 +50,8 @@ export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: Ste
           aretomo_run_name: r.aretomo_run_name,
           denoise_run_name: r.denoise_run_name,
           subset_csv_path: r.subset_csv_path,
-          subset_selection: r.subset_selection,
+          subset_selection: r.subset_selection ?? null,
+          subset_filename: r.subset_filename ?? '',
           selected_copick_runs: r.selected_copick_runs,
         }))
       );
