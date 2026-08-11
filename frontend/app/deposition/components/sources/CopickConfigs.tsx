@@ -24,7 +24,7 @@ export function CopickConfigs({
   useEffect(() => () => clearTimeout(copyTimer.current ?? undefined), []);
 
   const copyPath = (value: string) => {
-    void navigator.clipboard?.writeText(value);
+    navigator.clipboard?.writeText(value).catch(() => undefined);
     setCopied(value);
     clearTimeout(copyTimer.current ?? undefined);
     copyTimer.current = setTimeout(() => setCopied((c) => (c === value ? null : c)), 1200);
