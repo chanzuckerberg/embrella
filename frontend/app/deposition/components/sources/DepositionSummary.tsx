@@ -32,6 +32,7 @@ export function DepositionSummary({ rows, subsetMode }: { rows: SourceRow[]; sub
       <Box sx={{ mt: 1 }}>
         <SummaryLine label="Sessions" value={s.sessions} />
         <SummaryLine label="Tomograms" value={tomograms} />
+        {subsetMode !== 'all' && s.totalTomograms > 0 && <SummaryLine label="Excluded" value={s.droppedTomograms} />}
         <SummaryLine label="Copick configs" value={s.copickConfigs} />
         <SummaryLine label="Denoised sessions" value={`${s.denoisedSessions} of ${s.sessions}`} />
       </Box>
