@@ -92,6 +92,11 @@ urlpatterns = [
     ),
     # Copick-specific endpoints
     path("v1/processors/copick/runs/", views.get_copick_runs, name="get_copick_runs"),
+    path(
+        "v1/processors/copick/annotated-count/",
+        views.get_copick_annotated_count,
+        name="get_copick_annotated_count",
+    ),
     path("v1/processors/copick/template_maps/", views.get_copick_template_maps, name="get_copick_template_maps"),
     # Plan runs endpoint (shared by all processors for run number lookup)
     path("v1/execution/plan_runs/", views.get_plan_runs, name="get_plan_runs"),

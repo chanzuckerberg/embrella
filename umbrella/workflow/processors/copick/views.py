@@ -696,6 +696,36 @@ def get_copick_runs(request) -> JsonResponse:
     return JsonResponse({"success": True, "copick_runs": copick_runs})
 
 
+def get_copick_annotated_count(request) -> JsonResponse:
+    """Annotated-tomogram count for a session"""
+    session_id = request.GET.get("session_id")
+    runs = [r.strip() for r in request.GET.get("runs", "").split(",") if r.strip()]
+    if not session_id:
+        return JsonResponse({"success": False, "error": "session_id is required", "annotated_count": 0})
+    if not runs:
+        return JsonResponse({"success": True, "annotated_count": 0, "annotated_runs": [], "scanned": True})
+
+    from .scan import COPICK_CONFIG_PATH, annotated_run_names, scan_copick_project
+
+    annotated: set[str] = set()
+    scanned = True
+    for run in runs:
+        cluster_id = cluster_id_for_run(session_id, run, default=COPICK_DEFAULT_CLUSTER_ID)
+        result = scan_copick_project(cluster_id, COPICK_CONFIG_PATH.format(session=session_id, run=run))
+        if not result.get("scanned"):
+            scanned = False
+        annotated.update(annotated_run_names(result))
+
+    return JsonResponse(
+        {
+            "success": True,
+            "annotated_count": len(annotated),
+            "annotated_runs": sorted(annotated),
+            "scanned": scanned,
+        }
+    )
+
+
 def _latest_pipe_status(proc_run) -> str:
     latest = (
         PipeExecution.objects.filter(proc_run=proc_run).order_by("-updated_at").values_list("status", flat=True).first()
