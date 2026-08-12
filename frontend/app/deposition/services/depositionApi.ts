@@ -154,6 +154,14 @@ export async function listCopickRuns(sessionName: string): Promise<CopickRunOpti
   return data.copick_runs ?? [];
 }
 
+/* Annotated-tomogram count for a session's selected copick configs. Slow - SSH scan. */
+export async function getAnnotatedCount(sessionName: string, runs: string[]): Promise<number> {
+  if (runs.length === 0) return 0;
+  const q = `?session_id=${encodeURIComponent(sessionName)}&runs=${encodeURIComponent(runs.join(','))}`;
+  const data = await parse<{ annotated_count?: number }>(await fetchResource(url(`${API.COPICK_ANNOTATED_COUNT}${q}`)));
+  return data.annotated_count ?? 0;
+}
+
 /* Total tomograms for a session + AreTomo run, from the metadata summary (num_tomograms). */
 export async function getTomogramCount(sessionName: string, runNumber: string): Promise<number> {
   const run = runNumber.startsWith('run') ? runNumber : `run${runNumber}`;

@@ -1,6 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getTomogramCount, listCopickRuns, listMsiSessions, listPlanRuns } from '../services/depositionApi';
+import {
+  getAnnotatedCount,
+  getTomogramCount,
+  listCopickRuns,
+  listMsiSessions,
+  listPlanRuns,
+} from '../services/depositionApi';
 import type { CopickRunOption } from '../types';
 
 const sourceKeys = {
@@ -8,6 +14,8 @@ const sourceKeys = {
   planRuns: (plan: string, session: string) => ['deposition', 'sources', 'plan-runs', plan, session] as const,
   copickRuns: (session: string) => ['deposition', 'sources', 'copick-runs', session] as const,
   tomoCount: (session: string, run: string) => ['deposition', 'sources', 'tomo-count', session, run] as const,
+  annotatedCount: (session: string, runs: string[]) =>
+    ['deposition', 'sources', 'annotated-count', session, runs.join(',')] as const,
 };
 
 const STALE = 5 * 60 * 1000;
@@ -44,6 +52,18 @@ export function useTomogramCount(sessionName: string, aretomoRun: string) {
     queryKey: sourceKeys.tomoCount(sessionName, aretomoRun),
     queryFn: () => getTomogramCount(sessionName, aretomoRun),
     enabled: sessionName.trim().length > 0 && aretomoRun.trim().length > 0,
+    staleTime: STALE,
+  });
+}
+
+/**
+ * Annotated-tomogram count for a session's selected copick configs .
+ */
+export function useAnnotatedCount(sessionName: string, runs: string[], enabled: boolean) {
+  return useQuery<number>({
+    queryKey: sourceKeys.annotatedCount(sessionName, runs),
+    queryFn: () => getAnnotatedCount(sessionName, runs),
+    enabled: enabled && sessionName.trim().length > 0 && runs.length > 0,
     staleTime: STALE,
   });
 }

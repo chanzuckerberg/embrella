@@ -5,7 +5,7 @@ import { Icon } from '@czi-sds/components';
 import { Autocomplete, Box, Chip, IconButton, TextField, Typography } from '@mui/material';
 
 import type { TomogramSubsetMode } from '../../types';
-import { usePlanRuns, useTomogramCount } from '../../hooks/useSources';
+import { useAnnotatedCount, usePlanRuns, useTomogramCount } from '../../hooks/useSources';
 import { fillChipSx, outlineChipSx } from './chipStyles';
 import { rowSelected } from './counts';
 import { CopickConfigs } from './CopickConfigs';
@@ -23,6 +23,7 @@ export function SessionCard({
   onRemove,
   onUploadSubset,
   onCount,
+  onAnnotated,
 }: {
   index: number;
   row: SourceRow;
@@ -33,6 +34,7 @@ export function SessionCard({
   onRemove: () => void;
   onUploadSubset: (file: File) => void;
   onCount?: (key: string, total: number | undefined) => void;
+  onAnnotated?: (key: string, count: number | undefined) => void;
 }) {
   const session = row.msi_session_name;
   const aretomo = usePlanRuns('aretomo3', session);
@@ -54,10 +56,21 @@ export function SessionCard({
     onCount?.(row.key, total);
   }, [row.key, total, onCount]);
 
-  const rowWithCount = { ...row, tomogram_total: total };
+  // Annotated count is a slow SSH scan, so only fetch it when Annotated mode is active.
+  const annotatedMode = subsetMode === 'annotated';
+  const annotated = useAnnotatedCount(session, row.selected_copick_runs, annotatedMode);
+  const annotatedCount = annotatedMode ? annotated.data : undefined;
+  useEffect(() => {
+    onAnnotated?.(row.key, annotatedCount);
+  }, [row.key, annotatedCount, onAnnotated]);
+
+  const rowWithCount = { ...row, tomogram_total: total, tomogram_selected: annotatedCount };
   const selected = rowSelected(rowWithCount, subsetMode);
-  const tomoBadge = total != null ? `${selected ?? '—'} / ${total} tomograms` : '— tomograms';
-  const badgeWarn = selected === 0;
+  const scanningAnnotated = annotatedMode && annotated.isFetching;
+  let tomoBadge = '— tomograms';
+  if (scanningAnnotated) tomoBadge = 'scanning annotations…';
+  else if (total != null) tomoBadge = `${selected ?? '—'} / ${total} tomograms`;
+  const badgeWarn = !scanningAnnotated && selected === 0;
   const [open, setOpen] = useState(index === 0);
 
   return (

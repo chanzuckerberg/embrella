@@ -60,6 +60,7 @@ export enum API {
   // Processor-specific endpoints
   PLAN_RUNS = '/workflow/v1/execution/plan_runs/',
   COPICK_RUNS = '/workflow/v1/processors/copick/runs/',
+  COPICK_ANNOTATED_COUNT = '/workflow/v1/processors/copick/annotated-count/',
   COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
 
   // Session/Run Selection
