@@ -79,6 +79,7 @@ export interface DepositionSession {
   denoise_run_name?: string;
   subset_csv_path?: string;
   subset_selection?: unknown;
+  subset_filename?: string;
   selected_copick_runs?: unknown[];
   tiltseries_metadata?: Record<string, unknown> | null;
   tomogram_metadata?: Record<string, unknown> | null;

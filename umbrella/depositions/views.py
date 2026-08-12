@@ -281,9 +281,10 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
             )
 
         session.subset_selection = selection
+        session.subset_filename = upload.name
         session.subset_csv_path = ""
-        session.save(update_fields=["subset_selection", "subset_csv_path", "updated_at"])
-        return Response({"subset_selection": selection})
+        session.save(update_fields=["subset_selection", "subset_filename", "subset_csv_path", "updated_at"])
+        return Response({"subset_selection": selection, "subset_filename": upload.name})
 
 
 @extend_schema_view(

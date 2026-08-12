@@ -143,6 +143,11 @@ class DepositionSession(models.Model):
         blank=True,
         help_text="Draft custom-subset selection; written to the cluster at submit.",
     )
+    subset_filename = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Original name of the uploaded subset file, for display in the wizard.",
+    )
     selected_copick_runs = models.JSONField(default=list, blank=True)
     last_autofill_at = models.DateTimeField(null=True, blank=True)
     last_autofill_duration_seconds = models.IntegerField(null=True, blank=True)
