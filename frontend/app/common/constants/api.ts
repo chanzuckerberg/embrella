@@ -62,6 +62,10 @@ export enum API {
   COPICK_RUNS = '/workflow/v1/processors/copick/runs/',
   COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
 
+  // Session Browser
+  SESSION_OVERVIEW = '/tem/v1/session-overview/',
+  SESSION_OVERVIEW_FILTERLIST = '/tem/v1/session-overview/filterlist/',
+
   // Session/Run Selection
   MSI_SESSIONS_LIST = '/workflow/get_msi_session_list',
 
