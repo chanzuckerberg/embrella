@@ -25,7 +25,7 @@ export function DepositionSummary({ rows, subsetMode }: { rows: SourceRow[]; sub
   const tomograms = s.totalTomograms > 0 ? `${s.selectedTomograms} of ${s.totalTomograms}` : '—';
 
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, minWidth: 240, position: 'sticky', top: 24 }}>
+    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, minWidth: 240, position: 'sticky', top: 2 }}>
       <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700, letterSpacing: 1 }}>
         This deposition
       </Typography>
