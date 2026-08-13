@@ -41,15 +41,17 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth={false} sx={{ pt: 2, pb: 3, px: 3 }}>
       <Paper
         variant="outlined"
         sx={{
+          width: '100%',
+          maxWidth: 1070,
+          mx: 'auto',
           borderRadius: 3,
           display: 'flex',
           flexDirection: 'column',
-          maxHeight: 'calc(100vh - 194px)',
-          minHeight: 620,
+          height: 'calc(100vh - 174px)',
           overflow: 'hidden',
         }}
       >
@@ -57,13 +59,13 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           sx={{
             flexShrink: 0,
             px: { xs: 3, md: 5 },
-            pt: { xs: 3, md: 4 },
+            pt: { xs: 2, md: 0.5 },
             pb: 3,
             borderBottom: '1px solid',
             borderColor: 'divider',
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
             <Box>
               <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: 1.2, fontWeight: 600 }}>
                 Step {step.num} of {WIZARD_STEPS.length}
