@@ -112,3 +112,14 @@ def scan_copick_project(cluster_id: str, config_path: str, *, timeout: int = 120
         return {**EMPTY, "scanned": False, "reason": "scan_error"}
     finally:
         ssh.close()
+
+
+def annotated_run_names(scan: dict) -> list[str]:
+    """Distinct copick run names that have at least one annotation."""
+    runs: set[str] = set()
+    for kind in ("picks", "segmentations", "meshes"):
+        for entry in scan.get(kind) or []:
+            run_name = entry.get("run_name")
+            if run_name:
+                runs.add(run_name)
+    return sorted(runs)

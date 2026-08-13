@@ -162,3 +162,61 @@ class TestDetailScanWiring:
         assert r.status_code == 200
         assert "annotations" not in r.json()["project"]
         scan_mock.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestAnnotatedCountEndpoint:
+    """GET annotated-count scans the session's copick configs and unions annotated runs."""
+
+    URL = "/workflow/v1/processors/copick/annotated-count/"
+
+    def test_aggregates_across_runs(self, client, copick_session):
+        def fake_scan(_cluster_id, config_path):
+            if "run002" in config_path:
+                return {"picks": [{"run_name": "TS_1"}], "segmentations": [], "meshes": [], "scanned": True}
+            return {"picks": [], "segmentations": [{"run_name": "TS_2"}], "meshes": [], "scanned": True}
+
+        with mock.patch.object(scan, "scan_copick_project", side_effect=fake_scan):
+            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run002,run003"})
+        body = r.json()
+        assert r.status_code == 200
+        assert body["annotated_count"] == 2
+        assert body["annotated_runs"] == ["TS_1", "TS_2"]
+        assert body["scanned"] is True
+
+    def test_no_runs_returns_zero_without_scanning(self, client, copick_session):
+        with mock.patch.object(scan, "scan_copick_project") as scan_mock:
+            r = client.get(self.URL, {"session_id": "26feb20b"})
+        assert r.json()["annotated_count"] == 0
+        scan_mock.assert_not_called()
+
+    def test_missing_session_id_is_error(self, client, db):
+        r = client.get(self.URL, {"runs": "run002"})
+        assert r.json()["success"] is False
+
+
+class TestAnnotatedRunNames:
+    """annotated_run_names: distinct runs that carry any pick/segmentation/mesh."""
+
+    def test_distinct_across_kinds_sorted(self):
+        result = scan.annotated_run_names(
+            {
+                "picks": [{"run_name": "run003"}, {"run_name": "run001"}, {"run_name": "run003"}],
+                "segmentations": [{"run_name": "run002"}],
+                "meshes": [{"run_name": "run001"}],
+            }
+        )
+        assert result == ["run001", "run002", "run003"]  # deduped + sorted
+
+    def test_empty_scan_is_empty(self):
+        assert scan.annotated_run_names(scan.EMPTY) == []
+
+    def test_ignores_missing_or_blank_run_name(self):
+        result = scan.annotated_run_names(
+            {
+                "picks": [{"run_name": "run001"}, {"run_name": ""}, {"object_name": "x"}],
+                "segmentations": [],
+                "meshes": [],
+            }
+        )
+        assert result == ["run001"]
