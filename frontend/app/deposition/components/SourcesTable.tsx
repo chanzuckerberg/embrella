@@ -60,8 +60,9 @@ export function SourcesTable({
 
   const stats = rollup(rowsWithCounts, subsetMode);
   const sessionLabel = `${stats.sessions} session${stats.sessions === 1 ? '' : 's'}`;
-  const headerStats =
-    stats.totalTomograms > 0 ? `${sessionLabel} · ${stats.selectedTomograms} tomograms selected` : sessionLabel;
+  const selectedText = stats.selectedKnown ? `${stats.selectedTomograms}` : '-';
+  const headerStats = stats.totalTomograms > 0 ? `${sessionLabel} · ${selectedText} tomograms selected` : sessionLabel;
+  const excluded = stats.selectedKnown ? stats.totalTomograms - stats.selectedTomograms : 0;
   const allLabel = stats.totalTomograms > 0 ? `All ${stats.totalTomograms}` : 'All';
   const annotatedLabel = stats.annotatedTomograms > 0 ? `Annotated only ${stats.annotatedTomograms}` : 'Annotated only';
 
@@ -150,7 +151,7 @@ export function SourcesTable({
           </Box>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0 }}>
-            {modeHelp(subsetMode, stats.totalTomograms - stats.selectedTomograms)}
+            {modeHelp(subsetMode, excluded)}
           </Typography>
         </Box>
 

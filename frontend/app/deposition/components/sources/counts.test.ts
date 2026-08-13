@@ -78,4 +78,37 @@ describe('rollup', () => {
     expect(s.selectedTomograms).toBe(3); // 3 from row a, 0 from row b (no subset)
     expect(s.droppedTomograms).toBe(147); // 150 - 3
   });
+
+  it('all → selection is known', () => {
+    expect(rollup(rows, 'all').selectedKnown).toBe(true);
+  });
+
+  it('annotated → unknown while the scan count is pending, not counted as 0', () => {
+    const s = rollup(rows, 'annotated');
+    expect(s.selectedKnown).toBe(false);
+    expect(s.selectedTomograms).toBe(0);
+  });
+
+  it('annotated → known once every row has a scan count', () => {
+    const scanned = [
+      row({ key: 'a', tomogram_total: 100, tomogram_selected: 30 }),
+      row({ key: 'b', tomogram_total: 50, tomogram_selected: 10 }),
+    ];
+    const s = rollup(scanned, 'annotated');
+    expect(s.selectedKnown).toBe(true);
+    expect(s.selectedTomograms).toBe(40);
+  });
+
+  it('custom → a cluster-path subset makes the rollup unknown', () => {
+    const withPath = [row({ key: 'a', tomogram_total: 100, subset_csv_path: '/hpc/x.csv' })];
+    const s = rollup(withPath, 'custom');
+    expect(s.selectedKnown).toBe(false);
+    expect(s.selectedTomograms).toBe(0);
+  });
+
+  it('a row with an unknown total is skipped entirely and does not flip selectedKnown', () => {
+    const s = rollup([row({ key: 'a', tomogram_total: undefined })], 'annotated');
+    expect(s.totalTomograms).toBe(0);
+    expect(s.selectedKnown).toBe(true);
+  });
 });
