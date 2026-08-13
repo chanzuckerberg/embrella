@@ -732,6 +732,8 @@ def get_copick_annotated_count(request) -> JsonResponse:
             "scanned": scanned,
         }
     )
+
+
 def _list_cluster_copick_runs(session_id: str) -> set[str]:
     """Copick run dirs physically present on the cluster for a session.
     Complements the DB ProcRun list with configs created outside Embrella.
