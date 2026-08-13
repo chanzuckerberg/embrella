@@ -308,7 +308,6 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
                 # index (DomainPathService) was removed: the models it read are no longer
                 # written by the processor flow, so it silently classified everything as
                 # user_created.
-                # TODO: reclassify by parent folder / processor type, or by MSI session.
                 # TODO: implement compare bruno survey with czii's (needs a czii survey
                 # to diff against to detect synced_from_czii directories).
                 origin = "unknown"
@@ -343,6 +342,31 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
             survey.status = "completed"
             survey.save()
 
+            # Materialize the storage tree from the rows just written using our db (not parquet)
+            leaves_built = None
+            try:
+                from processes.models import current_survey
+                from processes.services.storage_tree import build_storage_tree
+
+                leaves_built = build_storage_tree(survey).leaves
+
+                current = current_survey(survey.cluster)
+                if current is not None and current.pk != survey.pk:
+                    logger.warning(
+                        "Survey %s rebuilt, but %s is still the current tree for %s. "
+                        "The Storage Explorer will not reflect this survey.",
+                        survey_id,
+                        current.pk,
+                        survey.cluster,
+                    )
+            except Exception:
+                logger.exception(
+                    "Survey %s: storage tree build failed. Directory summaries are intact; "
+                    "run `manage.py rebuild_storage_tree --survey %s` to retry.",
+                    survey_id,
+                    survey_id,
+                )
+
             logger.info(
                 f"Survey {survey_id} processing complete. Created {summaries_created} directory summaries.",
             )
@@ -354,6 +378,7 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
                 "total_directories": survey.total_directories,
                 "total_size_bytes": survey.total_size_bytes,
                 "summaries_created": summaries_created,
+                "storage_tree_leaves": leaves_built,
             }
 
         finally:
