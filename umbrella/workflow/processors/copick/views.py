@@ -9,7 +9,9 @@ Provides processor-specific endpoints for:
 """
 
 import json
+import logging
 import os
+import shlex
 
 from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
@@ -23,7 +25,11 @@ from rest_framework.permissions import AllowAny
 from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 
+from common import clusterio
+
 from .processor import CopickProcessor
+
+logger = logging.getLogger(__name__)
 
 COPICK_PLAN_NAME = "czii-copick"
 COPICK_DEFAULT_CLUSTER_ID = CopickProcessor.cluster
@@ -639,7 +645,9 @@ def get_copick_runs(request) -> JsonResponse:
     """
     Get available Copick runs for a given session.
 
-    Lists the ProcRuns under the czii-copick plan for the session - a DB query, so no HPC mount.
+    Merges two sources so the dropdown reflects everything selectable: (1) czii-copick ProcRuns in
+    the DB (Embrella-managed, always available), and (2) copick config dirs physically on the
+    cluster (created outside Embrella, over SSH - degrades to DB-only when SSH is off).
     `description` is the run's copick config.json path on the cluster.
 
     Args:
@@ -671,26 +679,26 @@ def get_copick_runs(request) -> JsonResponse:
             }
         )
 
+    run_names: set[str] = set()
+
+    # 1) Embrella-managed copick projects (DB ProcRuns) — always available.
     try:
         plan = ProcPlan.objects.get(name=COPICK_PLAN_NAME)
         session_obj = MsiSession.objects.get(name=session_id)
+        run_names |= set(ProcRun.objects.filter(proc_plan=plan, msi_session=session_obj).values_list("name", flat=True))
     except (ProcPlan.DoesNotExist, MsiSession.DoesNotExist):
-        return JsonResponse(
-            {
-                "success": True,
-                "copick_runs": [],
-                "message": "No Copick runs found for this session. Create a Copick project first.",
-            }
-        )
+        pass
 
-    runs = ProcRun.objects.filter(proc_plan=plan, msi_session=session_obj).order_by("-created_at")
+    # 2) Configs physically on the cluster (may have been created outside Embrella, so no ProcRun)
+    run_names |= _list_cluster_copick_runs(session_id)
+
     copick_runs = [
         {
-            "name": run.name,
-            "label": run.name,
-            "description": f"/hpc/projects/group.czii/krios1.processing/copick/{session_id}/{run.name}/config.json",
+            "name": name,
+            "label": name,
+            "description": f"/hpc/projects/group.czii/krios1.processing/copick/{session_id}/{name}/config.json",
         }
-        for run in runs
+        for name in sorted(run_names)
     ]
 
     return JsonResponse({"success": True, "copick_runs": copick_runs})
@@ -724,6 +732,31 @@ def get_copick_annotated_count(request) -> JsonResponse:
             "scanned": scanned,
         }
     )
+
+
+def _list_cluster_copick_runs(session_id: str) -> set[str]:
+    """Copick run dirs physically present on the cluster for a session.
+    Complements the DB ProcRun list with configs created outside Embrella.
+    """
+    try:
+        ssh = clusterio.get_cluster_ssh_connection(cluster_id=COPICK_DEFAULT_CLUSTER_ID)
+    except Exception:
+        return set()
+    try:
+        base = f"/hpc/projects/group.czii/krios1.processing/copick/{session_id}"
+        _, stdout, _ = ssh.exec_command(f"ls -d {shlex.quote(base)}/*/config.json 2>/dev/null", timeout=20)
+        out = stdout.read().decode("utf-8", "replace")
+        runs = set()
+        for line in out.splitlines():
+            parts = line.strip().split("/")
+            if len(parts) >= 2 and parts[-1] == "config.json":
+                runs.add(parts[-2])  # .../copick/<session>/<run>/config.json → <run>
+        return runs
+    except Exception:
+        logger.exception("copick: cluster run listing failed for session %s", session_id)
+        return set()
+    finally:
+        ssh.close()
 
 
 def _latest_pipe_status(proc_run) -> str:

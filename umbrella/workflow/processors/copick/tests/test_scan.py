@@ -117,17 +117,30 @@ def test_scan_copick_error_surfaced():
 
 
 @pytest.mark.django_db
-class TestGetCopickRunsFromDB:
-    """get_copick_runs lists copick ProcRuns from the DB (no filesystem/SSH/mount)."""
+class TestGetCopickRuns:
+    """get_copick_runs merges DB ProcRuns with cluster-listed configs (SSH best-effort)."""
+
+    def _no_cluster(self):
+        # SSH unavailable → cluster listing is empty, so we exercise the DB-only path.
+        return mock.patch.object(copick_views, "_list_cluster_copick_runs", return_value=set())
 
     def test_lists_copick_procruns(self, client, copick_session):
-        r = client.get(COPICK_RUNS_URL, {"session_id": "26feb20b"})
+        with self._no_cluster():
+            r = client.get(COPICK_RUNS_URL, {"session_id": "26feb20b"})
         assert r.status_code == 200
         names = {x["name"] for x in r.json()["copick_runs"]}
         assert names == {"run001", "run002"}
 
+    def test_merges_cluster_configs_not_in_db(self, client, copick_session):
+        # run004 exists on the cluster but has no ProcRun — it must still appear.
+        with mock.patch.object(copick_views, "_list_cluster_copick_runs", return_value={"run004", "run001"}):
+            r = client.get(COPICK_RUNS_URL, {"session_id": "26feb20b"})
+        names = {x["name"] for x in r.json()["copick_runs"]}
+        assert names == {"run001", "run002", "run004"}  # DB ∪ cluster, deduped
+
     def test_unknown_session_returns_empty(self, client, db):
-        r = client.get(COPICK_RUNS_URL, {"session_id": "does-not-exist"})
+        with self._no_cluster():
+            r = client.get(COPICK_RUNS_URL, {"session_id": "does-not-exist"})
         assert r.status_code == 200
         assert r.json()["copick_runs"] == []
 

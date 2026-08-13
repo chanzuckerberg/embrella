@@ -129,7 +129,12 @@ export function CopickConfigs({
         );
       })}
 
-      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
+      <Menu
+        anchorEl={anchor}
+        open={!!anchor}
+        onClose={() => setAnchor(null)}
+        slotProps={{ paper: { sx: { maxHeight: 150 } } }}
+      >
         {copick.isFetching && <MenuItem disabled>Loading…</MenuItem>}
         {available.map((r) => (
           <MenuItem
