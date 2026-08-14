@@ -72,6 +72,17 @@ class TableQueryFilter(BaseFilterBackend):
     """
 
     def filter_queryset(self, request, queryset, view):
+        queryset = self.filter_only(request, queryset, view)
+        return self._apply_ordering(parse_table_query(request), queryset, view)
+
+    def filter_only(self, request, queryset, view):
+        """
+        Filters and search, without ordering.
+
+        For views that aggregate: Views that need
+        the underlying rows for a page to nest them under their parent call
+        this to get identically-filtered rows without inheriting a sort key
+        """
         table_query = parse_table_query(request)
 
         queryset, filter_lookups = self._apply_filters(table_query, queryset, view)
@@ -81,7 +92,7 @@ class TableQueryFilter(BaseFilterBackend):
         if any(traverses_to_many(queryset.model, lookup) for lookup in applied):
             queryset = queryset.distinct()
 
-        return self._apply_ordering(table_query, queryset, view)
+        return queryset
 
     def _apply_filters(self, table_query, queryset, view):
         """Returns the queryset and the ORM lookups that were applied."""
