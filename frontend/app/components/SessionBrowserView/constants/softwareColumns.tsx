@@ -1,6 +1,6 @@
 import { ColumnDef } from '@tanstack/react-table';
 
-import { formatDate } from '@app/common/utils/date';
+import { formatDate } from '@app/common/utils/format';
 
 import { SessionSoftwareGroup } from '../types';
 

@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 
 import { AccessorReturnType } from '@app/common/components/EntityTable/types';
-import { humanize } from '@app/common/utils/string';
+import { humanize } from '@app/common/utils/format';
 import { EntityDataTypes } from '@app/common/types/tableState';
 import { TomogramData } from '../types';
 import { ParametersCell } from '../ParametersCell';

@@ -3,7 +3,7 @@ import { ColumnDef } from '@tanstack/react-table';
 
 import { AccessorReturnType } from '@app/common/components/EntityTable/types';
 import { EntityDataTypes } from '@app/common/types/tableState';
-import { formatDate } from '@app/common/utils/date';
+import { formatDate } from '@app/common/utils/format';
 import { GridNameCell } from '@app/components/GridsView/components/GridNameCell';
 
 import { SessionOverviewData } from '../types';

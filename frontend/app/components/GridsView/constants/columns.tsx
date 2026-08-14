@@ -2,8 +2,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Link } from '@czi-sds/components';
 
 import { EntityDataTypes } from '@app/common/types/tableState';
-import { humanize } from '@app/common/utils/string';
-import { formatDate } from '@app/common/utils/date';
+import { formatDate, humanize } from '@app/common/utils/format';
 import { AccessorReturnType } from '@app/common/components/EntityTable/types';
 import {
   getLinkPropsFromLinkField,
