@@ -57,19 +57,8 @@ export const StatusActionMenu = ({ anchor, target, onClose, onChoose }: StatusAc
   };
 
   return (
-    <Menu
-      anchorEl={anchor}
-      open={Boolean(anchor)}
-      onClose={close}
-      // This app scrolls inside TableWrapper, not on body, so MUI's scroll lock
-      // has no scrollbar to compensate for and its padding shifts the whole
-      // table sideways when the menu opens.
-      disableScrollLock
-    >
+    <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={close} disableScrollLock>
       {!!target?.inheritedFrom && (
-        // Says why the row reads what it reads, without restating the path --
-        // that is on the tag's own tooltip, and at ~90 characters it wrapped to
-        // three lines and dwarfed the four options underneath it.
         <MenuItem disabled sx={{ opacity: 1 }}>
           <Typography variant="caption" color="text.secondary">
             Inherited from the tier above

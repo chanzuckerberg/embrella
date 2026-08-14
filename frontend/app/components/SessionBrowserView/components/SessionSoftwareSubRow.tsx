@@ -12,13 +12,7 @@ interface SessionSoftwareSubRowProps {
 }
 
 /**
- * Middle tier of the session browser: one row per processing-software display
- * name, each expanding to that software's runs.
- *
- * Note this shows every software on the session even when a
- * `processingSoftware` filter is active — the backend filters which *sessions*
- * match, not which runs come back, so the expanded view stays a complete
- * picture of the session.
+ * Session browser's software tier
  */
 export const SessionSoftwareSubRow = ({ data }: SessionSoftwareSubRowProps) => {
   const groups = useMemo(() => groupRunsBySoftware(data), [data]);

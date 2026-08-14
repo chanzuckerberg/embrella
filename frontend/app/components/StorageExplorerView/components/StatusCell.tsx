@@ -7,13 +7,6 @@ import { statusLabel } from '../constants/statusLabels';
 import { useStorageDecisions } from '../context/StorageDecisionContext';
 import { StorageStatus } from '../types';
 
-/**
- * SDS's `neutral` intent fills with gray-200 (#dfdfdf), which is heavy for the
- * status most rows are in — nearly the whole table is undecided, so a mid grey
- * across all of it reads as noise and leaves nothing for the decided rows to
- * stand out against. One step lighter on the same ramp; SDS's gray-700 label
- * still gives 12:1 contrast.
- */
 const QuietTag = styled(Tag)`
   background-color: ${gray100};
 `;
@@ -44,17 +37,6 @@ interface StatusCellProps {
 
 /**
  * A row's preservation status, at any tier, and the control that sets it.
- *
- * "Delete" is a recorded judgement that a directory looks reclaimable. Nothing
- * in this view deletes, moves or modifies a file.
- *
- * A tag rather than text because it is also the affordance: SDS Tag is
- * clickable and has a hover state, so the thing showing the current value is
- * the thing you click to change it. Outside the decision provider it degrades
- * to a plain label rather than throwing, so a tier can be rendered on its own.
- *
- * Inheritance is not marked here — the menu says "Inherited from the tier
- * above" when it applies, which is the point at which it matters.
  */
 export const StatusCell = ({
   status,

@@ -2,11 +2,6 @@ import { SessionOverviewData, SessionRunRow, SessionSoftwareGroup } from '../typ
 
 /**
  * Build the software tier of the session browser from a session's flat `runs`.
- *
- * The API nests runs directly under the session, so the grouping happens here.
- * Groups are keyed on `planLabel` — the display value — because that is what
- * the row's `processingSoftware` array lists, and sorting them the same way
- * keeps the collapsed chips and the expanded rows in the same order.
  */
 export function groupRunsBySoftware(data: SessionOverviewData): SessionSoftwareGroup[] {
   const groups = new Map<string, SessionRunRow[]>();
