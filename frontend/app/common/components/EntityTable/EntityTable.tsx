@@ -37,6 +37,12 @@ interface EntityTableProps<T> {
   getSubRows?: (row: any) => any[] | undefined;
   renderSubRow?: (row: Row<T>) => React.ReactNode;
   onRowCountChange?: (rowCount: number) => void;
+  /**
+   * Bump to re-read the current page. Unlike remounting the table this keeps
+   * row expansion, which matters when an action taken three tiers deep should
+   * not collapse everything above it.
+   */
+  refetchSignal?: number;
 }
 
 export const StyledPagination = styled(Pagination)`
@@ -90,6 +96,7 @@ export const EntityTable = <T extends EntityDataTypes>({
   getSubRows,
   renderSubRow,
   onRowCountChange,
+  refetchSignal,
 }: EntityTableProps<T>): React.JSX.Element => {
   const { table, entityList } = useConnect<T>(entityApi, entityApiResponseField, columnDefs, {
     rowSelection,
@@ -103,6 +110,13 @@ export const EntityTable = <T extends EntityDataTypes>({
       onRowCountChange?.(entityList.entities.length);
     }
   }, [entityList, onRowCountChange]);
+
+  const refetch = entityList?.refetch;
+  useEffect(() => {
+    // Skipped on mount: the initial fetch has already been kicked off.
+    if (refetchSignal) refetch?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the signal alone; refetch identity is stable
+  }, [refetchSignal]);
 
   const { getPageCount, getState, nextPage, previousPage, setPageIndex } = table;
   const {

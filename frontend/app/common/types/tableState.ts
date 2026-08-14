@@ -33,6 +33,8 @@ export type EntityList<T extends EntityDataTypes> = {
   entities: T[];
   pagination: Pagination;
   sortBy: SortBy;
+  /** Re-reads the current page in place, keeping row expansion state. */
+  refetch?: () => void;
 };
 
 export interface Pagination {

@@ -11,6 +11,7 @@ function run(overrides: Partial<StorageRunRow> & { id: string; software: string 
     totalSizeDisplay: '1000.00 B',
     lastModified: '2026-01-01T00:00:00Z',
     pathPrefix: `/base/${overrides.software}/26mar02a/run001`,
+    softwarePathPrefix: `/base/${overrides.software}/26mar02a`,
     status: 'unset' as StorageStatus,
     decidedAtPrefix: null,
     ...overrides,
@@ -102,7 +103,8 @@ describe('groupRunsBySoftware', () => {
     expect(groups[0].lastModified).toBeNull();
   });
 
-  it('orders groups and their runs biggest first', () => {
+  it('orders software groups biggest first', () => {
+    // That tier answers "where did the space go".
     const groups = groupRunsBySoftware(
       session([
         run({ id: 'r1', software: 'denoise', totalSizeBytes: 100 }),
@@ -112,7 +114,30 @@ describe('groupRunsBySoftware', () => {
     );
 
     expect(groups.map((group) => group.software)).toEqual(['aretomo3', 'denoise']);
-    expect(groups[0].runs.map((r) => r.totalSizeBytes)).toEqual([900, 200]);
+  });
+
+  it('orders runs by name, not by size', () => {
+    // Within one software folder you are looking for a particular run.
+    const groups = groupRunsBySoftware(
+      session([
+        run({ id: 'r1', software: 'denoise', run: { id: 1, name: 'run004' }, totalSizeBytes: 3 }),
+        run({ id: 'r2', software: 'denoise', run: { id: 2, name: 'run001' }, totalSizeBytes: 900 }),
+        run({ id: 'r3', software: 'denoise', run: { id: 3, name: 'run002' }, totalSizeBytes: 1 }),
+      ])
+    );
+
+    expect(groups[0].runs.map((r) => r.run.name)).toEqual(['run001', 'run002', 'run004']);
+  });
+
+  it('sorts run names numerically, so run10 follows run9', () => {
+    const groups = groupRunsBySoftware(
+      session([
+        run({ id: 'r1', software: 'denoise', run: { id: 1, name: 'run10' } }),
+        run({ id: 'r2', software: 'denoise', run: { id: 2, name: 'run9' } }),
+      ])
+    );
+
+    expect(groups[0].runs.map((r) => r.run.name)).toEqual(['run9', 'run10']);
   });
 
   it('excludes the session root from runCount but keeps its bytes', () => {

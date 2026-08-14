@@ -49,6 +49,7 @@ export function groupRunsBySoftware(data: StorageSessionData): StorageSoftwareGr
       return {
         id: `storagesoftware-${data.sessionName}-${software}`,
         software,
+        pathPrefix: runs[0].softwarePathPrefix,
         // Session-root leaves carry files sitting directly under the session
         // directory; they are not runs, and the API's runCount excludes them too.
         runCount: runs.filter((run) => run.run.name !== '(session root)').length,
@@ -58,7 +59,7 @@ export function groupRunsBySoftware(data: StorageSessionData): StorageSoftwareGr
         totalSizeDisplay: formatBytes(totalSizeBytes),
         lastModified: modified.length > 0 ? modified.reduce((a, b) => (a > b ? a : b)) : null,
         status: rollupStatus(runs),
-        runs: [...runs].sort((a, b) => b.totalSizeBytes - a.totalSizeBytes),
+        runs: [...runs].sort((a, b) => a.run.name.localeCompare(b.run.name, undefined, { numeric: true })),
       };
     })
     .sort((a, b) => b.totalSizeBytes - a.totalSizeBytes);

@@ -2,7 +2,7 @@ import { ColumnDef } from '@tanstack/react-table';
 
 import { formatDate } from '@app/common/utils/format';
 
-import { StatusTag } from '../components/StatusTag';
+import { StatusCell } from '../components/StatusCell';
 import { StorageSoftwareGroup } from '../types';
 import { statusLabel } from './statusLabels';
 
@@ -43,7 +43,16 @@ export const STORAGE_SOFTWARE_COLUMN_DEFS: ColumnDef<StorageSoftwareGroup>[] = [
   {
     id: 'status',
     accessorFn: (group) => statusLabel(group.status),
-    cell: ({ row }) => <StatusTag status={row.original.status} />,
+    cell: ({ row }) => (
+      <StatusCell
+        status={row.original.status}
+        label={`${row.original.software} for this session`}
+        pathPrefixes={[row.original.pathPrefix]}
+        totalSizeDisplay={row.original.totalSizeDisplay}
+        directoryCount={row.original.directoryCount}
+        pathPrefix={row.original.pathPrefix}
+      />
+    ),
     header: 'Status',
     size: 110,
   },

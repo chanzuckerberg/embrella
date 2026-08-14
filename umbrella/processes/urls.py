@@ -2,13 +2,14 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from . import views
-from .viewsets import StorageSessionViewSet
+from .viewsets import StorageDecisionViewSet, StorageSessionViewSet
 
 # register app namespace
 app_name = "processes"
 
 router = DefaultRouter()
 router.register(r"v1/storage-sessions", StorageSessionViewSet, basename="storage-sessions")
+router.register(r"v1/storage-decisions", StorageDecisionViewSet, basename="storage-decisions")
 
 # Legacy template-based routes (included under /legacy/processes/).
 legacy_urlpatterns = [

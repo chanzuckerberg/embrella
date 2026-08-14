@@ -157,11 +157,33 @@ class TestEnvelope:
             "totalSizeDisplay",
             "lastModified",
             "pathPrefix",
+            "softwarePathPrefix",
             "status",
             "decidedAtPrefix",
         }
         # Namespaced so a run id cannot collide with a session row id.
         assert run["id"].startswith("storagerun-")
+
+    def test_software_path_prefix_is_the_runs_parent(self, auth_client, populated):
+        """
+        The client records software- and session-tier decisions against this, so
+        it has to be the run's parent directory and not the run itself.
+        """
+        rows = auth_client.get(URL, q()).json()["result"]
+        runs = {
+            (r["software"], r["run"]["name"]): r
+            for r in next(x for x in rows if x["sessionName"] == "26mar02a")["runs"]
+        }
+
+        aretomo = runs[("aretomo3", "run001")]
+        assert aretomo["pathPrefix"] == f"{BASE}/aretomo3/26mar02a/run001"
+        assert aretomo["softwarePathPrefix"] == f"{BASE}/aretomo3/26mar02a"
+
+        # Two software folders means two prefixes for one session.
+        assert {r["softwarePathPrefix"] for r in runs.values()} == {
+            f"{BASE}/aretomo3/26mar02a",
+            f"{BASE}/denoise/26mar02a",
+        }
 
     def test_biggest_session_is_first(self, auth_client, populated):
         rows = auth_client.get(URL, q()).json()["result"]

@@ -70,6 +70,7 @@ export enum API {
   STORAGE_SESSIONS = '/processes/v1/storage-sessions/',
   STORAGE_SESSIONS_FILTERLIST = '/processes/v1/storage-sessions/filterlist/',
   STORAGE_SESSIONS_SUMMARY = '/processes/v1/storage-sessions/summary/',
+  STORAGE_DECISIONS = '/processes/v1/storage-decisions/',
 
   // Session/Run Selection
   MSI_SESSIONS_LIST = '/workflow/get_msi_session_list',

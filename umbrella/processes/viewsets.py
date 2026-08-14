@@ -7,6 +7,7 @@ DRF ViewSets for the processes app.
 
 from collections import defaultdict
 
+from django.db import transaction
 from django.db.models import Count, Max, Min, Q, Sum
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import mixins, viewsets
@@ -17,9 +18,20 @@ from rest_framework.response import Response
 from stores.models import Cluster
 from umbrella.table_api import EntityTablePagination, TableQueryFilter, build_filters, value_counts
 
-from processes.models import DirectorySummary, FilesystemSurvey, StorageRunSummary, current_survey, format_bytes
-from processes.serializers import StorageSessionSerializer
-from processes.services.decisions import decisions_for, effective_status, rollup_status
+from processes.models import (
+    DirectorySummary,
+    FilesystemSurvey,
+    StorageDecision,
+    StorageRunSummary,
+    current_survey,
+    format_bytes,
+)
+from processes.serializers import (
+    StorageDecisionSerializer,
+    StorageDecisionWriteSerializer,
+    StorageSessionSerializer,
+)
+from processes.services.decisions import UNSET, decisions_for, effective_status, rollup_status, session_filter
 from processes.services.storage_tree import tree_is_stale
 
 
@@ -429,3 +441,108 @@ class StorageSessionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             "processingSoftware": value_counts(leaves, "software", count="session_name"),
         }
         return Response({"filters": build_filters(request, facets)})
+
+
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Storage Explorer"],
+        summary="List recorded preservation decisions",
+        description=("Paginated and filterable through the shared `q` protocol."),
+        parameters=[
+            OpenApiParameter(name="cluster", description="Filter to one cluster.", required=False, type=str),
+        ],
+    ),
+    destroy=extend_schema(
+        tags=["Storage Explorer"],
+        summary="Remove one decision",
+        description=(
+            "Deletes the record of a judgement. Nothing on the filesystem is touched.\n\n"
+            "Posting `status: unset` for the same paths does the same thing and is what the UI uses, "
+            "since it already knows the paths and would otherwise have to look up row ids."
+        ),
+    ),
+)
+class StorageDecisionViewSet(mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    """
+    Records human judgements about which directories look reclaimable.
+
+    **Nothing here deletes, moves or modifies a file.** ``status = "delete"``
+    writes a row to StorageDecision and nothing else: no filesystem write, no
+    ``rm``, no SLURM job, no cluster call. Acting on these decisions is
+    deliberately a separate feature that has not been built. If a change to this
+    module starts touching ``common/clusterio.py``, submitting a job, or writing
+    to a path, it is out of scope and needs its own design review.
+    """
+
+    serializer_class = StorageDecisionSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = EntityTablePagination
+    filter_backends = [TableQueryFilter]
+
+    table_filters = {
+        "cluster": "cluster__in",
+        "status": "status__in",
+        # Derived from the path; see session_filter for why there is no column.
+        "session": session_filter,
+    }
+    table_search_fields = ["path_prefix", "notes"]
+    table_sort_fields = {
+        "decidedAt": "decided_at",
+        "path": "path_prefix",
+        "status": "status",
+        "decidedBy": "decided_by__username",
+    }
+    # Newest first: the useful question is usually "what was decided recently".
+    table_default_sort = ("decidedAt", False)
+
+    def get_queryset(self):
+        queryset = StorageDecision.objects.select_related("decided_by")
+        cluster = self.request.query_params.get("cluster")
+        return queryset.filter(cluster=cluster) if cluster else queryset
+
+    @extend_schema(
+        tags=["Storage Explorer"],
+        summary="Record a decision across one or more directories",
+        description=("Writes one judgement over every path in `path_prefixes`, in a single transaction."),
+        request=StorageDecisionWriteSerializer,
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "cleared": {
+                        "type": "integer",
+                        "description": "Rows removed, non-zero only for `status: unset`.",
+                    },
+                    "result": {"type": "array", "items": {"type": "object"}},
+                },
+            },
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        form = StorageDecisionWriteSerializer(data=request.data)
+        form.is_valid(raise_exception=True)
+        decision = form.validated_data
+
+        cluster = decision["cluster"]
+        prefixes = decision["path_prefixes"]
+
+        # Atomic so a multi-prefix session decision cannot land half-applied.
+        with transaction.atomic():
+            if decision["status"] == UNSET:
+                cleared, _ = StorageDecision.objects.filter(cluster=cluster, path_prefix__in=prefixes).delete()
+                return Response({"cleared": cleared, "result": []})
+
+            rows = [
+                StorageDecision.objects.update_or_create(
+                    cluster=cluster,
+                    path_prefix=prefix,
+                    defaults={
+                        "status": decision["status"],
+                        "notes": decision["notes"],
+                        "decided_by": request.user,
+                    },
+                )[0]
+                for prefix in prefixes
+            ]
+
+        return Response({"cleared": 0, "result": StorageDecisionSerializer(rows, many=True).data})

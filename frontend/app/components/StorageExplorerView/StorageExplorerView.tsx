@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, FormControl, InputLabel, MenuItem, Select, Tooltip, Typography } from '@mui/material';
 import { Callout, Tab, Tabs } from '@czi-sds/components';
 import { parseAsString, useQueryState } from 'nuqs';
@@ -15,12 +15,14 @@ import { formatDate } from '@app/common/utils/format';
 import { DirectoryExplorerView } from '@app/components/DirectoryExplorerView';
 import { fetchSurveys } from '@app/components/DirectoryExplorerView/api';
 
-import { fetchStorageSummary } from './api';
+import { fetchStorageSummary, recordStorageDecision } from './api';
+import { StatusActionMenu } from './components/StatusActionMenu';
 import { StorageSearchBar } from './components/StorageSearchBar';
 import { StorageStatsCard } from './components/StorageStatsCard';
 import { STORAGE_FILTER_CATEGORIES, STORAGE_FILTER_CONFIGS } from './constants/filters';
+import { StorageDecisionContext } from './context/StorageDecisionContext';
 import { GroupTable } from './GroupTable';
-import { StorageFilterCategory, StorageFilterId, StorageSummary } from './types';
+import { DecisionTarget, SettableStatus, StorageFilterCategory, StorageFilterId, StorageSummary } from './types';
 
 const ENTITY_TAB = 'entity';
 const PATHS_TAB = 'paths';
@@ -100,6 +102,32 @@ const StorageExplorerLayout = (): React.JSX.Element => {
     void setTab(PATHS_TAB);
   }, [setTab]);
 
+  // Set-status menu, shared by all three tiers via context.
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [menuTarget, setMenuTarget] = useState<DecisionTarget | null>(null);
+  const [decisionVersion, setDecisionVersion] = useState(0);
+
+  const openMenu = useCallback((anchor: HTMLElement, target: DecisionTarget) => {
+    setMenuAnchor(anchor);
+    setMenuTarget(target);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setMenuAnchor(null);
+    setMenuTarget(null);
+  }, []);
+
+  const applyDecision = useCallback(
+    async (status: SettableStatus, notes: string) => {
+      if (!menuTarget) return;
+      await recordStorageDecision(selectedCluster, menuTarget.pathPrefixes, status, notes);
+      setDecisionVersion((previous) => previous + 1);
+    },
+    [menuTarget, selectedCluster]
+  );
+
+  const decisionContext = useMemo(() => ({ openMenu }), [openMenu]);
+
   return (
     <Box>
       <Box sx={{ px: 3 }}>
@@ -118,7 +146,7 @@ const StorageExplorerLayout = (): React.JSX.Element => {
       {tab === PATHS_TAB ? (
         <DirectoryExplorerView />
       ) : (
-        <Box>
+        <StorageDecisionContext.Provider value={decisionContext}>
           {!!survey?.stale && (
             <Box sx={{ px: 3, pt: 1.5 }}>
               {/* Wrong numbers with no warning are worse than a missing view. */}
@@ -180,10 +208,12 @@ const StorageExplorerLayout = (): React.JSX.Element => {
               />
             </Sidebar>
             <TableWrapper>
-              <GroupTable cluster={cluster} />
+              <GroupTable cluster={cluster} refetchSignal={decisionVersion} />
             </TableWrapper>
           </FilterableTableMain>
-        </Box>
+
+          <StatusActionMenu anchor={menuAnchor} target={menuTarget} onClose={closeMenu} onChoose={applyDecision} />
+        </StorageDecisionContext.Provider>
       )}
     </Box>
   );

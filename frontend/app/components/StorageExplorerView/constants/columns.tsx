@@ -6,7 +6,7 @@ import { AccessorReturnType } from '@app/common/components/EntityTable/types';
 import { EntityDataTypes } from '@app/common/types/tableState';
 import { formatDate } from '@app/common/utils/format';
 
-import { StatusTag } from '../components/StatusTag';
+import { StatusCell } from '../components/StatusCell';
 import { StorageSessionData } from '../types';
 import { statusLabel } from './statusLabels';
 
@@ -114,7 +114,20 @@ export const STORAGE_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>
   {
     id: STORAGE_COLUMN_IDS.STATUS,
     accessorFn: (data) => statusLabel(row(data).status),
-    cell: ({ row: tableRow }) => <StatusTag status={row(tableRow.original).status} />,
+    cell: ({ row: tableRow }) => {
+      const session = row(tableRow.original);
+      return (
+        <StatusCell
+          status={session.status}
+          label={`session ${session.sessionName}`}
+          // One prefix per software folder: a session's data is not under a
+          // single directory, so one judgement covers several.
+          pathPrefixes={[...new Set(session.runs.map((run) => run.softwarePathPrefix))]}
+          totalSizeDisplay={session.totalSizeDisplay}
+          directoryCount={session.directoryCount}
+        />
+      );
+    },
     // Not a stored column on the aggregate, so the backend cannot order by it.
     enableSorting: false,
     header: 'Status',

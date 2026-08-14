@@ -25,11 +25,24 @@ export interface StorageRunRow {
   totalSizeBytes: number;
   totalSizeDisplay: string;
   lastModified: string | null;
-  /** Absolute directory this leaf covers; the drill-down key. */
   pathPrefix: string;
+  softwarePathPrefix: string;
   status: StorageStatus;
   /** Equal to `pathPrefix` if the decision is this row's, shorter if inherited, null if none. */
   decidedAtPrefix: string | null;
+}
+
+/** Statuses a user can choose. `mixed` is presentation-only and never written. */
+export type SettableStatus = Exclude<StorageStatus, 'mixed'>;
+
+export interface DecisionTarget {
+  label: string;
+  pathPrefixes: string[];
+  status: StorageStatus;
+  totalSizeDisplay: string;
+  directoryCount: number;
+  /** Set when the current status came from an ancestor rather than this row. */
+  inheritedFrom?: string | null;
 }
 
 export interface StorageSessionData {
@@ -61,6 +74,7 @@ export interface StorageSessionData {
 export interface StorageSoftwareGroup {
   id: string;
   software: string;
+  pathPrefix: string;
   runCount: number;
   directoryCount: number;
   fileCount: number;

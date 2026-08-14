@@ -1,10 +1,12 @@
 """
-Read serializers for the storage-explorer API.
+Serializers for the storage-explorer API.
 """
 
 from rest_framework import serializers
+from stores.models import Cluster
 
-from processes.models import format_bytes
+from processes.models import DirectorySummary, FilesystemSurvey, StorageDecision, format_bytes
+from processes.services.decisions import covered_leaves
 
 
 class StorageSessionRefSerializer(serializers.Serializer):
@@ -64,6 +66,14 @@ class StorageRunSerializer(serializers.Serializer):
         source="path_prefix",
         help_text="Absolute directory this run covers. Pass as `path_prefix` to /processes/v1/directories/ to drill in.",
     )
+    softwarePathPrefix = serializers.SerializerMethodField(
+        help_text=(
+            "The run's parent -- the session's directory under one software folder. "
+            "Supplied so a client can record a decision at the software or session tier "
+            "without having to take paths apart itself. A session spans one of these per "
+            "software folder it has data under."
+        ),
+    )
     # Both attached by the viewset from StorageDecision; not model fields.
     status = serializers.CharField(help_text="unset, preserve, delete or review.")
     decidedAtPrefix = serializers.CharField(
@@ -86,6 +96,23 @@ class StorageRunSerializer(serializers.Serializer):
 
     def get_totalSizeDisplay(self, obj) -> str:
         return format_bytes(obj.total_size_bytes)
+
+    def get_softwarePathPrefix(self, obj) -> str:
+        """
+        path_prefix with the run segment removed.
+
+        A session-root leaf already *is* that directory, so it is returned as is.
+        Verified against both real surveys: path_prefix ends with `/<run_name>`
+        for all 5,101 run leaves, so the endswith check never falls through in
+        practice -- it is there so a future path layout cannot silently return a
+        truncated prefix.
+        """
+        if not obj.run_name:
+            return obj.path_prefix
+        suffix = f"/{obj.run_name}"
+        if obj.path_prefix.endswith(suffix):
+            return obj.path_prefix[: -len(suffix)]
+        return obj.path_prefix
 
 
 class StorageSessionSerializer(serializers.Serializer):
@@ -155,3 +182,77 @@ class StorageSessionSerializer(serializers.Serializer):
 
     def get_totalSizeDisplay(self, obj) -> str:
         return format_bytes(obj["total_size_bytes"])
+
+
+class StorageDecisionSerializer(serializers.ModelSerializer):
+    """
+    A recorded preservation decision, as read back.
+    """
+
+    pathPrefix = serializers.CharField(source="path_prefix", read_only=True)
+    decidedBy = serializers.CharField(source="decided_by.username", read_only=True, allow_null=True)
+    decidedAt = serializers.DateTimeField(source="decided_at", read_only=True)
+
+    class Meta:
+        model = StorageDecision
+        fields = ["id", "cluster", "pathPrefix", "status", "notes", "decidedBy", "decidedAt"]
+
+
+class StorageDecisionWriteSerializer(serializers.Serializer):
+    """
+    Record one judgement across one or more directories.
+
+    Recording `delete` does not delete anything. It writes rows to
+    StorageDecision and nothing else -- no filesystem write, no cluster call.
+    """
+
+    cluster = serializers.CharField(max_length=16)
+    path_prefixes = serializers.ListField(
+        child=serializers.CharField(max_length=512),
+        allow_empty=False,
+        help_text="Absolute directories this decision covers. One per software folder for a session-tier decision.",
+    )
+    status = serializers.ChoiceField(
+        choices=DirectorySummary.PRESERVE_STATUS_CHOICES,
+        help_text="`unset` deletes the rows rather than storing the word, so the table holds only real decisions.",
+    )
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate_cluster(self, value):
+        if not Cluster.objects.filter(cluster_id=value).exists():
+            known = ", ".join(sorted(Cluster.objects.values_list("cluster_id", flat=True))) or "none configured"
+            raise serializers.ValidationError(f"Unknown cluster {value!r}. Known clusters: {known}.")
+        return value
+
+    def validate(self, attrs):
+        """
+        Every prefix must be absolute, inside a surveyed tree, and actually on disk.
+        """
+        cluster = attrs["cluster"]
+        base_paths = [
+            base.rstrip("/")
+            for base in FilesystemSurvey.objects.filter(cluster=cluster).values_list("base_path", flat=True).distinct()
+        ]
+
+        cleaned = []
+        for raw in attrs["path_prefixes"]:
+            prefix = raw.rstrip("/")
+            if not prefix.startswith("/"):
+                raise serializers.ValidationError({"path_prefixes": f"{raw!r} is not an absolute path."})
+            if not any(prefix == base or prefix.startswith(f"{base}/") for base in base_paths):
+                raise serializers.ValidationError(
+                    {
+                        "path_prefixes": (
+                            f"{raw!r} is not under a surveyed directory for cluster {cluster!r}. "
+                            f"Surveyed roots: {', '.join(base_paths) or 'none'}."
+                        ),
+                    },
+                )
+            if not covered_leaves(cluster, prefix).exists():
+                raise serializers.ValidationError(
+                    {"path_prefixes": f"{raw!r} matches no directory in the current survey for {cluster!r}."},
+                )
+            cleaned.append(prefix)
+
+        attrs["path_prefixes"] = cleaned
+        return attrs

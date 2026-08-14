@@ -3,7 +3,7 @@ import { ColumnDef } from '@tanstack/react-table';
 
 import { formatDate } from '@app/common/utils/format';
 
-import { StatusTag } from '../components/StatusTag';
+import { StatusCell } from '../components/StatusCell';
 import { StorageRunRow } from '../types';
 import { statusLabel } from './statusLabels';
 
@@ -52,10 +52,14 @@ export const STORAGE_RUN_COLUMN_DEFS: ColumnDef<StorageRunRow>[] = [
     id: 'status',
     accessorFn: (run) => statusLabel(run.status),
     cell: ({ row }) => (
-      <StatusTag
+      <StatusCell
         status={row.original.status}
-        decidedAtPrefix={row.original.decidedAtPrefix}
+        label={`run ${row.original.run.name}`}
+        pathPrefixes={[row.original.pathPrefix]}
+        totalSizeDisplay={row.original.totalSizeDisplay}
+        directoryCount={row.original.directoryCount}
         pathPrefix={row.original.pathPrefix}
+        decidedAtPrefix={row.original.decidedAtPrefix}
       />
     ),
     header: 'Status',
