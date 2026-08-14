@@ -26,6 +26,7 @@ export interface SourcesRollup {
   totalTomograms: number;
   selectedTomograms: number;
   droppedTomograms: number;
+  selectedKnown: boolean;
   annotatedTomograms: number;
   copickConfigs: number;
   denoisedSessions: number;
@@ -37,6 +38,7 @@ export function rollup(rows: SourceRow[], mode: TomogramSubsetMode): SourcesRoll
     totalTomograms: 0,
     selectedTomograms: 0,
     droppedTomograms: 0,
+    selectedKnown: true,
     annotatedTomograms: 0,
     copickConfigs: 0,
     denoisedSessions: 0,
@@ -48,7 +50,9 @@ export function rollup(rows: SourceRow[], mode: TomogramSubsetMode): SourcesRoll
     if (r.tomogram_total != null) {
       acc.totalTomograms += r.tomogram_total;
       acc.annotatedTomograms += r.tomogram_selected ?? 0;
-      acc.selectedTomograms += rowSelected(r, mode) ?? 0;
+      const sel = rowSelected(r, mode);
+      if (sel == null) acc.selectedKnown = false;
+      else acc.selectedTomograms += sel;
     }
   }
   acc.droppedTomograms = Math.max(0, acc.totalTomograms - acc.selectedTomograms);

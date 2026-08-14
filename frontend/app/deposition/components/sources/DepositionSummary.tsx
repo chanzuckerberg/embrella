@@ -22,7 +22,10 @@ function SummaryLine({ label, value }: { label: string; value: ReactNode }) {
 
 export function DepositionSummary({ rows, subsetMode }: { rows: SourceRow[]; subsetMode: TomogramSubsetMode }) {
   const s = rollup(rows, subsetMode);
-  const tomograms = s.totalTomograms > 0 ? `${s.selectedTomograms} of ${s.totalTomograms}` : '—';
+  let tomograms = '-';
+  if (s.totalTomograms > 0) {
+    tomograms = s.selectedKnown ? `${s.selectedTomograms} of ${s.totalTomograms}` : `— of ${s.totalTomograms}`;
+  }
 
   return (
     <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2, minWidth: 240, position: 'sticky', top: 2 }}>
@@ -32,7 +35,9 @@ export function DepositionSummary({ rows, subsetMode }: { rows: SourceRow[]; sub
       <Box sx={{ mt: 1 }}>
         <SummaryLine label="Sessions" value={s.sessions} />
         <SummaryLine label="Tomograms" value={tomograms} />
-        {subsetMode !== 'all' && s.totalTomograms > 0 && <SummaryLine label="Excluded" value={s.droppedTomograms} />}
+        {subsetMode !== 'all' && s.totalTomograms > 0 && s.selectedKnown && (
+          <SummaryLine label="Excluded" value={s.droppedTomograms} />
+        )}
         <SummaryLine label="Copick configs" value={s.copickConfigs} />
         <SummaryLine label="Denoised sessions" value={`${s.denoisedSessions} of ${s.sessions}`} />
       </Box>
