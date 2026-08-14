@@ -445,6 +445,96 @@ class TestFilterlist:
 
 
 @pytest.mark.django_db
+class TestSummary:
+    """
+    The stats card's figures. `outsideTree` is the one worth guarding: it is a
+    subtraction, so an error in either operand shows up as storage the view
+    silently fails to account for.
+    """
+
+    def test_shape(self, auth_client, populated):
+        body = auth_client.get(f"{URL}summary/", {"cluster": "czii"}).json()
+
+        assert set(body) == {"survey", "total", "inTree", "outsideTree", "bySoftware"}
+        assert set(body["total"]) == {"totalSizeBytes", "totalSizeDisplay", "directoryCount", "fileCount"}
+        assert set(body["inTree"]) == {
+            "totalSizeBytes",
+            "totalSizeDisplay",
+            "directoryCount",
+            "fileCount",
+            "sessionCount",
+            "unregisteredSessionCount",
+            "runCount",
+        }
+        assert body["survey"]["cluster"] == "czii"
+
+    def test_in_tree_plus_outside_tree_equals_the_total(self, auth_client, populated, add_dir):
+        """
+        Every byte the survey saw lands in exactly one of the two tiles.
+        """
+        # relion is not Embrella software, so the tree must exclude it.
+        add_dir(populated, f"{BASE}/relion/kagglePaper/run001", size=7777)
+
+        body = auth_client.get(f"{URL}summary/", {"cluster": "czii"}).json()
+
+        for key in ("totalSizeBytes", "directoryCount", "fileCount"):
+            assert body["inTree"][key] + body["outsideTree"][key] == body["total"][key]
+
+        # The excluded subtree is the whole of the difference here.
+        assert body["outsideTree"]["totalSizeBytes"] == 7777
+        assert body["outsideTree"]["directoryCount"] == 1
+
+    def test_in_tree_totals_match_the_session_rows(self, auth_client, populated):
+        summary = auth_client.get(f"{URL}summary/", {"cluster": "czii"}).json()
+        rows = auth_client.get(URL, q()).json()["result"]
+
+        assert summary["inTree"]["totalSizeBytes"] == sum(row["totalSizeBytes"] for row in rows)
+        assert summary["inTree"]["sessionCount"] == len(rows)
+        assert summary["inTree"]["unregisteredSessionCount"] == 1
+
+    def test_by_software_is_largest_first_and_sums_to_the_tree(self, auth_client, populated):
+        body = auth_client.get(f"{URL}summary/", {"cluster": "czii"}).json()
+
+        sizes = [row["totalSizeBytes"] for row in body["bySoftware"]]
+        assert sizes == sorted(sizes, reverse=True)
+        assert sum(sizes) == body["inTree"]["totalSizeBytes"]
+
+        by_name = {row["software"]: row for row in body["bySoftware"]}
+        # Counted in sessions: aretomo3 holds both, denoise only one.
+        assert by_name["aretomo3"]["sessionCount"] == 2
+        assert by_name["denoise"]["sessionCount"] == 1
+
+    def test_ignores_the_q_param(self, auth_client, populated):
+        """
+        A cluster snapshot, not a summary of the filtered page -- otherwise the
+        card would restate the table instead of giving it context.
+        """
+        filtered = auth_client.get(
+            f"{URL}summary/",
+            {"cluster": "czii", "q": json.dumps([{"category": "processingSoftware", "value": ["denoise"]}])},
+        ).json()
+        unfiltered = auth_client.get(f"{URL}summary/", {"cluster": "czii"}).json()
+
+        assert filtered == unfiltered
+
+    def test_cluster_with_no_completed_survey_is_null_not_an_error(self, auth_client, software):
+        Cluster.objects.get_or_create(cluster_id="bruno", defaults={"name": "Bruno"})
+        response = auth_client.get(f"{URL}summary/", {"cluster": "bruno"})
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "survey": None,
+            "total": None,
+            "inTree": None,
+            "outsideTree": None,
+            "bySoftware": [],
+        }
+
+    def test_unknown_cluster_is_rejected(self, auth_client, populated):
+        assert auth_client.get(f"{URL}summary/", {"cluster": "czi"}).status_code == 400
+
+
+@pytest.mark.django_db
 class TestScoping:
     def test_only_the_current_survey_is_read(self, auth_client, software, make_survey, add_dir):
         """

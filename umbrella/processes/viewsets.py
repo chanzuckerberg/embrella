@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from stores.models import Cluster
 from umbrella.table_api import EntityTablePagination, TableQueryFilter, build_filters, value_counts
 
-from processes.models import FilesystemSurvey, StorageRunSummary, current_survey
+from processes.models import DirectorySummary, FilesystemSurvey, StorageRunSummary, current_survey, format_bytes
 from processes.serializers import StorageSessionSerializer
 from processes.services.decisions import decisions_for, effective_status, rollup_status
 from processes.services.storage_tree import tree_is_stale
@@ -76,6 +76,18 @@ def resolve_cluster(requested):
     return default.cluster_id
 
 
+def _size_block(size, directories, files):
+    """
+    The four figures every tile on the stats card shows.
+    """
+    return {
+        "totalSizeBytes": size,
+        "totalSizeDisplay": format_bytes(size),
+        "directoryCount": directories,
+        "fileCount": files,
+    }
+
+
 @extend_schema_view(
     list=extend_schema(
         tags=["Storage Explorer"],
@@ -129,6 +141,7 @@ class StorageSessionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         "lastModified": "last_modified",
         "project": "msi_session__project__name",
         "owner": "fs_owner",
+        "user": "msi_session__user__username",
     }
     table_default_sort = ("size", False)
     table_tiebreak = "session_name"
@@ -261,6 +274,108 @@ class StorageSessionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         response = self.get_paginated_response(serializer.data)
         response.data["survey"] = self._survey_block()
         return response
+
+    @extend_schema(
+        tags=["Storage Explorer"],
+        summary="Cluster-wide storage totals for the explorer's stats card",
+        description=(
+            "One snapshot of the cluster, ignoring `q` entirely -- these are the figures the header "
+            "card shows, not a summary of the current page.\n\n"
+            "`total` covers every directory the survey recorded. `inTree` covers only those under a "
+            "known processing-software folder, which is all the session table can show. "
+            "`outsideTree` is the difference: `relion`, `warptools` and anything else the allowlist "
+            "excludes, plus the software directories themselves. It is the one number that says how "
+            "much of the cluster this view cannot account for, so it is worth reading before "
+            "concluding the table shows everything."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="cluster",
+                description="Cluster id. Defaults to the configured default cluster.",
+                required=False,
+                type=str,
+            ),
+        ],
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "survey": {
+                        "type": "object",
+                        "nullable": True,
+                        "description": "Null when the cluster has no completed survey; every other block is null too.",
+                    },
+                    "total": {"type": "object", "nullable": True},
+                    "inTree": {"type": "object", "nullable": True},
+                    "outsideTree": {"type": "object", "nullable": True},
+                    "bySoftware": {"type": "array", "items": {"type": "object"}},
+                },
+            },
+        },
+    )
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        survey = self._survey()
+        if survey is None:
+            return Response(
+                {"survey": None, "total": None, "inTree": None, "outsideTree": None, "bySoftware": []},
+            )
+
+        leaves = StorageRunSummary.objects.filter(survey=survey)
+        tree = leaves.aggregate(
+            size=Sum("total_size_bytes"),
+            directories=Sum("directory_count"),
+            files=Sum("file_count"),
+        )
+        # A full scan of the survey's rows -- 1.9M on bruno, measured under a
+        # second, and this runs once per cluster rather than per page.
+        whole = DirectorySummary.objects.filter(survey=survey).aggregate(
+            size=Sum("total_size_bytes"),
+            directories=Count("id"),
+            files=Sum("file_count"),
+        )
+
+        tree_size = tree["size"] or 0
+        tree_dirs = tree["directories"] or 0
+        total_size = whole["size"] or 0
+        total_dirs = whole["directories"] or 0
+
+        return Response(
+            {
+                "survey": self._survey_block(),
+                "total": _size_block(total_size, total_dirs, whole["files"] or 0),
+                "inTree": {
+                    **_size_block(tree_size, tree_dirs, tree["files"] or 0),
+                    "sessionCount": leaves.values("session_name").distinct().count(),
+                    "unregisteredSessionCount": (
+                        leaves.filter(msi_session__isnull=True).values("session_name").distinct().count()
+                    ),
+                    # Session-root leaves are not runs; they carry files sitting
+                    # directly under the session directory.
+                    "runCount": leaves.exclude(run_name="").count(),
+                },
+                "outsideTree": _size_block(
+                    total_size - tree_size,
+                    total_dirs - tree_dirs,
+                    (whole["files"] or 0) - (tree["files"] or 0),
+                ),
+                "bySoftware": [
+                    {
+                        "software": row["software"],
+                        **_size_block(row["size"], row["directories"], row["files"]),
+                        "sessionCount": row["sessions"],
+                    }
+                    for row in leaves.values("software")
+                    .annotate(
+                        size=Sum("total_size_bytes"),
+                        directories=Sum("directory_count"),
+                        files=Sum("file_count"),
+                        sessions=Count("session_name", distinct=True),
+                    )
+                    .order_by("-size")
+                ],
+            },
+        )
 
     @extend_schema(
         tags=["Storage Explorer"],
