@@ -66,6 +66,11 @@ export enum API {
   SESSION_OVERVIEW = '/tem/v1/session-overview/',
   SESSION_OVERVIEW_FILTERLIST = '/tem/v1/session-overview/filterlist/',
 
+  // Storage Explorer (entity-centric tree). Take a ?cluster=, not a survey id.
+  STORAGE_SESSIONS = '/processes/v1/storage-sessions/',
+  STORAGE_SESSIONS_FILTERLIST = '/processes/v1/storage-sessions/filterlist/',
+  STORAGE_SESSIONS_SUMMARY = '/processes/v1/storage-sessions/summary/',
+
   // Session/Run Selection
   MSI_SESSIONS_LIST = '/workflow/get_msi_session_list',
 

@@ -12,6 +12,7 @@ import {
 } from '@app/components/DirectoryExplorerView/types';
 import { ReviewFilterCategory } from '@app/components/ReviewsView/types';
 import { SessionFilterCategory, SessionFilterConfig, SessionFilterId } from '@app/components/SessionBrowserView/types';
+import { StorageFilterCategory, StorageFilterConfig, StorageFilterId } from '@app/components/StorageExplorerView/types';
 import { JobFilterCategory, JobFilterConfig, JobFilterId } from '@app/processing/jobs/monitor/types';
 import { ScreeningFilterCategory, ScreeningFilterConfig, ScreeningFilterId } from '@app/components/Screening/types';
 // EntityFilterCategory extends EntityFilterCategories
@@ -33,7 +34,8 @@ export type EntityFilterIdTypes =
   | DirectoryFilterId
   | JobFilterId
   | ScreeningFilterId
-  | SessionFilterId;
+  | SessionFilterId
+  | StorageFilterId;
 
 export type EntityFilterCategories =
   | AnnotationFilterCategory
@@ -43,7 +45,8 @@ export type EntityFilterCategories =
   | ReviewFilterCategory
   | JobFilterCategory
   | ScreeningFilterCategory
-  | SessionFilterCategory;
+  | SessionFilterCategory
+  | StorageFilterCategory;
 
 export type EntityFilterConfigs =
   | AnnotationFilterConfig
@@ -52,7 +55,8 @@ export type EntityFilterConfigs =
   | DirectoryFilterConfig
   | JobFilterConfig
   | ScreeningFilterConfig
-  | SessionFilterConfig;
+  | SessionFilterConfig
+  | StorageFilterConfig;
 
 export interface FilterConfig<FilterId, FilterCategory extends string> {
   filterCategory: FilterCategory; // Key in result set row values to filter on.

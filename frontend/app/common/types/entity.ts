@@ -5,6 +5,7 @@ import { StandardSampleData } from '@app/components/StandardSamples/types';
 import { GridData } from '@app/components/GridsView/types';
 import { ReviewData } from '@app/components/ReviewsView/types';
 import { SessionOverviewData } from '@app/components/SessionBrowserView/types';
+import { StorageSessionData } from '@app/components/StorageExplorerView/types';
 import { TomogramData } from '@app/components/TomogramsView/types';
 import { Job } from '@app/processing/jobs/monitor/types';
 
@@ -18,6 +19,7 @@ export type EntityAPIPrimaryAttributeToDataType = {
   job: Job;
   session: SessionOverviewData;
   specimen: StandardSampleData;
+  storageSession: StorageSessionData;
 };
 
 export interface EntityLinkField {

@@ -25,7 +25,14 @@ const GROUPS: Group[] = [
   { id: 'g-1', name: 'alpha', children: [{ id: 'c-1', label: 'alpha-child' }] },
   // Two children so its count cell differs from alpha's — otherwise a
   // getByText on the count is ambiguous.
-  { id: 'g-2', name: 'beta', children: [{ id: 'c-2', label: 'beta-child' }, { id: 'c-3', label: 'beta-child-2' }] },
+  {
+    id: 'g-2',
+    name: 'beta',
+    children: [
+      { id: 'c-2', label: 'beta-child' },
+      { id: 'c-3', label: 'beta-child-2' },
+    ],
+  },
   { id: 'g-3', name: 'gamma', children: [] },
 ];
 
