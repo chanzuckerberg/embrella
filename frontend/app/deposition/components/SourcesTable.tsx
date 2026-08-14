@@ -77,69 +77,82 @@ export function SourcesTable({
       <Box sx={{ minWidth: 0 }}>
         <Box
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'nowrap',
-            gap: 2,
-            mb: 1,
+            position: 'sticky',
+            top: 0,
+            zIndex: 2,
+            bgcolor: 'background.paper',
+            pb: 1.5,
+            mb: 2,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, minWidth: 0 }}>
-            <Typography
-              variant="overline"
-              sx={{ fontWeight: 700, letterSpacing: 1.2, color: 'text.secondary', lineHeight: 1.2, flexShrink: 0 }}
-            >
-              Imaging sessions
-            </Typography>
-            <Typography variant="body2" color="text.secondary" noWrap>
-              {headerStats}
-            </Typography>
-          </Box>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'nowrap',
+              gap: 2,
+              mb: 1,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, minWidth: 0 }}>
+              <Typography
+                variant="overline"
+                sx={{ fontWeight: 700, letterSpacing: 1.2, color: 'text.secondary', lineHeight: 1.2, flexShrink: 0 }}
+              >
+                Imaging sessions
+              </Typography>
+              <Typography variant="body2" color="text.secondary" noWrap>
+                {headerStats}
+              </Typography>
+            </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexShrink: 0 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-              Deposit
-            </Typography>
-            <ToggleButtonGroup
-              exclusive
-              size="small"
-              value={subsetMode}
-              onChange={(_, v: TomogramSubsetMode | null) => v && onSubsetModeChange(v)}
-              disabled={readOnly}
-              sx={{
-                bgcolor: 'grey.100',
-                '& .MuiToggleButtonGroup-grouped': {
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: '6px !important',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.8125rem',
-                  color: 'text.secondary',
-                  bgcolor: 'background.paper',
-                  '&:not(:first-of-type)': { ml: 0 },
-                  '&:hover': { bgcolor: 'grey.50' },
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    borderColor: 'primary.main',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
-                    '&:hover': { bgcolor: 'primary.dark' },
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexShrink: 0 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                Deposit
+              </Typography>
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={subsetMode}
+                onChange={(_, v: TomogramSubsetMode | null) => v && onSubsetModeChange(v)}
+                disabled={readOnly}
+                sx={{
+                  bgcolor: 'grey.100',
+                  '& .MuiToggleButtonGroup-grouped': {
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: '6px !important',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.8125rem',
+                    color: 'text.secondary',
+                    bgcolor: 'background.paper',
+                    '&:not(:first-of-type)': { ml: 0 },
+                    '&:hover': { bgcolor: 'grey.50' },
+                    '&.Mui-selected': {
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      borderColor: 'primary.main',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
+                      '&:hover': { bgcolor: 'primary.dark' },
+                    },
                   },
-                },
-              }}
-            >
-              <ToggleButton value="all">{allLabel}</ToggleButton>
-              <ToggleButton value="annotated">{annotatedLabel}</ToggleButton>
-              <ToggleButton value="custom">Custom CSV</ToggleButton>
-            </ToggleButtonGroup>
+                }}
+              >
+                <ToggleButton value="all">{allLabel}</ToggleButton>
+                <ToggleButton value="annotated">{annotatedLabel}</ToggleButton>
+                <ToggleButton value="custom">Custom CSV</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
           </Box>
-        </Box>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-          {modeHelp(subsetMode, stats.totalTomograms - stats.selectedTomograms)}
-        </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0 }}>
+            {modeHelp(subsetMode, stats.totalTomograms - stats.selectedTomograms)}
+          </Typography>
+        </Box>
 
         {rows.length === 0 && (
           <Callout intent="info" sdsStyle="persistent">
@@ -175,7 +188,7 @@ export function SourcesTable({
         )}
       </Box>
 
-      <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+      <Box sx={{ display: { xs: 'none', md: 'block' }, alignSelf: 'stretch' }}>
         <DepositionSummary rows={rowsWithCounts} subsetMode={subsetMode} />
       </Box>
     </Box>
