@@ -63,12 +63,23 @@ export interface DepositionMethodLink {
   custom_name?: string;
 }
 
+export interface CopickRunOption {
+  name: string;
+  label: string;
+  description?: string;
+}
+
+export type TomogramSubsetMode = 'all' | 'annotated' | 'custom';
+
 export interface DepositionSession {
   id: number;
   msi_session: number;
+  msi_session_name?: string;
   aretomo_run_name?: string;
   denoise_run_name?: string;
   subset_csv_path?: string;
+  subset_selection?: unknown;
+  subset_filename?: string;
   selected_copick_runs?: unknown[];
   tiltseries_metadata?: Record<string, unknown> | null;
   tomogram_metadata?: Record<string, unknown> | null;
@@ -112,6 +123,7 @@ export interface Dataset {
   authors_json?: AuthorRef[];
   dataset_publications?: string;
   related_database_entries?: string;
+  tomogram_subset_mode?: TomogramSubsetMode;
   funding?: DatasetFunding[];
   sessions?: DepositionSession[];
   job?: DatasetJob | null;

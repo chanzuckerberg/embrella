@@ -72,6 +72,17 @@ class Dataset(models.Model):
     )
     dataset_publications = models.TextField(blank=True)
     related_database_entries = models.TextField(blank=True)
+    TOMOGRAM_SUBSET_CHOICES = [
+        ("all", "All from AreTomo runs"),
+        ("annotated", "Only tomograms with annotations"),
+        ("custom", "Custom CSV (per-row override)"),
+    ]
+    tomogram_subset_mode = models.CharField(
+        max_length=16,
+        choices=TOMOGRAM_SUBSET_CHOICES,
+        default="all",
+        help_text="How the tomogram subset is chosen; applies to ALL sessions in this dataset.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -127,6 +138,16 @@ class DepositionSession(models.Model):
     aretomo_run_name = models.CharField(max_length=40, blank=True)
     denoise_run_name = models.CharField(max_length=40, blank=True, help_text="Blank means denoise was skipped")
     subset_csv_path = models.CharField(max_length=1024, blank=True)
+    subset_selection = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Draft custom-subset selection; written to the cluster at submit.",
+    )
+    subset_filename = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Original name of the uploaded subset file, for display in the wizard.",
+    )
     selected_copick_runs = models.JSONField(default=list, blank=True)
     last_autofill_at = models.DateTimeField(null=True, blank=True)
     last_autofill_duration_seconds = models.IntegerField(null=True, blank=True)

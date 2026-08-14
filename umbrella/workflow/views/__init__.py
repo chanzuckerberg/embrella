@@ -54,6 +54,7 @@ from workflow.legacy.views.template_views import (
 
 # Import modern copick-specific views
 from workflow.processors.copick.views import (
+    get_copick_annotated_count,
     get_copick_runs,
 )
 from workflow.processors.copick.views import (
@@ -188,6 +189,7 @@ __all__ = [
     "run_import_tomogram_copick",
     # Copick views (modern)
     "get_copick_runs",
+    "get_copick_annotated_count",
     "get_copick_template_maps",
     # Metadata views
     "get_metadata_summary",

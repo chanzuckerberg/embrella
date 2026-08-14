@@ -9,7 +9,9 @@ Provides processor-specific endpoints for:
 """
 
 import json
+import logging
 import os
+import shlex
 
 from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
@@ -23,7 +25,11 @@ from rest_framework.permissions import AllowAny
 from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 
+from common import clusterio
+
 from .processor import CopickProcessor
+
+logger = logging.getLogger(__name__)
 
 COPICK_PLAN_NAME = "czii-copick"
 COPICK_DEFAULT_CLUSTER_ID = CopickProcessor.cluster
@@ -639,11 +645,13 @@ def get_copick_runs(request) -> JsonResponse:
     """
     Get available Copick runs for a given session.
 
-    Reads the Copick project directory to find all existing runs.
-    Used for the "Add Object" operation to select which run to add objects to.
+    Merges two sources so the dropdown reflects everything selectable: (1) czii-copick ProcRuns in
+    the DB (Embrella-managed, always available), and (2) copick config dirs physically on the
+    cluster (created outside Embrella, over SSH - degrades to DB-only when SSH is off).
+    `description` is the run's copick config.json path on the cluster.
 
     Args:
-        request: Django HTTP request with optional ?session_id= query parameter
+        request: Django HTTP request with a ?session_id= query parameter
 
     Returns:
         JsonResponse with Copick runs:
@@ -651,9 +659,9 @@ def get_copick_runs(request) -> JsonResponse:
             "success": True,
             "copick_runs": [
                 {
-                    "name": "TS_001",
-                    "label": "TS_001",
-                    "description": "Tilt series 001"
+                    "name": "run001",
+                    "label": "run001",
+                    "description": "/hpc/projects/group.czii/krios1.processing/copick/<session>/run001/config.json"
                 },
                 ...
             ]
@@ -671,70 +679,84 @@ def get_copick_runs(request) -> JsonResponse:
             }
         )
 
-    copick_runs = []
+    run_names: set[str] = set()
 
-    # Path to Copick project directory
-    copick_base_path = f"/hpc/projects/group.czii/krios1.processing/copick/{session_id}"
-
+    # 1) Embrella-managed copick projects (DB ProcRuns) — always available.
     try:
-        # Try to read Copick config.json to get run information
-        config_path = os.path.join(copick_base_path, "config.json")
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                config = json.load(f)
-                # Copick config typically has a "runs" section
-                runs_data = config.get("runs", [])
-                for run in runs_data:
-                    run_name = run.get("name", "")
-                    copick_runs.append(
-                        {
-                            "name": run_name,
-                            "label": run_name,
-                            "description": run.get("description", f"Copick run {run_name}"),
-                        }
-                    )
-        else:
-            # Fall back to reading directory structure
-            runs_dir = os.path.join(copick_base_path, "ExperimentRuns")
-            if os.path.exists(runs_dir):
-                for run_name in os.listdir(runs_dir):
-                    run_path = os.path.join(runs_dir, run_name)
-                    if os.path.isdir(run_path):
-                        copick_runs.append(
-                            {
-                                "name": run_name,
-                                "label": run_name,
-                                "description": f"Copick run {run_name}",
-                            }
-                        )
+        plan = ProcPlan.objects.get(name=COPICK_PLAN_NAME)
+        session_obj = MsiSession.objects.get(name=session_id)
+        run_names |= set(ProcRun.objects.filter(proc_plan=plan, msi_session=session_obj).values_list("name", flat=True))
+    except (ProcPlan.DoesNotExist, MsiSession.DoesNotExist):
+        pass
 
-        # Sort by name
-        copick_runs.sort(key=lambda x: x["name"])
+    # 2) Configs physically on the cluster (may have been created outside Embrella, so no ProcRun)
+    run_names |= _list_cluster_copick_runs(session_id)
 
-        if not copick_runs:
-            return JsonResponse(
-                {
-                    "success": True,
-                    "copick_runs": [],
-                    "message": "No Copick runs found for this session. Create a Copick project first.",
-                }
-            )
+    copick_runs = [
+        {
+            "name": name,
+            "label": name,
+            "description": f"/hpc/projects/group.czii/krios1.processing/copick/{session_id}/{name}/config.json",
+        }
+        for name in sorted(run_names)
+    ]
 
-    except Exception as e:
-        return JsonResponse(
-            {
-                "success": False,
-                "error": f"Failed to load Copick runs: {str(e)}",
-                "copick_runs": [],
-            }
-        )
+    return JsonResponse({"success": True, "copick_runs": copick_runs})
+
+
+def get_copick_annotated_count(request) -> JsonResponse:
+    """Annotated-tomogram count for a session"""
+    session_id = request.GET.get("session_id")
+    runs = [r.strip() for r in request.GET.get("runs", "").split(",") if r.strip()]
+    if not session_id:
+        return JsonResponse({"success": False, "error": "session_id is required", "annotated_count": 0})
+    if not runs:
+        return JsonResponse({"success": True, "annotated_count": 0, "annotated_runs": [], "scanned": True})
+
+    from .scan import COPICK_CONFIG_PATH, annotated_run_names, scan_copick_project
+
+    annotated: set[str] = set()
+    scanned = True
+    for run in runs:
+        cluster_id = cluster_id_for_run(session_id, run, default=COPICK_DEFAULT_CLUSTER_ID)
+        result = scan_copick_project(cluster_id, COPICK_CONFIG_PATH.format(session=session_id, run=run))
+        if not result.get("scanned"):
+            scanned = False
+        annotated.update(annotated_run_names(result))
 
     return JsonResponse(
         {
             "success": True,
-            "copick_runs": copick_runs,
+            "annotated_count": len(annotated),
+            "annotated_runs": sorted(annotated),
+            "scanned": scanned,
         }
     )
+
+
+def _list_cluster_copick_runs(session_id: str) -> set[str]:
+    """Copick run dirs physically present on the cluster for a session.
+    Complements the DB ProcRun list with configs created outside Embrella.
+    """
+    try:
+        ssh = clusterio.get_cluster_ssh_connection(cluster_id=COPICK_DEFAULT_CLUSTER_ID)
+    except Exception:
+        return set()
+    try:
+        base = f"/hpc/projects/group.czii/krios1.processing/copick/{session_id}"
+        _, stdout, _ = ssh.exec_command(f"ls -d {shlex.quote(base)}/*/config.json 2>/dev/null", timeout=20)
+        out = stdout.read().decode("utf-8", "replace")
+        runs = set()
+        for line in out.splitlines():
+            parts = line.strip().split("/")
+            if len(parts) >= 2 and parts[-1] == "config.json":
+                runs.add(parts[-2])  # .../copick/<session>/<run>/config.json → <run>
+        return runs
+    except Exception:
+        logger.exception("copick: cluster run listing failed for session %s", session_id)
+        return set()
+    finally:
+        ssh.close()
 
 
 def _latest_pipe_status(proc_run) -> str:
@@ -845,7 +867,17 @@ def list_copick_projects(request) -> JsonResponse:
 @extend_schema(
     methods=["GET"],
     tags=["Copick Projects"],
-    description="Return a single copick project by (session_name, run_name).",
+    description=(
+        "Return a copick project. Pass ?scan=true to include picks/segs/meshes from the cluster (SSH, slower)."
+    ),
+    parameters=[
+        OpenApiParameter(
+            name="scan",
+            required=False,
+            type=OpenApiTypes.BOOL,
+            description="If true, include scanned picks/segmentations/meshes under `annotations`.",
+        ),
+    ],
     responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
 )
 @login_not_required
@@ -863,4 +895,12 @@ def get_copick_project_detail(request, session_name: str, run_name: str) -> Json
     except ProcRun.DoesNotExist:
         return JsonResponse({"success": False, "error": "Copick project not found"}, status=404)
 
-    return JsonResponse({"success": True, "project": _build_copick_project(run)})
+    project = _build_copick_project(run)
+
+    if request.GET.get("scan", "").lower() in ("1", "true", "yes"):
+        from .scan import COPICK_CONFIG_PATH, scan_copick_project
+
+        config_path = COPICK_CONFIG_PATH.format(session=session_name, run=run_name)
+        project["annotations"] = scan_copick_project(project["cluster_id"], config_path)
+
+    return JsonResponse({"success": True, "project": project})
