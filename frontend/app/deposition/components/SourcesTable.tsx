@@ -56,7 +56,15 @@ export function SourcesTable({
   const reportCount = useCallback((key: string, total: number | undefined) => {
     setCounts((c) => (c[key] === total ? c : { ...c, [key]: total }));
   }, []);
-  const rowsWithCounts = rows.map((r) => ({ ...r, tomogram_total: counts[r.key] }));
+  const [annotatedCounts, setAnnotatedCounts] = useState<Record<string, number | undefined>>({});
+  const reportAnnotated = useCallback((key: string, count: number | undefined) => {
+    setAnnotatedCounts((c) => (c[key] === count ? c : { ...c, [key]: count }));
+  }, []);
+  const rowsWithCounts = rows.map((r) => ({
+    ...r,
+    tomogram_total: counts[r.key],
+    tomogram_selected: annotatedCounts[r.key],
+  }));
 
   const stats = rollup(rowsWithCounts, subsetMode);
   const sessionLabel = `${stats.sessions} session${stats.sessions === 1 ? '' : 's'}`;
@@ -173,6 +181,7 @@ export function SourcesTable({
             onRemove={() => removeRow(row.key)}
             onUploadSubset={(file) => onUploadSubset(row, file)}
             onCount={reportCount}
+            onAnnotated={reportAnnotated}
           />
         ))}
 
