@@ -2,6 +2,7 @@
 Django-Q2 async tasks for filesystem survey processing.
 """
 
+import contextlib
 import os
 import tempfile
 from datetime import UTC, datetime
@@ -222,6 +223,7 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
         }
 
         ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
+        tmp_path = None
 
         try:
             sftp = ssh.open_sftp()
@@ -335,9 +337,6 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
 
             con.close()
 
-            # Cleanup temp file
-            os.unlink(tmp_path)
-
             # Update survey status
             survey.status = "completed"
             survey.save()
@@ -383,6 +382,11 @@ def process_survey_results(survey_id: int, cluster_id: str = "czii"):
 
         finally:
             ssh.close()
+            # Multi-GB download: must go even when the ingest raises or the worker
+            # is killed mid-task, or it strands in the container's writable layer.
+            if tmp_path:
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp_path)
 
     except Exception as e:
         logger.error(f"Error processing survey {survey_id}: {e}", exc_info=True)
