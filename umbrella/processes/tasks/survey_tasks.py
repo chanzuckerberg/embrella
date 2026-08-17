@@ -14,6 +14,9 @@ from umbrella_logger import logger
 from common import clusterio
 from processes.tasks._setup import *  # noqa: F401,F403 - Django setup
 
+# survey ingestion is slow, needs custom timeout.
+SURVEY_INGEST_TIMEOUT = 3600
+
 
 def run_survey_status_syncer(survey_id: int, cluster_id: str = "czii"):
     """
@@ -101,7 +104,7 @@ def run_survey_status_syncer(survey_id: int, cluster_id: str = "czii"):
                     survey_id,
                     cluster_id,
                     task_name=f"process_survey_{survey_id}",
-                    timeout=3600,  # 1 hour timeout for processing
+                    timeout=SURVEY_INGEST_TIMEOUT,
                 )
 
                 return {

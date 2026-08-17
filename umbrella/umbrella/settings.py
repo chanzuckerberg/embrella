@@ -371,7 +371,9 @@ Q_CLUSTER = {
     "workers": 4,
     "recycle": 500,
     "timeout": 300,  # 5 minutes for SSH operations
-    "retry": 360,  # Retry failed tasks after 6 minutes
+    "retry": 4200,
+    "ack_failures": True,
+    "max_attempts": 3,
     "queue_limit": 50,
     "bulk": 10,
     "orm": "default",  # Use Django ORM as broker

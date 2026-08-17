@@ -133,10 +133,13 @@ class Command(BaseCommand):
 
             # survey.cluster explicitly: the task's cluster_id argument defaults
             # to "czii", which would fetch another cluster's Parquet.
+            from processes.tasks.survey_tasks import SURVEY_INGEST_TIMEOUT
+
             task_id = async_task(
                 "processes.tasks.survey_tasks.process_survey_results",
                 survey.pk,
                 survey.cluster,
+                timeout=SURVEY_INGEST_TIMEOUT,
             )
             self.stdout.write(f"Queued ingest for survey {survey.pk} on the worker (task {task_id}).")
             self.stdout.write("Follow it with: podman compose ... logs -f worker")
