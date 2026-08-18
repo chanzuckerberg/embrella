@@ -3,19 +3,25 @@ import io
 import json
 import logging
 import os
+import time
 
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
+from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from stores.models import Cluster, resolve_review_path
 
 from .models import (
     Dataset,
     Deposition,
     DepositionAnnotationMethodLink,
     DepositionSession,
+    TiltseriesMetadata,
+    TomogramMetadata,
 )
 from .permissions import IsDepositionOwnerOrReadOnly
 from .serializers import (
@@ -26,6 +32,7 @@ from .serializers import (
     SubmissionDepositionSerializer,
 )
 from .services import get_reservation_service
+from .services.autofill import map_session_to_metadata, run_autofill_init
 
 logger = logging.getLogger(__name__)
 
@@ -250,7 +257,58 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
 
     @action(detail=True, methods=["post"], url_path="auto-fill")
     def auto_fill(self, request, pk=None):
-        return _not_implemented()  # TODO: auto-fill service (cryoetportalprep init via SSH)
+        """Run `cryoetportalprep init` on the cluster and populate this session's metadata."""
+        session = self.get_object()
+        if not session.aretomo_run_name:
+            return Response(
+                {"detail": "Select an AreTomo run for this session before auto-filling."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        run_number = (
+            session.aretomo_run_name if session.aretomo_run_name.startswith("run") else f"run{session.aretomo_run_name}"
+        )
+
+        msi_session = session.msi_session
+        cluster_id = cluster_id_for_run(msi_session.name, run_number)
+        try:
+            cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
+        except Cluster.DoesNotExist:
+            return Response(
+                {"detail": f"Unknown cluster for this run: {cluster_id}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        aretomo3_dir = resolve_review_path(
+            "proc_dir",
+            cluster,
+            msi_session=msi_session,
+            workflow="aretomo3",
+            run=run_number,
+        )
+
+        started = time.monotonic()
+        result = run_autofill_init(cluster_id, aretomo3_dir, msi_session.name)
+        if not result["filled"]:
+            return Response(
+                {"detail": f"Auto-fill could not read this run: {result['reason']}."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        raw = result["session"]
+        mapped = map_session_to_metadata(raw)
+        TiltseriesMetadata.objects.update_or_create(
+            session=session,
+            defaults={**mapped["tiltseries"], "autofill_metadata": raw},
+        )
+        TomogramMetadata.objects.update_or_create(
+            session=session,
+            defaults={**mapped["tomogram"], "autofill_metadata": raw},
+        )
+
+        session.last_autofill_at = timezone.now()
+        session.last_autofill_duration_seconds = round(time.monotonic() - started)
+        session.save(update_fields=["last_autofill_at", "last_autofill_duration_seconds", "updated_at"])
+        return Response(self.get_serializer(session).data)
 
     @action(detail=True, methods=["post"], url_path="subset-csv")
     def subset_csv(self, request, pk=None):
