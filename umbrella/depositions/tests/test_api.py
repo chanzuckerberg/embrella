@@ -302,3 +302,108 @@ class TestSubsetUpload:
         upload = SimpleUploadedFile("Metadata.json", b"{}", content_type="application/json")
         r = client.post(f"{SESSIONS}{owned_session.id}/subset-csv/", {"file": upload}, format="multipart")
         assert r.status_code == 403
+
+
+@pytest.mark.django_db
+class TestAutoFill:
+    """POST /sessions/<id>/auto-fill/ runs cryoetportalprep init and populates metadata."""
+
+    def _url(self, session):
+        return f"{SESSIONS}{session.id}/auto-fill/"
+
+    def _patch_cluster(self):
+        """Isolate the SSH/path plumbing so tests exercise the view, not the cluster."""
+        return (
+            mock.patch("depositions.views.cluster_id_for_run", return_value="bruno"),
+            mock.patch("depositions.views.Cluster"),
+            mock.patch("depositions.views.resolve_review_path", return_value="/hpc/aretomo3/24nov10/run001"),
+        )
+
+    def test_requires_an_aretomo_run(self, auth_client, owned_session):
+        # owned_session has a blank aretomo_run_name
+        r = auth_client.post(self._url(owned_session))
+        assert r.status_code == 400
+
+    def test_populates_metadata_and_stamps(self, auth_client, owned_session):
+        from depositions.models import TiltseriesMetadata, TomogramMetadata
+
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+
+        raw = {
+            "total_dose": 120.0,
+            "tilt_axis_angle": None,
+            "acquisition": {
+                "pixel_spacing": 1.54,
+                "acceleration_voltage_kv": 300.0,
+                "spherical_aberration_constant": 2.7,
+                "aretomo_version": "AreTomo3 2.1.0",
+                "binned_voxel_ratio": 8,
+            },
+        }
+        c1, c2, c3 = self._patch_cluster()
+        with (
+            c1,
+            c2,
+            c3,
+            mock.patch(
+                "depositions.views.run_autofill_init",
+                return_value={"filled": True, "session": raw, "reason": None},
+            ),
+        ):
+            r = auth_client.post(self._url(owned_session))
+
+        assert r.status_code == 200, r.content
+        ts = TiltseriesMetadata.objects.get(session=owned_session)
+        assert ts.pixel_spacing == 1.54
+        assert ts.acceleration_voltage == 300.0
+        assert ts.total_flux == 120.0
+        assert ts.tilt_axis is None
+        assert ts.autofill_metadata == raw
+        tm = TomogramMetadata.objects.get(session=owned_session)
+        assert tm.reconstruction_software == "AreTomo3 2.1.0"
+        owned_session.refresh_from_db()
+        assert owned_session.last_autofill_at is not None
+        assert owned_session.last_autofill_duration_seconds is not None
+
+    def test_unprefixed_run_is_normalized_to_run_dir(self, auth_client, owned_session):
+        # Runs are stored as "001" but the cluster dir is "run001" - the view must prefix it.
+        owned_session.aretomo_run_name = "001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+        resolve = mock.patch("depositions.views.resolve_review_path", return_value="/hpc/aretomo3/x/run001")
+        with (
+            mock.patch("depositions.views.cluster_id_for_run", return_value="bruno"),
+            mock.patch("depositions.views.Cluster"),
+            resolve as resolve_mock,
+            mock.patch(
+                "depositions.views.run_autofill_init",
+                return_value={"filled": True, "session": {"acquisition": {}}, "reason": None},
+            ),
+        ):
+            r = auth_client.post(self._url(owned_session))
+        assert r.status_code == 200, r.content
+        assert resolve_mock.call_args.kwargs["run"] == "run001"
+
+    def test_init_failure_returns_502(self, auth_client, owned_session):
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+        c1, c2, c3 = self._patch_cluster()
+        with (
+            c1,
+            c2,
+            c3,
+            mock.patch(
+                "depositions.views.run_autofill_init",
+                return_value={"filled": False, "session": None, "reason": "Metrics file not found"},
+            ),
+        ):
+            r = auth_client.post(self._url(owned_session))
+        assert r.status_code == 502
+        assert "Metrics file not found" in r.json()["detail"]
+
+    def test_non_owner_cannot_autofill(self, owned_session):
+        other = User.objects.create_user(username="heidi@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        r = client.post(f"{SESSIONS}{owned_session.id}/auto-fill/")
+        assert r.status_code == 403
