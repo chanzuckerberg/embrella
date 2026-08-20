@@ -107,7 +107,7 @@ def create_tem_static_path(data_type):
         # screen atlas
         instance = StaticPath.objects.create(
             data_type=data_type,
-            static_path="/{workflow}/{session_group}/{grid_session}/atlas",
+            static_path="/{workflow}/{session_group}/{atlas_session}/atlas",
         )
     return instance
 

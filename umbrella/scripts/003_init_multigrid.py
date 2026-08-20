@@ -36,7 +36,7 @@ def create_tem_static_path(data_type):
         # screen atlas
         instance = StaticPath.objects.create(
             data_type=data_type,
-            static_path="/{workflow}/{session_group}/{grid_session}/atlas",
+            static_path="/{workflow}/{session_group}/{atlas_session}/atlas",
         )
     return instance
 
@@ -48,7 +48,7 @@ def create_multigrid_plan(scope, camera):
     workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="scrn")
     atlas_path_type = PathType.objects.create(
         static_path=create_tem_static_path("satlas"),
-        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{grid_session}/Atlas/{date}_{timestamp}.mrc",
+        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/{date}_{timestamp}.mrc",
     )
     software = Software.objects.create(
         name="tfs multi-grid",
