@@ -183,6 +183,24 @@ class SessionPlan(models.Model):
         app_label = "tem"
 
 
+def plan_replacement_map(plan):
+    """Placeholder values derivable from a SessionPlan alone.
+
+    Shared by every acquisition template, whether it is resolved from an `MsiSession` or
+    an `AtlasSession`; each adds its own identity tokens on top. See
+    `stores.placeholders` for the vocabulary this has to satisfy.
+    """
+    camera = plan.camera
+    return {
+        "workflow": plan.imaging_workflow.workflow,
+        "scope": plan.scope.name,
+        "camera": camera.name,
+        "frame_format": camera.frame_format,
+        "root_dir": camera.root_dir.rstrip("/"),
+        "initial_frame_base_dir": camera.initial_frame_base_dir.rstrip("/"),
+    }
+
+
 class ScreenSessionGroup(models.Model):
     """
     A grouping of screening on grids. It is identified by the cassette
@@ -237,15 +255,11 @@ class AtlasSession(models.Model):
         ]
 
     def get_replacement_map(self):
-        plan = self.group.session_plan
-        scope_name = plan.scope.name
-        mapping = {
-            "workflow": plan.imaging_workflow.workflow,
-            "scope": scope_name,
+        return {
+            **plan_replacement_map(self.group.session_plan),
             "session_group": self.group.name,
             "atlas_session": self.name,
         }
-        return mapping
 
     def _get_session_glob(self, path_type):
         plan = self.group.session_plan
@@ -319,19 +333,19 @@ class MsiSession(models.Model):
     class Meta:
         app_label = "tem"
 
+    def get_replacement_map(self):
+        return {
+            **plan_replacement_map(self.session_plan),
+            "msi_session": self.name,
+        }
+
     def _get_session_glob(self, path_type):
-        plan = self.session_plan
-        scope_name = plan.scope.name
-        my_attr = getattr(plan.software, path_type)
+        my_attr = getattr(self.session_plan.software, path_type)
         if not my_attr:
             return "."
         return fill_place_holders(
             my_attr.overlay_path,
-            {
-                "workflow": plan.imaging_workflow.workflow,
-                "scope": scope_name,
-                "msi_session": self.name,
-            },
+            self.get_replacement_map(),
         )
 
     def get_session_frames_glob(self):
@@ -357,25 +371,19 @@ class MsiSession(models.Model):
         """
         Use session_plan and software to update session path by replacing place holders
         """
-        plan = self.session_plan
-        scope_name = plan.scope.name
-        path_obj = getattr(plan.software, type_name)
+        path_obj = getattr(self.session_plan.software, type_name)
+        replacement_map = self.get_replacement_map()
         static_path = fill_place_holders(
             path_obj.static_path.static_path,
-            {
-                "workflow": plan.imaging_workflow.workflow,
-                "scope": scope_name,
-                "msi_session": self.name,
-            },
+            replacement_map,
         )
         session_attr = getattr(self, "get_session_%s_glob" % type_name)
+        # The glob has already been filled from this same map; the second pass matters
+        # only for the atlas role, where the glob may come from a linked AtlasSession
+        # whose map has no {msi_session}.
         overlay_path = fill_place_holders(
             session_attr(),
-            {
-                "workflow": plan.imaging_workflow.workflow,
-                "scope": scope_name,
-                "msi_session": self.name,
-            },
+            replacement_map,
         )
         path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
         if not path_set:

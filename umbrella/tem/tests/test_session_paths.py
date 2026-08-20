@@ -96,17 +96,18 @@ class TestGetSessionGlob:
         assert glob.startswith("/hpc/instruments/czii.krios1/OffloadData/24nov10/")
 
     def test_leaves_file_scoped_tokens_unsubstituted(self, msi_session):
-        """The replacement map supplies only workflow/scope/msi_session, so per-file
-        tokens survive verbatim -- which is why the stored string is neither a valid
-        path nor a valid glob."""
+        """The replacement map supplies only session-scoped tokens, so per-file ones
+        survive verbatim -- which is why the stored string is neither a valid path nor a
+        valid glob."""
         glob = msi_session.get_session_frames_glob()
         assert "{run}" in glob
         assert "{sequence}" in glob
         assert "{tilt}" in glob
 
-    def test_scope_token_is_not_lowercased(self, db, microscope, camera, software, imaging_workflow):
-        """Lane A uses raw `scope.name` while resolve_review_path lowercases.
-        Pinned so the normalisation is a visible change."""
+    def test_scope_name_is_used_verbatim(self, db, microscope, camera, software, imaging_workflow):
+        """Microscope.name is the path segment itself, so no case is forced on it. Our
+        scopes are lowercase by convention, but an install whose directories are spelled
+        "Krios1" must work."""
         microscope.name = "Krios1"
         microscope.save()
         plan = SessionPlan.objects.create(
@@ -115,11 +116,13 @@ class TestGetSessionGlob:
         session = MsiSession.objects.create(name="24nov11", session_plan=plan)
         assert "czii.Krios1/" in session.get_session_frames_glob()
 
-    def test_camera_fields_are_not_available_as_tokens(self, db, msi_session, software):
-        """Camera.frame_format/root_dir exist but no replacement map supplies them."""
-        software.frames.overlay_path = "/data/{camera}/{frame_format}/{msi_session}/"
+    def test_camera_fields_are_available_as_tokens(self, db, msi_session, software):
+        """A camera difference (.eer vs .tiff, a different mount root) resolves by
+        substitution, so it needs no per-plan config row. The trailing slash on
+        Camera.root_dir is stripped -- templates supply their own separators."""
+        software.frames.overlay_path = "{root_dir}/{camera}/{frame_format}/{msi_session}/"
         software.frames.save()
-        assert msi_session.get_session_frames_glob() == "/data/{camera}/{frame_format}/24nov10/"
+        assert msi_session.get_session_frames_glob() == "/hpc/instruments/czii.krios1/OffloadData/Falcon4i/eer/24nov10/"
 
     def test_returns_dot_when_software_role_is_null(self, db, bare_software, microscope, camera, imaging_workflow):
         plan = SessionPlan.objects.create(

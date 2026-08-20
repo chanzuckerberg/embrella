@@ -53,10 +53,11 @@ def test_processor_class():
             return f"#!/bin/bash\necho {params['test_param']}"
 
         def parse_output_paths(self, run_context):
+            # TODO: adding in filepattern support
             return [
                 {
                     "type": "test_output",
-                    "pattern": f"{run_context.get_output_base_path()}output.txt",
+                    "pattern": "/test/outputs/output.txt",
                 },
             ]
 
@@ -296,8 +297,8 @@ class TestRunContext:
         assert context.run_number == "run001"
         assert context.inputs["test_input"] == "/path/to/input.txt"
 
-    def test_get_output_base_path(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
-        """Test getting output base path."""
+    def test_get_placeholder_map(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
+        """The placeholder map is the contract processors resolve DB templates against."""
         context = RunContext(
             proc_run=test_proc_run,
             pipe_in_plan=test_pipe_in_plan,
@@ -309,12 +310,16 @@ class TestRunContext:
             inputs={},
         )
 
-        path = context.get_output_base_path()
+        placeholders = context.get_placeholder_map()
 
-        assert "/hpc/projects/group.czii/czii.processing/" in path
-        assert "test_software" in path
-        assert "24nov10" in path
-        assert "run001" in path
+        assert placeholders["scope"] == "TestScope"
+        assert placeholders["msi_session"] == "24nov10"
+        assert placeholders["proc_software"] == "test_software"
+        assert placeholders["proc_run"] == "run001"
+        assert placeholders["pipe"] == "test_pipe"
+        assert placeholders["proc_plan"] == "test_plan"
+        # {workflow} is the legacy alias of {proc_software} in this lane.
+        assert placeholders["workflow"] == placeholders["proc_software"]
 
     def test_get_input_required(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
         """Test getting a required input."""

@@ -133,6 +133,8 @@ def run():
     )
 
     # 2) Flatten the migration-seeded URL templates (see _URL_TEMPLATES).
+    # Once PathType.cluster exists, narrow this to cluster__isnull=True so the
+    # cluster-agnostic default is rewritten and per-cluster siblings are left alone.
     for data_type, overlay in _URL_TEMPLATES.items():
         PathType.objects.filter(static_path__data_type=data_type).update(overlay_path=overlay)
 

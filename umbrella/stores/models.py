@@ -156,7 +156,7 @@ def resolve_review_path(data_type, cluster, msi_session, *, backend_fetch=False,
 
     `data_type`    — StaticPath.data_type of the template row (e.g. 'proc_dir', 'zarr_url', 'thumb_url').
     `cluster`      — stores.Cluster instance; supplies {http_base}.
-    `msi_session`  — tem.MsiSession instance; supplies {scope} (lowercased) and {msi_session}.
+    `msi_session`  — tem.MsiSession instance; supplies {scope} and {msi_session}.
     `backend_fetch`— set True when the *server* (not the browser) will fetch the resulting
                      URL, so it uses the in-network base instead of the browser-facing one.
     `**context`    — additional placeholder values (e.g. workflow, run, position, vol_suffix).
@@ -172,10 +172,9 @@ def resolve_review_path(data_type, cluster, msi_session, *, backend_fetch=False,
         # server can reach the file server even when http_base_url is browser-only.
         if backend_fetch and settings.FILESERVER_INTERNAL_BASE_URL:
             http_base = settings.FILESERVER_INTERNAL_BASE_URL
-    scope = msi_session.session_plan.scope.name.lower()
     values = {
         "http_base": http_base,
-        "scope": scope,
+        "scope": msi_session.session_plan.scope.name,
         "msi_session": msi_session.name,
         **{k: v for k, v in context.items() if v is not None},
     }

@@ -11,11 +11,11 @@ from stores.models import Cluster, Path, PathType, StaticPath
 from tem.models import MsiSession, SessionPlan
 
 """
-from stores.models import DataRecord, 
+from stores.models import DataRecord,
 class ArrayData(DataRecord):
     unit_cell_dimension
     is_stack
-    sub_array_of    
+    sub_array_of
 """
 
 
@@ -166,6 +166,7 @@ class PipeInPlan(models.Model):
         if proc_run:
             mapping["proc_run"] = proc_run.name
             mapping["proc_software"] = self.pipe.software.name
+            mapping["workflow"] = mapping["proc_software"]  # Legacy alias
         if msi_session:
             mapping["msi_session"] = msi_session.name
             mapping["scope"] = msi_session.session_plan.scope.name
