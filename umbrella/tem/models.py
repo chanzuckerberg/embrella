@@ -251,13 +251,11 @@ class AtlasSession(models.Model):
         plan = self.group.session_plan
         my_attr = getattr(plan.software, path_type)
         if not my_attr:
-            out_path = "."
-        else:
-            out_path = fill_place_holders(
-                my_attr.overlay_path,
-                self.get_replacement_map(),
-            )
-            return out_path
+            return "."
+        return fill_place_holders(
+            my_attr.overlay_path,
+            self.get_replacement_map(),
+        )
 
     def get_session_path(self, type_name="atlas"):
         """
@@ -326,17 +324,15 @@ class MsiSession(models.Model):
         scope_name = plan.scope.name
         my_attr = getattr(plan.software, path_type)
         if not my_attr:
-            out_path = "."
-        else:
-            out_path = fill_place_holders(
-                my_attr.overlay_path,
-                {
-                    "workflow": plan.imaging_workflow.workflow,
-                    "scope": scope_name,
-                    "msi_session": self.name,
-                },
-            )
-            return out_path
+            return "."
+        return fill_place_holders(
+            my_attr.overlay_path,
+            {
+                "workflow": plan.imaging_workflow.workflow,
+                "scope": scope_name,
+                "msi_session": self.name,
+            },
+        )
 
     def get_session_frames_glob(self):
         return self._get_session_glob("frames")

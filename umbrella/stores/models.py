@@ -33,10 +33,9 @@ DATA_TYPES = [
 ]
 
 
-def fill_place_holders(input_str, key_values={}):
-    for k in key_values.keys():
-        place_holder = "{%s}" % k
-        input_str = input_str.replace(place_holder, key_values[k])
+def fill_place_holders(input_str, key_values=None):
+    for k, v in (key_values or {}).items():
+        input_str = input_str.replace("{%s}" % k, str(v))
     return input_str
 
 
@@ -178,6 +177,6 @@ def resolve_review_path(data_type, cluster, msi_session, *, backend_fetch=False,
         "http_base": http_base,
         "scope": scope,
         "msi_session": msi_session.name,
-        **{k: str(v) for k, v in context.items() if v is not None},
+        **{k: v for k, v in context.items() if v is not None},
     }
     return fill_place_holders(pt.overlay_path, values)

@@ -1,10 +1,8 @@
 """
 Characterization tests for session path resolution.
 
-These pin down what `MsiSession`/`AtlasSession` path resolution does *today*, before
-the scope-aware rework changes it. Two behaviours captured here are known bugs and are
-marked `xfail(strict=True)`, so they flip to passing the moment the fix lands and fail
-loudly if someone fixes them without removing the marker.
+These pin down what `MsiSession`/`AtlasSession` path resolution does *today*, so the
+scope-aware rework changes behaviour visibly rather than incidentally.
 
 Templates mirror the real seeds in scripts/001_init.py so the substitution behaviour
 under test is the production one.
@@ -123,7 +121,6 @@ class TestGetSessionGlob:
         software.frames.save()
         assert msi_session.get_session_frames_glob() == "/data/{camera}/{frame_format}/24nov10/"
 
-    @pytest.mark.xfail(strict=True, reason="Phase 0.2: `return` sits inside the else branch")
     def test_returns_dot_when_software_role_is_null(self, db, bare_software, microscope, camera, imaging_workflow):
         plan = SessionPlan.objects.create(
             scope=microscope, camera=camera, imaging_workflow=imaging_workflow, software=bare_software
@@ -178,7 +175,6 @@ class TestAtlasSessionPaths:
     def test_leaves_timestamp_unsubstituted(self, atlas_session):
         assert "{timestamp}" in atlas_session.get_session_atlas_glob()
 
-    @pytest.mark.xfail(strict=True, reason="Phase 0.2: same else-branch bug as MsiSession")
     def test_returns_dot_when_software_role_is_null(self, db, session_plan):
         session_plan.software.atlas = None
         session_plan.software.save()
