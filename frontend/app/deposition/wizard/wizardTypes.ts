@@ -6,6 +6,8 @@ import type { AutoSaveState } from '../hooks/useDraftAutoSave';
 export interface StepProps {
   dataset: Dataset;
   reportSave: (state: AutoSaveState) => void;
+  /** Report how many required fields are still blocking. */
+  reportBlocking?: (count: number) => void;
   readOnly: boolean;
 }
 

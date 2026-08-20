@@ -125,7 +125,8 @@ export async function updateSession(id: number, data: Partial<DepositionSession>
   return parse(await patchResource(url(`${API.DEPOSITION_SESSIONS}${id}/`), data));
 }
 
-export async function autoFillSession(id: number): Promise<unknown> {
+/** Runs cryoetportalprep init on the cluster; returns the session with metadata populated. */
+export async function autoFillSession(id: number): Promise<DepositionSession> {
   return parse(await postResource(url(`${API.DEPOSITION_SESSIONS}${id}/auto-fill/`), {}));
 }
 

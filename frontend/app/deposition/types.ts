@@ -71,6 +71,40 @@ export interface CopickRunOption {
 
 export type TomogramSubsetMode = 'all' | 'annotated' | 'custom';
 
+/** Raw dataprep_config.yaml session block cryoetportalprep init emitted. */
+export type AutofillMetadata = Record<string, unknown>;
+
+export interface TiltseriesMetadata {
+  acceleration_voltage?: number | null;
+  spherical_aberration_constant?: number | null;
+  pixel_spacing?: number | null;
+  total_flux?: number | null;
+  tilt_min?: number | null;
+  tilt_max?: number | null;
+  tilt_step?: number | null;
+  tilt_axis?: number | null;
+  tilting_scheme?: string;
+  binning_from_frames?: number | null;
+  is_aligned?: boolean | null;
+  microscope_manufacturer?: string;
+  microscope_model?: string;
+  microscope_energy_filter?: string;
+  camera_manufacturer?: string;
+  camera_model?: string;
+  data_acquisition_software?: string;
+  autofill_metadata?: AutofillMetadata;
+}
+
+export interface TomogramMetadata {
+  voxel_spacing?: number | null;
+  ctf_corrected?: boolean | null;
+  reconstruction_method?: string;
+  reconstruction_software?: string;
+  processing?: string;
+  is_visualization_default?: boolean | null;
+  autofill_metadata?: AutofillMetadata;
+}
+
 export interface DepositionSession {
   id: number;
   msi_session: number;
@@ -81,8 +115,8 @@ export interface DepositionSession {
   subset_selection?: unknown;
   subset_filename?: string;
   selected_copick_runs?: unknown[];
-  tiltseries_metadata?: Record<string, unknown> | null;
-  tomogram_metadata?: Record<string, unknown> | null;
+  tiltseries_metadata?: TiltseriesMetadata | null;
+  tomogram_metadata?: TomogramMetadata | null;
   annotations?: unknown[];
   last_autofill_at?: string | null;
   last_autofill_duration_seconds?: number | null;
