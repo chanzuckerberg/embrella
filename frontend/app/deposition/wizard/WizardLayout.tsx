@@ -88,7 +88,16 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           <WizardStepper steps={WIZARD_STEPS} current={current} skipped={skippedNums} onSelect={go} />
         </Box>
 
-        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: { xs: 3, md: 5 }, py: { xs: 4, md: 5 } }}>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'scroll',
+            scrollbarGutter: 'stable',
+            px: { xs: 3, md: 5 },
+            py: { xs: 4, md: 5 },
+          }}
+        >
           {readOnly && (
             <Alert severity="info" sx={{ mb: 3 }}>
               You&apos;re viewing another user&apos;s submission - it&apos;s read-only.
