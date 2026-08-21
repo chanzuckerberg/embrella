@@ -122,6 +122,7 @@ export function BiologicalClassification({
           lookup={row.lookup}
           manualOnly={row.manualOnly}
           idPlaceholder={row.idPlaceholder}
+          childrenOf={row.childrenOf}
           required={required}
           name={(sample[row.nameKey] as string) ?? ''}
           id={idVal}

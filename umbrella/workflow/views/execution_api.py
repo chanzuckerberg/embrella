@@ -271,6 +271,7 @@ def execute_pipe(request):
                 )
 
             # Find plan with this processor
+            # FIXME: processor may have multiple plans, like aretomo
             pipe_in_plan_with_processor = (
                 PipeInPlan.objects.filter(
                     pipe__software__processor_class=processor_name,

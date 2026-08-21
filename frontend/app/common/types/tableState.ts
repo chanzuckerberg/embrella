@@ -6,6 +6,8 @@ import { ScreeningGridData } from '@app/components/Screening/types';
 import { StandardSampleData } from '@app/components/StandardSamples/types';
 import { GridData } from '@app/components/GridsView/types';
 import { ReviewData } from '@app/components/ReviewsView/types';
+import { SessionOverviewData } from '@app/components/SessionBrowserView/types';
+import { StorageSessionData } from '@app/components/StorageExplorerView/types';
 import { TomogramData } from '@app/components/TomogramsView/types';
 import { Job } from '@app/processing/jobs/monitor/types';
 
@@ -15,7 +17,9 @@ export type EntityDataTypes =
   | GridBoxData
   | GridData
   | PuckData
+  | SessionOverviewData
   | StandardSampleData
+  | StorageSessionData
   | ScreeningGridData
   | TomogramData
   | ReviewData
@@ -29,6 +33,8 @@ export type EntityList<T extends EntityDataTypes> = {
   entities: T[];
   pagination: Pagination;
   sortBy: SortBy;
+  /** Re-reads the current page in place, keeping row expansion state. */
+  refetch?: () => void;
 };
 
 export interface Pagination {

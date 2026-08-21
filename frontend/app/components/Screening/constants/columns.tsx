@@ -10,7 +10,7 @@ import {
   getLinkCellFromCellContext,
 } from '@app/common/components/EntityTable/utils/linkUtils';
 import { EntityDataTypes } from '@app/common/types/tableState';
-import { formatDate } from '@app/common/utils/date';
+import { formatDate } from '@app/common/utils/format';
 import { GridDetailIconCell } from '@app/components/GridsView/components/GridDetailIconCell';
 import { useGridDetailDialog } from '@app/components/GridsView/context/GridDetailDialogContext';
 import { AllLabelsCell } from '../components/AllLabelsCell';

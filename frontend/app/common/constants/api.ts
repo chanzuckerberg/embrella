@@ -63,6 +63,16 @@ export enum API {
   COPICK_ANNOTATED_COUNT = '/workflow/v1/processors/copick/annotated-count/',
   COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
 
+  // Session Browser
+  SESSION_OVERVIEW = '/tem/v1/session-overview/',
+  SESSION_OVERVIEW_FILTERLIST = '/tem/v1/session-overview/filterlist/',
+
+  // Storage Explorer (entity-centric tree). Take a ?cluster=, not a survey id.
+  STORAGE_SESSIONS = '/processes/v1/storage-sessions/',
+  STORAGE_SESSIONS_FILTERLIST = '/processes/v1/storage-sessions/filterlist/',
+  STORAGE_SESSIONS_SUMMARY = '/processes/v1/storage-sessions/summary/',
+  STORAGE_DECISIONS = '/processes/v1/storage-decisions/',
+
   // Session/Run Selection
   MSI_SESSIONS_LIST = '/workflow/get_msi_session_list',
   MSI_SESSION_ID = '/workflow/get_msisession_id',

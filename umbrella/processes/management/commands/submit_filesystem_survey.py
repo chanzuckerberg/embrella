@@ -16,6 +16,7 @@ Usage:
     python manage.py submit_filesystem_survey --cluster czii --path /hpc/projects/group.czii/ --no-cache
 """
 
+import contextlib
 import json
 import os
 import re
@@ -51,7 +52,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--output-dir",
             type=str,
-            help="Output directory for survey results (default: /hpc/projects/<cluster>/surveys/)",
+            help="Output directory for survey results (default: /hpc/projects/group.czii/svc.czii.umbrella/file_surveys/)",
         )
         parser.add_argument(
             "--dry-run",
@@ -115,7 +116,7 @@ class Command(BaseCommand):
             output_dir = options["output_dir"]
         else:
             # Default output directory
-            output_dir = "/hpc/projects/group.czii/michael.souza/surveys"
+            output_dir = "/hpc/projects/group.czii/svc.czii.umbrella/file_surveys"
 
         # Get user
         if options["user"]:
@@ -348,6 +349,8 @@ class Command(BaseCommand):
                 return None
 
             ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster, auth=auth)
+            tmp_parquet = None
+            tmp_cache = None
 
             try:
                 sftp = ssh.open_sftp()
@@ -368,9 +371,6 @@ class Command(BaseCommand):
                     WHERE type = 'zarr'
                 """).fetchall()
                 con.close()
-
-                # Clean up temp parquet
-                os.unlink(tmp_parquet)
 
                 if not zarr_entries:
                     self.stdout.write("  No zarr entries found in previous survey")
@@ -407,9 +407,6 @@ class Command(BaseCommand):
                 sftp.put(tmp_cache, remote_cache_path)
                 sftp.close()
 
-                # Clean up temp cache file
-                os.unlink(tmp_cache)
-
                 self.stdout.write(
                     self.style.SUCCESS(
                         f"  Zarr cache ready: {len(zarr_entries)} entries",
@@ -419,6 +416,10 @@ class Command(BaseCommand):
 
             finally:
                 ssh.close()
+                for path in (tmp_parquet, tmp_cache):
+                    if path:
+                        with contextlib.suppress(OSError):
+                            os.unlink(path)
 
         except Exception as e:
             logger.warning(f"Error preparing zarr cache: {e}")

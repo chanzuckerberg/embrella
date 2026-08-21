@@ -73,7 +73,11 @@ class ProcSoftware(models.Model):
     - script_directory: Remote directory for script uploads
     """
 
-    name = models.CharField(max_length=32, default="aretomo3")
+    name = models.CharField(
+        max_length=32,
+        default="aretomo3",
+        help_text=("Filesystem token, not a display name: fills {proc_software} in stores.Path."),
+    )
     version = models.CharField(max_length=32, default="2024-03-10")
     capable_tasks = models.ManyToManyField(Task)
 
@@ -87,6 +91,7 @@ class ProcSoftware(models.Model):
         max_length=64,
         null=True,
         blank=True,
+        unique=True,
         help_text='Processor class name (e.g., "aretomo3" maps to AreTomo3Processor)',
     )
     default_cluster = models.CharField(
@@ -106,6 +111,17 @@ class ProcSoftware(models.Model):
         blank=True,
         help_text="Remote script directory (e.g., /hpc/projects/.../scripts)",
     )
+    storage_dirname = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text=(
+            "Directory on the cluster this software writes into, used to group the Storage "
+            "Explorer. Usually the same as name, but not always: both copick sub-processors "
+            "write into 'copick'. Maintained by hand in the admin; blank falls back to name."
+        ),
+    )
     active = models.BooleanField(
         default=True,
         help_text="Whether this processor is currently active in the codebase",
@@ -124,9 +140,26 @@ class ProcPlan(models.Model):
     """
 
     name = models.CharField(max_length=32, default="czii-live")
+    display_name = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Human-readable label for the UI. Falls back to name when blank.",
+    )
 
     def __str__(self):
         return self.name
+
+    @property
+    def label(self):
+        """
+        UI-facing name for the plan.
+
+        `name` feeds path templates via PipeInPlan.get_replacement_map and is
+        compared against literals in several views, so it can't be prettified
+        in place -- display_name carries the readable label instead.
+        """
+        return self.display_name or self.name
 
 
 class Pipe(models.Model):
@@ -1006,3 +1039,160 @@ class DirectorySummary(models.Model):
                 return f"{size:.2f} {unit}"
             size /= 1024.0
         return f"{size:.2f} PB"
+
+
+def format_bytes(size):
+    """Human-readable byte count, matching DirectorySummary.get_size_display()."""
+    size = float(size or 0)
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if size < 1024.0:
+            return f"{size:.2f} {unit}"
+        size /= 1024.0
+    return f"{size:.2f} PB"
+
+
+def current_survey(cluster):
+    """
+    The survey whose tree represents the latest completed scan for a cluster
+    """
+    return FilesystemSurvey.objects.filter(cluster=cluster, status="completed").order_by("-completed_at", "-id").first()
+
+
+class StorageRunSummaryQuerySet(models.QuerySet):
+    def current(self, cluster):
+        """
+        Leaves for the newest completed survey on one cluster.
+
+        Returns an empty queryset when the cluster has no completed survey.
+        """
+        survey = current_survey(cluster)
+        if survey is None:
+            return self.none()
+        return self.filter(survey=survey)
+
+
+class StorageRunSummary(models.Model):
+    """
+    Materialized leaf of the storage tree: one row per
+    (survey, software, session, run) directory group.
+
+    Built by processes.services.storage_tree.build_storage_tree(). Every field
+    is derived, so the table can be dropped and rebuilt at any time.
+
+    scope reads by survey; `objects.current(cluster)` is the intended usage
+
+    Decisions live in StorageDecision
+    """
+
+    objects = StorageRunSummaryQuerySet.as_manager()
+
+    survey = models.ForeignKey(
+        FilesystemSurvey,
+        on_delete=models.CASCADE,
+        related_name="run_summaries",
+    )
+    cluster = models.CharField(max_length=16, db_index=True)
+
+    # Path-derived identity, relative to survey.base_path.
+    software = models.CharField(max_length=64, db_index=True, help_text="Depth-1 segment, e.g. 'aretomo3'")
+    session_name = models.CharField(
+        max_length=255, db_index=True, help_text="Depth-2 segment; may not be a known MsiSession"
+    )
+    run_name = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Depth-3 segment. Empty means files directly under the session directory.",
+    )
+    path_prefix = models.CharField(max_length=512, help_text="The directory this leaf covers")
+
+    # Resolved links. NULL means "on disk, but Embrella has no record of it".
+    # SET_NULL throughout: deleting a record must not erase the survey's
+    # evidence that the bytes are still on the cluster.
+    msi_session = models.ForeignKey(
+        MsiSession,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="storage_run_summaries",
+    )
+    proc_run = models.ForeignKey(
+        "processes.ProcRun",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="storage_run_summaries",
+    )
+    proc_software = models.ForeignKey(
+        "processes.ProcSoftware",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="storage_run_summaries",
+    )
+
+    # Rollups over every descendant DirectorySummary row.
+    directory_count = models.IntegerField(default=0)
+    file_count = models.BigIntegerField(default=0)
+    total_size_bytes = models.BigIntegerField(default=0)
+    newest_file_mtime = models.DateTimeField(null=True, blank=True)
+    oldest_file_mtime = models.DateTimeField(null=True, blank=True)
+    owner_username = models.CharField(max_length=64, blank=True, default="", help_text="Most common owner")
+
+    built_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["survey", "software", "session_name", "run_name"]
+        indexes = [
+            models.Index(fields=["survey", "session_name"]),
+            models.Index(fields=["survey", "software"]),
+            models.Index(fields=["survey", "-total_size_bytes"]),
+        ]
+        ordering = ["session_name", "software", "run_name"]
+        verbose_name_plural = "storage run summaries"
+
+    def __str__(self):
+        run = self.run_name or "(session root)"
+        return f"{self.software}/{self.session_name}/{run} ({self.get_size_display()})"
+
+    @property
+    def registered(self):
+        """True when the path's session name resolves to a real MsiSession."""
+        return self.msi_session_id is not None
+
+    def get_size_display(self):
+        return format_bytes(self.total_size_bytes)
+
+
+class StorageDecision(models.Model):
+    """
+    A preservation decision about a directory, keyed on the path
+
+    One row per decision, not per affected directory -- marking a session
+    writes a single row whose prefix covers every descendant.
+    Cascades with longest matching prefix, so a run-level decision overrides
+    session-level parent (bad older run, but newer ones can be preserved).
+
+    NOTE: Currently does not handle delete, move or modify files
+    """
+
+    cluster = models.CharField(max_length=16, db_index=True)
+    path_prefix = models.CharField(max_length=512, help_text="Session or run directory this decision covers")
+    status = models.CharField(max_length=20, choices=DirectorySummary.PRESERVE_STATUS_CHOICES)
+    notes = models.TextField(blank=True, default="")
+    decided_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="storage_decisions",
+    )
+    decided_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["cluster", "path_prefix"]
+        indexes = [models.Index(fields=["cluster", "path_prefix"])]
+        ordering = ["cluster", "path_prefix"]
+
+    def __str__(self):
+        return f"{self.get_status_display()}: {self.path_prefix}"

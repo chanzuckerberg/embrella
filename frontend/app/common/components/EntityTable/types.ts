@@ -9,7 +9,9 @@ export type ApiPrimaryEntityAttribute =
   | 'job'
   | 'gridBox'
   | 'puck'
-  | 'specimen';
+  | 'session'
+  | 'specimen'
+  | 'storageSession';
 export type AccessorReturnType = LinkCellProps | LinkCellProps[] | string;
 
 export interface LinkCellProps {

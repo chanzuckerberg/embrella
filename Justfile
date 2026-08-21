@@ -716,6 +716,72 @@ devdown:
 devlogs service="":
     {{COMPOSE_DEV}} logs -f {{service}}
 
+# Compose invocation for a stack, selected by stage. Unlike the deploy recipes,
+# these run ON the host (inside /srv/czii-umbrella-django) rather than over ssh,
+# so they work the same when you are shelled into staging as they do locally.
+_composefor stage:
+    #!/bin/bash
+    set -euo pipefail
+    case "{{stage}}" in
+      dev)     echo "podman compose --env-file .env -f infra/compose.yaml -f infra/compose.build.yaml -f infra/compose.dev.yaml" ;;
+      staging) echo "podman compose --env-file .env.staging -f infra/compose.yaml -f infra/compose.staging.yaml" ;;
+      prod)    echo "podman compose --env-file .env.production -f infra/compose.yaml -f infra/compose.prod.yaml" ;;
+      *) echo "Error: stage must be one of: dev, staging, prod" >&2; exit 1 ;;
+    esac
+
+# Run a one-off command in a stage's backend container, on the host you are on.
+# `devexec` is the dev-only shorthand for the same thing.
+#
+#   just stageexec staging python umbrella/manage.py rebuild_storage_tree --check
+stageexec stage +args:
+    #!/bin/bash
+    set -euo pipefail
+    $(just _composefor {{stage}}) exec -T backend {{args}}
+
+# Register a filesystem survey whose Parquet output is already on the cluster,
+# and ingest it into DirectorySummary + the storage tree.
+#
+# For pointing a second environment at surveys that have already been run
+#
+# Add `--queue` to hand the work to the django-q worker instead of holding the
+# shell open; Add `--dry-run` to check the Parquet is readable without writing anything.
+#
+# `completed` is required rather than optional so that a trailing flag cannot
+# silently land in it. Pass '' if you genuinely do not have the timestamp.
+#
+#   just importsurvey staging czii  /hpc/…/file_surveys/survey_6.parquet 2026-08-05T23:48:08Z
+#   just importsurvey staging bruno /hpc/…/file_surveys/survey_7.parquet 2026-08-10T16:28:59Z --queue
+importsurvey stage cluster parquet completed *flags:
+    #!/bin/bash
+    set -euo pipefail
+    COMPOSE=$(just _composefor {{stage}})
+    COMPLETED=()
+    if [[ -n "{{completed}}" ]]; then COMPLETED=(--completed-at "{{completed}}"); fi
+    $COMPOSE exec -T backend python umbrella/manage.py import_survey \
+        --cluster {{cluster}} --parquet {{parquet}} "${COMPLETED[@]}" {{flags}}
+
+# What each survey has ingested so far. Useful while `importsurvey --queue` runs.
+surveystatus stage:
+    #!/bin/bash
+    set -euo pipefail
+    $(just _composefor {{stage}}) exec -T backend python umbrella/manage.py shell <<'PY'
+    from processes.models import DirectorySummary, FilesystemSurvey, StorageRunSummary
+    from processes.services.storage_tree import tree_is_stale
+
+    surveys = list(FilesystemSurvey.objects.order_by("pk"))
+    if not surveys:
+        print("no surveys")
+    for s in surveys:
+        completed = f"{s.completed_at:%Y-%m-%d %H:%M}" if s.completed_at else "NEVER"
+        stale = " STALE" if s.status == "completed" and tree_is_stale(s) else ""
+        print(
+            f"{s.pk:>4}  {s.cluster:<6} {s.status:<11}"
+            f" dirs={DirectorySummary.objects.filter(survey=s).count():>9,}"
+            f" leaves={StorageRunSummary.objects.filter(survey=s).count():>6,}"
+            f"  completed={completed}{stale}"
+        )
+    PY
+
 # Run a one-off command inside the running backend container.
 # Example: `just devexec pytest umbrella/processes/tests/test_services.py`
 devexec +args:
