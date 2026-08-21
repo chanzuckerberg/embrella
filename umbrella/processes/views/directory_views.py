@@ -5,6 +5,7 @@ This module contains views for managing filesystem surveys and browsing
 directory-level aggregates from survey results.
 """
 
+import contextlib
 import json
 import logging
 import os
@@ -563,6 +564,7 @@ def get_directory_files(request, directory_id):
         }
 
         ssh = clusterio.get_cluster_ssh_connection(cluster_id=survey.cluster, auth=auth)
+        tmp_path = None
 
         try:
             sftp = ssh.open_sftp()
@@ -613,9 +615,6 @@ def get_directory_files(request, directory_id):
 
             con.close()
 
-            # Clean up temp file
-            os.unlink(tmp_path)
-
             # Format results
             files = []
             for row in results:
@@ -653,6 +652,9 @@ def get_directory_files(request, directory_id):
 
         finally:
             ssh.close()
+            if tmp_path:
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp_path)
 
     except clusterio.SSHDisabledError:
         # No cluster access (e.g. demo server) — degrade to an empty file list.
@@ -733,6 +735,7 @@ def get_survey_files(request, survey_id):
         }
 
         ssh = clusterio.get_cluster_ssh_connection(cluster_id=survey.cluster, auth=auth)
+        tmp_path = None
 
         try:
             sftp = ssh.open_sftp()
@@ -779,9 +782,6 @@ def get_survey_files(request, survey_id):
 
             con.close()
 
-            # Clean up temp file
-            os.unlink(tmp_path)
-
             # Format results
             files = []
             for row in results:
@@ -813,6 +813,9 @@ def get_survey_files(request, survey_id):
 
         finally:
             ssh.close()
+            if tmp_path:
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp_path)
 
     except clusterio.SSHDisabledError:
         # No cluster access (e.g. demo server) — degrade to an empty file list.

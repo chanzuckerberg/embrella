@@ -54,6 +54,8 @@ services:
     image: ${IMAGE_REGISTRY:-embrella}/db:${IMAGE_TAG:-latest}
     user: '0:0'
     command: ['mariadbd', '--user=root']
+    ports:
+      - '127.0.0.1:${MYSQL_HOST_PORT:-3306}:3306'
     environment:
       MARIADB_USER: ${MYSQL_USER:?set MYSQL_USER}
       MARIADB_PASSWORD: ${MYSQL_PWD:?set MYSQL_PWD}

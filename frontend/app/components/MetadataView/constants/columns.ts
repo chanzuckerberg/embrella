@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { AccessorReturnType } from '@app/common/components/EntityTable/types';
 import { ComputedMetric } from '@app/common/types/metadataViz/metadataSummary';
-import { humanize } from '@app/common/utils/string';
+import { humanize } from '@app/common/utils/format';
 
 export const METADATA_COLUMN_IDS = {
   NAME: 'name',

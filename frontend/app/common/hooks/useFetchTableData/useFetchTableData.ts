@@ -9,11 +9,12 @@ export const useFetchTableData = <T extends EntityDataTypes>(
   dataEndpoint: API,
   searchParam: SearchParam
 ): EntityList<T> => {
-  const { data } = useFetchData<ApiListResponse<EntityDataTypes>>(dataEndpoint, searchParam);
+  const { data, refetch } = useFetchData<ApiListResponse<EntityDataTypes>>(dataEndpoint, searchParam);
 
   return {
     entities: data?.result,
     pagination: data?.pagination,
     sortBy: data?.sortBy,
+    refetch,
   } as EntityList<T>;
 };

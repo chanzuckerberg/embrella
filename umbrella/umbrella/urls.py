@@ -50,6 +50,8 @@ from processes.api.views import (
     get_review_tomograms,
     get_tomo_by_msi_session,
 )
+from processes.urls import legacy_urlpatterns as processes_legacy_urlpatterns
+from processes.urls import v1_urlpatterns as processes_v1_urlpatterns
 from processes.views import available_annotation_filter
 from rest_framework.routers import DefaultRouter
 from tem.api.views import SessionView
@@ -146,7 +148,7 @@ legacy_patterns = [
     path("umbrella/", include("custom.urls"), name="umbrella"),
     path("projects/", include(("projects.urls", "projects"), namespace="legacy_projects")),
     path("tem/", include((tem_legacy_urlpatterns, "tem"))),
-    path("processes/", include(("processes.urls", "processes"), namespace="legacy_processes")),
+    path("processes/", include((processes_legacy_urlpatterns, "processes"), namespace="legacy_processes")),
     path("cryo_grids/", include(("cryo_grids.urls", "cryo_grids"), namespace="legacy_cryo_grids")),
     path("workflow/", include(("workflow.urls", "workflow"), namespace="legacy_workflow")),
 ]
@@ -170,7 +172,7 @@ urlpatterns = (
         path("workflow/", include("workflow.urls"), name="workflow"),
         path("cryo_grids/", include("cryo_grids.urls"), name="cryo_grids"),
         path("depositions/", include("depositions.urls"), name="depositions"),
-        path("processes/", include("processes.urls"), name="processes"),
+        path("processes/", include((processes_v1_urlpatterns, "processes")), name="processes"),
         path("projects/", include("projects.urls"), name="projects"),
         path("tem/", include(tem_v1_urlpatterns)),
         path("copick/", include("workflow.processors.copick.api_urls")),

@@ -5,6 +5,7 @@ import { EntityAPIPrimaryAttributeToDataType } from '@app/common/types/entity';
 import { EntityDataTypes } from '@app/common/types/tableState';
 import { AnnotationData } from '@app/components/AnnotationsView/types';
 import { GridData } from '@app/components/GridsView/types';
+import { SessionOverviewData } from '@app/components/SessionBrowserView/types';
 import { TomogramData } from '@app/components/TomogramsView/types';
 import { act, renderHook } from '@testing-library/react';
 
@@ -46,6 +47,25 @@ describe('getRowId', () => {
     const rowId = getRowId(row, entityApiResponseField);
 
     expect(rowId).toBe('789');
+  });
+
+  it('should return the correct row ID for a session entity', () => {
+    const row: EntityDataTypes = {
+      session: { id: 321, name: '24mar01a' },
+    } as SessionOverviewData;
+
+    const entityApiResponseField: keyof EntityAPIPrimaryAttributeToDataType = 'session';
+    const rowId = getRowId(row, entityApiResponseField);
+
+    expect(rowId).toBe('321');
+  });
+
+  it('should fall back to the namespaced id for a session run sub-row', () => {
+    // Run sub-rows carry no `session`, and their bare ids ("run-311") are
+    // namespaced so session 311 and run 311 cannot collide on one row key.
+    const row = { id: 'run-311' } as unknown as EntityDataTypes;
+
+    expect(getRowId(row, 'session')).toBe('run-311');
   });
 });
 

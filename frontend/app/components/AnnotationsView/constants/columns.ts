@@ -2,7 +2,7 @@ import { ColumnDef } from '@tanstack/react-table';
 
 import { AccessorReturnType } from '@app/common/components/EntityTable/types';
 import { EntityDataTypes } from '@app/common/types/tableState';
-import { humanize } from '@app/common/utils/string';
+import { humanize } from '@app/common/utils/format';
 import { AnnotationData } from '../types';
 
 export const ANNOTATION_COLUMN_IDS = {
