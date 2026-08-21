@@ -11,7 +11,13 @@ export interface BioRow {
   lookup: string;
   manualOnly?: boolean;
   idPlaceholder?: string;
+  /** Restrict OLS suggestions */
+  childrenOf?: string;
 }
+
+// GO has three branches; Cell component must only suggest from the Cellular Component
+// eslint-disable-next-line sonarjs/no-clear-text-protocols
+export const GO_CELLULAR_COMPONENT_IRI = 'http://purl.obolibrary.org/obo/GO_0005575';
 
 export const BIO_ROWS: BioRow[] = [
   {
@@ -56,6 +62,7 @@ export const BIO_ROWS: BioRow[] = [
     nameKey: 'cell_component_name',
     idKey: 'ontology',
     lookup: 'https://www.ebi.ac.uk/ols4/ontologies/go',
+    childrenOf: GO_CELLULAR_COMPONENT_IRI,
   },
   {
     key: 'development_stage',

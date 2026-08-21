@@ -28,10 +28,13 @@ async function olsQuery(endpoint: 'search' | 'select', params: Record<string, st
   return docs.map(toTerm).filter((t): t is OntologyTerm => t !== null);
 }
 
-export function searchOntology(term: string, ontology: string): Promise<OntologyTerm[]> {
+export function searchOntology(term: string, ontology: string, childrenOf?: string): Promise<OntologyTerm[]> {
   const q = term.trim();
   if (!q) return Promise.resolve([]);
-  return olsQuery('select', { q, ontology: ontology.toLowerCase() });
+  const params: Record<string, string> = { q, ontology: ontology.toLowerCase() };
+  // Restrict to subtree rooted at this IRI
+  if (childrenOf) params.childrenOf = childrenOf;
+  return olsQuery('select', params);
 }
 
 /** Validate an OBO id */
