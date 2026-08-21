@@ -132,6 +132,20 @@ class ProcSoftware(models.Model):
     def __str__(self):
         return "%s @ (%s)" % (self.name, self.version)
 
+    @property
+    def dirname(self):
+        """Directory segment this software owns on the cluster -- fills {proc_software}.
+
+        Not `name`: the copick sub-processors are distinct softwares writing into one
+        `copick` directory, so substituting `name` would resolve to a path that does not
+        exist. Currently a no-op for every software that has an output template, since
+        those all have `storage_dirname == name`.
+
+        `storage_tree` deliberately spells `dirname or name` at the queryset level instead
+        of using this, to avoid instantiating a model per row.
+        """
+        return self.storage_dirname or self.name
+
 
 class ProcPlan(models.Model):
     """
@@ -198,7 +212,7 @@ class PipeInPlan(models.Model):
         }
         if proc_run:
             mapping["proc_run"] = proc_run.name
-            mapping["proc_software"] = self.pipe.software.name
+            mapping["proc_software"] = self.pipe.software.dirname
             mapping["workflow"] = mapping["proc_software"]  # Legacy alias
         if msi_session:
             mapping["msi_session"] = msi_session.name

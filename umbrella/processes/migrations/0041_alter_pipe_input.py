@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('processes', '0037_review_cluster'),
+        ('processes', '0040_procsoftware_storage_dirname_storagedecision_and_more'),
         ('stores', '0017_alter_datakind_data_type'),
     ]
 

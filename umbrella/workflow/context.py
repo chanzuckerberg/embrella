@@ -99,7 +99,7 @@ class RunContext:
         {proc_run} is the processing run and {run} is a per-file tilt-series id, which is
         the opposite of how review templates read them.
         """
-        proc_software = self.pipe_in_plan.pipe.software.name
+        proc_software = self.pipe_in_plan.pipe.software.dirname
         return {
             "proc_plan": self.proc_run.proc_plan.name,
             "proc_run": self.proc_run.name,
