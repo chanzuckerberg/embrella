@@ -108,7 +108,7 @@ class RunCreationService:
             proc_run.created_objects[my_pipe_pk].append(("recmethod", recon_method))
         if class_name == "Annotation":
             meth_map = {"pick": "template matching", "seg": "ml semantic segamentation"}
-            dtype = my_rpdata.pathtype.static_path.data_type
+            dtype = my_rpdata.pathtype.data_kind.data_type
             anno_methods = AnnotationMethod.objects.filter(name=meth_map[dtype])
             if not anno_methods:
                 # Create default recon method
@@ -132,7 +132,7 @@ class RunCreationService:
         if pipe is None:
             return False
         task_names = list(map((lambda x: x.name), pipe.tasks_performed.all()))
-        output_types = list(map((lambda x: x.static_path.data_type), pipe.output.all()))
+        output_types = list(map((lambda x: x.data_kind.data_type), pipe.output.all()))
         input_types = list(map((lambda x: x.data_type), pipe.input.all()))
         pipe_joints = RunCreationService.get_pipe_joints(pipe)
         if "ctf deconvolution" in task_names:
@@ -156,7 +156,7 @@ class RunCreationService:
         if pipe_joints:
             parent_tomo_pipe = None
             for pr in pipe_joints:
-                if pr.input_pathtype.static_path.data_type in tomogram_making_data_type:
+                if pr.input_pathtype.data_kind.data_type in tomogram_making_data_type:
                     parent_tomo_pipe = pr.input_pipe_in_plan.pipe
                     return parent_tomo_pipe
         return None
@@ -236,7 +236,7 @@ class RunCreationService:
         all_input_pipe_pks = list(input_pipe_pks)
         #
         # get my_instance from class in this python module
-        ptype = pdata.pathtype.static_path.data_type
+        ptype = pdata.pathtype.data_kind.data_type
         class_name = model_map[ptype][0]
         my_attr = getattr_from_globals(class_name)
         my_instance = my_attr(pipe_data=pdata)
@@ -333,7 +333,7 @@ class RunCreationService:
                 # TODO: consider doing this at the time of msi_session creation
                 frames_fd = RunCreationService.create_frames_runpipedata(proc_run, proc_run.msi_session)
             pipes_input_from.extend(RunCreationService.get_input_pipe_pks(proc_run, pipl.pipe))
-        path_types = list(map((lambda x: x.pathtype.static_path.data_type), run_pipe_datas))
+        path_types = list(map((lambda x: x.pathtype.data_kind.data_type), run_pipe_datas))
         # TODO: this makes it necessary to enter pipes in strict order.
         input_pipe_pks = pipes_input_from
         print("all input pipe pks", input_pipe_pks)
@@ -350,20 +350,20 @@ class RunCreationService:
         else:
             # processing run starts from tomogram
             pipe_pk = tomo_input.pipe_data.pipe.pk
-            ptype = tomo_input.pipe_data.pathtype.static_path.data_type
+            ptype = tomo_input.pipe_data.pathtype.data_kind.data_type
             proc_run.created_objects = {pipe_pk: [(ptype, tomo_input)]}
             input_pipe_pks = [tomo_input.pipe_data.pipe.pk]
             if pick_input:
                 # processing run needing pick_input such as 2d gallery making
                 pipe_pk = pick_input.pipe_data.pipe.pk
-                ptype = pick_input.pipe_data.pathtype.static_path.data_type
+                ptype = pick_input.pipe_data.pathtype.data_kind.data_type
                 proc_run.created_objects[pipe_pk] = [(ptype, pick_input)]
                 input_pipe_pks.append(pick_input.pipe_data.pipe.pk)
 
         input_objects = {}
         # accumulate created_objects
         for ptype in tomogram_path_type_order:
-            results = list(filter((lambda x: x.pathtype.static_path.data_type == ptype), run_pipe_datas))
+            results = list(filter((lambda x: x.pathtype.data_kind.data_type == ptype), run_pipe_datas))
             if tomo_input and ptype in ("rec"):
                 # only allow the tomo_input result to be considered
                 results = [tomo_input.pipe_data]

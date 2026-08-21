@@ -39,19 +39,12 @@ class PipelineDataService:
                     msi_session=proc_run.msi_session,
                 )
 
-                out_static = fill_place_holders(
-                    p_out.static_path.static_path,
-                    replacement_map,
-                )
                 out_overlay = fill_place_holders(
                     p_out.overlay_path,
                     replacement_map,
                 )
 
-                out_path = Path.objects.create(
-                    static_path=out_static,
-                    overlay_path=out_overlay,
-                )
+                out_path = Path.objects.create(overlay_path=out_overlay)
 
                 data_instance = RunPipeData.objects.create(
                     run=proc_run,

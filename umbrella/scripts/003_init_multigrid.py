@@ -10,7 +10,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 # from cryo_grids.models import Site, Dewar, Cane, Puck, CryoGridBox, Sample
 # from cryo_grids.models import *
-from stores.models import PathType, StaticPath
+from stores.models import DataKind, PathType
 
 # from tem.models import *
 
@@ -21,24 +21,10 @@ def get_scope_camera():
     return scope, camera
 
 
-def create_tem_static_path(data_type):
-    if data_type in ["frames", "sums", "mdoc", "parents"]:
-        instance = StaticPath.objects.create(
-            data_type=data_type,
-            static_path="/{workflow}/{msi_session}/{run}/%s" % data_type,
-        )
-    if data_type in ["atlas"]:
-        instance = StaticPath.objects.create(
-            data_type=data_type,
-            static_path="/{msi_session}/{run}/%s" % data_type,
-        )
-    if data_type in ["satlas"]:
-        # screen atlas
-        instance = StaticPath.objects.create(
-            data_type=data_type,
-            static_path="/{workflow}/{session_group}/{atlas_session}/atlas",
-        )
-    return instance
+def create_tem_data_kind(data_type):
+    # Branched by data_type until the vestigial static_path template came off DataKind;
+    # every kind is now just its name.
+    return DataKind.objects.create(data_type=data_type)
 
 
 def create_multigrid_plan(scope, camera):
@@ -47,7 +33,7 @@ def create_multigrid_plan(scope, camera):
     """
     workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="scrn")
     atlas_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("satlas"),
+        data_kind=create_tem_data_kind("satlas"),
         overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/{date}_{timestamp}.mrc",
     )
     software = Software.objects.create(

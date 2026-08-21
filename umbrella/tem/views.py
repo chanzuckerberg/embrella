@@ -335,26 +335,11 @@ def get_all_sessions(request):
             notes=session.notes,
             user=UserBase(username=session.user.username),
             project=ProjectBase(name=session.project.name),
-            frames=PathInfo(
-                static_path=session.frames.static_path if session.frames.static_path else None,
-                overlay_path=session.frames.overlay_path if session.frames.overlay_path else None,
-            ),
-            mdocs=PathInfo(
-                static_path=session.mdocs.static_path if session.mdocs.static_path else None,
-                overlay_path=session.mdocs.overlay_path if session.mdocs.overlay_path else None,
-            ),
-            sums=PathInfo(
-                static_path=session.sums.static_path if session.sums.static_path else None,
-                overlay_path=session.sums.overlay_path if session.sums.overlay_path else None,
-            ),
-            parents=PathInfo(
-                static_path=session.parents.static_path if session.parents.static_path else None,
-                overlay_path=session.parents.overlay_path if session.parents.overlay_path else None,
-            ),
-            atlas=PathInfo(
-                static_path=session.atlas.static_path if session.atlas.static_path else None,
-                overlay_path=session.atlas.overlay_path if session.atlas.overlay_path else None,
-            ),
+            frames=PathInfo(overlay_path=session.frames.overlay_path if session.frames.overlay_path else None),
+            mdocs=PathInfo(overlay_path=session.mdocs.overlay_path if session.mdocs.overlay_path else None),
+            sums=PathInfo(overlay_path=session.sums.overlay_path if session.sums.overlay_path else None),
+            parents=PathInfo(overlay_path=session.parents.overlay_path if session.parents.overlay_path else None),
+            atlas=PathInfo(overlay_path=session.atlas.overlay_path if session.atlas.overlay_path else None),
         )
         # Convert Pydantic model to dictionary and append to the list
         session_list.append(session_data.dict())
@@ -385,13 +370,13 @@ def get_all_image_paths(request):
 
     name_param = request.GET.get("name")
 
-    # Query the Software table and prefetch related paths via nested "select_related"
-    software_query = Software.objects.prefetch_related(
-        "frames__static_path",
-        "sums__static_path",
-        "mdocs__static_path",
-        "parents__static_path",
-        "atlas__static_path",
+    # Only overlay_path is reported now, so the five role FKs are all this needs.
+    software_query = Software.objects.select_related(
+        "frames",
+        "sums",
+        "mdocs",
+        "parents",
+        "atlas",
     ).all()
 
     result_list = []
@@ -402,36 +387,11 @@ def get_all_image_paths(request):
             pk=software.pk,
             fields=SoftwareFieldsResponse(
                 name=software.name,
-                frames=PathInfo(
-                    static_path=software.frames.static_path.static_path
-                    if software.frames and software.frames.static_path
-                    else None,
-                    overlay_path=software.frames.overlay_path if software.frames else None,
-                ),
-                sums=PathInfo(
-                    static_path=software.sums.static_path.static_path
-                    if software.sums and software.sums.static_path
-                    else None,
-                    overlay_path=software.sums.overlay_path if software.sums else None,
-                ),
-                mdocs=PathInfo(
-                    static_path=software.mdocs.static_path.static_path
-                    if software.mdocs and software.mdocs.static_path
-                    else None,
-                    overlay_path=software.mdocs.overlay_path if software.mdocs else None,
-                ),
-                parents=PathInfo(
-                    static_path=software.parents.static_path.static_path
-                    if software.parents and software.parents.static_path
-                    else None,
-                    overlay_path=software.parents.overlay_path if software.parents else None,
-                ),
-                atlas=PathInfo(
-                    static_path=software.atlas.static_path.static_path
-                    if software.atlas and software.atlas.static_path
-                    else None,
-                    overlay_path=software.atlas.overlay_path if software.atlas else None,
-                ),
+                frames=PathInfo(overlay_path=software.frames.overlay_path if software.frames else None),
+                sums=PathInfo(overlay_path=software.sums.overlay_path if software.sums else None),
+                mdocs=PathInfo(overlay_path=software.mdocs.overlay_path if software.mdocs else None),
+                parents=PathInfo(overlay_path=software.parents.overlay_path if software.parents else None),
+                atlas=PathInfo(overlay_path=software.atlas.overlay_path if software.atlas else None),
             ),
         )
         result_list.append(software_data.dict())

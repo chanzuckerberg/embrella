@@ -22,7 +22,7 @@ from cryo_grids.models import (
 )
 from external_links.models import ExternalResource
 from projects.models import Project
-from stores.models import PathType, StaticPath
+from stores.models import DataKind, PathType
 
 # from tem.models import *
 from tem.models import Camera, ImagingWorkflow, Microscope, SessionPlan, Software
@@ -97,19 +97,10 @@ def create_scope_camera():
     return scope, camera
 
 
-def create_tem_static_path(data_type):
-    if data_type in ["frames", "sums", "mdoc", "parents", "atlas"]:
-        instance = StaticPath.objects.create(
-            data_type=data_type,
-            static_path="/{workflow}/{msi_session}/{run}/%s" % data_type,
-        )
-    if data_type in ["satlas"]:
-        # screen atlas
-        instance = StaticPath.objects.create(
-            data_type=data_type,
-            static_path="/{workflow}/{session_group}/{atlas_session}/atlas",
-        )
-    return instance
+def create_tem_data_kind(data_type):
+    # Branched by data_type until the vestigial static_path template came off DataKind;
+    # every kind is now just its name.
+    return DataKind.objects.create(data_type=data_type)
 
 
 def create_tomo5_plan(scope, camera):
@@ -118,23 +109,23 @@ def create_tomo5_plan(scope, camera):
     """
     workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo")
     frame_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("frames"),
+        data_kind=create_tem_data_kind("frames"),
         overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}_{sequence}_{tilt}_*.eer",
     )
     sum_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("sums"),
+        data_kind=create_tem_data_kind("sums"),
         overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run_stage_pos}_Exposure.mrc",
     )
     mdoc_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("mdoc"),
+        data_kind=create_tem_data_kind("mdoc"),
         overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}.mdoc",
     )
     parent_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("parents"),
+        data_kind=create_tem_data_kind("parents"),
         overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run_stage_pos}_Search.mrc",
     )
     atlas_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("atlas"),
+        data_kind=create_tem_data_kind("atlas"),
         overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/Atlas_{timestamp}.mrc",
     )
     software = Software.objects.create(

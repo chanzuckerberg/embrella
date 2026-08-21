@@ -62,7 +62,7 @@ def _get_data_by_msi_session_data_type(plan, session, data_types=[]):
         my_pipe = vpp.pipe
         # filter data_types as the right input_pipe
         input_joints = PipeJoint.objects.filter(
-            pipe_in_plan__pipe=my_pipe, input_pathtype__static_path__data_type__in=data_types
+            pipe_in_plan__pipe=my_pipe, input_pathtype__data_kind__data_type__in=data_types
         )
         if not input_joints:
             continue

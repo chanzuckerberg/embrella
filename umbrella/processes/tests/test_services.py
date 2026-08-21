@@ -35,7 +35,6 @@ class TestPipelineDataService(TestCase):
         # Setup mocks
         pipe_mock = Mock(spec=Pipe)
         p_out_mock = Mock()
-        p_out_mock.static_path.static_path = "/static/path"
         p_out_mock.overlay_path = "/overlay/path"
         pipe_mock.output.all.return_value = [p_out_mock]
 
@@ -44,7 +43,7 @@ class TestPipelineDataService(TestCase):
         pipe_in_plan_mock.get_replacement_map.return_value = {"session": "test_session"}
 
         mock_pipe_in_plan.objects.filter.return_value = [pipe_in_plan_mock]
-        mock_fill.side_effect = ["/filled/static", "/filled/overlay"]
+        mock_fill.side_effect = ["/filled/overlay"]
         mock_path.objects.create.return_value = Mock()
         mock_run_pipe_data.objects.create.return_value = Mock()
 
@@ -145,7 +144,7 @@ class TestRunCreationService(TestCase):
     def test_get_tomo_pipe_with_matching_joint(self):
         """Test get_tomo_pipe returns parent pipe for tomogram data types."""
         joint_mock = Mock()
-        joint_mock.input_pathtype.static_path.data_type = "rec"
+        joint_mock.input_pathtype.data_kind.data_type = "rec"
         parent_pipe = Mock(spec=Pipe)
         joint_mock.input_pipe_in_plan.pipe = parent_pipe
 

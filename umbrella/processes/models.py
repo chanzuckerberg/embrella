@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
 from django.utils.timezone import now
-from stores.models import Cluster, Path, PathType, StaticPath
+from stores.models import Cluster, DataKind, Path, PathType
 from tem.models import MsiSession, SessionPlan
 
 """
@@ -138,7 +138,7 @@ class Pipe(models.Model):
     name = models.CharField(max_length=32, default="voxelspacing10.000a")
     software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
     tasks_performed = models.ManyToManyField(Task)
-    input = models.ManyToManyField(StaticPath, related_name="staticpath_in_input")
+    input = models.ManyToManyField(DataKind, related_name="datakind_in_input")
     output = models.ManyToManyField(PathType, related_name="pathtype_in_output")
 
     def __str__(self):
@@ -202,7 +202,7 @@ class PipeJoint(models.Model):
     def __str__(self):
         return "%s needs %s from %s" % (
             self.pipe_in_plan,
-            self.input_pathtype.static_path.data_type,
+            self.input_pathtype.data_kind.data_type,
             self.input_pipe_in_plan,
         )
 
@@ -725,8 +725,8 @@ def suggest_name(prefix, msi_session, plan, model_name="ProcRun"):
 
 
 def select_plan_ids_by_input_data_types(selected_data_types):
-    selected_static_paths = StaticPath.objects.filter(data_type__in=selected_data_types)
-    selected_pipes = Pipe.objects.filter(input__in=selected_static_paths)
+    selected_kinds = DataKind.objects.filter(data_type__in=selected_data_types)
+    selected_pipes = Pipe.objects.filter(input__in=selected_kinds)
     pipe_in_plans = PipeInPlan.objects.filter(pipe__in=selected_pipes)
     plan_ids = list(map((lambda x: x.plan.id), pipe_in_plans))
     return plan_ids

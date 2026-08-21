@@ -13,7 +13,7 @@ from processes.models import (
     ProcSoftware,
     Task,
 )
-from stores.models import PathType, StaticPath
+from stores.models import DataKind, PathType
 
 # from tem.models import *
 
@@ -22,28 +22,27 @@ def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
 
 
-def create_static_path(data_type):
+def create_data_kind(data_type):
     for data_type in ["cpck", "ocpi"]:
-        instance = StaticPath.objects.create(
+        instance = DataKind.objects.create(
             data_type=data_type,
-            static_path="/{msi_session}/{run}/%s/{proc_software}/{proc_run}/{pipe}/" % data_type,
         )
     return instance
 
 
-def get_static_path(data_type):
-    qset = StaticPath.objects.filter(data_type=data_type)
+def get_data_kind(data_type):
+    qset = DataKind.objects.filter(data_type=data_type)
     if qset:
         return qset[0]
     else:
-        create_static_path(data_type)
-        qset = StaticPath.objects.filter(data_type=data_type)
+        create_data_kind(data_type)
+        qset = DataKind.objects.filter(data_type=data_type)
         return qset[0]
 
 
 def add_pipe_joints(pipe_in_plan, input_pipe_in_plan, data_types):
     pathtypes_in_input = input_pipe_in_plan.pipe.output.all()
-    dtypes = list(map((lambda x: x.static_path.data_type), pathtypes_in_input))
+    dtypes = list(map((lambda x: x.data_kind.data_type), pathtypes_in_input))
     for t in data_types:
         dindex = dtypes.index(t)
         input_pathtype = pathtypes_in_input[dindex]
@@ -89,13 +88,13 @@ def create_pipeline_plan():
     output_path_types = []
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("cpck"),
+            data_kind=get_data_kind("cpck"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/",
         )
     )
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("ocpi"),
+            data_kind=get_data_kind("ocpi"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/",
         )
     )
@@ -112,8 +111,8 @@ def create_pipeline_plan():
     for p in output_path_types[1:2]:  # recon
         pipe2.output.add(p)
 
-    pipe1.input.add(get_static_path("rec"))
-    pipe2.input.add(get_static_path("rec"))
+    pipe1.input.add(get_data_kind("rec"))
+    pipe2.input.add(get_data_kind("rec"))
 
     # pipe joints
     plan_cpck = ProcPlan.objects.get(pk=1)
@@ -123,7 +122,7 @@ def create_pipeline_plan():
     plan_ocpi_j2 = PipeInPlan.objects.filter(plan=plan_ocpi, pipe__name="octopi_j2").first()
 
     producer_rec = PipeInPlan.objects.filter(
-        pipe__output__static_path__data_type="rec",
+        pipe__output__data_kind__data_type="rec",
     ).first()
 
     if producer_rec:
@@ -135,12 +134,12 @@ def create_pipeline_plan():
 
 def run():
     try:
-        r = get_static_path("rec")
-    except StaticPath.DoesNotExist:
+        r = get_data_kind("rec")
+    except DataKind.DoesNotExist:
         print("Please run init_processes first")
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}. Need reconstruction StaticPath instances to run")
+        print(f"Error: {e}. Need reconstruction DataKind instances to run")
         sys.exit(1)
     create_pipeline_plan()
 

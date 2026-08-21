@@ -275,23 +275,12 @@ class AtlasSession(models.Model):
         """
         Use session_plan and software to update session path by replacing place holders
         """
-        plan = self.group.session_plan
-        path_obj = getattr(plan.software, type_name)
-        static_path = fill_place_holders(
-            path_obj.static_path.static_path,
-            self.get_replacement_map(),
-        )
         session_attr = getattr(self, "get_session_%s_glob" % type_name)
         overlay_path = fill_place_holders(
             session_attr(),
             self.get_replacement_map(),
         )
-        path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
-        if not path_set:
-            p = Path(overlay_path=overlay_path, static_path=static_path)
-            p.save()
-        else:
-            p = path_set[0]
+        p, _ = Path.objects.get_or_create(overlay_path=overlay_path)
         return p
 
     def get_session_atlas_glob(self):
@@ -371,26 +360,18 @@ class MsiSession(models.Model):
         """
         Use session_plan and software to update session path by replacing place holders
         """
-        path_obj = getattr(self.session_plan.software, type_name)
-        replacement_map = self.get_replacement_map()
-        static_path = fill_place_holders(
-            path_obj.static_path.static_path,
-            replacement_map,
-        )
         session_attr = getattr(self, "get_session_%s_glob" % type_name)
         # The glob has already been filled from this same map; the second pass matters
         # only for the atlas role, where the glob may come from a linked AtlasSession
         # whose map has no {msi_session}.
         overlay_path = fill_place_holders(
             session_attr(),
-            replacement_map,
+            self.get_replacement_map(),
         )
-        path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
-        if not path_set:
-            p = Path(overlay_path=overlay_path, static_path=static_path)
-            p.save()
-        else:
-            p = path_set[0]
+        # overlay_path embeds the session identity, so it is unique on its own. Filtering
+        # on static_path as well meant editing a template spawned a duplicate Path row
+        # instead of reusing one.
+        p, _ = Path.objects.get_or_create(overlay_path=overlay_path)
         return p
 
     def get_calibrated_pixel_size(self):
@@ -418,7 +399,6 @@ def parse_integer_order_list(text):
 
 
 class PathInfo(BaseModel):
-    static_path: str | None
     overlay_path: str | None
 
 

@@ -1,11 +1,11 @@
 from django.contrib import admin
 
-from .models import Cluster, Path, PathType, StaticPath
+from .models import Cluster, DataKind, Path, PathType
 
 # Register your models here.
 admin.site.register(Path)
 admin.site.register(PathType)
-admin.site.register(StaticPath)
+admin.site.register(DataKind)
 
 
 @admin.register(Cluster)

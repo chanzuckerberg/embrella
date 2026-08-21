@@ -235,7 +235,7 @@ class BaseProcessor(ABC):
                 ...
             ]
 
-        The 'type' should match PathType.static_path.data_type values:
+        The 'type' should match PathType.data_kind.data_type values:
             - 'frames': Raw frames
             - 'rawst': Raw tilt series
             - 'aln': Alignment

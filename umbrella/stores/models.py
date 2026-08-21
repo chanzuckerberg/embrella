@@ -60,7 +60,6 @@ def validate_fileserver_base_url(url):
 
 
 class Path(models.Model):
-    static_path = models.CharField(max_length=255, help_text="path referenced in program")
     overlay_path = models.CharField(max_length=255, help_text="filesystem path of the data")
     # path_type = models.CharField(max_length=32, choices=PATH_TYPES,default='dir')
 
@@ -74,16 +73,21 @@ class Path(models.Model):
         return self.overlay_path
 
 
-class StaticPath(models.Model):
-    data_type = models.CharField(max_length=16, choices=DATA_TYPES, unique=True)
-    static_path = models.CharField(max_length=255, help_text="path reference with placeholder")
+class DataKind(models.Model):
+    """A kind of data -- the logical handle `Pipe.input` and `resolve_review_path` key on.
+
+    Carries no path of its own: where a kind physically lives is answered by a PathType
+    template resolved against a session or run.
+    """
+
+    data_type = models.CharField(max_length=32, unique=True)
 
     def __str__(self):
         return self.data_type
 
 
 class PathType(models.Model):
-    static_path = models.ForeignKey(StaticPath, on_delete=models.CASCADE)
+    data_kind = models.ForeignKey(DataKind, on_delete=models.CASCADE)
     overlay_path = models.CharField(max_length=255, help_text="filesystem path with placeholder")
     # path_type = models.CharField(max_length=32, choices=PATH_TYPES,default='dir')
 
@@ -94,7 +98,7 @@ class PathType(models.Model):
         return fill_place_holders(input_str, key_values)
 
     def __str__(self):
-        return "%s=>%s" % (self.static_path.data_type, self.overlay_path)
+        return "%s=>%s" % (self.data_kind.data_type, self.overlay_path)
 
 
 class Cluster(models.Model):
@@ -154,14 +158,14 @@ def _invalidate_clusterio_cache(sender, **kwargs):
 def resolve_review_path(data_type, cluster, msi_session, *, backend_fetch=False, **context):
     """Resolve a review/metadata PathType template into a concrete URL or filesystem path.
 
-    `data_type`    — StaticPath.data_type of the template row (e.g. 'proc_dir', 'zarr_url', 'thumb_url').
+    `data_type`    — DataKind.data_type of the template row (e.g. 'proc_dir', 'zarr_url', 'thumb_url').
     `cluster`      — stores.Cluster instance; supplies {http_base}.
     `msi_session`  — tem.MsiSession instance; supplies {scope} and {msi_session}.
     `backend_fetch`— set True when the *server* (not the browser) will fetch the resulting
                      URL, so it uses the in-network base instead of the browser-facing one.
     `**context`    — additional placeholder values (e.g. workflow, run, position, vol_suffix).
     """
-    pt = PathType.objects.select_related("static_path").get(static_path__data_type=data_type)
+    pt = PathType.objects.select_related("data_kind").get(data_kind__data_type=data_type)
     http_base = cluster.http_base_url
     # Only URL templates embed {http_base}; filesystem templates (e.g. proc_dir) don't.
     if "{http_base}" in pt.overlay_path:

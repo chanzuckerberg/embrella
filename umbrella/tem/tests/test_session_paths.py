@@ -9,7 +9,7 @@ under test is the production one.
 """
 
 import pytest
-from stores.models import Path, PathType, StaticPath
+from stores.models import DataKind, Path, PathType
 
 from tem.models import (
     AtlasSession,
@@ -22,18 +22,16 @@ from tem.models import (
     Software,
 )
 
-FRAMES_STATIC = "/{workflow}/{msi_session}/{run}/frames"
 FRAMES_OVERLAY = "/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}_{sequence}_{tilt}_*.eer"
-MDOC_STATIC = "/{workflow}/{msi_session}/{run}/mdoc"
 MDOC_OVERLAY = "/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}.mdoc"
 ATLAS_OVERLAY = (
     "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/Atlas_{timestamp}.mrc"
 )
 
 
-def make_path_type(data_type, static_path, overlay_path):
+def make_path_type(data_type, overlay_path):
     return PathType.objects.create(
-        static_path=StaticPath.objects.create(data_type=data_type, static_path=static_path),
+        data_kind=DataKind.objects.create(data_type=data_type),
         overlay_path=overlay_path,
     )
 
@@ -58,8 +56,8 @@ def software(db):
     """Software with real path FKs -- the fixtures elsewhere leave all five NULL."""
     return Software.objects.create(
         name="tomo5",
-        frames=make_path_type("frames", FRAMES_STATIC, FRAMES_OVERLAY),
-        mdocs=make_path_type("mdoc", MDOC_STATIC, MDOC_OVERLAY),
+        frames=make_path_type("frames", FRAMES_OVERLAY),
+        mdocs=make_path_type("mdoc", MDOC_OVERLAY),
     )
 
 
@@ -134,10 +132,9 @@ class TestGetSessionGlob:
 
 @pytest.mark.django_db
 class TestGetSessionPath:
-    def test_creates_path_with_both_halves_filled(self, msi_session):
+    def test_creates_path_with_overlay_filled(self, msi_session):
         p = msi_session.get_session_path("frames")
         assert p.overlay_path.startswith("/hpc/instruments/czii.krios1/OffloadData/24nov10/")
-        assert p.static_path == "/tomo/24nov10/{run}/frames"
 
     def test_is_idempotent(self, msi_session):
         """Second call reuses the row rather than duplicating it."""
@@ -166,7 +163,7 @@ class TestGetSessionPath:
 class TestAtlasSessionPaths:
     @pytest.fixture
     def atlas_session(self, db, session_plan, software):
-        software.atlas = make_path_type("atlas", "/{workflow}/{session_group}/atlas", ATLAS_OVERLAY)
+        software.atlas = make_path_type("atlas", ATLAS_OVERLAY)
         software.save()
         group = ScreenSessionGroup.objects.create(name="grp1", session_plan=session_plan)
         return AtlasSession.objects.create(name="scrn1", group=group)

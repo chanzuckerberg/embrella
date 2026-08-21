@@ -15,7 +15,7 @@ from processes.models import (
     Task,
     TomogramVoxelSpacing,
 )
-from stores.models import PathType, StaticPath
+from stores.models import DataKind, PathType
 
 # from tem.models import *
 
@@ -24,28 +24,27 @@ def _get_first_of(model_class):
     return model_class.objects.get(pk=1)
 
 
-def create_static_path(data_type):
+def create_data_kind(data_type):
     for data_type in ["tangl", "rawst", "aln", "ctf", "imod", "rec", "evn", "odd", "deno"]:
-        instance = StaticPath.objects.create(
+        instance = DataKind.objects.create(
             data_type=data_type,
-            static_path="/{msi_session}/{run}/%s/{proc_software}/{proc_run}/{pipe}/" % data_type,
         )
     return instance
 
 
-def get_static_path(data_type):
-    qset = StaticPath.objects.filter(data_type=data_type)
+def get_data_kind(data_type):
+    qset = DataKind.objects.filter(data_type=data_type)
     if qset:
         return qset[0]
     else:
-        create_static_path(data_type)
-        qset = StaticPath.objects.filter(data_type=data_type)
+        create_data_kind(data_type)
+        qset = DataKind.objects.filter(data_type=data_type)
         return qset[0]
 
 
 def add_pipe_joints(pipe_in_plan, input_pipe_in_plan, data_types):
     pathtypes_in_input = input_pipe_in_plan.pipe.output.all()
-    dtypes = list(map((lambda x: x.static_path.data_type), pathtypes_in_input))
+    dtypes = list(map((lambda x: x.data_kind.data_type), pathtypes_in_input))
     for t in data_types:
         dindex = dtypes.index(t)
         input_pathtype = pathtypes_in_input[dindex]
@@ -104,55 +103,55 @@ def create_pipeline_plan():
     output_path_types = []
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("tangl"),
+            data_kind=get_data_kind("tangl"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}_TLT.txt",
         )
     )
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("rawst"),
+            data_kind=get_data_kind("rawst"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}.mrc",
         )
     )
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("ctf"),
+            data_kind=get_data_kind("ctf"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}_CTF.txt",
         )
     )
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("aln"),
+            data_kind=get_data_kind("aln"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}.aln",
         )
     )
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("imod"),
+            data_kind=get_data_kind("imod"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{run}_Imod/",
         )
     )
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("rec"),
+            data_kind=get_data_kind("rec"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{pipe}/{run}_Vol.mrc",
         )
     )
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("evn"),
+            data_kind=get_data_kind("evn"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{pipe}/{run}_EVN_Vol.mrc",
         )
     )
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("odd"),
+            data_kind=get_data_kind("odd"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{pipe}/{run}_ODD_Vol.mrc",
         )
     )
     output_path_types.append(
         PathType.objects.create(
-            static_path=get_static_path("deno"),
+            data_kind=get_data_kind("deno"),
             overlay_path="/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{pipe}/{run}_Vol.mrc",
         )
     )
@@ -169,21 +168,21 @@ def create_pipeline_plan():
     for t in tasks[-1:]:
         pipe4.tasks_performed.add(t)
     # input/output
-    pipe1.input.add(get_static_path("frames"))
-    pipe1.input.add(get_static_path("mdoc"))
+    pipe1.input.add(get_data_kind("frames"))
+    pipe1.input.add(get_data_kind("mdoc"))
     for p in output_path_types[:-1]:
         # all except denoise
         pipe1.output.add(p)
-    pipe2.input.add(get_static_path("tangl"))
-    pipe2.input.add(get_static_path("aln"))
-    pipe2.input.add(get_static_path("rawst"))
-    pipe3.input.add(get_static_path("tangl"))
-    pipe3.input.add(get_static_path("aln"))
-    pipe3.input.add(get_static_path("rawst"))
+    pipe2.input.add(get_data_kind("tangl"))
+    pipe2.input.add(get_data_kind("aln"))
+    pipe2.input.add(get_data_kind("rawst"))
+    pipe3.input.add(get_data_kind("tangl"))
+    pipe3.input.add(get_data_kind("aln"))
+    pipe3.input.add(get_data_kind("rawst"))
     for p in output_path_types[5:6]:  # recon
         pipe2.output.add(p)
         pipe3.output.add(p)
-    pipe4.input.add(get_static_path("rec"))  # denoise
+    pipe4.input.add(get_data_kind("rec"))  # denoise
     for p in output_path_types[-1:]:
         pipe4.output.add(p)
     # save
@@ -210,12 +209,12 @@ def create_default_recon_methods():
 
 def run():
     try:
-        r = get_static_path("frames")
+        r = get_data_kind("frames")
     except r.DoesNotExist:
         print("Please run init first")
         sys.exit(1)
     except Exception:
-        print("Error: %s. Need frames and mdoc StaticPath instances to run")
+        print("Error: %s. Need frames and mdoc DataKind instances to run")
         sys.exit(1)
     create_pipeline_plan()
     create_default_spacings()

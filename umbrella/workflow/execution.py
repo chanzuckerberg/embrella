@@ -257,15 +257,15 @@ class PipelineExecutor:
             ).first()
 
             if input_data:
-                data_type = joint.input_pathtype.static_path.data_type
-                inputs[data_type] = input_data.path.static_path
+                data_type = joint.input_pathtype.data_kind.data_type
+                inputs[data_type] = input_data.path.overlay_path
                 logger.debug(
                     f"Found input {data_type} from pipe {joint.input_pipe_in_plan.pipe.name}: "
-                    f"{input_data.path.static_path}",
+                    f"{input_data.path.overlay_path}",
                 )
             else:
                 missing_inputs.append(
-                    f"{joint.input_pathtype.static_path.data_type} from {joint.input_pipe_in_plan.pipe.name}",
+                    f"{joint.input_pathtype.data_kind.data_type} from {joint.input_pipe_in_plan.pipe.name}",
                 )
 
         if missing_inputs:
@@ -419,7 +419,7 @@ class PipelineExecutor:
 
             if not input_execution:
                 missing.append(
-                    f"{joint.input_pathtype.static_path.data_type} "
+                    f"{joint.input_pathtype.data_kind.data_type} "
                     f"from {joint.input_pipe_in_plan.pipe.name} (not completed)",
                 )
                 continue
@@ -433,7 +433,7 @@ class PipelineExecutor:
 
             if not output_exists:
                 missing.append(
-                    f"{joint.input_pathtype.static_path.data_type} "
+                    f"{joint.input_pathtype.data_kind.data_type} "
                     f"from {joint.input_pipe_in_plan.pipe.name} (no output data)",
                 )
 
