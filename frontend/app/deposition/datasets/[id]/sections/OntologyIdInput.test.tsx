@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import type { ComponentProps } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 import { OntologyIdInput } from './OntologyIdInput';
 import { searchOntology, validateOntologyId } from '../../../services/ols';
@@ -87,4 +87,23 @@ it('accepts a UBERON id in the multi-ontology Cell type field', async () => {
   mockValidate.mockResolvedValue({ id: 'UBERON:0000955', label: 'brain', synonyms: [] });
   renderInput({ ...CELL_TYPE, id: 'UBERON:0000955' });
   expect(await screen.findByText(/brain/i)).toBeInTheDocument();
+});
+
+it('restricts GO cell-component suggestions to the Cellular Component branch', async () => {
+  renderInput({
+    ontology: 'go',
+    pattern: '^GO:[0-9]{7}$',
+    prefix: 'GO',
+    label: 'Cell component',
+    childrenOf: 'http://purl.obolibrary.org/obo/GO_0005575',
+    name: 'mitochondrion',
+  });
+  await waitFor(() =>
+    expect(mockSearch).toHaveBeenCalledWith('mitochondrion', 'go', 'http://purl.obolibrary.org/obo/GO_0005575')
+  );
+});
+
+it('does not scope suggestions for a field with no branch restriction', async () => {
+  renderInput({ ...CL, name: 'neuron' });
+  await waitFor(() => expect(mockSearch).toHaveBeenCalledWith('neuron', 'cl', undefined));
 });

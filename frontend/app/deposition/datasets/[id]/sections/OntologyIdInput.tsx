@@ -23,6 +23,7 @@ export function OntologyIdInput({
   manualOnly = false,
   idPlaceholder,
   required = false,
+  childrenOf,
 }: {
   label: string;
   ontology: string;
@@ -36,6 +37,7 @@ export function OntologyIdInput({
   manualOnly?: boolean;
   idPlaceholder?: string;
   required?: boolean;
+  childrenOf?: string; // restrict suggestions to descendants
 }) {
   const [query, setQuery] = useState(name);
   const debouncedQuery = useDebounced(query, 300);
@@ -46,7 +48,7 @@ export function OntologyIdInput({
     data: options = [],
     isFetching,
     isError: searchError,
-  } = useOntologySearch(debouncedQuery, ontology, olsEnabled);
+  } = useOntologySearch(debouncedQuery, ontology, olsEnabled, childrenOf);
   const {
     data: resolved,
     isFetching: validating,
