@@ -12,6 +12,7 @@ from rest_framework.decorators import api_view
 from stores.models import Path
 
 from tem.models import (
+    SOFTWARE_PATH_ROLES,
     AtlasSession,
     MsiSessionBase,
     PathInfo,
@@ -20,6 +21,7 @@ from tem.models import (
     SoftwareFieldsResponse,
     SoftwareResponseModel,
     UserBase,
+    resolve_software_path_type,
 )
 
 from . import models
@@ -168,15 +170,13 @@ def create_session(request):
         atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
         session_instance.atlas_session = atlas_session
         path_dicts = {}
-        software = session_instance.session_plan.software
-        if software.frames:
-            session_instance.frames = session_instance.get_session_path("frames")
-        if software.sums:
-            session_instance.sums = session_instance.get_session_path("sums")
-        if software.mdocs:
-            session_instance.mdocs = session_instance.get_session_path("mdocs")
-        if software.parents:
-            session_instance.parents = session_instance.get_session_path("parents")
+        # See the same loop in tem/api/v1_views.py: binding first, then software default;
+        # `atlas` reuses the screening session's Path instead of resolving its own.
+        for role in SOFTWARE_PATH_ROLES:
+            if role == "atlas":
+                continue
+            if resolve_software_path_type(session_instance.session_plan, role):
+                setattr(session_instance, role, session_instance.get_session_path(role))
         if atlas_session:
             session_instance.atlas = atlas_session.atlas
         session_instance.save()

@@ -1,3 +1,4 @@
+import logging
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -5,6 +6,10 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+
+from stores import placeholders
+
+logger = logging.getLogger(__name__)
 
 DATA_TYPES = [
     ("atlas", "grid atlas"),
@@ -59,6 +64,20 @@ def validate_fileserver_base_url(url):
         )
 
 
+def validate_path_template(template):
+    """Reject a directory template naming a token nothing can substitute."""
+    unknown = placeholders.unknown_placeholders(template)
+    if not unknown:
+        return
+    problems = []
+    for name in sorted(unknown):
+        suggestion = placeholders.suggest_placeholder(name)
+        hint = f" Did you mean {{{suggestion}}}?" if suggestion else ""
+        problems.append(f"Unknown placeholder {{{name}}}.{hint}")
+    legal = ", ".join("{%s}" % n for n in sorted(placeholders.known_placeholders()))
+    raise ValidationError(" ".join(problems) + f" Available placeholders: {legal}")
+
+
 class Path(models.Model):
     overlay_path = models.CharField(max_length=255, help_text="filesystem path of the data")
     # path_type = models.CharField(max_length=32, choices=PATH_TYPES,default='dir')
@@ -89,6 +108,14 @@ class DataKind(models.Model):
 class PathType(models.Model):
     data_kind = models.ForeignKey(DataKind, on_delete=models.CASCADE)
     overlay_path = models.CharField(max_length=255, help_text="filesystem path with placeholder")
+    cluster = models.ForeignKey(
+        "stores.Cluster",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Blank is the cluster-agnostic default, and the fallback. A row naming a "
+        "cluster overrides that default on that cluster only.",
+    )
     # path_type = models.CharField(max_length=32, choices=PATH_TYPES,default='dir')
 
     class Meta:
@@ -98,7 +125,50 @@ class PathType(models.Model):
         return fill_place_holders(input_str, key_values)
 
     def __str__(self):
-        return "%s=>%s" % (self.data_kind.data_type, self.overlay_path)
+        suffix = " @%s" % self.cluster_id if self.cluster_id else ""
+        return "%s=>%s%s" % (self.data_kind.data_type, self.overlay_path, suffix)
+
+    def clean(self):
+        super().clean()
+        validate_path_template(self.overlay_path)
+
+    @classmethod
+    def resolve(cls, data_type, cluster=None):
+        """The PathType for `data_type` on `cluster`, else the cluster-agnostic default.
+
+        Returns None when no row matches at all, so callers can raise their own error.
+        """
+        rows = list(cls.objects.select_related("data_kind").filter(data_kind__data_type=data_type))
+        return pick_for_cluster(rows, cluster)
+
+
+def pick_for_cluster(path_types, cluster=None):
+    """Cluster-specific row if one exists, else the cluster-agnostic default, else None.
+
+    Two independent dimensions -- which template, and which cluster -- each one rung deep.
+    """
+    rows = list(path_types)
+    cluster_id = getattr(cluster, "cluster_id", cluster)
+    if cluster_id is not None:
+        specific = [pt for pt in rows if pt.cluster_id == cluster_id]
+        if specific:
+            return _lowest_pk(specific, "cluster %r" % cluster_id)
+    default = [pt for pt in rows if pt.cluster_id is None]
+    if default:
+        return _lowest_pk(default, "the cluster-agnostic default")
+    return None
+
+
+def _lowest_pk(rows, what):
+    # Ambiguity should be observable, not silently ranked.
+    if len(rows) > 1:
+        logger.warning(
+            "%d PathType rows match %s (pks %s); using the lowest. Remove the extras.",
+            len(rows),
+            what,
+            ", ".join(str(pt.pk) for pt in rows),
+        )
+    return min(rows, key=lambda pt: pt.pk)
 
 
 class Cluster(models.Model):
@@ -165,7 +235,14 @@ def resolve_review_path(data_type, cluster, msi_session, *, backend_fetch=False,
                      URL, so it uses the in-network base instead of the browser-facing one.
     `**context`    — additional placeholder values (e.g. workflow, run, position, vol_suffix).
     """
-    pt = PathType.objects.select_related("data_kind").get(data_kind__data_type=data_type)
+    # Cluster-aware: a bare .get() raised MultipleObjectsReturned the moment a data_type
+    # had a per-cluster sibling.
+    pt = PathType.resolve(data_type, cluster=cluster)
+    if pt is None:
+        raise PathType.DoesNotExist(
+            f"No PathType for data_type {data_type!r} (cluster {getattr(cluster, 'cluster_id', cluster)!r}). "
+            f"Add one in the admin under Stores → Path types."
+        )
     http_base = cluster.http_base_url
     # Only URL templates embed {http_base}; filesystem templates (e.g. proc_dir) don't.
     if "{http_base}" in pt.overlay_path:

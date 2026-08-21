@@ -107,12 +107,22 @@ class CalibratedPixelSize(models.Model):
         app_label = "tem"
 
 
+SOFTWARE_PATH_ROLES = ("frames", "sums", "mdocs", "parents", "atlas")
+
+
 class Software(models.Model):
     """
     Software determines the paths of the output files
     """
 
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
+    version = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        help_text="A version that lays files out differently is a separate row. So is a "
+        "distinct protocol -- name it compoundly, e.g. 'Tomo5 dose-symmetric'.",
+    )
     frames = models.ForeignKey(
         PathType,
         related_name="frames_type",
@@ -156,10 +166,11 @@ class Software(models.Model):
     )
 
     def __str__(self):
-        return self.name
+        return "%s %s" % (self.name, self.version) if self.version else self.name
 
     class Meta:
         app_label = "tem"
+        unique_together = [["name", "version"]]
 
 
 class ImagingWorkflow(models.Model):
@@ -181,6 +192,41 @@ class SessionPlan(models.Model):
 
     class Meta:
         app_label = "tem"
+
+
+class SessionPlanPathBinding(models.Model):
+    """Per-plan override of which template a role resolves to."""
+
+    session_plan = models.ForeignKey(SessionPlan, related_name="path_bindings", on_delete=models.CASCADE)
+    role = models.CharField(max_length=8, choices=[(r, r) for r in SOFTWARE_PATH_ROLES])
+    path_type = models.ForeignKey(
+        PathType,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Directory template for this role on this plan. Blank falls back to the software default.",
+    )
+    is_active = models.BooleanField(default=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        app_label = "tem"
+        unique_together = [["session_plan", "role"]]
+
+    def __str__(self):
+        return "%s/%s -> %s" % (self.session_plan_id, self.role, self.path_type or "(default)")
+
+
+def resolve_software_path_type(plan, role):
+    """The PathType for `role` on `plan`: binding first, then the software default.
+
+    Returns None when the software does not emit this role at all -- a terminal answer,
+    unlike a missing binding, which only means "use the default".
+    """
+    binding = plan.path_bindings.filter(role=role, is_active=True).first()
+    if binding and binding.path_type:
+        return binding.path_type
+    return getattr(plan.software, role)
 
 
 def plan_replacement_map(plan):
@@ -262,8 +308,7 @@ class AtlasSession(models.Model):
         }
 
     def _get_session_glob(self, path_type):
-        plan = self.group.session_plan
-        my_attr = getattr(plan.software, path_type)
+        my_attr = resolve_software_path_type(self.group.session_plan, path_type)
         if not my_attr:
             return "."
         return fill_place_holders(
@@ -329,7 +374,7 @@ class MsiSession(models.Model):
         }
 
     def _get_session_glob(self, path_type):
-        my_attr = getattr(self.session_plan.software, path_type)
+        my_attr = resolve_software_path_type(self.session_plan, path_type)
         if not my_attr:
             return "."
         return fill_place_holders(

@@ -5,11 +5,13 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from tem.models import (
+    SOFTWARE_PATH_ROLES,
     AtlasSession,
     CryoGrid,
     Magnification,
     MsiSession,
     SessionPlan,
+    resolve_software_path_type,
     suggest_name,
 )
 
@@ -56,36 +58,31 @@ def create_session(request):
     atlas_session = AtlasSession.objects.filter(grid=grid).last()
     session.atlas_session = atlas_session
 
-    software = session_plan.software
-    if software.frames:
-        session.frames = session.get_session_path("frames")
-    if software.sums:
-        session.sums = session.get_session_path("sums")
-    if software.mdocs:
-        session.mdocs = session.get_session_path("mdocs")
-    if software.parents:
-        session.parents = session.get_session_path("parents")
+    # A role resolves through its binding first, then the software default; None means
+    # this software does not emit that role at all. `atlas` is excluded
+    for role in SOFTWARE_PATH_ROLES:
+        if role == "atlas":
+            continue
+        if resolve_software_path_type(session_plan, role):
+            setattr(session, role, session.get_session_path(role))
     if atlas_session:
         session.atlas = atlas_session.atlas
     session.save()
 
-    return Response(
-        {
-            "id": session.id,
-            "name": session.name,
-            "project_name": project.name,
-            "grid_name": str(grid),
-            "session_plan_name": str(session_plan),
-            "magnification_display": str(magnification) if magnification else None,
-            "frames": str(session.frames) if session.frames else None,
-            "sums": str(session.sums) if session.sums else None,
-            "mdocs": str(session.mdocs) if session.mdocs else None,
-            "parents": str(session.parents) if session.parents else None,
-            "atlas": str(session.atlas) if session.atlas else None,
-            "legacy_url": f"/legacy/tem/{session.id}/",
-        },
-        status=status.HTTP_201_CREATED,
-    )
+    payload = {
+        "id": session.id,
+        "name": session.name,
+        "project_name": project.name,
+        "grid_name": str(grid),
+        "session_plan_name": str(session_plan),
+        "magnification_display": str(magnification) if magnification else None,
+        "legacy_url": f"/legacy/tem/{session.id}/",
+    }
+    for role in SOFTWARE_PATH_ROLES:
+        path = getattr(session, role)
+        payload[role] = str(path) if path else None
+
+    return Response(CreatedSessionSerializer(payload).data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(

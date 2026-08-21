@@ -132,11 +132,10 @@ def run():
         ),
     )
 
-    # 2) Flatten the migration-seeded URL templates (see _URL_TEMPLATES).
-    # Once PathType.cluster exists, narrow this to cluster__isnull=True so the
-    # cluster-agnostic default is rewritten and per-cluster siblings are left alone.
+    # 2) Flatten the migration-seeded URL templates (see _URL_TEMPLATES). Only the
+    # cluster-agnostic default is rewritten; per-cluster siblings are left alone.
     for data_type, overlay in _URL_TEMPLATES.items():
-        PathType.objects.filter(data_kind__data_type=data_type).update(overlay_path=overlay)
+        PathType.objects.filter(data_kind__data_type=data_type, cluster__isnull=True).update(overlay_path=overlay)
 
     # 3) Single demo login (idempotent — password re-synced from env each run).
     user_model = get_user_model()
