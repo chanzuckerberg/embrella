@@ -11,6 +11,8 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
+OPERATOR_OWNED_FIELDS = frozenset({"script_directory"})
+
 
 class WorkflowConfig(AppConfig):
     """
@@ -96,12 +98,11 @@ class WorkflowConfig(AppConfig):
                     else:
                         logger.debug(f"  Task exists: {metadata['task_name']}")
 
-                    # Create/update ProcSoftware record (always overwrite with class values).
+                    # Updates ProcSoftware record every startup.
                     software_fields = {
                         "version": metadata["version"],
                         "default_cluster": metadata["default_cluster"],
                         "allowed_clusters": metadata["allowed_clusters"],
-                        "script_directory": metadata["script_directory"],
                         "active": True,
                     }
                     proc_software, software_created = self._claim_software(metadata, software_fields)
@@ -160,6 +161,8 @@ class WorkflowConfig(AppConfig):
             )
 
         for field, value in software_fields.items():
+            if field in OPERATOR_OWNED_FIELDS and getattr(proc_software, field, None):
+                continue
             setattr(proc_software, field, value)
         proc_software.save()
 

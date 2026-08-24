@@ -55,8 +55,10 @@ class AretomoSyncer(syncers.ProcessSyncer):
 
 
 if __name__ == "__main__":
+    from workflow.processors import get_processor
+
     syncer = AretomoSyncer(
-        base_path="/hpc/projects/krios1.processing/aretomo3",
+        base_path=get_processor("aretomo3").get_processing_base_path(),
         log_dir=os.path.join(os.path.dirname(__file__), "logs"),
     )
     sys.exit(0 if syncer.run() else 1)

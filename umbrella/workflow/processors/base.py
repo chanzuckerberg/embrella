@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
+from django.core.exceptions import ImproperlyConfigured
 from umbrella_logger import logger
 
 from workflow.context import RunContext
@@ -441,43 +442,36 @@ class BaseProcessor(ABC):
         """
         pass
 
+    def _proc_software(self):
+        """This processor's ProcSoftware row, or None if it has not synced yet."""
+        from processes.models import ProcSoftware
+
+        return ProcSoftware.objects.filter(processor_class=self.name).first()
+
+    def _configured_directory(self, field: str) -> str:
+        """A remote directory this processor's ProcSoftware row must supply."""
+        row = self._proc_software()
+        value = getattr(row, field, None)
+        if not value:
+            raise ImproperlyConfigured(
+                f"ProcSoftware.{field} is unset for {self.name!r}. "
+                f"Set it in the admin under Processes → Proc softwares.",
+            )
+        return value.rstrip("/")
+
     def get_script_directory(self) -> str:
         """
         Get the remote directory where scripts should be uploaded.
-
-        By default, derives from get_processing_base_path() by:
-        1. Inserting 'group.czii/' after '/hpc/projects/'
-        2. Appending '/scripts' suffix
-
-        Override this if the directory needs custom logic.
-
-        Returns:
-            Absolute path on remote cluster
-
-        Default:
-            /hpc/projects/group.czii/{cluster}.processing/{name}/scripts
         """
-        return f"{self.get_processing_base_path()}/scripts"
+        return self._configured_directory("script_directory")
 
     def get_processing_base_path(self) -> str:
         """
         Get the base processing path for this processor (used by syncers).
 
-        This is the parent directory where session subdirectories are created.
-        Override this if the path doesn't follow the standard convention.
-
-        Returns:
-            Absolute path on remote cluster (without /scripts suffix)
-
-        Default:
-            /hpc/projects/{cluster}.processing/{name}
-
-        Example for AreTomo3:
-            /hpc/projects/group.czii/krios1.processing/aretomo3
+        The root runs are written under, e.g. <root>/aretomo3 holding <session>/<run>/.
         """
-        # TODO: utilize path types from db instead of hard-coding
-        # Use the symlinked path (without group.czii) for backward compatibility
-        return f"/hpc/projects/group.czii/krios1.processing/{self.name}"
+        return self._configured_directory("processing_directory")
 
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
@@ -558,7 +552,6 @@ class BaseProcessor(ABC):
                 'processor_class': 'aretomo3',
                 'default_cluster': 'czii',
                 'allowed_clusters': ['czii', 'bruno'],
-                'script_directory': '/hpc/projects/.../scripts',
                 'task_name': 'tomographic_reconstruction'
             }
 
@@ -575,7 +568,6 @@ class BaseProcessor(ABC):
             "processor_class": self.name,
             "default_cluster": self.cluster,
             "allowed_clusters": getattr(self, "allowed_clusters", [self.cluster]),
-            "script_directory": self.get_script_directory(),
             "task_name": getattr(self, "task_name", None),
         }
 

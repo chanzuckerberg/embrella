@@ -82,6 +82,7 @@ def test_aretomo3_software(db):
         version="2.2.2_07-11-2025",
         processor_class="aretomo3",
         default_cluster="czii",
+        processing_directory="/hpc/projects/group.czii/krios1.processing/aretomo3",
         script_directory="/hpc/projects/group.czii/krios1.processing/aretomo3/scripts",
     )
     software.capable_tasks.add(task)

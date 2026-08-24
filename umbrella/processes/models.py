@@ -71,6 +71,7 @@ class ProcSoftware(models.Model):
     - default_cluster: Default cluster for job submission ('czii' or 'bruno')
     - allowed_clusters: List of clusters this software can run on
     - script_directory: Remote directory for script uploads
+    - processing_directory: Remote root this software's runs are written under
     """
 
     name = models.CharField(
@@ -109,7 +110,16 @@ class ProcSoftware(models.Model):
         max_length=256,
         null=True,
         blank=True,
-        help_text="Remote script directory (e.g., /hpc/projects/.../scripts)",
+        help_text="Remote script directory (e.g., /hpc/projects/.../aretomo3/scripts)",
+    )
+    processing_directory = models.CharField(
+        max_length=256,
+        blank=True,
+        default="",
+        help_text=(
+            "Remote root this software's runs are written under, scanned by the syncers "
+            "(e.g., /hpc/projects/.../aretomo3)."
+        ),
     )
     storage_dirname = models.CharField(
         max_length=64,

@@ -154,19 +154,6 @@ class DenoisETProcessor(BaseProcessor):
             },
         ]
 
-    def get_processing_base_path(self) -> str:
-        """
-        Get the base processing path for DenoisET (used by syncers).
-
-        Override to use "denoise" instead of "denoiset" to match cluster convention.
-        The base class get_script_directory() will automatically derive the script path
-        from this by inserting 'group.czii/' and appending '/scripts'.
-
-        Returns:
-            Absolute path on remote cluster (without /scripts suffix)
-        """
-        return "/hpc/projects/group.czii/krios1.processing/denoise"
-
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
         Get default SLURM options for DenoisET jobs.
