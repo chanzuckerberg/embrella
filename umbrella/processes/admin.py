@@ -41,7 +41,15 @@ admin.site.register(Task)
 
 @admin.register(ProcSoftware)
 class ProcSoftwareAdmin(admin.ModelAdmin):
-    list_display = ("name", "version", "processor_class", "default_cluster", "storage_dirname", "script_directory")
+    list_display = (
+        "name",
+        "version",
+        "processor_class",
+        "default_cluster",
+        "storage_dirname",
+        "processing_directory",
+        "script_directory",
+    )
     list_editable = ("storage_dirname",)
     list_filter = ("default_cluster",)
     search_fields = ("name", "processor_class")
@@ -55,8 +63,14 @@ class ProcSoftwareAdmin(admin.ModelAdmin):
         (
             "Execution Configuration",
             {
-                "fields": ("processor_class", "default_cluster", "allowed_clusters", "script_directory"),
-                "description": "Configure how this software runs on clusters",
+                "fields": (
+                    "processor_class",
+                    "default_cluster",
+                    "allowed_clusters",
+                    "processing_directory",
+                    "script_directory",
+                ),
+                "description": ("Configure how this software runs on clusters."),
             },
         ),
         (
