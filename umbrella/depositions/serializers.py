@@ -50,6 +50,20 @@ def validate_authors_json(value):
     return value
 
 
+def validate_selected_copick_runs(value):
+    """Shape-check selected_copick_runs: a list of unique, non-empty run-name strings."""
+    if not isinstance(value, list):
+        raise serializers.ValidationError("selected_copick_runs must be a list of run-name strings.")
+    seen = set()
+    for i, item in enumerate(value):
+        if not isinstance(item, str) or not item.strip():
+            raise serializers.ValidationError(f"selected_copick_runs[{i}] must be a non-empty string (run name).")
+        if item in seen:
+            raise serializers.ValidationError(f"Duplicate copick run '{item}' in selected_copick_runs.")
+        seen.add(item)
+    return value
+
+
 class DepositionAnnotationMethodLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = DepositionAnnotationMethodLink
@@ -125,6 +139,9 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["last_autofill_at"]
 
+    def validate_selected_copick_runs(self, value):
+        return validate_selected_copick_runs(value)
+
 
 class DepositionSessionSerializer(serializers.ModelSerializer):
     """Full /sessions/[id] view — writable metadata + annotations."""
@@ -156,6 +173,9 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(f"Duplicate tomogram flavor '{flavor}'.")
             seen.add(flavor)
         return value
+
+    def validate_selected_copick_runs(self, value):
+        return validate_selected_copick_runs(value)
 
     def update(self, instance, validated_data):
         ts = validated_data.pop("tiltseries_metadata", None)
