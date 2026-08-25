@@ -1,4 +1,5 @@
 import logging
+import re
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -105,6 +106,74 @@ class DataKind(models.Model):
         return self.data_type
 
 
+def validate_file_regex(pattern):
+    """Compile `pattern` as a basename regex, or raise ValidationError. Returns the compiled form."""
+    try:
+        compiled = re.compile(pattern)
+    except re.error as exc:
+        raise ValidationError({"regex": "Not a valid regular expression: %s" % exc}) from exc
+
+    if not pattern.startswith("^") or not pattern.endswith("$"):
+        raise ValidationError({"regex": "Anchor with ^ and $, or it matches any basename containing it."})
+
+    if compiled.groups > len(compiled.groupindex):
+        raise ValidationError({"regex": "Use named groups -- (?P<run>...) -- callers read groups by name."})
+
+    return compiled
+
+
+class FilePattern(models.Model):
+    """How to list and parse the *files* in the directory a PathType resolves to.
+
+    The directory template fills downward (template + context -> path); this regex reads
+    back upward (basename -> the tokens identifying one file).
+    """
+
+    data_kind = models.ForeignKey(DataKind, on_delete=models.CASCADE, related_name="file_patterns")
+    label = models.CharField(
+        max_length=64,
+        help_text="Name shown in the file-pattern dropdowns on Path type and Session plan, e.g. 'Tomo5 EER fractions'.",
+    )
+    list_glob = models.CharField(
+        max_length=128,
+        default="*",
+        help_text="Narrows the remote listing before the regex runs. Must describe the same files as the regex.",
+    )
+    regex = models.CharField(
+        max_length=512,
+        help_text="Anchored, named groups, matched against the basename alone -- the directory is the PathType's half.",
+    )
+    sample_filenames = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Real basenames this pattern must match. Checked on save, so put real file names here.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        app_label = "stores"
+
+    def __str__(self):
+        return "%s: %s" % (self.data_kind.data_type, self.label or self.list_glob)
+
+    def clean(self):
+        super().clean()
+        compiled = validate_file_regex(self.regex)
+        unmatched = [name for name in self.sample_filenames or [] if not compiled.match(name)]
+        if not unmatched:
+            return
+
+        raise ValidationError(
+            {"sample_filenames": "This regex does not match %s." % ", ".join(repr(name) for name in unmatched)}
+        )
+
+    def match(self, basename):
+        """The captured groups for `basename`, or None when it isn't one of ours."""
+        found = re.match(self.regex, basename)
+        return found.groupdict() if found else None
+
+
 class PathType(models.Model):
     data_kind = models.ForeignKey(DataKind, on_delete=models.CASCADE)
     overlay_path = models.CharField(max_length=255, help_text="filesystem path with placeholder")
@@ -115,6 +184,17 @@ class PathType(models.Model):
         blank=True,
         help_text="Blank is the cluster-agnostic default, and the fallback. A row naming a "
         "cluster overrides that default on that cluster only.",
+    )
+    file_pattern = models.ForeignKey(
+        FilePattern,
+        # PROTECT like the binding's: nulling on delete leaves the directory pattern-less,
+        # so the next listing finds nothing instead of failing.
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="path_types",
+        help_text="Filename convention normally found in this directory. A plan whose files "
+        "are named differently overrides it on its path binding.",
     )
     # path_type = models.CharField(max_length=32, choices=PATH_TYPES,default='dir')
 

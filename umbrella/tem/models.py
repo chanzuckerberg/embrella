@@ -10,7 +10,7 @@ from django.db.models import Q
 from django.utils import timezone
 from projects.models import Project
 from pydantic import BaseModel
-from stores.models import Path, PathType, fill_place_holders
+from stores.models import FilePattern, Path, PathType, fill_place_holders
 
 TEM_CHOICES = {
     "imaging_mode": [
@@ -195,7 +195,11 @@ class SessionPlan(models.Model):
 
 
 class SessionPlanPathBinding(models.Model):
-    """Per-plan override of which template a role resolves to."""
+    """Per-plan override of which template a role resolves to.
+
+    Directory and filename override independently: a scope writing into the shared directory
+    under its own naming convention sets `file_pattern` alone, with no duplicate PathType row.
+    """
 
     session_plan = models.ForeignKey(SessionPlan, related_name="path_bindings", on_delete=models.CASCADE)
     role = models.CharField(max_length=8, choices=[(r, r) for r in SOFTWARE_PATH_ROLES])
@@ -205,6 +209,13 @@ class SessionPlanPathBinding(models.Model):
         null=True,
         blank=True,
         help_text="Directory template for this role on this plan. Blank falls back to the software default.",
+    )
+    file_pattern = models.ForeignKey(
+        FilePattern,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Filename convention for this role on this plan. Blank falls back to the resolved directory's own.",
     )
     is_active = models.BooleanField(default=True)
     notes = models.CharField(max_length=255, blank=True)
@@ -217,16 +228,29 @@ class SessionPlanPathBinding(models.Model):
         return "%s/%s -> %s" % (self.session_plan_id, self.role, self.path_type or "(default)")
 
 
+def _active_binding(plan, role):
+    return plan.path_bindings.filter(role=role, is_active=True).first()
+
+
 def resolve_software_path_type(plan, role):
     """The PathType for `role` on `plan`: binding first, then the software default.
 
     Returns None when the software does not emit this role at all -- a terminal answer,
     unlike a missing binding, which only means "use the default".
     """
-    binding = plan.path_bindings.filter(role=role, is_active=True).first()
+    binding = _active_binding(plan, role)
     if binding and binding.path_type:
         return binding.path_type
     return getattr(plan.software, role)
+
+
+def resolve_software_file_pattern(plan, role):
+    """The FilePattern for `role` on `plan`: binding first, then the directory's own."""
+    binding = _active_binding(plan, role)
+    if binding and binding.file_pattern:
+        return binding.file_pattern
+    path_type = resolve_software_path_type(plan, role)
+    return path_type.file_pattern if path_type else None
 
 
 def plan_replacement_map(plan):

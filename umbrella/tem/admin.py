@@ -57,7 +57,7 @@ class SoftwareAdmin(admin.ModelAdmin):
 class SessionPlanPathBindingInline(admin.TabularInline):
     model = SessionPlanPathBinding
     extra = 0
-    autocomplete_fields = ("path_type",)
+    autocomplete_fields = ("path_type", "file_pattern")
     # Both, not just the plural: the plural titles the tab, the singular the "Add another …"
     # button, which otherwise reads "Add another Session plan path binding".
     verbose_name = "path override"

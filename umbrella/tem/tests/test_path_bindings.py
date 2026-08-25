@@ -2,7 +2,7 @@
 
 import pytest
 from django.db.utils import IntegrityError
-from stores.models import Cluster, DataKind, PathType, pick_for_cluster
+from stores.models import Cluster, DataKind, FilePattern, PathType, pick_for_cluster
 
 from tem.models import (
     SOFTWARE_PATH_ROLES,
@@ -13,6 +13,7 @@ from tem.models import (
     SessionPlan,
     SessionPlanPathBinding,
     Software,
+    resolve_software_file_pattern,
     resolve_software_path_type,
 )
 
@@ -23,6 +24,18 @@ OTHER_TEST_FRAMES = "/data/{scope}/frames/{msi_session}/"
 def make_path_type(data_type, overlay_path, cluster=None):
     kind, _ = DataKind.objects.get_or_create(data_type=data_type)
     return PathType.objects.create(data_kind=kind, overlay_path=overlay_path, cluster=cluster)
+
+
+def make_file_pattern(list_glob, regex=r"^(?P<run>\w+)\.eer$"):
+    kind, _ = DataKind.objects.get_or_create(data_type="frames")
+    return FilePattern.objects.create(data_kind=kind, label=list_glob, list_glob=list_glob, regex=regex)
+
+
+def attach_pattern(path_type, list_glob, **kwargs):
+    """Give `path_type` its default FilePattern, and return the pattern."""
+    path_type.file_pattern = make_file_pattern(list_glob, **kwargs)
+    path_type.save(update_fields=["file_pattern"])
+    return path_type.file_pattern
 
 
 @pytest.fixture
@@ -121,6 +134,43 @@ class TestNoBackfillRegression:
         plan = make_plan("krios1", camera, workflow, software)
         for role in SOFTWARE_PATH_ROLES:
             assert resolve_software_path_type(plan, role) == getattr(software, role)
+
+
+@pytest.mark.django_db
+class TestFilePatternResolution:
+    """Directory and filename override on independent rungs -- the case that forced it being
+    two scopes sharing a directory and naming their files differently."""
+
+    def test_falls_back_to_directory(self, camera, workflow, software):
+        plan = make_plan("krios1", camera, workflow, software)
+        default = attach_pattern(software.frames, "*.eer")
+        assert resolve_software_file_pattern(plan, "frames") == default
+
+    def test_binding_overrides_filename(self, camera, workflow, software):
+        plan = make_plan("krios2", camera, workflow, software)
+        attach_pattern(software.frames, "*.eer")
+        theirs = make_file_pattern("*.tif", regex=r"^(?P<position>\d+)\.tif$")
+        SessionPlanPathBinding.objects.create(session_plan=plan, role="frames", file_pattern=theirs)
+
+        assert resolve_software_file_pattern(plan, "frames") == theirs
+        assert resolve_software_path_type(plan, "frames") == software.frames
+
+    def test_new_directory_brings_pattern(self, camera, workflow, software):
+        plan = make_plan("krios2", camera, workflow, software)
+        elsewhere = make_path_type("frames", OTHER_TEST_FRAMES)
+        pattern = attach_pattern(elsewhere, "*.tif")
+        SessionPlanPathBinding.objects.create(session_plan=plan, role="frames", path_type=elsewhere)
+
+        assert resolve_software_file_pattern(plan, "frames") == pattern
+
+    def test_none_when_no_pattern(self, camera, workflow, software):
+        """The state of every row today: patterns are additive, so none must stay legal."""
+        plan = make_plan("krios1", camera, workflow, software)
+        assert resolve_software_file_pattern(plan, "frames") is None
+
+    def test_none_when_role_unsupported(self, camera, workflow, software):
+        plan = make_plan("krios1", camera, workflow, software)
+        assert resolve_software_file_pattern(plan, "atlas") is None
 
 
 @pytest.mark.django_db
