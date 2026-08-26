@@ -51,6 +51,46 @@ class TestRegexRules:
         assert validate_file_regex(r"^(?P<run>\w+)(?:_alt)?\.eer$")
 
 
+class TestReDoSGuard:
+    """These regexes run against every basename in a directory inside a django-q worker,
+    where catastrophic backtracking is a hung job with no obvious cause."""
+
+    @pytest.mark.parametrize(
+        "regex",
+        [
+            r"^(?P<run>\w+)*\.eer$",
+            r"^(?:\w+\s*)+\.eer$",
+            r"^(?P<x>.+)*\.eer$",
+            r"^(?:a+){2,}\.eer$",
+        ],
+    )
+    def test_rejects_nested_unbounded_quantifiers(self, regex):
+        with pytest.raises(ValidationError, match="backtrack catastrophically"):
+            validate_file_regex(regex)
+
+    def test_separator_anchored_repeat_passes(self):
+        """The 2e rec pattern: each repetition starts with a literal '_', so the split is
+        unambiguous and backtracking stays linear."""
+        assert validate_file_regex(r"^(?P<position>Position_\d+(?:_\d+)*)_Vol\.zarr$")
+
+    def test_bounded_quantifier_passes(self):
+        assert validate_file_regex(r"^(?P<tilt>-?\d+(?:\.\d+)?)\.eer$")
+
+
+class TestCompiled:
+    def test_bad_regex_raises_at_first_read(self):
+        """clean() only runs in admin; a row from .objects.create(), a data migration, or a
+        restored dump reaches the read site unchecked. Better an actionable error there
+        than a regex that silently matches nothing."""
+        pattern = make_pattern(regex=r"(?P<run>\w+)\.eer")  # unanchored, as clean() would have caught
+        with pytest.raises(ValidationError, match="Anchor with"):
+            pattern.match("Position1.eer")
+
+    def test_compiled_is_cached(self):
+        pattern = make_pattern()
+        assert pattern.compiled is pattern.compiled
+
+
 class TestOneKindManyConventions:
     def test_kind_allows_any_groups(self):
         """Nothing constrains *which* groups a pattern captures, so two scopes naming

@@ -1,5 +1,6 @@
 import logging
 import re
+from functools import cached_property
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -112,6 +113,12 @@ class DataKind(models.Model):
         return self.data_type
 
 
+# An unbounded-quantified group -- (...)* / (...)+ / (...){2,} -- whose body holds no
+# nested group. The body is what _REDOS_PRONE_BODY then inspects.
+_QUANTIFIED_GROUP = re.compile(r"(?<!\\)\((?:\?:|\?P<\w+>)?((?:\\.|\[[^\]]*\]|[^()\\])*)\)(?:[*+]|\{\d+,\})")
+_REDOS_PRONE_BODY = re.compile(r"(?:\\.|\[[^\]]*\]|[^\\\[])(?:[*+]|\{\d+,\})")
+
+
 def validate_file_regex(pattern):
     """Compile `pattern` as a basename regex, or raise ValidationError. Returns the compiled form."""
     try:
@@ -124,6 +131,16 @@ def validate_file_regex(pattern):
 
     if compiled.groups > len(compiled.groupindex):
         raise ValidationError({"regex": "Use named groups -- (?P<run>...) -- callers read groups by name."})
+
+    # security & perf: catches common regexes that can crash server
+    for group in _QUANTIFIED_GROUP.finditer(pattern):
+        if _REDOS_PRONE_BODY.match(group.group(1)):
+            raise ValidationError(
+                {
+                    "regex": "Nested unbounded quantifiers -- %s -- can backtrack catastrophically "
+                    "on a non-matching name. Anchor the repeat with a literal, e.g. (?:_\\d+)*." % group.group(0)
+                }
+            )
 
     return compiled
 
@@ -174,9 +191,13 @@ class FilePattern(models.Model):
             {"sample_filenames": "This regex does not match %s." % ", ".join(repr(name) for name in unmatched)}
         )
 
+    @cached_property
+    def compiled(self):
+        return validate_file_regex(self.regex)
+
     def match(self, basename):
         """The captured groups for `basename`, or None when it isn't one of ours."""
-        found = re.match(self.regex, basename)
+        found = self.compiled.match(basename)
         return found.groupdict() if found else None
 
 
