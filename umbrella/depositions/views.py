@@ -36,6 +36,8 @@ from .services.autofill import map_session_to_metadata, run_autofill_init
 
 logger = logging.getLogger(__name__)
 
+DEPOSITION_DEFAULT_CLUSTER_ID = "bruno"
+
 # Wizard autosaves via PATCH only — no PUT full-replace.
 HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
 
@@ -269,7 +271,7 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
         )
 
         msi_session = session.msi_session
-        cluster_id = cluster_id_for_run(msi_session.name, run_number)
+        cluster_id = cluster_id_for_run(msi_session.name, run_number, default=DEPOSITION_DEFAULT_CLUSTER_ID)
         try:
             cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
         except Cluster.DoesNotExist:
