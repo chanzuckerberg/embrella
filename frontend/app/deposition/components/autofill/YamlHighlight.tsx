@@ -2,7 +2,6 @@
 
 import { Box } from '@mui/material';
 
-// One-off dark code-viewer palette (fixed, like an editor theme).
 const C = {
   bg: '#0d1117',
   gutter: '#6e7681',
@@ -65,7 +64,6 @@ function Line({ text }: { text: string }) {
   );
 }
 
-/** Read-only, syntax-highlighted YAML with a line-number gutter. */
 export function YamlHighlight({ yaml }: { yaml: string }) {
   const lines = yaml.split('\n');
   const width = String(lines.length).length;

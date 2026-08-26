@@ -57,7 +57,6 @@ export const TILTSERIES_FIELDS: FieldDef[] = [
     required: true,
     default: -96,
   },
-  // tilt_min / tilt_max removed — computed per tilt series by `sync` at submit (from .rawtlt).
   { key: 'tilt_step', label: 'tilt_step', section: 'Acquisition', unit: '°', type: 'number' },
   { key: 'tilting_scheme', label: 'tilting_scheme', section: 'Acquisition', type: 'text', default: 'dose-symmetric' },
   {
@@ -196,13 +195,6 @@ function sameValue(a: unknown, b: unknown): boolean {
   return String(a) === String(b);
 }
 
-/**
- * Where a field's current value came from, for the Source column:
- * - `init`       cryoetportalprep init populated it and the user hasn't changed it
- * - `overridden` init populated it but the current value differs
- * - `required`   required and still empty
- * - `none`       optional + empty, or user-entered with no init source
- */
 export function provenance(field: FieldDef, meta: Meta | null | undefined): Provenance {
   const autofilled = field.autofillPath ? getPath(meta?.autofill_metadata, field.autofillPath) : undefined;
 

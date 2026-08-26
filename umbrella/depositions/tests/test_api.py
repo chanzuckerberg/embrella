@@ -399,7 +399,9 @@ class TestAutoFill:
         ):
             r = auth_client.post(self._url(owned_session))
         assert r.status_code == 502
-        assert "Metrics file not found" in r.json()["detail"]
+        detail = r.json()["detail"]
+        assert "Metrics file not found" not in detail
+        assert "AreTomo run" in detail
 
     def test_non_owner_cannot_autofill(self, owned_session):
         other = User.objects.create_user(username="heidi@example.com", password="pw")

@@ -70,7 +70,6 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
         s.id === session.id
           ? {
               ...s,
-              // Re-seed defaults — the fetched metadata (esp. tomogram) is sparse, so keep WBP/ctf/etc.
               tiltseries: applyDefaults(TILTSERIES_FIELDS, session.tiltseries_metadata ?? {}),
               tomogram: applyDefaults(TOMOGRAM_FIELDS, session.tomogram_metadata ?? {}),
               lastAutofillAt: session.last_autofill_at ?? s.lastAutofillAt,
