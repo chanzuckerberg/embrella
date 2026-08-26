@@ -179,8 +179,8 @@ def main(review_id, existing_positions=None):
 
     # Get ZARR files for this review's session
     session_path = get_session_path(review)
-    zarr_files = check_zarr_exists(session_path)
-    print(f"🔍 Found {len(zarr_files)} matching ZARR files")
+    zarr_files, zarr_candidates = check_zarr_exists(session_path)
+    print(f"🔍 Matched {len(zarr_files)} of {zarr_candidates} ZARR files")
 
     # Process files, passing existing positions to skip
     process_files(review, zarr_files, existing_positions)

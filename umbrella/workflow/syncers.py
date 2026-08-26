@@ -143,6 +143,7 @@ def parse_zarr_filename(filename, pattern=None):
 
 
 def check_zarr_exists(full_path, cluster_id=None):
+    """((basename, position_id) pairs, count of .zarr entries seen) for a run directory."""
     # TODO: legacy lister -- replace with clusterio.list_files(full_path,
     # rec_file_pattern().list_glob, include_dirs=True), which also fixes `full_path`
     # being unquoted in the shell command below.
@@ -150,6 +151,7 @@ def check_zarr_exists(full_path, cluster_id=None):
 
     cluster_id = cluster_id or get_default_cluster_id()
     found_zarrs = []
+    candidates = 0
     pattern = rec_file_pattern()  # once -- the per-file parse below must not query
     ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
     stdin, stdout, stderr = ssh.exec_command(f"ls {full_path}")
@@ -170,6 +172,7 @@ def check_zarr_exists(full_path, cluster_id=None):
             line = line[:-1]
 
         if line.endswith(".zarr"):
+            candidates += 1
             log.info(f"Found ZARR file: {line}")
             position_id = parse_zarr_filename(line, pattern=pattern)
             if position_id:
@@ -177,8 +180,8 @@ def check_zarr_exists(full_path, cluster_id=None):
             else:
                 log.warning(f"Could not parse position ID from filename: {line}")
 
-    log.info(f"Found {len(found_zarrs)} ZARR files in {full_path}")
-    return found_zarrs
+    log.info(f"Matched {len(found_zarrs)} of {candidates} .zarr entries in {full_path}")
+    return found_zarrs, candidates
 
 
 class ProcessSyncer(object):
@@ -300,8 +303,11 @@ class ProcessSyncer(object):
                     },
                 )
 
-    def process_zarr_directory(self, recon_type, path_to_zarrs, processed_tomograms=set()):
-        """Check remote directory path_to_zarrs and create reviewtomogram objects for them if not present."""
+    def process_zarr_directory(self, recon_type, path_to_zarrs):
+        """Sync ReviewTomogram rows of `recon_type` against the .zarr files in `path_to_zarrs`.
+
+        Creates rows for new files; never deletes.
+        """
         self._log_to_db(
             "sync_start",
             f"Checking {recon_type} at {path_to_zarrs}",
@@ -311,7 +317,20 @@ class ProcessSyncer(object):
             },
         )
 
-        found_zarrs = check_zarr_exists(path_to_zarrs, cluster_id=self.cluster_id)
+        found_zarrs, candidates = check_zarr_exists(path_to_zarrs, cluster_id=self.cluster_id)
+
+        unmatched = candidates - len(found_zarrs)
+        if unmatched:
+            self._log_to_db(
+                "warning",
+                f"{unmatched} of {candidates} .zarr entries did not match the rec file pattern",
+                {
+                    "reconstruction_type": recon_type,
+                    "candidates": candidates,
+                    "unmatched": unmatched,
+                },
+            )
+
         if len(found_zarrs) == 0:
             self._log_to_db(
                 "sync_complete",
@@ -321,40 +340,43 @@ class ProcessSyncer(object):
                     "count": 0,
                 },
             )
-            return processed_tomograms
+            return
 
+        known = dict(
+            ReviewTomogram.objects.filter(
+                reconstruction_type__iexact=recon_type,
+                run_id=self.run_id,
+                session=self.session,
+            ).values_list("position_id", "tomogram_id")
+        )
+
+        seen = set()
+        new_count = 0
+        for _filename, position_id in found_zarrs:
+            if position_id in known:
+                seen.add(known[position_id])
+            else:
+                tomogram = self.create_tomogram(reconstruction_type=recon_type, position_id=position_id)
+                if tomogram:
+                    new_count += 1
+                    seen.add(tomogram.tomogram_id)
+                    log.info(f"Created new tomogram for position_id: {position_id}")
+
+        # The directory is re-listed whole every pass, and this will find new ones.
+        # missing_files: rows with no file on disk this pass -- reported, never deleted.
+        known_count = len(found_zarrs) - new_count
         self._log_to_db(
             "file_found",
-            f"Found {len(found_zarrs)} files for {recon_type}",
+            f"Found {new_count} new files ({known_count} previous, {len(found_zarrs)} total) for {recon_type}",
             {
                 "reconstruction_type": recon_type,
                 "count": len(found_zarrs),
+                "new": new_count,
+                "previous": known_count,
+                "missing_files": len(set(known.values()) - seen),
                 "files": [f[0] for f in found_zarrs[:10]],  # First 10 files
             },
         )
-
-        for _filename, position_id in found_zarrs:
-            # Check for existing tomogram with same position_id, reconstruction_type, run_id, and session
-            existing_tomogram = ReviewTomogram.objects.filter(
-                position_id=position_id,
-                reconstruction_type=recon_type,
-                run_id=self.run_id,
-                session=self.session,
-            ).first()
-
-            if existing_tomogram:
-                log.info(
-                    f"Found existing tomogram with same position_id ({position_id}), reconstruction_type ({recon_type}), run_id ({self.run_id}), and session ({self.session.name})"
-                )
-                processed_tomograms.add(existing_tomogram.tomogram_id)
-            else:
-                # Create new tomogram
-                tomogram = self.create_tomogram(reconstruction_type=recon_type, position_id=position_id)
-                if tomogram:
-                    processed_tomograms.add(tomogram.tomogram_id)
-                    log.info(f"Created new tomogram for position_id: {position_id}")
-
-        return processed_tomograms
 
     def sync_results(self):
         raise NotImplementedError

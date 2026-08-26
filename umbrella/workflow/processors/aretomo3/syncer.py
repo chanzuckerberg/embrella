@@ -15,7 +15,6 @@ sys.path = [p for p in sys.path if p != PROJ_DIR]  # pycharm IDE fix
 import django
 
 django.setup()
-from processes.models import ReviewTomogram
 
 from workflow import syncers
 from workflow.syncers import log
@@ -26,10 +25,8 @@ class AretomoSyncer(syncers.ProcessSyncer):
         """Main sync function to be called by cron job"""
         log.info(f"Processing session: {self.session.name}, run: {self.run_id}")
 
-        # Track which tomograms we've processed in this run
-        processed_tomograms = set()
-
-        # Check both SART and DCTF reconstructions
+        # Check both SART and DCTF reconstructions. A pass only ever creates rows --
+        # see ProcessSyncer.process_zarr_directory on why sync never deletes.
         recon_type_to_vol_dir = {
             "DCTF": "vol001",
             "SART": "vol003",
@@ -37,18 +34,7 @@ class AretomoSyncer(syncers.ProcessSyncer):
         for recon_type in ["DCTF", "SART"]:
             vol_dir = recon_type_to_vol_dir[recon_type]
             full_path = f"{self.session_path}/{vol_dir}" if vol_dir != "" else self.session_path
-            self.process_zarr_directory(
-                recon_type=recon_type,
-                path_to_zarrs=full_path,
-                processed_tomograms=processed_tomograms,
-            )
-
-        # Remove tomograms that no longer exist in the file server
-        existing_tomograms = ReviewTomogram.objects.filter(session=self.session, run_id=self.run_id)
-        for tomogram in existing_tomograms:
-            if tomogram.tomogram_id not in processed_tomograms:
-                log.info(f"Removing tomogram that no longer exists: {tomogram.tomogram_id}")
-                tomogram.delete()
+            self.process_zarr_directory(recon_type=recon_type, path_to_zarrs=full_path)
 
         # Update review total counts for this session/run combination
         self.update_review_total_counts()

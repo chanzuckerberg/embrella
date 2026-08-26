@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin
+from django.db.models import Count
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 
@@ -145,12 +146,29 @@ class FilePatternForm(forms.ModelForm):
 @admin.register(FilePattern)
 class FilePatternAdmin(admin.ModelAdmin):
     form = FilePatternForm
-    list_display = ("label", "data_kind", "list_glob", "regex")
+    list_display = ("label", "data_kind", "list_glob", "regex", "bound_to")
     list_filter = ("data_kind",)
     search_fields = ("label", "regex", "list_glob")
     autocomplete_fields = ("data_kind",)
     readonly_fields = ("created_at",)
     ordering = ("data_kind__data_type", "label")
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(
+                path_type_count=Count("path_types", distinct=True),
+                binding_count=Count("sessionplanpathbinding", distinct=True),
+            )
+        )
+
+    @admin.display(description="bound to")
+    def bound_to(self, obj):
+        """Blast radius before editing: how many templates and plan overrides read this
+        row. Zero of each means nothing resolves it."""
+        return "%d path types, %d bindings" % (obj.path_type_count, obj.binding_count)
+
     fieldsets = (
         (
             None,

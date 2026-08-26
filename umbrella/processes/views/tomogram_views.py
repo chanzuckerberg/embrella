@@ -410,8 +410,8 @@ def get_tomogram_stats(request):
 
         # Not the default cluster: this run may have executed on Bruno, and listing the
         # wrong cluster reports zero files rather than failing.
-        zarr_files = check_zarr_exists(full_path, cluster_id=cluster_id_for_run(session.name, run_id))
-        print(f"Found {len(zarr_files)} zarr files")
+        zarr_files, zarr_candidates = check_zarr_exists(full_path, cluster_id=cluster_id_for_run(session.name, run_id))
+        print(f"Matched {len(zarr_files)} of {zarr_candidates} zarr files")
 
         # Simplified query directly on ReviewTomogram
         query = ReviewTomogram.objects.filter(
