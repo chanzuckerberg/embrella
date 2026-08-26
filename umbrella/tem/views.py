@@ -12,7 +12,6 @@ from rest_framework.decorators import api_view
 from stores.models import Path
 
 from tem.models import (
-    SOFTWARE_PATH_ROLES,
     AtlasSession,
     MsiSessionBase,
     PathInfo,
@@ -21,7 +20,6 @@ from tem.models import (
     SoftwareFieldsResponse,
     SoftwareResponseModel,
     UserBase,
-    resolve_software_path_type,
 )
 
 from . import models
@@ -65,11 +63,13 @@ def detail(request, session_id):
         "data": session,
         "fields": fields,
         "paths": {
-            "frame path pattern": session.get_session_frames_glob(),
-            "sum image path pattern": session.get_session_sums_glob(),
-            "mdoc path pattern": session.get_session_mdocs_glob(),
-            "parent path pattern": session.get_session_parents_glob(),
-            "atlas image path pattern": session.get_session_atlas_glob(),
+            # Directories, not patterns, since the split: the filenames live on the
+            # resolved FilePattern instead.
+            "frame directory": session.get_session_dir("frames"),
+            "sum image directory": session.get_session_dir("sums"),
+            "mdoc directory": session.get_session_dir("mdocs"),
+            "parent image directory": session.get_session_dir("parents"),
+            "atlas image directory": session.get_session_dir("atlas"),
             "update_notes": form,
         },
     }
@@ -165,20 +165,9 @@ def create_session(request):
             user=request.user,
         )
         session_instance.save()
-        my_pk = session_instance.id
         # default to the latest screening grid atlas if available
-        atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
-        session_instance.atlas_session = atlas_session
-        path_dicts = {}
-        # See the same loop in tem/api/v1_views.py: binding first, then software default;
-        # `atlas` reuses the screening session's Path instead of resolving its own.
-        for role in SOFTWARE_PATH_ROLES:
-            if role == "atlas":
-                continue
-            if resolve_software_path_type(session_instance.session_plan, role):
-                setattr(session_instance, role, session_instance.get_session_path(role))
-        if atlas_session:
-            session_instance.atlas = atlas_session.atlas
+        session_instance.atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
+        session_instance.resolve_role_paths()
         session_instance.save()
         return HttpResponseRedirect(reverse("tem:detail", args=(session_instance.id,)))
 
@@ -275,7 +264,7 @@ def _create_scrn_session(user, group_instance, grid):
     session_instance.save()
     my_pk = session_instance.id
     path_dicts = {}
-    session_instance.atlas = session_instance.get_session_path("atlas")
+    session_instance.atlas = session_instance.resolve_path_row("atlas")
     session_instance.save()
     return
 
