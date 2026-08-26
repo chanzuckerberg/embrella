@@ -873,6 +873,12 @@ class ReviewTomogram(models.Model):
 
     class Meta:
         unique_together = ["review", "tomogram_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "run_id", "reconstruction_type", "position_id"],
+                name="uniq_reviewtomogram_identity",
+            ),
+        ]
 
     def __str__(self):
         return f"Tomogram Review {self.tomogram_id} in {self.review}"
