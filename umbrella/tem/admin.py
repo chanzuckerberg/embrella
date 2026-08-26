@@ -18,6 +18,7 @@ from .models import (
     SessionPlanPathBinding,
     Software,
     plan_replacement_map,
+    resolve_software_file_pattern,
     resolve_software_path_type,
 )
 
@@ -101,23 +102,36 @@ class SessionPlanAdmin(admin.ModelAdmin):
         for role in SOFTWARE_PATH_ROLES:
             path_type = resolve_software_path_type(obj, role)
             if path_type is None:
-                rows.append((role, "unset", "—", "software does not produce this role"))
+                rows.append((role, "unset", "—", "—", "software does not produce this role"))
                 continue
             resolved = fill_place_holders(path_type.overlay_path, example)
             leftover = placeholders_in(resolved)
             note = "unsubstituted: " + ", ".join(sorted("{%s}" % t for t in leftover)) if leftover else ""
-            rows.append((role, "binding" if role in overridden else "software default", resolved, note))
+            # The directory is only half the answer since the split -- without the pattern
+            # the panel reads as if the filenames were lost.
+            pattern = resolve_software_file_pattern(obj, role)
+            rows.append(
+                (
+                    role,
+                    "binding" if role in overridden else "software default",
+                    resolved,
+                    pattern.list_glob if pattern else "—",
+                    note,
+                )
+            )
         # Bootstrap classes, not admin ones: jazzmin leaves a bare <table> unstyled, and
         # without fixed layout + break-all the paths overflow and push `note` off-screen.
         return format_html(
             '{}<table class="table table-sm" style="table-layout:fixed;width:100%">'
-            '<colgroup><col style="width:6em"><col style="width:9em"><col><col style="width:12em"></colgroup>'
-            "<tr><th>role</th><th>source</th><th>example</th><th>note</th></tr>{}</table>",
+            '<colgroup><col style="width:6em"><col style="width:9em"><col>'
+            '<col style="width:10em"><col style="width:12em"></colgroup>'
+            "<tr><th>role</th><th>source</th><th>directory</th><th>files</th><th>note</th></tr>{}</table>",
             _RESOLVES_TO_CSS,
             format_html_join(
                 "",
                 "<tr><td><b>{}</b></td>"
                 '<td style="white-space:nowrap">{}</td>'
+                '<td><code style="word-break:break-all">{}</code></td>'
                 '<td><code style="word-break:break-all">{}</code></td>'
                 '<td style="word-break:break-all">{}</td></tr>',
                 rows,

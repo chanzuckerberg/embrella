@@ -92,6 +92,12 @@ class Path(models.Model):
     def __str__(self):
         return self.overlay_path
 
+    @classmethod
+    def first_or_create(cls, overlay_path):
+        """The row for `overlay_path`, reusing the oldest existing one."""
+        existing = cls.objects.filter(overlay_path=overlay_path).order_by("pk").first()
+        return existing or cls.objects.create(overlay_path=overlay_path)
+
 
 class DataKind(models.Model):
     """A kind of data -- the logical handle `Pipe.input` and `resolve_review_path` key on.

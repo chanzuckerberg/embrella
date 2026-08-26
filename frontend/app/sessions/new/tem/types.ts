@@ -37,6 +37,12 @@ export interface FormOptions {
   projects: ProjectOption[];
 }
 
+/** Where a role's data lands: the resolved directory, and the filenames expected in it. */
+export interface RolePath {
+  directory: string | null;
+  pattern: string | null;
+}
+
 export interface CreatedSession {
   id: number;
   name: string;
@@ -44,11 +50,11 @@ export interface CreatedSession {
   grid_name: string;
   session_plan_name: string;
   magnification_display: string | null;
-  frames: string | null;
-  sums: string | null;
-  mdocs: string | null;
-  parents: string | null;
-  atlas: string | null;
+  frames: RolePath;
+  sums: RolePath;
+  mdocs: RolePath;
+  parents: RolePath;
+  atlas: RolePath;
   legacy_url: string;
 }
 

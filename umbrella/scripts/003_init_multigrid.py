@@ -10,7 +10,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")
 django.setup()
 # from cryo_grids.models import Site, Dewar, Cane, Puck, CryoGridBox, Sample
 # from cryo_grids.models import *
-from stores.models import DataKind, PathType
+from stores.models import DataKind, FilePattern, PathType
 
 # from tem.models import *
 
@@ -32,9 +32,17 @@ def create_multigrid_plan(scope, camera):
     TFS multi grid screening plan
     """
     workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="scrn")
+    data_kind = create_tem_data_kind("satlas")
     atlas_path_type = PathType.objects.create(
-        data_kind=create_tem_data_kind("satlas"),
-        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/{date}_{timestamp}.mrc",
+        data_kind=data_kind,
+        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/",
+        # Same directory as tomo5's atlas, different filenames -- which is the split
+        file_pattern=FilePattern.objects.create(
+            data_kind=data_kind,
+            label="{date}_{timestamp}.mrc",
+            list_glob="*.mrc",
+            regex=r"^(?P<date>[\d-]+)_(?P<timestamp>[\w-]+)\.mrc$",
+        ),
     )
     software = Software.objects.create(
         name="tfs multi-grid",

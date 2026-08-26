@@ -37,26 +37,28 @@ def resolve_dir(kind, *, cluster=None, strict=True, **context):
 
     resolved = fill_place_holders(path_type.overlay_path, context)
     if strict:
-        _assert_fully_resolved(kind, path_type, resolved)
+        assert_fully_resolved(resolved, describe=f"PathType {path_type.pk} for {kind!r}")
     return resolved
 
 
-def _assert_fully_resolved(kind, path_type, resolved):
+def assert_fully_resolved(resolved, *, describe):
+    """Raise unless every `{token}` in `resolved` was substituted.
+
+    The one acceptance criterion of the whole split: a stored path is a directory, not a
+    half-filled template. `describe` names what was being resolved, for the message.
+    """
     leftover = placeholders_in(resolved)
     if not leftover:
         return
-    # A file-scoped token here means the template still carries its filename half; that is
-    # a different mistake from a missing context value, so say which one it is.
-    misplaced = misplaced_placeholders(path_type.overlay_path)
+    misplaced = misplaced_placeholders(resolved)
     if misplaced:
         raise UnresolvedPlaceholderError(
-            f"PathType {path_type.pk} for {kind!r} is a directory template but names "
-            f"file-scoped token(s) {_fmt(misplaced)}. Those identify a file within the "
-            f"directory and belong in a FilePattern capture group, not here."
+            f"{describe} is a directory template but names file-scoped token(s) "
+            f"{_fmt(misplaced)}. Those identify a file within the directory and belong in "
+            f"a FilePattern capture group, not here."
         )
     raise UnresolvedPlaceholderError(
-        f"{kind!r} resolved to {resolved!r}, which still contains {_fmt(leftover)}. "
-        f"Pass the missing value(s) to resolve_dir()."
+        f"{describe} resolved to {resolved!r}, which still contains {_fmt(leftover)}. Supply the missing value(s)."
     )
 
 

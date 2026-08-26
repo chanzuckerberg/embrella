@@ -5,13 +5,11 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from tem.models import (
-    SOFTWARE_PATH_ROLES,
     AtlasSession,
     CryoGrid,
     Magnification,
     MsiSession,
     SessionPlan,
-    resolve_software_path_type,
     suggest_name,
 )
 
@@ -55,18 +53,8 @@ def create_session(request):
 
     # Auto-create Path objects based on software config
     # default to the latest screening grid atlas if available
-    atlas_session = AtlasSession.objects.filter(grid=grid).last()
-    session.atlas_session = atlas_session
-
-    # A role resolves through its binding first, then the software default; None means
-    # this software does not emit that role at all. `atlas` is excluded
-    for role in SOFTWARE_PATH_ROLES:
-        if role == "atlas":
-            continue
-        if resolve_software_path_type(session_plan, role):
-            setattr(session, role, session.get_session_path(role))
-    if atlas_session:
-        session.atlas = atlas_session.atlas
+    session.atlas_session = AtlasSession.objects.filter(grid=grid).last()
+    session.resolve_role_paths()
     session.save()
 
     payload = {
@@ -78,11 +66,17 @@ def create_session(request):
         "magnification_display": str(magnification) if magnification else None,
         "legacy_url": f"/legacy/tem/{session.id}/",
     }
-    for role in SOFTWARE_PATH_ROLES:
-        path = getattr(session, role)
-        payload[role] = str(path) if path else None
+    for role, path in session.role_paths.items():
+        payload[role] = _role_halves(path, session.get_file_pattern(role))
 
     return Response(CreatedSessionSerializer(payload).data, status=status.HTTP_201_CREATED)
+
+
+def _role_halves(path, pattern):
+    """The directory and the filename glob for one role."""
+    if not path:
+        return {"directory": None, "pattern": None}
+    return {"directory": str(path), "pattern": pattern.list_glob if pattern else None}
 
 
 @extend_schema(

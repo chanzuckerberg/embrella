@@ -6,6 +6,7 @@ import pytest
 from cryo_grids.models import CryoGrid
 from django.contrib.auth.models import User
 from projects.models import Project
+from stores.models import DataKind, FilePattern, PathType
 
 from tem.models import (
     Camera,
@@ -56,6 +57,24 @@ def session_plan(db, microscope, camera, software):
         imaging_workflow=imaging_workflow,
         software=software,
     )
+
+
+@pytest.fixture
+def plan_with_frames(db, session_plan):
+    """The shared plan, with `frames` given a split directory template and its file pattern."""
+    kind = DataKind.objects.create(data_type="frames")
+    session_plan.software.frames = PathType.objects.create(
+        data_kind=kind,
+        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/",
+        file_pattern=FilePattern.objects.create(
+            data_kind=kind,
+            label="{run}_{sequence}_{tilt}_*.eer",
+            list_glob="*.eer",
+            regex=r"^(?P<run>.+)_(?P<sequence>\d+)_(?P<tilt>-?\d+(?:\.\d+)?)_.*\.eer$",
+        ),
+    )
+    session_plan.software.save()
+    return session_plan
 
 
 @pytest.fixture
