@@ -75,8 +75,6 @@ PLACEHOLDERS = (
     ),
     Placeholder("copick_run", SESSION_SCOPED, "caller kwarg -- ProcRun.name for a copick project"),
     # -- File-scoped: unknowable at create time, so they are capture groups, not substitutions --
-    # TODO: review templates use {run} for the processing run (run001) and pre-substitute
-    # it. That is {proc_run}'s job -- rename them and this becomes filename-only.
     Placeholder(
         "run",
         FILE_SCOPED,

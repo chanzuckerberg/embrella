@@ -132,11 +132,17 @@ class CopickProcessor(BaseProcessor):
         # Get structured template context (includes SLURM directives)
         context = self.get_template_context(params, run_context)
 
+        # Lazy: workflow.syncers pulls in workflow.views at import time.
+        from workflow.syncers import rec_file_pattern
+
         # Build template variables based on operation
         template_vars = {
             "operation": operation,  # Pass operation to template for conditionals
             "session": session_name,
             "copickRun": copick_run,
+            # The one Position-naming contract, from the same row the syncers parse with.
+            # copick's --run-regex matches run *stems*, so the basename regex drops .zarr.
+            "run_regex": rec_file_pattern().regex.replace(r"\.zarr$", "$"),
             "slurm_directives": context.get("slurm_directives", []),
             "context_vars": context.get("context_vars", {}),
         }

@@ -43,19 +43,16 @@ PROCESSING_TEMPLATES = [
     "/{msi_session}/{run}/rec/{proc_software}/{proc_run}/{pipe}/",
 ]
 
-# stores/migrations/0011_review_pathtypes.py, 0012_copick_url_pathtype.py,
-# 0013_proc_url_pathtype.py, and the flattened variants in scripts/populate_demo.py:110-113
+# stores/migrations/0011-0013 as rewritten by 0021 ({workflow}/{run} -> the proc_
+# spellings), and the flattened variants in scripts/populate_demo.py:110-114
 REVIEW_TEMPLATES = [
-    "/hpc/projects/group.czii/{scope}.processing/{workflow}/{msi_session}/{run}/",
-    "{http_base}{scope}.processing/{workflow}/{msi_session}/{run}/{vol_suffix}/{position}_Vol.zarr",
-    "{http_base}{scope}.processing/aretomo3/{msi_session}/{run}/{thumb_kind}/",
+    "/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/",
+    "{http_base}{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{vol_suffix}/{position}_Vol.zarr",
+    "{http_base}{scope}.processing/aretomo3/{msi_session}/{proc_run}/{thumb_kind}/",
     "{http_base}{scope}.processing/copick/{msi_session}/{copick_run}/",
-    "/{workflow}/{msi_session}/{run}/proc_dir",
-    "/aretomo3/{msi_session}/{run}/{thumb_kind}/",
-    "/copick/{msi_session}/{copick_run}/",
-    "{http_base}{workflow}/{msi_session}/{run}/",
-    "{http_base}aretomo3/{msi_session}/{run}/{thumb_kind}/",
-    "{http_base}{workflow}/{msi_session}/{run}/{vol_suffix}/{position}_Vol.zarr",
+    "{http_base}{proc_software}/{msi_session}/{proc_run}/",
+    "{http_base}aretomo3/{msi_session}/{proc_run}/{thumb_kind}/",
+    "{http_base}{proc_software}/{msi_session}/{proc_run}/{vol_suffix}/{position}_Vol.zarr",
 ]
 
 SEEDED_TEMPLATES = ACQUISITION_TEMPLATES + PROCESSING_TEMPLATES + REVIEW_TEMPLATES

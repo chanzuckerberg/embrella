@@ -58,15 +58,15 @@ def get_metadata_summary(request):
         "proc_dir",
         cluster,
         msi_session=msi_session,
-        workflow="aretomo3",
-        run=run_number,
+        proc_software="aretomo3",
+        proc_run=run_number,
     )
     base_proc_url = resolve_review_path(
         "proc_url",
         cluster,
         msi_session=msi_session,
-        workflow="aretomo3",
-        run=run_number,
+        proc_software="aretomo3",
+        proc_run=run_number,
         backend_fetch=True,
     )
     metrics_url = f"{base_proc_url}TiltSeries_Metrics.csv"
@@ -161,14 +161,14 @@ def get_metadata_viz_data(request):
             "thumb_url",
             cluster,
             msi_session=msi_session,
-            run=run_number,
+            proc_run=run_number,
             thumb_kind="thumbnails",
         )
         ctf_base_url = resolve_review_path(
             "thumb_url",
             cluster,
             msi_session=msi_session,
-            run=run_number,
+            proc_run=run_number,
             thumb_kind="ctf_thumbnails",
         )
 
@@ -176,8 +176,8 @@ def get_metadata_viz_data(request):
             "proc_url",
             cluster,
             msi_session=msi_session,
-            workflow="aretomo3",
-            run=run_number,
+            proc_software="aretomo3",
+            proc_run=run_number,
             backend_fetch=True,
         )
         metrics_url = f"{base_proc_url}TiltSeries_Metrics.csv"

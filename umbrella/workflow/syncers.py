@@ -6,7 +6,6 @@ import argparse
 import json
 import logging
 import os
-import re
 import time
 import uuid
 from datetime import datetime
@@ -113,22 +112,45 @@ def cleanup_transient_syncer_logs(job_id):
     return {"deleted_count": deleted_count}
 
 
-def parse_zarr_filename(filename):
-    # Match both formats: Position_1_2_Vol.zarr or Position_15_Vol.zarr
-    match = re.match(r"^Position_(\d+)(?:_(\d+))?_Vol\.zarr$", filename)
-    if match:
-        if match.group(2):  # If second number exists
-            return f"Position_{match.group(1)}_{match.group(2)}"
-        else:  # Single number format
-            return f"Position_{match.group(1)}"
-    return None
+# TODO: update by grabing by plan, role. Syncer will need the session plan
+# The canonical reconstruction FilePattern, seeded by stores/0021. This constant and the
+# migration's must match; the row is a code-shipped contract, not free-form config.
+REC_PATTERN_LABEL = "{position}_Vol.zarr"
+
+
+def rec_file_pattern():
+    """The FilePattern naming reconstruction volumes. Loud when the row is gone."""
+    from django.core.exceptions import ImproperlyConfigured
+    from stores.models import FilePattern
+
+    try:
+        return FilePattern.objects.get(data_kind__data_type="rec", label=REC_PATTERN_LABEL)
+    except FilePattern.DoesNotExist:
+        raise ImproperlyConfigured(
+            f"FilePattern (rec, {REC_PATTERN_LABEL!r}) is missing -- seeded by stores/0021 and read by "
+            f"the syncers and the copick job template. Restore it under Stores → File patterns."
+        ) from None
+
+
+def parse_zarr_filename(filename, pattern=None):
+    """The position id in a reconstruction basename, or None when it isn't one.
+
+    Pass `pattern` when calling in a loop -- each default lookup is a query. Replaced
+    three divergent hardcoded regexes; this one allows any Position_1_2_3... depth.
+    """
+    groups = (pattern or rec_file_pattern()).match(filename)
+    return groups["position"] if groups else None
 
 
 def check_zarr_exists(full_path, cluster_id=None):
+    # TODO: legacy lister -- replace with clusterio.list_files(full_path,
+    # rec_file_pattern().list_glob, include_dirs=True), which also fixes `full_path`
+    # being unquoted in the shell command below.
     from processes.services.cluster_resolver import get_default_cluster_id
 
     cluster_id = cluster_id or get_default_cluster_id()
     found_zarrs = []
+    pattern = rec_file_pattern()  # once -- the per-file parse below must not query
     ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
     stdin, stdout, stderr = ssh.exec_command(f"ls {full_path}")
 
@@ -149,7 +171,7 @@ def check_zarr_exists(full_path, cluster_id=None):
 
         if line.endswith(".zarr"):
             log.info(f"Found ZARR file: {line}")
-            position_id = parse_zarr_filename(line)
+            position_id = parse_zarr_filename(line, pattern=pattern)
             if position_id:
                 found_zarrs.append((line, position_id))
             else:

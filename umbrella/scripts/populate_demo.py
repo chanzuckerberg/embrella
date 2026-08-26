@@ -108,9 +108,9 @@ _RECON = {
 # "{scope}.processing/" — the demo file tree drops that segment. DB-wide: every
 # session in this DB resolves URLs through these (fine on a demo-only DB).
 _URL_TEMPLATES = {
-    "proc_url": "{http_base}{workflow}/{msi_session}/{run}/",
-    "thumb_url": "{http_base}aretomo3/{msi_session}/{run}/{thumb_kind}/",
-    "zarr_url": "{http_base}{workflow}/{msi_session}/{run}/{vol_suffix}/{position}_Vol.zarr",
+    "proc_url": "{http_base}{proc_software}/{msi_session}/{proc_run}/",
+    "thumb_url": "{http_base}aretomo3/{msi_session}/{proc_run}/{thumb_kind}/",
+    "zarr_url": "{http_base}{proc_software}/{msi_session}/{proc_run}/{vol_suffix}/{position}_Vol.zarr",
 }
 
 

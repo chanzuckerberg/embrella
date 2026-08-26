@@ -366,4 +366,15 @@ def resolve_review_path(data_type, cluster, msi_session, *, backend_fetch=False,
         "msi_session": msi_session.name,
         **{k: v for k, v in context.items() if v is not None},
     }
+    # TODO: synonymous placeholders that need to be consolidated. This is temporary but needs db updates to resolve
+    _mirror(values, "proc_software", "workflow")
+    _mirror(values, "proc_run", "run")
     return fill_place_holders(pt.overlay_path, values)
+
+
+def _mirror(values, a, b):
+    """Give each of two equivalent spellings the other's value when only one is set."""
+    if a in values and b not in values:
+        values[b] = values[a]
+    elif b in values and a not in values:
+        values[a] = values[b]
