@@ -4,6 +4,8 @@ Module for reading magnification from MDOC files on remote clusters.
 MDOC files are produced by tomo5 during tilt series acquisition.
 This module parses the Magnification field from [ZValue = 0] to
 cross-validate against the session's configured magnification.
+
+TODO: Support reading from serialEM mdoc files, which may have a different structure.
 """
 
 import re
