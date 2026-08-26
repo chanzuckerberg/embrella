@@ -11,7 +11,7 @@ import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useAutoFill } from '../../hooks/useAutoFill';
 import { SessionMetadataCard, type SessionMeta } from '../../components/autofill/SessionMetadataCard';
 import type { FieldValue } from '../../components/autofill/MetadataRow';
-import { countIssues, TILTSERIES_FIELDS, TOMOGRAM_FIELDS } from '../../components/autofill/fields';
+import { applyDefaults, countIssues, TILTSERIES_FIELDS, TOMOGRAM_FIELDS } from '../../components/autofill/fields';
 import type { Dataset } from '../../types';
 import type { StepProps } from '../wizardTypes';
 
@@ -21,14 +21,10 @@ function toSessionMeta(dataset: Dataset): SessionMeta[] {
     id: s.id,
     sessionName: s.msi_session_name ?? '',
     aretomoRun: s.aretomo_run_name ?? '',
-    tiltseries: s.tiltseries_metadata ?? {},
-    tomogram: s.tomogram_metadata ?? {},
+    tiltseries: applyDefaults(TILTSERIES_FIELDS, s.tiltseries_metadata ?? {}),
+    tomogram: applyDefaults(TOMOGRAM_FIELDS, s.tomogram_metadata ?? {}),
     lastAutofillAt: s.last_autofill_at ?? null,
   }));
-}
-
-function hasData(s: SessionMeta): boolean {
-  return Object.keys(s.tiltseries).length > 0 || Object.keys(s.tomogram).length > 0;
 }
 
 function sessionIssues(s: SessionMeta): number {
@@ -46,7 +42,7 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
 
   const save = useCallback(
     async (state: SessionMeta[]) => {
-      const dirty = state.filter((s) => s.id && hasData(s));
+      const dirty = state.filter((s) => s.id);
       await Promise.all(
         dirty.map((s) =>
           updateSession(s.id as number, { tiltseries_metadata: s.tiltseries, tomogram_metadata: s.tomogram })
@@ -74,8 +70,9 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
         s.id === session.id
           ? {
               ...s,
-              tiltseries: session.tiltseries_metadata ?? {},
-              tomogram: session.tomogram_metadata ?? {},
+              // Re-seed defaults — the fetched metadata (esp. tomogram) is sparse, so keep WBP/ctf/etc.
+              tiltseries: applyDefaults(TILTSERIES_FIELDS, session.tiltseries_metadata ?? {}),
+              tomogram: applyDefaults(TOMOGRAM_FIELDS, session.tomogram_metadata ?? {}),
               lastAutofillAt: session.last_autofill_at ?? s.lastAutofillAt,
             }
           : s
@@ -107,8 +104,7 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
   return (
     <Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Auto-fill pulls tilt-series and tomogram metadata from each session’s AreTomo run. Give the values a quick
-        review - fill in anything marked required before continuing.
+        Check the auto-filled metadata and fill required fields before continuing.
       </Typography>
 
       {sessions.length > 1 && (
@@ -147,17 +143,15 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
         onFieldChange={(tab, fieldKey, value) => setField(active.key, tab, fieldKey, value)}
       />
 
-      <Box sx={{ mt: 2 }}>
-        {totalIssues > 0 ? (
+      {totalIssues > 0 && (
+        <Box sx={{ mt: 2 }}>
           <Alert severity="warning">
             {totalIssues} required field{totalIssues === 1 ? '' : 's'} left across{' '}
             {sessions.filter((s) => sessionIssues(s) > 0).length} session
             {sessions.filter((s) => sessionIssues(s) > 0).length === 1 ? '' : 's'}.
           </Alert>
-        ) : (
-          <Alert severity="success">All required metadata is filled in.</Alert>
-        )}
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 }

@@ -52,7 +52,15 @@ class TestMapSessionToMetadata:
             "total_flux": 120.0,
             "binning_from_frames": 8,
         }
-        assert mapped["tomogram"] == {"reconstruction_software": "AreTomo3 2.1.0"}
+        # voxel_spacing = round(pixel_spacing * binned_voxel_ratio, 3) — mirrors deposition_prep.
+        assert mapped["tomogram"] == {
+            "reconstruction_software": "AreTomo3 2.1.0",
+            "voxel_spacing": 12.32,
+        }
+
+    def test_voxel_spacing_omitted_when_inputs_missing(self):
+        block = {"acquisition": {"pixel_spacing": 1.54}}  # no binned_voxel_ratio
+        assert "voxel_spacing" not in map_session_to_metadata(block)["tomogram"]
 
     def test_null_fields_are_dropped_not_written(self):
         # tilt_axis_angle is None

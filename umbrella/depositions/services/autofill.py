@@ -78,9 +78,17 @@ def map_session_to_metadata(session: dict | None) -> dict:
     tomogram = _compact(
         {
             "reconstruction_software": acq.get("aretomo_version"),
+            # Mirror deposition_prep portal_yaml.py: voxel_spacing = round(pixel_spacing * binned_voxel_ratio, 3).
+            "voxel_spacing": _voxel_spacing(acq.get("pixel_spacing"), acq.get("binned_voxel_ratio")),
         }
     )
     return {"tiltseries": tiltseries, "tomogram": tomogram}
+
+
+def _voxel_spacing(pixel_spacing, binned_voxel_ratio) -> float | None:
+    if pixel_spacing is None or binned_voxel_ratio is None:
+        return None
+    return round(pixel_spacing * binned_voxel_ratio, 3)
 
 
 def _compact(d: dict) -> dict:

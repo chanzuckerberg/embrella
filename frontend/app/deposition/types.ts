@@ -85,10 +85,13 @@ export interface TiltseriesMetadata {
   tilt_axis?: number | null;
   tilting_scheme?: string;
   binning_from_frames?: number | null;
+  aligned_tiltseries_binning?: number | null;
   is_aligned?: boolean | null;
   microscope_manufacturer?: string;
   microscope_model?: string;
   microscope_energy_filter?: string;
+  microscope_image_corrector?: string;
+  microscope_phase_plate?: string;
   camera_manufacturer?: string;
   camera_model?: string;
   data_acquisition_software?: string;
