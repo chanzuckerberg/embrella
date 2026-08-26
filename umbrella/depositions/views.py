@@ -291,10 +291,22 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
         started = time.monotonic()
         result = run_autofill_init(cluster_id, aretomo3_dir, msi_session.name)
         if not result["filled"]:
-            return Response(
-                {"detail": f"Auto-fill could not read this run: {result['reason']}."},
-                status=status.HTTP_502_BAD_GATEWAY,
+            logger.warning(
+                "auto-fill failed for session %s run %s on %s: %s",
+                msi_session.name,
+                run_number,
+                cluster_id,
+                result["reason"],
             )
+            user_messages = {
+                "ssh_disabled": "Auto-fill isn't available here.",
+                "ssh_error": "Couldn't reach the cluster to auto-fill. Please try again.",
+            }
+            user_message = user_messages.get(
+                result["reason"],
+                "Check the AreTomo run on the Sources step.",
+            )
+            return Response({"detail": user_message}, status=status.HTTP_502_BAD_GATEWAY)
 
         raw = result["session"]
         mapped = map_session_to_metadata(raw)
