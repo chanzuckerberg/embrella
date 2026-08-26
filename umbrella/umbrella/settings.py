@@ -80,7 +80,6 @@ DATABASES = {
 
 INSTALLED_APPS = [
     "external_links",
-    "django_object_actions",
     "jazzmin",
     "cryo_grids",
     "depositions",
