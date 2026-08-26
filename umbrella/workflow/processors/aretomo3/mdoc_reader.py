@@ -7,14 +7,14 @@ cross-validate against the session's configured magnification.
 """
 
 import re
+from fnmatch import fnmatch
 from typing import Any, Dict, Optional
 
 from umbrella_logger import logger
 
 from common.clusterio import get_cluster_ssh_connection
 
-# assume krios1, but hope to make configurable by Path Types mdoc=>...
-DEFAULT_MDOC_DIRECTORY = "/hpc/instruments/czii.krios1/OffloadData"
+DEFAULT_MDOC_GLOB = "*.mdoc"
 
 
 def parse_mdoc_magnification(content: str) -> Optional[int]:
@@ -49,21 +49,23 @@ def parse_mdoc_magnification(content: str) -> Optional[int]:
 
 
 def read_mdoc_magnification(
-    msi_session_name: str,
+    session_dir: str,
     cluster_id: str = "czii",
-    mdoc_base_dir: str = DEFAULT_MDOC_DIRECTORY,
+    list_glob: str = DEFAULT_MDOC_GLOB,
 ) -> Dict[str, Any]:
     """
     Read the magnification from the first MDOC file in a session directory.
 
-    Connects to the cluster via SSH/SFTP and reads the first .mdoc file
-    found in the session directory, parsing the Magnification field from
-    [ZValue = 0].
+    Connects to the cluster via SSH/SFTP and reads the first matching file,
+    parsing the Magnification field from [ZValue = 0]. One connection does
+    both the listing and the read.
 
     Args:
-        msi_session_name: Name of the MSI session (directory name on cluster)
+        session_dir: Resolved remote directory holding the session's mdocs --
+            resolve it from the session (`session.get_session_dir("mdocs")`),
+            never assemble it here.
         cluster_id: Cluster to connect to
-        mdoc_base_dir: Base directory containing session MDOC directories
+        list_glob: Filename convention, normally the session's mdocs FilePattern
 
     Returns:
         Dict with structure:
@@ -76,7 +78,7 @@ def read_mdoc_magnification(
     """
     ssh = None
     sftp = None
-    session_dir = f"{mdoc_base_dir}/{msi_session_name}"
+    session_dir = session_dir.rstrip("/")  # resolved directories carry a trailing slash
 
     try:
         ssh = get_cluster_ssh_connection(cluster_id=cluster_id)
@@ -100,7 +102,7 @@ def read_mdoc_magnification(
                 "error": f"Permission denied: {session_dir}",
             }
 
-        mdoc_files = sorted(f for f in entries if f.lower().endswith(".mdoc"))
+        mdoc_files = sorted(f for f in entries if fnmatch(f.lower(), list_glob.lower()))
         if not mdoc_files:
             return {
                 "success": False,
@@ -124,7 +126,7 @@ def read_mdoc_magnification(
                 "error": f"No Magnification field found in [ZValue = 0] of {mdoc_filename}",
             }
 
-        logger.info(f"MDOC magnification for {msi_session_name}: {magnification} (from {mdoc_filename})")
+        logger.info(f"MDOC magnification in {session_dir}: {magnification} (from {mdoc_filename})")
         return {
             "success": True,
             "magnification": magnification,

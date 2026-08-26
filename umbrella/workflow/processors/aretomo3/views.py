@@ -52,7 +52,7 @@ def get_gain_file_options(cluster_id: str = "czii") -> List[Dict[str, str]]:
             {
                 "value": file_info["filename"],
                 "label": label,
-                "description": f"Modified: {file_info['modified_time']} | Size: {file_info['size_human']}",
+                "description": f"Modified: {file_info['modified_time']}",
             }
         )
 
@@ -274,7 +274,17 @@ def validate_session(request, session_id: str = None) -> JsonResponse:
 
     validation = {}
     try:
-        mdoc_result = mdoc_reader.read_mdoc_magnification(session_id)
+        # The session's own resolution is the directory -- no assembled path, no
+        # assumed scope. "." means the plan's software emits no mdocs; skip quietly,
+        # matching how any other read failure is treated below.
+        mdocs_dir = session.get_session_dir("mdocs")
+        if mdocs_dir == ".":
+            return JsonResponse({"success": True, "validation": {}})
+        pattern = session.get_file_pattern("mdocs")
+        mdoc_result = mdoc_reader.read_mdoc_magnification(
+            mdocs_dir,
+            list_glob=pattern.list_glob if pattern else mdoc_reader.DEFAULT_MDOC_GLOB,
+        )
         if mdoc_result["success"]:
             mdoc_mag = mdoc_result["magnification"]
             validation["mdoc_magnification"] = mdoc_mag

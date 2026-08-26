@@ -19,9 +19,11 @@ from processes.models import ProcPlan, ProcRun
 from tem.models import MsiSession
 from umbrella_logger import logger
 
-from common.clusterio import get_cluster_ssh_connection
+from common.clusterio import FIND_TYPE_DIR, find_paths
 
 # Base path for Copick projects on the HPC
+# TODO: resolve via stores.paths.resolve_dir once a copick-root DataKind row carries this
+# tree -- the existing `cpck` template spells a root that doesn't match this one.
 COPICK_BASE_PATH = "/hpc/projects/group.czii/krios1.processing/copick"
 
 
@@ -52,7 +54,6 @@ def _get_tomo_combos(session: str, procrun: str, cluster_id: str = "bruno") -> D
             }
         }
     """
-    ssh = None
     base_dir = f"{COPICK_BASE_PATH}/{session}/{procrun}"
     expt_dir = f"{base_dir}/ExperimentRuns"
 
@@ -63,27 +64,19 @@ def _get_tomo_combos(session: str, procrun: str, cluster_id: str = "bruno") -> D
     }
 
     try:
-        ssh = get_cluster_ssh_connection(cluster_id=cluster_id)
+        # One round trip for the whole Position_*/VoxelSpacing*/type.zarr tree.
+        zarr_paths = find_paths(expt_dir, "*.zarr", cluster_id=cluster_id, maxdepth=4, entry_type=FIND_TYPE_DIR)
 
-        # Single find command to get all .zarr paths in one call
-        # Output format: ExperimentRuns/Position_X/VoxelSpacingY.YYY/type.zarr
-        find_cmd = f"find {expt_dir} -maxdepth 4 -type d -name '*.zarr' 2>/dev/null"
-        stdin, stdout, stderr = ssh.exec_command(find_cmd)
-        output = stdout.read().decode("utf-8").strip()
-
-        if not output:
+        if not zarr_paths:
             logger.warning(f"No .zarr directories found in {expt_dir}")
             return result
 
-        # Parse the find output
+        # Parse the found paths
         # Pattern: .../ExperimentRuns/Position_X/VoxelSpacingY.YYY/type.zarr
         combos: Dict[str, set] = defaultdict(set)
         positions_seen: set = set()
 
-        for line in output.split("\n"):
-            if not line:
-                continue
-
+        for line in zarr_paths:
             # Extract path components
             # Example: /hpc/.../ExperimentRuns/Position_14/VoxelSpacing5.006/dctf.zarr
             parts = line.split("/")
@@ -137,10 +130,6 @@ def _get_tomo_combos(session: str, procrun: str, cluster_id: str = "bruno") -> D
         logger.error(f"Error scanning tomo combos for {session}/{procrun}: {e}")
         result["error"] = str(e)
         return result
-
-    finally:
-        if ssh:
-            ssh.close()
 
 
 @require_http_methods(["GET"])

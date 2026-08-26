@@ -15,6 +15,7 @@ from processes.models import (
     ProcSoftware,
     Task,
 )
+from stores.models import DataKind, PathType
 from tem.models import (
     CalibratedPixelSize,
     Camera,
@@ -58,7 +59,15 @@ def test_msi_session(db):
         initial_frame_base_dir="/test/frames",
     )
     imaging_workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo")
-    software = Software.objects.create(name="TestSoftware")
+    # An mdocs template, so views resolving the session's mdoc directory (validate_session)
+    # get a real path rather than the "software emits no mdocs" short-circuit.
+    software = Software.objects.create(
+        name="TestSoftware",
+        mdocs=PathType.objects.create(
+            data_kind=DataKind.objects.create(data_type="mdoc"),
+            overlay_path="/test/root/{msi_session}/",
+        ),
+    )
 
     session_plan = SessionPlan.objects.create(
         scope=microscope,
