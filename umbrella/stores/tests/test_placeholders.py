@@ -23,17 +23,12 @@ from stores.placeholders import (
     unknown_placeholders,
 )
 
-# scripts/001_init.py:104-138 and scripts/003_init_multigrid.py:28-51
+# Directory halves only, since stores/0020 split the filenames off onto FilePattern rows.
+# scripts/001_init.py:126-169 and scripts/003_init_multigrid.py:30-46
 ACQUISITION_TEMPLATES = [
-    "/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}_{sequence}_{tilt}_*.eer",
-    "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run_stage_pos}_Exposure.mrc",
-    "/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}.mdoc",
-    "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run_stage_pos}_Search.mrc",
-    "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/Atlas_{timestamp}.mrc",
-    "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/{date}_{timestamp}.mrc",
-    "/{workflow}/{msi_session}/{run}/frames",
-    "/{workflow}/{session_group}/{atlas_session}/atlas",
-    "/{msi_session}/{run}/satlas",
+    "/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/",
+    "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/",
+    "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/",
 ]
 
 # scripts/004_init_processes.py:107-156, 005_init_pytom_pick.py:100-113,

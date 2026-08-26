@@ -2,7 +2,7 @@
 
 import pytest
 from django.db.utils import IntegrityError
-from stores.models import Cluster, DataKind, FilePattern, PathType, pick_for_cluster
+from stores.models import Cluster, DataKind, FilePattern, Path, PathType, pick_for_cluster
 
 from tem.models import (
     SOFTWARE_PATH_ROLES,
@@ -79,13 +79,13 @@ class TestTheFeature:
         a = MsiSession.objects.create(name="24nov10", session_plan=krios)
         b = MsiSession.objects.create(name="24nov11", session_plan=other)
 
-        assert a.get_session_path("frames").overlay_path == "/hpc/instruments/czii.krios1/OffloadData/24nov10/"
-        assert b.get_session_path("frames").overlay_path == "/data/other2/frames/24nov11/"
+        assert a._resolve_path_row("frames").overlay_path == "/hpc/instruments/czii.krios1/OffloadData/24nov10/"
+        assert b._resolve_path_row("frames").overlay_path == "/data/other2/frames/24nov11/"
 
     def test_creating_a_session_writes_no_bindings(self, camera, workflow, software):
         """Bindings scale with plans, not sessions."""
         plan = make_plan("krios1", camera, workflow, software)
-        MsiSession.objects.create(name="24nov10", session_plan=plan).get_session_path("frames")
+        MsiSession.objects.create(name="24nov10", session_plan=plan)._resolve_path_row("frames")
         assert SessionPlanPathBinding.objects.count() == 0
 
 
@@ -132,8 +132,30 @@ class TestNoBackfillRegression:
         """A single-scope install has no bindings, so every role must resolve to the
         software default byte-identically -- that is what makes Phase 1 backfill-free."""
         plan = make_plan("krios1", camera, workflow, software)
+        expected = {"frames": software.frames, "sums": None, "mdocs": None, "parents": None, "atlas": None}
         for role in SOFTWARE_PATH_ROLES:
-            assert resolve_software_path_type(plan, role) == getattr(software, role)
+            assert resolve_software_path_type(plan, role) == expected[role]
+
+
+@pytest.mark.django_db
+class TestRoleMappings:
+    def test_every_role_is_a_software_field(self, software):
+        assert software.role_path_types.keys() == set(SOFTWARE_PATH_ROLES)
+
+    def test_every_role_is_a_session_field(self, camera, workflow, software):
+        session = MsiSession.objects.create(name="24nov10", session_plan=make_plan("k1", camera, workflow, software))
+        assert session.role_paths.keys() == set(SOFTWARE_PATH_ROLES)
+
+    def test_resolve_role_paths_leaves_an_unemitted_role_alone(self, camera, workflow, software):
+        """This software has no sums template, so a Path attached by hand survives: absence
+        of a template means "produces no such data", not "clear the field"."""
+        session = MsiSession.objects.create(name="24nov10", session_plan=make_plan("k1", camera, workflow, software))
+        session.sums = Path.objects.create(overlay_path="/set/by/hand/")
+
+        session.resolve_role_paths()
+
+        assert session.sums.overlay_path == "/set/by/hand/"
+        assert session.frames.overlay_path == "/hpc/instruments/czii.k1/OffloadData/24nov10/"
 
 
 @pytest.mark.django_db
