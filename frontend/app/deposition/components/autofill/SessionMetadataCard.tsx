@@ -9,7 +9,15 @@ import type { FieldValue } from './MetadataRow';
 import { FieldGrid, NothingToFix } from './FieldGrid';
 import { TomogramPanel } from './TomogramPanel';
 import { YamlPreview } from './YamlPreview';
-import { countIssues, countTomogramIssues, groupBySection, isIssue, SECTION_SOURCE, TILTSERIES_FIELDS, type FieldDef } from './fields';
+import {
+  countIssues,
+  countTomogramIssues,
+  groupBySection,
+  isIssue,
+  SECTION_SOURCE,
+  TILTSERIES_FIELDS,
+  type FieldDef,
+} from './fields';
 import { sessionToYaml } from './yaml';
 
 export interface SessionMeta {
