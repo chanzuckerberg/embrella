@@ -26,7 +26,6 @@ export function MetadataRow({
   original?: unknown;
   readOnly: boolean;
   loading?: boolean;
-  /** Placeholder shown when the field is empty (default "-"). */
   placeholder?: string;
   onChange: (value: FieldValue) => void;
 }) {

@@ -174,8 +174,6 @@ export const TOMOGRAM_FIELDS: FieldDef[] = [
   { key: 'processing', label: 'processing', section: 'Reconstruction', type: 'text' },
   { key: 'processing_software', label: 'processing_software', section: 'Reconstruction', type: 'text' },
 ];
-// Excluded from the SHARED grid. is_visualization_default is also kept out of the per-flavor rows
-// (it's the "Shown first in viewer" header checkbox), so perFlavorTomogramFields lists rows explicitly.
 const PER_FLAVOR_TOMOGRAM_KEYS = new Set(['processing', 'processing_software', 'is_visualization_default']);
 export const SHARED_TOMOGRAM_FIELDS = TOMOGRAM_FIELDS.filter((f) => !PER_FLAVOR_TOMOGRAM_KEYS.has(f.key));
 

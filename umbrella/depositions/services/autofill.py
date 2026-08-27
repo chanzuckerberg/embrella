@@ -87,7 +87,7 @@ def map_session_to_metadata(session: dict | None) -> dict:
             **shared,
             "flavor": "denoised",
             "processing": "denoised",
-            "processing_software": "DenoisET",  
+            "processing_software": "DenoisET",
             "is_visualization_default": True,
         },
         {

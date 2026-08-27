@@ -15,7 +15,7 @@ def _session(*, annotations=(), tomogram=False, tiltseries=False):
         tomogram_metadata=SimpleNamespace(exists=lambda: tomogram),
     )
     if tiltseries:
-        s.tiltseries_metadata = object() 
+        s.tiltseries_metadata = object()
     return s
 
 
