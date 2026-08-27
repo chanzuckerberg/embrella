@@ -21,10 +21,12 @@ from umbrella_logger import logger
 
 from common.clusterio import FIND_TYPE_DIR, find_paths
 
-# Base path for Copick projects on the HPC
-# TODO: resolve via stores.paths.resolve_dir once a copick-root DataKind row carries this
-# tree -- the existing `cpck` template spells a root that doesn't match this one.
-COPICK_BASE_PATH = "/hpc/projects/group.czii/krios1.processing/copick"
+
+def _copick_root(cluster_id: str) -> str:
+    """Copick's processing root -- from the same template the job scripts render with."""
+    from workflow.processors import get_processor
+
+    return get_processor("copick").get_processing_base_path(cluster=cluster_id)
 
 
 def _get_tomo_combos(session: str, procrun: str, cluster_id: str = "bruno") -> Dict[str, Any]:
@@ -35,7 +37,7 @@ def _get_tomo_combos(session: str, procrun: str, cluster_id: str = "bruno") -> D
     structure, then parses the results in Python. This avoids many round-trip SFTP calls.
 
     Directory structure scanned:
-        {COPICK_BASE_PATH}/{session}/{procrun}/ExperimentRuns/Position_*/VoxelSpacing*/*.zarr
+        <copick root>/{session}/{procrun}/ExperimentRuns/Position_*/VoxelSpacing*/*.zarr
 
     Args:
         session: Copick session name (e.g., "25oct28b")
@@ -54,7 +56,7 @@ def _get_tomo_combos(session: str, procrun: str, cluster_id: str = "bruno") -> D
             }
         }
     """
-    base_dir = f"{COPICK_BASE_PATH}/{session}/{procrun}"
+    base_dir = f"{_copick_root(cluster_id)}/{session}/{procrun}"
     expt_dir = f"{base_dir}/ExperimentRuns"
 
     result = {

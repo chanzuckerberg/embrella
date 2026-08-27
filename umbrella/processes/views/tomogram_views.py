@@ -404,7 +404,7 @@ def get_tomogram_stats(request):
         else:  # denoised
             vol_dir, processor = "", "denoiset"
 
-        base_path = get_processor(processor).get_processing_base_path(scope=session.session_plan.scope.name)
+        base_path = get_processor(processor).get_processing_base_path()
         session_path = f"{base_path}/{session.name}/{run_id}"
         full_path = f"{session_path}/{vol_dir}" if vol_dir else session_path
 
@@ -525,9 +525,7 @@ async def start_sync(request):
 
         # sync_to_async because get_processing_base_path reads ProcSoftware and the
         # PathType template, and this view is async
-        base_path = await sync_to_async(get_processor(processor).get_processing_base_path)(
-            scope=session.session_plan.scope.name
-        )
+        base_path = await sync_to_async(get_processor(processor).get_processing_base_path)()
 
         # Capture stdout to get progress information
         output = io.StringIO()

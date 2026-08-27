@@ -13,7 +13,7 @@ from typing import Any, Dict, List
 from jinja2 import Environment, FileSystemLoader
 
 from workflow.context import RunContext
-from workflow.processors import register_processor
+from workflow.processors import get_processor, register_processor
 from workflow.processors.base import BaseProcessor
 
 logger = logging.getLogger(__name__)
@@ -140,12 +140,19 @@ class CopickProcessor(BaseProcessor):
             "operation": operation,  # Pass operation to template for conditionals
             "session": session_name,
             "copickRun": copick_run,
+            "copick_root": self.get_processing_base_path(cluster=run_context.cluster_id),
             # The one Position-naming contract, from the same row the syncers parse with.
             # copick's --run-regex matches run *stems*, so the basename regex drops .zarr.
             "run_regex": rec_file_pattern().regex.replace(r"\.zarr$", "$"),
             "slurm_directives": context.get("slurm_directives", []),
             "context_vars": context.get("context_vars", {}),
         }
+
+        # Tomogram imports read across software: the source trees resolve through the
+        # owning processor so per-software overrides keep applying.
+        if operation in ("create", "import_tomograms"):
+            for var, source in (("aretomo3_root", "aretomo3"), ("denoise_root", "denoiset")):
+                template_vars[var] = get_processor(source).get_processing_base_path(cluster=run_context.cluster_id)
 
         # Add operation-specific variables
         if operation == "create":

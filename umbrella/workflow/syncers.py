@@ -30,11 +30,6 @@ def fix_run_id(run_id):
     return f"run{str(int(run_id)).zfill(3)}"
 
 
-def scope_for_session(session_name):
-    session = MsiSession.objects.filter(name=session_name).select_related("session_plan__scope").first()
-    return session.session_plan.scope.name if session else None
-
-
 def is_slurm_state_active(state):
     return state in ["PENDING", "CONFIGURING", "RUNNING", "COMPLETING"]
 

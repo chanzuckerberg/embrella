@@ -238,7 +238,7 @@ properties:
     type: string
     title: Input File Prefix Path
     description: "Prefix of input file path. Together with InSuffix and InSkips, forms file name pattern for processing. Can be: (1) Prefix string like 'Position_' to match files starting with that prefix, (2) Path to folder containing movie files (tiff/eer) or tilt series (mrc). If suffix is .mdoc, matches mdoc files with this prefix. If suffix is .mrc, matches mrc files with this prefix. Note: movie files must be in same directory as mdoc files."
-    default: '${in_mdoc_dir}/${project_name}/Position_'
+    default: '${in_mdoc_dir}/Position_'
     x-parameter-group: input_processing
     x-bash-var: in_prefix
     x-bash-format: quoted

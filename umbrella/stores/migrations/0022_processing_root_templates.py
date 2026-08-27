@@ -5,9 +5,9 @@ Replaces the deleted ProcSoftware.processing_directory / script_directory scalar
 substituting ProcSoftware.dirname (storage_dirname or name). A software whose directories
 don't follow this layout overrides per-row via ProcSoftware.processing_root / script_dir.
 
-One tree serves every scope here -- {scope} is a legal token if an install wants
-per-scope roots. These are the shipped defaults; get_or_create leaves operator edits
-alone.
+software_root is the shared tools tree job scripts reference (executables, conda
+environments, helper scripts) -- one constant tree, no substitutions.
+
 TODO: Eventually this should read from deployment config rather than carrying CZII's
 layout as the default
 """
@@ -17,6 +17,7 @@ from django.db import migrations
 TEMPLATES = {
     "processing_root": "/hpc/projects/group.czii/krios1.processing/{proc_software}",
     "script_dir": "/hpc/projects/group.czii/krios1.processing/{proc_software}/scripts",
+    "software_root": "/hpc/projects/group.czii/krios1.processing/software",
 }
 
 

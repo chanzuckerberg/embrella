@@ -12,8 +12,8 @@
 {% endif -%}
 {% endfor -%}
 #SBATCH --mail-type=ALL
-#SBATCH -o /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_aretomo3.out
-#SBATCH -e /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_aretomo3.err
+#SBATCH -o {{ out_dir }}/JOB%j_aretomo3.out
+#SBATCH -e {{ out_dir }}/JOB%j_aretomo3.err
 {% if cluster == "czii" -%}
 #SBATCH --qos=embrella
 {% endif %}
@@ -28,8 +28,8 @@
 #SBATCH {{ directive.directive }}={{ directive.value }}
 {% endif -%}
 {% endfor -%}
-#SBATCH -o /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_reformat.out
-#SBATCH -e /hpc/projects/group.czii/krios1.processing/aretomo3/{{ project_name }}/{{ run_number }}/JOB%j_reformat.err
+#SBATCH -o {{ out_dir }}/JOB%j_reformat.out
+#SBATCH -e {{ out_dir }}/JOB%j_reformat.err
 
 # Ensure all files/dirs created by this job are group-writable so other users can
 # launch subsequent runs in the same session dir.
@@ -57,11 +57,11 @@ export {{ var_name }}="{{ var_info.value }}"
 {% endfor -%}
 
 # Input paths
-export in_mdoc_dir="/hpc/instruments/czii.krios1/OffloadData"
+export in_mdoc_dir="{{ mdoc_dir }}"
 export gain_fn="{{ gain_file_path }}"
 
 # Output path
-export out_path="/hpc/projects/group.czii/krios1.processing/aretomo3/${project_name}/${run_number}"
+export out_path="{{ out_dir }}"
 mkdir -p "${out_path}/vol001" "${out_path}/vol002" "${out_path}/vol003"
 chmod 775 "${out_path}"
 
@@ -94,7 +94,7 @@ run_aretomo3_gpu() {
     ml cuda
 
     # AreTomo3 command with fixed flags and schema-generated variable flags
-    /hpc/projects/group.czii/krios1.processing/software/executables/AreTomo3_2.3.0_Cuda13_03-21-2026 \
+    {{ software_root }}/executables/AreTomo3_2.3.0_Cuda13_03-21-2026 \
         -Gain ${gain_fn} \
         -OutDir ${out_path} \
         -Gpu {% for i in range(slurm_component_0_gpus) -%}{{ i }}{% if not loop.last %},{% endif %}{% endfor %} \
@@ -107,12 +107,12 @@ run_reformat_cpu() {
     set -e
     umask 0002
     ml anaconda
-    conda activate /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/zarrczar_env
-    bash /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/mrc_to_zarr_and_thumbnails.sh ${out_path} 960 180
+    conda activate {{ script_dir }}/zarrczar_env
+    bash {{ script_dir }}/mrc_to_zarr_and_thumbnails.sh ${out_path} 960 180
 
-    conda activate /hpc/projects/group.czii/krios1.processing/software/slabpick/pySlabPick
-    python /hpc/projects/group.czii/krios1.processing/software/diagnostics/scripts/plot_aretomo3_metrics.py --session ${project_name} --run ${run_number}
-    python /hpc/projects/group.czii/krios1.processing/software/diagnostics/scripts/summary_aretomo3_metrics.py
+    conda activate {{ software_root }}/slabpick/pySlabPick
+    python {{ software_root }}/diagnostics/scripts/plot_aretomo3_metrics.py --session ${project_name} --run ${run_number}
+    python {{ software_root }}/diagnostics/scripts/summary_aretomo3_metrics.py
 }
 
 # Export functions so they're available to srun subshells

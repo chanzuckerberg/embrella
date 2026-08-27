@@ -457,23 +457,29 @@ class BaseProcessor(ABC):
             )
         return row
 
-    def _resolve_root(self, kind: str, override, dirname: str, scope: str, cluster=None) -> str:
+    def _resolve_root(self, kind: str, override, dirname: str, cluster=None) -> str:
         from stores.paths import resolve_dir, resolve_template
 
-        context = {"scope": scope, "proc_software": dirname}
+        context = {"proc_software": dirname}
         if override is not None:
             return resolve_template(override, **context).rstrip("/")
         return resolve_dir(kind, cluster=cluster, **context).rstrip("/")
 
-    def get_script_directory(self, scope: str, cluster=None) -> str:
-        """The remote directory scripts are uploaded to, for sessions on `scope`."""
+    def get_script_directory(self, cluster=None) -> str:
+        """The remote directory scripts are uploaded to."""
         software = self._software_row()
-        return self._resolve_root("script_dir", software.script_dir, software.dirname, scope, cluster)
+        return self._resolve_root("script_dir", software.script_dir, software.dirname, cluster)
 
-    def get_processing_base_path(self, scope: str, cluster=None) -> str:
-        """The root this software's runs live under for `scope`'s sessions (used by syncers)."""
+    def get_processing_base_path(self, cluster=None) -> str:
+        """The root this software's runs live under, for every scope (used by syncers)."""
         software = self._software_row()
-        return self._resolve_root("processing_root", software.processing_root, software.dirname, scope, cluster)
+        return self._resolve_root("processing_root", software.processing_root, software.dirname, cluster)
+
+    def get_software_root(self, cluster=None) -> str:
+        """The shared tools tree (executables, conda envs) job scripts reference."""
+        from stores.paths import resolve_dir
+
+        return resolve_dir("software_root", cluster=cluster).rstrip("/")
 
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
@@ -1547,13 +1553,8 @@ class BaseProcessor(ABC):
         """
         from processes.tasks import start_syncer_monitoring
 
-        # Resolved per run: the session pins the scope, so each run's syncer watches the
-        # root its own job actually writes under.
         if base_path is None:
-            base_path = self.get_processing_base_path(
-                scope=run_context.msi_session.session_plan.scope.name,
-                cluster=run_context.cluster_id,
-            )
+            base_path = self.get_processing_base_path(cluster=run_context.cluster_id)
 
         try:
             task_id = start_syncer_monitoring(

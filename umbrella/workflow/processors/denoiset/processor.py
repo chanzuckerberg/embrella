@@ -106,6 +106,15 @@ class DenoisETProcessor(BaseProcessor):
         template_vars["slurm_directives"] = context.get("slurm_directives", [])
         template_vars["cluster"] = run_context.cluster_id
 
+        from workflow.processors import get_processor
+
+        template_vars["denoise_root"] = self.get_processing_base_path(cluster=run_context.cluster_id)
+        template_vars["script_dir"] = self.get_script_directory(cluster=run_context.cluster_id)
+        template_vars["software_root"] = self.get_software_root(cluster=run_context.cluster_id)
+        template_vars["aretomo3_root"] = get_processor("aretomo3").get_processing_base_path(
+            cluster=run_context.cluster_id
+        )
+
         # Render template with schema-driven variables
         script = template.render(**template_vars)
 
@@ -129,10 +138,7 @@ class DenoisETProcessor(BaseProcessor):
         session_name = run_context.msi_session.name
         denoise_run = run_context.run_number
 
-        root = self.get_processing_base_path(
-            scope=run_context.msi_session.session_plan.scope.name,
-            cluster=run_context.cluster_id,
-        )
+        root = self.get_processing_base_path(cluster=run_context.cluster_id)
         base_path = f"{root}/{session_name}/{denoise_run}"
 
         return [
