@@ -29,13 +29,14 @@ const url = (path: string): string => `${DJANGO_URL}${path}`;
 
 async function parse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    let detail = '';
+    let message = '';
     try {
-      detail = JSON.stringify(await response.json());
+      const body = (await response.json()) as { detail?: unknown };
+      message = typeof body?.detail === 'string' ? body.detail : JSON.stringify(body);
     } catch {
       /* no body */
     }
-    throw new Error(`Request failed: ${response.status} ${detail}`);
+    throw new Error(message || `Something went wrong (${response.status}). Please try again.`);
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
@@ -125,7 +126,8 @@ export async function updateSession(id: number, data: Partial<DepositionSession>
   return parse(await patchResource(url(`${API.DEPOSITION_SESSIONS}${id}/`), data));
 }
 
-export async function autoFillSession(id: number): Promise<unknown> {
+/** Runs cryoetportalprep init on the cluster; returns the session with metadata populated. */
+export async function autoFillSession(id: number): Promise<DepositionSession> {
   return parse(await postResource(url(`${API.DEPOSITION_SESSIONS}${id}/auto-fill/`), {}));
 }
 

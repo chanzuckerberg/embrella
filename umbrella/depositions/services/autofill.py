@@ -62,7 +62,7 @@ def run_autofill_init(cluster_id: str, aretomo3_dir: str, session_name: str, *, 
 
 
 def map_session_to_metadata(session: dict | None) -> dict:
-    """Map a ``dataprep_config.yaml`` session block to ``{tiltseries, tomogram}`` field dicts."""
+    """Map a ``dataprep_config.yaml`` session block to ``{tiltseries, tomograms}`` field dicts."""
     session = session or {}
     acq = session.get("acquisition") or {}
     tiltseries = _compact(
@@ -75,12 +75,36 @@ def map_session_to_metadata(session: dict | None) -> dict:
             "binning_from_frames": acq.get("binned_voxel_ratio"),
         }
     )
-    tomogram = _compact(
+    aretomo_version = acq.get("aretomo_version")
+    shared = _compact(
         {
-            "reconstruction_software": acq.get("aretomo_version"),
+            "reconstruction_software": aretomo_version,
+            "voxel_spacing": _voxel_spacing(acq.get("pixel_spacing"), acq.get("binned_voxel_ratio")),
         }
     )
-    return {"tiltseries": tiltseries, "tomogram": tomogram}
+    tomograms = [
+        {
+            **shared,
+            "flavor": "denoised",
+            "processing": "denoised",
+            "processing_software": "DenoisET",
+            "is_visualization_default": True,
+        },
+        {
+            **shared,
+            "flavor": "filtered",
+            "processing": "filtered",
+            "processing_software": aretomo_version or "",
+            "is_visualization_default": False,
+        },
+    ]
+    return {"tiltseries": tiltseries, "tomograms": tomograms}
+
+
+def _voxel_spacing(pixel_spacing, binned_voxel_ratio) -> float | None:
+    if pixel_spacing is None or binned_voxel_ratio is None:
+        return None
+    return round(pixel_spacing * binned_voxel_ratio, 3)
 
 
 def _compact(d: dict) -> dict:
