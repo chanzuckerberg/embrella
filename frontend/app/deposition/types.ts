@@ -98,12 +98,18 @@ export interface TiltseriesMetadata {
   autofill_metadata?: AutofillMetadata;
 }
 
+export type TomogramFlavor = 'denoised' | 'filtered';
+
+export const TOMOGRAM_FLAVORS: TomogramFlavor[] = ['denoised', 'filtered'];
+
 export interface TomogramMetadata {
+  flavor?: TomogramFlavor;
   voxel_spacing?: number | null;
   ctf_corrected?: boolean | null;
   reconstruction_method?: string;
   reconstruction_software?: string;
   processing?: string;
+  processing_software?: string;
   is_visualization_default?: boolean | null;
   autofill_metadata?: AutofillMetadata;
 }
@@ -119,7 +125,7 @@ export interface DepositionSession {
   subset_filename?: string;
   selected_copick_runs?: unknown[];
   tiltseries_metadata?: TiltseriesMetadata | null;
-  tomogram_metadata?: TomogramMetadata | null;
+  tomogram_metadata?: TomogramMetadata[] | null;
   annotations?: unknown[];
   last_autofill_at?: string | null;
   last_autofill_duration_seconds?: number | null;

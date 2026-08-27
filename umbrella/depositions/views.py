@@ -229,11 +229,25 @@ class DatasetViewSet(viewsets.ModelViewSet):
                         "tilt_max": 60,
                         "tilt_step": 3,
                     },
-                    "tomogram_metadata": {
-                        "voxel_spacing": 7.84,
-                        "reconstruction_method": "WBP",
-                        "ctf_corrected": True,
-                    },
+                    "tomogram_metadata": [
+                        {
+                            "flavor": "denoised",
+                            "voxel_spacing": 7.84,
+                            "reconstruction_method": "WBP",
+                            "ctf_corrected": True,
+                            "processing": "denoised",
+                            "processing_software": "DenoisET",
+                            "is_visualization_default": True,
+                        },
+                        {
+                            "flavor": "filtered",
+                            "voxel_spacing": 7.84,
+                            "reconstruction_method": "WBP",
+                            "ctf_corrected": True,
+                            "processing": "filtered",
+                            "is_visualization_default": False,
+                        },
+                    ],
                     "annotations": [
                         {
                             "copick_kind": "picks",
@@ -314,10 +328,14 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
             session=session,
             defaults={**mapped["tiltseries"], "autofill_metadata": raw},
         )
-        TomogramMetadata.objects.update_or_create(
-            session=session,
-            defaults={**mapped["tomogram"], "autofill_metadata": raw},
-        )
+        for tomo in mapped["tomograms"]:
+            TomogramMetadata.objects.update_or_create(
+                session=session,
+                flavor=tomo["flavor"],
+                defaults={**tomo, "autofill_metadata": raw},
+            )
+        kept_flavors = {tomo["flavor"] for tomo in mapped["tomograms"]}
+        session.tomogram_metadata.exclude(flavor__in=kept_flavors).delete()
 
         session.last_autofill_at = timezone.now()
         session.last_autofill_duration_seconds = round(time.monotonic() - started)

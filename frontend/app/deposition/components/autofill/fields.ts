@@ -1,4 +1,5 @@
-import type { AutofillMetadata, TiltseriesMetadata, TomogramMetadata } from '../../types';
+import type { AutofillMetadata, TiltseriesMetadata, TomogramFlavor, TomogramMetadata } from '../../types';
+import { TOMOGRAM_FLAVORS } from '../../types';
 
 export type FieldType = 'number' | 'text' | 'boolean';
 
@@ -143,7 +144,15 @@ export const TOMOGRAM_FIELDS: FieldDef[] = [
     section: 'Reconstruction',
     unit: 'Å',
     type: 'number',
-    readOnly: true,
+    required: true,
+  },
+  {
+    key: 'reconstruction_software',
+    label: 'reconstruction_software',
+    section: 'Reconstruction',
+    type: 'text',
+    required: true,
+    autofillPath: 'acquisition.aretomo_version',
   },
   {
     key: 'reconstruction_method',
@@ -154,14 +163,6 @@ export const TOMOGRAM_FIELDS: FieldDef[] = [
     default: 'WBP',
   },
   {
-    key: 'reconstruction_software',
-    label: 'reconstruction_software',
-    section: 'Reconstruction',
-    type: 'text',
-    autofillPath: 'acquisition.aretomo_version',
-  },
-  { key: 'processing', label: 'processing', section: 'Reconstruction', type: 'text' },
-  {
     key: 'ctf_corrected',
     label: 'ctf_corrected',
     section: 'Reconstruction',
@@ -170,7 +171,19 @@ export const TOMOGRAM_FIELDS: FieldDef[] = [
     default: true,
   },
   { key: 'is_visualization_default', label: 'is_visualization_default', section: 'Reconstruction', type: 'boolean' },
+  { key: 'processing', label: 'processing', section: 'Reconstruction', type: 'text' },
+  { key: 'processing_software', label: 'processing_software', section: 'Reconstruction', type: 'text' },
 ];
+// Excluded from the SHARED grid. is_visualization_default is also kept out of the per-flavor rows
+// (it's the "Shown first in viewer" header checkbox), so perFlavorTomogramFields lists rows explicitly.
+const PER_FLAVOR_TOMOGRAM_KEYS = new Set(['processing', 'processing_software', 'is_visualization_default']);
+export const SHARED_TOMOGRAM_FIELDS = TOMOGRAM_FIELDS.filter((f) => !PER_FLAVOR_TOMOGRAM_KEYS.has(f.key));
+
+export function perFlavorTomogramFields(flavor: TomogramFlavor): FieldDef[] {
+  return TOMOGRAM_FIELDS.filter((f) => f.key === 'processing' || f.key === 'processing_software').map((f) =>
+    f.key === 'processing_software' ? { ...f, required: flavor === 'denoised' } : f
+  );
+}
 
 export type Provenance = 'init' | 'overridden' | 'required' | 'none';
 
@@ -218,6 +231,14 @@ export function isIssue(field: FieldDef, meta: Meta | null | undefined): boolean
 
 export function countIssues(fields: FieldDef[], meta: Meta | null | undefined): number {
   return fields.filter((f) => isIssue(f, meta)).length;
+}
+
+export function countTomogramIssues(tomograms: Record<TomogramFlavor, TomogramMetadata>): number {
+  let n = countIssues(SHARED_TOMOGRAM_FIELDS, tomograms.denoised as never);
+  for (const flavor of TOMOGRAM_FLAVORS) {
+    n += countIssues(perFlavorTomogramFields(flavor), tomograms[flavor] as never);
+  }
+  return n;
 }
 
 export interface FieldSection {

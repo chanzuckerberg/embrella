@@ -1,6 +1,7 @@
 'use client';
 
-import { Box, Button, Typography } from '@mui/material';
+import { Button } from '@czi-sds/components';
+import { Box, Typography } from '@mui/material';
 
 import { YamlHighlight } from './YamlHighlight';
 
@@ -42,7 +43,7 @@ export function YamlPreview({ yaml, title, onClose }: { yaml: string; title?: st
             </Typography>
           )}
         </Box>
-        <Button size="small" onClick={onClose} sx={{ textTransform: 'none', color: 'text.secondary', flexShrink: 0 }}>
+        <Button sdsType="primary" sdsStyle="minimal" size="small" onClick={onClose} sx={{ flexShrink: 0 }}>
           Close
         </Button>
       </Box>

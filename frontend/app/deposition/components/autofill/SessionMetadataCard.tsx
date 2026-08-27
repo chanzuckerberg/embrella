@@ -1,21 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { Icon } from '@czi-sds/components';
-import { Alert, Box, Button, CircularProgress, FormControlLabel, Switch, Tab, Tabs, Typography } from '@mui/material';
+import { Icon, Button } from '@czi-sds/components';
+import { Alert, Box, Checkbox, CircularProgress, FormControlLabel, Switch, Tab, Tabs, Typography } from '@mui/material';
 
-import type { TiltseriesMetadata, TomogramMetadata } from '../../types';
+import type { TiltseriesMetadata, TomogramFlavor, TomogramMetadata } from '../../types';
+import { TOMOGRAM_FLAVORS } from '../../types';
 import { MetadataRow, type FieldValue } from './MetadataRow';
 import { YamlPreview } from './YamlPreview';
 import {
   autofilledValue,
   countIssues,
+  countTomogramIssues,
   groupBySection,
   isIssue,
+  perFlavorTomogramFields,
   provenance,
   SECTION_SOURCE,
+  SHARED_TOMOGRAM_FIELDS,
   TILTSERIES_FIELDS,
-  TOMOGRAM_FIELDS,
   type FieldDef,
 } from './fields';
 import { sessionToYaml } from './yaml';
@@ -26,11 +29,30 @@ export interface SessionMeta {
   sessionName: string;
   aretomoRun: string;
   tiltseries: TiltseriesMetadata;
-  tomogram: TomogramMetadata;
+  tomograms: Record<TomogramFlavor, TomogramMetadata>;
   lastAutofillAt?: string | null;
 }
 
-type TabKey = 'tiltseries' | 'tomogram';
+type TabKey = 'tiltseries' | TomogramFlavor;
+type ViewTab = 'tiltseries' | 'tomograms';
+
+const FLAVOR_LABEL: Record<TomogramFlavor, string> = {
+  denoised: 'Denoised',
+  filtered: 'Filtered',
+};
+
+function tabLabel(name: string, issues: number) {
+  return (
+    <Box component="span">
+      {name}
+      {issues > 0 && (
+        <Box component="span" sx={{ color: 'error.main' }}>
+          {` · ${issues} to fix`}
+        </Box>
+      )}
+    </Box>
+  );
+}
 
 function MetadataTable({
   fields,
@@ -38,6 +60,7 @@ function MetadataTable({
   readOnly,
   showOnlyIssues,
   columns,
+  loading,
   onChange,
 }: {
   fields: FieldDef[];
@@ -45,6 +68,7 @@ function MetadataTable({
   readOnly: boolean;
   showOnlyIssues: boolean;
   columns: 1 | 2;
+  loading: boolean;
   onChange: (key: string, value: FieldValue) => void;
 }) {
   const visible = showOnlyIssues ? fields.filter((f) => isIssue(f, meta as never)) : fields;
@@ -93,8 +117,138 @@ function MetadataTable({
                   provenance={provenance(field, meta as never)}
                   original={autofilledValue(field, meta as never)}
                   readOnly={readOnly}
-                  wide={isPaths}
+                  loading={loading}
                   onChange={(v) => onChange(field.key, v)}
+                />
+              ))}
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+const FLAVOR_FILE_SUFFIX: Record<TomogramFlavor, string> = {
+  denoised: '_Vol.mrc',
+  filtered: '_dctf_Vol.mrc',
+};
+
+function TomogramPanel({
+  tomograms,
+  readOnly,
+  loading,
+  columns,
+  runName,
+  showOnlyIssues,
+  onShared,
+  onFlavor,
+}: {
+  tomograms: Record<TomogramFlavor, TomogramMetadata>;
+  readOnly: boolean;
+  loading: boolean;
+  columns: 1 | 2;
+  runName: string;
+  showOnlyIssues: boolean;
+  onShared: (key: string, value: FieldValue) => void;
+  onFlavor: (flavor: TomogramFlavor, key: string, value: FieldValue) => void;
+}) {
+  const shared = tomograms.denoised;
+  const gridCols = columns === 2 ? { xs: '1fr', md: '1fr 1fr' } : '1fr';
+
+  const sharedVisible = SHARED_TOMOGRAM_FIELDS.filter((f) => !showOnlyIssues || isIssue(f, shared as never));
+  const flavorFields = (flavor: TomogramFlavor) =>
+    perFlavorTomogramFields(flavor).filter((f) => !showOnlyIssues || isIssue(f, tomograms[flavor] as never));
+
+  if (showOnlyIssues && sharedVisible.length === 0 && TOMOGRAM_FLAVORS.every((f) => flavorFields(f).length === 0)) {
+    return (
+      <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
+        Nothing to fix here - everything’s filled in.
+      </Typography>
+    );
+  }
+
+  const gridSx = {
+    display: 'grid',
+    gridTemplateColumns: gridCols,
+    columnGap: { xs: 2, md: 5 },
+    rowGap: 1.25,
+    alignItems: 'center',
+  } as const;
+
+  return (
+    <Box sx={{ mt: 0.5 }}>
+      {sharedVisible.length > 0 && (
+        <>
+          <Typography
+            variant="overline"
+            sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1 }}
+          >
+            RECONSTRUCTION
+            <Box
+              component="span"
+              sx={{ ml: 1, textTransform: 'none', letterSpacing: 0, color: 'text.disabled', fontWeight: 400 }}
+            >
+              applies to every tomogram in this session
+            </Box>
+          </Typography>
+          <Box sx={{ ...gridSx, mb: 3 }}>
+            {sharedVisible.map((field) => (
+              <MetadataRow
+                key={field.key}
+                field={field}
+                value={(shared as Record<string, FieldValue>)[field.key]}
+                provenance={provenance(field, shared as never)}
+                original={autofilledValue(field, shared as never)}
+                readOnly={readOnly}
+                loading={loading}
+                onChange={(v) => onShared(field.key, v)}
+              />
+            ))}
+          </Box>
+        </>
+      )}
+
+      {TOMOGRAM_FLAVORS.map((flavor) => {
+        const fields = flavorFields(flavor);
+        if (fields.length === 0) return null;
+        return (
+          <Box key={flavor} sx={{ mb: 2.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
+              <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary' }}>
+                {FLAVOR_LABEL[flavor].toUpperCase()}
+                <Box
+                  component="span"
+                  sx={{ ml: 1, textTransform: 'none', letterSpacing: 0, color: 'text.disabled', fontWeight: 400 }}
+                >
+                  · {runName ? `${runName}${FLAVOR_FILE_SUFFIX[flavor]}` : `*${FLAVOR_FILE_SUFFIX[flavor]}`}
+                </Box>
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={tomograms[flavor].is_visualization_default === true}
+                    disabled={readOnly}
+                    onChange={(e) => onFlavor(flavor, 'is_visualization_default', e.target.checked)}
+                    sx={{ p: 0.5 }}
+                  />
+                }
+                label={<Typography variant="caption">is_visualization_default</Typography>}
+                sx={{ m: 0 }}
+              />
+            </Box>
+            <Box sx={gridSx}>
+              {fields.map((field) => (
+                <MetadataRow
+                  key={field.key}
+                  field={field}
+                  value={(tomograms[flavor] as Record<string, FieldValue>)[field.key]}
+                  provenance={provenance(field, tomograms[flavor] as never)}
+                  original={autofilledValue(field, tomograms[flavor] as never)}
+                  readOnly={readOnly}
+                  loading={loading}
+                  onChange={(v) => onFlavor(flavor, field.key, v)}
                 />
               ))}
             </Box>
@@ -120,16 +274,13 @@ export function SessionMetadataCard({
   onAutoFill: () => void;
   onFieldChange: (tab: TabKey, key: string, value: FieldValue) => void;
 }) {
-  const [tab, setTab] = useState<TabKey>('tiltseries');
+  const [tab, setTab] = useState<ViewTab>('tiltseries');
   const [showOnlyIssues, setShowOnlyIssues] = useState(false);
   const [showYaml, setShowYaml] = useState(false);
   const hasRun = Boolean(session.aretomoRun);
 
   const tsIssues = countIssues(TILTSERIES_FIELDS, session.tiltseries as never);
-  const tomoIssues = countIssues(TOMOGRAM_FIELDS, session.tomogram as never);
-
-  const fields = tab === 'tiltseries' ? TILTSERIES_FIELDS : TOMOGRAM_FIELDS;
-  const meta = tab === 'tiltseries' ? session.tiltseries : session.tomogram;
+  const tomoIssues = countTomogramIssues(session.tomograms);
   const sessionLabel = session.sessionName || 'Session';
   const yamlTitle = session.aretomoRun ? `${sessionLabel} · ${session.aretomoRun}` : sessionLabel;
 
@@ -166,12 +317,13 @@ export function SessionMetadataCard({
         </Box>
         {!readOnly && (
           <Button
-            variant="text"
+            sdsType="primary"
+            sdsStyle="outline"
             size="small"
             startIcon={autoFilling ? <CircularProgress size={14} /> : undefined}
             disabled={autoFilling || !hasRun}
             onClick={onAutoFill}
-            sx={{ flexShrink: 0, textTransform: 'none', fontWeight: 600, px: 1 }}
+            sx={{ flexShrink: 0 }}
           >
             {session.lastAutofillAt ? 'Re-run auto-fill' : 'Auto-fill'}
           </Button>
@@ -204,14 +356,14 @@ export function SessionMetadataCard({
         >
           <Tabs
             value={tab}
-            onChange={(_, v: TabKey) => setTab(v)}
+            onChange={(_, v: ViewTab) => setTab(v)}
             sx={{
               minHeight: 36,
               '& .MuiTab-root': { minHeight: 36, py: 0.5, textTransform: 'none', fontWeight: 600 },
             }}
           >
-            <Tab value="tiltseries" label={tsIssues > 0 ? `Tilt series · ${tsIssues} to fix` : 'Tilt series'} />
-            <Tab value="tomogram" label={tomoIssues > 0 ? `Tomogram · ${tomoIssues} to fix` : 'Tomogram'} />
+            <Tab value="tiltseries" label={tabLabel('Tilt series', tsIssues)} />
+            <Tab value="tomograms" label={tabLabel('Tomograms', tomoIssues)} />
           </Tabs>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pb: 0.25 }}>
@@ -222,7 +374,7 @@ export function SessionMetadataCard({
               label={<Typography variant="body2">Show only issues</Typography>}
               sx={{ mr: 0.5 }}
             />
-            <Button size="small" onClick={() => setShowYaml((o) => !o)} sx={{ textTransform: 'none', fontWeight: 600 }}>
+            <Button sdsType="primary" sdsStyle="minimal" size="small" onClick={() => setShowYaml((o) => !o)}>
               {showYaml ? 'Hide YAML' : 'View YAML'}
             </Button>
           </Box>
@@ -236,17 +388,41 @@ export function SessionMetadataCard({
             alignItems: 'start',
           }}
         >
-          <MetadataTable
-            fields={fields}
-            meta={meta}
-            readOnly={readOnly}
-            showOnlyIssues={showOnlyIssues}
-            columns={showYaml ? 1 : 2}
-            onChange={(key, v) => onFieldChange(tab, key, v)}
-          />
+          {tab === 'tiltseries' ? (
+            <MetadataTable
+              fields={TILTSERIES_FIELDS}
+              meta={session.tiltseries}
+              readOnly={readOnly}
+              showOnlyIssues={showOnlyIssues}
+              columns={showYaml ? 1 : 2}
+              loading={autoFilling}
+              onChange={(key, v) => onFieldChange('tiltseries', key, v)}
+            />
+          ) : (
+            <TomogramPanel
+              tomograms={session.tomograms}
+              readOnly={readOnly}
+              loading={autoFilling}
+              columns={showYaml ? 1 : 2}
+              runName={session.aretomoRun}
+              showOnlyIssues={showOnlyIssues}
+              onShared={(key, v) => {
+                onFieldChange('denoised', key, v);
+                onFieldChange('filtered', key, v);
+              }}
+              onFlavor={(flavor, key, v) => {
+                onFieldChange(flavor, key, v);
+                // Only one flavor can be the visualization default — selecting one clears the other.
+                if (key === 'is_visualization_default' && v === true) {
+                  const other = flavor === 'denoised' ? 'filtered' : 'denoised';
+                  onFieldChange(other, 'is_visualization_default', false);
+                }
+              }}
+            />
+          )}
           {showYaml && (
             <YamlPreview
-              yaml={sessionToYaml(session.tiltseries, session.tomogram)}
+              yaml={sessionToYaml(session.tiltseries, session.tomograms)}
               title={yamlTitle}
               onClose={() => setShowYaml(false)}
             />

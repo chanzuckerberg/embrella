@@ -10,11 +10,12 @@ def _annotation(is_selected):
 
 
 def _session(*, annotations=(), tomogram=False, tiltseries=False):
-    s = SimpleNamespace(annotations=SimpleNamespace(all=lambda: list(annotations)))
-    if tomogram:
-        s.tomogram_metadata = object()  # presence is what get_type checks (hasattr)
+    s = SimpleNamespace(
+        annotations=SimpleNamespace(all=lambda: list(annotations)),
+        tomogram_metadata=SimpleNamespace(exists=lambda: tomogram),
+    )
     if tiltseries:
-        s.tiltseries_metadata = object()
+        s.tiltseries_metadata = object() 
     return s
 
 

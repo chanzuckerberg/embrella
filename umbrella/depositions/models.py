@@ -196,7 +196,12 @@ class TiltseriesMetadata(models.Model):
 
 
 class TomogramMetadata(models.Model):
-    session = models.OneToOneField(DepositionSession, on_delete=models.CASCADE, related_name="tomogram_metadata")
+    FLAVOR_CHOICES = [
+        ("denoised", "Denoised"),
+        ("filtered", "Filtered"),
+    ]
+    session = models.ForeignKey(DepositionSession, on_delete=models.CASCADE, related_name="tomogram_metadata")
+    flavor = models.CharField(max_length=32, choices=FLAVOR_CHOICES, blank=True)
     voxel_spacing = models.FloatField(null=True, blank=True)
     ctf_corrected = models.BooleanField(null=True, blank=True)
     fiducial_alignment_status = models.CharField(max_length=256, blank=True)
@@ -209,8 +214,11 @@ class TomogramMetadata(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        unique_together = ["session", "flavor"]
+
     def __str__(self):
-        return f"TomogramMetadata for session {self.session_id}"
+        return f"TomogramMetadata ({self.flavor or '?'}) for session {self.session_id}"
 
 
 class DepositionAnnotation(models.Model):

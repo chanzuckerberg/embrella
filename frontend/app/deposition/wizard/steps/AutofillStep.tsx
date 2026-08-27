@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -11,9 +11,34 @@ import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useAutoFill } from '../../hooks/useAutoFill';
 import { SessionMetadataCard, type SessionMeta } from '../../components/autofill/SessionMetadataCard';
 import type { FieldValue } from '../../components/autofill/MetadataRow';
-import { applyDefaults, countIssues, TILTSERIES_FIELDS, TOMOGRAM_FIELDS } from '../../components/autofill/fields';
-import type { Dataset } from '../../types';
+import {
+  applyDefaults,
+  countIssues,
+  countTomogramIssues,
+  TILTSERIES_FIELDS,
+  TOMOGRAM_FIELDS,
+} from '../../components/autofill/fields';
+import type { Dataset, TomogramFlavor, TomogramMetadata } from '../../types';
+import { TOMOGRAM_FLAVORS } from '../../types';
 import type { StepProps } from '../wizardTypes';
+
+type TomoTab = 'tiltseries' | TomogramFlavor;
+
+function toTomograms(list?: TomogramMetadata[] | null): Record<TomogramFlavor, TomogramMetadata> {
+  const byFlavor = new Map((list ?? []).map((t) => [t.flavor, t]));
+  const out = TOMOGRAM_FLAVORS.reduce(
+    (acc, flavor) => {
+      acc[flavor] = applyDefaults(TOMOGRAM_FIELDS, { ...(byFlavor.get(flavor) ?? {}), flavor });
+      return acc;
+    },
+    {} as Record<TomogramFlavor, TomogramMetadata>
+  );
+  if (!TOMOGRAM_FLAVORS.some((f) => out[f].is_visualization_default)) {
+    out.denoised.is_visualization_default = true;
+    out.filtered.is_visualization_default = false;
+  }
+  return out;
+}
 
 function toSessionMeta(dataset: Dataset): SessionMeta[] {
   return (dataset.sessions ?? []).map((s, i) => ({
@@ -22,13 +47,13 @@ function toSessionMeta(dataset: Dataset): SessionMeta[] {
     sessionName: s.msi_session_name ?? '',
     aretomoRun: s.aretomo_run_name ?? '',
     tiltseries: applyDefaults(TILTSERIES_FIELDS, s.tiltseries_metadata ?? {}),
-    tomogram: applyDefaults(TOMOGRAM_FIELDS, s.tomogram_metadata ?? {}),
+    tomograms: toTomograms(s.tomogram_metadata),
     lastAutofillAt: s.last_autofill_at ?? null,
   }));
 }
 
 function sessionIssues(s: SessionMeta): number {
-  return countIssues(TILTSERIES_FIELDS, s.tiltseries as never) + countIssues(TOMOGRAM_FIELDS, s.tomogram as never);
+  return countIssues(TILTSERIES_FIELDS, s.tiltseries as never) + countTomogramIssues(s.tomograms);
 }
 
 export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: readOnlyProp }: StepProps) {
@@ -45,7 +70,10 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
       const dirty = state.filter((s) => s.id);
       await Promise.all(
         dirty.map((s) =>
-          updateSession(s.id as number, { tiltseries_metadata: s.tiltseries, tomogram_metadata: s.tomogram })
+          updateSession(s.id as number, {
+            tiltseries_metadata: s.tiltseries,
+            tomogram_metadata: TOMOGRAM_FLAVORS.map((f) => ({ ...s.tomograms[f], flavor: f })),
+          })
         )
       );
       queryClient.invalidateQueries({ queryKey: depositionKeys.dataset(dataset.id) });
@@ -71,7 +99,7 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
           ? {
               ...s,
               tiltseries: applyDefaults(TILTSERIES_FIELDS, session.tiltseries_metadata ?? {}),
-              tomogram: applyDefaults(TOMOGRAM_FIELDS, session.tomogram_metadata ?? {}),
+              tomograms: toTomograms(session.tomogram_metadata),
               lastAutofillAt: session.last_autofill_at ?? s.lastAutofillAt,
             }
           : s
@@ -79,20 +107,17 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
     );
   });
 
-  const setField = (key: string, tab: 'tiltseries' | 'tomogram', fieldKey: string, value: FieldValue) => {
-    setSessions((prev) => prev.map((s) => (s.key === key ? { ...s, [tab]: { ...s[tab], [fieldKey]: value } } : s)));
+  const setField = (key: string, tab: TomoTab, fieldKey: string, value: FieldValue) => {
+    setSessions((prev) =>
+      prev.map((s) => {
+        if (s.key !== key) return s;
+        if (tab === 'tiltseries') return { ...s, tiltseries: { ...s.tiltseries, [fieldKey]: value } };
+        return { ...s, tomograms: { ...s.tomograms, [tab]: { ...s.tomograms[tab], [fieldKey]: value } } };
+      })
+    );
   };
 
   const active = sessions.find((s) => s.key === activeKey) ?? sessions[0];
-
-  const attempted = useRef<Set<number>>(new Set());
-  const { mutate: runAutofill } = autofill;
-  useEffect(() => {
-    if (readOnly || !active?.id || active.lastAutofillAt || !active.aretomoRun) return;
-    if (attempted.current.has(active.id)) return;
-    attempted.current.add(active.id);
-    runAutofill(active.id);
-  }, [active?.id, active?.lastAutofillAt, active?.aretomoRun, readOnly, runAutofill]);
 
   if (sessions.length === 0) {
     return <Alert severity="info">Add imaging sessions on the Sources step first.</Alert>;
