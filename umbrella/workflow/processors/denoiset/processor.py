@@ -129,7 +129,11 @@ class DenoisETProcessor(BaseProcessor):
         session_name = run_context.msi_session.name
         denoise_run = run_context.run_number
 
-        base_path = f"{self.get_processing_base_path()}/{session_name}/{denoise_run}"
+        root = self.get_processing_base_path(
+            scope=run_context.msi_session.session_plan.scope.name,
+            cluster=run_context.cluster_id,
+        )
+        base_path = f"{root}/{session_name}/{denoise_run}"
 
         return [
             {

@@ -448,30 +448,32 @@ class BaseProcessor(ABC):
 
         return ProcSoftware.objects.filter(processor_class=self.name).first()
 
-    def _configured_directory(self, field: str) -> str:
-        """A remote directory this processor's ProcSoftware row must supply."""
+    def _software_row(self):
+        """This processor's ProcSoftware row."""
         row = self._proc_software()
-        value = getattr(row, field, None)
-        if not value:
+        if row is None:
             raise ImproperlyConfigured(
-                f"ProcSoftware.{field} is unset for {self.name!r}. "
-                f"Set it in the admin under Processes → Proc softwares.",
+                f"No ProcSoftware row for processor {self.name!r}; it has not synced yet.",
             )
-        return value.rstrip("/")
+        return row
 
-    def get_script_directory(self) -> str:
-        """
-        Get the remote directory where scripts should be uploaded.
-        """
-        return self._configured_directory("script_directory")
+    def _resolve_root(self, kind: str, override, dirname: str, scope: str, cluster=None) -> str:
+        from stores.paths import resolve_dir, resolve_template
 
-    def get_processing_base_path(self) -> str:
-        """
-        Get the base processing path for this processor (used by syncers).
+        context = {"scope": scope, "proc_software": dirname}
+        if override is not None:
+            return resolve_template(override, **context).rstrip("/")
+        return resolve_dir(kind, cluster=cluster, **context).rstrip("/")
 
-        The root runs are written under, e.g. <root>/aretomo3 holding <session>/<run>/.
-        """
-        return self._configured_directory("processing_directory")
+    def get_script_directory(self, scope: str, cluster=None) -> str:
+        """The remote directory scripts are uploaded to, for sessions on `scope`."""
+        software = self._software_row()
+        return self._resolve_root("script_dir", software.script_dir, software.dirname, scope, cluster)
+
+    def get_processing_base_path(self, scope: str, cluster=None) -> str:
+        """The root this software's runs live under for `scope`'s sessions (used by syncers)."""
+        software = self._software_row()
+        return self._resolve_root("processing_root", software.processing_root, software.dirname, scope, cluster)
 
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
@@ -1545,9 +1547,13 @@ class BaseProcessor(ABC):
         """
         from processes.tasks import start_syncer_monitoring
 
-        # Use get_processing_base_path() if no explicit base_path provided
+        # Resolved per run: the session pins the scope, so each run's syncer watches the
+        # root its own job actually writes under.
         if base_path is None:
-            base_path = self.get_processing_base_path()
+            base_path = self.get_processing_base_path(
+                scope=run_context.msi_session.session_plan.scope.name,
+                cluster=run_context.cluster_id,
+            )
 
         try:
             task_id = start_syncer_monitoring(

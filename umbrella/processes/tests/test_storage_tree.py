@@ -5,6 +5,7 @@ Tests for the storage tree builder
 from datetime import datetime, timezone
 
 import pytest
+from stores.models import PathType
 from tem.models import MsiSession
 
 from processes.models import (
@@ -44,7 +45,6 @@ def software(db):
             name=name,
             version="test",
             storage_dirname=name,
-            script_directory=f"{BASE}/{name}/scripts",
         )
     ProcSoftware.objects.create(name="pytom", version="test", storage_dirname="pytom")
     return ProcSoftware.objects.all()
@@ -124,9 +124,9 @@ class TestSegmentParsing:
         """
         The script upload directory sits in the session position.
 
-        Recognised from ProcSoftware.script_directory rather than a hardcoded
-        name, so a deployment that uploads somewhere else works without a code
-        change.
+        Recognised from the script_dir template's last segment (stores/0022) rather
+        than a hardcoded name, so a deployment that uploads somewhere else works
+        without a code change.
         """
         make_dir(f"{BASE}/aretomo3/scripts", size=10)
         make_dir(f"{BASE}/aretomo3/scripts/pyConvert/lib/python3.10/site-packages", size=90)
@@ -137,12 +137,11 @@ class TestSegmentParsing:
         leaves = leaves_by_key(survey)
         assert set(leaves) == {("aretomo3", "26mar02a", "run001")}
 
-    def test_scripts_excluded_for_software_with_no_script_directory(self, survey, software, make_dir):
+    def test_scripts_excluded_for_every_software(self, survey, software, make_dir):
         """
-        pytom has a NULL script_directory but a real pytom/scripts holding 15.7 GB.
-
-        Matching exact script_directory prefixes would miss it, so the segment
-        name is taken from whichever rows do set the field and applied to all.
+        pytom has a real pytom/scripts holding 15.7 GB but is not an Embrella-run
+        processor. The segment name comes from the template, so it applies to every
+        software's tree alike.
         """
         make_dir(f"{BASE}/pytom/scripts", size=15_700)
         make_dir(f"{BASE}/pytom/26mar02a/run001", size=500)
@@ -153,7 +152,9 @@ class TestSegmentParsing:
 
     def test_scripts_directory_name_comes_from_the_database(self, survey, software, make_dir):
         """A deployment uploading to `bin` instead of `scripts` needs no code change."""
-        ProcSoftware.objects.filter(name="aretomo3").update(script_directory=f"{BASE}/aretomo3/bin")
+        PathType.objects.filter(data_kind__data_type="script_dir").update(
+            overlay_path="/hpc/{scope}.processing/{proc_software}/bin"
+        )
         make_dir(f"{BASE}/aretomo3/bin/whatever", size=90)
         make_dir(f"{BASE}/aretomo3/26mar02a/run001", size=500)
 

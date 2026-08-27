@@ -38,7 +38,6 @@ def software(db):
             name=name,
             version="test",
             storage_dirname=name,
-            script_directory=f"{BASE}/{name}/scripts",
         )
     return ProcSoftware.objects.all()
 

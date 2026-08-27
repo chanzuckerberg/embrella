@@ -66,12 +66,12 @@ class ProcSoftware(models.Model):
     """
     A software program started with the same command with different options.
 
-    New fields for generic pipeline execution:
+    Fields:
     - processor_class: Python class name for execution (e.g., 'aretomo3')
     - default_cluster: Default cluster for job submission ('czii' or 'bruno')
     - allowed_clusters: List of clusters this software can run on
-    - script_directory: Remote directory for script uploads
-    - processing_directory: Remote root this software's runs are written under
+    - processing_root: Optional PathType to directory template
+    - script_dir: Optional PathType to script location
     """
 
     name = models.CharField(
@@ -106,21 +106,6 @@ class ProcSoftware(models.Model):
         blank=True,
         help_text='List of cluster IDs this software can run on (e.g., ["czii", "bruno"]). Empty means all clusters allowed.',
     )
-    script_directory = models.CharField(
-        max_length=256,
-        null=True,
-        blank=True,
-        help_text="Remote script directory (e.g., /hpc/projects/.../aretomo3/scripts)",
-    )
-    processing_directory = models.CharField(
-        max_length=256,
-        blank=True,
-        default="",
-        help_text=(
-            "Remote root this software's runs are written under, scanned by the syncers "
-            "(e.g., /hpc/projects/.../aretomo3)."
-        ),
-    )
     storage_dirname = models.CharField(
         max_length=64,
         blank=True,
@@ -130,6 +115,30 @@ class ProcSoftware(models.Model):
             "Directory on the cluster this software writes into, used to group the Storage "
             "Explorer. Usually the same as name, but not always: both copick sub-processors "
             "write into 'copick'. Maintained by hand in the admin; blank falls back to name."
+        ),
+    )
+    # PROTECT like every path FK here: SET_NULL is how the None-glob bug arose, and a
+    # deleted template must not silently revert a software to the shared layout.
+    processing_root = models.ForeignKey(
+        PathType,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="processing_root_of",
+        help_text=(
+            "Directory template for this software's runs, when they live outside the "
+            "standard tree. Blank = the shared processing_root template."
+        ),
+    )
+    script_dir = models.ForeignKey(
+        PathType,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="script_dir_of",
+        help_text=(
+            "Directory template for this software's uploaded scripts, when they live "
+            "outside the standard tree. Blank = the shared script_dir template."
         ),
     )
     active = models.BooleanField(

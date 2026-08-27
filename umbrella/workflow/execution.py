@@ -135,7 +135,10 @@ class PipelineExecutor:
         submitter = RemoteJobSubmitter(
             cluster_id=context.cluster_id,
             auth=auth,
-            remote_script_dir=processor.get_script_directory(),
+            remote_script_dir=processor.get_script_directory(
+                scope=context.msi_session.session_plan.scope.name,
+                cluster=context.cluster_id,
+            ),
         )
 
         try:

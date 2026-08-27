@@ -11,8 +11,6 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
-OPERATOR_OWNED_FIELDS = frozenset({"script_directory"})
-
 
 class WorkflowConfig(AppConfig):
     """
@@ -161,8 +159,6 @@ class WorkflowConfig(AppConfig):
             )
 
         for field, value in software_fields.items():
-            if field in OPERATOR_OWNED_FIELDS and getattr(proc_software, field, None):
-                continue
             setattr(proc_software, field, value)
         proc_software.save()
 

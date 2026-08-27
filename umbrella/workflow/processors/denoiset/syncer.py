@@ -33,10 +33,22 @@ class DenoiseSyncer(syncers.ProcessSyncer):
 
 
 if __name__ == "__main__":
+    # spawned by trigger_syncer / job_api with --session/--run, or run by hand for a one-off re-sync.
+    import argparse
+
     from workflow.processors import get_processor
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scope", help="Microscope.name, optional")
+    parser.add_argument("--session", help="msi session name")
+    args, _ = parser.parse_known_args()
+
+    scope = args.scope or syncers.scope_for_session(args.session or "")
+    if not scope:
+        parser.error("--scope is required when --session is missing or unknown")
+
     syncer = DenoiseSyncer(
-        base_path=get_processor("denoiset").get_processing_base_path(),
+        base_path=get_processor("denoiset").get_processing_base_path(scope=scope),
         log_dir=os.path.join(os.path.dirname(__file__), "logs"),
     )
     sys.exit(0 if syncer.run() else 1)

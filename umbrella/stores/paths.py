@@ -41,6 +41,17 @@ def resolve_dir(kind, *, cluster=None, strict=True, **context):
     return resolved
 
 
+def resolve_template(path_type, *, strict=True, **context):
+    """Resolve one specific PathType row -- for callers holding an FK rather than a kind.
+
+    The override rung of two-rung resolution; `resolve_dir` is the kind-default rung.
+    """
+    resolved = fill_place_holders(path_type.overlay_path, context)
+    if strict:
+        assert_fully_resolved(resolved, describe=f"PathType {path_type.pk}")
+    return resolved
+
+
 def assert_fully_resolved(resolved, *, describe):
     """Raise unless every `{token}` in `resolved` was substituted.
 

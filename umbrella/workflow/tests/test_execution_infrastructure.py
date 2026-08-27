@@ -177,7 +177,6 @@ def test_proc_software(db, test_task):
         version="1.0.0",
         processor_class="test_processor",
         default_cluster="czii",
-        script_directory="/test/scripts",
     )
     software.capable_tasks.add(test_task)
     return software

@@ -25,19 +25,20 @@ def script_dir_segments():
     """
     Directory names that hold uploaded SLURM scripts rather than a session.
 
-    Derived from ProcSoftware.script_directory
+    Derived from the `script_dir` templates: their last path segment is token-free
+    ("scripts"), so no scope or software substitution is needed to know the name.
     """
+    from stores.models import PathType
+
     segments = {
-        basename(script_dir.rstrip("/"))
-        for script_dir in ProcSoftware.objects.exclude(script_directory__isnull=True)
-        .exclude(script_directory="")
-        .values_list("script_directory", flat=True)
+        basename(overlay.rstrip("/"))
+        for overlay in PathType.objects.filter(data_kind__data_type="script_dir").values_list("overlay_path", flat=True)
     }
     segments.discard("")
 
     if not segments:
         logger.warning(
-            "No ProcSoftware.script_directory is set, so script upload directories cannot be "
+            "No script_dir PathType is configured, so script upload directories cannot be "
             "distinguished from sessions. Expect a spurious 'scripts' session in the tree.",
         )
     return segments

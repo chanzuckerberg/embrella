@@ -47,10 +47,9 @@ class ProcSoftwareAdmin(admin.ModelAdmin):
         "processor_class",
         "default_cluster",
         "storage_dirname",
-        "processing_directory",
-        "script_directory",
     )
     list_editable = ("storage_dirname",)
+    autocomplete_fields = ("processing_root", "script_dir")
     list_filter = ("default_cluster",)
     search_fields = ("name", "processor_class")
     fieldsets = (
@@ -67,10 +66,15 @@ class ProcSoftwareAdmin(admin.ModelAdmin):
                     "processor_class",
                     "default_cluster",
                     "allowed_clusters",
-                    "processing_directory",
-                    "script_directory",
+                    "processing_root",
+                    "script_dir",
                 ),
-                "description": ("Configure how this software runs on clusters."),
+                "description": (
+                    "Configure how this software runs on clusters. Leave the two directory "
+                    "templates blank to use the shared processing_root / script_dir "
+                    "templates (Stores → Path types); set them only for a software whose "
+                    "directories don't follow the standard layout."
+                ),
             },
         ),
         (
