@@ -2,22 +2,19 @@
 
 import { useState } from 'react';
 import { Icon, Button } from '@czi-sds/components';
-import { Alert, Box, Checkbox, CircularProgress, FormControlLabel, Switch, Tab, Tabs, Typography } from '@mui/material';
+import { Alert, Box, CircularProgress, FormControlLabel, Switch, Tab, Tabs, Typography } from '@mui/material';
 
 import type { TiltseriesMetadata, TomogramFlavor, TomogramMetadata } from '../../types';
-import { TOMOGRAM_FLAVORS } from '../../types';
-import { MetadataRow, type FieldValue } from './MetadataRow';
+import type { FieldValue } from './MetadataRow';
+import { FieldGrid, NothingToFix } from './FieldGrid';
+import { TomogramPanel } from './TomogramPanel';
 import { YamlPreview } from './YamlPreview';
 import {
-  autofilledValue,
   countIssues,
   countTomogramIssues,
   groupBySection,
   isIssue,
-  perFlavorTomogramFields,
-  provenance,
   SECTION_SOURCE,
-  SHARED_TOMOGRAM_FIELDS,
   TILTSERIES_FIELDS,
   type FieldDef,
 } from './fields';
@@ -33,13 +30,9 @@ export interface SessionMeta {
   lastAutofillAt?: string | null;
 }
 
-type TabKey = 'tiltseries' | TomogramFlavor;
+// Field-change target: tilt-series, or a specific tomogram flavor. Shared with AutofillStep's setField.
+export type TabKey = 'tiltseries' | TomogramFlavor;
 type ViewTab = 'tiltseries' | 'tomograms';
-
-const FLAVOR_LABEL: Record<TomogramFlavor, string> = {
-  denoised: 'Denoised',
-  filtered: 'Filtered',
-};
 
 function tabLabel(name: string, issues: number) {
   return (
@@ -73,11 +66,7 @@ function MetadataTable({
 }) {
   const visible = showOnlyIssues ? fields.filter((f) => isIssue(f, meta as never)) : fields;
   if (visible.length === 0) {
-    return (
-      <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-        Nothing to fix here - everything’s filled in.
-      </Typography>
-    );
+    return <NothingToFix />;
   }
 
   return (
@@ -100,158 +89,14 @@ function MetadataTable({
                 </Box>
               )}
             </Typography>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: cols === 2 ? { xs: '1fr', md: '1fr 1fr' } : '1fr',
-                columnGap: { xs: 2, md: 5 },
-                rowGap: 1.25,
-                alignItems: 'center',
-              }}
-            >
-              {group.fields.map((field) => (
-                <MetadataRow
-                  key={field.key}
-                  field={field}
-                  value={(meta as Record<string, FieldValue>)[field.key]}
-                  provenance={provenance(field, meta as never)}
-                  original={autofilledValue(field, meta as never)}
-                  readOnly={readOnly}
-                  loading={loading}
-                  onChange={(v) => onChange(field.key, v)}
-                />
-              ))}
-            </Box>
-          </Box>
-        );
-      })}
-    </Box>
-  );
-}
-
-const FLAVOR_FILE_SUFFIX: Record<TomogramFlavor, string> = {
-  denoised: '_Vol.mrc',
-  filtered: '_dctf_Vol.mrc',
-};
-
-function TomogramPanel({
-  tomograms,
-  readOnly,
-  loading,
-  columns,
-  runName,
-  showOnlyIssues,
-  onShared,
-  onFlavor,
-}: {
-  tomograms: Record<TomogramFlavor, TomogramMetadata>;
-  readOnly: boolean;
-  loading: boolean;
-  columns: 1 | 2;
-  runName: string;
-  showOnlyIssues: boolean;
-  onShared: (key: string, value: FieldValue) => void;
-  onFlavor: (flavor: TomogramFlavor, key: string, value: FieldValue) => void;
-}) {
-  const shared = tomograms.denoised;
-  const gridCols = columns === 2 ? { xs: '1fr', md: '1fr 1fr' } : '1fr';
-
-  const sharedVisible = SHARED_TOMOGRAM_FIELDS.filter((f) => !showOnlyIssues || isIssue(f, shared as never));
-  const flavorFields = (flavor: TomogramFlavor) =>
-    perFlavorTomogramFields(flavor).filter((f) => !showOnlyIssues || isIssue(f, tomograms[flavor] as never));
-
-  if (showOnlyIssues && sharedVisible.length === 0 && TOMOGRAM_FLAVORS.every((f) => flavorFields(f).length === 0)) {
-    return (
-      <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-        Nothing to fix here - everything’s filled in.
-      </Typography>
-    );
-  }
-
-  const gridSx = {
-    display: 'grid',
-    gridTemplateColumns: gridCols,
-    columnGap: { xs: 2, md: 5 },
-    rowGap: 1.25,
-    alignItems: 'center',
-  } as const;
-
-  return (
-    <Box sx={{ mt: 0.5 }}>
-      {sharedVisible.length > 0 && (
-        <>
-          <Typography
-            variant="overline"
-            sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1 }}
-          >
-            RECONSTRUCTION
-            <Box
-              component="span"
-              sx={{ ml: 1, textTransform: 'none', letterSpacing: 0, color: 'text.disabled', fontWeight: 400 }}
-            >
-              applies to every tomogram in this session
-            </Box>
-          </Typography>
-          <Box sx={{ ...gridSx, mb: 3 }}>
-            {sharedVisible.map((field) => (
-              <MetadataRow
-                key={field.key}
-                field={field}
-                value={(shared as Record<string, FieldValue>)[field.key]}
-                provenance={provenance(field, shared as never)}
-                original={autofilledValue(field, shared as never)}
-                readOnly={readOnly}
-                loading={loading}
-                onChange={(v) => onShared(field.key, v)}
-              />
-            ))}
-          </Box>
-        </>
-      )}
-
-      {TOMOGRAM_FLAVORS.map((flavor) => {
-        const fields = flavorFields(flavor);
-        if (fields.length === 0) return null;
-        return (
-          <Box key={flavor} sx={{ mb: 2.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
-              <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary' }}>
-                {FLAVOR_LABEL[flavor].toUpperCase()}
-                <Box
-                  component="span"
-                  sx={{ ml: 1, textTransform: 'none', letterSpacing: 0, color: 'text.disabled', fontWeight: 400 }}
-                >
-                  · {runName ? `${runName}${FLAVOR_FILE_SUFFIX[flavor]}` : `*${FLAVOR_FILE_SUFFIX[flavor]}`}
-                </Box>
-              </Typography>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    size="small"
-                    checked={tomograms[flavor].is_visualization_default === true}
-                    disabled={readOnly}
-                    onChange={(e) => onFlavor(flavor, 'is_visualization_default', e.target.checked)}
-                    sx={{ p: 0.5 }}
-                  />
-                }
-                label={<Typography variant="caption">is_visualization_default</Typography>}
-                sx={{ m: 0 }}
-              />
-            </Box>
-            <Box sx={gridSx}>
-              {fields.map((field) => (
-                <MetadataRow
-                  key={field.key}
-                  field={field}
-                  value={(tomograms[flavor] as Record<string, FieldValue>)[field.key]}
-                  provenance={provenance(field, tomograms[flavor] as never)}
-                  original={autofilledValue(field, tomograms[flavor] as never)}
-                  readOnly={readOnly}
-                  loading={loading}
-                  onChange={(v) => onFlavor(flavor, field.key, v)}
-                />
-              ))}
-            </Box>
+            <FieldGrid
+              fields={group.fields}
+              meta={meta as Record<string, FieldValue>}
+              columns={cols}
+              readOnly={readOnly}
+              loading={loading}
+              onChange={onChange}
+            />
           </Box>
         );
       })}
@@ -412,7 +257,6 @@ export function SessionMetadataCard({
               }}
               onFlavor={(flavor, key, v) => {
                 onFieldChange(flavor, key, v);
-                // Only one flavor can be the visualization default — selecting one clears the other.
                 if (key === 'is_visualization_default' && v === true) {
                   const other = flavor === 'denoised' ? 'filtered' : 'denoised';
                   onFieldChange(other, 'is_visualization_default', false);

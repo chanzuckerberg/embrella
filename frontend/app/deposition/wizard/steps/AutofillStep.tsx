@@ -9,7 +9,7 @@ import { updateSession } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
 import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useAutoFill } from '../../hooks/useAutoFill';
-import { SessionMetadataCard, type SessionMeta } from '../../components/autofill/SessionMetadataCard';
+import { SessionMetadataCard, type SessionMeta, type TabKey } from '../../components/autofill/SessionMetadataCard';
 import type { FieldValue } from '../../components/autofill/MetadataRow';
 import {
   applyDefaults,
@@ -21,8 +21,6 @@ import {
 import type { Dataset, TomogramFlavor, TomogramMetadata } from '../../types';
 import { TOMOGRAM_FLAVORS } from '../../types';
 import type { StepProps } from '../wizardTypes';
-
-type TomoTab = 'tiltseries' | TomogramFlavor;
 
 function toTomograms(list?: TomogramMetadata[] | null): Record<TomogramFlavor, TomogramMetadata> {
   const byFlavor = new Map((list ?? []).map((t) => [t.flavor, t]));
@@ -60,10 +58,9 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
   const queryClient = useQueryClient();
   const readOnly = readOnlyProp || dataset.status !== 'draft';
   const [sessions, setSessions] = useState<SessionMeta[]>(() => toSessionMeta(dataset));
-  const [activeKey, setActiveKey] = useState<string>(() => {
-    const initial = toSessionMeta(dataset);
-    return (initial.find((s) => s.aretomoRun) ?? initial[0])?.key ?? '';
-  });
+  const [activeKey, setActiveKey] = useState<string>(
+    () => (sessions.find((s) => s.aretomoRun) ?? sessions[0])?.key ?? ''
+  );
 
   const save = useCallback(
     async (state: SessionMeta[]) => {
@@ -107,7 +104,7 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
     );
   });
 
-  const setField = (key: string, tab: TomoTab, fieldKey: string, value: FieldValue) => {
+  const setField = (key: string, tab: TabKey, fieldKey: string, value: FieldValue) => {
     setSessions((prev) =>
       prev.map((s) => {
         if (s.key !== key) return s;
