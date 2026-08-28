@@ -113,6 +113,10 @@ SOFTWARE_PATH_ROLES = ("frames", "sums", "mdocs", "parents", "atlas")
 INHERITED_ROLE = "atlas"
 RESOLVED_ROLES = tuple(role for role in SOFTWARE_PATH_ROLES if role != INHERITED_ROLE)
 
+# The plan's tilt-series stack naming
+STEM_ROLE = "tilt_series"
+BINDING_ROLES = SOFTWARE_PATH_ROLES + (STEM_ROLE,)
+
 
 class Software(models.Model):
     """
@@ -211,7 +215,7 @@ class SessionPlanPathBinding(models.Model):
     """
 
     session_plan = models.ForeignKey(SessionPlan, related_name="path_bindings", on_delete=models.CASCADE)
-    role = models.CharField(max_length=8, choices=[(r, r) for r in SOFTWARE_PATH_ROLES])
+    role = models.CharField(max_length=16, choices=[(r, r) for r in BINDING_ROLES])
     path_type = models.ForeignKey(
         PathType,
         on_delete=models.PROTECT,
@@ -253,11 +257,18 @@ def resolve_software_path_type(plan, role):
     return plan.software.role_path_types[role]
 
 
+def resolve_plan_file_pattern(plan, role):
+    """The plan-bound FilePattern for `role`, or None."""
+    binding = _active_binding(plan, role)
+    return binding.file_pattern if binding else None
+
+
 def resolve_software_file_pattern(plan, role):
     """The FilePattern for `role` on `plan`: binding first, then the directory's own."""
-    binding = _active_binding(plan, role)
-    if binding and binding.file_pattern:
-        return binding.file_pattern
+    bound = resolve_plan_file_pattern(plan, role)
+    if bound:
+        return bound
+
     path_type = resolve_software_path_type(plan, role)
     return path_type.file_pattern if path_type else None
 
