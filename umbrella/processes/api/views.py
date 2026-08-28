@@ -847,16 +847,12 @@ class ReviewTomogramView(View):
             session_id = tomogram.session.name if tomogram.session else None
             run_id = tomogram.run_id if tomogram.run_id else None
 
-            # Construct zarr path based on reconstruction type
+            # The zarr URL is the resolved run directory plus the file path the syncer
+            # discovered -- display replays discovery, no filename convention here.
             review = tomogram.review
-            if review.reconstruction_type.lower() == "sart":
-                vol_suffix = "vol003"
-                job_name = "aretomo3"
-            elif review.reconstruction_type.lower() == "dctf":
-                vol_suffix = "vol001"
+            if review.reconstruction_type.lower() in ("sart", "dctf"):
                 job_name = "aretomo3"
             else:
-                vol_suffix = ""  # denoised
                 job_name = "denoise"
 
             # Resolve zarr URL against the review's cluster (falls back to the default cluster if not set).
@@ -867,27 +863,25 @@ class ReviewTomogramView(View):
                     {"error": "No default cluster is configured. Set one in the admin (Stores → Clusters)."},
                     status=500,
                 )
-            response_data["zarrPath"] = resolve_review_path(
+            zarr_dir = resolve_review_path(
                 "zarr_url",
                 cluster=cluster,
                 msi_session=tomogram.session,
                 proc_software=job_name,
                 proc_run=run_id,
-                vol_suffix=vol_suffix,
-                position=tomogram.position_id,
             )
+            response_data["zarrPath"] = zarr_dir + tomogram.file_path
             response_data["cluster"] = cluster.cluster_id
 
-            zarr_fetch_url = resolve_review_path(
+            zarr_fetch_dir = resolve_review_path(
                 "zarr_url",
                 cluster=cluster,
                 msi_session=tomogram.session,
                 proc_software=job_name,
                 proc_run=run_id,
-                vol_suffix=vol_suffix,
-                position=tomogram.position_id,
                 backend_fetch=True,
             )
+            zarr_fetch_url = zarr_fetch_dir + tomogram.file_path
 
             logger.debug(f"Computing contrast limits for {review.reconstruction_type} reconstruction: {zarr_fetch_url}")
             try:

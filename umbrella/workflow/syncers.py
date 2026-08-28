@@ -12,6 +12,7 @@ from datetime import datetime
 
 from django.http import HttpRequest
 from processes.models import PipeExecution, Review, ReviewTomogram, SyncerLog, SyncerProcess
+from stores.models import FilePattern
 from tem.models import MsiSession
 
 from common import clusterio
@@ -112,47 +113,23 @@ def cleanup_transient_syncer_logs(job_id):
     return {"deleted_count": deleted_count}
 
 
-# TODO: update by grabing by plan, role. Syncer will need the session plan
-# The canonical reconstruction FilePattern, seeded by stores/0021. This constant and the
-# migration's must match; the row is a code-shipped contract, not free-form config.
-REC_PATTERN_LABEL = "{position}_Vol.zarr"
-
-
-def rec_file_pattern():
-    """The FilePattern naming reconstruction volumes. Loud when the row is gone."""
-    from django.core.exceptions import ImproperlyConfigured
-    from stores.models import FilePattern
-
-    try:
-        return FilePattern.objects.get(data_kind__data_type="rec", label=REC_PATTERN_LABEL)
-    except FilePattern.DoesNotExist:
-        raise ImproperlyConfigured(
-            f"FilePattern (rec, {REC_PATTERN_LABEL!r}) is missing -- seeded by stores/0021 and read by "
-            f"the syncers and the copick job template. Restore it under Stores → File patterns."
-        ) from None
-
-
-def parse_zarr_filename(filename, pattern=None):
+def parse_zarr_filename(filename: str, pattern: FilePattern) -> str | None:
     """The position id in a reconstruction basename, or None when it isn't one.
 
-    Pass `pattern` when calling in a loop -- each default lookup is a query. Replaced
-    three divergent hardcoded regexes; this one allows any Position_1_2_3... depth.
+    `pattern` is the owning software's reconstruction FilePattern
     """
-    groups = (pattern or rec_file_pattern()).match(filename)
+    groups = pattern.match(filename)
     return groups["position"] if groups else None
 
 
-def check_zarr_exists(full_path, cluster_id=None):
+def check_zarr_exists(full_path: str, pattern: FilePattern, cluster_id=None) -> tuple[list[tuple[str, str]], int]:
     """((basename, position_id) pairs, count of .zarr entries seen) for a run directory."""
-    # TODO: legacy lister -- replace with clusterio.list_files(full_path,
-    # rec_file_pattern().list_glob, include_dirs=True), which also fixes `full_path`
     # being unquoted in the shell command below.
     from processes.services.cluster_resolver import get_default_cluster_id
 
     cluster_id = cluster_id or get_default_cluster_id()
     found_zarrs = []
     candidates = 0
-    pattern = rec_file_pattern()  # once -- the per-file parse below must not query
     ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
     stdin, stdout, stderr = ssh.exec_command(f"ls {full_path}")
 
@@ -185,6 +162,8 @@ def check_zarr_exists(full_path, cluster_id=None):
 
 
 class ProcessSyncer(object):
+    processor_name = None
+
     def __init__(self, base_path, log_dir):
         self.base_path = base_path
         self.log_dir = log_dir
@@ -193,6 +172,12 @@ class ProcessSyncer(object):
         self._syncer_process = None
         self.job_id = None
         self.cluster_id = None
+
+    def _output_pattern(self) -> FilePattern:
+        """The owning software's rec FilePattern -- resolved once per sync pass."""
+        from workflow.processors import get_processor
+
+        return get_processor(self.processor_name).get_output_pattern("rec")
 
     def _log_to_db(self, action_type: str, message: str, metadata: dict = None):
         """Log syncer action to database."""
@@ -240,7 +225,7 @@ class ProcessSyncer(object):
             except Exception as e:
                 log.warning(f"Failed to mark syncer as {status}: {e}")
 
-    def create_tomogram(self, reconstruction_type, position_id):
+    def create_tomogram(self, reconstruction_type, position_id, file_path, pattern_label=None):
         """Create a ReviewTomogram entry in the database"""
         tomogram_id = generate_uuid()
 
@@ -250,6 +235,7 @@ class ProcessSyncer(object):
             run_id=self.run_id,
             reconstruction_type=reconstruction_type,
             position_id=position_id,  # Using parsed position_id
+            file_path=file_path,
             quality="pending",
         )
         log.info(f"Created tomogram: {tomogram_id} with position_id: {position_id}")
@@ -260,6 +246,8 @@ class ProcessSyncer(object):
                 "tomogram_id": tomogram_id,
                 "position_id": position_id,
                 "reconstruction_type": reconstruction_type,
+                "file_path": file_path,
+                "pattern": pattern_label,
             },
         )
         return tomogram
@@ -303,8 +291,10 @@ class ProcessSyncer(object):
                     },
                 )
 
-    def process_zarr_directory(self, recon_type, path_to_zarrs):
+    def process_zarr_directory(self, recon_type, path_to_zarrs, rel_dir=""):
         """Sync ReviewTomogram rows of `recon_type` against the .zarr files in `path_to_zarrs`.
+
+        `rel_dir` is `path_to_zarrs` relative to the run directory (e.g. "vol003", "vol001" intended for SART
 
         Creates rows for new files; never deletes.
         """
@@ -317,7 +307,8 @@ class ProcessSyncer(object):
             },
         )
 
-        found_zarrs, candidates = check_zarr_exists(path_to_zarrs, cluster_id=self.cluster_id)
+        pattern = self._output_pattern()
+        found_zarrs, candidates = check_zarr_exists(path_to_zarrs, pattern, cluster_id=self.cluster_id)
 
         unmatched = candidates - len(found_zarrs)
         if unmatched:
@@ -352,11 +343,16 @@ class ProcessSyncer(object):
 
         seen = set()
         new_count = 0
-        for _filename, position_id in found_zarrs:
+        for filename, position_id in found_zarrs:
             if position_id in known:
                 seen.add(known[position_id])
             else:
-                tomogram = self.create_tomogram(reconstruction_type=recon_type, position_id=position_id)
+                tomogram = self.create_tomogram(
+                    reconstruction_type=recon_type,
+                    position_id=position_id,
+                    file_path=f"{rel_dir}/{filename}" if rel_dir else filename,
+                    pattern_label=pattern.label,
+                )
                 if tomogram:
                     new_count += 1
                     seen.add(tomogram.tomogram_id)

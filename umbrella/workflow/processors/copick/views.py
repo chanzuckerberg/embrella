@@ -27,6 +27,7 @@ from tem.models import MsiSession
 
 from common import clusterio
 
+from .constants import ImportTomoType
 from .processor import CopickProcessor
 
 logger = logging.getLogger(__name__)
@@ -116,16 +117,14 @@ def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
             # Use the same plan mapping as the legacy implementation
             from processes.models import ProcPlan
 
-            # Get the selected tomogram type to filter runs
-            # If "denoise" → only show DenoisET runs
-            # If "dctf", "sart", or "wbp" → only show AreTomo3 runs
-            # If not provided → show both (backward compatibility)
+            # Filter runs to the software owning the selected type (the mapping lives
+            # on ImportTomoType.source_software). Not provided → show both.
             import_tomo_type = request.GET.get("import_tomo_type", "").lower()
 
             options["import_tomogram_run"] = []
 
-            # Get AreTomo3 runs (for dctf, sart, wbp types)
-            if not import_tomo_type or import_tomo_type in ["dctf", "sart", "wbp"]:
+            # Get AreTomo3 runs (for the AreTomo3-owned types)
+            if not import_tomo_type or import_tomo_type in ImportTomoType.values_for("aretomo3"):
                 try:
                     aretomo_plan = ProcPlan.objects.get(name="czii-live")
                     aretomo_runs = ProcRun.objects.filter(msi_session=session, proc_plan=aretomo_plan).order_by(
@@ -146,7 +145,7 @@ def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
                     pass
 
             # Get DenoisET runs (for denoise type)
-            if not import_tomo_type or import_tomo_type == "denoise":
+            if not import_tomo_type or import_tomo_type == ImportTomoType.DENOISE:
                 try:
                     denoise_plan = ProcPlan.objects.get(name="czii-denoise")
                     denoise_runs = ProcRun.objects.filter(msi_session=session, proc_plan=denoise_plan).order_by(

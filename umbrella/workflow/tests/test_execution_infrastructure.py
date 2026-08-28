@@ -410,8 +410,16 @@ class TestPipelineExecutor:
         assert execution.pipe_in_plan == test_pipe_in_plan
         assert execution.status == "submitted"
         assert execution.job_id == "123456"
-        # Executor also stamps cluster_id on parameters for downstream tracking.
-        assert execution.parameters == {"test_param": 50, "cluster_id": "czii"}
+        # Executor also stamps cluster_id and the resolved paths on parameters for
+        # downstream tracking.
+        assert execution.parameters == {
+            "test_param": 50,
+            "cluster_id": "czii",
+            "_paths_used": {
+                "processing_base_path": "/hpc/projects/group.czii/krios1.processing/test_software",
+                "output_patterns": {},
+            },
+        }
 
     @patch("workflow.execution.RemoteJobSubmitter")
     def test_execute_pipe_stamps_bruno_cluster_id(
@@ -444,7 +452,7 @@ class TestPipelineExecutor:
 
         # PipeExecution.parameters carries cluster_id=bruno for the syncer/metadata views.
         execution = PipeExecution.objects.get(id=result["pipe_execution_id"])
-        assert execution.parameters == {"test_param": 10, "cluster_id": "bruno"}
+        assert execution.parameters["cluster_id"] == "bruno"
 
     def test_execute_pipe_validation_fails(
         self,

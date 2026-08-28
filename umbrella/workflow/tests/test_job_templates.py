@@ -8,10 +8,11 @@ row moves every script, and a second scope needs zero template edits.
 import pytest
 from django.contrib.auth.models import User
 from processes.models import ProcSoftware
-from stores.models import DataKind, PathType
+from stores.models import DataKind, FilePattern, PathType
 from tem.models import Camera, ImagingWorkflow, Microscope, MsiSession, SessionPlan, Software
 from workflow.context import RunContext
 from workflow.processors import get_processor
+from workflow.processors.copick.constants import ImportTomoType
 
 pytestmark = pytest.mark.django_db
 
@@ -44,9 +45,13 @@ def session(db):
 
 @pytest.fixture
 def software_rows(db):
-    """The ProcSoftware rows the roots resolve {proc_software} from."""
+    """The ProcSoftware rows the roots resolve {proc_software} from, with the rec
+    pattern used"""
+    rec_pattern = FilePattern.objects.get(data_kind__data_type="rec")
     for processor_class, name in (("aretomo3", "aretomo3"), ("denoiset", "denoise"), ("copick", "copick")):
-        ProcSoftware.objects.update_or_create(processor_class=processor_class, defaults={"name": name})
+        software, _ = ProcSoftware.objects.update_or_create(processor_class=processor_class, defaults={"name": name})
+        if processor_class in ("aretomo3", "denoiset"):
+            software.output_patterns.add(rec_pattern)
 
 
 @pytest.fixture
@@ -108,6 +113,14 @@ class TestAretomo3Script:
 
 class TestCopickScript:
     CREATE_PARAMS = {"operation": "create", "import_tomo_type": "dctf", "import_tomogram_run": "run001"}
+
+    def test_import_tomo_types_match_the_schema_enum(self):
+        """A type added to schema.yaml must be mapped to its source software."""
+        schema = get_processor("copick").get_parameter_schema()
+
+        assert set(schema["properties"]["import_tomo_type"]["enum"]) == {t.value for t in ImportTomoType}
+        for tomo_type in ImportTomoType:
+            assert tomo_type.source_software in ("aretomo3", "denoiset")
 
     def test_project_dir_is_copicks_root(self, run_context):
         script = get_processor("copick").render_script(dict(self.CREATE_PARAMS), run_context)

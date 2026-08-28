@@ -21,6 +21,8 @@ from workflow.syncers import log
 
 
 class AretomoSyncer(syncers.ProcessSyncer):
+    processor_name = "aretomo3"
+
     def sync_results(self):
         """Main sync function to be called by cron job"""
         log.info(f"Processing session: {self.session.name}, run: {self.run_id}")
@@ -34,7 +36,7 @@ class AretomoSyncer(syncers.ProcessSyncer):
         for recon_type in ["DCTF", "SART"]:
             vol_dir = recon_type_to_vol_dir[recon_type]
             full_path = f"{self.session_path}/{vol_dir}" if vol_dir != "" else self.session_path
-            self.process_zarr_directory(recon_type=recon_type, path_to_zarrs=full_path)
+            self.process_zarr_directory(recon_type=recon_type, path_to_zarrs=full_path, rel_dir=vol_dir)
 
         # Update review total counts for this session/run combination
         self.update_review_total_counts()

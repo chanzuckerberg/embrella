@@ -174,6 +174,13 @@ class PipelineExecutor:
         if hetjob_info:
             parameters_with_metadata["_hetjob_info"] = hetjob_info
 
+        # Freeze what path resolution produced: PathType/FilePattern rows are
+        # operator-mutable, so the run keeps its own record of the config it used.
+        try:
+            parameters_with_metadata["_paths_used"] = processor.get_paths_used(context)
+        except Exception as e:
+            logger.warning(f"Error capturing the paths used: {e}", exc_info=True)
+
         pipe_exec = self._create_execution_record(
             pipe_in_plan,
             proc_run,

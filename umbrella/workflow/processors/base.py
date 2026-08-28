@@ -481,6 +481,24 @@ class BaseProcessor(ABC):
 
         return resolve_dir("software_root", cluster=cluster).rstrip("/")
 
+    def get_output_pattern(self, kind: str):
+        """The FilePattern naming this software's output files of `kind` (e.g. "rec")."""
+        from stores.models import DataKind
+
+        if not DataKind.objects.filter(data_type=kind).exists():
+            raise ImproperlyConfigured(
+                f"No DataKind {kind!r} is registered, so no FilePattern can name it. "
+                f"Add the kind under Stores → Data kinds first."
+            )
+
+        patterns = self._software_row().output_patterns.filter(data_kind__data_type=kind)
+        if len(patterns) != 1:
+            raise ImproperlyConfigured(
+                f"ProcSoftware {self.name!r} needs exactly one {kind!r} output pattern "
+                f"(found {len(patterns)}). Bind one under Processes → Proc softwares."
+            )
+        return patterns[0]
+
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
         Get default SLURM options for this processor.
@@ -543,6 +561,16 @@ class BaseProcessor(ABC):
                 }
         """
         return None
+
+    def get_paths_used(self, run_context: "RunContext") -> Dict[str, Any]:
+        """Snapshot of what path resolution produced at submit time."""
+        return {
+            "processing_base_path": self.get_processing_base_path(cluster=run_context.cluster_id),
+            "output_patterns": {
+                pattern.data_kind.data_type: pattern.label
+                for pattern in self._software_row().output_patterns.select_related("data_kind")
+            },
+        }
 
     def get_database_metadata(self) -> Dict[str, Any]:
         """

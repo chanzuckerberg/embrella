@@ -21,6 +21,8 @@ from workflow.syncers import log
 
 
 class DenoiseSyncer(syncers.ProcessSyncer):
+    processor_name = "denoiset"
+
     def sync_results(self):
         """Main sync function to be called by cron job"""
         log.info(f"Processing session: {self.session.name}, run: {self.run_id}")

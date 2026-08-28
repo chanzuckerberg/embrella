@@ -3,10 +3,12 @@
 One constant tree serves every scope; {proc_software} is the only substitution.
 """
 
+from types import SimpleNamespace
+
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 from processes.models import ProcSoftware
-from stores.models import DataKind, PathType
+from stores.models import DataKind, FilePattern, PathType
 from stores.paths import UnresolvedPlaceholderError
 from workflow.processors import get_processor
 
@@ -139,3 +141,45 @@ class TestUnconfiguredIsAnError:
         )
         with pytest.raises(UnresolvedPlaceholderError, match="scope"):
             get_processor("aretomo3").get_processing_base_path()
+
+
+def bind_rec_pattern(software):
+    software.output_patterns.add(FilePattern.objects.get(data_kind__data_type="rec"))
+
+
+class TestOutputPattern:
+    """Software declares its output naming; there is no fallback pattern for the same
+    reason there is no fallback root."""
+
+    def test_resolves_the_bound_pattern(self, templates):
+        bind_rec_pattern(given_software("aretomo3"))
+        assert get_processor("aretomo3").get_output_pattern("rec").label == "{position}_Vol.zarr"
+
+    def test_unbound_kind_raises(self, templates):
+        given_software("aretomo3")
+        with pytest.raises(ImproperlyConfigured, match="'rec' output pattern"):
+            get_processor("aretomo3").get_output_pattern("rec")
+
+    def test_unregistered_kind_raises(self, templates):
+        """A typo'd or missing DataKind fails as "register the kind", not "bind a pattern"."""
+        given_software("aretomo3")
+        with pytest.raises(ImproperlyConfigured, match="No DataKind 'thumb'"):
+            get_processor("aretomo3").get_output_pattern("thumb")
+
+
+class TestPathsUsed:
+    """The snapshot execution.py freezes into PipeExecution.parameters["_paths_used"],
+    so a run keeps its resolved config after the operator edits the template rows."""
+
+    def test_snapshot_names_root_and_bound_patterns(self, templates):
+        bind_rec_pattern(given_software("aretomo3"))
+        info = get_processor("aretomo3").get_paths_used(SimpleNamespace(cluster_id=None))
+        assert info == {
+            "processing_base_path": "/hpc/projects/group.czii/krios1.processing/aretomo3",
+            "output_patterns": {"rec": "{position}_Vol.zarr"},
+        }
+
+    def test_software_without_patterns_snapshots_none(self, templates):
+        given_software("denoiset")
+        info = get_processor("denoiset").get_paths_used(SimpleNamespace(cluster_id=None))
+        assert info["output_patterns"] == {}

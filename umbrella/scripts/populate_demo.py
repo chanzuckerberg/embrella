@@ -93,16 +93,23 @@ METADATA_ONLY_RUNS = [
     # dict(session_name="25aug01a", run_id="run001"),
 ]
 
-# reconstruction_type -> (workflow_segment, vol_suffix), mirroring the runtime
-# resolution in processes/api/views.py: SART/DCTF use the aretomo3 workflow with a
-# vol00x subdir; Denoised uses the denoise workflow with no vol subdir (empty
-# suffix -> a "//" in the zarr path, which is expected). Thumbnails and the metadata
-# summary CSV always resolve under aretomo3 regardless of recon_type.
+# reconstruction_type -> (workflow_segment, vol_suffix), mirroring what the real
+# syncers record: SART/DCTF live under the aretomo3 workflow in a vol00x subdir;
+# Denoised under the denoise workflow directly in the run dir. Thumbnails and the
+# metadata summary CSV always resolve under aretomo3 regardless of recon_type.
 _RECON = {
     "SART": ("aretomo3", "vol003"),
     "DCTF": ("aretomo3", "vol001"),
     "Denoised": ("denoise", ""),
 }
+
+
+def _rec_file_path(recon_type, position):
+    """The run-relative zarr path a real syncer would record for this position."""
+    _, vol_suffix = _RECON[recon_type]
+    basename = f"{position}_Vol.zarr"
+    return f"{vol_suffix}/{basename}" if vol_suffix else basename
+
 
 # Flattened review/metadata URL templates: the migration-seeded versions prefix
 # "{scope}.processing/" — the demo file tree drops that segment. DB-wide: every
@@ -110,7 +117,7 @@ _RECON = {
 _URL_TEMPLATES = {
     "proc_url": "{http_base}{proc_software}/{msi_session}/{proc_run}/",
     "thumb_url": "{http_base}aretomo3/{msi_session}/{proc_run}/{thumb_kind}/",
-    "zarr_url": "{http_base}{proc_software}/{msi_session}/{proc_run}/{vol_suffix}/{position}_Vol.zarr",
+    "zarr_url": "{http_base}{proc_software}/{msi_session}/{proc_run}/",
 }
 
 
@@ -250,6 +257,7 @@ def _seed_tomogram(spec, *, session_plan, user, cluster, proc_plan):
                 run_id=run_id,
                 reconstruction_type=recon_type,
                 position_id=position,
+                file_path=_rec_file_path(recon_type, position),
                 quality="pending",
                 rejection_reasons=[],
                 object_labels=[],
@@ -265,15 +273,11 @@ def _print_summary():
     for spec in DEMO_TOMOGRAMS:
         session_name = spec["session_name"]
         run_id = spec["run_id"]
-        workflow, vol_suffix = _RECON[spec["recon_type"]]
+        workflow, _ = _RECON[spec["recon_type"]]
         # Thumbnails + the metadata summary CSV always live under aretomo3; only the
         # review zarr uses the recon-derived workflow segment (+ vol subdir).
         thumb_base = f"aretomo3/{session_name}/{run_id}"
         zarr_base = f"{workflow}/{session_name}/{run_id}"
-        # Denoised has an empty vol_suffix -> the zarr sits directly under the run dir
-        # (no vol subfolder). The resolved URL has a "//" there, but nginx merges
-        # slashes before serving, so on disk it's a single slash — drop the file here.
-        vol_seg = f"{vol_suffix}/" if vol_suffix else ""
         tag = "" if spec.get("in_metadata", True) else "  (review-only, not on metadata page)"
         print(f"\n  [{spec['review_name']}]  session={session_name} run={run_id} recon={spec['recon_type']}{tag}")
         # Metadata summary + thumbnails only matter for specs shown on the metadata page.
@@ -283,7 +287,7 @@ def _print_summary():
             print(f"    thumbnail grid   : {thumb_base}/thumbnails/<Tilt_Series>.jpeg")
             print(f"                       {thumb_base}/ctf_thumbnails/<Tilt_Series>.jpeg")
         for position in spec["positions"]:
-            print(f"    review zarr      : {zarr_base}/{vol_seg}{position}_Vol.zarr/")
+            print(f"    review zarr      : {zarr_base}/{_rec_file_path(spec['recon_type'], position)}/")
     for spec in METADATA_ONLY_RUNS:
         base = f"aretomo3/{spec['session_name']}/{spec['run_id']}"
         print(f"\n  [metadata-only]  session={spec['session_name']} run={spec['run_id']}")

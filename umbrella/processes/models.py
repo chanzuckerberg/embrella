@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
 from django.utils.timezone import now
-from stores.models import Cluster, DataKind, Path, PathType
+from stores.models import Cluster, DataKind, FilePattern, Path, PathType
 from tem.models import MsiSession, SessionPlan
 
 """
@@ -139,6 +139,16 @@ class ProcSoftware(models.Model):
         help_text=(
             "Directory template for this software's uploaded scripts, when they live "
             "outside the standard tree. Blank = the shared script_dir template."
+        ),
+    )
+    output_patterns = models.ManyToManyField(
+        FilePattern,
+        blank=True,
+        related_name="output_of",
+        help_text=(
+            "How this software names its output files, at most one pattern per data "
+            "kind (e.g. rec volumes, thumbnails, metrics CSV). Read by the syncers and "
+            "job templates through BaseProcessor.get_output_pattern()."
         ),
     )
     active = models.BooleanField(
@@ -864,6 +874,12 @@ class ReviewTomogram(models.Model):
     reconstruction_type = models.CharField(max_length=100, null=True, blank=True)  # e.g., 'WBP', 'SIRT', 'SGD'
 
     position_id = models.CharField(max_length=100)
+    file_path = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="discovered file path relative to the run directory",
+    )
     quality = models.CharField(
         max_length=20,
         choices=[
