@@ -379,33 +379,3 @@ def apply_filters(df, filter_config):
     rejected_df = df[~mask]
 
     return accepted_df, rejected_df
-
-
-def natural_position_sort_key(name):
-    """
-    Custom sort key function for position names.
-
-    Handles names like Position_1, Position_1_1, Position_1_2, etc.
-
-    Args:
-        name: Position name string
-
-    Returns:
-        List of integers for sorting
-    """
-    # Remove 'Position_' prefix and split by underscore
-    parts = name.replace("Position_", "").split("_")
-
-    # Convert each part to integer, defaulting to 0 if conversion fails
-    numbers = []
-    for part in parts:
-        try:
-            numbers.append(int(part))
-        except ValueError:
-            numbers.append(0)
-
-    # Pad with zeros to ensure consistent sorting (for cases with different depths)
-    while len(numbers) < 3:  # Support up to Position_X_Y_Z
-        numbers.append(0)
-
-    return numbers

@@ -17,13 +17,13 @@ from tem.models import MsiSession
 from umbrella_logger import logger
 
 from common.httpio import fetch_remote_text
+from common.sorting import natural_sort_key
 
 from .constants import DATA_COLLECTION_PATH
 from .utils import (
     apply_filters,
     calculate_metric_ranges,
     compute_stats,
-    natural_position_sort_key,
 )
 
 
@@ -231,10 +231,9 @@ def get_metadata_viz_data(request):
             lambda ts: f"{ctf_base_url}{ts}.jpeg",
         )
 
-        # Use the new custom sorting function
         df = df.sort_values(
             by="Tilt_Series",
-            key=lambda col: col.map(natural_position_sort_key),
+            key=lambda col: col.map(natural_sort_key),
         ).reset_index(drop=True)
 
         # Calculate metric ranges before applying filters
