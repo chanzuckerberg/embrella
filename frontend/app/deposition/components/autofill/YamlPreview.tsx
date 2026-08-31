@@ -4,9 +4,7 @@ import { useState } from 'react';
 import { Button } from '@czi-sds/components';
 import { Box, Typography } from '@mui/material';
 
-import { YamlHighlight } from './YamlHighlight';
-
-const EDITOR_BG = '#0d1117';
+import { YamlHighlight, EDITOR_BG } from './YamlHighlight';
 
 export function YamlPreview({
   yaml,

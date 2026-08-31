@@ -93,12 +93,14 @@ function parseBlocks(text: string): RawBlocks {
   return out;
 }
 
-function coerce(field: FieldDef, raw: string): FieldValue {
+const SKIP = Symbol('skip');
+
+function coerce(field: FieldDef, raw: string): FieldValue | typeof SKIP {
   const v = raw.trim();
   if (v === '' || v === 'null') return null;
   if (field.type === 'number') {
     const n = Number(v);
-    return Number.isNaN(n) ? null : n;
+    return Number.isNaN(n) ? SKIP : n;
   }
   if (field.type === 'boolean') return v === 'true';
   return v;
@@ -108,7 +110,9 @@ function pickEditable(fields: FieldDef[], raw: Record<string, string>): Record<s
   const out: Record<string, FieldValue> = {};
   for (const f of fields) {
     if (f.readOnly) continue;
-    if (f.key in raw) out[f.key] = coerce(f, raw[f.key]);
+    if (!(f.key in raw)) continue;
+    const value = coerce(f, raw[f.key]);
+    if (value !== SKIP) out[f.key] = value;
   }
   return out;
 }

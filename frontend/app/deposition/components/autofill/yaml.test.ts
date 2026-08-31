@@ -42,8 +42,8 @@ describe('yamlToSession', () => {
       '    processing: filtered',
     ].join('\n');
     const { shared, perFlavor } = yamlToSession(stray);
-    expect(shared.voxel_spacing).toBe(7.84); 
-    expect('voxel_spacing' in perFlavor.filtered).toBe(false); 
+    expect(shared.voxel_spacing).toBe(7.84);
+    expect('voxel_spacing' in perFlavor.filtered).toBe(false);
   });
 
   it('picks per-flavor fields per flavor with type coercion', () => {
@@ -59,6 +59,13 @@ describe('yamlToSession', () => {
   it('is tolerant of blank lines, comments, and extra whitespace', () => {
     const messy = ['# heading', '', 'tiltseries:', '   acceleration_voltage:   300  ', ''].join('\n');
     expect(yamlToSession(messy).tiltseries.acceleration_voltage).toBe(300);
+  });
+
+  it('skips unparseable numbers but still clears on empty/null', () => {
+    const yaml = ['tiltseries:', '  acceleration_voltage: not-a-number', '  pixel_spacing: null'].join('\n');
+    const { tiltseries } = yamlToSession(yaml);
+    expect('acceleration_voltage' in tiltseries).toBe(false);
+    expect(tiltseries.pixel_spacing).toBeNull();
   });
 
   it('round-trips editable values through sessionToYaml -> yamlToSession', () => {
