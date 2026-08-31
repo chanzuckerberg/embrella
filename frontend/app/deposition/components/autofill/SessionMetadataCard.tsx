@@ -5,6 +5,7 @@ import { Icon, Button } from '@czi-sds/components';
 import { Alert, Box, CircularProgress, FormControlLabel, Switch, Tab, Tabs, Typography } from '@mui/material';
 
 import type { TiltseriesMetadata, TomogramFlavor, TomogramMetadata } from '../../types';
+import { TOMOGRAM_FLAVORS } from '../../types';
 import type { FieldValue } from './MetadataRow';
 import { FieldGrid, NothingToFix } from './FieldGrid';
 import { TomogramPanel } from './TomogramPanel';
@@ -18,7 +19,7 @@ import {
   TILTSERIES_FIELDS,
   type FieldDef,
 } from './fields';
-import { sessionToYaml } from './yaml';
+import { sessionToYaml, yamlToSession } from './yaml';
 
 export interface SessionMeta {
   key: string;
@@ -30,7 +31,6 @@ export interface SessionMeta {
   lastAutofillAt?: string | null;
 }
 
-// Field-change target: tilt-series, or a specific tomogram flavor. Shared with AutofillStep's setField.
 export type TabKey = 'tiltseries' | TomogramFlavor;
 type ViewTab = 'tiltseries' | 'tomograms';
 
@@ -128,6 +128,18 @@ export function SessionMetadataCard({
   const tomoIssues = countTomogramIssues(session.tomograms);
   const sessionLabel = session.sessionName || 'Session';
   const yamlTitle = session.aretomoRun ? `${sessionLabel} · ${session.aretomoRun}` : sessionLabel;
+
+  const applyYaml = (text: string) => {
+    const { tiltseries, shared, perFlavor } = yamlToSession(text);
+    for (const [k, v] of Object.entries(tiltseries)) onFieldChange('tiltseries', k, v);
+    for (const [k, v] of Object.entries(shared)) {
+      onFieldChange('denoised', k, v);
+      onFieldChange('filtered', k, v);
+    }
+    for (const flavor of TOMOGRAM_FLAVORS) {
+      for (const [k, v] of Object.entries(perFlavor[flavor])) onFieldChange(flavor, k, v);
+    }
+  };
 
   return (
     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
@@ -269,6 +281,7 @@ export function SessionMetadataCard({
               yaml={sessionToYaml(session.tiltseries, session.tomograms)}
               title={yamlTitle}
               onClose={() => setShowYaml(false)}
+              onChange={readOnly ? undefined : applyYaml}
             />
           )}
         </Box>
