@@ -476,3 +476,28 @@ class TestTomogramFlavorValidation:
     def test_rejects_duplicate_flavor(self, auth_client, owned_session):
         r = self._patch(auth_client, owned_session, [{"flavor": "denoised"}, {"flavor": "denoised"}])
         assert r.status_code == 400
+
+
+@pytest.mark.django_db
+class TestDatasetLoadsSessionMetadata:
+    """Dataset GET must return saved session metadata so the wizard reloads edits on reopen"""
+
+    def test_dataset_get_includes_saved_metadata(self, auth_client, owned_session):
+        from depositions.models import TiltseriesMetadata, TomogramMetadata
+
+        TiltseriesMetadata.objects.create(session=owned_session, acceleration_voltage=302)
+        TomogramMetadata.objects.create(session=owned_session, flavor="denoised", voxel_spacing=7.84)
+
+        r = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
+        assert r.status_code == 200, r.content
+        sess = next(s for s in r.json()["sessions"] if s["id"] == owned_session.id)
+        assert sess["tiltseries_metadata"]["acceleration_voltage"] == 302
+        assert sess["tomogram_metadata"][0]["flavor"] == "denoised"
+        assert sess["tomogram_metadata"][0]["voxel_spacing"] == 7.84
+
+    def test_dataset_get_without_metadata_does_not_error(self, auth_client, owned_session):
+        r = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
+        assert r.status_code == 200, r.content
+        sess = next(s for s in r.json()["sessions"] if s["id"] == owned_session.id)
+        assert sess.get("tiltseries_metadata") is None
+        assert sess["tomogram_metadata"] == []

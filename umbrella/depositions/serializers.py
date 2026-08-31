@@ -97,10 +97,15 @@ class DatasetJobSerializer(serializers.ModelSerializer):
 
 
 class DepositionSessionLinkSerializer(serializers.ModelSerializer):
-    """Shallow session selection nested under Dataset."""
+    """Shallow session selection nested under Dataset.
+
+    Metadata is read-only here so the wizard can reload saved tiltseries/tomogram values on reopen
+    """
 
     id = serializers.IntegerField(required=False)
     msi_session_name = serializers.CharField(source="msi_session.name", read_only=True)
+    tiltseries_metadata = TiltseriesMetadataSerializer(read_only=True)
+    tomogram_metadata = TomogramMetadataSerializer(many=True, read_only=True)
 
     class Meta:
         model = DepositionSession
@@ -114,6 +119,8 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
             "subset_selection",
             "subset_filename",
             "selected_copick_runs",
+            "tiltseries_metadata",
+            "tomogram_metadata",
         ]
 
 

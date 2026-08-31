@@ -52,7 +52,7 @@ describe('yamlToSession', () => {
     expect(perFlavor.denoised.processing_software).toBe('DenoisET');
     expect(perFlavor.denoised.is_visualization_default).toBe(true);
     expect(perFlavor.filtered.processing).toBe('filtered');
-    expect(perFlavor.filtered.processing_software).toBeNull(); // "null" -> null
+    expect(perFlavor.filtered.processing_software).toBe('');
     expect(perFlavor.filtered.is_visualization_default).toBe(false);
   });
 
@@ -66,6 +66,21 @@ describe('yamlToSession', () => {
     const { tiltseries } = yamlToSession(yaml);
     expect('acceleration_voltage' in tiltseries).toBe(false);
     expect(tiltseries.pixel_spacing).toBeNull();
+  });
+
+  it('empty text -> "" (backend CharField rejects null), empty number/boolean -> null', () => {
+    const yaml = [
+      'tiltseries:',
+      '  data_acquisition_software: null',
+      '  tilting_scheme: ',
+      '  tilt_step: null',
+      '  is_aligned: null',
+    ].join('\n');
+    const { tiltseries } = yamlToSession(yaml);
+    expect(tiltseries.data_acquisition_software).toBe('');
+    expect(tiltseries.tilting_scheme).toBe('');
+    expect(tiltseries.tilt_step).toBeNull();
+    expect(tiltseries.is_aligned).toBeNull();
   });
 
   it('round-trips editable values through sessionToYaml -> yamlToSession', () => {

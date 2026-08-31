@@ -95,7 +95,7 @@ export function YamlPreview({
         </Box>
       </Box>
 
-      <Box sx={{ flex: 1, overflow: 'auto', bgcolor: EDITOR_BG }}>
+      <Box sx={{ flex: 1, minHeight: 320, overflow: 'auto', bgcolor: EDITOR_BG }}>
         {editing ? (
           <Box
             component="textarea"
@@ -104,17 +104,18 @@ export function YamlPreview({
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDraft(e.target.value)}
             sx={{
               width: '100%',
+              height: '100%',
               minHeight: 320,
               border: 'none',
               outline: 'none',
-              resize: 'vertical',
+              resize: 'none',
               display: 'block',
               bgcolor: EDITOR_BG,
               color: '#c9d1d9',
               fontFamily: 'monospace',
-              fontSize: '0.8125rem',
-              lineHeight: 1.6,
-              p: 1.5,
+              fontSize: '0.8rem',
+              lineHeight: 1.7,
+              p: 2,
               tabSize: 2,
             }}
           />

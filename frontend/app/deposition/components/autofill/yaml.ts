@@ -97,13 +97,15 @@ const SKIP = Symbol('skip');
 
 function coerce(field: FieldDef, raw: string): FieldValue | typeof SKIP {
   const v = raw.trim();
-  if (v === '' || v === 'null') return null;
+  const empty = v === '' || v === 'null';
   if (field.type === 'number') {
+    if (empty) return null;
     const n = Number(v);
     return Number.isNaN(n) ? SKIP : n;
   }
-  if (field.type === 'boolean') return v === 'true';
-  return v;
+  if (field.type === 'boolean') return empty ? null : v === 'true';
+
+  return empty ? '' : v;
 }
 
 function pickEditable(fields: FieldDef[], raw: Record<string, string>): Record<string, FieldValue> {
