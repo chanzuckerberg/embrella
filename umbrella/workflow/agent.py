@@ -320,12 +320,14 @@ class Denoiset(object):
 
 
 class StatusChecker(object):
-    def __init__(self, cluster_id, auth, remote_script_dir, local_template_path):
+    def __init__(self, cluster_id, auth, remote_script_dir=None, local_template_path=None):
         """
         :param cluster_id: Cluster to use
         :param auth: Cluster credentials.
         :param remote_script_dir: Remote directory where the status-check script will be stored.
+            Only check_status() needs it; track_jobs() runs squeue directly.
         :param local_template_path: Local path to the Jinja2 template for the status-check script.
+            Only check_status() needs it.
         """
         self.cluster_id = cluster_id
         self.auth = auth
@@ -442,7 +444,8 @@ class StatusChecker(object):
 
 
 class RemoteJobSubmitter:
-    def __init__(self, cluster_id, auth, remote_script_dir):
+    def __init__(self, cluster_id, auth, remote_script_dir=None):
+        # remote_script_dir is only needed by run_script(); cancel() works without it.
         self.cluster_id = cluster_id
         self.auth = auth
         self.remote_script_dir = remote_script_dir

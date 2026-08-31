@@ -24,14 +24,10 @@ def track_jobs_internal(cluster_id="czii"):
     """
     from workflow.agent import StatusChecker
 
-    from .constants import ARETOMO3_SCRIPT_PATH, ARETOMO3_TEMPLATE_PATH
-
     try:
         checker = StatusChecker(
             cluster_id=cluster_id,
             auth=clusterio.get_auth_service_user(),
-            remote_script_dir=ARETOMO3_SCRIPT_PATH,
-            local_template_path=ARETOMO3_TEMPLATE_PATH,
         )
 
         checker.connect()

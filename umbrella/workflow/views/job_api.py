@@ -26,8 +26,6 @@ from common import clusterio
 
 from ..agent import RemoteJobSubmitter, StatusChecker
 from .constants import (
-    ARETOMO3_SCRIPT_PATH,
-    ARETOMO3_TEMPLATE_PATH,
     LABEL_TO_SLURM_STATE,
     SLURM_STATE_TO_LABEL,
 )
@@ -119,8 +117,6 @@ def get_jobs_list(request):
             checker = StatusChecker(
                 cluster_id=cluster_id,
                 auth=clusterio.get_auth_service_user(),
-                remote_script_dir=ARETOMO3_SCRIPT_PATH,
-                local_template_path=ARETOMO3_TEMPLATE_PATH,
             )
             checker.connect()
             output, error = checker.track_jobs(job_name=None, all=True)
@@ -594,8 +590,6 @@ def get_jobs_filterlist(request):
             checker = StatusChecker(
                 cluster_id=cluster_id,
                 auth=clusterio.get_auth_service_user(),
-                remote_script_dir=ARETOMO3_SCRIPT_PATH,
-                local_template_path=ARETOMO3_TEMPLATE_PATH,
             )
             checker.connect()
             output, error = checker.track_jobs(job_name=None, all=True)
@@ -848,7 +842,6 @@ def bulk_cancel_jobs(request):
         canceler = RemoteJobSubmitter(
             cluster_id=cluster_id,
             auth=auth,
-            remote_script_dir=ARETOMO3_SCRIPT_PATH,
         )
 
         results = []
@@ -915,16 +908,11 @@ def bulk_cancel_jobs(request):
         return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
 
 
-# Map processor names to syncer configurations
-SYNCER_CONFIG = {
-    "aretomo3": {
-        "syncer_type": "AretomoSyncer",
-        "base_path": "/hpc/projects/group.czii/krios1.processing/aretomo3",
-    },
-    "denoiset": {
-        "syncer_type": "DenoiseSyncer",
-        "base_path": "/hpc/projects/group.czii/krios1.processing/denoise",
-    },
+# Processors with a syncer, and the label SyncerLog rows carry. The spawned
+# syncer.py resolves its own base path from the processing_root template.
+SYNCER_TYPES = {
+    "aretomo3": "AretomoSyncer",
+    "denoiset": "DenoiseSyncer",
 }
 
 
@@ -948,7 +936,7 @@ def _get_syncer_status_for_job(job_id: str, pipe_execution: PipeExecution = None
                 software = pipe_execution.pipe_in_plan.pipe.software
                 processor_name = software.processor_class or software.name if software else None
 
-            supports_syncer = processor_name in SYNCER_CONFIG
+            supports_syncer = processor_name in SYNCER_TYPES
             if supports_syncer:
                 # No syncer process exists but job supports it
                 job_completed = pipe_execution.status in ["completed", "failed"]
@@ -956,7 +944,7 @@ def _get_syncer_status_for_job(job_id: str, pipe_execution: PipeExecution = None
                     "status": None,
                     "last_heartbeat": None,
                     "can_rerun": job_completed,  # Can re-run if job completed
-                    "syncer_type": SYNCER_CONFIG.get(processor_name, {}).get("syncer_type"),
+                    "syncer_type": SYNCER_TYPES.get(processor_name),
                 }
         return None
 
@@ -1137,7 +1125,7 @@ def rerun_syncer(request, job_id: str):
             software = pipe_exec.pipe_in_plan.pipe.software
             processor_name = software.processor_class or software.name if software else None
 
-        if processor_name not in SYNCER_CONFIG:
+        if processor_name not in SYNCER_TYPES:
             return JsonResponse(
                 {
                     "success": False,
@@ -1145,8 +1133,6 @@ def rerun_syncer(request, job_id: str):
                 },
                 status=400,
             )
-
-        syncer_config = SYNCER_CONFIG[processor_name]
 
         # Get session and run info
         if not pipe_exec.proc_run or not pipe_exec.proc_run.msi_session:
@@ -1179,7 +1165,7 @@ def rerun_syncer(request, job_id: str):
                 "run_name": run_name,
                 "processor": processor_name,
             },
-            syncer_type=syncer_config["syncer_type"],
+            syncer_type=SYNCER_TYPES[processor_name],
             session_name=session_name,
             run_id=run_name,
         )
