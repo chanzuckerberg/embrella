@@ -483,10 +483,14 @@ class TestDatasetLoadsSessionMetadata:
     """Dataset GET must return saved session metadata so the wizard reloads edits on reopen"""
 
     def test_dataset_get_includes_saved_metadata(self, auth_client, owned_session):
+        from django.utils import timezone
+
         from depositions.models import TiltseriesMetadata, TomogramMetadata
 
         TiltseriesMetadata.objects.create(session=owned_session, acceleration_voltage=302)
         TomogramMetadata.objects.create(session=owned_session, flavor="denoised", voxel_spacing=7.84)
+        owned_session.last_autofill_at = timezone.now()
+        owned_session.save(update_fields=["last_autofill_at"])
 
         r = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
         assert r.status_code == 200, r.content
@@ -494,6 +498,9 @@ class TestDatasetLoadsSessionMetadata:
         assert sess["tiltseries_metadata"]["acceleration_voltage"] == 302
         assert sess["tomogram_metadata"][0]["flavor"] == "denoised"
         assert sess["tomogram_metadata"][0]["voxel_spacing"] == 7.84
+        # last_autofill_at must load too, else the wizard shows "Auto-fill" (not "Re-run") on reopen
+        # and skips the overwrite confirm.
+        assert sess["last_autofill_at"] is not None
 
     def test_dataset_get_without_metadata_does_not_error(self, auth_client, owned_session):
         r = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")

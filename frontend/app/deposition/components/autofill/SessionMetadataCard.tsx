@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Icon, Button } from '@czi-sds/components';
 import { Alert, Box, CircularProgress, FormControlLabel, Switch, Tab, Tabs, Typography } from '@mui/material';
 
+import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
+
 import type { TiltseriesMetadata, TomogramFlavor, TomogramMetadata } from '../../types';
 import { TOMOGRAM_FLAVORS } from '../../types';
 import type { FieldValue } from './MetadataRow';
@@ -122,7 +124,13 @@ export function SessionMetadataCard({
   const [tab, setTab] = useState<ViewTab>('tiltseries');
   const [showOnlyIssues, setShowOnlyIssues] = useState(false);
   const [showYaml, setShowYaml] = useState(false);
+  const [confirmReRun, setConfirmReRun] = useState(false);
   const hasRun = Boolean(session.aretomoRun);
+  // Confirm re-run: overwrites prior autofill (and manual edits).
+  const handleAutoFillClick = () => {
+    if (session.lastAutofillAt) setConfirmReRun(true);
+    else onAutoFill();
+  };
 
   const tsIssues = countIssues(TILTSERIES_FIELDS, session.tiltseries as never);
   const tomoIssues = countTomogramIssues(session.tomograms);
@@ -179,13 +187,29 @@ export function SessionMetadataCard({
             size="small"
             startIcon={autoFilling ? <CircularProgress size={14} /> : undefined}
             disabled={autoFilling || !hasRun}
-            onClick={onAutoFill}
+            onClick={handleAutoFillClick}
             sx={{ flexShrink: 0 }}
           >
             {session.lastAutofillAt ? 'Re-run auto-fill' : 'Auto-fill'}
           </Button>
         )}
       </Box>
+
+      <BaseFormDialog
+        open={confirmReRun}
+        onClose={() => setConfirmReRun(false)}
+        title="Re-run auto-fill?"
+        saveButtonText="Replace values"
+        onSave={() => {
+          setConfirmReRun(false);
+          onAutoFill();
+        }}
+      >
+        <Typography variant="body1" color="text.secondary">
+          This replaces the current values - including any edits you made here or in the YAML - with freshly computed
+          ones.
+        </Typography>
+      </BaseFormDialog>
 
       <Box sx={{ px: 2, pb: 2 }}>
         {!hasRun && (

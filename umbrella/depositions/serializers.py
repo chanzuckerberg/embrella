@@ -121,7 +121,9 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
             "selected_copick_runs",
             "tiltseries_metadata",
             "tomogram_metadata",
+            "last_autofill_at",
         ]
+        read_only_fields = ["last_autofill_at"]
 
 
 class DepositionSessionSerializer(serializers.ModelSerializer):
