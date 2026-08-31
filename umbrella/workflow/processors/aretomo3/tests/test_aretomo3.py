@@ -5,7 +5,6 @@ Tests for AreTomo3 processor implementation.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from django.contrib.auth.models import User
 from django.utils import timezone
 from processes.models import (
     Pipe,
@@ -35,16 +34,6 @@ from workflow.processors import get_processor
 def aretomo3_processor():
     """Get the AreTomo3 processor instance."""
     return get_processor("aretomo3")
-
-
-@pytest.fixture
-def test_user(db):
-    """Create a test user."""
-    return User.objects.create_user(
-        username="testuser",
-        email="test@example.com",
-        password="testpass123",
-    )
 
 
 @pytest.fixture
@@ -236,23 +225,6 @@ class TestAreTomo3Processor:
         # 5 / 2.0 = 2.5, 10 / 2.0 = 5.0
         assert "tomo_bin_5A=2.5" in script
         assert "tomo_bin_10A=5.0" in script
-
-    def test_parse_output_paths(self, aretomo3_processor, test_run_context):
-        """Test parsing expected output paths."""
-        paths = aretomo3_processor.parse_output_paths(test_run_context)
-
-        assert len(paths) > 0
-
-        # Check path types
-        types = [p["type"] for p in paths]
-        assert "rec" in types  # Reconstruction volumes
-        assert "aln" in types  # Alignment data
-        assert "meta" in types  # Session metadata
-
-        # Check patterns contain session and run
-        for path_spec in paths:
-            assert "24nov10" in path_spec["pattern"]
-            assert "run001" in path_spec["pattern"]
 
     def test_get_slurm_options(self, aretomo3_processor):
         """Test SLURM options."""

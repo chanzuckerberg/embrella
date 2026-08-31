@@ -125,31 +125,6 @@ class MembranesegProcessor(BaseProcessor):
 
         return script
 
-    def parse_output_paths(self, run_context: RunContext) -> List[Dict[str, Any]]:
-        """
-        Define expected output paths for membrane segmentation.
-
-        Args:
-            run_context: Execution context
-
-        Returns:
-            List of output path specifications
-        """
-        # Note: Output paths are within the Copick project directory
-        # The actual session and run will be determined by the parameters
-        return [
-            {
-                "type": "segmentation",
-                "pattern": "*/segmentations/*.zarr",
-                "description": "Membrane segmentation volumes in Zarr format",
-            },
-            {
-                "type": "logs",
-                "pattern": "*.log",
-                "description": "Processing logs",
-            },
-        ]
-
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
         Get default SLURM options for membrane segmentation jobs.

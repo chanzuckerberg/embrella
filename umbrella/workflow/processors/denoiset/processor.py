@@ -125,45 +125,6 @@ class DenoisETProcessor(BaseProcessor):
 
         return script
 
-    def parse_output_paths(self, run_context: RunContext) -> List[Dict[str, Any]]:
-        """
-        Define expected output paths for DenoisET.
-
-        Args:
-            run_context: Execution context
-
-        Returns:
-            List of output path specifications
-        """
-        session_name = run_context.msi_session.name
-        denoise_run = run_context.run_number
-
-        root = self.get_processing_base_path(cluster=run_context.cluster_id)
-        base_path = f"{root}/{session_name}/{denoise_run}"
-
-        return [
-            {
-                "type": "denoised_volumes",
-                "pattern": f"{base_path}/*.mrc",
-                "description": "Denoised tomographic volumes",
-            },
-            {
-                "type": "rechunked",
-                "pattern": f"{base_path}/rechunked/*.zarr",
-                "description": "Rechunked Zarr arrays",
-            },
-            {
-                "type": "plots",
-                "pattern": f"{base_path}/plots/*.png",
-                "description": "Quality control plots",
-            },
-            {
-                "type": "logs",
-                "pattern": f"{base_path}/logs/*.log",
-                "description": "Processing logs",
-            },
-        ]
-
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
         Get default SLURM options for DenoisET jobs.

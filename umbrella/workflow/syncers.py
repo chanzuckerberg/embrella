@@ -124,41 +124,28 @@ def parse_zarr_filename(filename: str, pattern: FilePattern) -> str | None:
 
 def check_zarr_exists(full_path: str, pattern: FilePattern, cluster_id=None) -> tuple[list[tuple[str, str]], int]:
     """((basename, position_id) pairs, count of .zarr entries seen) for a run directory."""
-    # being unquoted in the shell command below.
     from processes.services.cluster_resolver import get_default_cluster_id
 
     cluster_id = cluster_id or get_default_cluster_id()
+    # "*.zarr" on purpose, not pattern.list_glob: entries the pattern can't parse must
+    # still be counted, so the "Matched X of Y" gap surfaces a wrong pattern.
+    listing = clusterio.list_files(full_path, "*.zarr", cluster_id=cluster_id, include_dirs=True)
+    if not listing["success"]:
+        log.warning(f"Could not list {full_path}: {listing.get('error')}")
+        return [], 0
+
+    names = [entry["name"] for entry in listing["files"]]
+
     found_zarrs = []
-    candidates = 0
-    ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
-    stdin, stdout, stderr = ssh.exec_command(f"ls {full_path}")
+    for name in names:
+        position_id = parse_zarr_filename(name, pattern=pattern)
+        if position_id:
+            found_zarrs.append((name, position_id))
+        else:
+            log.warning(f"Could not parse position ID from filename: {name}")
 
-    # Read the output
-    output = stdout.readlines()
-    errors = stderr.readlines()
-
-    if errors:
-        log.warning("Errors during command execution:")
-        for line in errors:
-            log.warning(line.strip())
-
-    for line in output:
-        line = line.strip()
-        # Remove trailing slash if present
-        if line.endswith("/"):
-            line = line[:-1]
-
-        if line.endswith(".zarr"):
-            candidates += 1
-            log.info(f"Found ZARR file: {line}")
-            position_id = parse_zarr_filename(line, pattern=pattern)
-            if position_id:
-                found_zarrs.append((line, position_id))
-            else:
-                log.warning(f"Could not parse position ID from filename: {line}")
-
-    log.info(f"Matched {len(found_zarrs)} of {candidates} .zarr entries in {full_path}")
-    return found_zarrs, candidates
+    log.info(f"Matched {len(found_zarrs)} of {len(names)} .zarr entries in {full_path}")
+    return found_zarrs, len(names)
 
 
 class ProcessSyncer(object):

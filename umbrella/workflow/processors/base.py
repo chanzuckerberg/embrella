@@ -4,8 +4,6 @@ Base Processor Class
 Defines the abstract interface that all processing software integrations must implement.
 """
 
-import os
-import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -50,9 +48,6 @@ class BaseProcessor(ABC):
 
             def render_script(self, params, run_context):
                 return "#!/bin/bash\\n..."
-
-            def parse_output_paths(self, run_context):
-                return [...]
     """
 
     # Class attributes that must be defined by subclasses
@@ -216,37 +211,6 @@ class BaseProcessor(ABC):
             module load aretomo3/2024-03-10
 
             aretomo3 -InMrc ${INPUT} -OutMrc ${OUTPUT} ...
-        """
-        pass
-
-    @abstractmethod
-    def parse_output_paths(self, run_context: "RunContext") -> List[Dict[str, str]]:
-        """
-        Return expected output paths for this processor.
-
-        Used to pre-populate RunPipeData records and validate completion.
-
-        Args:
-            run_context: Execution context with path information
-
-        Returns:
-            List of dicts with 'type' and 'pattern' keys:
-            [
-                {
-                    "type": "rec",  # Data type code
-                    "pattern": "/path/to/output/*_Vol.mrc"
-                },
-                ...
-            ]
-
-        The 'type' should match PathType.data_kind.data_type values:
-            - 'frames': Raw frames
-            - 'rawst': Raw tilt series
-            - 'aln': Alignment
-            - 'ctf': CTF parameters
-            - 'rec': Reconstruction
-            - 'deno': Denoised volume
-            - etc.
         """
         pass
 
@@ -1475,92 +1439,6 @@ class BaseProcessor(ABC):
             result["slurm_directives"] = self.generate_slurm_directives(params)
 
         return result
-
-    def _spawn_syncer_subprocess(
-        self,
-        syncer_script_name: str,
-        run_context: "RunContext",
-        job_id: str,
-    ) -> "subprocess.Popen":
-        """
-        Spawn a syncer as a background subprocess.
-
-        This is a helper method for processors that want to start output syncers
-        via the old subprocess approach. The syncer will run in the background
-        and poll for output files.
-
-        Args:
-            syncer_script_name: Name of syncer script (e.g., 'aretomo3_syncer.py')
-            run_context: Execution context with session/run info
-            job_id: SLURM job ID
-
-        Returns:
-            subprocess.Popen instance (not waited for - runs in background)
-
-        Example:
-            def on_job_submit(self, run_context, job_id):
-                self._spawn_syncer_subprocess(
-                    'aretomo3_syncer.py',
-                    run_context,
-                    job_id
-                )
-
-        Note:
-            This approach is being phased out in favor of Django-Q tasks.
-            For new processors, consider implementing sync_outputs() and
-            using Django-Q scheduled tasks instead.
-        """
-
-        # Build path to syncer script
-        syncer_path = os.path.join(
-            os.path.dirname(__file__),
-            "../..",
-            "processes/scripts",
-            syncer_script_name,
-        )
-
-        # Ensure script exists
-        if not os.path.exists(syncer_path):
-            logger.warning(
-                f"Syncer script not found: {syncer_path}. Skipping syncer spawn for {self.name}",
-            )
-            return None
-
-        # Set up environment (add project root to PYTHONPATH)
-        env = dict(os.environ)
-        project_root = os.path.dirname(os.path.dirname(syncer_path))
-        env["PYTHONPATH"] = project_root
-
-        try:
-            # Spawn syncer as background process
-            process = subprocess.Popen(
-                [
-                    "python",
-                    syncer_path,
-                    "--session",
-                    run_context.msi_session.name,
-                    "--run",
-                    run_context.run_number,
-                    "--job-id",
-                    job_id,
-                    "--continuous",  # Run continuously until job completes
-                ],
-                env=env,
-            )
-
-            logger.info(
-                f"Spawned {syncer_script_name} syncer for {run_context.msi_session.name}/"
-                f"{run_context.run_number} (job {job_id}, pid {process.pid})",
-            )
-
-            return process
-
-        except Exception as e:
-            logger.error(
-                f"Error spawning syncer {syncer_script_name}: {e}",
-                exc_info=True,
-            )
-            return None
 
     def _start_syncer_task(
         self,

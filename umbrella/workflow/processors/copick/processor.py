@@ -200,49 +200,6 @@ class CopickProcessor(BaseProcessor):
 
         return script
 
-    def parse_output_paths(self, run_context: RunContext) -> List[Dict[str, Any]]:
-        """
-        Define expected output paths for Copick.
-
-        Args:
-            run_context: Execution context
-
-        Returns:
-            List of output path specifications
-        """
-        session_name = run_context.msi_session.name
-        copick_run = run_context.run_number
-
-        base_path = f"/hpc/projects/group.czii/krios1.processing/copick/{session_name}/{copick_run}"
-
-        return [
-            {
-                "type": "config",
-                "pattern": f"{base_path}/config.json",
-                "description": "Copick project configuration file",
-            },
-            {
-                "type": "runs",
-                "pattern": f"{base_path}/ExperimentRuns/*",
-                "description": "Copick experiment runs",
-            },
-            {
-                "type": "picks",
-                "pattern": f"{base_path}/*/picks/*.zarr",
-                "description": "Particle picks in Zarr format",
-            },
-            {
-                "type": "meshes",
-                "pattern": f"{base_path}/*/meshes/*.glb",
-                "description": "Mesh annotations",
-            },
-            {
-                "type": "logs",
-                "pattern": f"{base_path}/*.log",
-                "description": "Processing logs",
-            },
-        ]
-
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
         Get default SLURM options for Copick jobs.

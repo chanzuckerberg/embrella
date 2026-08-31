@@ -415,38 +415,6 @@ class AreTomo3Processor(BaseProcessor):
 
         return rendered_script
 
-    def parse_output_paths(self, run_context: "RunContext") -> List[Dict[str, str]]:
-        """
-        Define expected output paths for AreTomo3.
-
-        Args:
-            run_context: Execution context
-
-        Returns:
-            List of output path specifications
-        """
-        # TODO: consider using path types from db instead of hard-coding patterns here
-        base_path = f"/hpc/projects/group.czii/krios1.processing/aretomo3/{run_context.msi_session.name}/{run_context.run_number}"
-
-        return [
-            {
-                "type": "rec",  # Reconstruction volumes
-                "pattern": f"{base_path}/vol*/Position_*_Vol.mrc",
-            },
-            {
-                "type": "aln",  # Alignment data
-                "pattern": f"{base_path}/Position_*.aln",
-            },
-            {
-                "type": "meta",  # Session metadata JSON
-                "pattern": f"{base_path}/AreTomo3_Session.json",
-            },
-            {
-                "type": "log",  # Job output logs
-                "pattern": f"{base_path}/JOB*.out",
-            },
-        ]
-
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """Get default SLURM options for AreTomo3."""
         return {
