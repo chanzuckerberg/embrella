@@ -174,10 +174,12 @@ class ProcessSyncer(object):
         self.cluster_id = None
 
     def _output_pattern(self) -> FilePattern:
-        """The owning software's rec FilePattern -- resolved once per sync pass."""
+        """The rec FilePattern for this run: the plan's bound pattern when one
+        exists, else the owning software's own."""
         from workflow.processors import get_processor
 
-        return get_processor(self.processor_name).get_output_pattern("rec")
+        plan = self.session.session_plan if self.session else None
+        return get_processor(self.processor_name).get_output_pattern("rec", plan=plan)
 
     def _log_to_db(self, action_type: str, message: str, metadata: dict = None):
         """Log syncer action to database."""

@@ -4,8 +4,17 @@ from unittest.mock import patch
 
 import pytest
 from processes.models import ProcSoftware, ReviewTomogram, SyncerLog
-from stores.models import FilePattern
-from tem.models import Camera, ImagingWorkflow, Microscope, MsiSession, SessionPlan, Software
+from stores.models import DataKind, FilePattern
+from tem.models import (
+    TILT_SERIES_ROLE,
+    Camera,
+    ImagingWorkflow,
+    Microscope,
+    MsiSession,
+    SessionPlan,
+    SessionPlanPathBinding,
+    Software,
+)
 from workflow.syncers import ProcessSyncer
 
 pytestmark = pytest.mark.django_db
@@ -14,6 +23,9 @@ REC_LABEL = "{position}_Vol.zarr"
 
 # One discovered zarr, as (basename, position_id) from check_zarr_exists.
 ONE_ZARR = ([("Position_1_Vol.zarr", "Position_1")], 1)
+
+# The same, for a scope whose acquisition names stacks the serialEM way.
+SERIALEM_ZARR = ([("pt712_ts_001.mrc_Vol.zarr", "pt712_ts_001")], 1)
 
 
 @pytest.fixture
@@ -74,3 +86,28 @@ class TestDiscoveredFilePath:
             syncer.process_zarr_directory("SART", "/proc/aretomo3/25aug25a/run003/vol003", rel_dir="vol003")
 
         assert ReviewTomogram.objects.count() == 1
+
+
+def bind_plan_pattern(plan):
+    kind, _ = DataKind.objects.get_or_create(data_type="rec")
+    pattern = FilePattern.objects.create(
+        data_kind=kind, label="serialEM rec", regex=r"^(?P<position>\w+_ts_\d+)\.mrc_Vol\.zarr$"
+    )
+    SessionPlanPathBinding.objects.create(session_plan=plan, role=TILT_SERIES_ROLE, file_pattern=pattern)
+
+
+class TestPlanBoundPattern:
+    """The session plan's own rec naming wins over the software's row, so a scope with
+    its own acquisition naming syncs without touching the shared row."""
+
+    @patch("workflow.syncers.check_zarr_exists", return_value=SERIALEM_ZARR)
+    def test_syncer_matches_with_the_plans_pattern(self, _check, msi_session, tmp_path):
+        bind_plan_pattern(msi_session.session_plan)
+        syncer = given_syncer(msi_session, tmp_path)
+        syncer.process_zarr_directory("SART", "/proc/aretomo3/25aug25a/run003/vol003", rel_dir="vol003")
+
+        pattern = _check.call_args.args[1]
+        assert pattern.regex == r"^(?P<position>\w+_ts_\d+)\.mrc_Vol\.zarr$"
+
+        entry = SyncerLog.objects.get(action_type="tomogram_created")
+        assert entry.metadata["pattern"] == "serialEM rec"

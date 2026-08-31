@@ -9,7 +9,16 @@ import pytest
 from django.contrib.auth.models import User
 from processes.models import ProcSoftware
 from stores.models import DataKind, FilePattern, PathType
-from tem.models import Camera, ImagingWorkflow, Microscope, MsiSession, SessionPlan, Software
+from tem.models import (
+    TILT_SERIES_ROLE,
+    Camera,
+    ImagingWorkflow,
+    Microscope,
+    MsiSession,
+    SessionPlan,
+    SessionPlanPathBinding,
+    Software,
+)
 from workflow.context import RunContext
 from workflow.processors import get_processor
 from workflow.processors.copick.constants import ImportTomoType
@@ -147,6 +156,53 @@ class TestCopickScript:
 
         assert f'template_maps_dir="{PROCESSING_ROOT}/copick/template_maps"' in script
         assert f'copick_base_dir="{PROCESSING_ROOT}/copick/${{copick_session}}/${{copick_run}}"' in script
+
+    # --run-regex matches run stems (basenames minus .zarr) in the source software's tree.
+    CANONICAL_RUN_REGEX = r"^(?P<position>Position_\d+(?:_\d+)*)_Vol$"
+    SERIALEM_RUN_REGEX = r"^(?P<position>\w+_ts_\d+)\.mrc_Vol$"
+
+    def bind_plan_pattern(self, plan):
+        kind, _ = DataKind.objects.get_or_create(data_type="rec")
+        pattern = FilePattern.objects.create(
+            data_kind=kind, label="serialEM rec", regex=r"^(?P<position>\w+_ts_\d+)\.mrc_Vol\.zarr$"
+        )
+        SessionPlanPathBinding.objects.create(session_plan=plan, role=TILT_SERIES_ROLE, file_pattern=pattern)
+
+    def test_run_regex_defaults_to_the_software_pattern(self, run_context):
+        script = get_processor("copick").render_script(dict(self.CREATE_PARAMS), run_context)
+
+        assert f"--run-regex '{self.CANONICAL_RUN_REGEX}'" in script
+
+    def test_run_regex_uses_the_plans_pattern(self, run_context):
+        self.bind_plan_pattern(run_context.msi_session.session_plan)
+        script = get_processor("copick").render_script(dict(self.CREATE_PARAMS), run_context)
+
+        assert f"--run-regex '{self.SERIALEM_RUN_REGEX}'" in script
+
+    def test_import_reads_the_source_sessions_plan(self, run_context):
+        """copick_session may differ from the run's session; --run-regex scans that
+        session's tree, so that session's plan names the files."""
+        theirs = run_context.msi_session.session_plan
+        other = MsiSession.objects.create(
+            name="25feb01a",
+            session_plan=SessionPlan.objects.create(
+                scope=Microscope.objects.create(name="krios2", cs=2.7),
+                camera=theirs.camera,
+                imaging_workflow=theirs.imaging_workflow,
+                software=theirs.software,
+            ),
+        )
+        self.bind_plan_pattern(other.session_plan)
+        params = {
+            "operation": "import_tomograms",
+            "copick_session": other.name,
+            "copick_run": "run001",
+            "import_tomo_type": "dctf",
+            "import_tomogram_run": "run001",
+        }
+        script = get_processor("copick").render_script(params, run_context)
+
+        assert f"--run-regex '{self.SERIALEM_RUN_REGEX}'" in script
 
 
 class TestDenoisetScript:

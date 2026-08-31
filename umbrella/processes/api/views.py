@@ -25,6 +25,7 @@ from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 from umbrella.contrast_limits import compute_optimal_contrast_limits
 
+from common.sorting import natural_sort_key
 from processes.models import (
     Annotation,
     PipeInPlan,
@@ -350,29 +351,8 @@ class ReviewView(View):
                 for tomo in tomograms
             ]
 
-            # Sort tomograms by position (handle compound position numbers like position_1_2, position_100_1)
-            def extract_position_number(position_str):
-                if position_str == "None":
-                    return float("inf")  # Put "None" positions at the end
-                try:
-                    # Extract all numbers from "Position_X_Y" format
-                    parts = position_str.split("_")
-                    if len(parts) >= 2:
-                        # Convert all numeric parts to integers for proper sorting
-                        numbers = []
-                        for part in parts[1:]:  # Skip "Position" part
-                            try:
-                                numbers.append(int(part))
-                            except ValueError:
-                                # If any part is not numeric, treat as invalid
-                                return float("inf")
-                        return numbers
-                    else:
-                        return float("inf")  # Invalid format
-                except (ValueError, IndexError):
-                    return float("inf")  # Put invalid positions at the end
-
-            tomograms_list.sort(key=lambda x: extract_position_number(x["position"]))
+            # Natural order across any naming shape (Position_1_2, pt712_ts_001, ...); "None" last.
+            tomograms_list.sort(key=lambda x: natural_sort_key(x["position"]))
 
             logger.debug(
                 f"Sorted tomogram positions for review {review_id}: {[tomo['position'] for tomo in tomograms_list]}"

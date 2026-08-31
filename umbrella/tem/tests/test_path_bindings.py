@@ -6,6 +6,7 @@ from stores.models import Cluster, DataKind, FilePattern, Path, PathType, pick_f
 
 from tem.models import (
     SOFTWARE_PATH_ROLES,
+    TILT_SERIES_ROLE,
     Camera,
     ImagingWorkflow,
     Microscope,
@@ -13,6 +14,7 @@ from tem.models import (
     SessionPlan,
     SessionPlanPathBinding,
     Software,
+    resolve_plan_file_pattern,
     resolve_software_file_pattern,
     resolve_software_path_type,
 )
@@ -193,6 +195,46 @@ class TestFilePatternResolution:
     def test_none_when_role_unsupported(self, camera, workflow, software):
         plan = make_plan("krios1", camera, workflow, software)
         assert resolve_software_file_pattern(plan, "atlas") is None
+
+
+@pytest.mark.django_db
+class TestTiltSeriesBinding:
+    """tilt_series is pattern-only: it holds the plan's own output naming for the
+    processing lane to read -- there is no Software field rung."""
+
+    def make_rec_pattern(self):
+        kind, _ = DataKind.objects.get_or_create(data_type="rec")
+        return FilePattern.objects.create(
+            data_kind=kind, label="serialEM rec", regex=r"^(?P<position>\w+_ts_\d+)\.mrc_Vol\.zarr$"
+        )
+
+    def test_resolves_the_bound_pattern(self, camera, workflow, software):
+        plan = make_plan("krios2", camera, workflow, software)
+        pattern = self.make_rec_pattern()
+        SessionPlanPathBinding.objects.create(session_plan=plan, role=TILT_SERIES_ROLE, file_pattern=pattern)
+
+        assert resolve_plan_file_pattern(plan, TILT_SERIES_ROLE) == pattern
+
+    def test_none_without_binding(self, camera, workflow, software):
+        plan = make_plan("krios1", camera, workflow, software)
+        assert resolve_plan_file_pattern(plan, TILT_SERIES_ROLE) is None
+
+    def test_inactive_binding_is_ignored(self, camera, workflow, software):
+        plan = make_plan("krios2", camera, workflow, software)
+        SessionPlanPathBinding.objects.create(
+            session_plan=plan, role=TILT_SERIES_ROLE, file_pattern=self.make_rec_pattern(), is_active=False
+        )
+        assert resolve_plan_file_pattern(plan, TILT_SERIES_ROLE) is None
+
+    def test_role_is_a_legal_choice(self, camera, workflow, software):
+        plan = make_plan("krios2", camera, workflow, software)
+        binding = SessionPlanPathBinding(session_plan=plan, role=TILT_SERIES_ROLE, file_pattern=self.make_rec_pattern())
+        binding.full_clean()  # raises on an unknown role choice
+
+    def test_not_a_software_field_role(self):
+        """Guards the double-duty tuple: Software must not grow a tilt_series FK.
+        software currently only has 5 FKs, and tilt_series is not one of them currently."""
+        assert TILT_SERIES_ROLE not in SOFTWARE_PATH_ROLES
 
 
 @pytest.mark.django_db

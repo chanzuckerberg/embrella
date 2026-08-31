@@ -8,13 +8,16 @@ import os
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import yaml
 from django.core.exceptions import ImproperlyConfigured
 from umbrella_logger import logger
 
 from workflow.context import RunContext
+
+if TYPE_CHECKING:
+    from tem.models import SessionPlan
 
 
 class BaseProcessor(ABC):
@@ -481,15 +484,20 @@ class BaseProcessor(ABC):
 
         return resolve_dir("software_root", cluster=cluster).rstrip("/")
 
-    def get_output_pattern(self, kind: str):
+    def get_output_pattern(self, kind: str, plan: Optional["SessionPlan"] = None):
         """The FilePattern naming this software's output files of `kind` (e.g. "rec")."""
         from stores.models import DataKind
+        from tem.models import TILT_SERIES_ROLE, resolve_plan_file_pattern
 
         if not DataKind.objects.filter(data_type=kind).exists():
             raise ImproperlyConfigured(
                 f"No DataKind {kind!r} is registered, so no FilePattern can name it. "
                 f"Add the kind under Stores → Data kinds first."
             )
+
+        bound = resolve_plan_file_pattern(plan, TILT_SERIES_ROLE) if plan else None
+        if bound and bound.data_kind.data_type == kind:
+            return bound
 
         patterns = self._software_row().output_patterns.filter(data_kind__data_type=kind)
         if len(patterns) != 1:
@@ -564,12 +572,21 @@ class BaseProcessor(ABC):
 
     def get_paths_used(self, run_context: "RunContext") -> Dict[str, Any]:
         """Snapshot of what path resolution produced at submit time."""
+        from tem.models import TILT_SERIES_ROLE, resolve_plan_file_pattern
+
+        session = run_context.msi_session
+        plan = session.session_plan if session else None
+        bound = resolve_plan_file_pattern(plan, TILT_SERIES_ROLE) if plan else None
+
+        kinds = {
+            pattern.data_kind.data_type for pattern in self._software_row().output_patterns.select_related("data_kind")
+        }
+        if bound:
+            kinds.add(bound.data_kind.data_type)
+
         return {
             "processing_base_path": self.get_processing_base_path(cluster=run_context.cluster_id),
-            "output_patterns": {
-                pattern.data_kind.data_type: pattern.label
-                for pattern in self._software_row().output_patterns.select_related("data_kind")
-            },
+            "output_patterns": {kind: self.get_output_pattern(kind, plan=plan).label for kind in kinds},
         }
 
     def get_database_metadata(self) -> Dict[str, Any]:

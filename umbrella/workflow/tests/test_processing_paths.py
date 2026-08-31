@@ -10,6 +10,15 @@ from django.core.exceptions import ImproperlyConfigured
 from processes.models import ProcSoftware
 from stores.models import DataKind, FilePattern, PathType
 from stores.paths import UnresolvedPlaceholderError
+from tem.models import (
+    TILT_SERIES_ROLE,
+    Camera,
+    ImagingWorkflow,
+    Microscope,
+    SessionPlan,
+    SessionPlanPathBinding,
+    Software,
+)
 from workflow.processors import get_processor
 
 pytestmark = pytest.mark.django_db
@@ -143,8 +152,41 @@ class TestUnconfiguredIsAnError:
             get_processor("aretomo3").get_processing_base_path()
 
 
+REC_LABEL = "{position}_Vol.zarr"
+
+
 def bind_rec_pattern(software):
-    software.output_patterns.add(FilePattern.objects.get(data_kind__data_type="rec"))
+    software.output_patterns.add(FilePattern.objects.get(data_kind__data_type="rec", label=REC_LABEL))
+
+
+# The serialEM naming: the stem varies per plan, the _Vol.zarr tail is a static match.
+SERIALEM_REC_REGEX = r"^(?P<position>\w+_ts_\d+)\.mrc_Vol\.zarr$"
+SERIALEM_ZARRS = [
+    "Position_10_ts_001.mrc_Vol.zarr",
+    "pt712_ts_001.mrc_Vol.zarr",
+    "pt729_ts_001.mrc_Vol.zarr",
+    "pt729_ts_002.mrc_Vol.zarr",
+]
+
+
+def given_plan():
+    return SessionPlan.objects.create(
+        scope=Microscope.objects.create(name="krios2", cs=2.7),
+        camera=Camera.objects.create(
+            name="TestCam", root_dir="/test/root", frame_format="eer", initial_frame_base_dir="/test/frames"
+        ),
+        imaging_workflow=ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo"),
+        software=Software.objects.create(name="serialEM"),
+    )
+
+
+def bind_plan_pattern(plan, data_type="rec"):
+    kind, _ = DataKind.objects.get_or_create(data_type=data_type)
+    pattern = FilePattern.objects.create(
+        data_kind=kind, label="serialEM rec", list_glob="*_Vol.zarr", regex=SERIALEM_REC_REGEX
+    )
+    SessionPlanPathBinding.objects.create(session_plan=plan, role=TILT_SERIES_ROLE, file_pattern=pattern)
+    return pattern
 
 
 class TestOutputPattern:
@@ -166,6 +208,37 @@ class TestOutputPattern:
         with pytest.raises(ImproperlyConfigured, match="No DataKind 'thumb'"):
             get_processor("aretomo3").get_output_pattern("thumb")
 
+    def test_plan_binding_wins_over_the_software_row(self, templates):
+        """serialEM names stacks its own way; the plan's pattern reads them, while the
+        canonical row reads none of them -- why the plan rung exists."""
+        bind_rec_pattern(given_software("aretomo3"))
+        plan = given_plan()
+        theirs = bind_plan_pattern(plan)
+        canonical = FilePattern.objects.get(data_kind__data_type="rec", label=REC_LABEL)
+
+        pattern = get_processor("aretomo3").get_output_pattern("rec", plan=plan)
+
+        assert pattern == theirs
+        for zarr in SERIALEM_ZARRS:
+            assert pattern.match(zarr)["position"] == zarr.removesuffix(".mrc_Vol.zarr")
+            assert canonical.match(zarr) is None
+
+    def test_plan_without_binding_uses_the_software_row(self, templates):
+        bind_rec_pattern(given_software("aretomo3"))
+        pattern = get_processor("aretomo3").get_output_pattern("rec", plan=given_plan())
+        assert pattern.label == REC_LABEL
+
+    def test_binding_of_another_kind_is_ignored(self, templates):
+        """The binding self-keys on its pattern's data kind: a row naming some other kind
+        of file must not hijack rec resolution."""
+        bind_rec_pattern(given_software("aretomo3"))
+        plan = given_plan()
+        bind_plan_pattern(plan, data_type="rawst")
+
+        pattern = get_processor("aretomo3").get_output_pattern("rec", plan=plan)
+
+        assert pattern.label == REC_LABEL
+
 
 class TestPathsUsed:
     """The snapshot execution.py freezes into PipeExecution.parameters["_paths_used"],
@@ -173,7 +246,7 @@ class TestPathsUsed:
 
     def test_snapshot_names_root_and_bound_patterns(self, templates):
         bind_rec_pattern(given_software("aretomo3"))
-        info = get_processor("aretomo3").get_paths_used(SimpleNamespace(cluster_id=None))
+        info = get_processor("aretomo3").get_paths_used(SimpleNamespace(cluster_id=None, msi_session=None))
         assert info == {
             "processing_base_path": "/hpc/projects/group.czii/krios1.processing/aretomo3",
             "output_patterns": {"rec": "{position}_Vol.zarr"},
@@ -181,5 +254,16 @@ class TestPathsUsed:
 
     def test_software_without_patterns_snapshots_none(self, templates):
         given_software("denoiset")
-        info = get_processor("denoiset").get_paths_used(SimpleNamespace(cluster_id=None))
+        info = get_processor("denoiset").get_paths_used(SimpleNamespace(cluster_id=None, msi_session=None))
         assert info["output_patterns"] == {}
+
+    def test_bound_plan_snapshots_its_own_label(self, templates):
+        """The snapshot records what the run resolves, not just what the software binds."""
+        bind_rec_pattern(given_software("aretomo3"))
+        plan = given_plan()
+        bind_plan_pattern(plan)
+        context = SimpleNamespace(cluster_id=None, msi_session=SimpleNamespace(session_plan=plan))
+
+        info = get_processor("aretomo3").get_paths_used(context)
+
+        assert info["output_patterns"] == {"rec": "serialEM rec"}

@@ -11,6 +11,7 @@ import re
 from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
+from tem.models import MsiSession
 
 from workflow.context import RunContext
 from workflow.processors import get_processor, register_processor
@@ -151,8 +152,11 @@ class CopickProcessor(BaseProcessor):
 
             # copick's --run-regex matches run *stems* in the source software's tree,
             # so the basename regex drops .zarr.
+            source_session = MsiSession.objects.filter(name=session_name).select_related("session_plan").first()
+            plan = source_session.session_plan if source_session else None
+
             source = ImportTomoType(params["import_tomo_type"]).source_software
-            pattern = get_processor(source).get_output_pattern("rec")
+            pattern = get_processor(source).get_output_pattern("rec", plan=plan)
             template_vars["run_regex"] = pattern.regex.replace(r"\.zarr$", "$")
 
         # Add operation-specific variables

@@ -114,8 +114,8 @@ INHERITED_ROLE = "atlas"
 RESOLVED_ROLES = tuple(role for role in SOFTWARE_PATH_ROLES if role != INHERITED_ROLE)
 
 # The plan's tilt-series stack naming
-STEM_ROLE = "tilt_series"
-BINDING_ROLES = SOFTWARE_PATH_ROLES + (STEM_ROLE,)
+TILT_SERIES_ROLE = "tilt_series"
+BINDING_ROLES = SOFTWARE_PATH_ROLES + (TILT_SERIES_ROLE,)
 
 
 class Software(models.Model):

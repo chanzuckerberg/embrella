@@ -7,7 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('processes', '0043_sync_processing_directory_help_text'),
-        ('tem', '0025_sessionplanpathbinding_file_pattern'),
+        ('tem', '0024_software_version_and_path_bindings'),
     ]
 
     operations = [
