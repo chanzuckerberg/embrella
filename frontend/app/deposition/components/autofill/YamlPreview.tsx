@@ -1,11 +1,39 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@czi-sds/components';
 import { Box, Typography } from '@mui/material';
 
-import { YamlHighlight } from './YamlHighlight';
+import { YamlHighlight, EDITOR_BG } from './YamlHighlight';
 
-export function YamlPreview({ yaml, title, onClose }: { yaml: string; title?: string; onClose: () => void }) {
+export function YamlPreview({
+  yaml,
+  title,
+  onClose,
+  onChange,
+}: {
+  yaml: string;
+  title?: string;
+  onClose: () => void;
+  onChange?: (yaml: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(yaml);
+  const editable = Boolean(onChange);
+
+  const startEdit = () => {
+    setDraft(yaml);
+    setEditing(true);
+  };
+  const save = () => {
+    onChange?.(draft);
+    setEditing(false);
+  };
+  const cancel = () => setEditing(false);
+
+  let statusText = '';
+  if (editing) statusText = 'editing - Save to apply to the fields';
+
   return (
     <Box
       sx={{
@@ -37,19 +65,63 @@ export function YamlPreview({ yaml, title, onClose }: { yaml: string; title?: st
           <Typography variant="subtitle2" sx={{ fontWeight: 700 }} noWrap>
             dataprep_config.yaml
           </Typography>
-          {title && (
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {title}
-            </Typography>
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {title}
+            {title && statusText ? ' · ' : ''}
+            {statusText}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+          {editable && !editing && (
+            <Button sdsType="primary" sdsStyle="minimal" size="small" onClick={startEdit}>
+              Edit
+            </Button>
+          )}
+          {editing && (
+            <>
+              <Button sdsType="primary" sdsStyle="minimal" size="small" onClick={save}>
+                Save
+              </Button>
+              <Button sdsType="secondary" sdsStyle="minimal" size="small" onClick={cancel}>
+                Cancel
+              </Button>
+            </>
+          )}
+          {!editing && (
+            <Button sdsType="secondary" sdsStyle="minimal" size="small" onClick={onClose}>
+              Close
+            </Button>
           )}
         </Box>
-        <Button sdsType="primary" sdsStyle="minimal" size="small" onClick={onClose} sx={{ flexShrink: 0 }}>
-          Close
-        </Button>
       </Box>
 
-      <Box sx={{ flex: 1, overflow: 'auto', bgcolor: '#0d1117' }}>
-        <YamlHighlight yaml={yaml} />
+      <Box sx={{ flex: 1, minHeight: 320, overflow: 'auto', bgcolor: EDITOR_BG }}>
+        {editing ? (
+          <Box
+            component="textarea"
+            value={draft}
+            spellCheck={false}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDraft(e.target.value)}
+            sx={{
+              width: '100%',
+              height: '100%',
+              minHeight: 320,
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+              display: 'block',
+              bgcolor: EDITOR_BG,
+              color: '#c9d1d9',
+              fontFamily: 'monospace',
+              fontSize: '0.8rem',
+              lineHeight: 1.7,
+              p: 2,
+              tabSize: 2,
+            }}
+          />
+        ) : (
+          <YamlHighlight yaml={yaml} />
+        )}
       </Box>
     </Box>
   );
