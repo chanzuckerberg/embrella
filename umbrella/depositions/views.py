@@ -36,6 +36,8 @@ from .services.autofill import map_session_to_metadata, run_autofill_init
 
 logger = logging.getLogger(__name__)
 
+DEPOSITION_DEFAULT_CLUSTER_ID = "bruno"
+
 # Wizard autosaves via PATCH only — no PUT full-replace.
 HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
 
@@ -227,11 +229,25 @@ class DatasetViewSet(viewsets.ModelViewSet):
                         "tilt_max": 60,
                         "tilt_step": 3,
                     },
-                    "tomogram_metadata": {
-                        "voxel_spacing": 7.84,
-                        "reconstruction_method": "WBP",
-                        "ctf_corrected": True,
-                    },
+                    "tomogram_metadata": [
+                        {
+                            "flavor": "denoised",
+                            "voxel_spacing": 7.84,
+                            "reconstruction_method": "WBP",
+                            "ctf_corrected": True,
+                            "processing": "denoised",
+                            "processing_software": "DenoisET",
+                            "is_visualization_default": True,
+                        },
+                        {
+                            "flavor": "filtered",
+                            "voxel_spacing": 7.84,
+                            "reconstruction_method": "WBP",
+                            "ctf_corrected": True,
+                            "processing": "filtered",
+                            "is_visualization_default": False,
+                        },
+                    ],
                     "annotations": [
                         {
                             "copick_kind": "picks",
@@ -269,7 +285,7 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
         )
 
         msi_session = session.msi_session
-        cluster_id = cluster_id_for_run(msi_session.name, run_number)
+        cluster_id = cluster_id_for_run(msi_session.name, run_number, default=DEPOSITION_DEFAULT_CLUSTER_ID)
         try:
             cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
         except Cluster.DoesNotExist:
@@ -289,10 +305,22 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
         started = time.monotonic()
         result = run_autofill_init(cluster_id, aretomo3_dir, msi_session.name)
         if not result["filled"]:
-            return Response(
-                {"detail": f"Auto-fill could not read this run: {result['reason']}."},
-                status=status.HTTP_502_BAD_GATEWAY,
+            logger.warning(
+                "auto-fill failed for session %s run %s on %s: %s",
+                msi_session.name,
+                run_number,
+                cluster_id,
+                result["reason"],
             )
+            user_messages = {
+                "ssh_disabled": "Auto-fill isn't available here.",
+                "ssh_error": "Couldn't reach the cluster to auto-fill. Please try again.",
+            }
+            user_message = user_messages.get(
+                result["reason"],
+                "Check the AreTomo run on the Sources step.",
+            )
+            return Response({"detail": user_message}, status=status.HTTP_502_BAD_GATEWAY)
 
         raw = result["session"]
         mapped = map_session_to_metadata(raw)
@@ -300,10 +328,14 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
             session=session,
             defaults={**mapped["tiltseries"], "autofill_metadata": raw},
         )
-        TomogramMetadata.objects.update_or_create(
-            session=session,
-            defaults={**mapped["tomogram"], "autofill_metadata": raw},
-        )
+        for tomo in mapped["tomograms"]:
+            TomogramMetadata.objects.update_or_create(
+                session=session,
+                flavor=tomo["flavor"],
+                defaults={**tomo, "autofill_metadata": raw},
+            )
+        kept_flavors = {tomo["flavor"] for tomo in mapped["tomograms"]}
+        session.tomogram_metadata.exclude(flavor__in=kept_flavors).delete()
 
         session.last_autofill_at = timezone.now()
         session.last_autofill_duration_seconds = round(time.monotonic() - started)

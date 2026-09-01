@@ -52,7 +52,31 @@ class TestMapSessionToMetadata:
             "total_flux": 120.0,
             "binning_from_frames": 8,
         }
-        assert mapped["tomogram"] == {"reconstruction_software": "AreTomo3 2.1.0"}
+        # Two flavors (denoised + filtered) mirroring deposition_prep._tomograms.
+        # voxel_spacing = round(pixel_spacing * binned_voxel_ratio, 3) — mirrors deposition_prep.
+        tomograms = mapped["tomograms"]
+        assert [t["flavor"] for t in tomograms] == ["denoised", "filtered"]
+        denoised, filtered = tomograms
+        assert denoised == {
+            "reconstruction_software": "AreTomo3 2.1.0",
+            "voxel_spacing": 12.32,
+            "flavor": "denoised",
+            "processing": "denoised",
+            "processing_software": "DenoisET",
+            "is_visualization_default": True,
+        }
+        assert filtered == {
+            "reconstruction_software": "AreTomo3 2.1.0",
+            "voxel_spacing": 12.32,
+            "flavor": "filtered",
+            "processing": "filtered",
+            "processing_software": "AreTomo3 2.1.0",
+            "is_visualization_default": False,
+        }
+
+    def test_voxel_spacing_omitted_when_inputs_missing(self):
+        block = {"acquisition": {"pixel_spacing": 1.54}}  # no binned_voxel_ratio
+        assert all("voxel_spacing" not in t for t in map_session_to_metadata(block)["tomograms"])
 
     def test_null_fields_are_dropped_not_written(self):
         # tilt_axis_angle is None
@@ -60,8 +84,9 @@ class TestMapSessionToMetadata:
         assert "tilt_axis" not in mapped["tiltseries"]
 
     def test_empty_or_none_session_is_safe(self):
-        assert map_session_to_metadata(None) == {"tiltseries": {}, "tomogram": {}}
-        assert map_session_to_metadata({}) == {"tiltseries": {}, "tomogram": {}}
+        for out in (map_session_to_metadata(None), map_session_to_metadata({})):
+            assert out["tiltseries"] == {}
+            assert [t["flavor"] for t in out["tomograms"]] == ["denoised", "filtered"]
 
 
 class TestExtractSession:

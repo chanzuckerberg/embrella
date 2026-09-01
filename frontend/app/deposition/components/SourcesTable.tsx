@@ -86,10 +86,6 @@ export function SourcesTable({
       <Box sx={{ minWidth: 0 }}>
         <Box
           sx={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 2,
-            bgcolor: 'background.paper',
             pb: 1.5,
             mb: 2,
             borderBottom: '1px solid',

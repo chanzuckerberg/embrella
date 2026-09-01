@@ -97,10 +97,15 @@ class DatasetJobSerializer(serializers.ModelSerializer):
 
 
 class DepositionSessionLinkSerializer(serializers.ModelSerializer):
-    """Shallow session selection nested under Dataset."""
+    """Shallow session selection nested under Dataset.
+
+    Metadata is read-only here so the wizard can reload saved tiltseries/tomogram values on reopen
+    """
 
     id = serializers.IntegerField(required=False)
     msi_session_name = serializers.CharField(source="msi_session.name", read_only=True)
+    tiltseries_metadata = TiltseriesMetadataSerializer(read_only=True)
+    tomogram_metadata = TomogramMetadataSerializer(many=True, read_only=True)
 
     class Meta:
         model = DepositionSession
@@ -114,14 +119,18 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
             "subset_selection",
             "subset_filename",
             "selected_copick_runs",
+            "tiltseries_metadata",
+            "tomogram_metadata",
+            "last_autofill_at",
         ]
+        read_only_fields = ["last_autofill_at"]
 
 
 class DepositionSessionSerializer(serializers.ModelSerializer):
     """Full /sessions/[id] view — writable metadata + annotations."""
 
     tiltseries_metadata = TiltseriesMetadataSerializer(required=False)
-    tomogram_metadata = TomogramMetadataSerializer(required=False)
+    tomogram_metadata = TomogramMetadataSerializer(many=True, required=False)
     annotations = DepositionAnnotationSerializer(many=True, required=False)
 
     class Meta:
@@ -135,6 +144,19 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
             "last_autofill_duration_seconds",
         ]
 
+    def validate_tomogram_metadata(self, value):
+        """Each tomogram must have a valid, unique flavor (denoised/filtered) — the sync upserts by it."""
+        valid = {"denoised", "filtered"}
+        seen = set()
+        for i, tomo in enumerate(value):
+            flavor = tomo.get("flavor")
+            if flavor not in valid:
+                raise serializers.ValidationError(f"tomogram_metadata[{i}].flavor must be one of {sorted(valid)}.")
+            if flavor in seen:
+                raise serializers.ValidationError(f"Duplicate tomogram flavor '{flavor}'.")
+            seen.add(flavor)
+        return value
+
     def update(self, instance, validated_data):
         ts = validated_data.pop("tiltseries_metadata", None)
         tomo = validated_data.pop("tomogram_metadata", None)
@@ -147,10 +169,21 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
         if ts is not None:
             TiltseriesMetadata.objects.update_or_create(session=instance, defaults=ts)
         if tomo is not None:
-            TomogramMetadata.objects.update_or_create(session=instance, defaults=tomo)
+            self._sync_tomograms(instance, tomo)
         if annotations is not None:
             self._sync_annotations(instance, annotations)
         return instance
+
+    def _sync_tomograms(self, session, tomograms):
+        """Sync tomograms by flavor (denoised/filtered)."""
+        seen = set()
+        for tomo in tomograms:
+            flavor = tomo.get("flavor", "")
+            seen.add(flavor)
+            TomogramMetadata.objects.update_or_create(session=session, flavor=flavor, defaults=tomo)
+        for existing in session.tomogram_metadata.all():
+            if existing.flavor not in seen:
+                existing.delete()
 
     def _sync_annotations(self, session, annotations):
         """Upsert annotations by (copick_kind, copick_ref); drop removed ones."""
@@ -332,7 +365,7 @@ class SubmissionDatasetSerializer(serializers.ModelSerializer):
 
     def get_type(self, obj) -> str:
         has_tomograms = any(
-            hasattr(s, "tiltseries_metadata") or hasattr(s, "tomogram_metadata") for s in obj.sessions.all()
+            hasattr(s, "tiltseries_metadata") or s.tomogram_metadata.exists() for s in obj.sessions.all()
         )
         has_annotations = any(a.is_selected for s in obj.sessions.all() for a in s.annotations.all())
         if has_annotations and not has_tomograms:

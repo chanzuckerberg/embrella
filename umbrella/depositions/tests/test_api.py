@@ -360,11 +360,43 @@ class TestAutoFill:
         assert ts.total_flux == 120.0
         assert ts.tilt_axis is None
         assert ts.autofill_metadata == raw
-        tm = TomogramMetadata.objects.get(session=owned_session)
-        assert tm.reconstruction_software == "AreTomo3 2.1.0"
+        tomos = {t.flavor: t for t in TomogramMetadata.objects.filter(session=owned_session)}
+        assert set(tomos) == {"denoised", "filtered"}
+        assert tomos["denoised"].reconstruction_software == "AreTomo3 2.1.0"
+        assert tomos["denoised"].voxel_spacing == 12.32
+        assert tomos["denoised"].processing_software == "DenoisET"
+        assert tomos["denoised"].is_visualization_default is True
+        assert tomos["filtered"].processing_software == "AreTomo3 2.1.0"
+        assert tomos["filtered"].is_visualization_default is False
+        assert tomos["denoised"].autofill_metadata == raw
         owned_session.refresh_from_db()
         assert owned_session.last_autofill_at is not None
         assert owned_session.last_autofill_duration_seconds is not None
+
+    def test_prunes_stale_flavor_rows(self, auth_client, owned_session):
+        """Re-running auto-fill drops a leftover pre-migration flavor="" row."""
+        from depositions.models import TomogramMetadata
+
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+        TomogramMetadata.objects.create(session=owned_session, flavor="", reconstruction_software="old")
+
+        raw = {"acquisition": {"aretomo_version": "AreTomo3 2.1.0", "pixel_spacing": 1.5, "binned_voxel_ratio": 8}}
+        c1, c2, c3 = self._patch_cluster()
+        with (
+            c1,
+            c2,
+            c3,
+            mock.patch(
+                "depositions.views.run_autofill_init",
+                return_value={"filled": True, "session": raw, "reason": None},
+            ),
+        ):
+            r = auth_client.post(self._url(owned_session))
+
+        assert r.status_code == 200, r.content
+        flavors = {t.flavor for t in TomogramMetadata.objects.filter(session=owned_session)}
+        assert flavors == {"denoised", "filtered"}  # stale "" row pruned
 
     def test_unprefixed_run_is_normalized_to_run_dir(self, auth_client, owned_session):
         # Runs are stored as "001" but the cluster dir is "run001" - the view must prefix it.
@@ -399,7 +431,9 @@ class TestAutoFill:
         ):
             r = auth_client.post(self._url(owned_session))
         assert r.status_code == 502
-        assert "Metrics file not found" in r.json()["detail"]
+        detail = r.json()["detail"]
+        assert "Metrics file not found" not in detail
+        assert "AreTomo run" in detail
 
     def test_non_owner_cannot_autofill(self, owned_session):
         other = User.objects.create_user(username="heidi@example.com", password="pw")
@@ -407,3 +441,70 @@ class TestAutoFill:
         client.force_login(other)
         r = client.post(f"{SESSIONS}{owned_session.id}/auto-fill/")
         assert r.status_code == 403
+
+
+@pytest.mark.django_db
+class TestTomogramFlavorValidation:
+    """PATCH /sessions/<id> tomogram_metadata must carry valid, unique flavors."""
+
+    def _patch(self, auth_client, session, tomos):
+        return auth_client.patch(f"{SESSIONS}{session.id}/", {"tomogram_metadata": tomos}, format="json")
+
+    def test_accepts_denoised_and_filtered(self, auth_client, owned_session):
+        from depositions.models import TomogramMetadata
+
+        r = self._patch(
+            auth_client,
+            owned_session,
+            [{"flavor": "denoised", "voxel_spacing": 7.84}, {"flavor": "filtered", "voxel_spacing": 7.84}],
+        )
+        assert r.status_code == 200, r.content
+        assert {t.flavor for t in TomogramMetadata.objects.filter(session=owned_session)} == {"denoised", "filtered"}
+
+    def test_rejects_invalid_flavor(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, [{"flavor": "raw", "voxel_spacing": 7.84}])
+        assert r.status_code == 400
+
+    def test_rejects_blank_flavor(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, [{"flavor": "", "voxel_spacing": 7.84}])
+        assert r.status_code == 400
+
+    def test_rejects_missing_flavor(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, [{"voxel_spacing": 7.84}])
+        assert r.status_code == 400
+
+    def test_rejects_duplicate_flavor(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, [{"flavor": "denoised"}, {"flavor": "denoised"}])
+        assert r.status_code == 400
+
+
+@pytest.mark.django_db
+class TestDatasetLoadsSessionMetadata:
+    """Dataset GET must return saved session metadata so the wizard reloads edits on reopen"""
+
+    def test_dataset_get_includes_saved_metadata(self, auth_client, owned_session):
+        from django.utils import timezone
+
+        from depositions.models import TiltseriesMetadata, TomogramMetadata
+
+        TiltseriesMetadata.objects.create(session=owned_session, acceleration_voltage=302)
+        TomogramMetadata.objects.create(session=owned_session, flavor="denoised", voxel_spacing=7.84)
+        owned_session.last_autofill_at = timezone.now()
+        owned_session.save(update_fields=["last_autofill_at"])
+
+        r = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
+        assert r.status_code == 200, r.content
+        sess = next(s for s in r.json()["sessions"] if s["id"] == owned_session.id)
+        assert sess["tiltseries_metadata"]["acceleration_voltage"] == 302
+        assert sess["tomogram_metadata"][0]["flavor"] == "denoised"
+        assert sess["tomogram_metadata"][0]["voxel_spacing"] == 7.84
+        # last_autofill_at must load too, else the wizard shows "Auto-fill" (not "Re-run") on reopen
+        # and skips the overwrite confirm.
+        assert sess["last_autofill_at"] is not None
+
+    def test_dataset_get_without_metadata_does_not_error(self, auth_client, owned_session):
+        r = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
+        assert r.status_code == 200, r.content
+        sess = next(s for s in r.json()["sessions"] if s["id"] == owned_session.id)
+        assert sess.get("tiltseries_metadata") is None
+        assert sess["tomogram_metadata"] == []

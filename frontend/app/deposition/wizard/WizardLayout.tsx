@@ -18,7 +18,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const router = useRouter();
   const [current, setCurrent] = useState(1);
   const [save, setSave] = useState<AutoSaveState | null>(null);
-  // Fail-open: read-only only when is_owner === false.
+  const [blocking, setBlocking] = useState(0);
   const readOnly = dataset.is_owner === false;
   const skippedNums = WIZARD_STEPS.filter((s) => isStepSkipped(s, dataset)).map((s) => s.num);
   const activeNums = WIZARD_STEPS.filter((s) => !skippedNums.includes(s.num)).map((s) => s.num);
@@ -29,6 +29,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   // Step change "Next/Back button" unmounts the body; autosave flushes pending edits.
   const go = (n: number) => {
     setSave(null);
+    setBlocking(0);
     setCurrent(n);
   };
 
@@ -88,19 +89,28 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           <WizardStepper steps={WIZARD_STEPS} current={current} skipped={skippedNums} onSelect={go} />
         </Box>
 
-        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: { xs: 3, md: 5 }, py: { xs: 4, md: 5 } }}>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'scroll',
+            scrollbarGutter: 'stable',
+            px: { xs: 3, md: 5 },
+            py: { xs: 4, md: 5 },
+          }}
+        >
           {readOnly && (
             <Alert severity="info" sx={{ mb: 3 }}>
               You&apos;re viewing another user&apos;s submission - it&apos;s read-only.
             </Alert>
           )}
-          <Body dataset={dataset} reportSave={setSave} readOnly={readOnly} />
+          <Body dataset={dataset} reportSave={setSave} reportBlocking={setBlocking} readOnly={readOnly} />
         </Box>
 
         <Box sx={{ flexShrink: 0, px: { xs: 3, md: 5 }, py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
           <WizardFooter
             disableBack={pos <= 0}
-            disableNext={pos < 0 || pos >= activeNums.length - 1}
+            disableNext={pos < 0 || pos >= activeNums.length - 1 || blocking > 0}
             onBack={() => pos > 0 && go(activeNums[pos - 1])}
             onNext={() => pos >= 0 && pos < activeNums.length - 1 && go(activeNums[pos + 1])}
             onSaveAndExit={saveAndExit}
