@@ -40,37 +40,6 @@ def natural_name_ordering(name_field="name", desc=False):
     return ("name_is_numeric", "name_as_number", name_field)
 
 
-def msi_session_sort_key(name):
-    """
-    Custom sorting function for MSI session names in format 'yymmmdda'.
-    Returns a tuple for sorting with newer sessions first.
-    """
-    try:
-        year = int(name[:2])
-        month = name[2:5].lower()
-        day = int(name[5:7])
-        seq = name[7] if len(name) > 7 else "a"
-
-        month_map = {
-            "jan": 1,
-            "feb": 2,
-            "mar": 3,
-            "apr": 4,
-            "may": 5,
-            "jun": 6,
-            "jul": 7,
-            "aug": 8,
-            "sep": 9,
-            "oct": 10,
-            "nov": 11,
-            "dec": 12,
-        }
-        month_num = month_map.get(month, 0)
-        return (-year, -month_num, -day, seq)
-    except (ValueError, IndexError):
-        return (0, 0, 0, name)
-
-
 def add_selected_status(filter_list, category, selected_filters):
     """Mark filter items as selected based on the current filter state."""
     selected_values = selected_filters.get(category, set())

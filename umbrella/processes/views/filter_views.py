@@ -19,10 +19,9 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from pydantic import ValidationError
 from rest_framework.decorators import api_view
 
+from common.sorting import msi_session_sort_key
 from processes.models import Annotation, ProcRun
 from processes.validation import QueryParams
-
-from .utils import msi_session_sort_key
 
 logger = logging.getLogger(__name__)
 

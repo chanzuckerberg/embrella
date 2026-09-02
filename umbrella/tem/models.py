@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from stores.models import FilePattern, Path, PathType, fill_place_holders
 from stores.paths import assert_fully_resolved
 
-from common.session_names import NAME_PREFIX_RE
+from common.sorting import NAME_PREFIX_RE
 
 TEM_CHOICES = {
     "imaging_mode": [
