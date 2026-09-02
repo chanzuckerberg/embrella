@@ -14,8 +14,20 @@ interface SessionFormProps {
 }
 
 export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFormProps) {
-  const { state, formOptions, users, grids, magnifications, errors, isLoading, isSubmitting, updateField, submit } =
-    useSessionForm();
+  const {
+    state,
+    formOptions,
+    users,
+    grids,
+    magnifications,
+    errors,
+    isLoading,
+    isSubmitting,
+    updateField,
+    selectSessionPlan,
+    selectFilterUser,
+    submit,
+  } = useSessionForm();
 
   // Map options for DropdownSelect (needs { name } shape)
   const sessionPlanOptions = useMemo(
@@ -89,7 +101,7 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
           topLabel="Session Plan"
           value={selectedSessionPlan}
           options={sessionPlanOptions}
-          onChange={(option) => updateField('sessionPlanId', option?.id ?? null)}
+          onChange={(option) => selectSessionPlan(option?.id ?? null)}
         />
         {Boolean(errors.sessionPlanId) && (
           <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.sessionPlanId}</Box>
@@ -113,7 +125,7 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
           topLabel="Filter by User"
           value={selectedUser}
           options={userOptions}
-          onChange={(option) => updateField('filterUserId', option?.id === 0 ? null : (option?.id ?? null))}
+          onChange={(option) => selectFilterUser(option?.id === 0 ? null : (option?.id ?? null))}
         />
       </Box>
 

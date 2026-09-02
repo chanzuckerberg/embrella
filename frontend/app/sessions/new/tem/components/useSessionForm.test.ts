@@ -15,6 +15,11 @@ const SERIALEM_PLAN = { id: 7, name: 'serialEM on krios1' };
 // What the backend does: the chosen plan's name_prefix in front of the date.
 const PLAN_PREFIX: Record<number, string> = { [TOMO5_PLAN.id]: '', [SERIALEM_PLAN.id]: 's' };
 
+const USER_ID = 5;
+const DEFAULT_GRID = { id: 11, name: 'g11', display_name: 'Grid 11', is_default: true };
+const OTHER_GRID = { id: 12, name: 'g12', display_name: 'Grid 12', is_default: false };
+const MAGNIFICATION = { id: 3, nominal_mag: 50000, mode: 'SA', index: 0, scope__name: 'krios1', display: '50kx' };
+
 const jsonResponse = (body: unknown) => ({ ok: true, json: async () => body }) as unknown as Response;
 
 function fakeBackend(url: string): Promise<Response> {
@@ -29,6 +34,13 @@ function fakeBackend(url: string): Promise<Response> {
   }
   if (pathname === TEM_API.USERS) {
     return Promise.resolve(jsonResponse({ users: [] }));
+  }
+  if (pathname === TEM_API.MAGNIFICATIONS) {
+    return Promise.resolve(jsonResponse([MAGNIFICATION]));
+  }
+  if (pathname === TEM_API.GRIDS_BY_USER) {
+    const grids = searchParams.get('user_id') === String(USER_ID) ? [OTHER_GRID, DEFAULT_GRID] : [];
+    return Promise.resolve(jsonResponse(grids));
   }
   return Promise.resolve(jsonResponse([]));
 }
@@ -57,7 +69,7 @@ describe('useSessionForm suggested name', () => {
   it('asks for the plan-specific suggestion and applies it to an untouched name', async () => {
     const { result } = await mountForm();
 
-    act(() => result.current.updateField('sessionPlanId', SERIALEM_PLAN.id));
+    act(() => result.current.selectSessionPlan(SERIALEM_PLAN.id));
 
     await waitFor(() => expect(result.current.state.name).toBe(`s${TODAY}`));
     expect(result.current.suggestedName).toBe(`s${TODAY}`);
@@ -70,7 +82,7 @@ describe('useSessionForm suggested name', () => {
     const { result } = await mountForm();
 
     act(() => result.current.updateField('name', 'mytestname'));
-    act(() => result.current.updateField('sessionPlanId', SERIALEM_PLAN.id));
+    act(() => result.current.selectSessionPlan(SERIALEM_PLAN.id));
 
     await waitFor(() => expect(result.current.suggestedName).toBe(`s${TODAY}`));
     expect(result.current.state.name).toBe('mytestname');
@@ -80,7 +92,7 @@ describe('useSessionForm suggested name', () => {
     const { result } = await mountForm();
 
     act(() => result.current.updateField('name', ''));
-    act(() => result.current.updateField('sessionPlanId', TOMO5_PLAN.id));
+    act(() => result.current.selectSessionPlan(TOMO5_PLAN.id));
 
     await waitFor(() => expect(result.current.state.name).toBe(TODAY));
   });
@@ -88,10 +100,47 @@ describe('useSessionForm suggested name', () => {
   it('follows the suggestion from one plan to the next while untouched', async () => {
     const { result } = await mountForm();
 
-    act(() => result.current.updateField('sessionPlanId', SERIALEM_PLAN.id));
+    act(() => result.current.selectSessionPlan(SERIALEM_PLAN.id));
     await waitFor(() => expect(result.current.state.name).toBe(`s${TODAY}`));
 
-    act(() => result.current.updateField('sessionPlanId', TOMO5_PLAN.id));
+    act(() => result.current.selectSessionPlan(TOMO5_PLAN.id));
     await waitFor(() => expect(result.current.state.name).toBe(TODAY));
+  });
+});
+
+describe('useSessionForm dependent lists', () => {
+  it('selecting a plan loads its magnifications and clears the old pick', async () => {
+    const { result } = await mountForm();
+    act(() => result.current.updateField('magnificationId', 99));
+
+    act(() => result.current.selectSessionPlan(SERIALEM_PLAN.id));
+
+    await waitFor(() => expect(result.current.magnifications).toEqual([MAGNIFICATION]));
+    expect(result.current.state.magnificationId).toBeNull();
+    expect(mockedFetch).toHaveBeenCalledWith(
+      expect.stringContaining(`${TEM_API.MAGNIFICATIONS}?session_plan_id=${SERIALEM_PLAN.id}`)
+    );
+  });
+
+  it('clearing the plan empties the magnifications without a request', async () => {
+    const { result } = await mountForm();
+    act(() => result.current.selectSessionPlan(SERIALEM_PLAN.id));
+    await waitFor(() => expect(result.current.magnifications).toHaveLength(1));
+    const calls = mockedFetch.mock.calls.length;
+
+    act(() => result.current.selectSessionPlan(null));
+
+    expect(result.current.magnifications).toEqual([]);
+    expect(mockedFetch.mock.calls.length).toBe(calls);
+  });
+
+  it('selecting a user loads their grids and pre-selects the default one', async () => {
+    const { result } = await mountForm();
+
+    act(() => result.current.selectFilterUser(USER_ID));
+
+    await waitFor(() => expect(result.current.state.gridId).toBe(DEFAULT_GRID.id));
+    expect(result.current.state.filterUserId).toBe(USER_ID);
+    expect(mockedFetch).toHaveBeenCalledWith(expect.stringContaining(`${TEM_API.GRIDS_BY_USER}?user_id=${USER_ID}`));
   });
 });
