@@ -64,8 +64,6 @@ from workflow.processors.copick.views import (
 # Import and re-export constants
 from .constants import (
     ARETOMO3_BASIC_TEMPLATE_PATH,
-    ARETOMO3_SCRIPT_PATH,
-    ARETOMO3_TEMPLATE_PATH,
     BASE_DIR,
     COPICK_ADD_OBJECT_TEMPLATE_PATH,
     COPICK_IMPORT_TOMO_TEMPLATE_PATH,
@@ -124,7 +122,6 @@ from .utils import (
     calculate_metric_ranges,
     compute_stats,
     format_job_output,
-    natural_position_sort_key,
     parse_script_output,
     store_log,
     track_jobs_internal,
@@ -133,8 +130,6 @@ from .utils import (
 __all__ = [
     # Constants
     "ARETOMO3_BASIC_TEMPLATE_PATH",
-    "ARETOMO3_SCRIPT_PATH",
-    "ARETOMO3_TEMPLATE_PATH",
     "BASE_DIR",
     "COPICK_ADD_OBJECT_TEMPLATE_PATH",
     "COPICK_IMPORT_TOMO_TEMPLATE_PATH",
@@ -159,7 +154,6 @@ __all__ = [
     "calculate_metric_ranges",
     "compute_stats",
     "format_job_output",
-    "natural_position_sort_key",
     "parse_script_output",
     "store_log",
     "track_jobs_internal",

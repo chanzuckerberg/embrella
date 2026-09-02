@@ -7,7 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import Q
 from django.utils.timezone import now
-from stores.models import Cluster, Path, PathType, StaticPath
+from stores.models import Cluster, DataKind, FilePattern, Path, PathType
 from tem.models import MsiSession, SessionPlan
 
 """
@@ -66,11 +66,12 @@ class ProcSoftware(models.Model):
     """
     A software program started with the same command with different options.
 
-    New fields for generic pipeline execution:
+    Fields:
     - processor_class: Python class name for execution (e.g., 'aretomo3')
     - default_cluster: Default cluster for job submission ('czii' or 'bruno')
     - allowed_clusters: List of clusters this software can run on
-    - script_directory: Remote directory for script uploads
+    - processing_root: Optional PathType to directory template
+    - script_dir: Optional PathType to script location
     """
 
     name = models.CharField(
@@ -105,12 +106,6 @@ class ProcSoftware(models.Model):
         blank=True,
         help_text='List of cluster IDs this software can run on (e.g., ["czii", "bruno"]). Empty means all clusters allowed.',
     )
-    script_directory = models.CharField(
-        max_length=256,
-        null=True,
-        blank=True,
-        help_text="Remote script directory (e.g., /hpc/projects/.../scripts)",
-    )
     storage_dirname = models.CharField(
         max_length=64,
         blank=True,
@@ -122,6 +117,40 @@ class ProcSoftware(models.Model):
             "write into 'copick'. Maintained by hand in the admin; blank falls back to name."
         ),
     )
+    # PROTECT like every path FK here: SET_NULL is how the None-glob bug arose, and a
+    # deleted template must not silently revert a software to the shared layout.
+    processing_root = models.ForeignKey(
+        PathType,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="processing_root_of",
+        help_text=(
+            "Directory template for this software's runs, when they live outside the "
+            "standard tree. Blank = the shared processing_root template."
+        ),
+    )
+    script_dir = models.ForeignKey(
+        PathType,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="script_dir_of",
+        help_text=(
+            "Directory template for this software's uploaded scripts, when they live "
+            "outside the standard tree. Blank = the shared script_dir template."
+        ),
+    )
+    output_patterns = models.ManyToManyField(
+        FilePattern,
+        blank=True,
+        related_name="output_of",
+        help_text=(
+            "How this software names its output files, at most one pattern per data "
+            "kind (e.g. rec volumes, thumbnails, metrics CSV). Read by the syncers and "
+            "job templates through BaseProcessor.get_output_pattern()."
+        ),
+    )
     active = models.BooleanField(
         default=True,
         help_text="Whether this processor is currently active in the codebase",
@@ -131,6 +160,20 @@ class ProcSoftware(models.Model):
 
     def __str__(self):
         return "%s @ (%s)" % (self.name, self.version)
+
+    @property
+    def dirname(self):
+        """Directory segment this software owns on the cluster -- fills {proc_software}.
+
+        Not `name`: the copick sub-processors are distinct softwares writing into one
+        `copick` directory, so substituting `name` would resolve to a path that does not
+        exist. Currently a no-op for every software that has an output template, since
+        those all have `storage_dirname == name`.
+
+        `storage_tree` deliberately spells `dirname or name` at the queryset level instead
+        of using this, to avoid instantiating a model per row.
+        """
+        return self.storage_dirname or self.name
 
 
 class ProcPlan(models.Model):
@@ -171,7 +214,7 @@ class Pipe(models.Model):
     name = models.CharField(max_length=32, default="voxelspacing10.000a")
     software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE)
     tasks_performed = models.ManyToManyField(Task)
-    input = models.ManyToManyField(StaticPath, related_name="staticpath_in_input")
+    input = models.ManyToManyField(DataKind, related_name="datakind_in_input")
     output = models.ManyToManyField(PathType, related_name="pathtype_in_output")
 
     def __str__(self):
@@ -198,7 +241,8 @@ class PipeInPlan(models.Model):
         }
         if proc_run:
             mapping["proc_run"] = proc_run.name
-            mapping["proc_software"] = self.pipe.software.name
+            mapping["proc_software"] = self.pipe.software.dirname
+            mapping["workflow"] = mapping["proc_software"]  # Legacy alias
         if msi_session:
             mapping["msi_session"] = msi_session.name
             mapping["scope"] = msi_session.session_plan.scope.name
@@ -234,7 +278,7 @@ class PipeJoint(models.Model):
     def __str__(self):
         return "%s needs %s from %s" % (
             self.pipe_in_plan,
-            self.input_pathtype.static_path.data_type,
+            self.input_pathtype.data_kind.data_type,
             self.input_pipe_in_plan,
         )
 
@@ -757,8 +801,8 @@ def suggest_name(prefix, msi_session, plan, model_name="ProcRun"):
 
 
 def select_plan_ids_by_input_data_types(selected_data_types):
-    selected_static_paths = StaticPath.objects.filter(data_type__in=selected_data_types)
-    selected_pipes = Pipe.objects.filter(input__in=selected_static_paths)
+    selected_kinds = DataKind.objects.filter(data_type__in=selected_data_types)
+    selected_pipes = Pipe.objects.filter(input__in=selected_kinds)
     pipe_in_plans = PipeInPlan.objects.filter(pipe__in=selected_pipes)
     plan_ids = list(map((lambda x: x.plan.id), pipe_in_plans))
     return plan_ids
@@ -830,6 +874,12 @@ class ReviewTomogram(models.Model):
     reconstruction_type = models.CharField(max_length=100, null=True, blank=True)  # e.g., 'WBP', 'SIRT', 'SGD'
 
     position_id = models.CharField(max_length=100)
+    file_path = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="discovered file path relative to the run directory",
+    )
     quality = models.CharField(
         max_length=20,
         choices=[
@@ -848,6 +898,12 @@ class ReviewTomogram(models.Model):
 
     class Meta:
         unique_together = ["review", "tomogram_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "run_id", "reconstruction_type", "position_id"],
+                name="uniq_reviewtomogram_identity",
+            ),
+        ]
 
     def __str__(self):
         return f"Tomogram Review {self.tomogram_id} in {self.review}"

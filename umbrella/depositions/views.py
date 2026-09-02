@@ -298,8 +298,8 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
             "proc_dir",
             cluster,
             msi_session=msi_session,
-            workflow="aretomo3",
-            run=run_number,
+            proc_software="aretomo3",
+            proc_run=run_number,
         )
 
         started = time.monotonic()

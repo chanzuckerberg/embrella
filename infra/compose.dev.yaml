@@ -14,6 +14,9 @@ services:
       - ../.env
     environment:
       DJANGO_ENV: development
+    volumes:
+      - ..:/app
+      - backend_venv:/app/.venv
 
   backend:
     command: ['python', 'umbrella/manage.py', 'runserver', '0.0.0.0:8000']

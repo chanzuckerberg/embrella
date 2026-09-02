@@ -63,11 +63,13 @@ def detail(request, session_id):
         "data": session,
         "fields": fields,
         "paths": {
-            "frame path pattern": session.get_session_frames_glob(),
-            "sum image path pattern": session.get_session_sums_glob(),
-            "mdoc path pattern": session.get_session_mdocs_glob(),
-            "parent path pattern": session.get_session_parents_glob(),
-            "atlas image path pattern": session.get_session_atlas_glob(),
+            # Directories, not patterns, since the split: the filenames live on the
+            # resolved FilePattern instead.
+            "frame directory": session.get_session_dir("frames"),
+            "sum image directory": session.get_session_dir("sums"),
+            "mdoc directory": session.get_session_dir("mdocs"),
+            "parent image directory": session.get_session_dir("parents"),
+            "atlas image directory": session.get_session_dir("atlas"),
             "update_notes": form,
         },
     }
@@ -163,22 +165,9 @@ def create_session(request):
             user=request.user,
         )
         session_instance.save()
-        my_pk = session_instance.id
         # default to the latest screening grid atlas if available
-        atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
-        session_instance.atlas_session = atlas_session
-        path_dicts = {}
-        software = session_instance.session_plan.software
-        if software.frames:
-            session_instance.frames = session_instance.get_session_path("frames")
-        if software.sums:
-            session_instance.sums = session_instance.get_session_path("sums")
-        if software.mdocs:
-            session_instance.mdocs = session_instance.get_session_path("mdocs")
-        if software.parents:
-            session_instance.parents = session_instance.get_session_path("parents")
-        if atlas_session:
-            session_instance.atlas = atlas_session.atlas
+        session_instance.atlas_session = AtlasSession.objects.filter(grid=grid_instance).last()
+        session_instance.resolve_role_paths()
         session_instance.save()
         return HttpResponseRedirect(reverse("tem:detail", args=(session_instance.id,)))
 
@@ -275,7 +264,7 @@ def _create_scrn_session(user, group_instance, grid):
     session_instance.save()
     my_pk = session_instance.id
     path_dicts = {}
-    session_instance.atlas = session_instance.get_session_path("atlas")
+    session_instance.atlas = session_instance.resolve_path_row("atlas")
     session_instance.save()
     return
 
@@ -335,26 +324,11 @@ def get_all_sessions(request):
             notes=session.notes,
             user=UserBase(username=session.user.username),
             project=ProjectBase(name=session.project.name),
-            frames=PathInfo(
-                static_path=session.frames.static_path if session.frames.static_path else None,
-                overlay_path=session.frames.overlay_path if session.frames.overlay_path else None,
-            ),
-            mdocs=PathInfo(
-                static_path=session.mdocs.static_path if session.mdocs.static_path else None,
-                overlay_path=session.mdocs.overlay_path if session.mdocs.overlay_path else None,
-            ),
-            sums=PathInfo(
-                static_path=session.sums.static_path if session.sums.static_path else None,
-                overlay_path=session.sums.overlay_path if session.sums.overlay_path else None,
-            ),
-            parents=PathInfo(
-                static_path=session.parents.static_path if session.parents.static_path else None,
-                overlay_path=session.parents.overlay_path if session.parents.overlay_path else None,
-            ),
-            atlas=PathInfo(
-                static_path=session.atlas.static_path if session.atlas.static_path else None,
-                overlay_path=session.atlas.overlay_path if session.atlas.overlay_path else None,
-            ),
+            frames=PathInfo(overlay_path=session.frames.overlay_path if session.frames.overlay_path else None),
+            mdocs=PathInfo(overlay_path=session.mdocs.overlay_path if session.mdocs.overlay_path else None),
+            sums=PathInfo(overlay_path=session.sums.overlay_path if session.sums.overlay_path else None),
+            parents=PathInfo(overlay_path=session.parents.overlay_path if session.parents.overlay_path else None),
+            atlas=PathInfo(overlay_path=session.atlas.overlay_path if session.atlas.overlay_path else None),
         )
         # Convert Pydantic model to dictionary and append to the list
         session_list.append(session_data.dict())
@@ -385,13 +359,13 @@ def get_all_image_paths(request):
 
     name_param = request.GET.get("name")
 
-    # Query the Software table and prefetch related paths via nested "select_related"
-    software_query = Software.objects.prefetch_related(
-        "frames__static_path",
-        "sums__static_path",
-        "mdocs__static_path",
-        "parents__static_path",
-        "atlas__static_path",
+    # Only overlay_path is reported now, so the five role FKs are all this needs.
+    software_query = Software.objects.select_related(
+        "frames",
+        "sums",
+        "mdocs",
+        "parents",
+        "atlas",
     ).all()
 
     result_list = []
@@ -402,36 +376,11 @@ def get_all_image_paths(request):
             pk=software.pk,
             fields=SoftwareFieldsResponse(
                 name=software.name,
-                frames=PathInfo(
-                    static_path=software.frames.static_path.static_path
-                    if software.frames and software.frames.static_path
-                    else None,
-                    overlay_path=software.frames.overlay_path if software.frames else None,
-                ),
-                sums=PathInfo(
-                    static_path=software.sums.static_path.static_path
-                    if software.sums and software.sums.static_path
-                    else None,
-                    overlay_path=software.sums.overlay_path if software.sums else None,
-                ),
-                mdocs=PathInfo(
-                    static_path=software.mdocs.static_path.static_path
-                    if software.mdocs and software.mdocs.static_path
-                    else None,
-                    overlay_path=software.mdocs.overlay_path if software.mdocs else None,
-                ),
-                parents=PathInfo(
-                    static_path=software.parents.static_path.static_path
-                    if software.parents and software.parents.static_path
-                    else None,
-                    overlay_path=software.parents.overlay_path if software.parents else None,
-                ),
-                atlas=PathInfo(
-                    static_path=software.atlas.static_path.static_path
-                    if software.atlas and software.atlas.static_path
-                    else None,
-                    overlay_path=software.atlas.overlay_path if software.atlas else None,
-                ),
+                frames=PathInfo(overlay_path=software.frames.overlay_path if software.frames else None),
+                sums=PathInfo(overlay_path=software.sums.overlay_path if software.sums else None),
+                mdocs=PathInfo(overlay_path=software.mdocs.overlay_path if software.mdocs else None),
+                parents=PathInfo(overlay_path=software.parents.overlay_path if software.parents else None),
+                atlas=PathInfo(overlay_path=software.atlas.overlay_path if software.atlas else None),
             ),
         )
         result_list.append(software_data.dict())

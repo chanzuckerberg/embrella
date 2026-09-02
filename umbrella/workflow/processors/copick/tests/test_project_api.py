@@ -40,7 +40,7 @@ def czii_cluster(db):
 
 @pytest.fixture
 def krios1_session(db):
-    scope = Microscope.objects.create(name="Krios1", cs=2.7)
+    scope = Microscope.objects.create(name="krios1", cs=2.7)
     camera = Camera.objects.create(
         name="K3", root_dir="/test/root", frame_format="eer", initial_frame_base_dir="/test/frames"
     )

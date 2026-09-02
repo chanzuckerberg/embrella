@@ -97,9 +97,15 @@ class MembranesegProcessor(BaseProcessor):
         # Generate a unique session ID for this membraneseg run
         membraneseg_session_id = run_context.run_number
 
+        # The project tree belongs to copick; its root resolves through that processor.
+        from workflow.processors import get_processor
+
+        copick_root = get_processor("copick").get_processing_base_path(cluster=run_context.cluster_id)
+
         template_vars = {
             "job_name": f"{session_name}_membraneseg_{copick_procrun}_{membraneseg_session_id}",
             "session": session_name,
+            "copick_root": copick_root,
             "copick_procrun": copick_procrun,
             "tomo_type": params["tomo_type"],
             "tomo_voxel_size": params["tomo_voxel_size"],
@@ -118,31 +124,6 @@ class MembranesegProcessor(BaseProcessor):
         )
 
         return script
-
-    def parse_output_paths(self, run_context: RunContext) -> List[Dict[str, Any]]:
-        """
-        Define expected output paths for membrane segmentation.
-
-        Args:
-            run_context: Execution context
-
-        Returns:
-            List of output path specifications
-        """
-        # Note: Output paths are within the Copick project directory
-        # The actual session and run will be determined by the parameters
-        return [
-            {
-                "type": "segmentation",
-                "pattern": "*/segmentations/*.zarr",
-                "description": "Membrane segmentation volumes in Zarr format",
-            },
-            {
-                "type": "logs",
-                "pattern": "*.log",
-                "description": "Processing logs",
-            },
-        ]
 
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """

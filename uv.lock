@@ -278,7 +278,6 @@ dependencies = [
     { name = "django-cors-headers" },
     { name = "django-extensions" },
     { name = "django-jazzmin" },
-    { name = "django-object-actions" },
     { name = "django-q2" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
@@ -320,7 +319,6 @@ requires-dist = [
     { name = "django-cors-headers", specifier = ">=4.9.0" },
     { name = "django-extensions", specifier = "==4.1" },
     { name = "django-jazzmin", specifier = ">=3.0" },
-    { name = "django-object-actions", specifier = "==4.2.0" },
     { name = "django-q2", specifier = ">=1.8.0" },
     { name = "djangorestframework", specifier = "==3.17.2" },
     { name = "drf-spectacular", specifier = ">=0.28.0" },
@@ -462,15 +460,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/70/a652284cd612bcd45da3cc18715db391c6cdeafd1ec9af60f4a3a243c74e/django_jazzmin-3.0.4.tar.gz", hash = "sha256:e8aef8b75edd8792408a69407c22ece924ab7a3d5c9d6f84d7a4eb57e06e7a44", size = 2423027, upload-time = "2026-03-13T11:29:18.821Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d4/1c/42d37c90bec6f6763206b966252dabe019f0c0197a6aaebafa5b213b78f1/django_jazzmin-3.0.4-py3-none-any.whl", hash = "sha256:70935a17604cc530e99be68d3d2b8c576095e1dac4af50464c827d66646f40fa", size = 2495119, upload-time = "2026-03-13T11:29:20.447Z" },
-]
-
-[[package]]
-name = "django-object-actions"
-version = "4.2.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/da/5c/c22183feb3397ccfaaac5c199c329fa6952a90934d792962eab4e5f94eea/django_object_actions-4.2.0.tar.gz", hash = "sha256:e24befedf01b6fcdccbb03c33c0e2c855fd1a88f352a66dc7e2170ba31e80128", size = 17320, upload-time = "2023-09-08T22:38:55.486Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/c7/1c6f42d39b1ec64ea5266effca823cf28beb441fd9c829de72c9fce30dcb/django_object_actions-4.2.0-py3-none-any.whl", hash = "sha256:ae0df9984c68a4f42f219a391b71fa0630fe44a2983b39b8064378ebddcff30c", size = 18397, upload-time = "2023-09-08T22:38:54.321Z" },
 ]
 
 [[package]]

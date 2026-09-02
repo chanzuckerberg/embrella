@@ -53,39 +53,30 @@ def create_session(request):
 
     # Auto-create Path objects based on software config
     # default to the latest screening grid atlas if available
-    atlas_session = AtlasSession.objects.filter(grid=grid).last()
-    session.atlas_session = atlas_session
-
-    software = session_plan.software
-    if software.frames:
-        session.frames = session.get_session_path("frames")
-    if software.sums:
-        session.sums = session.get_session_path("sums")
-    if software.mdocs:
-        session.mdocs = session.get_session_path("mdocs")
-    if software.parents:
-        session.parents = session.get_session_path("parents")
-    if atlas_session:
-        session.atlas = atlas_session.atlas
+    session.atlas_session = AtlasSession.objects.filter(grid=grid).last()
+    session.resolve_role_paths()
     session.save()
 
-    return Response(
-        {
-            "id": session.id,
-            "name": session.name,
-            "project_name": project.name,
-            "grid_name": str(grid),
-            "session_plan_name": str(session_plan),
-            "magnification_display": str(magnification) if magnification else None,
-            "frames": str(session.frames) if session.frames else None,
-            "sums": str(session.sums) if session.sums else None,
-            "mdocs": str(session.mdocs) if session.mdocs else None,
-            "parents": str(session.parents) if session.parents else None,
-            "atlas": str(session.atlas) if session.atlas else None,
-            "legacy_url": f"/legacy/tem/{session.id}/",
-        },
-        status=status.HTTP_201_CREATED,
-    )
+    payload = {
+        "id": session.id,
+        "name": session.name,
+        "project_name": project.name,
+        "grid_name": str(grid),
+        "session_plan_name": str(session_plan),
+        "magnification_display": str(magnification) if magnification else None,
+        "legacy_url": f"/legacy/tem/{session.id}/",
+    }
+    for role, path in session.role_paths.items():
+        payload[role] = _role_halves(path, session.get_file_pattern(role))
+
+    return Response(CreatedSessionSerializer(payload).data, status=status.HTTP_201_CREATED)
+
+
+def _role_halves(path, pattern):
+    """The directory and the filename glob for one role."""
+    if not path:
+        return {"directory": None, "pattern": None}
+    return {"directory": str(path), "pattern": pattern.list_glob if pattern else None}
 
 
 @extend_schema(

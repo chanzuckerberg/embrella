@@ -178,4 +178,5 @@ cython_debug/
 docs_build/
 umbrella/staticfiles/
 .claude/
+.planning/
 CLAUDE.md

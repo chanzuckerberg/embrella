@@ -78,21 +78,6 @@ class RunContext:
 
         return None
 
-    def get_output_base_path(self) -> str:
-        """
-        Get base output directory for this pipeline step.
-
-        Returns:
-            Absolute path on cluster: /hpc/projects/group.czii/{cluster}.processing/{software}/{session}/{run}/
-
-        Example:
-            /hpc/projects/group.czii/czii.processing/aretomo3/24nov10/run001/
-        """
-        from stores.models import fill_place_holders
-
-        template = "/hpc/projects/group.czii/{cluster}.processing/{proc_software}/{msi_session}/{proc_run}/"
-        return fill_place_holders(template, self.get_placeholder_map())
-
     def get_placeholder_map(self) -> Dict[str, str]:
         """
         Get placeholder map for path generation.
@@ -104,42 +89,25 @@ class RunContext:
                 'proc_run': 'run001',
                 'msi_session': '24nov10',
                 'proc_software': 'aretomo3',
+                'workflow': 'aretomo3',
                 'pipe': 'vol10a',
-                'scope': 'Krios1',
+                'scope': 'krios1',
                 'cluster': 'czii'
             }
+
+        See `stores.placeholders` for what each token means in this lane -- notably
+        {proc_run} is the processing run and {run} is a per-file tilt-series id, which is
+        the opposite of how review templates read them.
         """
+        proc_software = self.pipe_in_plan.pipe.software.dirname
         return {
             "proc_plan": self.proc_run.proc_plan.name,
             "proc_run": self.proc_run.name,
             "msi_session": self.msi_session.name,
-            "proc_software": self.pipe_in_plan.pipe.software.name,
+            "proc_software": proc_software,
+            # Legacy alias for {proc_software}; see PipeInPlan.get_replacement_map.
+            "workflow": proc_software,
             "pipe": self.pipe_in_plan.pipe.name,
             "scope": self.msi_session.session_plan.scope.name,
             "cluster": self.cluster_id,
         }
-
-    def format_paths(self, template: str) -> str:
-        """
-        Fill placeholders in a path template using run context.
-
-        Supports placeholders like {session}, {run}, {user}, etc.
-
-        Args:
-            template: Path template with {placeholders}
-
-        Returns:
-            Formatted path with placeholders replaced
-
-        Example:
-            path = context.format_paths('/data/{session}/{run}/output.mrc')
-            # Returns: '/data/20240315_Session1/run_001/output.mrc'
-        """
-        from stores.models import fill_place_holders
-
-        return fill_place_holders(
-            template,
-            session=self.msi_session,
-            run=self.proc_run,
-            user=self.user,
-        )

@@ -10,7 +10,8 @@ from django.db.models import Q
 from django.utils import timezone
 from projects.models import Project
 from pydantic import BaseModel
-from stores.models import Path, PathType, fill_place_holders
+from stores.models import FilePattern, Path, PathType, fill_place_holders
+from stores.paths import assert_fully_resolved
 
 TEM_CHOICES = {
     "imaging_mode": [
@@ -107,12 +108,29 @@ class CalibratedPixelSize(models.Model):
         app_label = "tem"
 
 
+SOFTWARE_PATH_ROLES = ("frames", "sums", "mdocs", "parents", "atlas")
+# `atlas` is inherited from the grid's screening session instead. See MsiSession.resolve_role_paths.
+INHERITED_ROLE = "atlas"
+RESOLVED_ROLES = tuple(role for role in SOFTWARE_PATH_ROLES if role != INHERITED_ROLE)
+
+# The plan's tilt-series stack naming
+TILT_SERIES_ROLE = "tilt_series"
+BINDING_ROLES = SOFTWARE_PATH_ROLES + (TILT_SERIES_ROLE,)
+
+
 class Software(models.Model):
     """
     Software determines the paths of the output files
     """
 
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
+    version = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        help_text="A version that lays files out differently is a separate row. So is a "
+        "distinct protocol -- name it compoundly, e.g. 'Tomo5 dose-symmetric'.",
+    )
     frames = models.ForeignKey(
         PathType,
         related_name="frames_type",
@@ -156,10 +174,16 @@ class Software(models.Model):
     )
 
     def __str__(self):
-        return self.name
+        return "%s %s" % (self.name, self.version) if self.version else self.name
+
+    @property
+    def role_path_types(self):
+        """role -> its default template, None where this software emits no such data."""
+        return {role: getattr(self, role) for role in SOFTWARE_PATH_ROLES}
 
     class Meta:
         app_label = "tem"
+        unique_together = [["name", "version"]]
 
 
 class ImagingWorkflow(models.Model):
@@ -181,6 +205,90 @@ class SessionPlan(models.Model):
 
     class Meta:
         app_label = "tem"
+
+
+class SessionPlanPathBinding(models.Model):
+    """Per-plan override of which template a role resolves to.
+
+    Directory and filename override independently: a scope writing into the shared directory
+    under its own naming convention sets `file_pattern` alone, with no duplicate PathType row.
+    """
+
+    session_plan = models.ForeignKey(SessionPlan, related_name="path_bindings", on_delete=models.CASCADE)
+    role = models.CharField(max_length=16, choices=[(r, r) for r in BINDING_ROLES])
+    path_type = models.ForeignKey(
+        PathType,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Directory template for this role on this plan. Blank falls back to the software default.",
+    )
+    file_pattern = models.ForeignKey(
+        FilePattern,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Filename convention for this role on this plan. Blank falls back to the resolved directory's own.",
+    )
+    is_active = models.BooleanField(default=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        app_label = "tem"
+        unique_together = [["session_plan", "role"]]
+
+    def __str__(self):
+        return "%s/%s -> %s" % (self.session_plan_id, self.role, self.path_type or "(default)")
+
+
+def _active_binding(plan, role):
+    return plan.path_bindings.filter(role=role, is_active=True).first()
+
+
+def resolve_software_path_type(plan, role):
+    """The PathType for `role` on `plan`: binding first, then the software default.
+
+    Returns None when the software does not emit this role at all -- a terminal answer,
+    unlike a missing binding, which only means "use the default".
+    """
+    binding = _active_binding(plan, role)
+    if binding and binding.path_type:
+        return binding.path_type
+    return plan.software.role_path_types[role]
+
+
+def resolve_plan_file_pattern(plan, role):
+    """The plan-bound FilePattern for `role`, or None."""
+    binding = _active_binding(plan, role)
+    return binding.file_pattern if binding else None
+
+
+def resolve_software_file_pattern(plan, role):
+    """The FilePattern for `role` on `plan`: binding first, then the directory's own."""
+    bound = resolve_plan_file_pattern(plan, role)
+    if bound:
+        return bound
+
+    path_type = resolve_software_path_type(plan, role)
+    return path_type.file_pattern if path_type else None
+
+
+def plan_replacement_map(plan):
+    """Placeholder values derivable from a SessionPlan alone.
+
+    Shared by every acquisition template, whether it is resolved from an `MsiSession` or
+    an `AtlasSession`; each adds its own identity tokens on top. See
+    `stores.placeholders` for the vocabulary this has to satisfy.
+    """
+    camera = plan.camera
+    return {
+        "workflow": plan.imaging_workflow.workflow,
+        "scope": plan.scope.name,
+        "camera": camera.name,
+        "frame_format": camera.frame_format,
+        "root_dir": camera.root_dir.rstrip("/"),
+        "initial_frame_base_dir": camera.initial_frame_base_dir.rstrip("/"),
+    }
 
 
 class ScreenSessionGroup(models.Model):
@@ -237,53 +345,30 @@ class AtlasSession(models.Model):
         ]
 
     def get_replacement_map(self):
-        plan = self.group.session_plan
-        scope_name = plan.scope.name
-        mapping = {
-            "workflow": plan.imaging_workflow.workflow,
-            "scope": scope_name,
+        return {
+            **plan_replacement_map(self.group.session_plan),
             "session_group": self.group.name,
             "atlas_session": self.name,
         }
-        return mapping
 
-    def _get_session_glob(self, path_type):
-        plan = self.group.session_plan
-        my_attr = getattr(plan.software, path_type)
-        if not my_attr:
-            out_path = "."
-        else:
-            out_path = fill_place_holders(
-                my_attr.overlay_path,
-                self.get_replacement_map(),
-            )
-            return out_path
-
-    def get_session_path(self, type_name="atlas"):
-        """
-        Use session_plan and software to update session path by replacing place holders
-        """
-        plan = self.group.session_plan
-        path_obj = getattr(plan.software, type_name)
-        static_path = fill_place_holders(
-            path_obj.static_path.static_path,
+    def get_session_dir(self, role=INHERITED_ROLE):
+        """The directory `role` resolves to. A screening session only produces its atlas."""
+        path_type = resolve_software_path_type(self.group.session_plan, role)
+        if not path_type:
+            return "."
+        return fill_place_holders(
+            path_type.overlay_path,
             self.get_replacement_map(),
         )
-        session_attr = getattr(self, "get_session_%s_glob" % type_name)
+
+    def resolve_path_row(self, role=INHERITED_ROLE):
+        """The persisted `stores.Path` for `role`, created if this directory has none yet."""
         overlay_path = fill_place_holders(
-            session_attr(),
+            self.get_session_dir(role),
             self.get_replacement_map(),
         )
-        path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
-        if not path_set:
-            p = Path(overlay_path=overlay_path, static_path=static_path)
-            p.save()
-        else:
-            p = path_set[0]
-        return p
-
-    def get_session_atlas_glob(self):
-        return self._get_session_glob("atlas")
+        assert_fully_resolved(overlay_path, describe="%s for atlas session %s" % (role, self.name))
+        return Path.first_or_create(overlay_path)
 
     def __str__(self):
         return "/scrn/%s/%s/" % (self.group.name, self.name)
@@ -321,73 +406,59 @@ class MsiSession(models.Model):
     class Meta:
         app_label = "tem"
 
-    def _get_session_glob(self, path_type):
-        plan = self.session_plan
-        scope_name = plan.scope.name
-        my_attr = getattr(plan.software, path_type)
-        if not my_attr:
-            out_path = "."
-        else:
-            out_path = fill_place_holders(
-                my_attr.overlay_path,
-                {
-                    "workflow": plan.imaging_workflow.workflow,
-                    "scope": scope_name,
-                    "msi_session": self.name,
-                },
-            )
-            return out_path
+    def get_replacement_map(self):
+        return {
+            **plan_replacement_map(self.session_plan),
+            "msi_session": self.name,
+        }
 
-    def get_session_frames_glob(self):
-        return self._get_session_glob("frames")
-
-    def get_session_mdocs_glob(self):
-        return self._get_session_glob("mdocs")
-
-    def get_session_sums_glob(self):
-        return self._get_session_glob("sums")
-
-    def get_session_parents_glob(self):
-        return self._get_session_glob("parents")
-
-    def get_session_atlas_glob(self):
-        if self.atlas_session:
-            # grid screening of this grid exists
-            return self.atlas_session._get_session_glob("atlas")
-        else:
-            return self._get_session_glob("atlas")
-
-    def get_session_path(self, type_name="frames"):
-        """
-        Use session_plan and software to update session path by replacing place holders
-        """
-        plan = self.session_plan
-        scope_name = plan.scope.name
-        path_obj = getattr(plan.software, type_name)
-        static_path = fill_place_holders(
-            path_obj.static_path.static_path,
-            {
-                "workflow": plan.imaging_workflow.workflow,
-                "scope": scope_name,
-                "msi_session": self.name,
-            },
+    def get_session_dir(self, role):
+        """The directory `role` resolves to, or "." when the software emits no such data."""
+        if role == INHERITED_ROLE and self.atlas_session:
+            return self.atlas_session.get_session_dir(INHERITED_ROLE)
+        path_type = resolve_software_path_type(self.session_plan, role)
+        if not path_type:
+            return "."
+        return fill_place_holders(
+            path_type.overlay_path,
+            self.get_replacement_map(),
         )
-        session_attr = getattr(self, "get_session_%s_glob" % type_name)
+
+    def get_file_pattern(self, role):
+        """The filename convention expected in this session's `role` directory."""
+        inherited = role == INHERITED_ROLE and self.atlas_session
+        plan = self.atlas_session.group.session_plan if inherited else self.session_plan
+        return resolve_software_file_pattern(plan, role)
+
+    def _resolve_path_row(self, role):
+        """The persisted `stores.Path` for `role`, created if this directory has none yet.
+
+        Writes -- unlike `get_session_dir`, which only builds the string. Private because
+        `resolve_role_paths` is the one place a session's paths are meant to be populated.
+        """
         overlay_path = fill_place_holders(
-            session_attr(),
-            {
-                "workflow": plan.imaging_workflow.workflow,
-                "scope": scope_name,
-                "msi_session": self.name,
-            },
+            self.get_session_dir(role),
+            self.get_replacement_map(),
         )
-        path_set = Path.objects.filter(overlay_path=overlay_path, static_path=static_path)
-        if not path_set:
-            p = Path(overlay_path=overlay_path, static_path=static_path)
-            p.save()
-        else:
-            p = path_set[0]
-        return p
+        assert_fully_resolved(overlay_path, describe="%s for session %s" % (role, self.name))
+        return Path.first_or_create(overlay_path)
+
+    @property
+    def role_paths(self):
+        """role -> the stores.Path stored for it, None where nothing was resolved."""
+        return {role: getattr(self, role) for role in SOFTWARE_PATH_ROLES}
+
+    def resolve_role_paths(self):
+        """Fill this session's Path FKs from its plan. Does not save.
+
+        A role with no template is left alone: absence means software doesn't produce it.
+        `atlas` is inherited from the linked screening session
+        """
+        for role in RESOLVED_ROLES:
+            if resolve_software_path_type(self.session_plan, role):
+                setattr(self, role, self._resolve_path_row(role))
+        if self.atlas_session:
+            self.atlas = self.atlas_session.atlas
 
     def get_calibrated_pixel_size(self):
         """Return the most recent calibrated pixel spacing for this session's magnification and camera, or None."""
@@ -414,7 +485,6 @@ def parse_integer_order_list(text):
 
 
 class PathInfo(BaseModel):
-    static_path: str | None
     overlay_path: str | None
 
 

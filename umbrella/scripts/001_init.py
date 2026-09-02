@@ -22,7 +22,7 @@ from cryo_grids.models import (
 )
 from external_links.models import ExternalResource
 from projects.models import Project
-from stores.models import PathType, StaticPath
+from stores.models import DataKind, FilePattern, PathType
 
 # from tem.models import *
 from tem.models import Camera, ImagingWorkflow, Microscope, SessionPlan, Software
@@ -97,19 +97,29 @@ def create_scope_camera():
     return scope, camera
 
 
-def create_tem_static_path(data_type):
-    if data_type in ["frames", "sums", "mdoc", "parents", "atlas"]:
-        instance = StaticPath.objects.create(
-            data_type=data_type,
-            static_path="/{workflow}/{msi_session}/{run}/%s" % data_type,
-        )
-    if data_type in ["satlas"]:
-        # screen atlas
-        instance = StaticPath.objects.create(
-            data_type=data_type,
-            static_path="/{workflow}/{session_group}/{grid_session}/atlas",
-        )
-    return instance
+def create_tem_data_kind(data_type):
+    # Branched by data_type until the vestigial static_path template came off DataKind;
+    # every kind is now just its name.
+    return DataKind.objects.create(data_type=data_type)
+
+
+def create_tem_path_type(data_type, directory, *, label, list_glob, regex):
+    """A directory template plus the filename convention found in it
+
+    The two halves are never concatenated: the directory fills downward from a session,
+    the regex reads a basename back upward.
+    """
+    data_kind = create_tem_data_kind(data_type)
+    return PathType.objects.create(
+        data_kind=data_kind,
+        overlay_path=directory,
+        file_pattern=FilePattern.objects.create(
+            data_kind=data_kind,
+            label=label,
+            list_glob=list_glob,
+            regex=regex,
+        ),
+    )
 
 
 def create_tomo5_plan(scope, camera):
@@ -117,25 +127,40 @@ def create_tomo5_plan(scope, camera):
     TFS tomo5 single grid tomography plan
     """
     workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo")
-    frame_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("frames"),
-        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}_{sequence}_{tilt}_*.eer",
+    frame_path_type = create_tem_path_type(
+        "frames",
+        "/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/",
+        label="{run}_{sequence}_{tilt}_*.eer",
+        list_glob="*.eer",
+        regex=r"^(?P<run>.+)_(?P<sequence>\d+)_(?P<tilt>-?\d+(?:\.\d+)?)_.*\.eer$",
     )
-    sum_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("sums"),
-        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run_stage_pos}_Exposure.mrc",
+    sum_path_type = create_tem_path_type(
+        "sums",
+        "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/",
+        label="{run_stage_pos}_Exposure.mrc",
+        list_glob="*_Exposure.mrc",
+        regex=r"^(?P<run_stage_pos>.+)_Exposure\.mrc$",
     )
-    mdoc_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("mdoc"),
-        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/{run}.mdoc",
+    mdoc_path_type = create_tem_path_type(
+        "mdoc",
+        "/hpc/instruments/czii.{scope}/OffloadData/{msi_session}/",
+        label="{run}.mdoc",
+        list_glob="*.mdoc",
+        regex=r"^(?P<run>.+)\.mdoc$",
     )
-    parent_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("parents"),
-        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/{run_stage_pos}_Search.mrc",
+    parent_path_type = create_tem_path_type(
+        "parents",
+        "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{msi_session}/Batch/",
+        label="{run_stage_pos}_Search.mrc",
+        list_glob="*_Search.mrc",
+        regex=r"^(?P<run_stage_pos>.+)_Search\.mrc$",
     )
-    atlas_path_type = PathType.objects.create(
-        static_path=create_tem_static_path("atlas"),
-        overlay_path="/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/Atlas_{timestamp}.mrc",
+    atlas_path_type = create_tem_path_type(
+        "atlas",
+        "/hpc/instruments/czii.{scope}/OffloadData/{workflow}/{session_group}/{atlas_session}/Atlas/",
+        label="Atlas_{timestamp}.mrc",
+        list_glob="Atlas_*.mrc",
+        regex=r"^Atlas_(?P<timestamp>[\w-]+)\.mrc$",
     )
     software = Software.objects.create(
         name="tomo5",

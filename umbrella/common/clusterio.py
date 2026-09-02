@@ -1,6 +1,6 @@
 import json
 import os
-import re
+import shlex
 import stat
 import subprocess
 from fnmatch import fnmatch
@@ -247,88 +247,33 @@ def get_remote_file_metadata(remote_path, cluster_id="czii", auth=None):
             ssh.close()
 
 
-def resolve_placeholder_and_list_files(template_path, cluster_id="czii", auth=None):
-    """
-    Resolve a path template with placeholders and list all matching files.
-
-    Takes a path like "/path/to/{run}_Vol.mrc" and:
-    1. Lists contents of parent directory ("/path/to/")
-    2. Matches files against pattern ("*_Vol.mrc")
-    3. Returns metadata for all matching files
+def list_files(directory, list_glob="*", *, cluster_id, include_dirs=False, auth=None):
+    """List remote entries under `directory` matching `list_glob`, with metadata.
 
     Args:
-        template_path (str): Path with {placeholder} syntax (e.g., "/data/{run}_file.txt")
-        cluster_id (str): Cluster identifier (default: 'czii')
-        auth (dict, optional): Custom authentication credentials
+        directory (str): Resolved remote directory to list.
+        list_glob (str): Shell-style glob, relative to `directory`.
+        cluster_id (str): Cluster identifier.
+        include_dirs (bool): Also match directories in the final segment. A ".zarr"
+            "file" is a directory, so listing zarrs requires this.
+        auth (dict, optional): Custom authentication credentials.
 
     Returns:
-        dict: Result with keys:
-            - success (bool): Whether operation succeeded
-            - files (list): List of dicts with keys: name, size_bytes, modified_time, full_path
-            - total_size (int): Aggregate size of all matched files
-            - pattern (str): The glob pattern used for matching
-            - parent_dir (str): The parent directory that was listed
-            - error (str, optional): Error message if operation failed
-
-    Example:
-        result = resolve_placeholder_and_list_files(
-            "/hpc/processing/run001/{run}_Vol.mrc",
-            'czii'
-        )
-        if result['success']:
-            print(f"Found {len(result['files'])} files, total: {result['total_size']} bytes")
-            for file_info in result['files']:
-                print(f"  {file_info['name']}: {file_info['size_bytes']} bytes")
+        dict: - success (bool)
+              - files (list): dicts with name, size_bytes, modified_time, full_path
+              - total_size (int): aggregate size of matched entries
+              - pattern (str): the glob used
+              - parent_dir (str): the directory listed
+              - error (str, optional)
     """
     ssh = None
     sftp = None
+    parent_dir = directory.rstrip("/") or "/"
 
     try:
-        # Handle placeholders in path segments
-        # Example: "/a/b/{run}/output.mrc" -> list "/a/b/" for dirs matching pattern, then check for "output.mrc" in each
-
-        # Split path into segments
-        path_segments = template_path.split("/")
-
-        # Find the first segment with a placeholder
-        placeholder_idx = None
-        for i, segment in enumerate(path_segments):
-            if "{" in segment and "}" in segment:
-                placeholder_idx = i
-                break
-
-        if placeholder_idx is None:
-            # No placeholder found - shouldn't happen but handle gracefully
-            return {
-                "success": False,
-                "files": [],
-                "total_size": 0,
-                "pattern": None,
-                "parent_dir": None,
-                "error": "No placeholder found in path",
-            }
-
-        # Parent directory is everything up to (not including) the placeholder segment
-        parent_dir = "/".join(path_segments[:placeholder_idx])
-        if not parent_dir:
-            parent_dir = "/"
-
-        # Remaining path segments after placeholder (including placeholder segment)
-        remaining_segments = path_segments[placeholder_idx:]
-
-        # Build glob pattern by replacing {placeholders} with *
-        pattern_segments = [re.sub(r"\{[^}]+\}", "*", seg) for seg in remaining_segments]
-        relative_pattern = "/".join(pattern_segments)
-
-        logger.info(f"Resolving template: {template_path}")
-        logger.info(f"  Parent dir: {parent_dir}")
-        logger.info(f"  Relative pattern: {relative_pattern}")
-
-        # Connect to remote host
         ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
         sftp = ssh.open_sftp()
 
-        # Check if parent directory exists
         try:
             sftp.stat(parent_dir)
         except FileNotFoundError:
@@ -336,21 +281,15 @@ def resolve_placeholder_and_list_files(template_path, cluster_id="czii", auth=No
                 "success": False,
                 "files": [],
                 "total_size": 0,
-                "pattern": relative_pattern,
+                "pattern": list_glob,
                 "parent_dir": parent_dir,
                 "error": f"Parent directory does not exist: {parent_dir}",
             }
 
-        # Recursive function to match files against pattern
-        def match_files_recursive(current_dir, pattern_parts):
-            """Recursively match files against pattern parts."""
+        def match_recursive(current_dir, pattern_parts):
+            """One listdir per directory: match this segment, recurse on the rest."""
             matched = []
-
-            if not pattern_parts:
-                return matched
-
-            current_pattern = pattern_parts[0]
-            remaining_patterns = pattern_parts[1:]
+            current_pattern, remaining = pattern_parts[0], pattern_parts[1:]
 
             try:
                 entries = sftp.listdir_attr(current_dir)
@@ -359,54 +298,46 @@ def resolve_placeholder_and_list_files(template_path, cluster_id="czii", auth=No
                 return matched
 
             for entry in entries:
-                entry_name = entry.filename
-                entry_path = os.path.join(current_dir, entry_name)
-
-                # Check if entry matches current pattern
-                if fnmatch(entry_name, current_pattern):
-                    if remaining_patterns:
-                        # More pattern parts remaining - recurse if this is a directory
-                        if stat.S_ISDIR(entry.st_mode):
-                            matched.extend(match_files_recursive(entry_path, remaining_patterns))
-                    else:
-                        # Last pattern part - include if it's a file
-                        if not stat.S_ISDIR(entry.st_mode):
-                            matched.append(
-                                {
-                                    "name": entry_name,
-                                    "size_bytes": entry.st_size,
-                                    "modified_time": entry.st_mtime,
-                                    "full_path": entry_path,
-                                },
-                            )
-
+                if not fnmatch(entry.filename, current_pattern):
+                    continue
+                entry_path = os.path.join(current_dir, entry.filename)
+                is_dir = stat.S_ISDIR(entry.st_mode)
+                if remaining:
+                    if is_dir:
+                        matched.extend(match_recursive(entry_path, remaining))
+                elif include_dirs or not is_dir:
+                    matched.append(
+                        {
+                            "name": entry.filename,
+                            "size_bytes": entry.st_size,
+                            "modified_time": entry.st_mtime,
+                            "full_path": entry_path,
+                        },
+                    )
             return matched
 
-        # Split pattern into parts and match
-        pattern_parts = [p for p in pattern_segments if p]  # Remove empty strings
-        matched_files = match_files_recursive(parent_dir, pattern_parts)
-
+        pattern_parts = [p for p in list_glob.split("/") if p]
+        matched_files = match_recursive(parent_dir, pattern_parts) if pattern_parts else []
         total_size = sum(f["size_bytes"] for f in matched_files)
-
-        logger.info(f"  Matched {len(matched_files)} files, total size: {total_size} bytes")
+        logger.info(f"Listed {parent_dir} with {list_glob!r}: {len(matched_files)} match(es), {total_size} bytes")
 
         return {
             "success": True,
             "files": matched_files,
             "total_size": total_size,
-            "pattern": relative_pattern,
+            "pattern": list_glob,
             "parent_dir": parent_dir,
             "error": None,
         }
 
     except Exception as e:
-        logger.error(f"Error resolving placeholder path {template_path}: {str(e)}")
+        logger.error(f"Error listing {parent_dir} with {list_glob!r}: {e}")
         return {
             "success": False,
             "files": [],
             "total_size": 0,
-            "pattern": relative_pattern if "relative_pattern" in locals() else None,
-            "parent_dir": parent_dir if "parent_dir" in locals() else None,
+            "pattern": list_glob,
+            "parent_dir": parent_dir,
             "error": str(e),
         }
 
@@ -415,6 +346,46 @@ def resolve_placeholder_and_list_files(template_path, cluster_id="czii", auth=No
             sftp.close()
         if ssh:
             ssh.close()
+
+
+# `find` entry types: plain file / directory.
+FIND_TYPE_FILE = "f"
+FIND_TYPE_DIR = "d"
+
+
+# TODO: used by membraneseg only. Retire with directory summary response, and maybe fallback to find paths.
+def find_paths(root, name_glob, *, cluster_id, maxdepth, entry_type=None, auth=None):
+    """Paths under `root` whose basename matches `name_glob`, in one round trip.
+
+    A remote `find` instead of an SFTP walk. No metadata --
+    use `list_files` when sizes and mtimes matter.
+
+    Args:
+        root (str): Directory to search under.
+        name_glob (str): Basename glob, e.g. "*.zarr".
+        cluster_id (str): Cluster identifier.
+        maxdepth (int): How deep below `root` to look.
+        entry_type (str, optional): FIND_TYPE_FILE / FIND_TYPE_DIR, or None for both.
+        auth (dict, optional): Custom authentication credentials.
+
+    Returns:
+        list[str]: Matching absolute paths; a missing root yields [].
+    """
+    if entry_type not in (None, FIND_TYPE_FILE, FIND_TYPE_DIR):
+        raise ValueError(f"entry_type must be {FIND_TYPE_FILE!r}, {FIND_TYPE_DIR!r} or None, got {entry_type!r}")
+
+    command = f"find {shlex.quote(root)} -maxdepth {int(maxdepth)} -name {shlex.quote(name_glob)}"
+    if entry_type:
+        command += f" -type {entry_type}"
+    # Permission noise and a missing root both collapse to "no matches".
+    command += " 2>/dev/null"
+
+    ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
+    try:
+        _, stdout, _ = ssh.exec_command(command)
+        return [line.strip() for line in stdout if line.strip()]
+    finally:
+        ssh.close()
 
 
 # ============================================================================

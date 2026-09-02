@@ -7,17 +7,7 @@ Tests the processor registry, execution engine, and API endpoints.
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from django.contrib.auth.models import User
-from processes.models import (
-    Pipe,
-    PipeExecution,
-    PipeInPlan,
-    ProcPlan,
-    ProcRun,
-    ProcSoftware,
-    Task,
-)
-from tem.models import Camera, ImagingWorkflow, Microscope, MsiSession, SessionPlan, Software
+from processes.models import PipeExecution, PipeInPlan
 from workflow.execution import PipelineExecutor, RunContext, ValidationError
 from workflow.processors import get_processor, list_processors, register_processor
 from workflow.processors.base import BaseProcessor
@@ -52,14 +42,6 @@ def test_processor_class():
         def render_script(self, params, run_context):
             return f"#!/bin/bash\necho {params['test_param']}"
 
-        def parse_output_paths(self, run_context):
-            return [
-                {
-                    "type": "test_output",
-                    "pattern": f"{run_context.get_output_base_path()}output.txt",
-                },
-            ]
-
         def on_job_submit(self, run_context, job_id):
             """Hook called after successful job submission."""
             pass
@@ -91,133 +73,6 @@ def registered_test_processor(test_processor_class):
     # Cleanup - restore original registry
     _PROCESSOR_REGISTRY.clear()
     _PROCESSOR_REGISTRY.update(original_registry)
-
-
-@pytest.fixture
-def test_user(db):
-    """Create a test user."""
-    return User.objects.create_user(
-        username="testuser",
-        email="test@example.com",
-        password="testpass123",
-    )
-
-
-@pytest.fixture
-def test_microscope(db):
-    """Create a test microscope."""
-    return Microscope.objects.create(
-        name="TestScope",
-        cs=2.7,
-    )
-
-
-@pytest.fixture
-def test_camera(db):
-    """Create a test camera."""
-    return Camera.objects.create(
-        name="TestCamera",
-        root_dir="/test/root",
-        frame_format="eer",
-        initial_frame_base_dir="/test/frames",
-    )
-
-
-@pytest.fixture
-def test_imaging_workflow(db):
-    """Create a test imaging workflow."""
-    return ImagingWorkflow.objects.create(
-        imaging_mode="tem",
-        workflow="tomo",
-    )
-
-
-@pytest.fixture
-def test_tem_software(db):
-    """Create a test TEM software."""
-    return Software.objects.create(
-        name="TestSoftware",
-    )
-
-
-@pytest.fixture
-def test_session_plan(db, test_microscope, test_camera, test_imaging_workflow, test_tem_software):
-    """Create a test session plan."""
-    return SessionPlan.objects.create(
-        scope=test_microscope,
-        camera=test_camera,
-        imaging_workflow=test_imaging_workflow,
-        software=test_tem_software,
-    )
-
-
-@pytest.fixture
-def test_msi_session(db, test_session_plan):
-    """Create a test MSI session."""
-    return MsiSession.objects.create(
-        name="24nov10",
-        session_plan=test_session_plan,
-    )
-
-
-@pytest.fixture
-def test_task(db):
-    """Create a test task."""
-    return Task.objects.create(
-        name="test_task",
-    )
-
-
-@pytest.fixture
-def test_proc_software(db, test_task):
-    """Create a test processing software."""
-    software = ProcSoftware.objects.create(
-        name="test_software",
-        version="1.0.0",
-        processor_class="test_processor",
-        default_cluster="czii",
-        script_directory="/test/scripts",
-    )
-    software.capable_tasks.add(test_task)
-    return software
-
-
-@pytest.fixture
-def test_pipe(db, test_proc_software):
-    """Create a test pipe."""
-    return Pipe.objects.create(
-        name="test_pipe",
-        software=test_proc_software,
-    )
-
-
-@pytest.fixture
-def test_proc_plan(db):
-    """Create a test processing plan."""
-    return ProcPlan.objects.create(
-        name="test_plan",
-    )
-
-
-@pytest.fixture
-def test_pipe_in_plan(db, test_proc_plan, test_pipe):
-    """Create a test pipe in plan."""
-    return PipeInPlan.objects.create(
-        plan=test_proc_plan,
-        pipe=test_pipe,
-        step=1,
-        name="test_step",
-    )
-
-
-@pytest.fixture
-def test_proc_run(db, test_proc_plan, test_msi_session):
-    """Create a test processing run."""
-    return ProcRun.objects.create(
-        name="run001",
-        proc_plan=test_proc_plan,
-        msi_session=test_msi_session,
-    )
 
 
 # Processor Registry Tests
@@ -296,8 +151,8 @@ class TestRunContext:
         assert context.run_number == "run001"
         assert context.inputs["test_input"] == "/path/to/input.txt"
 
-    def test_get_output_base_path(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
-        """Test getting output base path."""
+    def test_get_placeholder_map(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
+        """The placeholder map is the contract processors resolve DB templates against."""
         context = RunContext(
             proc_run=test_proc_run,
             pipe_in_plan=test_pipe_in_plan,
@@ -309,12 +164,16 @@ class TestRunContext:
             inputs={},
         )
 
-        path = context.get_output_base_path()
+        placeholders = context.get_placeholder_map()
 
-        assert "/hpc/projects/group.czii/czii.processing/" in path
-        assert "test_software" in path
-        assert "24nov10" in path
-        assert "run001" in path
+        assert placeholders["scope"] == "TestScope"
+        assert placeholders["msi_session"] == "24nov10"
+        assert placeholders["proc_software"] == "test_software"
+        assert placeholders["proc_run"] == "run001"
+        assert placeholders["pipe"] == "test_pipe"
+        assert placeholders["proc_plan"] == "test_plan"
+        # {workflow} is the legacy alias of {proc_software} in this lane.
+        assert placeholders["workflow"] == placeholders["proc_software"]
 
     def test_get_input_required(self, test_proc_run, test_pipe_in_plan, test_msi_session, test_user):
         """Test getting a required input."""
@@ -406,8 +265,16 @@ class TestPipelineExecutor:
         assert execution.pipe_in_plan == test_pipe_in_plan
         assert execution.status == "submitted"
         assert execution.job_id == "123456"
-        # Executor also stamps cluster_id on parameters for downstream tracking.
-        assert execution.parameters == {"test_param": 50, "cluster_id": "czii"}
+        # Executor also stamps cluster_id and the resolved paths on parameters for
+        # downstream tracking.
+        assert execution.parameters == {
+            "test_param": 50,
+            "cluster_id": "czii",
+            "_paths_used": {
+                "processing_base_path": "/hpc/projects/group.czii/krios1.processing/test_software",
+                "output_patterns": {},
+            },
+        }
 
     @patch("workflow.execution.RemoteJobSubmitter")
     def test_execute_pipe_stamps_bruno_cluster_id(
@@ -440,7 +307,7 @@ class TestPipelineExecutor:
 
         # PipeExecution.parameters carries cluster_id=bruno for the syncer/metadata views.
         execution = PipeExecution.objects.get(id=result["pipe_execution_id"])
-        assert execution.parameters == {"test_param": 10, "cluster_id": "bruno"}
+        assert execution.parameters["cluster_id"] == "bruno"
 
     def test_execute_pipe_validation_fails(
         self,
@@ -625,133 +492,7 @@ class TestExecutionAPI:
 
 
 class TestSyncerIntegration:
-    """Tests for syncer subprocess spawning and status monitoring."""
-
-    def test_spawn_syncer_subprocess_success(
-        self,
-        test_msi_session,
-        test_proc_run,
-        test_pipe_in_plan,
-        test_user,
-        registered_test_processor,
-    ):
-        """Test that _spawn_syncer_subprocess() spawns subprocess correctly."""
-        from workflow.execution import RunContext
-
-        # Create RunContext
-        run_context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={},
-        )
-
-        processor = registered_test_processor()
-
-        # Mock subprocess.Popen to avoid actually spawning process
-        with patch("subprocess.Popen") as mock_popen:
-            mock_process = Mock()
-            mock_process.pid = 12345
-            mock_popen.return_value = mock_process
-
-            # Mock os.path.exists to return True (syncer script exists)
-            with patch("os.path.exists", return_value=True):
-                result = processor._spawn_syncer_subprocess(
-                    "test_syncer.py",
-                    run_context,
-                    "job123",
-                )
-
-            # Verify subprocess.Popen was called with correct arguments
-            assert mock_popen.called
-            call_args = mock_popen.call_args[0][0]
-            assert "python" in call_args
-            assert "test_syncer.py" in call_args[1]  # Script path is second argument
-            assert "--session" in call_args
-            assert test_msi_session.name in call_args
-            assert "--run" in call_args
-            assert "run001" in call_args
-            assert "--job-id" in call_args
-            assert "job123" in call_args
-            assert "--continuous" in call_args
-
-            # Verify subprocess was returned
-            assert result == mock_process
-
-    def test_spawn_syncer_subprocess_script_not_found(
-        self,
-        test_msi_session,
-        test_proc_run,
-        test_pipe_in_plan,
-        test_user,
-        registered_test_processor,
-    ):
-        """Test that _spawn_syncer_subprocess() handles missing script gracefully."""
-        from workflow.execution import RunContext
-
-        run_context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={},
-        )
-
-        processor = registered_test_processor()
-
-        # Mock os.path.exists to return False (script doesn't exist)
-        with patch("os.path.exists", return_value=False):
-            result = processor._spawn_syncer_subprocess(
-                "nonexistent_syncer.py",
-                run_context,
-                "job123",
-            )
-
-        # Should return None when script not found
-        assert result is None
-
-    def test_spawn_syncer_subprocess_exception_handling(
-        self,
-        test_msi_session,
-        test_proc_run,
-        test_pipe_in_plan,
-        test_user,
-        registered_test_processor,
-    ):
-        """Test that _spawn_syncer_subprocess() handles exceptions gracefully."""
-        from workflow.execution import RunContext
-
-        run_context = RunContext(
-            proc_run=test_proc_run,
-            pipe_in_plan=test_pipe_in_plan,
-            msi_session=test_msi_session,
-            user=test_user,
-            cluster_id="czii",
-            run_number="run001",
-            job_name="test_job_name",
-            inputs={},
-        )
-
-        processor = registered_test_processor()
-
-        # Mock subprocess.Popen to raise exception
-        with patch("subprocess.Popen", side_effect=Exception("Test error")):  # noqa: SIM117
-            with patch("os.path.exists", return_value=True):  # noqa: SIM117
-                result = processor._spawn_syncer_subprocess(
-                    "test_syncer.py",
-                    run_context,
-                    "job123",
-                )
-
-        # Should return None on exception
-        assert result is None
+    """Tests for syncer task startup and status monitoring."""
 
     def test_status_monitoring_scheduled_on_execution(
         self,
@@ -890,10 +631,9 @@ class TestSyncerIntegration:
 
         processor = CopickProcessor()
 
-        # Mock _spawn_syncer_subprocess
-        with patch.object(processor, "_spawn_syncer_subprocess") as mock_spawn:
-            # on_job_submit should not call syncer for Copick
+        with patch.object(processor, "_start_syncer_task") as mock_start:
+            # on_job_submit should not start a syncer for Copick
             processor.on_job_submit(run_context, "job789")
 
             # Verify helper was NOT called
-            assert not mock_spawn.called
+            assert not mock_start.called

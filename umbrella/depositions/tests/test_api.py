@@ -414,7 +414,7 @@ class TestAutoFill:
         ):
             r = auth_client.post(self._url(owned_session))
         assert r.status_code == 200, r.content
-        assert resolve_mock.call_args.kwargs["run"] == "run001"
+        assert resolve_mock.call_args.kwargs["proc_run"] == "run001"
 
     def test_init_failure_returns_502(self, auth_client, owned_session):
         owned_session.aretomo_run_name = "run001"

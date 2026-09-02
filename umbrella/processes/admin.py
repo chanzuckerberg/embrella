@@ -41,8 +41,15 @@ admin.site.register(Task)
 
 @admin.register(ProcSoftware)
 class ProcSoftwareAdmin(admin.ModelAdmin):
-    list_display = ("name", "version", "processor_class", "default_cluster", "storage_dirname", "script_directory")
+    list_display = (
+        "name",
+        "version",
+        "processor_class",
+        "default_cluster",
+        "storage_dirname",
+    )
     list_editable = ("storage_dirname",)
+    autocomplete_fields = ("processing_root", "script_dir", "output_patterns")
     list_filter = ("default_cluster",)
     search_fields = ("name", "processor_class")
     fieldsets = (
@@ -55,8 +62,22 @@ class ProcSoftwareAdmin(admin.ModelAdmin):
         (
             "Execution Configuration",
             {
-                "fields": ("processor_class", "default_cluster", "allowed_clusters", "script_directory"),
-                "description": "Configure how this software runs on clusters",
+                "fields": (
+                    "processor_class",
+                    "default_cluster",
+                    "allowed_clusters",
+                    "processing_root",
+                    "script_dir",
+                    "output_patterns",
+                ),
+                "description": (
+                    "Configure how this software runs on clusters. Leave the two directory "
+                    "templates blank to use the shared processing_root / script_dir "
+                    "templates (Stores → Path types); set them only for a software whose "
+                    "directories don't follow the standard layout. Output patterns name this "
+                    "software's output files; a session plan's tilt_series binding of the "
+                    "same data kind overrides them per plan."
+                ),
             },
         ),
         (

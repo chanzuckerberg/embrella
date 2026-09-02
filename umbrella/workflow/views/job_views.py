@@ -34,7 +34,6 @@ from umbrella_logger import logger
 from common import clusterio
 
 from ..agent import RemoteJobSubmitter, StatusChecker
-from .constants import ARETOMO3_SCRIPT_PATH, ARETOMO3_TEMPLATE_PATH
 from .utils import format_job_output
 
 
@@ -122,8 +121,6 @@ def track_jobs(request):
             checker = StatusChecker(
                 cluster_id="czii",
                 auth=clusterio.get_auth_service_user(),
-                remote_script_dir=ARETOMO3_SCRIPT_PATH,
-                local_template_path=ARETOMO3_TEMPLATE_PATH,
             )
         except clusterio.SSHDisabledError:
             # No cluster access (e.g. demo server) — degrade to an empty job list.

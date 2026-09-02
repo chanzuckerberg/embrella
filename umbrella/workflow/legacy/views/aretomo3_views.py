@@ -84,8 +84,8 @@ def get_aretomo3_json(request):
         "proc_url",
         cluster,
         msi_session=msi_session,
-        workflow="aretomo3",
-        run=run_name,
+        proc_software="aretomo3",
+        proc_run=run_name,
         backend_fetch=True,
     )
     session_json_url = f"{base_proc_url}AreTomo3_Session.json"

@@ -96,12 +96,11 @@ class WorkflowConfig(AppConfig):
                     else:
                         logger.debug(f"  Task exists: {metadata['task_name']}")
 
-                    # Create/update ProcSoftware record (always overwrite with class values).
+                    # Updates ProcSoftware record every startup.
                     software_fields = {
                         "version": metadata["version"],
                         "default_cluster": metadata["default_cluster"],
                         "allowed_clusters": metadata["allowed_clusters"],
-                        "script_directory": metadata["script_directory"],
                         "active": True,
                     }
                     proc_software, software_created = self._claim_software(metadata, software_fields)

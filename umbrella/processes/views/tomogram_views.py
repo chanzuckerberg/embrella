@@ -391,25 +391,30 @@ def get_tomogram_stats(request):
         print(f"Found session: {session.name}")
 
         # Construct path based on reconstruction type
-        from processes.syncers import check_zarr_exists
+        from workflow.processors import get_processor
+        from workflow.syncers import check_zarr_exists
+
+        from processes.services.cluster_resolver import cluster_id_for_run
 
         recon_type_lower = recon_type.lower()
         if recon_type_lower == "sart":
-            vol_dir = "vol003"
-            base_path = "/hpc/projects/krios1.processing/aretomo3"
+            vol_dir, processor = "vol003", "aretomo3"
         elif recon_type_lower == "dctf":
-            vol_dir = "vol001"
-            base_path = "/hpc/projects/krios1.processing/aretomo3"
+            vol_dir, processor = "vol001", "aretomo3"
         else:  # denoised
-            vol_dir = ""
-            base_path = "/hpc/projects/krios1.processing/denoise"
+            vol_dir, processor = "", "denoiset"
 
+        base_path = get_processor(processor).get_processing_base_path()
         session_path = f"{base_path}/{session.name}/{run_id}"
         full_path = f"{session_path}/{vol_dir}" if vol_dir else session_path
 
-        # Use existing check_zarr_exists function from syncers
-        zarr_files = check_zarr_exists(full_path)
-        print(f"Found {len(zarr_files)} zarr files")
+        # Not the default cluster: this run may have executed on Bruno, and listing the
+        # wrong cluster reports zero files rather than failing.
+        pattern = get_processor(processor).get_output_pattern("rec", plan=session.session_plan)
+        zarr_files, zarr_candidates = check_zarr_exists(
+            full_path, pattern, cluster_id=cluster_id_for_run(session.name, run_id)
+        )
+        print(f"Matched {len(zarr_files)} of {zarr_candidates} zarr files")
 
         # Simplified query directly on ReviewTomogram
         query = ReviewTomogram.objects.filter(
@@ -475,7 +480,7 @@ async def start_sync(request):
 
     try:
         # First check if session exists - using sync_to_async
-        session = await sync_to_async(MsiSession.objects.get)(id=session_id)
+        session = await sync_to_async(MsiSession.objects.select_related("session_plan__scope").get)(id=session_id)
         print(f"Found session: {session.name}")
 
         # Check for existing tomograms with the same parameters
@@ -510,31 +515,31 @@ async def start_sync(request):
             review_id = None
 
         # Import the sync functions
+        from workflow.processors import get_processor
         from workflow.processors.aretomo3.syncer import AretomoSyncer
         from workflow.processors.denoiset.syncer import DenoiseSyncer
+
+        if recon_type.lower() in ["dctf", "sart"]:
+            syncer_class, processor = AretomoSyncer, "aretomo3"
+        elif recon_type.lower() == "denoised":
+            syncer_class, processor = DenoiseSyncer, "denoiset"
+        else:
+            raise ValueError(f"Unsupported reconstruction type: {recon_type}")
+
+        # sync_to_async because get_processing_base_path reads ProcSoftware and the
+        # PathType template, and this view is async
+        base_path = await sync_to_async(get_processor(processor).get_processing_base_path)()
 
         # Capture stdout to get progress information
         output = io.StringIO()
         with redirect_stdout(output):
-            # Use the appropriate sync function based on reconstruction type
-            if recon_type.lower() in ["dctf", "sart"]:
-                print(f"Starting AreTomo3 sync for session {session.name}, run {run_id}, type {recon_type}")
-                syncer = AretomoSyncer(
-                    base_path="/hpc/projects/krios1.processing/aretomo3",
-                    log_dir=os.path.join(os.path.dirname(__file__), "logs"),
-                )
-                await sync_to_async(syncer.setup)(run_id=run_id, session_name=session.name)
-                await sync_to_async(syncer.sync_results)()
-            elif recon_type.lower() == "denoised":
-                print(f"Starting Denoise sync for session {session.name}, run {run_id}")
-                syncer = DenoiseSyncer(
-                    base_path="/hpc/projects/krios1.processing/denoise",
-                    log_dir=os.path.join(os.path.dirname(__file__), "logs"),
-                )
-                await sync_to_async(syncer.setup)(run_id=run_id, session_name=session.name)
-                await sync_to_async(syncer.sync_results)()
-            else:
-                raise ValueError(f"Unsupported reconstruction type: {recon_type}")
+            print(f"Starting {syncer_class.__name__} for session {session.name}, run {run_id}, type {recon_type}")
+            syncer = syncer_class(
+                base_path=base_path,
+                log_dir=os.path.join(os.path.dirname(__file__), "logs"),
+            )
+            await sync_to_async(syncer.setup)(run_id=run_id, session_name=session.name)
+            await sync_to_async(syncer.sync_results)()
 
         # Get the captured output
         progress_output = output.getvalue()

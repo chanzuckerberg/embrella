@@ -107,6 +107,9 @@ Magnification = 81000
         assert parse_mdoc_magnification(content) == 81000
 
 
+SESSION_DIR = "/hpc/instruments/czii.krios1/OffloadData/26feb20d/"
+
+
 class TestReadMdocMagnification:
     def _mock_sftp_with_mdoc(self, content: str, filenames=None):
         """Create mock SSH/SFTP that returns given MDOC content."""
@@ -129,7 +132,7 @@ class TestReadMdocMagnification:
         mock_ssh, mock_sftp = self._mock_sftp_with_mdoc(SAMPLE_MDOC)
         mock_get_conn.return_value = mock_ssh
 
-        result = read_mdoc_magnification("26feb20d")
+        result = read_mdoc_magnification(SESSION_DIR)
 
         assert result["success"] is True
         assert result["magnification"] == 81000
@@ -141,7 +144,7 @@ class TestReadMdocMagnification:
         mock_ssh, mock_sftp = self._mock_sftp_with_mdoc("", filenames=["file.mrc", "file.eer"])
         mock_get_conn.return_value = mock_ssh
 
-        result = read_mdoc_magnification("26feb20d")
+        result = read_mdoc_magnification(SESSION_DIR)
 
         assert result["success"] is False
         assert "No MDOC files" in result["error"]
@@ -154,7 +157,7 @@ class TestReadMdocMagnification:
         mock_sftp.listdir.side_effect = FileNotFoundError()
         mock_get_conn.return_value = mock_ssh
 
-        result = read_mdoc_magnification("nonexistent_session")
+        result = read_mdoc_magnification("/hpc/nowhere/")
 
         assert result["success"] is False
         assert "not found" in result["error"]
@@ -165,7 +168,7 @@ class TestReadMdocMagnification:
         mock_ssh, mock_sftp = self._mock_sftp_with_mdoc(content)
         mock_get_conn.return_value = mock_ssh
 
-        result = read_mdoc_magnification("26feb20d")
+        result = read_mdoc_magnification(SESSION_DIR)
 
         assert result["success"] is False
         assert result["mdoc_file"] == "Position_1_1.mdoc"
@@ -175,7 +178,7 @@ class TestReadMdocMagnification:
     def test_ssh_connection_error(self, mock_get_conn):
         mock_get_conn.side_effect = Exception("SSH connection failed")
 
-        result = read_mdoc_magnification("26feb20d")
+        result = read_mdoc_magnification(SESSION_DIR)
 
         assert result["success"] is False
         assert "SSH connection failed" in result["error"]
@@ -188,7 +191,7 @@ class TestReadMdocMagnification:
         )
         mock_get_conn.return_value = mock_ssh
 
-        result = read_mdoc_magnification("26feb20d")
+        result = read_mdoc_magnification(SESSION_DIR)
 
         assert result["success"] is True
         assert result["mdoc_file"] == "Position_1.mdoc"
@@ -198,7 +201,7 @@ class TestReadMdocMagnification:
         mock_ssh, mock_sftp = self._mock_sftp_with_mdoc(SAMPLE_MDOC)
         mock_get_conn.return_value = mock_ssh
 
-        read_mdoc_magnification("26feb20d")
+        read_mdoc_magnification(SESSION_DIR)
 
         mock_sftp.close.assert_called_once()
         mock_ssh.close.assert_called_once()

@@ -5,7 +5,6 @@ Tests for AreTomo3 processor implementation.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from django.contrib.auth.models import User
 from django.utils import timezone
 from processes.models import (
     Pipe,
@@ -15,6 +14,7 @@ from processes.models import (
     ProcSoftware,
     Task,
 )
+from stores.models import DataKind, PathType
 from tem.models import (
     CalibratedPixelSize,
     Camera,
@@ -37,16 +37,6 @@ def aretomo3_processor():
 
 
 @pytest.fixture
-def test_user(db):
-    """Create a test user."""
-    return User.objects.create_user(
-        username="testuser",
-        email="test@example.com",
-        password="testpass123",
-    )
-
-
-@pytest.fixture
 def test_msi_session(db):
     """Create a test MSI session."""
     # Create required related objects
@@ -58,7 +48,15 @@ def test_msi_session(db):
         initial_frame_base_dir="/test/frames",
     )
     imaging_workflow = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo")
-    software = Software.objects.create(name="TestSoftware")
+    # An mdocs template, so views resolving the session's mdoc directory (validate_session)
+    # get a real path rather than the "software emits no mdocs" short-circuit.
+    software = Software.objects.create(
+        name="TestSoftware",
+        mdocs=PathType.objects.create(
+            data_kind=DataKind.objects.create(data_type="mdoc"),
+            overlay_path="/test/root/{msi_session}/",
+        ),
+    )
 
     session_plan = SessionPlan.objects.create(
         scope=microscope,
@@ -82,7 +80,6 @@ def test_aretomo3_software(db):
         version="2.2.2_07-11-2025",
         processor_class="aretomo3",
         default_cluster="czii",
-        script_directory="/hpc/projects/group.czii/krios1.processing/aretomo3/scripts",
     )
     software.capable_tasks.add(task)
     return software
@@ -228,23 +225,6 @@ class TestAreTomo3Processor:
         # 5 / 2.0 = 2.5, 10 / 2.0 = 5.0
         assert "tomo_bin_5A=2.5" in script
         assert "tomo_bin_10A=5.0" in script
-
-    def test_parse_output_paths(self, aretomo3_processor, test_run_context):
-        """Test parsing expected output paths."""
-        paths = aretomo3_processor.parse_output_paths(test_run_context)
-
-        assert len(paths) > 0
-
-        # Check path types
-        types = [p["type"] for p in paths]
-        assert "rec" in types  # Reconstruction volumes
-        assert "aln" in types  # Alignment data
-        assert "meta" in types  # Session metadata
-
-        # Check patterns contain session and run
-        for path_spec in paths:
-            assert "24nov10" in path_spec["pattern"]
-            assert "run001" in path_spec["pattern"]
 
     def test_get_slurm_options(self, aretomo3_processor):
         """Test SLURM options."""

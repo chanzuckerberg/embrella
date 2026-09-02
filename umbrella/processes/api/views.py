@@ -25,6 +25,7 @@ from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 from umbrella.contrast_limits import compute_optimal_contrast_limits
 
+from common.sorting import natural_sort_key
 from processes.models import (
     Annotation,
     PipeInPlan,
@@ -62,7 +63,7 @@ def _get_data_by_msi_session_data_type(plan, session, data_types=[]):
         my_pipe = vpp.pipe
         # filter data_types as the right input_pipe
         input_joints = PipeJoint.objects.filter(
-            pipe_in_plan__pipe=my_pipe, input_pathtype__static_path__data_type__in=data_types
+            pipe_in_plan__pipe=my_pipe, input_pathtype__data_kind__data_type__in=data_types
         )
         if not input_joints:
             continue
@@ -350,29 +351,8 @@ class ReviewView(View):
                 for tomo in tomograms
             ]
 
-            # Sort tomograms by position (handle compound position numbers like position_1_2, position_100_1)
-            def extract_position_number(position_str):
-                if position_str == "None":
-                    return float("inf")  # Put "None" positions at the end
-                try:
-                    # Extract all numbers from "Position_X_Y" format
-                    parts = position_str.split("_")
-                    if len(parts) >= 2:
-                        # Convert all numeric parts to integers for proper sorting
-                        numbers = []
-                        for part in parts[1:]:  # Skip "Position" part
-                            try:
-                                numbers.append(int(part))
-                            except ValueError:
-                                # If any part is not numeric, treat as invalid
-                                return float("inf")
-                        return numbers
-                    else:
-                        return float("inf")  # Invalid format
-                except (ValueError, IndexError):
-                    return float("inf")  # Put invalid positions at the end
-
-            tomograms_list.sort(key=lambda x: extract_position_number(x["position"]))
+            # Natural order across any naming shape (Position_1_2, pt712_ts_001, ...); "None" last.
+            tomograms_list.sort(key=lambda x: natural_sort_key(x["position"]))
 
             logger.debug(
                 f"Sorted tomogram positions for review {review_id}: {[tomo['position'] for tomo in tomograms_list]}"
@@ -847,16 +827,12 @@ class ReviewTomogramView(View):
             session_id = tomogram.session.name if tomogram.session else None
             run_id = tomogram.run_id if tomogram.run_id else None
 
-            # Construct zarr path based on reconstruction type
+            # The zarr URL is the resolved run directory plus the file path the syncer
+            # discovered -- display replays discovery, no filename convention here.
             review = tomogram.review
-            if review.reconstruction_type.lower() == "sart":
-                vol_suffix = "vol003"
-                job_name = "aretomo3"
-            elif review.reconstruction_type.lower() == "dctf":
-                vol_suffix = "vol001"
+            if review.reconstruction_type.lower() in ("sart", "dctf"):
                 job_name = "aretomo3"
             else:
-                vol_suffix = ""  # denoised
                 job_name = "denoise"
 
             # Resolve zarr URL against the review's cluster (falls back to the default cluster if not set).
@@ -867,27 +843,25 @@ class ReviewTomogramView(View):
                     {"error": "No default cluster is configured. Set one in the admin (Stores → Clusters)."},
                     status=500,
                 )
-            response_data["zarrPath"] = resolve_review_path(
+            zarr_dir = resolve_review_path(
                 "zarr_url",
                 cluster=cluster,
                 msi_session=tomogram.session,
-                workflow=job_name,
-                run=run_id,
-                vol_suffix=vol_suffix,
-                position=tomogram.position_id,
+                proc_software=job_name,
+                proc_run=run_id,
             )
+            response_data["zarrPath"] = zarr_dir + tomogram.file_path
             response_data["cluster"] = cluster.cluster_id
 
-            zarr_fetch_url = resolve_review_path(
+            zarr_fetch_dir = resolve_review_path(
                 "zarr_url",
                 cluster=cluster,
                 msi_session=tomogram.session,
-                workflow=job_name,
-                run=run_id,
-                vol_suffix=vol_suffix,
-                position=tomogram.position_id,
+                proc_software=job_name,
+                proc_run=run_id,
                 backend_fetch=True,
             )
+            zarr_fetch_url = zarr_fetch_dir + tomogram.file_path
 
             logger.debug(f"Computing contrast limits for {review.reconstruction_type} reconstruction: {zarr_fetch_url}")
             try:

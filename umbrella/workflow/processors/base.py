@@ -4,16 +4,18 @@ Base Processor Class
 Defines the abstract interface that all processing software integrations must implement.
 """
 
-import os
-import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import yaml
+from django.core.exceptions import ImproperlyConfigured
 from umbrella_logger import logger
 
 from workflow.context import RunContext
+
+if TYPE_CHECKING:
+    from tem.models import SessionPlan
 
 
 class BaseProcessor(ABC):
@@ -46,9 +48,6 @@ class BaseProcessor(ABC):
 
             def render_script(self, params, run_context):
                 return "#!/bin/bash\\n..."
-
-            def parse_output_paths(self, run_context):
-                return [...]
     """
 
     # Class attributes that must be defined by subclasses
@@ -212,37 +211,6 @@ class BaseProcessor(ABC):
             module load aretomo3/2024-03-10
 
             aretomo3 -InMrc ${INPUT} -OutMrc ${OUTPUT} ...
-        """
-        pass
-
-    @abstractmethod
-    def parse_output_paths(self, run_context: "RunContext") -> List[Dict[str, str]]:
-        """
-        Return expected output paths for this processor.
-
-        Used to pre-populate RunPipeData records and validate completion.
-
-        Args:
-            run_context: Execution context with path information
-
-        Returns:
-            List of dicts with 'type' and 'pattern' keys:
-            [
-                {
-                    "type": "rec",  # Data type code
-                    "pattern": "/path/to/output/*_Vol.mrc"
-                },
-                ...
-            ]
-
-        The 'type' should match PathType.static_path.data_type values:
-            - 'frames': Raw frames
-            - 'rawst': Raw tilt series
-            - 'aln': Alignment
-            - 'ctf': CTF parameters
-            - 'rec': Reconstruction
-            - 'deno': Denoised volume
-            - etc.
         """
         pass
 
@@ -441,43 +409,67 @@ class BaseProcessor(ABC):
         """
         pass
 
-    def get_script_directory(self) -> str:
-        """
-        Get the remote directory where scripts should be uploaded.
+    def _proc_software(self):
+        """This processor's ProcSoftware row, or None if it has not synced yet."""
+        from processes.models import ProcSoftware
 
-        By default, derives from get_processing_base_path() by:
-        1. Inserting 'group.czii/' after '/hpc/projects/'
-        2. Appending '/scripts' suffix
+        return ProcSoftware.objects.filter(processor_class=self.name).first()
 
-        Override this if the directory needs custom logic.
+    def _software_row(self):
+        """This processor's ProcSoftware row."""
+        row = self._proc_software()
+        if row is None:
+            raise ImproperlyConfigured(
+                f"No ProcSoftware row for processor {self.name!r}; it has not synced yet.",
+            )
+        return row
 
-        Returns:
-            Absolute path on remote cluster
+    def _resolve_root(self, kind: str, override, dirname: str, cluster=None) -> str:
+        from stores.paths import resolve_dir, resolve_template
 
-        Default:
-            /hpc/projects/group.czii/{cluster}.processing/{name}/scripts
-        """
-        return f"{self.get_processing_base_path()}/scripts"
+        context = {"proc_software": dirname}
+        if override is not None:
+            return resolve_template(override, **context).rstrip("/")
+        return resolve_dir(kind, cluster=cluster, **context).rstrip("/")
 
-    def get_processing_base_path(self) -> str:
-        """
-        Get the base processing path for this processor (used by syncers).
+    def get_script_directory(self, cluster=None) -> str:
+        """The remote directory scripts are uploaded to."""
+        software = self._software_row()
+        return self._resolve_root("script_dir", software.script_dir, software.dirname, cluster)
 
-        This is the parent directory where session subdirectories are created.
-        Override this if the path doesn't follow the standard convention.
+    def get_processing_base_path(self, cluster=None) -> str:
+        """The root this software's runs live under, for every scope (used by syncers)."""
+        software = self._software_row()
+        return self._resolve_root("processing_root", software.processing_root, software.dirname, cluster)
 
-        Returns:
-            Absolute path on remote cluster (without /scripts suffix)
+    def get_software_root(self, cluster=None) -> str:
+        """The shared tools tree (executables, conda envs) job scripts reference."""
+        from stores.paths import resolve_dir
 
-        Default:
-            /hpc/projects/{cluster}.processing/{name}
+        return resolve_dir("software_root", cluster=cluster).rstrip("/")
 
-        Example for AreTomo3:
-            /hpc/projects/group.czii/krios1.processing/aretomo3
-        """
-        # TODO: utilize path types from db instead of hard-coding
-        # Use the symlinked path (without group.czii) for backward compatibility
-        return f"/hpc/projects/group.czii/krios1.processing/{self.name}"
+    def get_output_pattern(self, kind: str, plan: Optional["SessionPlan"] = None):
+        """The FilePattern naming this software's output files of `kind` (e.g. "rec")."""
+        from stores.models import DataKind
+        from tem.models import TILT_SERIES_ROLE, resolve_plan_file_pattern
+
+        if not DataKind.objects.filter(data_type=kind).exists():
+            raise ImproperlyConfigured(
+                f"No DataKind {kind!r} is registered, so no FilePattern can name it. "
+                f"Add the kind under Stores → Data kinds first."
+            )
+
+        bound = resolve_plan_file_pattern(plan, TILT_SERIES_ROLE) if plan else None
+        if bound and bound.data_kind.data_type == kind:
+            return bound
+
+        patterns = self._software_row().output_patterns.filter(data_kind__data_type=kind)
+        if len(patterns) != 1:
+            raise ImproperlyConfigured(
+                f"ProcSoftware {self.name!r} needs exactly one {kind!r} output pattern "
+                f"(found {len(patterns)}). Bind one under Processes → Proc softwares."
+            )
+        return patterns[0]
 
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
@@ -542,6 +534,25 @@ class BaseProcessor(ABC):
         """
         return None
 
+    def get_paths_used(self, run_context: "RunContext") -> Dict[str, Any]:
+        """Snapshot of what path resolution produced at submit time."""
+        from tem.models import TILT_SERIES_ROLE, resolve_plan_file_pattern
+
+        session = run_context.msi_session
+        plan = session.session_plan if session else None
+        bound = resolve_plan_file_pattern(plan, TILT_SERIES_ROLE) if plan else None
+
+        kinds = {
+            pattern.data_kind.data_type for pattern in self._software_row().output_patterns.select_related("data_kind")
+        }
+        if bound:
+            kinds.add(bound.data_kind.data_type)
+
+        return {
+            "processing_base_path": self.get_processing_base_path(cluster=run_context.cluster_id),
+            "output_patterns": {kind: self.get_output_pattern(kind, plan=plan).label for kind in kinds},
+        }
+
     def get_database_metadata(self) -> Dict[str, Any]:
         """
         Return metadata for auto-creating/updating ProcSoftware and Task database records.
@@ -558,7 +569,6 @@ class BaseProcessor(ABC):
                 'processor_class': 'aretomo3',
                 'default_cluster': 'czii',
                 'allowed_clusters': ['czii', 'bruno'],
-                'script_directory': '/hpc/projects/.../scripts',
                 'task_name': 'tomographic_reconstruction'
             }
 
@@ -575,7 +585,6 @@ class BaseProcessor(ABC):
             "processor_class": self.name,
             "default_cluster": self.cluster,
             "allowed_clusters": getattr(self, "allowed_clusters", [self.cluster]),
-            "script_directory": self.get_script_directory(),
             "task_name": getattr(self, "task_name", None),
         }
 
@@ -1431,92 +1440,6 @@ class BaseProcessor(ABC):
 
         return result
 
-    def _spawn_syncer_subprocess(
-        self,
-        syncer_script_name: str,
-        run_context: "RunContext",
-        job_id: str,
-    ) -> "subprocess.Popen":
-        """
-        Spawn a syncer as a background subprocess.
-
-        This is a helper method for processors that want to start output syncers
-        via the old subprocess approach. The syncer will run in the background
-        and poll for output files.
-
-        Args:
-            syncer_script_name: Name of syncer script (e.g., 'aretomo3_syncer.py')
-            run_context: Execution context with session/run info
-            job_id: SLURM job ID
-
-        Returns:
-            subprocess.Popen instance (not waited for - runs in background)
-
-        Example:
-            def on_job_submit(self, run_context, job_id):
-                self._spawn_syncer_subprocess(
-                    'aretomo3_syncer.py',
-                    run_context,
-                    job_id
-                )
-
-        Note:
-            This approach is being phased out in favor of Django-Q tasks.
-            For new processors, consider implementing sync_outputs() and
-            using Django-Q scheduled tasks instead.
-        """
-
-        # Build path to syncer script
-        syncer_path = os.path.join(
-            os.path.dirname(__file__),
-            "../..",
-            "processes/scripts",
-            syncer_script_name,
-        )
-
-        # Ensure script exists
-        if not os.path.exists(syncer_path):
-            logger.warning(
-                f"Syncer script not found: {syncer_path}. Skipping syncer spawn for {self.name}",
-            )
-            return None
-
-        # Set up environment (add project root to PYTHONPATH)
-        env = dict(os.environ)
-        project_root = os.path.dirname(os.path.dirname(syncer_path))
-        env["PYTHONPATH"] = project_root
-
-        try:
-            # Spawn syncer as background process
-            process = subprocess.Popen(
-                [
-                    "python",
-                    syncer_path,
-                    "--session",
-                    run_context.msi_session.name,
-                    "--run",
-                    run_context.run_number,
-                    "--job-id",
-                    job_id,
-                    "--continuous",  # Run continuously until job completes
-                ],
-                env=env,
-            )
-
-            logger.info(
-                f"Spawned {syncer_script_name} syncer for {run_context.msi_session.name}/"
-                f"{run_context.run_number} (job {job_id}, pid {process.pid})",
-            )
-
-            return process
-
-        except Exception as e:
-            logger.error(
-                f"Error spawning syncer {syncer_script_name}: {e}",
-                exc_info=True,
-            )
-            return None
-
     def _start_syncer_task(
         self,
         syncer_class_path: str,
@@ -1553,9 +1476,8 @@ class BaseProcessor(ABC):
         """
         from processes.tasks import start_syncer_monitoring
 
-        # Use get_processing_base_path() if no explicit base_path provided
         if base_path is None:
-            base_path = self.get_processing_base_path()
+            base_path = self.get_processing_base_path(cluster=run_context.cluster_id)
 
         try:
             task_id = start_syncer_monitoring(

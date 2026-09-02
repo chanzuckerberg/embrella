@@ -135,7 +135,7 @@ class PipelineExecutor:
         submitter = RemoteJobSubmitter(
             cluster_id=context.cluster_id,
             auth=auth,
-            remote_script_dir=processor.get_script_directory(),
+            remote_script_dir=processor.get_script_directory(cluster=context.cluster_id),
         )
 
         try:
@@ -173,6 +173,13 @@ class PipelineExecutor:
         parameters_with_metadata["cluster_id"] = context.cluster_id or get_default_cluster_id()
         if hetjob_info:
             parameters_with_metadata["_hetjob_info"] = hetjob_info
+
+        # Freeze what path resolution produced: PathType/FilePattern rows are
+        # operator-mutable, so the run keeps its own record of the config it used.
+        try:
+            parameters_with_metadata["_paths_used"] = processor.get_paths_used(context)
+        except Exception as e:
+            logger.warning(f"Error capturing the paths used: {e}", exc_info=True)
 
         pipe_exec = self._create_execution_record(
             pipe_in_plan,
@@ -257,15 +264,15 @@ class PipelineExecutor:
             ).first()
 
             if input_data:
-                data_type = joint.input_pathtype.static_path.data_type
-                inputs[data_type] = input_data.path.static_path
+                data_type = joint.input_pathtype.data_kind.data_type
+                inputs[data_type] = input_data.path.overlay_path
                 logger.debug(
                     f"Found input {data_type} from pipe {joint.input_pipe_in_plan.pipe.name}: "
-                    f"{input_data.path.static_path}",
+                    f"{input_data.path.overlay_path}",
                 )
             else:
                 missing_inputs.append(
-                    f"{joint.input_pathtype.static_path.data_type} from {joint.input_pipe_in_plan.pipe.name}",
+                    f"{joint.input_pathtype.data_kind.data_type} from {joint.input_pipe_in_plan.pipe.name}",
                 )
 
         if missing_inputs:
@@ -419,7 +426,7 @@ class PipelineExecutor:
 
             if not input_execution:
                 missing.append(
-                    f"{joint.input_pathtype.static_path.data_type} "
+                    f"{joint.input_pathtype.data_kind.data_type} "
                     f"from {joint.input_pipe_in_plan.pipe.name} (not completed)",
                 )
                 continue
@@ -433,7 +440,7 @@ class PipelineExecutor:
 
             if not output_exists:
                 missing.append(
-                    f"{joint.input_pathtype.static_path.data_type} "
+                    f"{joint.input_pathtype.data_kind.data_type} "
                     f"from {joint.input_pipe_in_plan.pipe.name} (no output data)",
                 )
 

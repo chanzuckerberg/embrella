@@ -51,6 +51,17 @@ class MagnificationSerializer(serializers.Serializer):
         return "%gkx (%s) (%s)" % (obj["nominal_mag"] / 1000, obj["mode"], obj["scope__name"])
 
 
+class RolePathSerializer(serializers.Serializer):
+    """Where one role's data lands, in the two halves that vary independently.
+
+    `directory` is resolved and final; `pattern` is the filename glob expected in it. Both
+    are shown in the created-session dialog, the operator's only verification surface.
+    """
+
+    directory = serializers.CharField(allow_null=True)
+    pattern = serializers.CharField(allow_null=True)
+
+
 class CreatedSessionSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
@@ -58,9 +69,9 @@ class CreatedSessionSerializer(serializers.Serializer):
     grid_name = serializers.CharField()
     session_plan_name = serializers.CharField()
     magnification_display = serializers.CharField(allow_null=True)
-    frames = serializers.CharField(allow_null=True)
-    sums = serializers.CharField(allow_null=True)
-    mdocs = serializers.CharField(allow_null=True)
-    parents = serializers.CharField(allow_null=True)
-    atlas = serializers.CharField(allow_null=True)
+    frames = RolePathSerializer()
+    sums = RolePathSerializer()
+    mdocs = RolePathSerializer()
+    parents = RolePathSerializer()
+    atlas = RolePathSerializer()
     legacy_url = serializers.CharField()

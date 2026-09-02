@@ -106,6 +106,15 @@ class DenoisETProcessor(BaseProcessor):
         template_vars["slurm_directives"] = context.get("slurm_directives", [])
         template_vars["cluster"] = run_context.cluster_id
 
+        from workflow.processors import get_processor
+
+        template_vars["denoise_root"] = self.get_processing_base_path(cluster=run_context.cluster_id)
+        template_vars["script_dir"] = self.get_script_directory(cluster=run_context.cluster_id)
+        template_vars["software_root"] = self.get_software_root(cluster=run_context.cluster_id)
+        template_vars["aretomo3_root"] = get_processor("aretomo3").get_processing_base_path(
+            cluster=run_context.cluster_id
+        )
+
         # Render template with schema-driven variables
         script = template.render(**template_vars)
 
@@ -115,57 +124,6 @@ class DenoisETProcessor(BaseProcessor):
         )
 
         return script
-
-    def parse_output_paths(self, run_context: RunContext) -> List[Dict[str, Any]]:
-        """
-        Define expected output paths for DenoisET.
-
-        Args:
-            run_context: Execution context
-
-        Returns:
-            List of output path specifications
-        """
-        session_name = run_context.msi_session.name
-        denoise_run = run_context.run_number
-
-        base_path = f"{self.get_processing_base_path()}/{session_name}/{denoise_run}"
-
-        return [
-            {
-                "type": "denoised_volumes",
-                "pattern": f"{base_path}/*.mrc",
-                "description": "Denoised tomographic volumes",
-            },
-            {
-                "type": "rechunked",
-                "pattern": f"{base_path}/rechunked/*.zarr",
-                "description": "Rechunked Zarr arrays",
-            },
-            {
-                "type": "plots",
-                "pattern": f"{base_path}/plots/*.png",
-                "description": "Quality control plots",
-            },
-            {
-                "type": "logs",
-                "pattern": f"{base_path}/logs/*.log",
-                "description": "Processing logs",
-            },
-        ]
-
-    def get_processing_base_path(self) -> str:
-        """
-        Get the base processing path for DenoisET (used by syncers).
-
-        Override to use "denoise" instead of "denoiset" to match cluster convention.
-        The base class get_script_directory() will automatically derive the script path
-        from this by inserting 'group.czii/' and appending '/scripts'.
-
-        Returns:
-            Absolute path on remote cluster (without /scripts suffix)
-        """
-        return "/hpc/projects/group.czii/krios1.processing/denoise"
 
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """

@@ -29,7 +29,7 @@ membraneseg_session_id="{{ membraneseg_session_id }}"
 threshold="{{ threshold }}"
 
 # Dynamic parameters
-copick_dir="/hpc/projects/group.czii/krios1.processing/copick/${session}/${copick_procrun}"
+copick_dir="{{ copick_root }}/${session}/${copick_procrun}"
 
 mkdir -p "${copick_dir}"
 

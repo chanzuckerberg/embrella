@@ -1,9 +1,11 @@
 import pytest
+from stores.models import Path
 
 from tem.models import (
     ImagingWorkflow,
     MsiSession,
     SessionPlan,
+    SessionPlanPathBinding,
 )
 
 # Fixtures (test_user, microscope, camera, magnification, software,
@@ -219,3 +221,43 @@ class TestCreateSession:
         )
         assert response.status_code == 302
         assert "login" in response.url
+
+
+@pytest.mark.django_db
+class TestCreatedSessionPaths:
+    """The per-role halves the created-session dialog renders.
+
+    Since the split, a directory alone says less than the old combined template did, so the
+    response carries the file pattern beside it. SessionCreatedDialog.tsx shows both.
+    """
+
+    @pytest.fixture
+    def created(self, client, test_user, plan_with_frames, project, grid):
+        client.force_login(test_user)
+        response = client.post(
+            "/tem/v1/sessions/",
+            data={
+                "name": "26mar06f",
+                "session_plan_id": plan_with_frames.id,
+                "project_id": project.id,
+                "grid_id": grid.id,
+            },
+            content_type="application/json",
+        )
+        assert response.status_code == 201
+        return response.json()
+
+    def test_reports_the_directory_and_the_filenames_expected_in_it(self, created):
+        assert created["frames"] == {
+            "directory": "/hpc/instruments/czii.TestScope/OffloadData/26mar06f/",
+            "pattern": "*.eer",
+        }
+
+    def test_a_role_the_software_does_not_emit_is_null_on_both_halves(self, created):
+        assert created["sums"] == {"directory": None, "pattern": None}
+
+    def test_creates_one_path_row_and_no_bindings(self, created):
+        """Path rows scale with sessions, bindings with plans -- creating a session writes
+        zero of the latter."""
+        assert Path.objects.count() == 1
+        assert SessionPlanPathBinding.objects.count() == 0

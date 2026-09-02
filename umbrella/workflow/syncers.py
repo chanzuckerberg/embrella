@@ -6,13 +6,13 @@ import argparse
 import json
 import logging
 import os
-import re
 import time
 import uuid
 from datetime import datetime
 
 from django.http import HttpRequest
 from processes.models import PipeExecution, Review, ReviewTomogram, SyncerLog, SyncerProcess
+from stores.models import FilePattern
 from tem.models import MsiSession
 
 from common import clusterio
@@ -113,53 +113,44 @@ def cleanup_transient_syncer_logs(job_id):
     return {"deleted_count": deleted_count}
 
 
-def parse_zarr_filename(filename):
-    # Match both formats: Position_1_2_Vol.zarr or Position_15_Vol.zarr
-    match = re.match(r"^Position_(\d+)(?:_(\d+))?_Vol\.zarr$", filename)
-    if match:
-        if match.group(2):  # If second number exists
-            return f"Position_{match.group(1)}_{match.group(2)}"
-        else:  # Single number format
-            return f"Position_{match.group(1)}"
-    return None
+def parse_zarr_filename(filename: str, pattern: FilePattern) -> str | None:
+    """The position id in a reconstruction basename, or None when it isn't one.
+
+    `pattern` is the owning software's reconstruction FilePattern
+    """
+    groups = pattern.match(filename)
+    return groups["position"] if groups else None
 
 
-def check_zarr_exists(full_path, cluster_id=None):
+def check_zarr_exists(full_path: str, pattern: FilePattern, cluster_id=None) -> tuple[list[tuple[str, str]], int]:
+    """((basename, position_id) pairs, count of .zarr entries seen) for a run directory."""
     from processes.services.cluster_resolver import get_default_cluster_id
 
     cluster_id = cluster_id or get_default_cluster_id()
+    # "*.zarr" on purpose, not pattern.list_glob: entries the pattern can't parse must
+    # still be counted, so the "Matched X of Y" gap surfaces a wrong pattern.
+    listing = clusterio.list_files(full_path, "*.zarr", cluster_id=cluster_id, include_dirs=True)
+    if not listing["success"]:
+        log.warning(f"Could not list {full_path}: {listing.get('error')}")
+        return [], 0
+
+    names = [entry["name"] for entry in listing["files"]]
+
     found_zarrs = []
-    ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
-    stdin, stdout, stderr = ssh.exec_command(f"ls {full_path}")
+    for name in names:
+        position_id = parse_zarr_filename(name, pattern=pattern)
+        if position_id:
+            found_zarrs.append((name, position_id))
+        else:
+            log.warning(f"Could not parse position ID from filename: {name}")
 
-    # Read the output
-    output = stdout.readlines()
-    errors = stderr.readlines()
-
-    if errors:
-        log.warning("Errors during command execution:")
-        for line in errors:
-            log.warning(line.strip())
-
-    for line in output:
-        line = line.strip()
-        # Remove trailing slash if present
-        if line.endswith("/"):
-            line = line[:-1]
-
-        if line.endswith(".zarr"):
-            log.info(f"Found ZARR file: {line}")
-            position_id = parse_zarr_filename(line)
-            if position_id:
-                found_zarrs.append((line, position_id))
-            else:
-                log.warning(f"Could not parse position ID from filename: {line}")
-
-    log.info(f"Found {len(found_zarrs)} ZARR files in {full_path}")
-    return found_zarrs
+    log.info(f"Matched {len(found_zarrs)} of {len(names)} .zarr entries in {full_path}")
+    return found_zarrs, len(names)
 
 
 class ProcessSyncer(object):
+    processor_name = None
+
     def __init__(self, base_path, log_dir):
         self.base_path = base_path
         self.log_dir = log_dir
@@ -168,6 +159,15 @@ class ProcessSyncer(object):
         self._syncer_process = None
         self.job_id = None
         self.cluster_id = None
+
+    def _output_pattern(self) -> FilePattern:
+        """The rec FilePattern for this run: the plan's bound pattern when one
+        exists, else the owning software's own."""
+        from workflow.processors import get_processor
+
+        plan = self.session.session_plan if self.session else None
+        # TODO: refactor to take in output datakind as arg once we sync different types (like "seg" for membraneseg)
+        return get_processor(self.processor_name).get_output_pattern("rec", plan=plan)
 
     def _log_to_db(self, action_type: str, message: str, metadata: dict = None):
         """Log syncer action to database."""
@@ -215,7 +215,7 @@ class ProcessSyncer(object):
             except Exception as e:
                 log.warning(f"Failed to mark syncer as {status}: {e}")
 
-    def create_tomogram(self, reconstruction_type, position_id):
+    def create_tomogram(self, reconstruction_type, position_id, file_path, pattern_label=None):
         """Create a ReviewTomogram entry in the database"""
         tomogram_id = generate_uuid()
 
@@ -225,6 +225,7 @@ class ProcessSyncer(object):
             run_id=self.run_id,
             reconstruction_type=reconstruction_type,
             position_id=position_id,  # Using parsed position_id
+            file_path=file_path,
             quality="pending",
         )
         log.info(f"Created tomogram: {tomogram_id} with position_id: {position_id}")
@@ -235,6 +236,8 @@ class ProcessSyncer(object):
                 "tomogram_id": tomogram_id,
                 "position_id": position_id,
                 "reconstruction_type": reconstruction_type,
+                "file_path": file_path,
+                "pattern": pattern_label,
             },
         )
         return tomogram
@@ -278,8 +281,13 @@ class ProcessSyncer(object):
                     },
                 )
 
-    def process_zarr_directory(self, recon_type, path_to_zarrs, processed_tomograms=set()):
-        """Check remote directory path_to_zarrs and create reviewtomogram objects for them if not present."""
+    def process_zarr_directory(self, recon_type, path_to_zarrs, rel_dir=""):
+        """Sync ReviewTomogram rows of `recon_type` against the .zarr files in `path_to_zarrs`.
+
+        `rel_dir` is `path_to_zarrs` relative to the run directory (e.g. "vol003", "vol001" intended for SART
+
+        Creates rows for new files; never deletes.
+        """
         self._log_to_db(
             "sync_start",
             f"Checking {recon_type} at {path_to_zarrs}",
@@ -289,7 +297,21 @@ class ProcessSyncer(object):
             },
         )
 
-        found_zarrs = check_zarr_exists(path_to_zarrs, cluster_id=self.cluster_id)
+        pattern = self._output_pattern()
+        found_zarrs, candidates = check_zarr_exists(path_to_zarrs, pattern, cluster_id=self.cluster_id)
+
+        unmatched = candidates - len(found_zarrs)
+        if unmatched:
+            self._log_to_db(
+                "warning",
+                f"{unmatched} of {candidates} .zarr entries did not match the rec file pattern",
+                {
+                    "reconstruction_type": recon_type,
+                    "candidates": candidates,
+                    "unmatched": unmatched,
+                },
+            )
+
         if len(found_zarrs) == 0:
             self._log_to_db(
                 "sync_complete",
@@ -299,40 +321,48 @@ class ProcessSyncer(object):
                     "count": 0,
                 },
             )
-            return processed_tomograms
+            return
 
+        known = dict(
+            ReviewTomogram.objects.filter(
+                reconstruction_type__iexact=recon_type,
+                run_id=self.run_id,
+                session=self.session,
+            ).values_list("position_id", "tomogram_id")
+        )
+
+        seen = set()
+        new_count = 0
+        for filename, position_id in found_zarrs:
+            if position_id in known:
+                seen.add(known[position_id])
+            else:
+                tomogram = self.create_tomogram(
+                    reconstruction_type=recon_type,
+                    position_id=position_id,
+                    file_path=f"{rel_dir}/{filename}" if rel_dir else filename,
+                    pattern_label=pattern.label,
+                )
+                if tomogram:
+                    new_count += 1
+                    seen.add(tomogram.tomogram_id)
+                    log.info(f"Created new tomogram for position_id: {position_id}")
+
+        # The directory is re-listed whole every pass, and this will find new ones.
+        # missing_files: rows with no file on disk this pass -- reported, never deleted.
+        known_count = len(found_zarrs) - new_count
         self._log_to_db(
             "file_found",
-            f"Found {len(found_zarrs)} files for {recon_type}",
+            f"Found {new_count} new files ({known_count} previous, {len(found_zarrs)} total) for {recon_type}",
             {
                 "reconstruction_type": recon_type,
                 "count": len(found_zarrs),
+                "new": new_count,
+                "previous": known_count,
+                "missing_files": len(set(known.values()) - seen),
                 "files": [f[0] for f in found_zarrs[:10]],  # First 10 files
             },
         )
-
-        for _filename, position_id in found_zarrs:
-            # Check for existing tomogram with same position_id, reconstruction_type, run_id, and session
-            existing_tomogram = ReviewTomogram.objects.filter(
-                position_id=position_id,
-                reconstruction_type=recon_type,
-                run_id=self.run_id,
-                session=self.session,
-            ).first()
-
-            if existing_tomogram:
-                log.info(
-                    f"Found existing tomogram with same position_id ({position_id}), reconstruction_type ({recon_type}), run_id ({self.run_id}), and session ({self.session.name})"
-                )
-                processed_tomograms.add(existing_tomogram.tomogram_id)
-            else:
-                # Create new tomogram
-                tomogram = self.create_tomogram(reconstruction_type=recon_type, position_id=position_id)
-                if tomogram:
-                    processed_tomograms.add(tomogram.tomogram_id)
-                    log.info(f"Created new tomogram for position_id: {position_id}")
-
-        return processed_tomograms
 
     def sync_results(self):
         raise NotImplementedError

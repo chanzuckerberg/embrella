@@ -29,18 +29,6 @@ class CopickAddObjectProcessor(CopickProcessor):
     # Hidden from processor dropdown - accessed via Copick form's Add Object tab
     hidden_from_list = True
 
-    def get_processing_base_path(self) -> str:
-        """
-        Get the base processing path for this processor.
-
-        Uses the parent copick processor's path since add_object is an
-        accessory action that shares the same script directory.
-
-        Returns:
-            /hpc/projects/group.czii/krios1.processing/copick
-        """
-        return "/hpc/projects/group.czii/krios1.processing/copick"
-
     @classmethod
     def get_views_module(cls):
         """

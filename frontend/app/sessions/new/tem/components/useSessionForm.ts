@@ -57,12 +57,6 @@ export function useSessionForm(): UseSessionFormReturn {
         if (optionsRes.ok) {
           const options: FormOptions = await optionsRes.json();
           setFormOptions(options);
-
-          // Auto-select default session plan (Krios1 tomo5)
-          const defaultPlan = options.session_plans.find((sp) => sp.name.toLowerCase().includes('tomo5 on krios1'));
-          if (defaultPlan) {
-            setState((prev) => ({ ...prev, sessionPlanId: defaultPlan.id }));
-          }
         }
 
         if (nameRes.ok) {

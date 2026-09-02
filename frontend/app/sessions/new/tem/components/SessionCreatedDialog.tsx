@@ -3,7 +3,7 @@
 import React from 'react';
 import { Alert, Box, Typography } from '@mui/material';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from '@czi-sds/components';
-import { CreatedSession } from '../types';
+import { CreatedSession, RolePath } from '../types';
 
 interface SessionCreatedDialogProps {
   open: boolean;
@@ -12,26 +12,31 @@ interface SessionCreatedDialogProps {
   onDone: () => void;
 }
 
-function PathRow({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
+const CODE_SX = {
+  fontFamily: 'monospace',
+  bgcolor: 'grey.100',
+  px: 1,
+  py: 0.5,
+  borderRadius: 1,
+  wordBreak: 'break-all',
+} as const;
+
+/** Directory and filename pattern: two halves resolved from different config, shown apart. */
+function PathRow({ label, path }: { label: string; path: RolePath }) {
+  if (!path?.directory) return null;
   return (
     <Box sx={{ mb: 1 }}>
       <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 600 }}>
         {label}
       </Typography>
-      <Typography
-        variant="body2"
-        sx={{
-          fontFamily: 'monospace',
-          bgcolor: 'grey.100',
-          px: 1,
-          py: 0.5,
-          borderRadius: 1,
-          wordBreak: 'break-all',
-        }}
-      >
-        {value}
+      <Typography variant="body2" sx={CODE_SX}>
+        {path.directory}
       </Typography>
+      {path.pattern && (
+        <Typography variant="body2" sx={{ ...CODE_SX, mt: 0.25 }} color="text.secondary">
+          files: {path.pattern}
+        </Typography>
+      )}
     </Box>
   );
 }
@@ -48,14 +53,14 @@ export function SessionCreatedDialog({ open, session, onCreateAnother, onDone }:
   ];
 
   const paths = [
-    { label: 'Frames', value: session.frames },
-    { label: 'Sums', value: session.sums },
-    { label: 'Mdocs', value: session.mdocs },
-    { label: 'Parents', value: session.parents },
-    { label: 'Atlas', value: session.atlas },
+    { label: 'Frames', path: session.frames },
+    { label: 'Sums', path: session.sums },
+    { label: 'Mdocs', path: session.mdocs },
+    { label: 'Parents', path: session.parents },
+    { label: 'Atlas', path: session.atlas },
   ];
 
-  const hasAnyPath = paths.some((p) => p.value);
+  const hasAnyPath = paths.some((p) => p.path?.directory);
 
   return (
     <Dialog open={open} onClose={onDone} sdsSize="s">
@@ -78,7 +83,7 @@ export function SessionCreatedDialog({ open, session, onCreateAnother, onDone }:
               </Alert>
               <Box sx={{ mt: 1 }}>
                 {paths.map((p) => (
-                  <PathRow key={p.label} label={p.label} value={p.value} />
+                  <PathRow key={p.label} label={p.label} path={p.path} />
                 ))}
               </Box>
             </>

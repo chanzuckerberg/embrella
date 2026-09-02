@@ -11,10 +11,12 @@ import re
 from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
+from tem.models import MsiSession
 
 from workflow.context import RunContext
-from workflow.processors import register_processor
+from workflow.processors import get_processor, register_processor
 from workflow.processors.base import BaseProcessor
+from workflow.processors.copick.constants import ImportTomoType
 
 logger = logging.getLogger(__name__)
 
@@ -137,9 +139,25 @@ class CopickProcessor(BaseProcessor):
             "operation": operation,  # Pass operation to template for conditionals
             "session": session_name,
             "copickRun": copick_run,
+            "copick_root": self.get_processing_base_path(cluster=run_context.cluster_id),
             "slurm_directives": context.get("slurm_directives", []),
             "context_vars": context.get("context_vars", {}),
         }
+
+        # Tomogram imports read across software: the source trees and filename pattern
+        # resolve through the owning processor so per-software config keeps applying.
+        if operation in ("create", "import_tomograms"):
+            for var, source in (("aretomo3_root", "aretomo3"), ("denoise_root", "denoiset")):
+                template_vars[var] = get_processor(source).get_processing_base_path(cluster=run_context.cluster_id)
+
+            # copick's --run-regex matches run *stems* in the source software's tree,
+            # so the basename regex drops .zarr.
+            source_session = MsiSession.objects.filter(name=session_name).select_related("session_plan").first()
+            plan = source_session.session_plan if source_session else None
+
+            source = ImportTomoType(params["import_tomo_type"]).source_software
+            pattern = get_processor(source).get_output_pattern("rec", plan=plan)
+            template_vars["run_regex"] = pattern.regex.replace(r"\.zarr$", "$")
 
         # Add operation-specific variables
         if operation == "create":
@@ -181,49 +199,6 @@ class CopickProcessor(BaseProcessor):
         )
 
         return script
-
-    def parse_output_paths(self, run_context: RunContext) -> List[Dict[str, Any]]:
-        """
-        Define expected output paths for Copick.
-
-        Args:
-            run_context: Execution context
-
-        Returns:
-            List of output path specifications
-        """
-        session_name = run_context.msi_session.name
-        copick_run = run_context.run_number
-
-        base_path = f"/hpc/projects/group.czii/krios1.processing/copick/{session_name}/{copick_run}"
-
-        return [
-            {
-                "type": "config",
-                "pattern": f"{base_path}/config.json",
-                "description": "Copick project configuration file",
-            },
-            {
-                "type": "runs",
-                "pattern": f"{base_path}/ExperimentRuns/*",
-                "description": "Copick experiment runs",
-            },
-            {
-                "type": "picks",
-                "pattern": f"{base_path}/*/picks/*.zarr",
-                "description": "Particle picks in Zarr format",
-            },
-            {
-                "type": "meshes",
-                "pattern": f"{base_path}/*/meshes/*.glb",
-                "description": "Mesh annotations",
-            },
-            {
-                "type": "logs",
-                "pattern": f"{base_path}/*.log",
-                "description": "Processing logs",
-            },
-        ]
 
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """

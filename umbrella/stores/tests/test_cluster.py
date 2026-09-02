@@ -12,9 +12,9 @@ from processes.services.cluster_resolver import (
     clear_default_cluster_cache,
     get_default_cluster_id,
 )
-from tem.models import MsiSession
+from tem.models import Microscope, MsiSession
 
-from stores.models import Cluster, resolve_review_path, validate_fileserver_base_url
+from stores.models import Cluster, PathType, resolve_review_path, validate_fileserver_base_url
 
 pytestmark = pytest.mark.django_db
 
@@ -122,11 +122,22 @@ class FileserverAllowlistTests(TestCase):
 class ResolveReviewPathAllowlistTests(TestCase):
     """resolve_review_path re-validates the base URL, but only for URL templates."""
 
-    def _mock_session(self):
+    def _mock_session(self, scope_name="krios1"):
         session = Mock(spec=MsiSession)
-        session.name = "sess1"
-        session.session_plan.scope.name = "Krios1"
+        session.name = "11jan11a"
+        session.session_plan.scope = Microscope(name=scope_name)
         return session
+
+    def test_scope_name_is_used_verbatim(self):
+        # The shipped rows stopped naming {scope} (stores/0023), but a custom row still
+        # may; the session's spelling must arrive unmodified, not case-folded.
+        PathType.objects.filter(data_kind__data_type="proc_url").update(
+            overlay_path="{http_base}{scope}.review/{proc_software}/{msi_session}/{proc_run}/"
+        )
+        cluster = Cluster(cluster_id="x", name="X", http_base_url="https://ok.example/", ssh_hostname="h")
+        with override_settings(FILESERVER_ALLOWED_HOSTS=["https://ok.example"]):
+            url = resolve_review_path("proc_url", cluster, self._mock_session("Krios1"), workflow="aretomo3", run="001")
+        self.assertIn("Krios1.review/", url)
 
     def test_url_template_enforces_allowlist(self):
         cluster = Cluster(cluster_id="x", name="X", http_base_url="https://evil.example/", ssh_hostname="h")

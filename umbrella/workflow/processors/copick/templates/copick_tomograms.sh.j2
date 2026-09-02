@@ -42,11 +42,11 @@ copick_parent_run="{{ copickRunName }}"
 # ============================================================================
 {% if operation == 'create' -%}
 # Create operation: new directory based on ProcRun number
-copick_dir="/hpc/projects/group.czii/krios1.processing/copick/${session}/${copick_procrun}"
+copick_dir="{{ copick_root }}/${session}/${copick_procrun}"
 mkdir -p "${copick_dir}"
 {% elif operation == 'import_tomograms' -%}
 # Import operation: use existing copick project directory
-copick_dir="/hpc/projects/group.czii/krios1.processing/copick/${session}/${copick_parent_run}"
+copick_dir="{{ copick_root }}/${session}/${copick_parent_run}"
 {% endif -%}
 
 # ============================================================================
@@ -75,23 +75,23 @@ fi
 case "${tomo_type,,}" in
   dctf)
     # Dose-compensated reconstruction (AreTomo3)
-    tomo_path="/hpc/projects/group.czii/krios1.processing/aretomo3/${session}/${tomo_run}/vol001/*.mrc"
+    tomo_path="{{ aretomo3_root }}/${session}/${tomo_run}/vol001/*.mrc"
     ;;
   sart)
     # SART reconstruction (AreTomo3)
-    tomo_path="/hpc/projects/group.czii/krios1.processing/aretomo3/${session}/${tomo_run}/vol003/*.mrc"
+    tomo_path="{{ aretomo3_root }}/${session}/${tomo_run}/vol003/*.mrc"
     ;;
   wbp)
     # Weighted back-projection reconstruction (AreTomo3)
-    tomo_path="/hpc/projects/group.czii/krios1.processing/aretomo3/${session}/${tomo_run}/vol002/*.mrc"
+    tomo_path="{{ aretomo3_root }}/${session}/${tomo_run}/vol002/*.mrc"
     ;;
   denoise)
     # Denoised tomograms (DenoisET)
-    tomo_path="/hpc/projects/group.czii/krios1.processing/denoise/${session}/${tomo_run}/*.mrc"
+    tomo_path="{{ denoise_root }}/${session}/${tomo_run}/*.mrc"
     ;;
   *)
     # Default fallback: DCTF reconstruction
-    tomo_path="/hpc/projects/group.czii/krios1.processing/aretomo3/${session}/${tomo_run}/vol001/*.mrc"
+    tomo_path="{{ aretomo3_root }}/${session}/${tomo_run}/vol001/*.mrc"
     ;;
 esac
 
@@ -115,7 +115,7 @@ copick config filesystem \
 copick add tomogram "${tomo_path}" \
   --config "${copick_dir}/config.json" \
   --tomo-type "${tomo_type,,}" \
-  --run-regex '^(Position_[0-9]+(?:_[0-9]+)*)_Vol$' \
+  --run-regex '{{ run_regex }}' \
   --run-name-prefix "${session}_"
 
 # ============================================================================
