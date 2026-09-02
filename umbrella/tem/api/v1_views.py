@@ -101,16 +101,32 @@ def form_options(request):
     )
 
 
+def _plan_name_prefix(session_plan_id):
+    """The plan's configured prefix; "" when the id is missing, malformed or unknown."""
+    if not session_plan_id or not str(session_plan_id).isdigit():
+        return ""
+    plan = SessionPlan.objects.filter(pk=session_plan_id).only("name_prefix").first()
+    return plan.name_prefix if plan else ""
+
+
 @extend_schema(
     methods=["GET"],
     tags=["TEM Sessions"],
+    parameters=[
+        OpenApiParameter(
+            name="session_plan_id",
+            required=False,
+            type=int,
+            description="SessionPlan whose name_prefix to apply. Omitted or unknown: no prefix.",
+        ),
+    ],
     responses={200: SuggestNameSerializer},
-    description="Get an auto-generated session name based on the current date.",
+    description="Auto-generated session name: <plan prefix><yymmmdd><letter>, e.g. s26jun08a.",
 )
 @api_view(["GET"])
 def suggest_session_name(request):
-    name = suggest_name("")
-    return Response({"suggested_name": name})
+    prefix = _plan_name_prefix(request.query_params.get("session_plan_id"))
+    return Response({"suggested_name": suggest_name(prefix)})
 
 
 @extend_schema(

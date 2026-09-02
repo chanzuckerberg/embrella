@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from stores.models import Path
 
@@ -10,6 +12,11 @@ from tem.models import (
 
 # Fixtures (test_user, microscope, camera, magnification, software,
 # session_plan, project, grid) live in tem/tests/conftest.py.
+
+
+def _today():
+    """The yymmmdd part of a suggested name, built the way suggest_name builds it."""
+    return time.strftime("%y%b%d").lower()
 
 
 @pytest.mark.django_db
@@ -52,6 +59,32 @@ class TestSuggestName:
         assert "suggested_name" in data
         assert len(data["suggested_name"]) > 0
         assert data["suggested_name"].endswith("a")
+
+    def test_applies_plan_prefix(self, client, test_user, session_plan):
+        client.force_login(test_user)
+        session_plan.name_prefix = "s"
+        session_plan.save()
+        response = client.get(f"/tem/v1/sessions/suggest-name/?session_plan_id={session_plan.id}")
+        assert response.json()["suggested_name"] == f"s{_today()}a"
+
+    def test_prefixed_and_plain_names_increment_independently(self, client, test_user, session_plan, project, grid):
+        client.force_login(test_user)
+        session_plan.name_prefix = "s"
+        session_plan.save()
+        for name in (f"s{_today()}a", f"{_today()}a", f"{_today()}b"):
+            MsiSession.objects.create(name=name, session_plan=session_plan, project=project, grid=grid)
+
+        prefixed = client.get(f"/tem/v1/sessions/suggest-name/?session_plan_id={session_plan.id}")
+        plain = client.get("/tem/v1/sessions/suggest-name/")
+        assert prefixed.json()["suggested_name"] == f"s{_today()}b"
+        assert plain.json()["suggested_name"] == f"{_today()}c"
+
+    @pytest.mark.parametrize("query", ["", "?session_plan_id=99999", "?session_plan_id=abc"])
+    def test_falls_back_to_no_prefix(self, client, test_user, query):
+        client.force_login(test_user)
+        response = client.get(f"/tem/v1/sessions/suggest-name/{query}")
+        assert response.status_code == 200
+        assert response.json()["suggested_name"] == f"{_today()}a"
 
     def test_requires_authentication(self, client):
         response = client.get("/tem/v1/sessions/suggest-name/")
