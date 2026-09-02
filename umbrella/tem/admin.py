@@ -67,12 +67,19 @@ class SessionPlanPathBindingInline(admin.TabularInline):
 
 @admin.register(SessionPlan)
 class SessionPlanAdmin(admin.ModelAdmin):
-    list_display = ("__str__", "scope", "camera", "software", "override_count")
+    list_display = ("__str__", "scope", "camera", "software", "name_prefix", "override_count")
     list_filter = ("scope", "camera", "software")
     inlines = (SessionPlanPathBindingInline,)
     readonly_fields = ("resolves_to",)
     fieldsets = (
         (None, {"fields": ("scope", "camera", "imaging_workflow", "software")}),
+        (
+            "Session naming",
+            {
+                "fields": ("name_prefix",),
+                "description": "Prefix for suggested MSI session names. 's' gives s26jun08a.",
+            },
+        ),
         (
             "Resolves to",
             {
