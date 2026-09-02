@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
 import { UserContext } from '@app/common/context/UserProvider';
@@ -8,6 +8,15 @@ import { CreatedSession, FormOptions, GridOption, MagnificationOption, SessionFo
 import { TEM_API } from '../constants';
 
 const NAME_REGEX = /[@_!#$%^&*()<>?/\\|}{~:\s]/;
+
+/** The server's suggested name, prefixed per plan when one is given (e.g. s26jun08a). */
+async function fetchSuggestedName(sessionPlanId: number | null): Promise<string | null> {
+  const query = sessionPlanId ? `?session_plan_id=${sessionPlanId}` : '';
+  const res = await fetchResource(`${DJANGO_URL}${TEM_API.SUGGEST_NAME}${query}`);
+  if (!res.ok) return null;
+  const { suggested_name } = await res.json();
+  return suggested_name;
+}
 
 interface UseSessionFormReturn {
   state: SessionFormState;
@@ -40,6 +49,7 @@ export function useSessionForm(): UseSessionFormReturn {
   const [grids, setGrids] = useState<GridOption[]>([]);
   const [magnifications, setMagnifications] = useState<MagnificationOption[]>([]);
   const [suggestedName, setSuggestedName] = useState('');
+  const suggestedNameRef = useRef('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,9 +58,9 @@ export function useSessionForm(): UseSessionFormReturn {
   useEffect(() => {
     const load = async () => {
       try {
-        const [optionsRes, nameRes, usersRes] = await Promise.all([
+        const [optionsRes, suggested, usersRes] = await Promise.all([
           fetchResource(`${DJANGO_URL}${TEM_API.FORM_OPTIONS}`),
-          fetchResource(`${DJANGO_URL}${TEM_API.SUGGEST_NAME}`),
+          fetchSuggestedName(null),
           fetchResource(`${DJANGO_URL}${TEM_API.USERS}`),
         ]);
 
@@ -59,10 +69,10 @@ export function useSessionForm(): UseSessionFormReturn {
           setFormOptions(options);
         }
 
-        if (nameRes.ok) {
-          const { suggested_name } = await nameRes.json();
-          setSuggestedName(suggested_name);
-          setState((prev) => ({ ...prev, name: suggested_name }));
+        if (suggested !== null) {
+          suggestedNameRef.current = suggested;
+          setSuggestedName(suggested);
+          setState((prev) => ({ ...prev, name: suggested }));
         }
 
         if (usersRes.ok) {
@@ -142,6 +152,34 @@ export function useSessionForm(): UseSessionFormReturn {
       }
     };
     loadMags();
+  }, [state.sessionPlanId]);
+
+  // Re-suggest the name when the plan changes
+  useEffect(() => {
+    if (!state.sessionPlanId) {
+      return;
+    }
+
+    let stale = false;
+    const reSuggest = async () => {
+      try {
+        const suggested = await fetchSuggestedName(state.sessionPlanId);
+        if (stale || suggested === null) return;
+
+        const previous = suggestedNameRef.current;
+        suggestedNameRef.current = suggested;
+        setSuggestedName(suggested);
+        setState((prev) => (prev.name === '' || prev.name === previous ? { ...prev, name: suggested } : prev));
+      } catch (err) {
+        console.error('Failed to load suggested name:', err);
+      }
+    };
+    reSuggest();
+
+    // A slower response for an earlier plan must not overwrite the current one.
+    return () => {
+      stale = true;
+    };
   }, [state.sessionPlanId]);
 
   const updateField = useCallback(<K extends keyof SessionFormState>(field: K, value: SessionFormState[K]) => {
