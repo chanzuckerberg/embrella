@@ -39,8 +39,7 @@ class TestFormOptions:
 
     def test_requires_authentication(self, client):
         response = client.get("/tem/v1/sessions/form-options/")
-        assert response.status_code == 302
-        assert "login" in response.url
+        assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -56,8 +55,7 @@ class TestSuggestName:
 
     def test_requires_authentication(self, client):
         response = client.get("/tem/v1/sessions/suggest-name/")
-        assert response.status_code == 302
-        assert "login" in response.url
+        assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -85,8 +83,7 @@ class TestGetMagnifications:
 
     def test_requires_authentication(self, client):
         response = client.get("/tem/v1/magnifications/?session_plan_id=1")
-        assert response.status_code == 302
-        assert "login" in response.url
+        assert response.status_code == 401
 
 
 @pytest.mark.django_db
@@ -219,8 +216,7 @@ class TestCreateSession:
             },
             content_type="application/json",
         )
-        assert response.status_code == 302
-        assert "login" in response.url
+        assert response.status_code == 401
 
 
 @pytest.mark.django_db
