@@ -166,6 +166,7 @@ class ProcessSyncer(object):
         from workflow.processors import get_processor
 
         plan = self.session.session_plan if self.session else None
+        # TODO: refactor to take in output datakind as arg once we sync different types (like "seg" for membraneseg)
         return get_processor(self.processor_name).get_output_pattern("rec", plan=plan)
 
     def _log_to_db(self, action_type: str, message: str, metadata: dict = None):
