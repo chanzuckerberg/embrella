@@ -31,6 +31,7 @@ from umbrella_logger import logger
 
 from .agent import RemoteJobSubmitter
 from .context import RunContext
+from .defaults import resolve_defaults
 from .processors import BaseProcessor, get_processor
 
 
@@ -242,6 +243,14 @@ class PipelineExecutor:
         self._check_cluster_allowed(software, cluster_id)
 
         context = self._build_run_context(pipe_in_plan, proc_run, user, processor, cluster_id, mode)
+
+        # Fill unposted keys from the same cascade the form was prefilled with, so the
+        # stored parameters are the complete, replayable set the script was rendered from.
+        resolved = resolve_defaults(processor, msi_session=context.msi_session, cluster_id=context.cluster_id)
+        parameters = resolved.merge(parameters)
+        missing = resolved.missing(parameters, processor.get_parameter_schema().get("required", []))
+        if missing:
+            raise ValidationError(["Required parameter missing: %s" % key for key in missing])
 
         errors = processor.validate_parameters(parameters)
         if errors:

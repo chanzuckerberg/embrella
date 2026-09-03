@@ -387,6 +387,60 @@ class TestPipelineExecutor:
 
         assert "test_param must be non-negative" in exc_info.value.errors
 
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_execute_materializes_cascade_defaults(
+        self,
+        mock_submitter_class,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_proc_software,
+        test_user,
+        registered_test_processor,
+    ):
+        """A ParameterDefaults value the form didn't post still reaches the stored parameters."""
+        from processes.models import ParameterDefaults
+
+        ParameterDefaults.objects.create(proc_software=test_proc_software, values={"test_param": 77})
+        mock_submitter = MagicMock()
+        mock_submitter.run_script.return_value = ("Submitted batch job 1", "")
+        mock_submitter.last_script_path = "/scripts/test_script.sh"
+        mock_submitter_class.return_value = mock_submitter
+
+        result = PipelineExecutor().execute_pipe(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=test_proc_run,
+            user=test_user,
+            parameters={},
+            auth={"username": "test", "password": "pass"},
+        )
+
+        execution = PipeExecution.objects.get(id=result["pipe_execution_id"])
+        assert execution.parameters["test_param"] == 77
+        assert execution.script_content == "#!/bin/bash\necho 77"
+
+    def test_cleared_default_must_be_posted(
+        self,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_proc_software,
+        test_user,
+        registered_test_processor,
+    ):
+        """A row that nulls a key makes it required; leaving it out fails before render."""
+        from processes.models import ParameterDefaults
+
+        ParameterDefaults.objects.create(proc_software=test_proc_software, values={"test_param": None})
+
+        with pytest.raises(ValidationError) as exc_info:
+            PipelineExecutor().preview(
+                pipe_in_plan=test_pipe_in_plan,
+                proc_run=test_proc_run,
+                user=test_user,
+                parameters={},
+            )
+
+        assert exc_info.value.errors == ["Required parameter missing: test_param"]
+
     def test_cluster_not_allowed(
         self,
         test_proc_run,
@@ -593,6 +647,17 @@ class TestExecutionAPI:
 
         assert response.status_code == 400
         assert response.json()["validation_errors"] == ["test_param must be non-negative"]
+
+    def test_preview_script_missing_required(
+        self, client, test_user, test_pipe_in_plan, test_msi_session, registered_test_processor
+    ):
+        """schema `required` is enforced server-side, with the same 400 shape as other validation."""
+        client.force_login(test_user)
+
+        response = self._preview(client, parameters={})
+
+        assert response.status_code == 400
+        assert response.json()["validation_errors"] == ["Required parameter missing: test_param"]
 
     def test_preview_script_unknown_cluster(
         self, client, test_user, test_pipe_in_plan, test_msi_session, registered_test_processor
