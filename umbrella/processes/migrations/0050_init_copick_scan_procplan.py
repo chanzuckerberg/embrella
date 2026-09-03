@@ -52,7 +52,7 @@ def reverse_copick_scan_procplan(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("processes", "0048_procsoftware_output_patterns"),
+        ("processes", "0049_drop_legacy_param_models"),
     ]
 
     operations = [
