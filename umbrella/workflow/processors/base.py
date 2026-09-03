@@ -15,7 +15,7 @@ from umbrella_logger import logger
 from workflow.context import RunContext
 
 if TYPE_CHECKING:
-    from tem.models import SessionPlan
+    from tem.models import MsiSession, SessionPlan
 
 # Parsed schema per file
 _SCHEMA_CACHE: Dict[Path, Dict[str, Any]] = {}
@@ -478,6 +478,16 @@ class BaseProcessor(ABC):
                 f"(found {len(patterns)}). Bind one under Processes → Proc softwares."
             )
         return patterns[0]
+
+    def session_defaults(self, msi_session: "MsiSession") -> Dict[str, Any]:
+        """
+        Parameter values derived from the session itself, e.g. a calibrated pixel size.
+
+        Applied last by workflow.defaults.resolve_defaults, on top of the schema
+        defaults and the admin-configured ParameterDefaults rows. Return only the
+        keys that could actually be derived.
+        """
+        return {}
 
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
