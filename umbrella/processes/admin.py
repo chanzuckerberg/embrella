@@ -9,14 +9,11 @@ from .models import (
     DirectorySummary,
     FilesystemSurvey,
     Frames,
-    GlobalParam,
-    MetaKey,
     ParticleGallery,
     Pipe,
     PipeExecution,
     PipeInPlan,
     PipeJoint,
-    PipeParam,
     ProcPlan,
     ProcRun,
     ProcSoftware,
@@ -24,9 +21,7 @@ from .models import (
     ReconMethod,
     Review,
     ReviewTomogram,
-    RunGlobalValue,
     RunPipeData,
-    RunPipeValue,
     Task,
     TiltAngles,
     Tomograms,
@@ -35,7 +30,6 @@ from .models import (
 )
 
 # Register your models here.
-admin.site.register(MetaKey)
 admin.site.register(Task)
 
 
@@ -139,11 +133,7 @@ class ProcPlanAdmin(admin.ModelAdmin):
 admin.site.register(Pipe)
 admin.site.register(PipeJoint)
 admin.site.register(PipeInPlan)
-admin.site.register(GlobalParam)
-admin.site.register(PipeParam)
 admin.site.register(ProcRun)
-admin.site.register(RunGlobalValue)
-admin.site.register(RunPipeValue)
 admin.site.register(RunPipeData)
 
 

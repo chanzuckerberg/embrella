@@ -32,20 +32,6 @@ def getattr_from_globals(attr_name):
     return my_attr
 
 
-class MetaKey(models.Model):
-    """
-    Goes into stores.Version.metadata
-    """
-
-    name = models.CharField(max_length=32, default="cs")
-    definition = models.TextField(max_length=255, default="Spherical aberration constant")
-    unit = models.CharField(max_length=32, default="mm")
-    data_type = models.CharField(max_length=6, default="float", help_text="python type")
-
-    def __str__(self):
-        return "%s in unit of %s" % (self.name, self.unit)
-
-
 """
 PathData
     name
@@ -283,22 +269,6 @@ class PipeJoint(models.Model):
         )
 
 
-class GlobalParam(models.Model):
-    key = models.ForeignKey(MetaKey, on_delete=models.CASCADE)
-    pipeline = models.ForeignKey(ProcPlan, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return "(%s,  %s)" % (self.pipeline, self.key)
-
-
-class PipeParam(models.Model):
-    key = models.ForeignKey(MetaKey, on_delete=models.CASCADE)
-    pipe = models.ForeignKey(Pipe, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return "(%s, %s)" % (self.pipe, self.key)
-
-
 # record
 class ProcRun(models.Model):
     """
@@ -385,32 +355,6 @@ class ProcRun(models.Model):
         from processes.services import RunCreationService
 
         return RunCreationService.get_pipe_range(self, all_input_pipe_pks, my_pipe, input_objects)
-
-
-class RunGlobalValue(models.Model):
-    run = models.ForeignKey(ProcRun, on_delete=models.CASCADE)
-    param = models.ForeignKey(GlobalParam, on_delete=models.CASCADE)
-    value = models.CharField(max_length=255, default="100")
-
-    def __str__(self):
-        if self.value and self.param.key.data_type in ("dir", "file"):
-            display_value = Path.objects.get(pk=int(self.value))
-        else:
-            display_value = self.value
-        return "%s : %s" % (self.param.key.name, display_value)
-
-
-class RunPipeValue(models.Model):
-    run = models.ForeignKey(ProcRun, on_delete=models.CASCADE)
-    param = models.ForeignKey(PipeParam, on_delete=models.CASCADE)
-    value = models.CharField(max_length=255, default="100")
-
-    def __str__(self):
-        if self.value and self.param.key.data_type in ("dir", "file"):
-            display_value = Path.objects.get(pk=int(self.value))
-        else:
-            display_value = self.value
-        return "pipe%d %s : %s" % (self.param.pipe.step, self.param.key.name, display_value)
 
 
 class RunPipeData(models.Model):
