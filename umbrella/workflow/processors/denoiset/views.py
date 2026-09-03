@@ -3,7 +3,6 @@ Custom API views for DenoisET processor.
 
 Provides processor-specific endpoints for:
 - Dynamic form field options (available AreTomo3 runs)
-- Session-specific defaults (recommended model based on session characteristics)
 - Processor metadata (denoising guidance, examples)
 """
 
@@ -68,58 +67,6 @@ def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
         {
             "success": True,
             "options": options,
-        }
-    )
-
-
-@require_http_methods(["GET"])
-def get_session_defaults(request, session_id: str = None) -> JsonResponse:
-    """
-    Get recommended default parameters for a specific session.
-
-    Suggests model and parameters based on session characteristics:
-    - Model selection based on pixel size/resolution
-    - Live denoising setting based on session type
-    - Custom parameters based on data quality
-
-    Args:
-        request: Django HTTP request
-        session_id: MSI session ID
-
-    Returns:
-        JsonResponse with default parameter values:
-        {
-            "defaults": {
-                "model_name": "lysosome.pth",
-                "live_denoising": false
-            }
-        }
-    """
-    defaults = {
-        "model_name": "lysosome.pth",
-        "live_denoising": False,
-    }
-
-    if session_id:
-        try:
-            session = MsiSession.objects.get(name=session_id)
-
-            # TODO: Adjust defaults based on session metadata
-            # For example:
-            # - Select model based on sample type
-            # - Enable live denoising for ongoing sessions
-            # - Suggest custom params based on microscope
-
-            # For now, keep simple defaults
-            defaults["model_name"] = "lysosome.pth"
-
-        except MsiSession.DoesNotExist:
-            pass
-
-    return JsonResponse(
-        {
-            "success": True,
-            "defaults": defaults,
         }
     )
 

@@ -616,7 +616,7 @@ class BaseProcessor(ABC):
         for:
         - Dynamic form field options (dropdown values based on session/context)
         - Custom parameter validation (pre-submission checks)
-        - Session-specific defaults (recommended parameter values)
+        - Session info for the form (get_session_info; defaults come from session_defaults)
         - Processor metadata (help text, examples, documentation links)
 
         Returns:

@@ -333,32 +333,6 @@ def validate_parameters(request) -> JsonResponse:
 
 
 @require_http_methods(["GET"])
-def get_session_defaults(request, session_id: str = None) -> JsonResponse:
-    """
-    Get recommended default parameters for membrane segmentation.
-
-    Note: Membrane segmentation doesn't use MSI session selection,
-    so this endpoint returns minimal defaults.
-
-    Args:
-        request: Django HTTP request
-        session_id: Optional MSI session ID (not used)
-
-    Returns:
-        JsonResponse with default parameter values
-    """
-    return JsonResponse(
-        {
-            "success": True,
-            "defaults": {
-                "threshold": 0,
-            },
-            "session_info": {},
-        }
-    )
-
-
-@require_http_methods(["GET"])
 def get_processor_metadata(request) -> JsonResponse:
     """
     Get membrane segmentation processor metadata for UI display.

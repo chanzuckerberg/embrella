@@ -22,12 +22,25 @@ from tem.models import MsiSession
 from umbrella_logger import logger
 
 from common import clusterio
+from workflow.defaults import resolve_defaults
 from workflow.execution import PipelineExecutor, ValidationError
 from workflow.processors import get_processor, list_processors
 
 
 def _is_known_cluster(cluster_id) -> bool:
     return Cluster.objects.filter(cluster_id=cluster_id, is_active=True).exists()
+
+
+def _session_info(processor, msi_session) -> dict:
+    """Processor-specific session metadata for the form, from <processor>/views.py if it has any."""
+    if msi_session is None or not processor.has_custom_views():
+        return {}
+
+    views_module = processor.get_views_module()
+    if not views_module or not hasattr(views_module, "get_session_info"):
+        return {}
+
+    return views_module.get_session_info(msi_session)
 
 
 def _pipe_in_plan_for(processor_name: str):
@@ -1339,40 +1352,45 @@ def validate_processor_parameters(request, processor_name: str):
 @login_required
 def get_processor_defaults(request, processor_name: str):
     """
-    Get session-specific default parameters for a processor.
+    Effective parameter defaults for a processor, as the launch form should prefill them.
 
-    GET /workflow/v1/processors/<name>/defaults/
-    GET /workflow/v1/processors/<name>/defaults/?session_id=<id>
+    GET /workflow/v1/processors/<name>/defaults/?session_id=<name>&cluster=<id>
 
-    Delegates to processor-specific views module if available.
+    Both query params are optional. Resolution: schema.yaml < ParameterDefaults rows
+    (scope / acquisition software / cluster) < session-derived values. See
+    workflow.defaults.resolve_defaults.
 
     Returns:
         {
             "success": true,
-            "defaults": {
-                "param1": value1,
-                "param2": value2,
-                ...
-            }
+            "defaults": {"pixel_size": 2.5, ...},          # full effective map
+            "required_overrides": ["frame_dose"],           # rows cleared these; user must fill
+            "sources": {"pixel_size": "session", ...},      # "schema" | "row:<pk>" | "session"
+            "session_info": {...}                           # processor-specific, may be {}
         }
     """
     try:
         processor = get_processor(processor_name)
-        session_id = request.GET.get("session_id")
+        session_name = request.GET.get("session_id")
+        cluster_id = request.GET.get("cluster") or None
 
-        # Check if processor has custom views module
-        if processor.has_custom_views():
-            views_module = processor.get_views_module()
-            if views_module and hasattr(views_module, "get_session_defaults"):
-                # Delegate to processor-specific implementation
-                return views_module.get_session_defaults(request, session_id)
+        msi_session = None
+        if session_name:
+            msi_session = (
+                MsiSession.objects.filter(name=session_name)
+                .select_related("session_plan__scope", "session_plan__software")
+                .first()
+            )
 
-        # Default: return empty defaults
+        resolved = resolve_defaults(processor, msi_session=msi_session, cluster_id=cluster_id)
+
         return JsonResponse(
             {
                 "success": True,
-                "session_info": {},
-                "defaults": {},
+                "defaults": resolved.values,
+                "required_overrides": sorted(resolved.required),
+                "sources": resolved.sources,
+                "session_info": _session_info(processor, msi_session),
             }
         )
 
