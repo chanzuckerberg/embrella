@@ -26,6 +26,7 @@ from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 
 from common import clusterio
+from common.httpio import fetch_remote_text
 
 from .constants import ImportTomoType
 from .processor import CopickProcessor
@@ -34,6 +35,28 @@ logger = logging.getLogger(__name__)
 
 COPICK_PLAN_NAME = "czii-copick"
 COPICK_DEFAULT_CLUSTER_ID = CopickProcessor.cluster
+
+
+def _empty_scan() -> dict:
+    return {"scanned": False, "picks": [], "segmentations": [], "meshes": [], "annotated_runs": []}
+
+
+def _copick_root_url(session, run_name: str) -> str:
+    """Caddy root URL for a copick project (session, run) — where config.json / scan.json live."""
+    cluster_id = cluster_id_for_run(session.name, run_name, default=COPICK_DEFAULT_CLUSTER_ID)
+    cluster = Cluster.objects.get(cluster_id=cluster_id)
+    return resolve_review_path("copick_url", cluster=cluster, msi_session=session, copick_run=run_name)
+
+
+def _read_scan_json(root_url: str) -> dict:
+    """Read the aggregated scan.json."""
+    try:
+        return {**_empty_scan(), **json.loads(fetch_remote_text(root_url + "scan.json"))}
+    except FileNotFoundError:
+        return _empty_scan()
+    except Exception as exc:
+        logger.warning("copick scan.json read failed for %s: %s", root_url, exc)
+        return _empty_scan()
 
 
 @require_http_methods(["GET"])
@@ -712,16 +735,22 @@ def get_copick_annotated_count(request) -> JsonResponse:
     if not runs:
         return JsonResponse({"success": True, "annotated_count": 0, "annotated_runs": [], "scanned": True})
 
-    from .scan import COPICK_CONFIG_PATH, annotated_run_names, scan_copick_project
+    try:
+        session = MsiSession.objects.get(name=session_id)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({"success": False, "error": "session not found", "annotated_count": 0})
 
     annotated: set[str] = set()
     scanned = True
     for run in runs:
-        cluster_id = cluster_id_for_run(session_id, run, default=COPICK_DEFAULT_CLUSTER_ID)
-        result = scan_copick_project(cluster_id, COPICK_CONFIG_PATH.format(session=session_id, run=run))
+        try:
+            result = _read_scan_json(_copick_root_url(session, run))
+        except Exception as exc:
+            logger.warning("copick annotated-count: resolve failed for %s/%s: %s", session_id, run, exc)
+            result = {"scanned": False}
         if not result.get("scanned"):
             scanned = False
-        annotated.update(annotated_run_names(result))
+        annotated.update(result.get("annotated_runs", []))
 
     return JsonResponse(
         {
@@ -742,7 +771,9 @@ def _list_cluster_copick_runs(session_id: str) -> set[str]:
     except Exception:
         return set()
     try:
-        base = f"/hpc/projects/group.czii/krios1.processing/copick/{session_id}"
+        from workflow.processors import get_processor
+
+        base = f"{get_processor('copick').get_processing_base_path(cluster=COPICK_DEFAULT_CLUSTER_ID)}/{session_id}"
         _, stdout, _ = ssh.exec_command(f"ls -d {shlex.quote(base)}/*/config.json 2>/dev/null", timeout=20)
         out = stdout.read().decode("utf-8", "replace")
         runs = set()
@@ -866,15 +897,13 @@ def list_copick_projects(request) -> JsonResponse:
 @extend_schema(
     methods=["GET"],
     tags=["Copick Projects"],
-    description=(
-        "Return a copick project. Pass ?scan=true to include picks/segs/meshes from the cluster (SSH, slower)."
-    ),
+    description=("Return a copick project. Pass ?scan=true to include the cached picks/segs/meshes scan."),
     parameters=[
         OpenApiParameter(
             name="scan",
             required=False,
             type=OpenApiTypes.BOOL,
-            description="If true, include scanned picks/segmentations/meshes under `annotations`.",
+            description="If true, include the cached picks/segmentations/meshes scan under `annotations`.",
         ),
     ],
     responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
@@ -897,9 +926,6 @@ def get_copick_project_detail(request, session_name: str, run_name: str) -> Json
     project = _build_copick_project(run)
 
     if request.GET.get("scan", "").lower() in ("1", "true", "yes"):
-        from .scan import COPICK_CONFIG_PATH, scan_copick_project
-
-        config_path = COPICK_CONFIG_PATH.format(session=session_name, run=run_name)
-        project["annotations"] = scan_copick_project(project["cluster_id"], config_path)
+        project["annotations"] = _read_scan_json(project["root_url"])
 
     return JsonResponse({"success": True, "project": project})

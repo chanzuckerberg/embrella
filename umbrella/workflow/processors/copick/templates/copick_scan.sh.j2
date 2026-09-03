@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# Copick scan: enumerate a project's picks/segmentations/meshes, aggregate by copick_ref,
+# and write scan.json beside config.json .
+
+#SBATCH --job-name=copick_scan
+{% for directive in slurm_directives -%}
+{% if directive.directive.startswith('-') and not directive.directive.startswith('--') -%}
+#SBATCH {{ directive.directive }} {{ directive.value }}
+{% else -%}
+#SBATCH {{ directive.directive }}={{ directive.value }}
+{% endif -%}
+{% endfor -%}
+
+# Group-writable so scan.json is readable/overwritable by later runs in the session.
+umask 0002
+
+ml anaconda
+conda activate {{ copickEnv }}
+
+config_path="{{ configPath }}"
+out_path="{{ scanOutPath }}"
+
+python3 - "$config_path" "$out_path" <<'PY'
+import json
+import os
+import sys
+
+config_path, out_path = sys.argv[1], sys.argv[2]
+
+
+def _ref(obj, user_id, session_id):
+    """Stable annotation identity: "<object>:<user_id>/<session_id>" (matches the copick-web URL shape)."""
+    return "%s:%s/%s" % (obj or "", user_id or "", session_id or "")
+
+
+# Aggregate by (kind, copick_ref): one row per distinct identity across all runs.
+# Also track distinct run names that carry any annotation — the annotated-count
+# endpoint needs run names, which the copick_ref aggregation collapses away.
+agg = {}
+annotated_runs = set()
+
+
+def _add(kind, obj, user_id, session_id, run_name, count):
+    annotated_runs.add(run_name)
+    key = (kind, _ref(obj, user_id, session_id))
+    entry = agg.get(key)
+    if entry is None:
+        entry = {
+            "copick_kind": kind,
+            "copick_ref": _ref(obj, user_id, session_id),
+            "object_name": obj or "",
+            "run_count": 0,
+            "total_count": 0,
+        }
+        agg[key] = entry
+    entry["run_count"] += 1
+    # Only picks have point counts; segmentations/meshes stay at 0.
+    if count:
+        entry["total_count"] += count
+
+
+try:
+    import copick  # inside the try: a bad conda_env surfaces as scanned:false+error
+
+    root = copick.from_file(config_path)
+    for run in root.runs:
+        rn = run.name
+        for p in run.picks or []:
+            pts = getattr(p, "points", None)
+            _add("picks", getattr(p, "pickable_object_name", None), p.user_id, p.session_id, rn,
+                 len(pts) if pts is not None else 0)
+        for s in run.segmentations or []:
+            _add("segmentations", getattr(s, "name", None), s.user_id, s.session_id, rn, 0)
+        for m in run.meshes or []:
+            _add("meshes", getattr(m, "pickable_object_name", None) or getattr(m, "name", None),
+                 m.user_id, m.session_id, rn, 0)
+except Exception as exc:  # noqa: BLE001 - env/copick/config failure is recorded in scan.json
+    out = {"scanned": False, "error": str(exc)}
+else:
+    out = {
+        "scanned": True,
+        "picks": [v for v in agg.values() if v["copick_kind"] == "picks"],
+        "segmentations": [v for v in agg.values() if v["copick_kind"] == "segmentations"],
+        "meshes": [v for v in agg.values() if v["copick_kind"] == "meshes"],
+        "annotated_runs": sorted(annotated_runs),
+    }
+
+# Atomic write so a caddy reader never sees a half-written file.
+tmp_path = out_path + ".tmp"
+with open(tmp_path, "w") as fh:
+    json.dump(out, fh)
+os.replace(tmp_path, out_path)
+print("copick scan wrote %s" % out_path)
+PY
+
+echo "Copick scan completed."
