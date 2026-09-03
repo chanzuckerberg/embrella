@@ -4,11 +4,13 @@ import uuid
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils.timezone import now
 from stores.models import Cluster, DataKind, FilePattern, Path, PathType
-from tem.models import MsiSession, SessionPlan
+from tem.models import Microscope, MsiSession, SessionPlan, Software
+from umbrella_logger import logger
 
 """
 from stores.models import DataRecord,
@@ -160,6 +162,111 @@ class ProcSoftware(models.Model):
         of using this, to avoid instantiating a model per row.
         """
         return self.storage_dirname or self.name
+
+
+class ParameterDefaults(models.Model):
+    """
+    Per-processor parameter overrides, cascaded by acquisition software, scope and cluster.
+
+        schema.yaml default
+          < row()  < row(software)  < row(scope)  < row(scope+software)
+          < row(cluster) < row(cluster+software) < row(cluster+scope) < row(all three)
+          < processor.session_defaults()          # e.g. calibrated pixel size
+
+    A blank dimension matches anything. Later rows overwrite earlier ones key by key.
+    A JSON null clears the schema default and makes the key required in the launch form.
+    """
+
+    # Bit order for `specificity`, least -> most significant. Cluster is the top bit so
+    # any cluster row beats any scope/software row: cluster rows mostly hold SLURM
+    # resources, which must apply regardless of how the data was acquired.
+    DIMENSIONS = ("software", "scope", "cluster")
+
+    proc_software = models.ForeignKey(ProcSoftware, on_delete=models.CASCADE, related_name="parameter_defaults")
+    software = models.ForeignKey(
+        Software,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="Blank = any acquisition software.",
+    )
+    scope = models.ForeignKey(
+        Microscope,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text="Blank = any microscope.",
+    )
+    cluster = models.ForeignKey(
+        Cluster,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        help_text="Blank = any cluster.",
+    )
+    values = models.JSONField(
+        default=dict,
+        help_text="{parameter: value}. Keys must exist in the processor schema. null clears the default.",
+    )
+    is_active = models.BooleanField(default=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name_plural = "parameter defaults"
+
+    def __str__(self):
+        dims = ", ".join("%s=%s" % (dim, getattr(self, dim)) for dim in self.DIMENSIONS if getattr(self, dim + "_id"))
+        return "%s [%s]" % (self.proc_software.processor_class, dims or "any")
+
+    @property
+    def specificity(self) -> int:
+        """Bitmask of the dimensions set; higher wins. 0b101 = software + cluster."""
+        return sum(1 << bit for bit, dim in enumerate(self.DIMENSIONS) if getattr(self, dim + "_id") is not None)
+
+    @classmethod
+    def applicable(cls, proc_software, *, plan: SessionPlan = None, cluster_id: str = None) -> list:
+        """Active rows matching this plan and cluster, least specific first."""
+        rows = cls.objects.filter(proc_software=proc_software, is_active=True)
+        rows = rows.filter(_blank_or("software", plan.software_id if plan else None))
+        rows = rows.filter(_blank_or("scope", plan.scope_id if plan else None))
+        rows = rows.filter(_blank_or("cluster", cluster_id))
+
+        ordered = sorted(rows.select_related(*cls.DIMENSIONS), key=lambda row: (row.specificity, row.pk))
+        _warn_on_ties(ordered)
+        return ordered
+
+    def clean(self):
+        super().clean()
+        if not isinstance(self.values, dict):
+            raise ValidationError({"values": 'Must be a JSON object, e.g. {"tilt_axis": 85.3}.'})
+
+        # The DB can't enforce this: NULLs never collide in a unique index.
+        twin = ParameterDefaults.objects.filter(
+            proc_software=self.proc_software,
+            software=self.software,
+            scope=self.scope,
+            cluster=self.cluster,
+            is_active=True,
+        ).exclude(pk=self.pk)
+        if twin.exists():
+            raise ValidationError("An active row with these exact dimensions already exists (pk %d)." % twin.first().pk)
+
+
+def _blank_or(field, value):
+    """Rows that leave `field` blank, plus rows naming `value` when one is known."""
+    blank = Q(**{field + "__isnull": True})
+    if value is None:
+        return blank
+    return blank | Q(**{field: value})
+
+
+def _warn_on_ties(rows):
+    # Ambiguity should be observable, not silently ranked.
+    seen = {}
+    for row in rows:
+        other = seen.setdefault(row.specificity, row)
+        if other is not row:
+            logger.warning("ParameterDefaults %d and %d have equal specificity; the higher pk wins.", other.pk, row.pk)
 
 
 class ProcPlan(models.Model):
