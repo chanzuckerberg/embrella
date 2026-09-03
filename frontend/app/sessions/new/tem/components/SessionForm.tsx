@@ -1,11 +1,49 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Alert, Box, CircularProgress, TextField } from '@mui/material';
-import { Button } from '@czi-sds/components';
+import { Alert, alpha, Box, CircularProgress, SxProps, TextField, Theme } from '@mui/material';
+import { Button, SegmentedControl } from '@czi-sds/components';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
-import { CreatedSession } from '../types';
+import { primary100, primary500 } from '@app/common/theme';
+import { CreatedSession, PLAN_TIERS, PlanTier } from '../types';
 import { useSessionForm } from './useSessionForm';
+
+const LABEL_INDENT_CLASS = 'pl-4';
+// DropdownSelect adds font-semibold itself; plain labels need both.
+const LABEL_CLASS = `font-semibold ${LABEL_INDENT_CLASS}`;
+
+const PLAN_TIER_LABELS: Record<PlanTier, string> = {
+  scope: 'Microscope',
+  software: 'Software',
+  workflow: 'Workflow',
+  camera: 'Camera',
+};
+
+const SEGMENT_STYLES: SxProps<Theme> = {
+  '& .MuiToggleButtonGroup-root': {
+    backgroundColor: (theme) => primary100({ theme }),
+    overflow: 'hidden',
+    '&, &:hover': { boxShadow: (theme) => `inset 0 0 0 1px ${alpha(primary500({ theme }) ?? '#000', 0.25)}` },
+    '&:has(.Mui-disabled)': { backgroundColor: 'grey.100', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.12)' },
+
+    '& .MuiToggleButton-root': {
+      backgroundColor: 'transparent',
+      color: 'text.primary',
+      fontSize: '0.875rem',
+      lineHeight: 1.4,
+      padding: '4px 14px',
+      '& *': { fontSize: 'inherit', lineHeight: 'inherit' },
+      '&:hover': { backgroundColor: (theme) => alpha(primary500({ theme }) ?? '#000', 0.12) },
+      '&.Mui-disabled': { color: 'text.disabled' },
+    },
+    '& .MuiToggleButton-root.Mui-selected, & .MuiToggleButton-root.Mui-selected:hover': {
+      backgroundColor: 'common.white',
+      color: (theme) => primary500({ theme }),
+      fontWeight: 600,
+      boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+    },
+  },
+};
 
 interface SessionFormProps {
   onSuccess?: (session: CreatedSession) => void;
@@ -23,17 +61,13 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
     errors,
     isLoading,
     isSubmitting,
+    planSelection,
+    planTierOptions,
     updateField,
-    selectSessionPlan,
+    selectPlanTier,
     selectFilterUser,
     submit,
   } = useSessionForm();
-
-  // Map options for DropdownSelect (needs { name } shape)
-  const sessionPlanOptions = useMemo(
-    () => (formOptions?.session_plans ?? []).map((sp) => ({ ...sp, name: sp.name })),
-    [formOptions]
-  );
 
   const projectOptions = useMemo(
     () => (formOptions?.projects ?? []).map((p) => ({ ...p, name: p.name })),
@@ -52,11 +86,6 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
   );
 
   const gridOptions = useMemo(() => grids.map((g) => ({ ...g, name: g.display_name || g.name })), [grids]);
-
-  const selectedSessionPlan = useMemo(
-    () => sessionPlanOptions.find((sp) => sp.id === state.sessionPlanId),
-    [sessionPlanOptions, state.sessionPlanId]
-  );
 
   const selectedProject = useMemo(
     () => projectOptions.find((p) => p.id === state.projectId),
@@ -96,20 +125,34 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: compact ? 2 : 3 }}>
       {Boolean(errors.submit) && <Alert severity="error">{errors.submit}</Alert>}
 
-      <Box sx={{ '& > button': { width: '100%' } }}>
-        <DropdownSelect
-          topLabel="Session Plan"
-          value={selectedSessionPlan}
-          options={sessionPlanOptions}
-          onChange={(option) => selectSessionPlan(option?.id ?? null)}
-        />
-        {Boolean(errors.sessionPlanId) && (
-          <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '4px' }}>{errors.sessionPlanId}</Box>
-        )}
-      </Box>
+      {/* The session plan, one tier at a time: microscope -> software -> workflow -> camera.
+          Every option is on screen as a segment, so each tier is one click. */}
+      {PLAN_TIERS.map((tier, index) => {
+        const previousTier = PLAN_TIERS[index - 1];
+        return (
+          <Box key={tier} sx={SEGMENT_STYLES}>
+            <div className={LABEL_CLASS}>{PLAN_TIER_LABELS[tier]}</div>
+            <SegmentedControl
+              aria-label={PLAN_TIER_LABELS[tier]}
+              buttonDefinition={planTierOptions[tier].map((value) => ({
+                label: value,
+                shouldShowTooltip: false,
+                value,
+              }))}
+              value={planSelection[tier] ?? null}
+              disabled={Boolean(previousTier) && !planSelection[previousTier]}
+              onChange={(_event, value) => selectPlanTier(tier, value ?? undefined)}
+            />
+          </Box>
+        );
+      })}
+      {Boolean(errors.sessionPlanId) && (
+        <Box sx={{ color: 'error.main', fontSize: '0.75rem', mt: '-12px' }}>{errors.sessionPlanId}</Box>
+      )}
 
       <Box sx={{ '& > button': { width: '100%' } }}>
         <DropdownSelect
+          topLabelClass={LABEL_INDENT_CLASS}
           topLabel="Project"
           value={selectedProject}
           options={projectOptions}
@@ -122,6 +165,7 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
 
       <Box sx={{ '& > button': { width: '100%' } }}>
         <DropdownSelect
+          topLabelClass={LABEL_INDENT_CLASS}
           topLabel="Filter by User"
           value={selectedUser}
           options={userOptions}
@@ -131,6 +175,7 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
 
       <Box sx={{ '& > button': { width: '100%' } }}>
         <DropdownSelect
+          topLabelClass={LABEL_INDENT_CLASS}
           topLabel="Grid"
           value={selectedGrid}
           options={gridOptions}
@@ -143,6 +188,7 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
 
       <Box sx={{ '& > button': { width: '100%' } }}>
         <DropdownSelect
+          topLabelClass={LABEL_INDENT_CLASS}
           topLabel="Magnification"
           value={selectedMagnification}
           options={magnificationOptions}
@@ -154,7 +200,7 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
       </Box>
 
       <Box>
-        <div className="font-semibold">Session Name</div>
+        <div className={LABEL_CLASS}>Session Name</div>
         <TextField
           value={state.name}
           onChange={(e) => updateField('name', e.target.value)}

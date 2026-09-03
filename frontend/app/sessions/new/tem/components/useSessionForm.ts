@@ -1,29 +1,46 @@
 'use client';
 
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { DJANGO_URL } from '@app/common/constants/api';
-import { fetchResource, postResource } from '@app/common/queries/fetchResource';
+import { useCallback, useContext, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
 import { UserContext } from '@app/common/context/UserProvider';
-import { CreatedSession, FormOptions, GridOption, MagnificationOption, SessionFormState, UserOption } from '../types';
-import { TEM_API } from '../constants';
+import {
+  createSession,
+  fetchFormOptions,
+  fetchGrids,
+  fetchMagnifications,
+  fetchSuggestedName,
+  fetchUsers,
+} from '../services/sessionApi';
+import {
+  CreatedSession,
+  FormOptions,
+  GridOption,
+  MagnificationOption,
+  PLAN_TIERS,
+  PlanSelection,
+  PlanTier,
+  SessionFormState,
+  SessionPlanOption,
+  UserOption,
+} from '../types';
+import { autoFill, pickTier, resolvePlan, tierOptions } from './planTiers';
 
 const NAME_REGEX = /[@_!#$%^&*()<>?/\\|}{~:\s]/;
+const MAX_NAME_LENGTH = 20;
+const STALE = 5 * 60 * 1000;
 
-/** The server's suggested name, prefixed per plan when one is given (e.g. s26jun08a). */
-async function fetchSuggestedName(sessionPlanId: number | null): Promise<string | null> {
-  const query = sessionPlanId ? `?session_plan_id=${sessionPlanId}` : '';
-  const res = await fetchResource(`${DJANGO_URL}${TEM_API.SUGGEST_NAME}${query}`);
-  if (!res.ok) return null;
-  const { suggested_name } = await res.json();
-  return suggested_name;
-}
+const keys = {
+  formOptions: ['tem', 'session-form', 'options'] as const,
+  users: ['tem', 'session-form', 'users'] as const,
+  grids: (userId: number | null) => ['tem', 'session-form', 'grids', userId] as const,
+  magnifications: (planId: number | null) => ['tem', 'session-form', 'magnifications', planId] as const,
+  suggestedName: (planId: number | null) => ['tem', 'session-form', 'suggested-name', planId] as const,
+};
 
-function useLatestRequest() {
-  const counter = useRef(0);
-  const next = useCallback(() => ++counter.current, []);
-  const isLatest = useCallback((token: number) => token === counter.current, []);
-  return useMemo(() => ({ next, isLatest }), [next, isLatest]);
-}
+const NO_GRIDS: GridOption[] = [];
+const NO_MAGNIFICATIONS: MagnificationOption[] = [];
+const NO_USERS: UserOption[] = [];
 
 interface UseSessionFormReturn {
   state: SessionFormState;
@@ -35,14 +52,29 @@ interface UseSessionFormReturn {
   errors: Record<string, string>;
   isLoading: boolean;
   isSubmitting: boolean;
+  /** Tiered plan choice: what is picked so far, and what each tier currently offers. */
+  planSelection: PlanSelection;
+  planTierOptions: Record<PlanTier, string[]>;
   updateField: <K extends keyof SessionFormState>(field: K, value: SessionFormState[K]) => void;
+  selectPlanTier: (tier: PlanTier, value: string | undefined) => void;
   selectSessionPlan: (sessionPlanId: number | null) => void;
   selectFilterUser: (userId: number | null) => void;
   submit: () => Promise<CreatedSession | null>;
 }
 
+/**
+ * Server data is declared with React Query, keyed on the form state it depends on:
+ *
+ *   filterUserId  -> grids            (default grid pre-selected once they arrive)
+ *   sessionPlanId -> magnifications
+ *   sessionPlanId -> suggested name   (applied to the field only while it is untouched)
+ *
+ * Handlers only change state; the queries follow. The few "react to arriving data" steps are
+ * done during render with the previous-value pattern, so there are no effects.
+ */
 export function useSessionForm(): UseSessionFormReturn {
   const user = useContext(UserContext);
+  const currentUserId = user?.id ? Number(user.id) : null;
 
   const [state, setState] = useState<SessionFormState>({
     sessionPlanId: null,
@@ -50,121 +82,58 @@ export function useSessionForm(): UseSessionFormReturn {
     gridId: null,
     magnificationId: null,
     name: '',
-    filterUserId: null,
+    filterUserId: currentUserId,
   });
-
-  const [formOptions, setFormOptions] = useState<FormOptions | null>(null);
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const [grids, setGrids] = useState<GridOption[]>([]);
-  const [magnifications, setMagnifications] = useState<MagnificationOption[]>([]);
-  const [suggestedName, setSuggestedName] = useState('');
-  // Mirror of suggestedName readable from async handlers without re-creating them.
-  const suggestedNameRef = useRef('');
+  const [planSelection, setPlanSelection] = useState<PlanSelection>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const gridsRequest = useLatestRequest();
-  const magnificationsRequest = useLatestRequest();
-  const nameRequest = useLatestRequest();
+  const optionsQuery = useQuery({ queryKey: keys.formOptions, queryFn: fetchFormOptions, staleTime: STALE });
+  const usersQuery = useQuery({ queryKey: keys.users, queryFn: fetchUsers, staleTime: STALE });
+  const gridsQuery = useQuery({
+    queryKey: keys.grids(state.filterUserId),
+    queryFn: () => fetchGrids(state.filterUserId),
+    staleTime: STALE,
+  });
+  const magnificationsQuery = useQuery({
+    queryKey: keys.magnifications(state.sessionPlanId),
+    queryFn: () => fetchMagnifications(state.sessionPlanId as number),
+    enabled: state.sessionPlanId !== null,
+    staleTime: STALE,
+  });
+  const nameQuery = useQuery({
+    queryKey: keys.suggestedName(state.sessionPlanId),
+    queryFn: () => fetchSuggestedName(state.sessionPlanId),
+  });
 
-  const applySuggestedName = useCallback((suggested: string) => {
-    const previous = suggestedNameRef.current;
-    suggestedNameRef.current = suggested;
-    setSuggestedName(suggested);
-    // Only replace a name the user hasn't touched: empty, or still the previous suggestion.
-    setState((prev) => (prev.name === '' || prev.name === previous ? { ...prev, name: suggested } : prev));
-  }, []);
+  const plans = useMemo(() => optionsQuery.data?.session_plans ?? [], [optionsQuery.data]);
+  const grids = gridsQuery.data ?? NO_GRIDS;
+  const magnifications =
+    state.sessionPlanId !== null ? (magnificationsQuery.data ?? NO_MAGNIFICATIONS) : NO_MAGNIFICATIONS;
 
-  const loadGrids = useCallback(
-    async (userId: number | null) => {
-      const token = gridsRequest.next();
-      const url = userId
-        ? `${DJANGO_URL}${TEM_API.GRIDS_BY_USER}?user_id=${userId}`
-        : `${DJANGO_URL}${TEM_API.GRIDS_BY_USER}`;
+  // The signed-in user arrives after mount: adopt them as the grid filter when they do.
+  const [prevUserId, setPrevUserId] = useState(currentUserId);
+  if (currentUserId !== prevUserId) {
+    setPrevUserId(currentUserId);
+    setState((prev) => ({ ...prev, filterUserId: currentUserId, gridId: null }));
+  }
 
-      try {
-        const res = await fetchResource(url);
-        if (!res.ok) return;
-        const data: GridOption[] = await res.json();
-        if (!gridsRequest.isLatest(token)) return;
+  // A fresh grid list pre-selects its default grid; a grid the user picked is left alone.
+  const defaultGrid = grids.find((g) => g.is_default);
+  if (state.gridId === null && defaultGrid) {
+    setState((prev) => (prev.gridId === null ? { ...prev, gridId: defaultGrid.id } : prev));
+  }
 
-        setGrids(data);
-        const defaultGrid = data.find((g) => g.is_default);
-        setState((prev) => ({ ...prev, gridId: defaultGrid?.id ?? null }));
-      } catch (err) {
-        console.error('Failed to load grids:', err);
-      }
-    },
-    [gridsRequest]
-  );
-
-  const loadMagnifications = useCallback(
-    async (sessionPlanId: number) => {
-      const token = magnificationsRequest.next();
-
-      try {
-        const res = await fetchResource(`${DJANGO_URL}${TEM_API.MAGNIFICATIONS}?session_plan_id=${sessionPlanId}`);
-        if (!res.ok) return;
-        const data: MagnificationOption[] = await res.json();
-        if (magnificationsRequest.isLatest(token)) setMagnifications(data);
-      } catch (err) {
-        console.error('Failed to load magnifications:', err);
-      }
-    },
-    [magnificationsRequest]
-  );
-
-  const loadSuggestedName = useCallback(
-    async (sessionPlanId: number) => {
-      const token = nameRequest.next();
-
-      try {
-        const suggested = await fetchSuggestedName(sessionPlanId);
-        if (suggested !== null && nameRequest.isLatest(token)) applySuggestedName(suggested);
-      } catch (err) {
-        console.error('Failed to load suggested name:', err);
-      }
-    },
-    [nameRequest, applySuggestedName]
-  );
-
-  // Initial load: options, users, an unprefixed name, and the grids of the current user.
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [optionsRes, suggested, usersRes] = await Promise.all([
-          fetchResource(`${DJANGO_URL}${TEM_API.FORM_OPTIONS}`),
-          fetchSuggestedName(null),
-          fetchResource(`${DJANGO_URL}${TEM_API.USERS}`),
-        ]);
-
-        if (optionsRes.ok) {
-          const options: FormOptions = await optionsRes.json();
-          setFormOptions(options);
-        }
-
-        if (suggested !== null) {
-          applySuggestedName(suggested);
-        }
-
-        if (usersRes.ok) {
-          const data = await usersRes.json();
-          setUsers(data.users || data.results || data);
-        }
-
-        // Pre-select the current user for grid filtering
-        const filterUserId = user?.id ? Number(user.id) : null;
-        setState((prev) => ({ ...prev, filterUserId }));
-        await loadGrids(filterUserId);
-      } catch (err) {
-        console.error('Failed to load form options:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
-  }, [user?.id, applySuggestedName, loadGrids]);
+  // Apply a newly suggested name only while the field is empty or still shows the previous
+  // suggestion. Keyed on plan + value so the same text for a new plan still re-applies.
+  const suggested = nameQuery.data ?? null;
+  const suggestionKey = suggested === null ? null : `${state.sessionPlanId}:${suggested}`;
+  const [applied, setApplied] = useState<{ key: string | null; name: string }>({ key: null, name: '' });
+  if (suggestionKey !== null && suggestionKey !== applied.key) {
+    const previous = applied.name;
+    setApplied({ key: suggestionKey, name: suggested as string });
+    setState((prev) => (prev.name === '' || prev.name === previous ? { ...prev, name: suggested as string } : prev));
+  }
 
   const clearError = useCallback((field: string) => {
     setErrors((prev) => {
@@ -183,28 +152,50 @@ export function useSessionForm(): UseSessionFormReturn {
     [clearError]
   );
 
-  const selectFilterUser = useCallback(
-    (userId: number | null) => {
-      setState((prev) => ({ ...prev, filterUserId: userId }));
-      loadGrids(userId);
-    },
-    [loadGrids]
-  );
+  const selectFilterUser = useCallback((userId: number | null) => {
+    // The default grid of the new list takes over.
+    setState((prev) => ({ ...prev, filterUserId: userId, gridId: null }));
+  }, []);
 
   const selectSessionPlan = useCallback(
     (sessionPlanId: number | null) => {
       // The magnification list belongs to the old plan.
       setState((prev) => ({ ...prev, sessionPlanId, magnificationId: null }));
       clearError('sessionPlanId');
-
-      if (!sessionPlanId) {
-        setMagnifications([]);
-        return;
-      }
-      loadMagnifications(sessionPlanId);
-      loadSuggestedName(sessionPlanId);
     },
-    [clearError, loadMagnifications, loadSuggestedName]
+    [clearError]
+  );
+
+  const planTierOptions = useMemo(
+    () =>
+      Object.fromEntries(PLAN_TIERS.map((tier) => [tier, tierOptions(plans, planSelection, tier)])) as Record<
+        PlanTier,
+        string[]
+      >,
+    [plans, planSelection]
+  );
+
+  const applyPlanSelection = useCallback(
+    (availablePlans: SessionPlanOption[], selection: PlanSelection) => {
+      setPlanSelection(selection);
+      selectSessionPlan(resolvePlan(availablePlans, selection)?.id ?? null);
+    },
+    [selectSessionPlan]
+  );
+
+  // Once the plans are known, pre-fill the tiers that have a single option. Only ever once,
+  // so a background refetch cannot undo what the user has picked since.
+  const [tiersInitialised, setTiersInitialised] = useState(false);
+  if (!tiersInitialised && optionsQuery.data) {
+    setTiersInitialised(true);
+    applyPlanSelection(plans, autoFill(plans, {}));
+  }
+
+  const selectPlanTier = useCallback(
+    (tier: PlanTier, value: string | undefined) => {
+      applyPlanSelection(plans, pickTier(plans, planSelection, tier, value));
+    },
+    [plans, planSelection, applyPlanSelection]
   );
 
   const validate = useCallback((): boolean => {
@@ -219,8 +210,8 @@ export function useSessionForm(): UseSessionFormReturn {
       newErrors.name = 'Session name is required.';
     } else if (NAME_REGEX.test(state.name)) {
       newErrors.name = 'Name cannot contain special characters or spaces.';
-    } else if (state.name.length > 20) {
-      newErrors.name = 'Name must be 20 characters or fewer.';
+    } else if (state.name.length > MAX_NAME_LENGTH) {
+      newErrors.name = `Name must be ${MAX_NAME_LENGTH} characters or fewer.`;
     }
 
     setErrors(newErrors);
@@ -234,22 +225,17 @@ export function useSessionForm(): UseSessionFormReturn {
     setErrors({});
 
     try {
-      const payload: Record<string, unknown> = {
+      const res = await createSession({
         name: state.name.trim(),
         session_plan_id: state.sessionPlanId,
         project_id: state.projectId,
         grid_id: state.gridId,
-      };
-      // might not have any magnification options, so this is optional
-      if (state.magnificationId) {
-        payload.magnification_id = state.magnificationId;
-      }
-
-      const res = await postResource(`${DJANGO_URL}${TEM_API.CREATE_SESSION}`, payload);
+        // might not have any magnification options, so this is optional
+        ...(state.magnificationId ? { magnification_id: state.magnificationId } : {}),
+      });
 
       if (res.ok) {
-        const session: CreatedSession = await res.json();
-        return session;
+        return (await res.json()) as CreatedSession;
       }
 
       // Handle validation errors from server
@@ -272,6 +258,11 @@ export function useSessionForm(): UseSessionFormReturn {
     }
   }, [state, validate]);
 
+  const isLoading = optionsQuery.isPending || usersQuery.isPending;
+  const formOptions = optionsQuery.data ?? null;
+  const users = usersQuery.data ?? NO_USERS;
+  const suggestedName = applied.name;
+
   return useMemo(
     () => ({
       state,
@@ -283,7 +274,10 @@ export function useSessionForm(): UseSessionFormReturn {
       errors,
       isLoading,
       isSubmitting,
+      planSelection,
+      planTierOptions,
       updateField,
+      selectPlanTier,
       selectSessionPlan,
       selectFilterUser,
       submit,
@@ -298,7 +292,10 @@ export function useSessionForm(): UseSessionFormReturn {
       errors,
       isLoading,
       isSubmitting,
+      planSelection,
+      planTierOptions,
       updateField,
+      selectPlanTier,
       selectSessionPlan,
       selectFilterUser,
       submit,

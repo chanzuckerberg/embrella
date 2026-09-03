@@ -1,4 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createElement, PropsWithChildren } from 'react';
 
 import { fetchResource } from '@app/common/queries/fetchResource';
 import { TEM_API } from '../constants';
@@ -10,8 +12,23 @@ jest.mock('@app/common/queries/fetchResource', () => ({
 }));
 
 const TODAY = '26sep02a';
-const TOMO5_PLAN = { id: 1, name: 'tomo5 on krios1' };
-const SERIALEM_PLAN = { id: 7, name: 'serialEM on krios1' };
+const TOMO = 'TEM Tomography';
+const TOMO5_PLAN = {
+  id: 1,
+  name: 'tomo5 on krios1',
+  workflow: TOMO,
+  scope: 'krios1',
+  software: 'tomo5',
+  camera: 'Falcon4i',
+};
+const SERIALEM_PLAN = {
+  id: 7,
+  name: 'serialEM on krios1',
+  workflow: TOMO,
+  scope: 'krios1',
+  software: 'serialEM',
+  camera: 'Falcon4i',
+};
 // What the backend does: the chosen plan's name_prefix in front of the date.
 const PLAN_PREFIX: Record<number, string> = { [TOMO5_PLAN.id]: '', [SERIALEM_PLAN.id]: 's' };
 
@@ -47,9 +64,19 @@ function fakeBackend(url: string): Promise<Response> {
 
 const mockedFetch = fetchResource as jest.MockedFunction<typeof fetchResource>;
 
+// A fresh client per mount: no cache shared between tests, no retries hiding failures.
+function queryWrapper() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  function Wrapper({ children }: PropsWithChildren) {
+    return createElement(QueryClientProvider, { client }, children);
+  }
+  return Wrapper;
+}
+
 async function mountForm() {
-  const hook = renderHook(() => useSessionForm());
+  const hook = renderHook(() => useSessionForm(), { wrapper: queryWrapper() });
   await waitFor(() => expect(hook.result.current.state.name).toBe(TODAY));
+  await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
   return hook;
 }
 
@@ -108,6 +135,46 @@ describe('useSessionForm suggested name', () => {
   });
 });
 
+describe('useSessionForm tiered plan choice', () => {
+  it('pre-fills tiers with a single option and leaves the real choice open', async () => {
+    const { result } = await mountForm();
+
+    // Both plans are on krios1, so scope is filled; software is the first real choice.
+    await waitFor(() => expect(result.current.planSelection).toEqual({ scope: 'krios1' }));
+    expect(result.current.planTierOptions.software).toEqual(['tomo5', 'serialEM']);
+    expect(result.current.state.sessionPlanId).toBeNull();
+  });
+
+  it('completing the tiers resolves the plan and prefixes the name', async () => {
+    const { result } = await mountForm();
+    await waitFor(() => expect(result.current.planSelection.scope).toBe('krios1'));
+
+    act(() => result.current.selectPlanTier('software', 'serialEM'));
+
+    // Workflow and camera each have one option left: auto-filled, so one click pins the plan.
+    expect(result.current.planSelection).toEqual({
+      scope: 'krios1',
+      software: 'serialEM',
+      workflow: TOMO,
+      camera: 'Falcon4i',
+    });
+    expect(result.current.state.sessionPlanId).toBe(SERIALEM_PLAN.id);
+    await waitFor(() => expect(result.current.state.name).toBe(`s${TODAY}`));
+  });
+
+  it('re-picking an upper tier clears the plan until the tiers below are chosen again', async () => {
+    const { result } = await mountForm();
+    await waitFor(() => expect(result.current.planSelection.scope).toBe('krios1'));
+    act(() => result.current.selectPlanTier('software', 'serialEM'));
+    expect(result.current.state.sessionPlanId).toBe(SERIALEM_PLAN.id);
+
+    act(() => result.current.selectPlanTier('scope', 'krios1'));
+
+    expect(result.current.planSelection).toEqual({ scope: 'krios1' });
+    expect(result.current.state.sessionPlanId).toBeNull();
+  });
+});
+
 describe('useSessionForm dependent lists', () => {
   it('selecting a plan loads its magnifications and clears the old pick', async () => {
     const { result } = await mountForm();
@@ -123,15 +190,18 @@ describe('useSessionForm dependent lists', () => {
   });
 
   it('clearing the plan empties the magnifications without a request', async () => {
+    const magnificationCalls = () =>
+      mockedFetch.mock.calls.filter(([url]) => String(url).includes(TEM_API.MAGNIFICATIONS)).length;
     const { result } = await mountForm();
     act(() => result.current.selectSessionPlan(SERIALEM_PLAN.id));
     await waitFor(() => expect(result.current.magnifications).toHaveLength(1));
-    const calls = mockedFetch.mock.calls.length;
+    const calls = magnificationCalls();
 
     act(() => result.current.selectSessionPlan(null));
 
     expect(result.current.magnifications).toEqual([]);
-    expect(mockedFetch.mock.calls.length).toBe(calls);
+    // The unprefixed name is re-requested for "no plan"; magnifications are not.
+    expect(magnificationCalls()).toBe(calls);
   });
 
   it('selecting a user loads their grids and pre-selects the default one', async () => {

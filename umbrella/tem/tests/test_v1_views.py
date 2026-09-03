@@ -33,6 +33,14 @@ class TestFormOptions:
         assert len(data["projects"]) == 1
         assert data["projects"][0]["name"] == "TestProject"
 
+    def test_plan_option_carries_its_tiers(self, client, test_user, session_plan):
+        client.force_login(test_user)
+        plan = client.get("/tem/v1/sessions/form-options/").json()["session_plans"][0]
+        assert plan["workflow"] == str(session_plan.imaging_workflow)
+        assert plan["scope"] == session_plan.scope.name
+        assert plan["software"] == str(session_plan.software)
+        assert plan["camera"] == session_plan.camera.name
+
     def test_filters_to_tomo_and_sngl_workflows(self, client, test_user, microscope, camera, software):
         client.force_login(test_user)
         tomo_wf = ImagingWorkflow.objects.create(imaging_mode="tem", workflow="tomo")

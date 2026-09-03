@@ -95,7 +95,17 @@ def form_options(request):
 
     return Response(
         {
-            "session_plans": [{"id": sp.id, "name": str(sp)} for sp in session_plans],
+            "session_plans": [
+                {
+                    "id": sp.id,
+                    "name": str(sp),
+                    "workflow": str(sp.imaging_workflow),
+                    "scope": sp.scope.name,
+                    "software": str(sp.software),
+                    "camera": sp.camera.name,
+                }
+                for sp in session_plans
+            ],
             "projects": [{"id": p.id, "name": p.name} for p in projects],
         }
     )
