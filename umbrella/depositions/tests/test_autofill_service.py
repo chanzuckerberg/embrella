@@ -14,14 +14,14 @@ from depositions.services.autofill import (
 
 
 class TestRunAutofillInitConfig:
-    def test_graceful_when_conda_env_unconfigured(self):
-        """A missing conda_env PathType returns error before SSH is opened."""
+    def test_graceful_when_dataportal_env_unconfigured(self):
+        """A missing dataportal_env PathType returns error before SSH is opened."""
         with (
             mock.patch.object(autofill, "resolve_dir", side_effect=PathType.DoesNotExist),
             mock.patch.object(autofill.clusterio, "get_cluster_ssh_connection") as ssh,
         ):
             result = autofill.run_autofill_init("czii", "/a/b", "sess")
-        assert result == {"filled": False, "session": None, "reason": "conda_env_unconfigured"}
+        assert result == {"filled": False, "session": None, "reason": "dataportal_env_unconfigured"}
         ssh.assert_not_called()  # resolve happens first, so no connection is opened (nothing to leak)
 
 

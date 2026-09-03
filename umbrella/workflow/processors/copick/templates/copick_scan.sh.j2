@@ -61,7 +61,7 @@ def _add(kind, obj, user_id, session_id, run_name, count):
 
 
 try:
-    import copick  # inside the try: a bad conda_env surfaces as scanned:false+error
+    import copick  # inside the try: a bad env surfaces as scanned:false+error
 
     root = copick.from_file(config_path)
     for run in root.runs:

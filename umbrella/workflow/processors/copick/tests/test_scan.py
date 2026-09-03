@@ -216,6 +216,6 @@ class TestCopickScanWiring:
 
         assert "/hpc/krios1.processing/copick/25oct20a/run003/config.json" in script
         assert "/hpc/krios1.processing/copick/25oct20a/run003/scan.json" in script
-        assert resolve_dir("conda_env", cluster=None) in script
+        assert resolve_dir("dataportal_env", cluster=None) in script
         assert "#SBATCH --partition=cpu" in script
         assert "#SBATCH --time=00:30:00" in script

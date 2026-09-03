@@ -20,10 +20,10 @@ _YAML_END = "AUTOFILL_YAML_END"
 def run_autofill_init(cluster_id: str, aretomo3_dir: str, session_name: str, *, timeout: int = 180) -> dict:
     """SSH to ``cluster_id``, run ``cryoetportalprep init``, return the parsed session block."""
     try:
-        conda_env = resolve_dir("conda_env", cluster=cluster_id)
+        dataportal_env = resolve_dir("dataportal_env", cluster=cluster_id)
     except PathType.DoesNotExist:
-        logger.error("autofill: conda_env PathType not configured (cluster=%s)", cluster_id)
-        return {"filled": False, "session": None, "reason": "conda_env_unconfigured"}
+        logger.error("autofill: dataportal_env PathType not configured (cluster=%s)", cluster_id)
+        return {"filled": False, "session": None, "reason": "dataportal_env_unconfigured"}
 
     try:
         ssh = clusterio.get_cluster_ssh_connection(cluster_id=cluster_id)
@@ -37,7 +37,7 @@ def run_autofill_init(cluster_id: str, aretomo3_dir: str, session_name: str, *, 
 
     cmd = (
         f"ml load anaconda 2>/dev/null; "
-        f"conda activate {shlex.quote(conda_env)} && "
+        f"conda activate {shlex.quote(dataportal_env)} && "
         f"mkdir -p {shlex.quote(out_dir)} && "
         f"cryoetportalprep init -a {shlex.quote(str(aretomo3_dir))} "
         f"-s {shlex.quote(session_name)} -o {shlex.quote(out_dir)} 1>&2 && "
