@@ -17,6 +17,9 @@ from workflow.context import RunContext
 if TYPE_CHECKING:
     from tem.models import SessionPlan
 
+# Parsed schema per file
+_SCHEMA_CACHE: Dict[Path, Dict[str, Any]] = {}
+
 
 class BaseProcessor(ABC):
     """
@@ -116,9 +119,14 @@ class BaseProcessor(ABC):
         if not schema_path:
             return None
 
+        cached = _SCHEMA_CACHE.get(schema_path)
+        if cached:
+            return cached
+
         try:
             with open(schema_path, "r") as f:
                 schema = yaml.safe_load(f)
+            _SCHEMA_CACHE[schema_path] = schema
             logger.debug(f"Loaded schema from {schema_path} for processor {cls.name}")
             return schema
         except Exception as e:
