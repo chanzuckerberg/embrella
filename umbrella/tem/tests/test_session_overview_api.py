@@ -219,6 +219,32 @@ class TestSortingAndPaging:
         assert [r["session"]["name"] for r in body["result"]] == ["24mar01a", "24mar02a", "24mar03a"]
         assert body["sortBy"] == {"sort": "name", "asc": True}
 
+    def test_sort_by_name_ignores_the_plan_prefix(self, auth_client, make_session, session_plan):
+        session_plan.name_prefix = "s"
+        session_plan.save()
+        for name in ("24mar02a", "s24mar01a", "24mar01a", "s24mar03a"):
+            make_session(name)
+
+        body = auth_client.get(
+            URL,
+            q([{"category": "sort", "value": ["name"]}, {"category": "asc", "value": [True]}]),
+        ).json()
+        names = [r["session"]["name"] for r in body["result"]]
+        # 24mar01a and s24mar01a share the key "24mar01a"; -pk tiebreak puts the later one first.
+        assert names == ["24mar01a", "s24mar01a", "24mar02a", "s24mar03a"]
+
+    def test_sort_by_name_is_chronological_not_alphabetical(self, auth_client, make_session):
+        # The fixture plan has no prefix: s26feb05b is still recognised from the name alone.
+        for name in ("26apr15a", "26feb05b", "26jan09a", "25dec31a", "s26feb05b", "odd-name"):
+            make_session(name)
+
+        body = auth_client.get(
+            URL,
+            q([{"category": "sort", "value": ["name"]}, {"category": "asc", "value": [True]}]),
+        ).json()
+        names = [r["session"]["name"] for r in body["result"]]
+        assert names == ["25dec31a", "26jan09a", "s26feb05b", "26feb05b", "26apr15a", "odd-name"]
+
     def test_sort_by_run_count_descending(self, auth_client, make_session, live_plan):
         few = make_session("24mar01a")
         many = make_session("24mar02a")

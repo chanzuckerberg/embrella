@@ -1,13 +1,46 @@
 'use client';
 
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { DJANGO_URL } from '@app/common/constants/api';
-import { fetchResource, postResource } from '@app/common/queries/fetchResource';
+import { useCallback, useContext, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
 import { UserContext } from '@app/common/context/UserProvider';
-import { CreatedSession, FormOptions, GridOption, MagnificationOption, SessionFormState, UserOption } from '../types';
-import { TEM_API } from '../constants';
+import {
+  createSession,
+  fetchFormOptions,
+  fetchGrids,
+  fetchMagnifications,
+  fetchSuggestedName,
+  fetchUsers,
+} from '../services/sessionApi';
+import {
+  CreatedSession,
+  FormOptions,
+  GridOption,
+  MagnificationOption,
+  PLAN_TIERS,
+  PlanSelection,
+  PlanTier,
+  SessionFormState,
+  SessionPlanOption,
+  UserOption,
+} from '../types';
+import { autoFill, pickTier, resolvePlan, tierOptions } from './planTiers';
 
 const NAME_REGEX = /[@_!#$%^&*()<>?/\\|}{~:\s]/;
+const MAX_NAME_LENGTH = 20;
+const STALE = 5 * 60 * 1000;
+
+const keys = {
+  formOptions: ['tem', 'session-form', 'options'] as const,
+  users: ['tem', 'session-form', 'users'] as const,
+  grids: (userId: number | null) => ['tem', 'session-form', 'grids', userId] as const,
+  magnifications: (planId: number | null) => ['tem', 'session-form', 'magnifications', planId] as const,
+  suggestedName: (planId: number | null) => ['tem', 'session-form', 'suggested-name', planId] as const,
+};
+
+const NO_GRIDS: GridOption[] = [];
+const NO_MAGNIFICATIONS: MagnificationOption[] = [];
+const NO_USERS: UserOption[] = [];
 
 interface UseSessionFormReturn {
   state: SessionFormState;
@@ -19,12 +52,29 @@ interface UseSessionFormReturn {
   errors: Record<string, string>;
   isLoading: boolean;
   isSubmitting: boolean;
+  /** Tiered plan choice: what is picked so far, and what each tier currently offers. */
+  planSelection: PlanSelection;
+  planTierOptions: Record<PlanTier, string[]>;
   updateField: <K extends keyof SessionFormState>(field: K, value: SessionFormState[K]) => void;
+  selectPlanTier: (tier: PlanTier, value: string | undefined) => void;
+  selectSessionPlan: (sessionPlanId: number | null) => void;
+  selectFilterUser: (userId: number | null) => void;
   submit: () => Promise<CreatedSession | null>;
 }
 
+/**
+ * Server data is declared with React Query, keyed on the form state it depends on:
+ *
+ *   filterUserId  -> grids            (default grid pre-selected once they arrive)
+ *   sessionPlanId -> magnifications
+ *   sessionPlanId -> suggested name   (applied to the field only while it is untouched)
+ *
+ * Handlers only change state; the queries follow. The few "react to arriving data" steps are
+ * done during render with the previous-value pattern, so there are no effects.
+ */
 export function useSessionForm(): UseSessionFormReturn {
   const user = useContext(UserContext);
+  const currentUserId = user?.id ? Number(user.id) : null;
 
   const [state, setState] = useState<SessionFormState>({
     sessionPlanId: null,
@@ -32,130 +82,121 @@ export function useSessionForm(): UseSessionFormReturn {
     gridId: null,
     magnificationId: null,
     name: '',
-    filterUserId: null,
+    filterUserId: currentUserId,
   });
-
-  const [formOptions, setFormOptions] = useState<FormOptions | null>(null);
-  const [users, setUsers] = useState<UserOption[]>([]);
-  const [grids, setGrids] = useState<GridOption[]>([]);
-  const [magnifications, setMagnifications] = useState<MagnificationOption[]>([]);
-  const [suggestedName, setSuggestedName] = useState('');
+  const [planSelection, setPlanSelection] = useState<PlanSelection>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch form options + suggested name + users on mount
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [optionsRes, nameRes, usersRes] = await Promise.all([
-          fetchResource(`${DJANGO_URL}${TEM_API.FORM_OPTIONS}`),
-          fetchResource(`${DJANGO_URL}${TEM_API.SUGGEST_NAME}`),
-          fetchResource(`${DJANGO_URL}${TEM_API.USERS}`),
-        ]);
+  const optionsQuery = useQuery({ queryKey: keys.formOptions, queryFn: fetchFormOptions, staleTime: STALE });
+  const usersQuery = useQuery({ queryKey: keys.users, queryFn: fetchUsers, staleTime: STALE });
+  const gridsQuery = useQuery({
+    queryKey: keys.grids(state.filterUserId),
+    queryFn: () => fetchGrids(state.filterUserId),
+    staleTime: STALE,
+  });
+  const magnificationsQuery = useQuery({
+    queryKey: keys.magnifications(state.sessionPlanId),
+    queryFn: () => fetchMagnifications(state.sessionPlanId as number),
+    enabled: state.sessionPlanId !== null,
+    staleTime: STALE,
+  });
+  const nameQuery = useQuery({
+    queryKey: keys.suggestedName(state.sessionPlanId),
+    queryFn: () => fetchSuggestedName(state.sessionPlanId),
+  });
 
-        if (optionsRes.ok) {
-          const options: FormOptions = await optionsRes.json();
-          setFormOptions(options);
-        }
+  const plans = useMemo(() => optionsQuery.data?.session_plans ?? [], [optionsQuery.data]);
+  const grids = gridsQuery.data ?? NO_GRIDS;
+  const magnifications =
+    state.sessionPlanId !== null ? (magnificationsQuery.data ?? NO_MAGNIFICATIONS) : NO_MAGNIFICATIONS;
 
-        if (nameRes.ok) {
-          const { suggested_name } = await nameRes.json();
-          setSuggestedName(suggested_name);
-          setState((prev) => ({ ...prev, name: suggested_name }));
-        }
-
-        if (usersRes.ok) {
-          const data = await usersRes.json();
-          const userList = data.users || data.results || data;
-          setUsers(userList);
-
-          // Pre-select current user for grid filtering
-          if (user?.id) {
-            setState((prev) => ({ ...prev, filterUserId: Number(user.id) }));
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load form options:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
-  }, [user?.id]);
-
-  // Fetch grids when filterUserId changes
-  useEffect(() => {
-    const loadGrids = async () => {
-      const url = state.filterUserId
-        ? `${DJANGO_URL}${TEM_API.GRIDS_BY_USER}?user_id=${state.filterUserId}`
-        : `${DJANGO_URL}${TEM_API.GRIDS_BY_USER}`;
-
-      try {
-        const res = await fetchResource(url);
-        if (res.ok) {
-          const data: GridOption[] = await res.json();
-          setGrids(data);
-
-          // Auto-select default grid if available
-          const defaultGrid = data.find((g) => g.is_default);
-          if (defaultGrid) {
-            setState((prev) => ({ ...prev, gridId: defaultGrid.id }));
-          } else {
-            setState((prev) => ({ ...prev, gridId: null }));
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load grids:', err);
-      }
-    };
-    loadGrids();
-  }, [state.filterUserId]);
-
-  // Reset the magnification selection when the session plan changes.
-  const [prevSessionPlanId, setPrevSessionPlanId] = useState(state.sessionPlanId);
-  if (state.sessionPlanId !== prevSessionPlanId) {
-    setPrevSessionPlanId(state.sessionPlanId);
-    setState((prev) => ({ ...prev, magnificationId: null }));
-    if (!state.sessionPlanId) {
-      setMagnifications([]);
-    }
+  // The signed-in user arrives after mount: adopt them as the grid filter when they do.
+  const [prevUserId, setPrevUserId] = useState(currentUserId);
+  if (currentUserId !== prevUserId) {
+    setPrevUserId(currentUserId);
+    setState((prev) => ({ ...prev, filterUserId: currentUserId, gridId: null }));
   }
 
-  // Fetch magnifications when sessionPlanId changes
-  useEffect(() => {
-    if (!state.sessionPlanId) {
-      return;
-    }
+  // A fresh grid list pre-selects its default grid; a grid the user picked is left alone.
+  const defaultGrid = grids.find((g) => g.is_default);
+  if (state.gridId === null && defaultGrid) {
+    setState((prev) => (prev.gridId === null ? { ...prev, gridId: defaultGrid.id } : prev));
+  }
 
-    const loadMags = async () => {
-      try {
-        const res = await fetchResource(
-          `${DJANGO_URL}${TEM_API.MAGNIFICATIONS}?session_plan_id=${state.sessionPlanId}`
-        );
-        if (res.ok) {
-          const data: MagnificationOption[] = await res.json();
-          setMagnifications(data);
-        }
-      } catch (err) {
-        console.error('Failed to load magnifications:', err);
-      }
-    };
-    loadMags();
-  }, [state.sessionPlanId]);
+  // Apply a newly suggested name only while the field is empty or still shows the previous
+  // suggestion. Keyed on plan + value so the same text for a new plan still re-applies.
+  const suggested = nameQuery.data ?? null;
+  const suggestionKey = suggested === null ? null : `${state.sessionPlanId}:${suggested}`;
+  const [applied, setApplied] = useState<{ key: string | null; name: string }>({ key: null, name: '' });
+  if (suggestionKey !== null && suggestionKey !== applied.key) {
+    const previous = applied.name;
+    setApplied({ key: suggestionKey, name: suggested as string });
+    setState((prev) => (prev.name === '' || prev.name === previous ? { ...prev, name: suggested as string } : prev));
+  }
 
-  const updateField = useCallback(<K extends keyof SessionFormState>(field: K, value: SessionFormState[K]) => {
-    setState((prev) => ({ ...prev, [field]: value }));
-    // Clear error for this field when user changes it
+  const clearError = useCallback((field: string) => {
     setErrors((prev) => {
-      if (prev[field]) {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      }
-      return prev;
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
     });
   }, []);
+
+  const updateField = useCallback(
+    <K extends keyof SessionFormState>(field: K, value: SessionFormState[K]) => {
+      setState((prev) => ({ ...prev, [field]: value }));
+      clearError(field);
+    },
+    [clearError]
+  );
+
+  const selectFilterUser = useCallback((userId: number | null) => {
+    // The default grid of the new list takes over.
+    setState((prev) => ({ ...prev, filterUserId: userId, gridId: null }));
+  }, []);
+
+  const selectSessionPlan = useCallback(
+    (sessionPlanId: number | null) => {
+      // The magnification list belongs to the old plan.
+      setState((prev) => ({ ...prev, sessionPlanId, magnificationId: null }));
+      clearError('sessionPlanId');
+    },
+    [clearError]
+  );
+
+  const planTierOptions = useMemo(
+    () =>
+      Object.fromEntries(PLAN_TIERS.map((tier) => [tier, tierOptions(plans, planSelection, tier)])) as Record<
+        PlanTier,
+        string[]
+      >,
+    [plans, planSelection]
+  );
+
+  const applyPlanSelection = useCallback(
+    (availablePlans: SessionPlanOption[], selection: PlanSelection) => {
+      setPlanSelection(selection);
+      selectSessionPlan(resolvePlan(availablePlans, selection)?.id ?? null);
+    },
+    [selectSessionPlan]
+  );
+
+  // Once the plans are known, pre-fill the tiers that have a single option. Only ever once,
+  // so a background refetch cannot undo what the user has picked since.
+  const [tiersInitialised, setTiersInitialised] = useState(false);
+  if (!tiersInitialised && optionsQuery.data) {
+    setTiersInitialised(true);
+    applyPlanSelection(plans, autoFill(plans, {}));
+  }
+
+  const selectPlanTier = useCallback(
+    (tier: PlanTier, value: string | undefined) => {
+      applyPlanSelection(plans, pickTier(plans, planSelection, tier, value));
+    },
+    [plans, planSelection, applyPlanSelection]
+  );
 
   const validate = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
@@ -169,8 +210,8 @@ export function useSessionForm(): UseSessionFormReturn {
       newErrors.name = 'Session name is required.';
     } else if (NAME_REGEX.test(state.name)) {
       newErrors.name = 'Name cannot contain special characters or spaces.';
-    } else if (state.name.length > 20) {
-      newErrors.name = 'Name must be 20 characters or fewer.';
+    } else if (state.name.length > MAX_NAME_LENGTH) {
+      newErrors.name = `Name must be ${MAX_NAME_LENGTH} characters or fewer.`;
     }
 
     setErrors(newErrors);
@@ -184,22 +225,17 @@ export function useSessionForm(): UseSessionFormReturn {
     setErrors({});
 
     try {
-      const payload: Record<string, unknown> = {
+      const res = await createSession({
         name: state.name.trim(),
         session_plan_id: state.sessionPlanId,
         project_id: state.projectId,
         grid_id: state.gridId,
-      };
-      // might not have any magnification options, so this is optional
-      if (state.magnificationId) {
-        payload.magnification_id = state.magnificationId;
-      }
-
-      const res = await postResource(`${DJANGO_URL}${TEM_API.CREATE_SESSION}`, payload);
+        // might not have any magnification options, so this is optional
+        ...(state.magnificationId ? { magnification_id: state.magnificationId } : {}),
+      });
 
       if (res.ok) {
-        const session: CreatedSession = await res.json();
-        return session;
+        return (await res.json()) as CreatedSession;
       }
 
       // Handle validation errors from server
@@ -222,6 +258,11 @@ export function useSessionForm(): UseSessionFormReturn {
     }
   }, [state, validate]);
 
+  const isLoading = optionsQuery.isPending || usersQuery.isPending;
+  const formOptions = optionsQuery.data ?? null;
+  const users = usersQuery.data ?? NO_USERS;
+  const suggestedName = applied.name;
+
   return useMemo(
     () => ({
       state,
@@ -233,7 +274,12 @@ export function useSessionForm(): UseSessionFormReturn {
       errors,
       isLoading,
       isSubmitting,
+      planSelection,
+      planTierOptions,
       updateField,
+      selectPlanTier,
+      selectSessionPlan,
+      selectFilterUser,
       submit,
     }),
     [
@@ -246,7 +292,12 @@ export function useSessionForm(): UseSessionFormReturn {
       errors,
       isLoading,
       isSubmitting,
+      planSelection,
+      planTierOptions,
       updateField,
+      selectPlanTier,
+      selectSessionPlan,
+      selectFilterUser,
       submit,
     ]
   );

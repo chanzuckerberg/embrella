@@ -95,16 +95,6 @@ const spacing = {
 };
 
 /**
- * Custom corners
- */
-const corners = {
-  l: 16,
-  m: 4,
-  none: 0,
-  s: 2,
-};
-
-/**
  * (masoudmanson): SDS has introduced new font styles for tabular numbers.
  */
 const tabularNums = 'tabular-nums';
@@ -781,8 +771,9 @@ const SDSDarkThemeColors: Colors = {
 /**
  * Custom theme for light and dark themes
  */
+// Corners are left to SDS defaults (l: 6, xl: 8; `rounded` 20 is opt-in per component).
+// The old override of l: 16 turned every large-corner control into a pill.
 const sharedCustomTheme = {
-  corners,
   iconSizes,
   spacing,
   typography,

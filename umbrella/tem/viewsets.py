@@ -7,9 +7,11 @@ DRF ViewSets for the tem app.
 """
 
 from django.db.models import (
+    Case,
     CharField,
     Count,
     DateTimeField,
+    F,
     IntegerField,
     Max,
     Min,
@@ -18,8 +20,9 @@ from django.db.models import (
     Q,
     Subquery,
     Value,
+    When,
 )
-from django.db.models.functions import Coalesce, NullIf
+from django.db.models.functions import Coalesce, Concat, NullIf, Substr
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from processes.models import ProcRun, Review
 from rest_framework import viewsets
@@ -28,11 +31,52 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from umbrella.table_api import EntityTablePagination, TableQueryFilter, build_filters, value_counts
 
-from tem.models import MsiSession
+from common.sorting import MONTHS
+from tem.models import MsiSession, SessionPlan
 from tem.serializers import MsiSessionOverviewSerializer
 
 # ProcRun rows for one session, reused by every per-session aggregate below.
 _SESSION_RUNS = ProcRun.objects.filter(msi_session=OuterRef("pk")).order_by().values("msi_session")
+
+# Chronological sort key for the Name column, in SQL: <yy><mm><dd><seq> from the name minus
+# its prefix, so 26feb05b < 26apr15a and s26sep01a sits beside 26sep01a. Names off the
+# scheme get a "~" key, which sorts after every digit.
+#
+#   name       s26apr15a
+#   name_body  26apr15a      leading letters dropped, whatever the plan says
+#   name_mon   apr           -> "04"
+#   name_sort  26 04 15 a    -> "260415a"
+#
+# The prefix is read off the name, not the plan: sessions predate the field, and names are
+# free text. `__regex` runs on both sqlite and MariaDB; one branch per prefix length up to
+# SessionPlan.name_prefix's max_length.
+_NAME_BODY = Case(
+    *[
+        When(name__regex=r"^[a-z]{%d}\d" % length, then=Substr("name", length + 1))
+        for length in range(1, SessionPlan._meta.get_field("name_prefix").max_length + 1)
+    ],
+    default=F("name"),
+    output_field=CharField(),
+)
+_MONTH_NUMBER = Case(
+    *[When(name_mon=mon, then=Value("%02d" % number)) for number, mon in enumerate(MONTHS, start=1)],
+    default=Value(""),
+    output_field=CharField(),
+)
+_NAME_SORT = Case(
+    When(
+        name_mon__in=MONTHS,
+        then=Concat(
+            Substr("name_body", 1, 2),
+            _MONTH_NUMBER,
+            Substr("name_body", 6, 2),
+            Substr("name_body", 8),
+            output_field=CharField(),
+        ),
+    ),
+    default=Concat(Value("~"), F("name"), output_field=CharField()),
+    output_field=CharField(),
+)
 
 _PLAN_LABEL = Coalesce(NullIf("proc_plan__display_name", Value("")), "proc_plan__name")
 
@@ -85,7 +129,7 @@ class MsiSessionOverviewViewSet(viewsets.ReadOnlyModelViewSet):
     }
     table_search_fields = ["name", "project__name", "user__username", "grid__name"]
     table_sort_fields = {
-        "name": "name",
+        "name": "name_sort",
         "sessionDate": "created_at",
         "user": "user__username",
         "project": "project__name",
@@ -120,6 +164,7 @@ class MsiSessionOverviewViewSet(viewsets.ReadOnlyModelViewSet):
                 ),
             )
             .annotate(
+                name_body=_NAME_BODY,
                 run_count=Coalesce(
                     Subquery(
                         _SESSION_RUNS.annotate(n=Count("id")).values("n")[:1],
@@ -152,6 +197,9 @@ class MsiSessionOverviewViewSet(viewsets.ReadOnlyModelViewSet):
                     Value(""),
                 ),
             )
+            # Chained: each step reads the annotation before it.
+            .annotate(name_mon=Substr("name_body", 3, 3))
+            .annotate(name_sort=_NAME_SORT)
         )
 
     @extend_schema(

@@ -21,8 +21,14 @@ class MsiSessionCreateSerializer(serializers.Serializer):
 
 
 class SessionPlanOptionSerializer(serializers.Serializer):
+    """A plan and the four choices that identify it, so the form can offer them as tiers."""
+
     id = serializers.IntegerField()
     name = serializers.CharField()
+    workflow = serializers.CharField()
+    scope = serializers.CharField()
+    software = serializers.CharField()
+    camera = serializers.CharField()
 
 
 class ProjectOptionSerializer(serializers.Serializer):

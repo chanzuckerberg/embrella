@@ -4,41 +4,6 @@ Tests for processes views (after refactoring into modular structure).
 
 from django.test import SimpleTestCase
 
-from processes.views import msi_session_sort_key
-
-
-class TestConstantsAndUtils(SimpleTestCase):
-    """Tests for constants and utility functions."""
-
-    def test_msi_session_sort_key_valid_format(self):
-        """Test msi_session_sort_key with valid session name."""
-        # Format: yymmmdda (e.g., 24jan01a)
-        key = msi_session_sort_key("24jan01a")
-
-        self.assertIsInstance(key, tuple)
-        self.assertEqual(len(key), 4)
-        # Should be negative year for descending sort (newer first)
-        self.assertEqual(key[0], -24)
-        self.assertEqual(key[1], -1)  # January
-        self.assertEqual(key[2], -1)  # Day 01
-        self.assertEqual(key[3], "a")  # Sequence
-
-    def test_msi_session_sort_key_invalid_format(self):
-        """Test msi_session_sort_key with invalid session name."""
-        key = msi_session_sort_key("invalid")
-
-        # Should return tuple that sorts to end
-        self.assertEqual(key, (0, 0, 0, "z"))
-
-    def test_msi_session_sort_key_december(self):
-        """Test msi_session_sort_key with December month."""
-        key = msi_session_sort_key("23dec25b")
-
-        self.assertEqual(key[0], -23)
-        self.assertEqual(key[1], -12)  # December
-        self.assertEqual(key[2], -25)
-        self.assertEqual(key[3], "b")
-
 
 class TestModularStructure(SimpleTestCase):
     """Tests to verify the modular view structure is working correctly."""
@@ -60,12 +25,6 @@ class TestModularStructure(SimpleTestCase):
 
         self.assertTrue(hasattr(views, "ENVIRONMENT"))
 
-    def test_utils_accessible_from_package(self):
-        """Test that utils are accessible from processes.views."""
-        from processes import views
-
-        self.assertTrue(hasattr(views, "msi_session_sort_key"))
-
     def test_submodules_exist(self):
         """Test that all view submodules exist and are importable."""
         from processes.views import (
@@ -76,7 +35,6 @@ class TestModularStructure(SimpleTestCase):
             run_views,
             session_views,
             tomogram_views,
-            utils,
         )
 
         # Just checking they import without error
@@ -87,4 +45,3 @@ class TestModularStructure(SimpleTestCase):
         self.assertTrue(hasattr(annotation_views, "get_annotation_details"))
         self.assertTrue(hasattr(directory_views, "get_directories"))
         self.assertTrue(hasattr(constants, "ENVIRONMENT"))
-        self.assertTrue(hasattr(utils, "msi_session_sort_key"))

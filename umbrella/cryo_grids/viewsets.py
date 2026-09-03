@@ -46,6 +46,7 @@ from umbrella.choices import (
     PUCK_COLORS,
 )
 
+from common.sorting import msi_session_sort_key
 from cryo_grids.models import (
     Cane,
     CryoGrid,
@@ -77,7 +78,6 @@ from cryo_grids.viewset_helpers import (
     apply_shared_grid_inventory_filters,
     get_shared_filterlist_options,
     get_shared_search_suggestions,
-    msi_session_sort_key,
     natural_name_annotations,
     natural_name_ordering,
     parse_selected_filters,

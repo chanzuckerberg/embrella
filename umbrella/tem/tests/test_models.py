@@ -1,6 +1,7 @@
 import datetime
 
 import pytest
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from tem.models import (
@@ -117,3 +118,20 @@ class TestGetCalibratedPixelSize:
             calibrated_at=timezone.now(),
         )
         assert msi_session.get_calibrated_pixel_size() is None
+
+
+@pytest.mark.django_db
+class TestSessionPlanNamePrefix:
+    def test_defaults_to_blank(self, session_plan):
+        assert session_plan.name_prefix == ""
+
+    @pytest.mark.parametrize("prefix", ["", "s", "abcd"])
+    def test_accepts_lowercase_letters(self, session_plan, prefix):
+        session_plan.name_prefix = prefix
+        session_plan.full_clean()
+
+    @pytest.mark.parametrize("prefix", ["S", "s1", "s-", "abcde"])
+    def test_rejects_anything_else(self, session_plan, prefix):
+        session_plan.name_prefix = prefix
+        with pytest.raises(ValidationError):
+            session_plan.full_clean()

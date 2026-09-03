@@ -4,7 +4,7 @@ import time
 
 from cryo_grids.models import CryoGrid, CryoGridCassette
 from django.contrib.auth.models import User
-from django.core.validators import validate_comma_separated_integer_list
+from django.core.validators import RegexValidator, validate_comma_separated_integer_list
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -12,6 +12,8 @@ from projects.models import Project
 from pydantic import BaseModel
 from stores.models import FilePattern, Path, PathType, fill_place_holders
 from stores.paths import assert_fully_resolved
+
+from common.sorting import NAME_PREFIX_RE
 
 TEM_CHOICES = {
     "imaging_mode": [
@@ -199,6 +201,15 @@ class SessionPlan(models.Model):
     camera = models.ForeignKey(Camera, on_delete=models.CASCADE)
     imaging_workflow = models.ForeignKey(ImagingWorkflow, on_delete=models.CASCADE)
     software = models.ForeignKey(Software, on_delete=models.CASCADE)
+    name_prefix = models.CharField(
+        max_length=4,
+        blank=True,
+        default="",
+        validators=[RegexValidator(NAME_PREFIX_RE, "Lowercase letters only.")],
+        help_text="Lowercase letters put in front of suggested MSI session names, so sessions from "
+        "this scope/software pair are told apart at a glance. Blank for none. "
+        "E.g. 's' suggests s26jun08a; blank suggests 26jun08a.",
+    )
 
     def __str__(self):
         return "%s collected with %s on %s and %s" % (self.imaging_workflow, self.software, self.scope, self.camera)

@@ -62,13 +62,11 @@ from .tomogram_views import (
     start_sync,
     sync_tomograms_view,
 )
-from .utils import msi_session_sort_key
 
 # Define __all__ for explicit exports
 __all__ = [
     # Constants and utilities
     "ENVIRONMENT",
-    "msi_session_sort_key",
     # Run views
     "detail",
     "reserve_run",

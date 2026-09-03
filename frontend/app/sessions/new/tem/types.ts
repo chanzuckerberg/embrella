@@ -1,7 +1,18 @@
+/** A plan and the four choices that identify it; the form offers those as tiers. */
 export interface SessionPlanOption {
   id: number;
   name: string;
+  workflow: string;
+  scope: string;
+  software: string;
+  camera: string;
 }
+
+// Top tier first. Scope then software is the real decision; workflow and camera mostly follow.
+export const PLAN_TIERS = ['scope', 'software', 'workflow', 'camera'] as const;
+export type PlanTier = (typeof PLAN_TIERS)[number];
+/** What the user has picked so far, top tier first. Unset tiers are absent. */
+export type PlanSelection = Partial<Record<PlanTier, string>>;
 
 export interface ProjectOption {
   id: number;

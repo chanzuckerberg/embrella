@@ -26,6 +26,7 @@ from umbrella_logger import logger
 from common import clusterio
 from common.clusterio import jsonify
 from common.httpio import fetch_remote_text
+from common.sorting import SESSION_NAME_RE
 from workflow.agent import Aretomo3
 from workflow.views.constants import (
     ARETOMO3_BASIC_TEMPLATE_PATH,
@@ -167,9 +168,8 @@ def run_aretomo3_advanced(request):
         encoded_password = data.get("password", "")
         decoded_password = base64.b64decode(encoded_password).decode("utf-8")
 
-        # Validate project_name format (e.g., 23sep23a)
-        project_name_pattern = re.compile(r"^\d{2}[a-z]{3}\d{2}[a-z]$")
-        if not project_name_pattern.match(project_name):
+        # Validate project_name format (e.g., 23sep23a, s23sep23a)
+        if not SESSION_NAME_RE.match(project_name):
             return JsonResponse(
                 {"error": "Invalid project_name format. Please check the project name: 422"},
                 status=422,
@@ -401,9 +401,8 @@ def run_aretomo3(request):
         encoded_password = data.get("password")
         decoded_password = base64.b64decode(encoded_password).decode("utf-8")
 
-        # Validate session_name format
-        session_name_pattern = re.compile(r"^\d{2}[a-z]{3}\d{2}[a-z]$")
-        if not session_name_pattern.match(session_name):
+        # Validate session_name format (e.g., 23sep23a, s23sep23a)
+        if not SESSION_NAME_RE.match(session_name):
             return JsonResponse(
                 {"error": "Invalid session_name format. Please check the session name: 422"},
                 status=422,
