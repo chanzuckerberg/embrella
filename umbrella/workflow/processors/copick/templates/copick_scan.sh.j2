@@ -20,13 +20,15 @@ conda activate {{ copickEnv }}
 
 config_path="{{ configPath }}"
 out_path="{{ scanOutPath }}"
+session="{{ session }}"
+run="{{ run }}"
 
-python3 - "$config_path" "$out_path" <<'PY'
+python3 - "$config_path" "$out_path" "$session" "$run" <<'PY'
 import json
 import os
 import sys
 
-config_path, out_path = sys.argv[1], sys.argv[2]
+config_path, out_path, msi_session, msi_run = sys.argv[1:5]
 
 
 def _ref(obj, user_id, session_id):
@@ -76,10 +78,13 @@ try:
             _add("meshes", getattr(m, "pickable_object_name", None) or getattr(m, "name", None),
                  m.user_id, m.session_id, rn, 0)
 except Exception as exc:  # noqa: BLE001 - env/copick/config failure is recorded in scan.json
-    out = {"scanned": False, "error": str(exc)}
+    out = {"scanned": False, "error": str(exc), "session": msi_session, "run": msi_run, "config_path": config_path}
 else:
     out = {
         "scanned": True,
+        "session": msi_session,
+        "run": msi_run,
+        "config_path": config_path,
         "picks": [v for v in agg.values() if v["copick_kind"] == "picks"],
         "segmentations": [v for v in agg.values() if v["copick_kind"] == "segmentations"],
         "meshes": [v for v in agg.values() if v["copick_kind"] == "meshes"],

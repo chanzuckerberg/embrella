@@ -55,6 +55,8 @@ class CopickScanProcessor(CopickProcessor):
             configPath=f"{copick_dir}/config.json",
             scanOutPath=f"{copick_dir}/scan.json",
             copickEnv=resolve_dir("dataportal_env", cluster=run_context.cluster_id),
+            session=run_context.msi_session.name,
+            run=run_context.run_number,
             slurm_directives=context.get("slurm_directives", []),
         )
         logger.info("Rendered copick scan script for %s/%s", run_context.msi_session.name, run_context.run_number)
