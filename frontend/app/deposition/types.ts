@@ -69,6 +69,28 @@ export interface CopickRunOption {
   description?: string;
 }
 
+export type CopickKind = 'picks' | 'segmentations' | 'meshes';
+export type AnnotationMethodType = 'manual' | 'automated' | 'hybrid' | 'simulated';
+
+export interface DepositionAnnotation {
+  id?: number;
+  copick_kind: CopickKind;
+  copick_ref: string;
+  object_id?: string;
+  object_name?: string;
+  object_description?: string;
+  object_state?: string;
+  object_count?: number | null;
+  annotation_method?: string;
+  annotation_software?: string;
+  annotation_publication?: string;
+  method_type?: AnnotationMethodType | '';
+  ground_truth_status?: boolean;
+  is_visualization_default?: boolean;
+  is_selected?: boolean;
+  method_links?: DepositionMethodLink[];
+}
+
 export type TomogramSubsetMode = 'all' | 'annotated' | 'custom';
 
 /** Raw dataprep_config.yaml session block cryoetportalprep init emitted. */
@@ -126,7 +148,7 @@ export interface DepositionSession {
   selected_copick_runs?: unknown[];
   tiltseries_metadata?: TiltseriesMetadata | null;
   tomogram_metadata?: TomogramMetadata[] | null;
-  annotations?: unknown[];
+  annotations?: DepositionAnnotation[];
   last_autofill_at?: string | null;
   last_autofill_duration_seconds?: number | null;
 }
