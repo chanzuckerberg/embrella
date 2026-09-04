@@ -65,6 +65,22 @@ class TestProcessorDefaultsEndpoint:
         assert data["required_overrides"] == ["other"]
         assert data["sources"] == {"test_param": "row:%d" % row.pk, "other": "row:%d" % row.pk}
 
+    def test_admin_style_dimensions(
+        self, client, test_user, test_proc_software, test_session_plan, registered_processor
+    ):
+        """No session: scope/software passed directly, and the row being edited is excluded."""
+        client.force_login(test_user)
+        general = ParameterDefaults.objects.create(proc_software=test_proc_software, values={"test_param": 1})
+        own = ParameterDefaults.objects.create(
+            proc_software=test_proc_software, scope=test_session_plan.scope, values={"test_param": 2}
+        )
+
+        with_own = client.get(URL, {"scope": test_session_plan.scope_id}).json()
+        without_own = client.get(URL, {"scope": test_session_plan.scope_id, "exclude_row": own.pk}).json()
+
+        assert with_own["sources"]["test_param"] == "row:%d" % own.pk
+        assert without_own["sources"]["test_param"] == "row:%d" % general.pk
+
     def test_unknown_processor_404(self, client, test_user):
         client.force_login(test_user)
 

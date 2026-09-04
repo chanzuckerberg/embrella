@@ -83,6 +83,21 @@ class TestResolveDefaults:
 
         assert resolve_defaults(processor).values["binning"] == 2
 
+    def test_explicit_dimensions_without_session(self, processor, test_proc_software, test_session_plan):
+        _row(test_proc_software, {"binning": 8}, scope=test_session_plan.scope)
+
+        resolved = resolve_defaults(processor, scope_id=test_session_plan.scope_id)
+
+        assert resolved.values["binning"] == 8
+
+    def test_exclude_row(self, processor, test_proc_software, test_session_plan):
+        _row(test_proc_software, {"binning": 4})
+        own = _row(test_proc_software, {"binning": 8}, scope=test_session_plan.scope)
+
+        resolved = resolve_defaults(processor, scope_id=test_session_plan.scope_id, exclude_row_pk=own.pk)
+
+        assert resolved.values["binning"] == 4
+
     def test_null_clears_and_requires(self, processor, test_proc_software):
         _row(test_proc_software, {"mode": None})
 

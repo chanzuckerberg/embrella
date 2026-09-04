@@ -206,6 +206,7 @@ class ParameterDefaults(models.Model):
     )
     values = models.JSONField(
         default=dict,
+        blank=True,  # {} is "empty" to the form field; an all-blank row is legal
         help_text="{parameter: value}. Keys must exist in the processor schema. null clears the default.",
     )
     is_active = models.BooleanField(default=True)
@@ -224,11 +225,19 @@ class ParameterDefaults(models.Model):
         return sum(1 << bit for bit, dim in enumerate(self.DIMENSIONS) if getattr(self, dim + "_id") is not None)
 
     @classmethod
-    def applicable(cls, proc_software, *, plan: SessionPlan = None, cluster_id: str = None) -> list:
-        """Active rows matching this plan and cluster, least specific first."""
-        rows = cls.objects.filter(proc_software=proc_software, is_active=True)
-        rows = rows.filter(_blank_or("software", plan.software_id if plan else None))
-        rows = rows.filter(_blank_or("scope", plan.scope_id if plan else None))
+    def applicable(
+        cls,
+        proc_software,
+        *,
+        software_id: int = None,
+        scope_id: int = None,
+        cluster_id: str = None,
+        exclude_pk: int = None,
+    ) -> list:
+        """Active rows matching these dimensions, least specific first. Unknown dimension = blank rows only."""
+        rows = cls.objects.filter(proc_software=proc_software, is_active=True).exclude(pk=exclude_pk)
+        rows = rows.filter(_blank_or("software", software_id))
+        rows = rows.filter(_blank_or("scope", scope_id))
         rows = rows.filter(_blank_or("cluster", cluster_id))
 
         ordered = sorted(rows.select_related(*cls.DIMENSIONS), key=lambda row: (row.specificity, row.pk))
@@ -239,6 +248,10 @@ class ParameterDefaults(models.Model):
         super().clean()
         if not isinstance(self.values, dict):
             raise ValidationError({"values": 'Must be a JSON object, e.g. {"tilt_axis": 85.3}.'})
+
+        # A form error on proc_software leaves it unset; the FK check below still runs.
+        if self.proc_software_id is None:
+            return
 
         # The DB can't enforce this: NULLs never collide in a unique index.
         twin = ParameterDefaults.objects.filter(

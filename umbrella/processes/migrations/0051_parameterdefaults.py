@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             name='ParameterDefaults',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('values', models.JSONField(default=dict, help_text='{parameter: value}. Keys must exist in the processor schema. null clears the default.')),
+                ('values', models.JSONField(blank=True, default=dict, help_text='{parameter: value}. Keys must exist in the processor schema. null clears the default.')),
                 ('is_active', models.BooleanField(default=True)),
                 ('notes', models.CharField(blank=True, max_length=255)),
                 ('cluster', models.ForeignKey(blank=True, help_text='Blank = any cluster.', null=True, on_delete=django.db.models.deletion.PROTECT, to='stores.cluster')),

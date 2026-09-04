@@ -31,6 +31,11 @@ def _is_known_cluster(cluster_id) -> bool:
     return Cluster.objects.filter(cluster_id=cluster_id, is_active=True).exists()
 
 
+def _int_param(request, name):
+    value = request.GET.get(name)
+    return int(value) if value and value.isdigit() else None
+
+
 def _session_info(processor, msi_session) -> dict:
     """Processor-specific session metadata for the form, from <processor>/views.py if it has any."""
     if msi_session is None or not processor.has_custom_views():
@@ -1355,10 +1360,12 @@ def get_processor_defaults(request, processor_name: str):
     Effective parameter defaults for a processor, as the launch form should prefill them.
 
     GET /workflow/v1/processors/<name>/defaults/?session_id=<name>&cluster=<id>
+    GET /workflow/v1/processors/<name>/defaults/?scope=<pk>&software=<pk>&cluster=<id>&exclude_row=<pk>
 
-    Both query params are optional. Resolution: schema.yaml < ParameterDefaults rows
-    (scope / acquisition software / cluster) < session-derived values. See
-    workflow.defaults.resolve_defaults.
+    All query params are optional. The launch form passes a session; the admin panel
+    passes the dimensions directly (no session exists yet) and excludes the row being
+    edited. Resolution: schema.yaml < ParameterDefaults rows (scope / acquisition
+    software / cluster) < session-derived values. See workflow.defaults.resolve_defaults.
 
     Returns:
         {
@@ -1382,7 +1389,14 @@ def get_processor_defaults(request, processor_name: str):
                 .first()
             )
 
-        resolved = resolve_defaults(processor, msi_session=msi_session, cluster_id=cluster_id)
+        resolved = resolve_defaults(
+            processor,
+            msi_session=msi_session,
+            software_id=_int_param(request, "software"),
+            scope_id=_int_param(request, "scope"),
+            cluster_id=cluster_id,
+            exclude_row_pk=_int_param(request, "exclude_row"),
+        )
 
         return JsonResponse(
             {

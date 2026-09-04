@@ -52,20 +52,36 @@ def resolve_defaults(
     processor: BaseProcessor,
     *,
     msi_session: Optional[MsiSession] = None,
+    software_id: Optional[int] = None,
+    scope_id: Optional[int] = None,
     cluster_id: Optional[str] = None,
+    exclude_row_pk: Optional[int] = None,
 ) -> ResolvedDefaults:
+    """
+    A session supplies scope and software; pass them directly when there is no session
+    yet (the admin panel). `exclude_row_pk` answers "what would apply without this row".
+    """
     resolved = ResolvedDefaults()
 
     for key, prop in processor.get_parameter_schema().get("properties", {}).items():
         if "default" in prop:
             resolved.set(key, prop["default"], SOURCE_SCHEMA)
 
+    if msi_session:
+        software_id = msi_session.session_plan.software_id
+        scope_id = msi_session.session_plan.scope_id
+
     # Rows are keyed on ProcSoftware; a processor without a DB row has no overrides.
-    software = ProcSoftware.objects.filter(processor_class=processor.name, active=True).first()
-    if software:
-        plan = msi_session.session_plan if msi_session else None
-        cluster_id = cluster_id or software.default_cluster
-        for row in ParameterDefaults.applicable(software, plan=plan, cluster_id=cluster_id):
+    proc_software = ProcSoftware.objects.filter(processor_class=processor.name, active=True).first()
+    if proc_software:
+        rows = ParameterDefaults.applicable(
+            proc_software,
+            software_id=software_id,
+            scope_id=scope_id,
+            cluster_id=cluster_id or proc_software.default_cluster,
+            exclude_pk=exclude_row_pk,
+        )
+        for row in rows:
             _apply_row(resolved, row)
 
     # Session-derived values are the most specific: they beat a row's null too.

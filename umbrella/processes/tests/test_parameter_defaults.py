@@ -25,6 +25,10 @@ def _row(proc_software, **dims):
     return ParameterDefaults.objects.create(proc_software=proc_software, values={}, **dims)
 
 
+def _dims(plan):
+    return {"software_id": plan.software_id, "scope_id": plan.scope_id}
+
+
 class TestSpecificity:
     def test_bit_order_software_scope_cluster(self, proc_software, session_plan, czii):
         assert _row(proc_software).specificity == 0b000
@@ -48,7 +52,7 @@ class TestSpecificity:
         for dims in reversed(combos):
             _row(proc_software, **dims)
 
-        rows = ParameterDefaults.applicable(proc_software, plan=session_plan, cluster_id=CZII)
+        rows = ParameterDefaults.applicable(proc_software, **_dims(session_plan), cluster_id=CZII)
 
         assert [row.specificity for row in rows] == list(range(8))
 
@@ -75,14 +79,22 @@ class TestApplicable:
         _row(proc_software, software=Software.objects.create(name="OtherSoftware"))
         _row(proc_software, cluster=Cluster.objects.get(cluster_id=BRUNO))
 
-        assert ParameterDefaults.applicable(proc_software, plan=session_plan, cluster_id=CZII) == [matching]
+        assert ParameterDefaults.applicable(proc_software, **_dims(session_plan), cluster_id=CZII) == [matching]
+
+    def test_exclude_pk_drops_that_row(self, proc_software, session_plan):
+        any_row = _row(proc_software)
+        scope_row = _row(proc_software, scope=session_plan.scope)
+
+        rows = ParameterDefaults.applicable(proc_software, **_dims(session_plan), exclude_pk=scope_row.pk)
+
+        assert rows == [any_row]
 
     def test_inactive_and_other_processor_excluded(self, proc_software, session_plan):
         _row(proc_software, is_active=False)
         other = ProcSoftware.objects.create(name="denoise", processor_class="denoiset")
         _row(other)
 
-        assert ParameterDefaults.applicable(proc_software, plan=session_plan) == []
+        assert ParameterDefaults.applicable(proc_software, **_dims(session_plan)) == []
 
 
 class TestClean:
