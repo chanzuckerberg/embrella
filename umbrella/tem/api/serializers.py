@@ -31,6 +31,20 @@ class SessionPlanOptionSerializer(serializers.Serializer):
     camera = serializers.CharField()
 
 
+class SessionListItemSerializer(serializers.Serializer):
+    """A session and the plan it was acquired under, for pickers (e.g. the job launch form)."""
+
+    name = serializers.CharField()
+    scope = serializers.CharField()
+    software = serializers.CharField()
+    camera = serializers.CharField()
+    workflow = serializers.CharField()
+
+
+class SessionListSerializer(serializers.Serializer):
+    sessions = SessionListItemSerializer(many=True)
+
+
 class ProjectOptionSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()

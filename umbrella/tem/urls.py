@@ -32,7 +32,7 @@ v1_router.register(r"v1/session-overview", MsiSessionOverviewViewSet, basename="
 
 # v1 API endpoints (included under /tem/)
 v1_urlpatterns = [
-    path("v1/sessions/", v1_views.create_session, name="v1_create_session"),
+    path("v1/sessions/", v1_views.sessions, name="v1_sessions"),
     path("v1/sessions/form-options/", v1_views.form_options, name="v1_form_options"),
     path("v1/sessions/suggest-name/", v1_views.suggest_session_name, name="v1_suggest_name"),
     path("v1/magnifications/", v1_views.get_magnifications, name="v1_magnifications"),

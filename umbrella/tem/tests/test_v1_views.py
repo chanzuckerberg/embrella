@@ -58,6 +58,35 @@ class TestFormOptions:
 
 
 @pytest.mark.django_db
+class TestListSessions:
+    def test_newest_first_with_prefixed_names(self, client, test_user, session_plan):
+        client.force_login(test_user)
+        for name in ["25dec31b", "26sep01a", "s26sep02a"]:
+            MsiSession.objects.create(name=name, session_plan=session_plan)
+
+        data = client.get("/tem/v1/sessions/").json()
+
+        assert [s["name"] for s in data["sessions"]] == ["s26sep02a", "26sep01a", "25dec31b"]
+
+    def test_item_carries_its_plan(self, client, test_user, session_plan):
+        client.force_login(test_user)
+        MsiSession.objects.create(name="26sep01a", session_plan=session_plan)
+
+        item = client.get("/tem/v1/sessions/").json()["sessions"][0]
+
+        assert item == {
+            "name": "26sep01a",
+            "scope": session_plan.scope.name,
+            "software": str(session_plan.software),
+            "camera": session_plan.camera.name,
+            "workflow": str(session_plan.imaging_workflow),
+        }
+
+    def test_requires_authentication(self, client):
+        assert client.get("/tem/v1/sessions/").status_code == 401
+
+
+@pytest.mark.django_db
 class TestSuggestName:
     def test_returns_suggested_name(self, client, test_user):
         client.force_login(test_user)

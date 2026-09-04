@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from common.sorting import msi_session_sort_key
 from tem.models import (
     AtlasSession,
     CryoGrid,
@@ -18,10 +19,17 @@ from .serializers import (
     FormOptionsSerializer,
     MagnificationSerializer,
     MsiSessionCreateSerializer,
+    SessionListSerializer,
     SuggestNameSerializer,
 )
 
 
+@extend_schema(
+    methods=["GET"],
+    tags=["TEM Sessions"],
+    responses={200: SessionListSerializer},
+    description="All MSI sessions with their plan, newest first, for session pickers.",
+)
 @extend_schema(
     methods=["POST"],
     tags=["TEM Sessions"],
@@ -29,8 +37,35 @@ from .serializers import (
     responses={201: CreatedSessionSerializer},
     description="Create a new TEM MSI session with auto-generated paths.",
 )
-@api_view(["POST"])
-def create_session(request):
+@api_view(["GET", "POST"])
+def sessions(request):
+    if request.method == "GET":
+        return _list_sessions()
+    return _create_session(request)
+
+
+def _list_sessions():
+    plans = MsiSession.objects.select_related(
+        "session_plan__scope",
+        "session_plan__software",
+        "session_plan__camera",
+        "session_plan__imaging_workflow",
+    )
+    items = [
+        {
+            "name": session.name,
+            "scope": session.session_plan.scope.name,
+            "software": str(session.session_plan.software),
+            "camera": session.session_plan.camera.name,
+            "workflow": str(session.session_plan.imaging_workflow),
+        }
+        for session in plans
+    ]
+    items.sort(key=lambda item: msi_session_sort_key(item["name"]))
+    return Response(SessionListSerializer({"sessions": items}).data)
+
+
+def _create_session(request):
     serializer = MsiSessionCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
