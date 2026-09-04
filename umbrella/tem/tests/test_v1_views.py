@@ -87,6 +87,42 @@ class TestListSessions:
 
 
 @pytest.mark.django_db
+class TestSessionDetail:
+    def test_same_shape_as_created_session(self, client, test_user, session_plan, project, grid):
+        client.force_login(test_user)
+        MsiSession.objects.create(name="26sep01a", session_plan=session_plan, project=project, grid=grid)
+
+        data = client.get("/tem/v1/sessions/26sep01a/").json()
+
+        assert data["name"] == "26sep01a"
+        assert data["project_name"] == project.name
+        assert data["grid_name"] == str(grid)
+        assert data["session_plan_name"] == str(session_plan)
+        assert set(data) >= {"frames", "sums", "mdocs", "parents", "atlas", "legacy_url"}
+
+    def test_tolerates_missing_project_and_grid(self, client, test_user, session_plan):
+        client.force_login(test_user)
+        MsiSession.objects.create(name="26sep01a", session_plan=session_plan)
+
+        data = client.get("/tem/v1/sessions/26sep01a/").json()
+
+        assert data["project_name"] is None
+        assert data["grid_name"] is None
+
+    def test_unknown_session_404(self, client, test_user):
+        client.force_login(test_user)
+
+        assert client.get("/tem/v1/sessions/nope/").status_code == 404
+
+    def test_literal_routes_still_win(self, client, test_user, session_plan, project):
+        """form-options/ and suggest-name/ must not be swallowed by the <name>/ route."""
+        client.force_login(test_user)
+
+        assert "session_plans" in client.get("/tem/v1/sessions/form-options/").json()
+        assert "suggested_name" in client.get("/tem/v1/sessions/suggest-name/").json()
+
+
+@pytest.mark.django_db
 class TestSuggestName:
     def test_returns_suggested_name(self, client, test_user):
         client.force_login(test_user)

@@ -15,10 +15,10 @@ from tem.models import (
 )
 
 from .serializers import (
-    CreatedSessionSerializer,
     FormOptionsSerializer,
     MagnificationSerializer,
     MsiSessionCreateSerializer,
+    SessionDetailSerializer,
     SessionListSerializer,
     SuggestNameSerializer,
 )
@@ -34,7 +34,7 @@ from .serializers import (
     methods=["POST"],
     tags=["TEM Sessions"],
     request=MsiSessionCreateSerializer,
-    responses={201: CreatedSessionSerializer},
+    responses={201: SessionDetailSerializer},
     description="Create a new TEM MSI session with auto-generated paths.",
 )
 @api_view(["GET", "POST"])
@@ -92,19 +92,39 @@ def _create_session(request):
     session.resolve_role_paths()
     session.save()
 
+    return Response(SessionDetailSerializer(_session_payload(session)).data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    methods=["GET"],
+    tags=["TEM Sessions"],
+    responses={200: SessionDetailSerializer},
+    description="One MSI session: plan, project, grid, and where each data role lands.",
+)
+@api_view(["GET"])
+def session_detail(request, name):
+    session = (
+        MsiSession.objects.filter(name=name).select_related("project", "grid", "session_plan", "magnification").first()
+    )
+    if session is None:
+        return Response({"detail": "Session '%s' not found." % name}, status=status.HTTP_404_NOT_FOUND)
+    return Response(SessionDetailSerializer(_session_payload(session)).data)
+
+
+def _session_payload(session):
+    """What the created-session dialog and the launch form's session accordion both show."""
     payload = {
         "id": session.id,
         "name": session.name,
-        "project_name": project.name,
-        "grid_name": str(grid),
-        "session_plan_name": str(session_plan),
-        "magnification_display": str(magnification) if magnification else None,
+        "project_name": session.project.name if session.project else None,
+        "grid_name": str(session.grid) if session.grid else None,
+        "session_plan_name": str(session.session_plan),
+        "magnification_display": str(session.magnification) if session.magnification else None,
         "legacy_url": f"/legacy/tem/{session.id}/",
     }
     for role, path in session.role_paths.items():
         payload[role] = _role_halves(path, session.get_file_pattern(role))
-
-    return Response(CreatedSessionSerializer(payload).data, status=status.HTTP_201_CREATED)
+    return payload
 
 
 def _role_halves(path, pattern):

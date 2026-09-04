@@ -82,11 +82,13 @@ class RolePathSerializer(serializers.Serializer):
     pattern = serializers.CharField(allow_null=True)
 
 
-class CreatedSessionSerializer(serializers.Serializer):
+class SessionDetailSerializer(serializers.Serializer):
+    """One session as the operator sees it: identity, plan, and where each role's data lands."""
+
     id = serializers.IntegerField()
     name = serializers.CharField()
-    project_name = serializers.CharField()
-    grid_name = serializers.CharField()
+    project_name = serializers.CharField(allow_null=True)
+    grid_name = serializers.CharField(allow_null=True)
     session_plan_name = serializers.CharField()
     magnification_display = serializers.CharField(allow_null=True)
     frames = RolePathSerializer()
