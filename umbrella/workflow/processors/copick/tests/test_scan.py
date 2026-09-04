@@ -1,7 +1,9 @@
-"""Unit tests for the copick annotation scan."""
+"""Tests for the copick scan - endpoints read the cached scan.json.
 
-import json
-from contextlib import contextmanager
+The scan itself now runs as a SLURM job (CopickScanProcessor) that writes an aggregated
+scan.json next to config.json; the endpoints read it over caddy via _read_scan_json.
+"""
+
 from unittest import mock
 
 import pytest
@@ -9,17 +11,16 @@ from django.contrib.auth.models import User
 from processes.models import ProcPlan, ProcRun
 from tem.models import Camera, ImagingWorkflow, Microscope, MsiSession, SessionPlan, Software
 
-from common import clusterio
-from workflow.processors.copick import scan
 from workflow.processors.copick import views as copick_views
 
 COPICK_RUNS_URL = "/workflow/v1/processors/copick/runs/"
 COPICK_DETAIL_URL = "/copick/v1/projects/{session}/{run}/"
+ANNOTATED_COUNT_URL = "/workflow/v1/processors/copick/annotated-count/"
 
 
 @pytest.fixture
 def client(db, client):
-    """Django test client, logged in (the API auth middleware redirects anon requests)."""
+    """Django test client."""
     client.force_login(User.objects.create_user(username="tester", password="pw"))
     return client
 
@@ -40,88 +41,11 @@ def copick_session(db):
     return session
 
 
-class _FakeSftp:
-    @contextmanager
-    def file(self, *_args, **_kwargs):
-        yield mock.Mock()  # the "with sftp.file(...) as f: f.write(...)" target
-
-    def close(self):
-        pass
-
-
-class _FakeStream:
-    def __init__(self, text=""):
-        self._text = text
-
-    def read(self):
-        return self._text.encode("utf-8")
-
-
-class _FakeSSH:
-    def __init__(self, stdout="", stderr=""):
-        self._stdout, self._stderr = stdout, stderr
-
-    def open_sftp(self):
-        return _FakeSftp()
-
-    def exec_command(self, *_args, **_kwargs):
-        return None, _FakeStream(self._stdout), _FakeStream(self._stderr)
-
-    def close(self):
-        pass
-
-
-def _patch_ssh(ssh):
-    return mock.patch.object(clusterio, "get_cluster_ssh_connection", return_value=ssh)
-
-
-def test_scan_parses_picks_segs_meshes():
-    payload = {
-        "picks": [{"run_name": "TS_1", "object_name": "ribosome", "user_id": "u", "session_id": "0", "count": 12}],
-        "segmentations": [
-            {"run_name": "TS_1", "name": "membrane", "user_id": "u", "session_id": "0", "voxel_size": 10.0}
-        ],
-        "meshes": [],
-    }
-    ssh = _FakeSSH(stdout="some conda noise\nCOPICK_SCAN_JSON:" + json.dumps(payload) + "\n")
-    with _patch_ssh(ssh):
-        result = scan.scan_copick_project("czii", "/hpc/.../config.json")
-    assert result["scanned"] is True
-    assert result["picks"] == payload["picks"]
-    assert result["segmentations"] == payload["segmentations"]
-    assert result["meshes"] == []
-
-
-def test_scan_ssh_disabled_returns_empty():
-    with mock.patch.object(clusterio, "get_cluster_ssh_connection", side_effect=clusterio.SSHDisabledError("off")):
-        result = scan.scan_copick_project("czii", "/hpc/.../config.json")
-    assert result["scanned"] is False
-    assert result["reason"] == "ssh_disabled"
-    assert result["picks"] == [] and result["segmentations"] == [] and result["meshes"] == []
-
-
-def test_scan_no_json_marker_returns_empty():
-    ssh = _FakeSSH(stdout="ModuleNotFoundError: copick\n", stderr="boom")
-    with _patch_ssh(ssh):
-        result = scan.scan_copick_project("czii", "/hpc/.../config.json")
-    assert result["scanned"] is False
-    assert result["reason"] == "no_output"
-
-
-def test_scan_copick_error_surfaced():
-    ssh = _FakeSSH(stdout='COPICK_SCAN_JSON:{"error": "config not found"}\n')
-    with _patch_ssh(ssh):
-        result = scan.scan_copick_project("czii", "/hpc/.../config.json")
-    assert result["scanned"] is False
-    assert result["reason"] == "config not found"
-
-
 @pytest.mark.django_db
 class TestGetCopickRuns:
-    """get_copick_runs merges DB ProcRuns with cluster-listed configs (SSH best-effort)."""
+    """get_copick_runs merges DB ProcRuns with cluster-listed configs."""
 
     def _no_cluster(self):
-        # SSH unavailable → cluster listing is empty, so we exercise the DB-only path.
         return mock.patch.object(copick_views, "_list_cluster_copick_runs", return_value=set())
 
     def test_lists_copick_procruns(self, client, copick_session):
@@ -151,45 +75,66 @@ class TestGetCopickRuns:
 
 @pytest.mark.django_db
 class TestDetailScanWiring:
-    """get_copick_project_detail attaches scanned annotations only when ?scan=true."""
+    """get_copick_project_detail attaches the cached scan.json only when ?scan=true."""
 
     def test_scan_true_attaches_annotations(self, client, copick_session):
-        annotations = {"picks": [{"run_name": "run001"}], "segmentations": [], "meshes": [], "scanned": True}
+        ann = {
+            "scanned": True,
+            "picks": [{"copick_ref": "ribosome:u/0", "run_count": 3, "total_count": 12}],
+            "segmentations": [],
+            "meshes": [],
+            "annotated_runs": ["run001"],
+        }
         with (
-            mock.patch.object(copick_views, "_build_copick_project", return_value={"cluster_id": "czii"}),
-            mock.patch.object(scan, "scan_copick_project", return_value=annotations) as scan_mock,
+            mock.patch.object(
+                copick_views, "_build_copick_project", return_value={"root_url": "http://caddy/26feb20b/run001/"}
+            ),
+            mock.patch.object(copick_views, "_read_scan_json", return_value=ann) as read_mock,
         ):
             r = client.get(COPICK_DETAIL_URL.format(session="26feb20b", run="run001"), {"scan": "true"})
         assert r.status_code == 200
-        assert r.json()["project"]["annotations"] == annotations
-        scan_mock.assert_called_once_with(
-            "czii", "/hpc/projects/group.czii/krios1.processing/copick/26feb20b/run001/config.json"
-        )
+        assert r.json()["project"]["annotations"] == ann
+        read_mock.assert_called_once_with("http://caddy/26feb20b/run001/")
 
     def test_default_does_not_scan(self, client, copick_session):
         with (
-            mock.patch.object(copick_views, "_build_copick_project", return_value={"cluster_id": "czii"}),
-            mock.patch.object(scan, "scan_copick_project") as scan_mock,
+            mock.patch.object(copick_views, "_build_copick_project", return_value={"root_url": "http://caddy/x/"}),
+            mock.patch.object(copick_views, "_read_scan_json") as read_mock,
         ):
             r = client.get(COPICK_DETAIL_URL.format(session="26feb20b", run="run001"))
         assert r.status_code == 200
         assert "annotations" not in r.json()["project"]
-        scan_mock.assert_not_called()
+        read_mock.assert_not_called()
+
+
+class TestReadScanJson:
+    """_read_scan_json normalizes every return to carry the annotation list keys."""
+
+    def test_cluster_error_scan_still_has_list_keys(self):
+        """A cluster-side failure writes {scanned, error} with no lists"""
+        with mock.patch.object(
+            copick_views, "fetch_remote_text", return_value='{"scanned": false, "error": "no copick"}'
+        ):
+            result = copick_views._read_scan_json("http://caddy/x/")
+        assert result == {**copick_views._empty_scan(), "error": "no copick"}
 
 
 @pytest.mark.django_db
 class TestAnnotatedCountEndpoint:
-    """GET annotated-count scans the session's copick configs and unions annotated runs."""
+    """annotated-count unions annotated_runs from each selected config's cached scan.json."""
 
-    URL = "/workflow/v1/processors/copick/annotated-count/"
+    URL = ANNOTATED_COUNT_URL
+
+    def _fake_url(self):
+        return mock.patch.object(copick_views, "_copick_root_url", side_effect=lambda _s, run: f"http://caddy/{run}/")
 
     def test_aggregates_across_runs(self, client, copick_session):
-        def fake_scan(_cluster_id, config_path):
-            if "run002" in config_path:
-                return {"picks": [{"run_name": "TS_1"}], "segmentations": [], "meshes": [], "scanned": True}
-            return {"picks": [], "segmentations": [{"run_name": "TS_2"}], "meshes": [], "scanned": True}
+        def fake_read(root_url):
+            if "run002" in root_url:
+                return {"scanned": True, "annotated_runs": ["TS_1"]}
+            return {"scanned": True, "annotated_runs": ["TS_2"]}
 
-        with mock.patch.object(scan, "scan_copick_project", side_effect=fake_scan):
+        with self._fake_url(), mock.patch.object(copick_views, "_read_scan_json", side_effect=fake_read):
             r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run002,run003"})
         body = r.json()
         assert r.status_code == 200
@@ -197,39 +142,80 @@ class TestAnnotatedCountEndpoint:
         assert body["annotated_runs"] == ["TS_1", "TS_2"]
         assert body["scanned"] is True
 
-    def test_no_runs_returns_zero_without_scanning(self, client, copick_session):
-        with mock.patch.object(scan, "scan_copick_project") as scan_mock:
+    def test_pending_scan_marks_not_scanned(self, client, copick_session):
+        with (
+            self._fake_url(),
+            mock.patch.object(copick_views, "_read_scan_json", return_value={"scanned": False, "annotated_runs": []}),
+        ):
+            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run001"})
+        body = r.json()
+        assert body["scanned"] is False
+        assert body["annotated_count"] == 0
+
+    def test_resolve_failure_degrades_not_500(self, client, copick_session):
+        """A per-run path/cluster lookup failure."""
+        with mock.patch.object(copick_views, "_copick_root_url", side_effect=RuntimeError("no cluster row")):
+            r = client.get(self.URL, {"session_id": "26feb20b", "runs": "run001"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["scanned"] is False
+        assert body["annotated_count"] == 0
+
+    def test_no_runs_returns_zero_without_reading(self, client, copick_session):
+        with mock.patch.object(copick_views, "_read_scan_json") as read_mock:
             r = client.get(self.URL, {"session_id": "26feb20b"})
         assert r.json()["annotated_count"] == 0
-        scan_mock.assert_not_called()
+        read_mock.assert_not_called()
 
     def test_missing_session_id_is_error(self, client, db):
         r = client.get(self.URL, {"runs": "run002"})
         assert r.json()["success"] is False
 
 
-class TestAnnotatedRunNames:
-    """annotated_run_names: distinct runs that carry any pick/segmentation/mesh."""
+@pytest.mark.django_db
+class TestCopickScanWiring:
+    def test_scan_plan_and_pipe_exist(self):
+        from processes.models import PipeInPlan, ProcPlan, ProcSoftware
 
-    def test_distinct_across_kinds_sorted(self):
-        result = scan.annotated_run_names(
-            {
-                "picks": [{"run_name": "run003"}, {"run_name": "run001"}, {"run_name": "run003"}],
-                "segmentations": [{"run_name": "run002"}],
-                "meshes": [{"run_name": "run001"}],
-            }
-        )
-        assert result == ["run001", "run002", "run003"]  # deduped + sorted
+        assert ProcSoftware.objects.filter(processor_class="copick-scan").exists()
+        plan = ProcPlan.objects.get(name="copick-scan")
+        pip = PipeInPlan.objects.get(plan=plan)
+        assert pip.pipe.software.processor_class == "copick-scan"
 
-    def test_empty_scan_is_empty(self):
-        assert scan.annotated_run_names(scan.EMPTY) == []
+    def test_light_slurm_directives_from_schema(self):
+        """The scan's light resources (cpu/4/8G/30min) must reach the #SBATCH lines — they come from
+        the schema's x-slurm-directive props, NOT get_default_slurm_options (which isn't wired to jobs)."""
+        from workflow.processors import get_processor
 
-    def test_ignores_missing_or_blank_run_name(self):
-        result = scan.annotated_run_names(
-            {
-                "picks": [{"run_name": "run001"}, {"run_name": ""}, {"object_name": "x"}],
-                "segmentations": [],
-                "meshes": [],
-            }
-        )
-        assert result == ["run001"]
+        p = get_processor("copick-scan")
+        assert p.task_name == "copick_scan"
+        pairs = {(d["directive"], str(d["value"])) for d in p.generate_slurm_directives({})}
+        assert ("--partition", "cpu") in pairs
+        assert ("--cpus-per-task", "4") in pairs
+        assert ("--mem-per-cpu", "8G") in pairs
+        assert ("--time", "00:30:00") in pairs
+
+    def test_render_resolves_paths_and_emits_light_sbatch(self, db):
+        """render_script de-hardcodes paths AND writes the light #SBATCH lines into the script."""
+        from stores.paths import resolve_dir
+
+        from workflow.processors import get_processor as real_get_processor
+
+        proc = real_get_processor("copick-scan")
+        run_context = mock.Mock(run_number="run003", cluster_id=None)
+        run_context.msi_session.name = "25oct20a"
+
+        # Feed the *real* directives (from the schema) through, so the render proves they land as #SBATCH.
+        ctx = {"slurm_directives": proc.generate_slurm_directives({})}
+        with (
+            mock.patch.object(type(proc), "get_template_context", return_value=ctx),
+            mock.patch("workflow.processors.copick.scan_processor.get_processor") as gp,
+        ):
+            gp.return_value.get_processing_base_path.return_value = "/hpc/krios1.processing/copick"
+            script = proc.render_script({}, run_context)
+
+        assert "/hpc/krios1.processing/copick/25oct20a/run003/config.json" in script
+        assert "/hpc/krios1.processing/copick/25oct20a/run003/scan.json" in script
+        assert resolve_dir("dataportal_env", cluster=None) in script
+        assert "#SBATCH --partition=cpu" in script
+        assert "#SBATCH --time=00:30:00" in script

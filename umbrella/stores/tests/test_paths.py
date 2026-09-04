@@ -29,21 +29,21 @@ class TestResolveDir:
         )
 
     def test_a_template_with_no_placeholders_needs_no_context(self):
-        """The conda_env case: per-deployment, but constant once configured."""
-        make_path_type("conda_env", "/hpc/software/dataportalenv")
-        assert resolve_dir("conda_env") == "/hpc/software/dataportalenv"
+        # The dataportal_env case; throwaway kind, since migration 0025 seeds the real one.
+        make_path_type("example_env", "/hpc/software/dataportalenv")
+        assert resolve_dir("example_env") == "/hpc/software/dataportalenv"
 
     def test_prefers_the_cluster_specific_template(self):
         bruno = make_cluster("bruno")
-        make_path_type("conda_env", "/default/env")
-        make_path_type("conda_env", "/bruno/env", cluster=bruno)
-        assert resolve_dir("conda_env", cluster=bruno) == "/bruno/env"
-        assert resolve_dir("conda_env") == "/default/env"
+        make_path_type("example_env", "/default/env")
+        make_path_type("example_env", "/bruno/env", cluster=bruno)
+        assert resolve_dir("example_env", cluster=bruno) == "/bruno/env"
+        assert resolve_dir("example_env") == "/default/env"
 
     def test_accepts_a_cluster_id_string(self):
         bruno = make_cluster("bruno")
-        make_path_type("conda_env", "/bruno/env", cluster=bruno)
-        assert resolve_dir("conda_env", cluster="bruno") == "/bruno/env"
+        make_path_type("example_env", "/bruno/env", cluster=bruno)
+        assert resolve_dir("example_env", cluster="bruno") == "/bruno/env"
 
 
 class TestFailsLoudly:
