@@ -31,7 +31,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -57,6 +57,7 @@ import ScriptPreviewModal from './ScriptPreviewModal';
 import { SSHSetupModal } from '@app/common/components/SSHSetupModal';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
+import { applyUntouched, missingRequired, splitDefaults } from '../utils/defaults';
 
 export default function WorkflowLaunchForm({
   processor,
@@ -95,6 +96,10 @@ export default function WorkflowLaunchForm({
     }
     return defaults;
   });
+  // Keys an admin ParameterDefaults row cleared: shown empty and required
+  const [requiredOverrides, setRequiredOverrides] = useState<string[]>([]);
+  // Keys the user edited; refetched defaults never overwrite these
+  const touchedKeys = useRef(new Set<string>());
 
   // Loading states
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(false);
@@ -238,25 +243,43 @@ export default function WorkflowLaunchForm({
     }
   }, [parameters, sessionRunSelection.sessionName, onParametersChange]);
 
-  // Load defaults and options when session changes
+  // Load resolved defaults when session or cluster changes.
+  // Server resolves schema.yaml < admin ParameterDefaults rows < session values;
+  // cluster rows mostly hold SLURM resources, hence the refetch on cluster change.
+  useEffect(() => {
+    const sessionName = sessionRunSelection.sessionName;
+    if (!sessionName) return;
+
+    const loadDefaults = async () => {
+      try {
+        setIsLoadingDefaults(true);
+        const result = await fetchProcessorDefaults(processor.name, sessionName, cluster);
+        const cleared = result.required_overrides ?? [];
+        const { params, slurm } = splitDefaults(schema.schema, result.defaults);
+        setParameters((prev) => applyUntouched(prev, params, touchedKeys.current, cleared));
+        setSlurmOptions((prev) => applyUntouched(prev, slurm, touchedKeys.current, cleared));
+        setRequiredOverrides(cleared);
+        if (onSessionInfoLoaded && result.session_info) {
+          onSessionInfoLoaded(result.session_info, sessionName);
+        }
+      } catch (error) {
+        console.error('Failed to load defaults:', error);
+      } finally {
+        setIsLoadingDefaults(false);
+      }
+    };
+
+    loadDefaults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- schema and onSessionInfoLoaded are stable per processor
+  }, [sessionRunSelection.sessionName, processor.name, cluster]);
+
+  // Load dynamic options when session changes
   useEffect(() => {
     const sessionName = sessionRunSelection.sessionName;
     if (!sessionName) return;
 
     const loadSessionData = async () => {
       try {
-        // Load defaults
-        setIsLoadingDefaults(true);
-        const defaultsResult = await fetchProcessorDefaults(processor.name, sessionName);
-        setParameters((prev) => ({
-          ...defaultsResult.defaults,
-          ...prev, // Keep any user changes
-        }));
-        if (onSessionInfoLoaded && defaultsResult.session_info) {
-          onSessionInfoLoaded(defaultsResult.session_info, sessionName);
-        }
-        setIsLoadingDefaults(false);
-
         // Load dynamic options
         setIsLoadingOptions(true);
         // Pass current parameter values that affect dynamic options (e.g., import_tomo_type for Copick)
@@ -289,7 +312,6 @@ export default function WorkflowLaunchForm({
         setIsLoadingOptions(false);
       } catch (error) {
         console.error('Failed to load session data:', error);
-        setIsLoadingDefaults(false);
         setIsLoadingOptions(false);
       }
     };
@@ -439,23 +461,30 @@ export default function WorkflowLaunchForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- parameters.tomo_voxel_size is intentionally omitted
   }, [parameters.copick_session, parameters.copick_procrun, parameters.tomo_type, processor.name]);
 
-  // Check if all required parameters are filled
-  const areRequiredParametersFilled = () => {
-    if (!schema.schema.required) return true;
-    return schema.schema.required.every((fieldName) => {
-      const value = parameters[fieldName];
-      return value !== undefined && value !== null && value !== '';
-    });
-  };
+  // Required = schema `required` plus keys an admin row cleared. Either bucket may hold the value.
+  const missingRequiredKeys = () =>
+    missingRequired([...(schema.schema.required ?? []), ...requiredOverrides], parameters, slurmOptions);
+  const areRequiredParametersFilled = () => missingRequiredKeys().length === 0;
 
   // Handle parameter change
   const handleParameterChange = (name: string, value: unknown) => {
+    touchedKeys.current.add(name);
     setParameters((prev) => ({ ...prev, [name]: value }));
     // Clear validation error for this field
     setValidationErrors((prev) => prev.filter((e) => e.field !== name));
   };
 
+  // Bulk sets from header actions (CLI import) count as user edits too
+  const setImportedParameters: React.Dispatch<React.SetStateAction<Record<string, unknown>>> = (update) => {
+    setParameters((prev) => {
+      const next = typeof update === 'function' ? update(prev) : update;
+      Object.keys(next).forEach((key) => touchedKeys.current.add(key));
+      return next;
+    });
+  };
+
   const handleSlurmOptionChange = (name: string, value: unknown) => {
+    touchedKeys.current.add(name);
     setSlurmOptions((prev) => ({ ...prev, [name]: value }));
     // Clear validation error for this field
     setValidationErrors((prev) => prev.filter((e) => e.field !== name));
@@ -581,8 +610,9 @@ export default function WorkflowLaunchForm({
       return;
     }
 
-    if (!areRequiredParametersFilled()) {
-      setPreviewError('Please fill in all required parameters');
+    const missingFields = missingRequiredKeys();
+    if (missingFields.length > 0) {
+      setPreviewError(`Please fill in all required parameters: ${missingFields.join(', ')}`);
       setPreviewModalOpen(true);
       return;
     }
@@ -804,7 +834,8 @@ export default function WorkflowLaunchForm({
 
     // Get error for this field
     const error = validationErrors.find((e) => e.field === name);
-    const isRequired = schema.schema.required?.includes(name) || false;
+    const cleared = requiredOverrides.includes(name);
+    const isRequired = cleared || (schema.schema.required?.includes(name) ?? false);
 
     // Build label with CLI flag if available
     const baseLabel = prop.title || name;
@@ -814,7 +845,8 @@ export default function WorkflowLaunchForm({
     // SLURM/compute resource fields use slurmOptions state, others use parameters
     const isSlurmField = prop['x-compute-resource'] || prop['x-slurm-directive'];
     const stateValue = isSlurmField ? slurmOptions[name] : parameters[name];
-    const value = stateValue ?? prop.default ?? '';
+    // A cleared key shows empty even though the schema has a default
+    const value = stateValue ?? (cleared ? '' : prop.default) ?? '';
     const handleChange = isSlurmField ? handleSlurmOptionChange : handleParameterChange;
 
     // Handle dynamic dropdowns (e.g., AreTomo3 runs)
@@ -968,12 +1000,9 @@ export default function WorkflowLaunchForm({
     if (!dependenciesMet) {
       issues.push('Dependencies not met');
     }
-    if (!areRequiredParametersFilled()) {
-      const missingFields = schema.schema.required?.filter((field) => {
-        const value = parameters[field];
-        return value === undefined || value === null || value === '';
-      });
-      issues.push(`Missing required parameters: ${missingFields?.join(', ') || 'unknown'}`);
+    const missingFields = missingRequiredKeys();
+    if (missingFields.length > 0) {
+      issues.push(`Missing required parameters: ${missingFields.join(', ')}`);
     }
     return issues;
   };
@@ -1022,7 +1051,7 @@ export default function WorkflowLaunchForm({
                 {sessionSelectionConfig.requiresSessionSelection ? '3' : '2'}. Configure Parameters
               </Typography>
               {/* Header actions (e.g., Import from CLI button) */}
-              {headerActions?.({ parameters, setParameters, schema: schema.schema })}
+              {headerActions?.({ parameters, setParameters: setImportedParameters, schema: schema.schema })}
             </Box>
 
             {/* Loading indicator */}

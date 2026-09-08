@@ -17,12 +17,47 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun, ProcSoftware
 from rest_framework.decorators import api_view
+from stores.models import Cluster
 from tem.models import MsiSession
 from umbrella_logger import logger
 
 from common import clusterio
+from workflow.defaults import resolve_defaults
 from workflow.execution import PipelineExecutor, ValidationError
 from workflow.processors import get_processor, list_processors
+
+
+def _is_known_cluster(cluster_id) -> bool:
+    return Cluster.objects.filter(cluster_id=cluster_id, is_active=True).exists()
+
+
+def _int_param(request, name):
+    value = request.GET.get(name)
+    return int(value) if value and value.isdigit() else None
+
+
+def _session_info(processor, msi_session) -> dict:
+    """Processor-specific session metadata for the form, from <processor>/views.py if it has any."""
+    if msi_session is None or not processor.has_custom_views():
+        return {}
+
+    views_module = processor.get_views_module()
+    if not views_module or not hasattr(views_module, "get_session_info"):
+        return {}
+
+    return views_module.get_session_info(msi_session)
+
+
+def _pipe_in_plan_for(processor_name: str):
+    """The pipeline step that runs this processor, or None.
+
+    FIXME: processor may have multiple plans like aretomo; the first one wins.
+    """
+    return (
+        PipeInPlan.objects.filter(pipe__software__processor_class=processor_name)
+        .select_related("plan", "pipe", "pipe__software")
+        .first()
+    )
 
 
 @require_http_methods(["GET"])
@@ -270,17 +305,8 @@ def execute_pipe(request):
                     status=404,
                 )
 
-            # Find plan with this processor
-            # FIXME: processor may have multiple plans, like aretomo
-            pipe_in_plan_with_processor = (
-                PipeInPlan.objects.filter(
-                    pipe__software__processor_class=processor_name,
-                )
-                .select_related("plan", "pipe", "pipe__software")
-                .first()
-            )
-
-            if not pipe_in_plan_with_processor:
+            matching_pipe_in_plan = _pipe_in_plan_for(processor_name)
+            if not matching_pipe_in_plan:
                 return JsonResponse(
                     {
                         "success": False,
@@ -289,7 +315,7 @@ def execute_pipe(request):
                     status=404,
                 )
 
-            proc_plan = pipe_in_plan_with_processor.plan
+            proc_plan = matching_pipe_in_plan.plan
 
             # Get or create the processing run (NOW create it since we're actually submitting)
             proc_run, created = ProcRun.objects.get_or_create(
@@ -303,25 +329,6 @@ def execute_pipe(request):
 
             if created:
                 logger.info(f"Created new ProcRun: {run_name} for session {session_name} with plan {proc_plan.name}")
-
-            # Find matching pipe_in_plan
-            matching_pipe_in_plan = None
-            for pip in PipeInPlan.objects.filter(plan=proc_plan).select_related("pipe", "pipe__software"):
-                if (
-                    hasattr(pip.pipe.software, "processor_class")
-                    and pip.pipe.software.processor_class == processor_name
-                ):
-                    matching_pipe_in_plan = pip
-                    break
-
-            if not matching_pipe_in_plan:
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "error": f"No pipeline step found for processor '{processor_name}' in plan '{proc_plan.name}'",
-                    },
-                    status=404,
-                )
 
             # Set the IDs for execution
             pipe_in_plan_id = matching_pipe_in_plan.id
@@ -346,11 +353,11 @@ def execute_pipe(request):
                 status=400,
             )
 
-        if cluster_id not in ["czii", "bruno"]:
+        if not _is_known_cluster(cluster_id):
             return JsonResponse(
                 {
                     "success": False,
-                    "error": "Invalid cluster_id. Must be czii or bruno",
+                    "error": f"Unknown cluster_id '{cluster_id}'",
                 },
                 status=400,
             )
@@ -488,7 +495,7 @@ def preview_script(request):
         session_name = data.get("session_id")  # Actually session name
         run_name = data.get("run_name")
         parameters = data.get("parameters", {})
-        cluster_id = data.get("cluster") or data.get("cluster_id", "czii")
+        cluster_id = data.get("cluster") or data.get("cluster_id")
 
         # Validate required fields
         if not processor_name:
@@ -518,19 +525,18 @@ def preview_script(request):
                 status=400,
             )
 
-        # Validate cluster
-        if cluster_id not in ["czii", "bruno"]:
+        # Blank cluster falls back to the software default inside the executor
+        if cluster_id and not _is_known_cluster(cluster_id):
             return JsonResponse(
                 {
                     "success": False,
-                    "error": "Invalid cluster. Must be czii or bruno",
+                    "error": f"Unknown cluster '{cluster_id}'",
                 },
                 status=400,
             )
 
-        # Get processor
         try:
-            processor = get_processor(processor_name)
+            get_processor(processor_name)
         except ValueError as e:
             return JsonResponse(
                 {
@@ -540,7 +546,6 @@ def preview_script(request):
                 status=404,
             )
 
-        # Get MSI session
         try:
             msi_session = MsiSession.objects.get(name=session_name)
         except MsiSession.DoesNotExist:
@@ -552,20 +557,8 @@ def preview_script(request):
                 status=404,
             )
 
-        # Build RunContext for preview
-        # Create temporary in-memory model instances (not saved to DB)
-        from workflow.context import RunContext
-
-        # Find a pipe_in_plan with this processor to get plan and pipe info
-        pipe_in_plan_with_processor = (
-            PipeInPlan.objects.filter(
-                pipe__software__processor_class=processor_name,
-            )
-            .select_related("plan", "pipe", "pipe__software")
-            .first()
-        )
-
-        if not pipe_in_plan_with_processor:
+        pipe_in_plan = _pipe_in_plan_for(processor_name)
+        if not pipe_in_plan:
             return JsonResponse(
                 {
                     "success": False,
@@ -574,67 +567,36 @@ def preview_script(request):
                 status=404,
             )
 
-        proc_plan = pipe_in_plan_with_processor.plan
+        # Unsaved run: preview must leave no records behind
+        temp_proc_run = ProcRun(name=run_name, proc_plan=pipe_in_plan.plan, msi_session=msi_session)
 
-        # Create temporary ProcRun (not saved, just for preview)
-        temp_proc_run = ProcRun(
-            name=run_name,
-            proc_plan=proc_plan,
-            msi_session=msi_session,
-        )
-
-        # Use the existing pipe_in_plan from database for context
-        temp_pipe_in_plan = pipe_in_plan_with_processor
-
-        context = RunContext(
-            proc_run=temp_proc_run,
-            pipe_in_plan=temp_pipe_in_plan,
-            msi_session=msi_session,
-            cluster_id=cluster_id,
-            run_number=run_name,
-            job_name=f"{processor.name}_{msi_session.name}_{run_name}",
-            user=request.user,
-            inputs={},  # Preview doesn't need actual input paths
-        )
-
-        # Validate parameters
-        errors = processor.validate_parameters(parameters)
-        if errors:
+        try:
+            script_content = PipelineExecutor().preview(
+                pipe_in_plan=pipe_in_plan,
+                proc_run=temp_proc_run,
+                user=request.user,
+                parameters=parameters,
+                cluster_id=cluster_id,
+            )
+        except ValidationError as e:
             return JsonResponse(
                 {
                     "success": False,
                     "error": "Parameter validation failed",
-                    "validation_errors": errors,
+                    "validation_errors": e.errors,
                 },
                 status=400,
             )
-
-        # Validate SLURM resources
-        slurm_errors = processor.validate_slurm_resources(parameters, cluster_id)
-        if slurm_errors:
-            return JsonResponse(
-                {
-                    "success": False,
-                    "error": "SLURM resource validation failed",
-                    "validation_errors": slurm_errors,
-                },
-                status=400,
-            )
-
-        # Render script
-        try:
-            script_content = processor.render_script(parameters, context)
-        except Exception as e:
+        except ValueError as e:
             logger.error(f"Error rendering script for preview: {e}", exc_info=True)
             return JsonResponse(
                 {
                     "success": False,
-                    "error": f"Failed to render script: {str(e)}",
+                    "error": str(e),
                 },
                 status=500,
             )
 
-        # Return script content
         return JsonResponse(
             {
                 "success": True,
@@ -1395,40 +1357,54 @@ def validate_processor_parameters(request, processor_name: str):
 @login_required
 def get_processor_defaults(request, processor_name: str):
     """
-    Get session-specific default parameters for a processor.
+    Effective parameter defaults for a processor, as the launch form should prefill them.
 
-    GET /workflow/v1/processors/<name>/defaults/
-    GET /workflow/v1/processors/<name>/defaults/?session_id=<id>
+    GET /workflow/v1/processors/<name>/defaults/?session_id=<name>&cluster=<id>
+    GET /workflow/v1/processors/<name>/defaults/?scope=<pk>&software=<pk>&cluster=<id>&exclude_row=<pk>
 
-    Delegates to processor-specific views module if available.
+    All query params are optional. The launch form passes a session; the admin panel
+    passes the dimensions directly (no session exists yet) and excludes the row being
+    edited. Resolution: schema.yaml < ParameterDefaults rows (scope / acquisition
+    software / cluster) < session-derived values. See workflow.defaults.resolve_defaults.
 
     Returns:
         {
             "success": true,
-            "defaults": {
-                "param1": value1,
-                "param2": value2,
-                ...
-            }
+            "defaults": {"pixel_size": 2.5, ...},          # full effective map
+            "required_overrides": ["frame_dose"],           # rows cleared these; user must fill
+            "sources": {"pixel_size": "session", ...},      # "schema" | "row:<pk>" | "session"
+            "session_info": {...}                           # processor-specific, may be {}
         }
     """
     try:
         processor = get_processor(processor_name)
-        session_id = request.GET.get("session_id")
+        session_name = request.GET.get("session_id")
+        cluster_id = request.GET.get("cluster") or None
 
-        # Check if processor has custom views module
-        if processor.has_custom_views():
-            views_module = processor.get_views_module()
-            if views_module and hasattr(views_module, "get_session_defaults"):
-                # Delegate to processor-specific implementation
-                return views_module.get_session_defaults(request, session_id)
+        msi_session = None
+        if session_name:
+            msi_session = (
+                MsiSession.objects.filter(name=session_name)
+                .select_related("session_plan__scope", "session_plan__software")
+                .first()
+            )
 
-        # Default: return empty defaults
+        resolved = resolve_defaults(
+            processor,
+            msi_session=msi_session,
+            software_id=_int_param(request, "software"),
+            scope_id=_int_param(request, "scope"),
+            cluster_id=cluster_id,
+            exclude_row_pk=_int_param(request, "exclude_row"),
+        )
+
         return JsonResponse(
             {
                 "success": True,
-                "session_info": {},
-                "defaults": {},
+                "defaults": resolved.values,
+                "required_overrides": sorted(resolved.required),
+                "sources": resolved.sources,
+                "session_info": _session_info(processor, msi_session),
             }
         )
 

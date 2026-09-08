@@ -415,6 +415,10 @@ class AreTomo3Processor(BaseProcessor):
 
         return rendered_script
 
+    def session_defaults(self, msi_session) -> Dict[str, Any]:
+        pixel_size = msi_session.get_calibrated_pixel_size()
+        return {} if pixel_size is None else {"pixel_size": pixel_size}
+
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """Get default SLURM options for AreTomo3."""
         return {

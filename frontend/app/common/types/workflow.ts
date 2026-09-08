@@ -120,7 +120,12 @@ export interface ProcessorDynamicOptions {
  */
 export interface ProcessorDefaults {
   success: boolean;
+  /** Full effective map: schema.yaml < admin ParameterDefaults rows < session-derived values */
   defaults: Record<string, unknown>;
+  /** Keys an admin row cleared to null: no default, user must fill them in */
+  required_overrides?: string[];
+  /** key -> "schema" | "row:<pk>" | "session" */
+  sources?: Record<string, string>;
   session_info?: Record<string, unknown>;
 }
 

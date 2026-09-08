@@ -15,7 +15,10 @@ from umbrella_logger import logger
 from workflow.context import RunContext
 
 if TYPE_CHECKING:
-    from tem.models import SessionPlan
+    from tem.models import MsiSession, SessionPlan
+
+# Parsed schema per file
+_SCHEMA_CACHE: Dict[Path, Dict[str, Any]] = {}
 
 
 class BaseProcessor(ABC):
@@ -116,9 +119,14 @@ class BaseProcessor(ABC):
         if not schema_path:
             return None
 
+        cached = _SCHEMA_CACHE.get(schema_path)
+        if cached:
+            return cached
+
         try:
             with open(schema_path, "r") as f:
                 schema = yaml.safe_load(f)
+            _SCHEMA_CACHE[schema_path] = schema
             logger.debug(f"Loaded schema from {schema_path} for processor {cls.name}")
             return schema
         except Exception as e:
@@ -471,6 +479,16 @@ class BaseProcessor(ABC):
             )
         return patterns[0]
 
+    def session_defaults(self, msi_session: "MsiSession") -> Dict[str, Any]:
+        """
+        Parameter values derived from the session itself, e.g. a calibrated pixel size.
+
+        Applied last by workflow.defaults.resolve_defaults, on top of the schema
+        defaults and the admin-configured ParameterDefaults rows. Return only the
+        keys that could actually be derived.
+        """
+        return {}
+
     def get_default_slurm_options(self) -> Dict[str, Any]:
         """
         Get default SLURM options for this processor.
@@ -598,7 +616,7 @@ class BaseProcessor(ABC):
         for:
         - Dynamic form field options (dropdown values based on session/context)
         - Custom parameter validation (pre-submission checks)
-        - Session-specific defaults (recommended parameter values)
+        - Session info for the form (get_session_info; defaults come from session_defaults)
         - Processor metadata (help text, examples, documentation links)
 
         Returns:

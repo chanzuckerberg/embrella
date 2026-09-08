@@ -253,81 +253,57 @@ class TestAreTomo3Processor:
         assert call_kwargs["run_id"] == test_run_context.run_number
 
 
+def _set_magnification(session):
+    mag = Magnification.objects.create(scope=session.session_plan.scope, mode="SA", nominal_mag=50000, index=0)
+    session.magnification = mag
+    session.save()
+    return mag
+
+
 @pytest.mark.django_db
-class TestGetSessionDefaults:
-    """Tests for get_session_defaults returning pixel_size from calibration data."""
+class TestSessionDefaults:
+    """AreTomo3Processor.session_defaults derives pixel_size from calibration data."""
 
-    def test_returns_pixel_size_when_calibration_exists(self, test_msi_session, rf):
-        """get_session_defaults returns pixel_size when magnification and calibration exist."""
-        from workflow.processors.aretomo3.views import get_session_defaults
-
-        session = test_msi_session
-        camera = session.session_plan.camera
-        microscope = session.session_plan.scope
-
-        mag = Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
-        session.magnification = mag
-        session.save()
-
+    def test_pixel_size_when_calibration_exists(self, aretomo3_processor, test_msi_session):
+        mag = _set_magnification(test_msi_session)
         CalibratedPixelSize.objects.create(
             mag=mag,
-            camera=camera,
+            camera=test_msi_session.session_plan.camera,
             pixel_spacing=2.5,
             calibrated_at=timezone.now(),
         )
 
-        request = rf.get("/")
-        response = get_session_defaults(request, session_id=session.name)
-        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+        assert aretomo3_processor.session_defaults(test_msi_session) == {"pixel_size": 2.5}
 
-        assert data["defaults"]["pixel_size"] == 2.5
-        assert data["session_info"]["magnification"]["nominal_mag"] == 50000
+    def test_empty_when_no_magnification(self, aretomo3_processor, test_msi_session):
+        assert aretomo3_processor.session_defaults(test_msi_session) == {}
 
-    def test_no_pixel_size_when_no_magnification(self, test_msi_session, rf):
-        """get_session_defaults omits pixel_size when session has no magnification."""
-        from workflow.processors.aretomo3.views import get_session_defaults
+    def test_empty_when_no_calibration(self, aretomo3_processor, test_msi_session):
+        _set_magnification(test_msi_session)
 
-        request = rf.get("/")
-        response = get_session_defaults(request, session_id=test_msi_session.name)
-        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+        assert aretomo3_processor.session_defaults(test_msi_session) == {}
 
-        assert "pixel_size" not in data["defaults"]
 
-    def test_no_pixel_size_when_no_calibration(self, test_msi_session, rf):
-        """get_session_defaults omits pixel_size when no calibration exists for mag+camera."""
-        from workflow.processors.aretomo3.views import get_session_defaults
+@pytest.mark.django_db
+class TestGetSessionInfo:
+    """views.get_session_info describes the session; it decides no parameter values."""
 
-        session = test_msi_session
-        microscope = session.session_plan.scope
+    def test_magnification_block(self, test_msi_session):
+        from workflow.processors.aretomo3.views import get_session_info
 
-        mag = Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
-        session.magnification = mag
-        session.save()
+        _set_magnification(test_msi_session)
 
-        request = rf.get("/")
-        response = get_session_defaults(request, session_id=session.name)
-        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
+        info = get_session_info(test_msi_session)
 
-        assert "pixel_size" not in data["defaults"]
+        assert info["magnification"]["nominal_mag"] == 50000
+        assert info["magnification"]["pixel_size"] is None
+        # MDOC validation lives in validate_session, not here
+        assert "pixel_size_validation" not in info["magnification"]
 
-    def test_defaults_do_not_include_mdoc_validation(self, test_msi_session, rf):
-        """get_session_defaults no longer includes MDOC validation (moved to validate_session)."""
-        from workflow.processors.aretomo3.views import get_session_defaults
+    def test_minimal_session(self, test_msi_session):
+        from workflow.processors.aretomo3.views import get_session_info
 
-        session = test_msi_session
-        microscope = session.session_plan.scope
-
-        mag = Magnification.objects.create(scope=microscope, mode="SA", nominal_mag=50000, index=0)
-        session.magnification = mag
-        session.save()
-
-        request = rf.get("/")
-        response = get_session_defaults(request, session_id=session.name)
-        data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
-
-        # magnification info should not contain pixel_size_validation
-        mag_info = data["session_info"]["magnification"]
-        assert "pixel_size_validation" not in mag_info
+        assert get_session_info(test_msi_session) == {"user": None}
 
 
 @pytest.mark.django_db

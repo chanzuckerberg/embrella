@@ -330,6 +330,140 @@ class TestPipelineExecutor:
 
         assert "test_param must be non-negative" in exc_info.value.errors
 
+    def test_preview_renders_without_records(
+        self,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_user,
+        registered_test_processor,
+    ):
+        """Preview returns the same script execute would, but writes nothing."""
+        script = PipelineExecutor().preview(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=test_proc_run,
+            user=test_user,
+            parameters={"test_param": 50},
+        )
+
+        assert script == "#!/bin/bash\necho 50"
+        assert PipeExecution.objects.count() == 0
+
+    def test_preview_accepts_unsaved_run(
+        self,
+        test_pipe_in_plan,
+        test_msi_session,
+        test_user,
+        registered_test_processor,
+    ):
+        """Preview happens before the run exists, so an unsaved ProcRun must work."""
+        from processes.models import ProcRun
+
+        temp_run = ProcRun(name="run002", proc_plan=test_pipe_in_plan.plan, msi_session=test_msi_session)
+
+        script = PipelineExecutor().preview(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=temp_run,
+            user=test_user,
+            parameters={"test_param": 7},
+        )
+
+        assert script == "#!/bin/bash\necho 7"
+        assert ProcRun.objects.filter(name="run002").count() == 0
+
+    def test_preview_validation_fails(
+        self,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_user,
+        registered_test_processor,
+    ):
+        with pytest.raises(ValidationError) as exc_info:
+            PipelineExecutor().preview(
+                pipe_in_plan=test_pipe_in_plan,
+                proc_run=test_proc_run,
+                user=test_user,
+                parameters={"test_param": -1},
+            )
+
+        assert "test_param must be non-negative" in exc_info.value.errors
+
+    @patch("workflow.execution.RemoteJobSubmitter")
+    def test_execute_materializes_cascade_defaults(
+        self,
+        mock_submitter_class,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_proc_software,
+        test_user,
+        registered_test_processor,
+    ):
+        """A ParameterDefaults value the form didn't post still reaches the stored parameters."""
+        from processes.models import ParameterDefaults
+
+        ParameterDefaults.objects.create(proc_software=test_proc_software, values={"test_param": 77})
+        mock_submitter = MagicMock()
+        mock_submitter.run_script.return_value = ("Submitted batch job 1", "")
+        mock_submitter.last_script_path = "/scripts/test_script.sh"
+        mock_submitter_class.return_value = mock_submitter
+
+        result = PipelineExecutor().execute_pipe(
+            pipe_in_plan=test_pipe_in_plan,
+            proc_run=test_proc_run,
+            user=test_user,
+            parameters={},
+            auth={"username": "test", "password": "pass"},
+        )
+
+        execution = PipeExecution.objects.get(id=result["pipe_execution_id"])
+        assert execution.parameters["test_param"] == 77
+        assert execution.script_content == "#!/bin/bash\necho 77"
+
+    def test_cleared_default_must_be_posted(
+        self,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_proc_software,
+        test_user,
+        registered_test_processor,
+    ):
+        """A row that nulls a key makes it required; leaving it out fails before render."""
+        from processes.models import ParameterDefaults
+
+        ParameterDefaults.objects.create(proc_software=test_proc_software, values={"test_param": None})
+
+        with pytest.raises(ValidationError) as exc_info:
+            PipelineExecutor().preview(
+                pipe_in_plan=test_pipe_in_plan,
+                proc_run=test_proc_run,
+                user=test_user,
+                parameters={},
+            )
+
+        assert exc_info.value.errors == ["Required parameter missing: test_param"]
+
+    def test_cluster_not_allowed(
+        self,
+        test_proc_run,
+        test_pipe_in_plan,
+        test_user,
+        registered_test_processor,
+    ):
+        """allowed_clusters on the software restricts where it may run."""
+        software = test_pipe_in_plan.pipe.software
+        software.allowed_clusters = ["czii"]
+        software.save()
+
+        with pytest.raises(ValidationError) as exc_info:
+            PipelineExecutor().preview(
+                pipe_in_plan=test_pipe_in_plan,
+                proc_run=test_proc_run,
+                user=test_user,
+                parameters={"test_param": 1},
+                cluster_id="bruno",
+            )
+
+        assert "not allowed" in exc_info.value.errors[0]
+
     def test_check_dependencies_met_no_dependencies(
         self,
         test_proc_run,
@@ -484,6 +618,56 @@ class TestExecutionAPI:
         assert data["success"] is True
         assert "dependencies_met" in data
         assert "missing_dependencies" in data
+
+    def _preview(self, client, **overrides):
+        body = {
+            "processor": "test_processor",
+            "session_id": "24nov10",
+            "run_name": "run009",
+            "parameters": {"test_param": 50},
+            "cluster": "czii",
+            **overrides,
+        }
+        return client.post("/workflow/v1/execution/preview/", body, content_type="application/json")
+
+    def test_preview_script(self, client, test_user, test_pipe_in_plan, test_msi_session, registered_test_processor):
+        client.force_login(test_user)
+
+        response = self._preview(client)
+
+        assert response.status_code == 200
+        assert response.json() == {"success": True, "script_content": "#!/bin/bash\necho 50"}
+
+    def test_preview_script_validation_error(
+        self, client, test_user, test_pipe_in_plan, test_msi_session, registered_test_processor
+    ):
+        client.force_login(test_user)
+
+        response = self._preview(client, parameters={"test_param": -5})
+
+        assert response.status_code == 400
+        assert response.json()["validation_errors"] == ["test_param must be non-negative"]
+
+    def test_preview_script_missing_required(
+        self, client, test_user, test_pipe_in_plan, test_msi_session, registered_test_processor
+    ):
+        """schema `required` is enforced server-side, with the same 400 shape as other validation."""
+        client.force_login(test_user)
+
+        response = self._preview(client, parameters={})
+
+        assert response.status_code == 400
+        assert response.json()["validation_errors"] == ["Required parameter missing: test_param"]
+
+    def test_preview_script_unknown_cluster(
+        self, client, test_user, test_pipe_in_plan, test_msi_session, registered_test_processor
+    ):
+        client.force_login(test_user)
+
+        response = self._preview(client, cluster="nowhere")
+
+        assert response.status_code == 400
+        assert "nowhere" in response.json()["error"]
 
 
 # ============================================================================

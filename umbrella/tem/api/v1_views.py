@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from common.sorting import msi_session_sort_key
 from tem.models import (
     AtlasSession,
     CryoGrid,
@@ -14,23 +15,57 @@ from tem.models import (
 )
 
 from .serializers import (
-    CreatedSessionSerializer,
     FormOptionsSerializer,
     MagnificationSerializer,
     MsiSessionCreateSerializer,
+    SessionDetailSerializer,
+    SessionListSerializer,
     SuggestNameSerializer,
 )
 
 
 @extend_schema(
+    methods=["GET"],
+    tags=["TEM Sessions"],
+    responses={200: SessionListSerializer},
+    description="All MSI sessions with their plan, newest first, for session pickers.",
+)
+@extend_schema(
     methods=["POST"],
     tags=["TEM Sessions"],
     request=MsiSessionCreateSerializer,
-    responses={201: CreatedSessionSerializer},
+    responses={201: SessionDetailSerializer},
     description="Create a new TEM MSI session with auto-generated paths.",
 )
-@api_view(["POST"])
-def create_session(request):
+@api_view(["GET", "POST"])
+def sessions(request):
+    if request.method == "GET":
+        return _list_sessions()
+    return _create_session(request)
+
+
+def _list_sessions():
+    plans = MsiSession.objects.select_related(
+        "session_plan__scope",
+        "session_plan__software",
+        "session_plan__camera",
+        "session_plan__imaging_workflow",
+    )
+    items = [
+        {
+            "name": session.name,
+            "scope": session.session_plan.scope.name,
+            "software": str(session.session_plan.software),
+            "camera": session.session_plan.camera.name,
+            "workflow": str(session.session_plan.imaging_workflow),
+        }
+        for session in plans
+    ]
+    items.sort(key=lambda item: msi_session_sort_key(item["name"]))
+    return Response(SessionListSerializer({"sessions": items}).data)
+
+
+def _create_session(request):
     serializer = MsiSessionCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
@@ -57,19 +92,39 @@ def create_session(request):
     session.resolve_role_paths()
     session.save()
 
+    return Response(SessionDetailSerializer(_session_payload(session)).data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    methods=["GET"],
+    tags=["TEM Sessions"],
+    responses={200: SessionDetailSerializer},
+    description="One MSI session: plan, project, grid, and where each data role lands.",
+)
+@api_view(["GET"])
+def session_detail(request, name):
+    session = (
+        MsiSession.objects.filter(name=name).select_related("project", "grid", "session_plan", "magnification").first()
+    )
+    if session is None:
+        return Response({"detail": "Session '%s' not found." % name}, status=status.HTTP_404_NOT_FOUND)
+    return Response(SessionDetailSerializer(_session_payload(session)).data)
+
+
+def _session_payload(session):
+    """What the created-session dialog and the launch form's session accordion both show."""
     payload = {
         "id": session.id,
         "name": session.name,
-        "project_name": project.name,
-        "grid_name": str(grid),
-        "session_plan_name": str(session_plan),
-        "magnification_display": str(magnification) if magnification else None,
+        "project_name": session.project.name if session.project else None,
+        "grid_name": str(session.grid) if session.grid else None,
+        "session_plan_name": str(session.session_plan),
+        "magnification_display": str(session.magnification) if session.magnification else None,
         "legacy_url": f"/legacy/tem/{session.id}/",
     }
     for role, path in session.role_paths.items():
         payload[role] = _role_halves(path, session.get_file_pattern(role))
-
-    return Response(CreatedSessionSerializer(payload).data, status=status.HTTP_201_CREATED)
+    return payload
 
 
 def _role_halves(path, pattern):

@@ -10,6 +10,8 @@ It handles:
 """
 
 import re
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 from django.contrib.auth.models import User
@@ -20,13 +22,16 @@ from processes.models import (
     PipeInPlan,
     PipeJoint,
     ProcRun,
+    ProcSoftware,
     RunPipeData,
 )
 from processes.services.cluster_resolver import get_default_cluster_id
+from stores.models import Cluster
 from umbrella_logger import logger
 
 from .agent import RemoteJobSubmitter
 from .context import RunContext
+from .defaults import resolve_defaults
 from .processors import BaseProcessor, get_processor
 
 
@@ -36,6 +41,27 @@ class ValidationError(Exception):
     def __init__(self, errors: List[str]):
         self.errors = errors
         super().__init__(f"Validation failed: {'; '.join(errors)}")
+
+
+class RunMode(Enum):
+    """PREVIEW renders against an unsaved run; EXECUTE also resolves upstream inputs."""
+
+    PREVIEW = "preview"
+    EXECUTE = "execute"
+
+
+@dataclass
+class PreparedRun:
+    """Everything needed to submit: the script plus what produced it."""
+
+    processor: BaseProcessor
+    context: RunContext
+    parameters: Dict[str, Any]
+    script: str
+
+
+def _active_cluster_ids() -> List[str]:
+    return list(Cluster.objects.filter(is_active=True).values_list("cluster_id", flat=True))
 
 
 class PipelineExecutor:
@@ -89,47 +115,10 @@ class PipelineExecutor:
             f"Executing pipe {pipe_in_plan.pipe.name} for run {proc_run.name} (user: {user})",
         )
 
-        # 1. Get processor for this pipe's software
-        software = pipe_in_plan.pipe.software
-        try:
-            processor = get_processor(software.processor_class)
-        except ValueError as e:
-            raise ValueError(
-                f"Cannot execute pipe {pipe_in_plan.pipe.name}: {e}. "
-                f"Software '{software.name}' may not have a registered processor.",
-            )
-
-        # 2. Validate cluster selection
-        if cluster_id:
-            # Check if cluster is allowed for this software
-            allowed = software.allowed_clusters if software.allowed_clusters else ["czii", "bruno"]
-            if cluster_id not in allowed:
-                raise ValidationError(
-                    [
-                        f"Cluster '{cluster_id}' is not allowed for software '{software.name}'. "
-                        f"Allowed clusters: {', '.join(allowed)}",
-                    ]
-                )
-
-        # 3. Build RunContext with inputs from previous pipes
-        context = self._build_run_context(pipe_in_plan, proc_run, user, processor, cluster_id)
-
-        # 3. Validate parameters
-        errors = processor.validate_parameters(parameters)
-        if errors:
-            raise ValidationError(errors)
-
-        # 3b. Validate SLURM resources against cluster limits
-        slurm_errors = processor.validate_slurm_resources(parameters, cluster_id)
-        if slurm_errors:
-            raise ValidationError(slurm_errors)
-
-        # 4. Render script
-        try:
-            script_content = processor.render_script(parameters, context)
-        except Exception as e:
-            logger.error(f"Error rendering script: {e}", exc_info=True)
-            raise ValueError(f"Failed to render script: {e}")
+        # 1-4. Processor, cluster check, context, validation, render
+        prepared = self.prepare(pipe_in_plan, proc_run, user, parameters, cluster_id)
+        processor, context = prepared.processor, prepared.context
+        parameters, script_content = prepared.parameters, prepared.script
 
         # 5. Submit to SLURM
         submitter = RemoteJobSubmitter(
@@ -224,6 +213,87 @@ class PipelineExecutor:
             "pipe_execution_id": pipe_exec.id,
         }
 
+    def prepare(
+        self,
+        pipe_in_plan: PipeInPlan,
+        proc_run: ProcRun,
+        user: User,
+        parameters: Dict[str, Any],
+        cluster_id: Optional[str] = None,
+        mode: RunMode = RunMode.EXECUTE,
+    ) -> PreparedRun:
+        """
+        Everything before submission: processor, cluster check, context, validation, render.
+
+        Shared by execute_pipe and preview so the previewed script is the one that runs.
+
+        Raises:
+            ValidationError: Parameters invalid or cluster not allowed
+            ValueError: No processor, inputs missing (EXECUTE only), render failed
+        """
+        software = pipe_in_plan.pipe.software
+        try:
+            processor = get_processor(software.processor_class)
+        except ValueError as e:
+            raise ValueError(
+                f"Cannot execute pipe {pipe_in_plan.pipe.name}: {e}. "
+                f"Software '{software.name}' may not have a registered processor.",
+            )
+
+        self._check_cluster_allowed(software, cluster_id)
+
+        context = self._build_run_context(pipe_in_plan, proc_run, user, processor, cluster_id, mode)
+
+        # Fill unposted keys from the same cascade the form was prefilled with, so the
+        # stored parameters are the complete, replayable set the script was rendered from.
+        resolved = resolve_defaults(processor, msi_session=context.msi_session, cluster_id=context.cluster_id)
+        parameters = resolved.merge(parameters)
+        missing = resolved.missing(parameters, processor.get_parameter_schema().get("required", []))
+        if missing:
+            raise ValidationError(["Required parameter missing: %s" % key for key in missing])
+
+        errors = processor.validate_parameters(parameters)
+        if errors:
+            raise ValidationError(errors)
+
+        slurm_errors = processor.validate_slurm_resources(parameters, context.cluster_id)
+        if slurm_errors:
+            raise ValidationError(slurm_errors)
+
+        try:
+            script = processor.render_script(parameters, context)
+        except Exception as e:
+            logger.error(f"Error rendering script: {e}", exc_info=True)
+            raise ValueError(f"Failed to render script: {e}")
+
+        return PreparedRun(processor=processor, context=context, parameters=parameters, script=script)
+
+    def preview(
+        self,
+        pipe_in_plan: PipeInPlan,
+        proc_run: ProcRun,
+        user: User,
+        parameters: Dict[str, Any],
+        cluster_id: Optional[str] = None,
+    ) -> str:
+        """Rendered script for a run that may be unsaved. Nothing is submitted or recorded."""
+        return self.prepare(pipe_in_plan, proc_run, user, parameters, cluster_id, RunMode.PREVIEW).script
+
+    def _check_cluster_allowed(self, software: ProcSoftware, cluster_id: Optional[str]) -> None:
+        if not cluster_id:
+            return
+
+        allowed = software.allowed_clusters or _active_cluster_ids()
+        if cluster_id in allowed:
+            return
+
+        raise ValidationError(
+            [
+                f"Cluster '{cluster_id}' is not allowed for software '{software.name}'. "
+                f"Allowed clusters: {', '.join(allowed)}",
+            ]
+        )
+
     def _build_run_context(
         self,
         pipe_in_plan: PipeInPlan,
@@ -231,6 +301,7 @@ class PipelineExecutor:
         user: User,
         processor: BaseProcessor,
         cluster_id: Optional[str] = None,
+        mode: RunMode = RunMode.EXECUTE,
     ) -> RunContext:
         """
         Build execution context with input data from PipeJoints.
@@ -241,6 +312,7 @@ class PipelineExecutor:
             user: Executing user
             processor: The processor instance
             cluster_id: Optional cluster ID override
+            mode: PREVIEW skips input resolution (the run may be unsaved)
 
         Returns:
             RunContext with all required information
@@ -248,6 +320,29 @@ class PipelineExecutor:
         Raises:
             ValueError: If required inputs are missing
         """
+        inputs = {} if mode is RunMode.PREVIEW else self._resolve_inputs(pipe_in_plan, proc_run)
+
+        # Get cluster from parameter or software default
+        software = pipe_in_plan.pipe.software
+        cluster_id = cluster_id or software.default_cluster or get_default_cluster_id()
+
+        # Generate job name for SLURM submission
+        # Format: {processor_name}_{session_name}_{run_name}_{pipe_name}
+        job_name = f"{processor.name}_{proc_run.msi_session.name}_{proc_run.name}_{pipe_in_plan.name}"
+
+        return RunContext(
+            proc_run=proc_run,
+            pipe_in_plan=pipe_in_plan,
+            msi_session=proc_run.msi_session,
+            user=user,
+            cluster_id=cluster_id,
+            run_number=proc_run.name,
+            job_name=job_name,
+            inputs=inputs,
+        )
+
+    def _resolve_inputs(self, pipe_in_plan: PipeInPlan, proc_run: ProcRun) -> Dict[str, str]:
+        """Map each upstream output this pipe needs (via PipeJoints) to its path."""
         # Get PipeJoints that point to this pipe (defines what inputs it needs)
         joints = PipeJoint.objects.filter(pipe_in_plan=pipe_in_plan)
 
@@ -282,26 +377,7 @@ class PipelineExecutor:
                 f"Make sure dependent pipes have completed successfully.",
             )
 
-        # Get cluster from parameter or software default
-        software = pipe_in_plan.pipe.software
-        if not cluster_id:
-            # Use software's default_cluster, fallback to 'czii' if not set
-            cluster_id = getattr(software, "default_cluster", None) or getattr(software, "cluster", "czii")
-
-        # Generate job name for SLURM submission
-        # Format: {processor_name}_{session_name}_{run_name}_{pipe_name}
-        job_name = f"{processor.name}_{proc_run.msi_session.name}_{proc_run.name}_{pipe_in_plan.name}"
-
-        return RunContext(
-            proc_run=proc_run,
-            pipe_in_plan=pipe_in_plan,
-            msi_session=proc_run.msi_session,
-            user=user,
-            cluster_id=cluster_id,
-            run_number=proc_run.name,
-            job_name=job_name,
-            inputs=inputs,
-        )
+        return inputs
 
     def _parse_job_id(self, slurm_output: str) -> Optional[str]:
         """

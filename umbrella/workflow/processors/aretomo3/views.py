@@ -3,7 +3,7 @@ Custom API views for AreTomo3 processor.
 
 Provides processor-specific endpoints for:
 - Dynamic form field options (gain files, previous runs)
-- Session-specific defaults (pixel size, doses from TEM session)
+- Session info shown beside the form (user, magnification, project, grid)
 - Processor metadata (help text, examples, documentation)
 """
 
@@ -134,91 +134,53 @@ def _suggest_pixel_size_for_mdoc_mag(mdoc_mag: int, session_plan) -> Optional[Di
     return None
 
 
-@require_http_methods(["GET"])
-def get_session_defaults(request, session_id: str = None) -> JsonResponse:
+def get_session_info(session: MsiSession) -> Dict[str, Any]:
     """
-    Get recommended default parameters for a specific TEM session.
+    Session metadata shown next to the launch form: user, magnification, project, grid.
 
-    Extracts session metadata to provide intelligent defaults:
-    - Pixel size from microscope configuration
-    - Total dose from session protocol
-    - Frame dose calculated from typical frame count
-
-    Args:
-        request: Django HTTP request
-        session_id: MSI session ID
-
-    Returns:
-        JsonResponse with default parameter values:
-        {
-            "defaults": {
-                "pixel_size": 2.5,
-                "align_z": 800,
-                "vol_z": 1600
-            }
-        }
+    Parameter defaults are not decided here; see AreTomo3Processor.session_defaults
+    and workflow.defaults.resolve_defaults.
     """
-    defaults = {}
-    session_info = {}
+    session_info = {
+        "user": session.user.username if session.user else None,
+    }
 
-    if session_id:
-        try:
-            session = MsiSession.objects.get(name=session_id)
+    # Add magnification info for transparency
+    if session.magnification:
+        session_info["magnification"] = {
+            "nominal_mag": session.magnification.nominal_mag,
+            "scope": session.magnification.scope.name,
+            "pixel_size": session.get_calibrated_pixel_size(),
+        }
 
-            # Populate pixel_size from calibrated pixel size if available
-            pixel_size = session.get_calibrated_pixel_size()
-            if pixel_size is not None:
-                defaults["pixel_size"] = pixel_size
+    # Add project info if available
+    if session.project:
+        session_info["project"] = {
+            "id": session.project.id,
+            "name": session.project.name,
+        }
 
-            session_info = {
-                "user": session.user.username if session.user else None,
+    # Add grid info if available
+    if session.grid:
+        grid = session.grid
+        session_info["grid"] = {
+            "id": grid.id,
+            "created": grid.create_on,
+            "user": grid.user.username if grid.user else None,
+            "specimen": grid.specimen.id if grid.specimen else None,
+        }
+
+        # Add freezing session info if available
+        if grid.freezing_session:
+            fs = grid.freezing_session
+            session_info["grid"]["freezing_session"] = {
+                "id": fs.id,
+                "user": fs.user.username if fs.user else None,
+                "datetime": fs.datetime,
+                "documentation_page": model_to_dict(fs.documentation_page) if fs.documentation_page else None,
             }
 
-            # Add magnification info for transparency
-            if session.magnification:
-                session_info["magnification"] = {
-                    "nominal_mag": session.magnification.nominal_mag,
-                    "scope": session.magnification.scope.name,
-                    "pixel_size": pixel_size,
-                }
-
-            # Add project info if available
-            if session.project:
-                session_info["project"] = {
-                    "id": session.project.id,
-                    "name": session.project.name,
-                }
-
-            # Add grid info if available
-            if session.grid:
-                grid = session.grid
-                session_info["grid"] = {
-                    "id": grid.id,
-                    "created": grid.create_on,
-                    "user": grid.user.username if grid.user else None,
-                    "specimen": grid.specimen.id if grid.specimen else None,
-                }
-
-                # Add freezing session info if available
-                if grid.freezing_session:
-                    fs = grid.freezing_session
-                    session_info["grid"]["freezing_session"] = {
-                        "id": fs.id,
-                        "user": fs.user.username if fs.user else None,
-                        "datetime": fs.datetime,
-                        "documentation_page": model_to_dict(fs.documentation_page) if fs.documentation_page else None,
-                    }
-
-        except MsiSession.DoesNotExist:
-            pass
-
-    return JsonResponse(
-        {
-            "success": True,
-            "session_info": session_info,
-            "defaults": defaults,
-        }
-    )
+    return session_info
 
 
 @require_http_methods(["GET"])
@@ -254,7 +216,7 @@ def validate_session(request, session_id: str = None) -> JsonResponse:
     """
     Validate session data by cross-referencing MDOC magnification on cluster.
 
-    This is separated from get_session_defaults because the SSH round-trip
+    This is separated from the defaults endpoint because the SSH round-trip
     to read the MDOC file is slow (~7s) and shouldn't block form loading.
 
     Args:

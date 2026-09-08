@@ -73,6 +73,7 @@ properties:
     description: Target voxel size for downsampling. Leave empty to skip downsampling.
     minimum: 1.0
     maximum: 100.0
+    default: 10.0
     x-conditional: "operation == 'create' || operation == 'import_tomograms'"
 
   # ============================================================================

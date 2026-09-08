@@ -4,7 +4,6 @@ Custom API views for Copick processor.
 Provides processor-specific endpoints for:
 - Dynamic form field options (available tomogram runs, operations)
 - Custom parameter validation (check tomogram availability, project existence)
-- Session-specific defaults (recommended voxel size based on pixel size)
 - Processor metadata (Copick format info, examples)
 """
 
@@ -416,52 +415,6 @@ def validate_parameters(request) -> JsonResponse:
         {
             "valid": len(errors) == 0,
             "errors": errors,
-        }
-    )
-
-
-@require_http_methods(["GET"])
-def get_session_defaults(request, session_id: str = None) -> JsonResponse:
-    """
-    Get recommended default parameters for Copick export.
-
-    Suggests parameters based on session characteristics:
-    - Voxel size based on pixel size and typical downsampling
-    - Operation type based on existing Copick projects
-    - Tomogram type based on available runs
-
-    Args:
-        request: Django HTTP request
-        session_id: MSI session ID
-
-    Returns:
-        JsonResponse with default parameter values
-    """
-    defaults = {
-        "operation": "create",
-        "import_tomo_type": "dctf",
-    }
-
-    if session_id:
-        try:
-            session = MsiSession.objects.get(name=session_id)
-
-            # TODO: Calculate recommended voxel size based on pixel size
-            # For example, if pixel size is 2.5Å, suggest 10Å (4x binning)
-            defaults["downsample_voxel_size"] = 10.0
-
-            # TODO: Check if Copick project already exists for this session
-            # If so, default to 'import' operation
-            # For now, default to 'create'
-            defaults["operation"] = "create"
-
-        except MsiSession.DoesNotExist:
-            pass
-
-    return JsonResponse(
-        {
-            "success": True,
-            "defaults": defaults,
         }
     )
 
