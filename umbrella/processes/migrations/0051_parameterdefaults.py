@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('processes', '0049_drop_legacy_param_models'),
+        ('processes', '0050_init_copick_scan_procplan'),
         ('stores', '0024_zarr_url_ends_at_directory'),
         ('tem', '0025_sessionplan_name_prefix'),
     ]
