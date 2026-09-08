@@ -9,6 +9,7 @@ import { fetchResource } from '@app/common/queries/fetchResource';
 import { calculateNextRunName } from '../utils/runNumbers';
 import { SessionFormDialog } from '@app/sessions/new/tem/components/SessionFormDialog';
 import { CreatedSession } from '@app/sessions/new/tem/types';
+import { SessionDetails } from './SessionDetails';
 
 interface MsiSessionData {
   name: string;
@@ -47,22 +48,20 @@ export const SessionRunSelector = ({ onChange, disabled = false, planType }: Ses
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${DJANGO_URL}/workflow/get_msi_session_list`, {
-        credentials: 'include',
-      });
+      const response = await fetchResource(`${DJANGO_URL}${API.MSI_SESSIONS}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch sessions');
       }
 
-      const data = await response.json();
-      // Transform session_names array to sessions array format
-      const sessionsData = (data.session_names || []).map((name: string) => ({
+      // Sorted newest first by the server
+      const data: { sessions: { name: string }[] } = await response.json();
+      const sessionsData: MsiSessionData[] = (data.sessions || []).map(({ name }) => ({
         name,
         run_numbers: [], // Not needed since we're using text input
       }));
       setSessions(sessionsData);
-      return sessionsData as MsiSessionData[];
+      return sessionsData;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error fetching sessions');
       return [];
@@ -211,6 +210,7 @@ export const SessionRunSelector = ({ onChange, disabled = false, planType }: Ses
 
       {selectedSession && (
         <Box sx={{ mt: 2 }}>
+          <SessionDetails key={selectedSession.session.name} sessionName={selectedSession.session.name} />
           <TextField
             label="Processing Run Name"
             placeholder="run001"
