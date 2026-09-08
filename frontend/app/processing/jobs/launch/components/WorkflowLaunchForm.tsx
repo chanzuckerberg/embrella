@@ -610,8 +610,9 @@ export default function WorkflowLaunchForm({
       return;
     }
 
-    if (!areRequiredParametersFilled()) {
-      setPreviewError('Please fill in all required parameters');
+    const missingFields = missingRequiredKeys();
+    if (missingFields.length > 0) {
+      setPreviewError(`Please fill in all required parameters: ${missingFields.join(', ')}`);
       setPreviewModalOpen(true);
       return;
     }

@@ -54,7 +54,7 @@ properties:
     type: string
     title: Gain File Name
     description: |
-      Name of the gain reference file to use. If left blank, the most recent gain file will be used automatically.
+      Name of the gain reference file to use.
     x-bash-skip: true
     x-cli-flag: null
     x-cli-format: null
@@ -872,3 +872,4 @@ properties:
 
 required:
   - pixel_size
+  - gain_file_name
