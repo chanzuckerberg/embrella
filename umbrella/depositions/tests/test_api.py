@@ -12,6 +12,7 @@ from rest_framework.test import APIClient
 DEPOSITIONS = "/depositions/v1/depositions/"
 DATASETS = "/depositions/v1/datasets/"
 SESSIONS = "/depositions/v1/sessions/"
+METHOD_LINKS = "/depositions/v1/method-links/"
 
 
 @pytest.fixture(autouse=True)
@@ -508,3 +509,193 @@ class TestDatasetLoadsSessionMetadata:
         sess = next(s for s in r.json()["sessions"] if s["id"] == owned_session.id)
         assert sess.get("tiltseries_metadata") is None
         assert sess["tomogram_metadata"] == []
+
+
+@pytest.mark.django_db
+class TestAnnotationPersistence:
+    """PATCH /sessions/<id>/ upserts annotations by (copick_kind, copick_ref) with full-replace."""
+
+    def _url(self, session):
+        return f"{SESSIONS}{session.id}/"
+
+    def _ann(self, ref, **over):
+        return {"copick_kind": "picks", "copick_ref": ref, "object_name": "ribosome", **over}
+
+    def _patch(self, client, session, annotations):
+        return client.patch(self._url(session), {"annotations": annotations}, format="json")
+
+    def test_creates_annotations(self, auth_client, owned_session):
+        from depositions.models import DepositionAnnotation
+
+        r = self._patch(
+            auth_client, owned_session, [self._ann("ribosome-0"), self._ann("mito-0", copick_kind="segmentations")]
+        )
+        assert r.status_code == 200, r.content
+        assert DepositionAnnotation.objects.filter(session=owned_session).count() == 2
+
+    def test_upserts_by_kind_and_ref(self, auth_client, owned_session):
+        from depositions.models import DepositionAnnotation
+
+        self._patch(auth_client, owned_session, [self._ann("ribosome-0", object_count=100)])
+        r = self._patch(auth_client, owned_session, [self._ann("ribosome-0", object_count=250)])
+        assert r.status_code == 200, r.content
+        qs = DepositionAnnotation.objects.filter(session=owned_session)
+        assert qs.count() == 1
+        assert qs.first().object_count == 250
+
+    def test_full_replace_drops_omitted(self, auth_client, owned_session):
+        from depositions.models import DepositionAnnotation
+
+        self._patch(auth_client, owned_session, [self._ann("a"), self._ann("b")])
+        r = self._patch(auth_client, owned_session, [self._ann("a")])
+        assert r.status_code == 200, r.content
+        refs = set(DepositionAnnotation.objects.filter(session=owned_session).values_list("copick_ref", flat=True))
+        assert refs == {"a"}
+
+    def test_empty_list_clears_all(self, auth_client, owned_session):
+        from depositions.models import DepositionAnnotation
+
+        self._patch(auth_client, owned_session, [self._ann("a")])
+        r = self._patch(auth_client, owned_session, [])
+        assert r.status_code == 200, r.content
+        assert DepositionAnnotation.objects.filter(session=owned_session).count() == 0
+
+    def test_omitting_annotations_key_leaves_them_untouched(self, auth_client, owned_session):
+        from depositions.models import DepositionAnnotation
+
+        self._patch(auth_client, owned_session, [self._ann("a")])
+        r = auth_client.patch(self._url(owned_session), {"tiltseries_metadata": {"pixel_spacing": 1.5}}, format="json")
+        assert r.status_code == 200, r.content
+        assert DepositionAnnotation.objects.filter(session=owned_session).count() == 1
+
+    def test_get_returns_annotations(self, auth_client, owned_session):
+        self._patch(auth_client, owned_session, [self._ann("a")])
+        r = auth_client.get(self._url(owned_session))
+        assert r.status_code == 200
+        assert [a["copick_ref"] for a in r.json()["annotations"]] == ["a"]
+
+    def test_non_owner_cannot_patch(self, owned_session):
+        other = User.objects.create_user(username="mallory@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        r = self._patch(client, owned_session, [self._ann("a")])
+        assert r.status_code == 403
+
+
+@pytest.mark.django_db
+class TestMethodLinkCrud:
+    """/v1/method-links/ CRUD — owner-guarded, no PUT."""
+
+    def _annotation(self, session):
+        from depositions.models import DepositionAnnotation
+
+        return DepositionAnnotation.objects.create(
+            session=session, copick_kind="picks", copick_ref="ribosome-0", object_name="ribosome"
+        )
+
+    def _link(self, annotation, **over):
+        from depositions.models import DepositionAnnotationMethodLink
+
+        return DepositionAnnotationMethodLink.objects.create(
+            annotation=annotation, link_type="website", link="https://example.org", **over
+        )
+
+    def test_create_ties_to_annotation(self, auth_client, owned_session):
+        ann = self._annotation(owned_session)
+        r = auth_client.post(
+            METHOD_LINKS,
+            {"annotation": ann.id, "link_type": "source_code", "link": "https://github.com/x/y"},
+            format="json",
+        )
+        assert r.status_code == 201, r.content
+        assert ann.method_links.count() == 1
+
+    def test_non_owner_cannot_create(self, owned_session):
+        ann = self._annotation(owned_session)
+        other = User.objects.create_user(username="mallory@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        r = client.post(
+            METHOD_LINKS,
+            {"annotation": ann.id, "link_type": "source_code", "link": "https://github.com/x/y"},
+            format="json",
+        )
+        assert r.status_code == 403
+
+    def test_owner_can_update(self, auth_client, owned_session):
+        ml = self._link(self._annotation(owned_session))
+        r = auth_client.patch(f"{METHOD_LINKS}{ml.id}/", {"custom_name": "Project site"}, format="json")
+        assert r.status_code == 200, r.content
+        ml.refresh_from_db()
+        assert ml.custom_name == "Project site"
+
+    def test_owner_can_delete(self, auth_client, owned_session):
+        from depositions.models import DepositionAnnotationMethodLink
+
+        ml = self._link(self._annotation(owned_session))
+        r = auth_client.delete(f"{METHOD_LINKS}{ml.id}/")
+        assert r.status_code == 204
+        assert not DepositionAnnotationMethodLink.objects.filter(id=ml.id).exists()
+
+    def test_non_owner_cannot_delete(self, owned_session):
+        ml = self._link(self._annotation(owned_session))
+        other = User.objects.create_user(username="mallory@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        r = client.delete(f"{METHOD_LINKS}{ml.id}/")
+        assert r.status_code == 403
+
+    def test_put_not_allowed(self, auth_client, owned_session):
+        ml = self._link(self._annotation(owned_session))
+        r = auth_client.put(
+            f"{METHOD_LINKS}{ml.id}/",
+            {"annotation": ml.annotation_id, "link_type": "website", "link": "https://b.com"},
+            format="json",
+        )
+        assert r.status_code == 405
+
+
+@pytest.mark.django_db
+class TestSelectedCopickRunsShape:
+    """selected_copick_runs must be a list of unique, non-empty run-name strings."""
+
+    def _url(self, session):
+        return f"{SESSIONS}{session.id}/"
+
+    def _patch(self, client, session, runs):
+        return client.patch(self._url(session), {"selected_copick_runs": runs}, format="json")
+
+    def test_accepts_list_of_run_names(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, ["run001", "run003"])
+        assert r.status_code == 200, r.content
+        owned_session.refresh_from_db()
+        assert owned_session.selected_copick_runs == ["run001", "run003"]
+
+    def test_accepts_empty_list(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, [])
+        assert r.status_code == 200, r.content
+
+    def test_rejects_non_list(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, "run001")
+        assert r.status_code == 400
+        assert "selected_copick_runs" in r.json()
+
+    def test_rejects_non_string_entry(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, ["run001", 123])
+        assert r.status_code == 400
+
+    def test_rejects_empty_string_entry(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, ["run001", "  "])
+        assert r.status_code == 400
+
+    def test_rejects_duplicates(self, auth_client, owned_session):
+        r = self._patch(auth_client, owned_session, ["run001", "run001"])
+        assert r.status_code == 400
+
+    def test_dataset_nested_session_also_validates(self, auth_client, owned_session):
+        r = auth_client.patch(
+            f"{DATASETS}{owned_session.dataset_id}/",
+            {"sessions": [{"msi_session": owned_session.msi_session_id, "selected_copick_runs": [123]}]},
+            format="json",
+        )
+        assert r.status_code == 400
