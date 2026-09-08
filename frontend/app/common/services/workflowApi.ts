@@ -139,11 +139,18 @@ export async function validateProcessorParams(
 }
 
 /**
- * Get session-specific default parameters for a processor
+ * Effective default parameters for a processor, resolved for a session and cluster.
  */
-export async function fetchProcessorDefaults(processorName: string, sessionId?: string): Promise<ProcessorDefaults> {
+export async function fetchProcessorDefaults(
+  processorName: string,
+  sessionId?: string,
+  cluster?: string
+): Promise<ProcessorDefaults> {
   const url = replaceUrlParams(API.PROCESSOR_DEFAULTS, { processorName });
-  const queryString = sessionId ? buildQueryString({ session_id: sessionId }) : '';
+  const query: Record<string, string> = {};
+  if (sessionId) query.session_id = sessionId;
+  if (cluster) query.cluster = cluster;
+  const queryString = buildQueryString(query);
   const response = await fetchResource(`${DJANGO_URL}${url}${queryString}`);
 
   if (!response.ok) {
