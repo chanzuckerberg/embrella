@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 
-import { updateSession } from '../../services/depositionApi';
+import { rescanCopick, updateSession } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
 import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useAnnotationScan } from '../../hooks/useAnnotationScan';
@@ -44,13 +44,17 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   const [activeKey, setActiveKey] = useState(sessions[0]?.key ?? '');
   const active = useMemo(() => sessions.find((s) => s.key === activeKey) ?? sessions[0], [sessions, activeKey]);
 
+  // Merged, user-editable annotation list per session (seeded from saved rows).
   const [bySession, setBySession] = useState<Record<string, DepositionAnnotation[]>>(() =>
     Object.fromEntries(sessions.map((s) => [s.key, s.saved]))
   );
   const [activeAnnId, setActiveAnnId] = useState<string | null>(null);
+  const [triggered, setTriggered] = useState(false); // true only after a scan job is kicked off
 
-  const scan = useAnnotationScan(active?.name ?? '', active?.runs ?? [], !readOnly);
+  const scan = useAnnotationScan(active?.name ?? '', active?.runs ?? [], !readOnly, triggered);
 
+  // Fold scanned candidates into the editable list once the scan resolves — syncing async
+  // scan results into local state the user then edits (merge preserves existing edits + selection).
   useEffect(() => {
     if (!scan.data || !active) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -59,7 +63,23 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       [active.key]: mergeAnnotations(scan.data.annotations, prev[active.key] ?? []),
     }));
   }, [scan.data, active]);
-  const scanning = scan.isPending;
+  // Only "scanning" during the initial read, a re-scan submit, or while polling a job we triggered.
+  // Without a trigger, scanned=false just means "no scan has run yet" — don't spin forever.
+  const [rescanning, setRescanning] = useState(false);
+  const scanning = scan.isPending || rescanning || (triggered && !scan.data?.scanned);
+
+  const handleRescan = useCallback(async () => {
+    if (!active || active.runs.length === 0) return;
+    setRescanning(true);
+    try {
+      await rescanCopick(active.name, active.runs);
+      setTriggered(true); // start polling scan.json until the new job writes it
+      // Restart the read query so polling picks up the fresh job's scan.json when it lands.
+      await queryClient.invalidateQueries({ queryKey: ['copick-scan', active.name, [...active.runs].sort()] });
+    } finally {
+      setRescanning(false);
+    }
+  }, [active, queryClient]);
 
   const save = useCallback(
     async (state: Record<string, DepositionAnnotation[]>) => {
@@ -118,7 +138,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       ...prev,
       [active.key]: (prev[active.key] ?? []).map((a) => (annId(a) === id ? { ...a, is_selected: selected } : a)),
     }));
-    setActiveAnnId(id);
+    setActiveAnnId(id); // selecting a row also opens its metadata form on the right
   };
 
   const setAll = (selected: boolean) => {
@@ -160,17 +180,17 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         <Box sx={{ borderRight: { md: '1px solid' }, borderColor: { md: 'divider' }, pr: { md: 2 } }}>
           {scan.isError && (
             <Alert severity="warning" sx={{ mb: 1.5 }}>
-              Copick scan unavailable - showing saved annotations only.
+              Copick scan unavailable — showing saved annotations only.
             </Alert>
           )}
-          {!scan.isError && !!scan.data && !scan.data.scanned && scan.data.annotations.length === 0 && (
+          {!scan.isError && !!scan.data && !scan.data.scanned && !triggered && scan.data.annotations.length === 0 && (
             <Alert severity="info" sx={{ mb: 1.5 }}>
-              No copick scan has run for these configs yet - showing saved annotations only.
+              No copick scan has run for these configs yet — click “Re-scan copick” to enumerate annotations.
             </Alert>
           )}
           {!scan.isError && !!scan.data && !scan.data.scanned && scan.data.annotations.length > 0 && (
             <Alert severity="info" sx={{ mb: 1.5 }}>
-              Some selected configs haven&apos;t been scanned yet - showing available annotations.
+              Some selected configs haven&apos;t been scanned yet — showing available annotations.
             </Alert>
           )}
           <AnnotationList
@@ -221,6 +241,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
             if (v) {
               setActiveKey(v);
               setActiveAnnId(null);
+              setTriggered(false); // each session's scan state is independent
             }
           }}
           sx={{ mb: 2, flexWrap: 'wrap' }}
@@ -231,6 +252,14 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
+      )}
+
+      {(active?.runs.length ?? 0) > 0 && !readOnly && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+          <Button size="small" variant="outlined" onClick={handleRescan} disabled={scanning || rescanning}>
+            {scanning || rescanning ? 'Scanning…' : 'Re-scan copick'}
+          </Button>
+        </Box>
       )}
 
       {body}

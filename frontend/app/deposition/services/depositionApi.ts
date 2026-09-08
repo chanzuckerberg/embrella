@@ -164,6 +164,9 @@ export async function getAnnotatedCount(sessionName: string, runs: string[]): Pr
   return data.annotated_count ?? 0;
 }
 
+/* Read the cached scan.json for each selected run and merge its picks/segmentations/meshes.
+ * `scanned` stays true only if every run has a completed scan — false means a scan job is still
+ * pending (or unreadable) for at least one run, which callers use to keep polling. */
 export async function scanCopickAnnotations(sessionName: string, runs: string[]): Promise<ScanResult> {
   const merged: ScanResult = { scanned: true, picks: [], segmentations: [], meshes: [] };
   for (const run of runs) {
@@ -182,6 +185,22 @@ export async function scanCopickAnnotations(sessionName: string, runs: string[])
   }
   return merged;
 }
+
+/* Trigger a fresh copick scan job for each selected run. The backend resolves the cluster
+ * server-side (same as the ?scan=true read) and submits CopickScanProcessor, so no cluster is
+ * passed from here. Idempotent — the job atomically overwrites scan.json.
+ * NOTE: depends on the backend re-trigger endpoint (#865) being wired on the copick project route. */
+export async function rescanCopick(sessionName: string, runs: string[]): Promise<void> {
+  await Promise.all(
+    runs.map((run) =>
+      postResource(
+        url(`${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/scan/`),
+        {}
+      )
+    )
+  );
+}
+
 /* Total tomograms for a session + AreTomo run, from the metadata summary (num_tomograms). */
 export async function getTomogramCount(sessionName: string, runNumber: string): Promise<number> {
   const run = runNumber.startsWith('run') ? runNumber : `run${runNumber}`;
