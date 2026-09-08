@@ -21,16 +21,17 @@ describe('annotationNeedsMetadata', () => {
 });
 
 describe('normalizeScan', () => {
-  it('maps picks/segmentations/meshes into copick_kind + copick_ref', () => {
+  it('maps the aggregated picks/segmentations/meshes rows through copick_ref + total_count', () => {
     const out = normalizeScan({
-      picks: [{ run_name: 'run001', object_name: 'VLP', user_id: 'relion', session_id: '2', count: 12345 }],
-      segmentations: [{ run_name: 'run001', name: 'membrane', user_id: 'auto', session_id: '1' }],
-      meshes: [{ run_name: 'run002', object_name: 'VLP_shells', user_id: 'auto', session_id: '1' }],
+      scanned: true,
+      picks: [{ copick_ref: 'VLP:relion/2', object_name: 'VLP', run_count: 3, total_count: 12345 }],
+      segmentations: [{ copick_ref: 'membrane:auto/1', object_name: 'membrane', run_count: 1, total_count: 0 }],
+      meshes: [{ copick_ref: 'VLP_shells:auto/1', object_name: 'VLP_shells', run_count: 1, total_count: 0 }],
     });
     expect(out).toEqual([
-      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', run_name: 'run001', count: 12345 },
-      { copick_kind: 'segmentations', copick_ref: 'membrane:auto/1', object_name: 'membrane', run_name: 'run001' },
-      { copick_kind: 'meshes', copick_ref: 'VLP_shells:auto/1', object_name: 'VLP_shells', run_name: 'run002' },
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', count: 12345 },
+      { copick_kind: 'segmentations', copick_ref: 'membrane:auto/1', object_name: 'membrane', count: 0 },
+      { copick_kind: 'meshes', copick_ref: 'VLP_shells:auto/1', object_name: 'VLP_shells', count: 0 },
     ]);
   });
 
@@ -42,8 +43,8 @@ describe('normalizeScan', () => {
 
 describe('mergeAnnotations', () => {
   const scanned: ScannedAnnotation[] = [
-    { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', run_name: 'run001' },
-    { copick_kind: 'picks', copick_ref: 'GroEL:upload/1', object_name: 'GroEL', run_name: 'run002' },
+    { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP' },
+    { copick_kind: 'picks', copick_ref: 'GroEL:upload/1', object_name: 'GroEL' },
   ];
 
   it('carries saved metadata + is_selected onto matching scanned items', () => {
@@ -64,8 +65,8 @@ describe('mergeAnnotations', () => {
 
   it('dedupes the same (kind, ref) appearing across multiple runs', () => {
     const dupes: ScannedAnnotation[] = [
-      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', run_name: 'run001' },
-      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', run_name: 'run002' },
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP' },
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP' },
     ];
     expect(mergeAnnotations(dupes, [])).toHaveLength(1);
   });

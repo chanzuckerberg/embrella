@@ -52,8 +52,15 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   useEffect(() => {
     if (!scan.data || !active) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setBySession((prev) => ({ ...prev, [active.key]: mergeAnnotations(scan.data ?? [], prev[active.key] ?? []) }));
+    setBySession((prev) => ({
+      ...prev,
+      [active.key]: mergeAnnotations(scan.data.annotations, prev[active.key] ?? []),
+    }));
   }, [scan.data, active]);
+
+  // Spinner only during the initial read. A completed read with scanned=false means no scan has
+  // run for these configs yet (triggering is #868/#1154), not that one is in progress.
+  const scanning = scan.isPending;
 
   const save = useCallback(
     async (state: Record<string, DepositionAnnotation[]>) => {
@@ -109,12 +116,12 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   let body: ReactNode;
   if ((active?.runs.length ?? 0) === 0) {
     body = <Alert severity="info">No copick configs selected for this session on the Sources step.</Alert>;
-  } else if (scan.isPending) {
+  } else if (scanning) {
     body = (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 4, justifyContent: 'center' }}>
         <CircularProgress size={20} />
         <Typography variant="body2" color="text.secondary">
-          Scanning copick configs…
+          Scanning copick configs… this can take a few minutes.
         </Typography>
       </Box>
     );
@@ -131,7 +138,12 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         <Box sx={{ borderRight: { md: '1px solid' }, borderColor: { md: 'divider' }, pr: { md: 2 } }}>
           {scan.isError && (
             <Alert severity="warning" sx={{ mb: 1.5 }}>
-              Copick scan unavailable — showing saved annotations only.
+              Copick scan unavailable - showing saved annotations only.
+            </Alert>
+          )}
+          {!scan.isError && !!scan.data && !scan.data.scanned && (
+            <Alert severity="info" sx={{ mb: 1.5 }}>
+              No copick scan has run for these configs yet - showing saved annotations only.
             </Alert>
           )}
           <AnnotationList

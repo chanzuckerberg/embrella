@@ -5,68 +5,46 @@ export interface ScannedAnnotation {
   copick_kind: CopickKind;
   copick_ref: string; // "<object>:<user_id>/<session_id>"
   object_name: string;
-  run_name: string;
-  count?: number | null;
+  count?: number | null; // total_count — picks only; 0 for segmentations/meshes
 }
 
-interface RawPick {
-  run_name: string;
+/**
+ * A row in an `annotations` section, already aggregated by (copick_kind, copick_ref)
+ * by the copick scan job (#1130): copick_ref is pre-computed on the cluster, and
+ * counts are rolled up (run_count = # runs carrying it, total_count = summed points).
+ */
+interface RawRow {
+  copick_ref: string;
   object_name?: string | null;
-  user_id?: string;
-  session_id?: string;
-  count?: number | null;
-}
-interface RawSeg {
-  run_name: string;
-  name?: string | null;
-  user_id?: string;
-  session_id?: string;
-}
-interface RawMesh {
-  run_name: string;
-  object_name?: string | null;
-  user_id?: string;
-  session_id?: string;
+  run_count?: number;
+  total_count?: number;
 }
 
 /** Raw `annotations` block from GET /copick/v1/projects/<session>/<run>/?scan=true. */
 export interface ScanResult {
-  picks?: RawPick[];
-  segmentations?: RawSeg[];
-  meshes?: RawMesh[];
-}
-
-/** copick_ref is the stable identity of an annotation: "<object>:<user_id>/<session_id>". */
-function makeRef(object: string | null | undefined, userId?: string, sessionId?: string): string {
-  return `${object ?? ''}:${userId ?? ''}/${sessionId ?? ''}`;
+  scanned?: boolean;
+  picks?: RawRow[];
+  segmentations?: RawRow[];
+  meshes?: RawRow[];
+  annotated_runs?: string[];
 }
 
 export function normalizeScan(scan: ScanResult): ScannedAnnotation[] {
+  const sections: [CopickKind, RawRow[]][] = [
+    ['picks', scan.picks ?? []],
+    ['segmentations', scan.segmentations ?? []],
+    ['meshes', scan.meshes ?? []],
+  ];
   const out: ScannedAnnotation[] = [];
-  for (const p of scan.picks ?? []) {
-    out.push({
-      copick_kind: 'picks',
-      copick_ref: makeRef(p.object_name, p.user_id, p.session_id),
-      object_name: p.object_name ?? '',
-      run_name: p.run_name,
-      count: p.count ?? null,
-    });
-  }
-  for (const s of scan.segmentations ?? []) {
-    out.push({
-      copick_kind: 'segmentations',
-      copick_ref: makeRef(s.name, s.user_id, s.session_id),
-      object_name: s.name ?? '',
-      run_name: s.run_name,
-    });
-  }
-  for (const m of scan.meshes ?? []) {
-    out.push({
-      copick_kind: 'meshes',
-      copick_ref: makeRef(m.object_name, m.user_id, m.session_id),
-      object_name: m.object_name ?? '',
-      run_name: m.run_name,
-    });
+  for (const [kind, rows] of sections) {
+    for (const r of rows) {
+      out.push({
+        copick_kind: kind,
+        copick_ref: r.copick_ref,
+        object_name: r.object_name ?? '',
+        count: r.total_count ?? null,
+      });
+    }
   }
   return out;
 }
