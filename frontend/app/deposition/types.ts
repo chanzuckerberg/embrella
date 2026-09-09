@@ -57,7 +57,6 @@ export type MethodLinkType = 'documentation' | 'models_weights' | 'other' | 'sou
 
 export interface DepositionMethodLink {
   id?: number;
-  annotation: number;
   link_type: MethodLinkType;
   link: string;
   custom_name?: string;

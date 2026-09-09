@@ -47,6 +47,12 @@ export function annotationNeedsMetadata(a: DepositionAnnotation): boolean {
   return !!a.is_selected && (!a.object_name?.trim() || !a.object_id?.trim());
 }
 
+export function stripIncompleteLinks(a: DepositionAnnotation): DepositionAnnotation {
+  if (!a.method_links?.length) return a;
+  const links = a.method_links.filter((l) => l.link?.trim());
+  return links.length === a.method_links.length ? a : { ...a, method_links: links };
+}
+
 const annKey = (kind: CopickKind, ref: string) => `${kind}::${ref}`;
 
 export function mergeAnnotations(scanned: ScannedAnnotation[], saved: DepositionAnnotation[]): DepositionAnnotation[] {

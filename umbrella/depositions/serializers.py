@@ -4,9 +4,8 @@ Save model — shallow-nested autosave per wizard step:
   PATCH /depositions/[id]  -> deposition fields + authors_json
   PATCH /datasets/[id]     -> dataset fields + funding + session selection (nested, writable)
   PATCH /sessions/[id]     -> session + tiltseries/tomogram metadata + annotations (nested, writable;
-                              annotations upserted by (copick_kind, copick_ref))
-Method links have their own endpoint (avoids 2-level nesting), so they are read-only
-when nested under an annotation.
+                              annotations upserted by (copick_kind, copick_ref); each annotation's
+                              method_links written inline, upserted by id)
 """
 
 from cryo_grids.models import Sample
@@ -64,10 +63,14 @@ def validate_selected_copick_runs(value):
     return value
 
 
-class DepositionAnnotationMethodLinkSerializer(serializers.ModelSerializer):
+class NestedMethodLinkSerializer(serializers.ModelSerializer):
+    """Method links written inline under an annotation - the FK is set by the parent sync."""
+
+    id = serializers.IntegerField(required=False)
+
     class Meta:
         model = DepositionAnnotationMethodLink
-        fields = "__all__"
+        fields = ["id", "link_type", "link", "custom_name"]
 
 
 class DatasetFundingSerializer(serializers.ModelSerializer):
@@ -93,8 +96,7 @@ class TomogramMetadataSerializer(serializers.ModelSerializer):
 
 
 class DepositionAnnotationSerializer(serializers.ModelSerializer):
-    # method_links managed via their own endpoint -> read-only here
-    method_links = DepositionAnnotationMethodLinkSerializer(many=True, read_only=True)
+    method_links = NestedMethodLinkSerializer(many=True, required=False)
 
     class Meta:
         model = DepositionAnnotation
@@ -113,13 +115,15 @@ class DatasetJobSerializer(serializers.ModelSerializer):
 class DepositionSessionLinkSerializer(serializers.ModelSerializer):
     """Shallow session selection nested under Dataset.
 
-    Metadata is read-only here so the wizard can reload saved tiltseries/tomogram values on reopen
+    Metadata + annotations are read-only here so the wizard can reload saved tiltseries/tomogram
+    values and annotation metadata (incl. method_links) on reopen. Writes go through PATCH /sessions/[id].
     """
 
     id = serializers.IntegerField(required=False)
     msi_session_name = serializers.CharField(source="msi_session.name", read_only=True)
     tiltseries_metadata = TiltseriesMetadataSerializer(read_only=True)
     tomogram_metadata = TomogramMetadataSerializer(many=True, read_only=True)
+    annotations = DepositionAnnotationSerializer(many=True, read_only=True)
 
     class Meta:
         model = DepositionSession
@@ -135,6 +139,7 @@ class DepositionSessionLinkSerializer(serializers.ModelSerializer):
             "selected_copick_runs",
             "tiltseries_metadata",
             "tomogram_metadata",
+            "annotations",
             "last_autofill_at",
         ]
         read_only_fields = ["last_autofill_at"]
@@ -209,14 +214,34 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
         """Upsert annotations by (copick_kind, copick_ref); drop removed ones."""
         seen = set()
         for ann in annotations:
+            links = ann.pop("method_links", None)
             kind, ref = ann.get("copick_kind"), ann.get("copick_ref")
             seen.add((kind, ref))
-            DepositionAnnotation.objects.update_or_create(
+            annotation, _ = DepositionAnnotation.objects.update_or_create(
                 session=session, copick_kind=kind, copick_ref=ref, defaults=ann
             )
+            if links is not None:
+                self._sync_method_links(annotation, links)
         for existing in session.annotations.all():
             if (existing.copick_kind, existing.copick_ref) not in seen:
                 existing.delete()
+
+    def _sync_method_links(self, annotation, links):
+        """Upsert method links by id; drop removed ones. New rows (no id) are created."""
+        seen = set()
+        for link in links:
+            fid = link.pop("id", None)
+            # Reuse id only if it belongs to this annotation, otherwise create new.
+            existing = annotation.method_links.filter(id=fid).first() if fid else None
+            if existing:
+                for attr, value in link.items():
+                    setattr(existing, attr, value)
+                existing.save()
+                obj = existing
+            else:
+                obj = DepositionAnnotationMethodLink.objects.create(annotation=annotation, **link)
+            seen.add(obj.id)
+        annotation.method_links.exclude(id__in=seen).delete()
 
 
 class DatasetSampleSerializer(serializers.ModelSerializer):

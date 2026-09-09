@@ -10,7 +10,7 @@ import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useAnnotationScan } from '../../hooks/useAnnotationScan';
 import { AnnotationList, annId } from '../../components/annotations/AnnotationList';
 import { AnnotationMetadataForm } from '../../components/annotations/AnnotationMetadataForm';
-import { annotationNeedsMetadata, mergeAnnotations } from '../../components/annotations/scan';
+import { annotationNeedsMetadata, mergeAnnotations, stripIncompleteLinks } from '../../components/annotations/scan';
 import type { Dataset, DepositionAnnotation } from '../../types';
 import type { StepProps } from '../wizardTypes';
 
@@ -62,7 +62,11 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       await Promise.all(
         sessions
           .filter((s) => s.id)
-          .map((s) => updateSession(s.id as number, { annotations: (state[s.key] ?? []).filter((a) => a.is_selected) }))
+          .map((s) =>
+            updateSession(s.id as number, {
+              annotations: (state[s.key] ?? []).filter((a) => a.is_selected).map(stripIncompleteLinks),
+            })
+          )
       );
       queryClient.invalidateQueries({ queryKey: depositionKeys.dataset(dataset.id) });
     },

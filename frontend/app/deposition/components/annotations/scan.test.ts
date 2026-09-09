@@ -1,5 +1,11 @@
 import type { DepositionAnnotation } from '../../types';
-import { annotationNeedsMetadata, mergeAnnotations, normalizeScan, type ScannedAnnotation } from './scan';
+import {
+  annotationNeedsMetadata,
+  mergeAnnotations,
+  normalizeScan,
+  stripIncompleteLinks,
+  type ScannedAnnotation,
+} from './scan';
 
 describe('annotationNeedsMetadata', () => {
   const sel = (o: Partial<DepositionAnnotation>): DepositionAnnotation => ({
@@ -78,5 +84,34 @@ describe('mergeAnnotations', () => {
     const merged = mergeAnnotations(scanned, saved);
     expect(merged.find((a) => a.copick_ref === 'gone:auto/9')).toBeTruthy();
     expect(merged).toHaveLength(3);
+  });
+});
+
+describe('stripIncompleteLinks', () => {
+  const ann = (links?: DepositionAnnotation['method_links']): DepositionAnnotation => ({
+    copick_kind: 'picks',
+    copick_ref: 'x:u/1',
+    method_links: links,
+  });
+
+  it('drops links with a blank url so autosave cannot 400', () => {
+    const out = stripIncompleteLinks(
+      ann([
+        { link_type: 'source_code', link: 'https://github.com/x/y' },
+        { link_type: 'website', link: '' },
+        { link_type: 'documentation', link: '   ' },
+      ])
+    );
+    expect(out.method_links).toEqual([{ link_type: 'source_code', link: 'https://github.com/x/y' }]);
+  });
+
+  it('returns the same object when every link has a url (no needless copy)', () => {
+    const a = ann([{ link_type: 'website', link: 'https://a.org' }]);
+    expect(stripIncompleteLinks(a)).toBe(a);
+  });
+
+  it('is a no-op when there are no links', () => {
+    const a = ann();
+    expect(stripIncompleteLinks(a)).toBe(a);
   });
 });

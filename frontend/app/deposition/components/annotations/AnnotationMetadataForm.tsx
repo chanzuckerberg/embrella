@@ -16,7 +16,7 @@ import {
 
 import { IdentifierField } from '../IdentifierField';
 import { OntologyIdInput } from '../../datasets/[id]/sections/OntologyIdInput';
-import type { AnnotationMethodType, DepositionAnnotation } from '../../types';
+import type { AnnotationMethodType, DepositionAnnotation, DepositionMethodLink, MethodLinkType } from '../../types';
 
 const OBJECT_ONTOLOGIES = [
   {
@@ -63,6 +63,14 @@ const METHOD_TYPES: { value: AnnotationMethodType; label: string }[] = [
   { value: 'automated', label: 'Automated' },
   { value: 'hybrid', label: 'Hybrid' },
   { value: 'simulated', label: 'Simulated' },
+];
+
+const LINK_TYPES: { value: MethodLinkType; label: string }[] = [
+  { value: 'source_code', label: 'Source code' },
+  { value: 'models_weights', label: 'Models / weights' },
+  { value: 'documentation', label: 'Documentation' },
+  { value: 'website', label: 'Website' },
+  { value: 'other', label: 'Other' },
 ];
 
 function SectionLabel({ children }: { children: string }) {
@@ -132,6 +140,87 @@ function AnnotationPublications({
             sx={{ alignSelf: 'flex-start' }}
           >
             Add DOI
+          </Button>
+        )}
+      </Stack>
+    </Box>
+  );
+}
+
+function MethodLinksEditor({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: DepositionMethodLink[];
+  onChange: (value: DepositionMethodLink[]) => void;
+  disabled?: boolean;
+}) {
+  const rows = value;
+  const update = (i: number, patch: Partial<DepositionMethodLink>) =>
+    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  return (
+    <Box>
+      <SectionLabel>Method links</SectionLabel>
+      <Stack spacing={1}>
+        {rows.map((row, i) => (
+          <Stack key={row.id ?? `new-${i}`} direction="row" spacing={1} alignItems="flex-start">
+            <TextField
+              select
+              size="small"
+              label="Type"
+              required
+              value={row.link_type ?? ''}
+              onChange={(e) => update(i, { link_type: e.target.value as MethodLinkType })}
+              disabled={disabled}
+              sx={{ minWidth: 160 }}
+            >
+              {LINK_TYPES.map((t) => (
+                <MenuItem key={t.value} value={t.value}>
+                  {t.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              size="small"
+              label="Link URL"
+              required
+              placeholder="https://…"
+              value={row.link ?? ''}
+              onChange={(e) => update(i, { link: e.target.value })}
+              disabled={disabled}
+              sx={{ width: 460 }}
+            />
+            <TextField
+              size="small"
+              label="Custom name"
+              placeholder="Optional"
+              value={row.custom_name ?? ''}
+              onChange={(e) => update(i, { custom_name: e.target.value })}
+              disabled={disabled}
+              fullWidth
+            />
+            {!disabled && (
+              <IconButton
+                aria-label="Remove link"
+                size="small"
+                onClick={() => onChange(rows.filter((_, j) => j !== i))}
+              >
+                <Icon sdsIcon="TrashCan" sdsSize="s" color="gray" />
+              </IconButton>
+            )}
+          </Stack>
+        ))}
+        {!disabled && (
+          <Button
+            size="small"
+            variant="text"
+            startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
+            onClick={() => onChange([...rows, { link_type: 'source_code', link: '' }])}
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            Add link
           </Button>
         )}
       </Stack>
@@ -270,6 +359,12 @@ export function AnnotationMetadataForm({
         key={`${annotation.copick_kind}:${annotation.copick_ref}`}
         value={annotation.annotation_publication ?? ''}
         onChange={(v) => onChange({ annotation_publication: v })}
+        disabled={readOnly}
+      />
+
+      <MethodLinksEditor
+        value={annotation.method_links ?? []}
+        onChange={(v) => onChange({ method_links: v })}
         disabled={readOnly}
       />
 
