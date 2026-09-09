@@ -7,6 +7,7 @@ import {
   postResource,
 } from '@app/common/queries/fetchResource';
 
+import type { ScanResult } from '../components/annotations/scan';
 import type {
   CopickRunOption,
   Dataset,
@@ -156,7 +157,7 @@ export async function listCopickRuns(sessionName: string): Promise<CopickRunOpti
   return data.copick_runs ?? [];
 }
 
-/* Annotated-tomogram count for a session's selected copick configs. Slow - SSH scan. */
+/* Annotated-tomogram count for a session's selected copick configs, from the cached scan.json. */
 export async function getAnnotatedCount(sessionName: string, runs: string[]): Promise<number> {
   if (runs.length === 0) return 0;
   const q = `?session_id=${encodeURIComponent(sessionName)}&runs=${encodeURIComponent(runs.join(','))}`;
@@ -164,6 +165,24 @@ export async function getAnnotatedCount(sessionName: string, runs: string[]): Pr
   return data.annotated_count ?? 0;
 }
 
+export async function scanCopickAnnotations(sessionName: string, runs: string[]): Promise<ScanResult> {
+  const merged: ScanResult = { scanned: true, picks: [], segmentations: [], meshes: [] };
+  for (const run of runs) {
+    const path = `${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/?scan=true`;
+    const res = await fetchResource(url(path));
+    if (!res.ok) {
+      merged.scanned = false;
+      continue;
+    }
+    const data = (await res.json()) as { project?: { annotations?: ScanResult } };
+    const ann = data.project?.annotations ?? {};
+    if (!ann.scanned) merged.scanned = false;
+    merged.picks!.push(...(ann.picks ?? []));
+    merged.segmentations!.push(...(ann.segmentations ?? []));
+    merged.meshes!.push(...(ann.meshes ?? []));
+  }
+  return merged;
+}
 /* Total tomograms for a session + AreTomo run, from the metadata summary (num_tomograms). */
 export async function getTomogramCount(sessionName: string, runNumber: string): Promise<number> {
   const run = runNumber.startsWith('run') ? runNumber : `run${runNumber}`;

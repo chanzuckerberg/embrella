@@ -62,6 +62,7 @@ export enum API {
   COPICK_RUNS = '/workflow/v1/processors/copick/runs/',
   COPICK_ANNOTATED_COUNT = '/workflow/v1/processors/copick/annotated-count/',
   COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
+  COPICK_PROJECT_DETAIL = '/copick/v1/projects/',
 
   // Session Browser
   SESSION_OVERVIEW = '/tem/v1/session-overview/',

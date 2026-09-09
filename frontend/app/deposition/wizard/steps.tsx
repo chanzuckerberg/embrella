@@ -10,6 +10,7 @@ import { DepositionStep } from './steps/DepositionStep';
 import { DatasetStep } from './steps/DatasetStep';
 import { SourcesStep } from './steps/SourcesStep';
 import { AutofillStep } from './steps/AutofillStep';
+import { AnnotationsStep } from './steps/AnnotationsStep';
 
 function placeholder(label: string): ComponentType<StepProps> {
   function PlaceholderStep(_props: StepProps) {
@@ -55,7 +56,7 @@ export const WIZARD_STEPS: StepDef[] = [
   { num: 2, key: 'deposition', title: 'Deposition', Component: DepositionStep },
   { num: 3, key: 'dataset', title: 'Dataset', Component: DatasetStep },
   { num: 4, key: 'autofill', title: 'Auto-fill', Component: AutofillStep },
-  { num: 5, key: 'annotations', title: 'Annotations', Component: placeholder('Annotations') },
+  { num: 5, key: 'annotations', title: 'Annotations', Component: AnnotationsStep },
   { num: 6, key: 'submit', title: 'Finalize & Submit', Component: placeholder('Finalize & Submit') },
 ];
 
