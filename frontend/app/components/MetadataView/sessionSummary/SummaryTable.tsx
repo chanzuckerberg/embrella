@@ -10,7 +10,7 @@ interface SummaryTableProps {
 // Component for displaying a single info item with label and value
 interface InfoItemProps {
   label: string;
-  value: string | number;
+  value: string | number | null;
   breakWord?: boolean;
 }
 
