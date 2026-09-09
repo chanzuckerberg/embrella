@@ -43,20 +43,15 @@ HTTP_BAD_REQUEST = 400
 HTTP_NOT_FOUND = 404
 HTTP_SERVER_ERROR = 500
 
+# Unexpected exceptions carry internal detail (URLs, paths, stack state); only this reaches the client.
+GENERIC_ERROR = "Error processing metadata"
+
 
 class ThumbKind(StrEnum):
     """Subdirectories mrc_to_zarr_and_thumbnails.sh writes under the run directory."""
 
     THUMBNAILS = "thumbnails"
     CTF = "ctf_thumbnails"
-
-
-class RunLookupError(Exception):
-    """The request names a run this server cannot locate."""
-
-    def __init__(self, message, status):
-        super().__init__(message)
-        self.status = status
 
 
 @dataclass(frozen=True)
@@ -66,23 +61,31 @@ class RunLocation:
     run_number: str
 
 
+def _error(message, status):
+    return JsonResponse({"error": message}, status=status)
+
+
 def _locate_run(request):
-    """Cluster, session and run named by the query string."""
+    """(RunLocation, None) for the run named by the query string, or (None, error response).
+
+    Expected failures come back as responses, not exceptions, so nothing caught by the
+    views' catch-all ever reaches the client.
+    """
     session_name = request.GET.get("session_name")
     run_number = request.GET.get("run_number")
     if not session_name or not run_number:
-        raise RunLookupError("Missing session_name or run_number", HTTP_BAD_REQUEST)
+        return None, _error("Missing session_name or run_number", HTTP_BAD_REQUEST)
 
     cluster_id = request.GET.get("cluster_id") or cluster_id_for_run(session_name, run_number)
     cluster = Cluster.objects.filter(cluster_id=cluster_id, is_active=True).first()
     if cluster is None:
-        raise RunLookupError(f"Unknown cluster_id: {cluster_id}", HTTP_BAD_REQUEST)
+        return None, _error(f"Unknown cluster_id: {cluster_id}", HTTP_BAD_REQUEST)
 
     msi_session = MsiSession.objects.filter(name=session_name).first()
     if msi_session is None:
-        raise RunLookupError(f"Session not found: {session_name}", HTTP_NOT_FOUND)
+        return None, _error(f"Session not found: {session_name}", HTTP_NOT_FOUND)
 
-    return RunLocation(cluster, msi_session, run_number)
+    return RunLocation(cluster, msi_session, run_number), None
 
 
 def _review_path(loc, kind, **context):
@@ -118,10 +121,6 @@ def _read_metrics(loc):
     return df
 
 
-def _error(message, status):
-    return JsonResponse({"error": message}, status=status)
-
-
 def get_metadata_summary(request):
     """
     Fetch and compute summary statistics for tomogram metadata.
@@ -130,9 +129,11 @@ def get_metadata_summary(request):
     Caddy, computes statistics, and returns session metadata including user,
     project, and grid info.
     """
-    try:
-        loc = _locate_run(request)
+    loc, error = _locate_run(request)
+    if error:
+        return error
 
+    try:
         try:
             df = _read_metrics(loc)
         except FileNotFoundError:
@@ -170,11 +171,9 @@ def get_metadata_summary(request):
 
         return JsonResponse(response, json_dumps_params={"indent": 2})
 
-    except RunLookupError as e:
-        return _error(str(e), e.status)
-    except Exception as e:
-        logger.error(f"Error processing metadata: {str(e)}")
-        return _error(f"Error processing metadata: {str(e)}", HTTP_SERVER_ERROR)
+    except Exception:
+        logger.exception(GENERIC_ERROR)
+        return _error(GENERIC_ERROR, HTTP_SERVER_ERROR)
 
 
 @require_http_methods(["GET"])
@@ -185,9 +184,11 @@ def get_metadata_viz_data(request):
     Returns detailed per-tomogram metrics with thumbnail paths, applying
     optional filters and sorting. Results are split into accepted and rejected sets.
     """
-    try:
-        loc = _locate_run(request)
+    loc, error = _locate_run(request)
+    if error:
+        return error
 
+    try:
         q = request.GET.get("q", {})
         sort_by = request.GET.get("sort_by", None)
         sort_direction = request.GET.get("sort_direction", "asc")
@@ -223,7 +224,7 @@ def get_metadata_viz_data(request):
         # Check for missing required columns
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            raise ValueError(f"Missing required columns in CSV: {', '.join(missing_columns)}")
+            return _error(f"Missing required columns in CSV: {', '.join(missing_columns)}", HTTP_SERVER_ERROR)
 
         # Add Defocus(A) column if it doesn't exist (set to 0)
         if "Defocus(A)" not in df.columns:
@@ -326,7 +327,6 @@ def get_metadata_viz_data(request):
 
         return JsonResponse(response_data, json_dumps_params={"indent": 2})
 
-    except RunLookupError as e:
-        return _error(str(e), e.status)
-    except Exception as e:
-        return _error(f"Error processing metadata: {str(e)}", HTTP_SERVER_ERROR)
+    except Exception:
+        logger.exception(GENERIC_ERROR)
+        return _error(GENERIC_ERROR, HTTP_SERVER_ERROR)
