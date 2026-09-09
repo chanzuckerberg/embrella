@@ -9,6 +9,8 @@ For now, a copy is kept in the repo. We will plan to standardize them at some po
 - /aretomo3/
   - mrc_to_zarr_and_thumbnails.sh -- Contains replacement for aretomo3/scripts/reformat_thumbnail_rechunk.sh. Uses zarrczarr internal package and removes rechunking.
   - reconvert_mrc_to_zarr.sh -- Replace prior 2d rechunked zarrs with 3d
+- /denoiset/
+  - mrc_to_zarr.sh -- Convert denoised MRCs (flat dir) to zarr, skipping ones that already have a .zarr. Finishes partially converted runs.
 
 ## Custom Environments Created
 

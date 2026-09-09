@@ -6,6 +6,8 @@ and quality metrics from remote processing directories.
 """
 
 import json
+from dataclasses import dataclass
+from enum import StrEnum
 from io import StringIO
 
 import pandas as pd
@@ -19,12 +21,104 @@ from umbrella_logger import logger
 from common.httpio import fetch_remote_text
 from common.sorting import natural_sort_key
 
-from .constants import DATA_COLLECTION_PATH
 from .utils import (
     apply_filters,
     calculate_metric_ranges,
     compute_stats,
 )
+
+# This page reads AreTomo3 outputs only: the metrics CSV and the thumbnails the
+# reformat step writes next to the volumes.
+PROC_SOFTWARE = "aretomo3"
+METRICS_CSV = "TiltSeries_Metrics.csv"
+
+# Tilt_Series is the stack name `{stem}.mrc`; thumbnails are `{stem}.jpeg`
+STACK_EXT = ".mrc"
+THUMB_EXT = ".jpeg"
+
+FRAMES_ROLE = "frames"
+NO_DIR = "."  # get_session_dir's "software emits no such data" answer
+
+HTTP_BAD_REQUEST = 400
+HTTP_NOT_FOUND = 404
+HTTP_SERVER_ERROR = 500
+
+# Unexpected exceptions carry internal detail (URLs, paths, stack state); only this reaches the client.
+GENERIC_ERROR = "Error processing metadata"
+
+
+class ThumbKind(StrEnum):
+    """Subdirectories mrc_to_zarr_and_thumbnails.sh writes under the run directory."""
+
+    THUMBNAILS = "thumbnails"
+    CTF = "ctf_thumbnails"
+
+
+@dataclass(frozen=True)
+class RunLocation:
+    cluster: Cluster
+    msi_session: MsiSession
+    run_number: str
+
+
+def _error(message, status):
+    return JsonResponse({"error": message}, status=status)
+
+
+def _locate_run(request):
+    """(RunLocation, None) for the run named by the query string, or (None, error response).
+
+    Expected failures come back as responses, not exceptions, so nothing caught by the
+    views' catch-all ever reaches the client.
+    """
+    session_name = request.GET.get("session_name")
+    run_number = request.GET.get("run_number")
+    if not session_name or not run_number:
+        return None, _error("Missing session_name or run_number", HTTP_BAD_REQUEST)
+
+    cluster_id = request.GET.get("cluster_id") or cluster_id_for_run(session_name, run_number)
+    cluster = Cluster.objects.filter(cluster_id=cluster_id, is_active=True).first()
+    if cluster is None:
+        return None, _error(f"Unknown cluster_id: {cluster_id}", HTTP_BAD_REQUEST)
+
+    msi_session = MsiSession.objects.filter(name=session_name).first()
+    if msi_session is None:
+        return None, _error(f"Session not found: {session_name}", HTTP_NOT_FOUND)
+
+    return RunLocation(cluster, msi_session, run_number), None
+
+
+def _review_path(loc, kind, **context):
+    return resolve_review_path(
+        kind,
+        loc.cluster,
+        msi_session=loc.msi_session,
+        proc_software=PROC_SOFTWARE,
+        proc_run=loc.run_number,
+        **context,
+    )
+
+
+def _metrics_url(loc):
+    # The server fetches the CSV itself, so use the in-network base.
+    return _review_path(loc, "proc_url", backend_fetch=True) + METRICS_CSV
+
+
+def _thumb_url(loc, kind):
+    return _review_path(loc, "thumb_url", thumb_kind=kind.value)
+
+
+def _frames_dir(msi_session):
+    """Where this session's frames were collected, or None when its software emits none."""
+    frames_dir = msi_session.get_session_dir(FRAMES_ROLE)
+    return None if frames_dir == NO_DIR else frames_dir
+
+
+def _read_metrics(loc):
+    """The metrics CSV keyed by AreTomo3 stem. Raises FileNotFoundError when absent."""
+    df = pd.read_csv(StringIO(fetch_remote_text(_metrics_url(loc))))
+    df["Tilt_Series"] = df["Tilt_Series"].str.removesuffix(STACK_EXT)
+    return df
 
 
 def get_metadata_summary(request):
@@ -35,51 +129,15 @@ def get_metadata_summary(request):
     Caddy, computes statistics, and returns session metadata including user,
     project, and grid info.
     """
-    session_name = request.GET.get("session_name")
-    run_number = request.GET.get("run_number")
-
-    if not session_name or not run_number:
-        return JsonResponse({"error": "Missing session_name or run_number"}, status=400)
-
-    cluster_id = request.GET.get("cluster_id") or cluster_id_for_run(session_name, run_number)
+    loc, error = _locate_run(request)
+    if error:
+        return error
 
     try:
-        cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
-    except Cluster.DoesNotExist:
-        return JsonResponse({"error": f"Unknown cluster_id: {cluster_id}"}, status=400)
-
-    try:
-        msi_session = MsiSession.objects.get(name=session_name)
-    except MsiSession.DoesNotExist:
-        return JsonResponse({"error": f"Session not found: {session_name}"}, status=404)
-
-    # Filesystem path is kept only for display; the CSV is fetched over HTTP
-    base_proc_dir = resolve_review_path(
-        "proc_dir",
-        cluster,
-        msi_session=msi_session,
-        proc_software="aretomo3",
-        proc_run=run_number,
-    )
-    base_proc_url = resolve_review_path(
-        "proc_url",
-        cluster,
-        msi_session=msi_session,
-        proc_software="aretomo3",
-        proc_run=run_number,
-        backend_fetch=True,
-    )
-    metrics_url = f"{base_proc_url}TiltSeries_Metrics.csv"
-
-    try:
-        # Fetch the metrics CSV over HTTP from the Caddy file server.
         try:
-            metrics_content = fetch_remote_text(metrics_url)
+            df = _read_metrics(loc)
         except FileNotFoundError:
-            return JsonResponse({"error": "Required files not found"}, status=404)
-
-        df = pd.read_csv(StringIO(metrics_content))
-        df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
+            return _error("Required files not found", HTTP_NOT_FOUND)
 
         # Note: Defocus(A) column is optional - if not present, it will be skipped in statistics
 
@@ -92,21 +150,19 @@ def get_metadata_summary(request):
         # Compute statistics with optimized operations
         computed_metrics = compute_stats(df)
 
-        data_collection_dir = f"{DATA_COLLECTION_PATH}{session_name}/{run_number}/"
-        aretomo3_processing_dir = base_proc_dir
-
+        msi_session = loc.msi_session
         user_name = msi_session.user.username if msi_session.user else None
         project_name = msi_session.project.name if msi_session.project else None
         grid_name = msi_session.grid.name if msi_session.grid else None
 
         response = {
-            "session_name": session_name,
-            "run_number": run_number,
-            "cluster": cluster.cluster_id,
+            "session_name": msi_session.name,
+            "run_number": loc.run_number,
+            "cluster": loc.cluster.cluster_id,
             "num_tomograms": len(df),
             "pixel_size": df["Pix_Size(A)"][0],
-            "data_collection_directory": data_collection_dir,
-            "aretomo3_processing_directory": aretomo3_processing_dir,
+            "data_collection_directory": _frames_dir(msi_session),
+            "aretomo3_processing_directory": _review_path(loc, "proc_dir"),
             "computed_metrics": computed_metrics,
             "user_name": user_name,
             "project_name": project_name,
@@ -115,9 +171,9 @@ def get_metadata_summary(request):
 
         return JsonResponse(response, json_dumps_params={"indent": 2})
 
-    except Exception as e:
-        logger.error(f"Error processing metadata: {str(e)}")
-        return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
+    except Exception:
+        logger.exception(GENERIC_ERROR)
+        return _error(GENERIC_ERROR, HTTP_SERVER_ERROR)
 
 
 @require_http_methods(["GET"])
@@ -128,67 +184,26 @@ def get_metadata_viz_data(request):
     Returns detailed per-tomogram metrics with thumbnail paths, applying
     optional filters and sorting. Results are split into accepted and rejected sets.
     """
-    try:
-        # Get request parameters
-        session_name = request.GET.get("session_name")
-        run_number = request.GET.get("run_number")
-        q = request.GET.get("q", {})
+    loc, error = _locate_run(request)
+    if error:
+        return error
 
-        # Get sorting parameters
+    try:
+        q = request.GET.get("q", {})
         sort_by = request.GET.get("sort_by", None)
         sort_direction = request.GET.get("sort_direction", "asc")
-
-        if not session_name or not run_number:
-            return JsonResponse({"error": "Missing session_name or run_number"}, status=400)
-
-        cluster_id = request.GET.get("cluster_id") or cluster_id_for_run(session_name, run_number)
-
-        try:
-            cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
-        except Cluster.DoesNotExist:
-            return JsonResponse({"error": f"Unknown cluster_id: {cluster_id}"}, status=400)
-
-        try:
-            msi_session = MsiSession.objects.get(name=session_name)
-        except MsiSession.DoesNotExist:
-            return JsonResponse({"error": f"Session not found: {session_name}"}, status=404)
 
         # Parse filters if provided
         filter_config = json.loads(q) if q else {}
 
-        # Resolve cluster-/scope-aware thumbnail URLs.
-        thumbnail_base_url = resolve_review_path(
-            "thumb_url",
-            cluster,
-            msi_session=msi_session,
-            proc_run=run_number,
-            thumb_kind="thumbnails",
-        )
-        ctf_base_url = resolve_review_path(
-            "thumb_url",
-            cluster,
-            msi_session=msi_session,
-            proc_run=run_number,
-            thumb_kind="ctf_thumbnails",
-        )
+        thumbnail_base_url = _thumb_url(loc, ThumbKind.THUMBNAILS)
+        ctf_base_url = _thumb_url(loc, ThumbKind.CTF)
 
-        base_proc_url = resolve_review_path(
-            "proc_url",
-            cluster,
-            msi_session=msi_session,
-            proc_software="aretomo3",
-            proc_run=run_number,
-            backend_fetch=True,
-        )
-        metrics_url = f"{base_proc_url}TiltSeries_Metrics.csv"
-
-        # Fetch the metrics CSV over HTTP from the Caddy file server.
         try:
-            metrics_content = fetch_remote_text(metrics_url)
+            df = _read_metrics(loc)
         except FileNotFoundError:
-            return JsonResponse({"error": "Required files not found"}, status=404)
+            return _error("Required files not found", HTTP_NOT_FOUND)
 
-        df = pd.read_csv(StringIO(metrics_content))
         logger.info(f"Total positions in CSV before filtering: {len(df)}")
 
         # Required columns (excluding Defocus(A) and ExtPhase(Deg) which are optional)
@@ -209,7 +224,7 @@ def get_metadata_viz_data(request):
         # Check for missing required columns
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            raise ValueError(f"Missing required columns in CSV: {', '.join(missing_columns)}")
+            return _error(f"Missing required columns in CSV: {', '.join(missing_columns)}", HTTP_SERVER_ERROR)
 
         # Add Defocus(A) column if it doesn't exist (set to 0)
         if "Defocus(A)" not in df.columns:
@@ -221,15 +236,9 @@ def get_metadata_viz_data(request):
             df["ExtPhase(Deg)"] = 0
             logger.info("ExtPhase(Deg) column not found in CSV, setting to 0")
 
-        df["Tilt_Series"] = df["Tilt_Series"].str.replace(".mrc", "", regex=False)
-
-        # Add thumbnail paths directly to the dataframe
-        df["thumbnail_path"] = df["Tilt_Series"].apply(
-            lambda ts: f"{thumbnail_base_url}{ts}.jpeg",
-        )
-        df["ctf_thumbnails_path"] = df["Tilt_Series"].apply(
-            lambda ts: f"{ctf_base_url}{ts}.jpeg",
-        )
+        # Thumbnails are named after the stem, e.g. thumbnails/Position_8_ts_011.mrc.jpeg
+        df["thumbnail_path"] = thumbnail_base_url + df["Tilt_Series"] + THUMB_EXT
+        df["ctf_thumbnails_path"] = ctf_base_url + df["Tilt_Series"] + THUMB_EXT
 
         df = df.sort_values(
             by="Tilt_Series",
@@ -248,29 +257,6 @@ def get_metadata_viz_data(request):
                 return []
             result = []
             for _, row in df.iterrows():
-                item_name = str(row["Tilt_Series"])
-                image_path = row.get("thumbnail_path", None)
-                ctf_path = row.get("ctf_thumbnails_path", None)
-
-                item_image_path_to_return = image_path
-                ctf_thumbnails_path = ctf_path
-                if image_path is not None:
-                    logger.info(
-                        f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'thumbnail_path' from row.get(): '{image_path}' (type: {type(image_path)})",
-                    )
-                else:
-                    logger.info(
-                        "[METADATA_VIZ_DEBUG] 'thumbnail_path' column MISSING in df passed to prepare_result_list.",
-                    )
-
-                if ctf_path is not None:
-                    logger.info(
-                        f"[METADATA_VIZ_DEBUG] Item: {item_name}, Raw 'ctf_thumbnails_path' from row.get(): '{ctf_path}' (type: {type(ctf_path)})",
-                    )
-                else:
-                    logger.info(
-                        "[METADATA_VIZ_DEBUG] 'ctf_thumbnails_path' column MISSING in df passed to prepare_result_list.",
-                    )
                 metrics = {
                     "thickness": float(row["Thickness(A)"]),
                     "tilt_axis": float(row["Tilt_Axis"]),
@@ -287,10 +273,10 @@ def get_metadata_viz_data(request):
                 }
                 result.append(
                     {
-                        "name": item_name,
+                        "name": str(row["Tilt_Series"]),
                         "metrics": metrics,
-                        "thumbnail_path": item_image_path_to_return,
-                        "ctf_path": ctf_thumbnails_path,
+                        "thumbnail_path": row["thumbnail_path"],
+                        "ctf_path": row["ctf_thumbnails_path"],
                     }
                 )
 
@@ -324,17 +310,10 @@ def get_metadata_viz_data(request):
         accepted_results = prepare_result_list(accepted_df, apply_sorting=True)
         rejected_results = prepare_result_list(rejected_df)
 
-        # If no filters were applied, use the entire dataset as the result
-        has_filters = filter_config and "filters" in filter_config and filter_config["filters"]
-        if not has_filters:
-            result = prepare_result_list(df, apply_sorting=True)
-        else:
-            result = []
-
         # The final response
         response_data = {
-            "session_name": session_name,
-            "run_number": run_number,
+            "session_name": loc.msi_session.name,
+            "run_number": loc.run_number,
             "total_accepted": len(accepted_results),
             "total_rejected": len(rejected_results),
             "filters_applied": {
@@ -348,5 +327,6 @@ def get_metadata_viz_data(request):
 
         return JsonResponse(response_data, json_dumps_params={"indent": 2})
 
-    except Exception as e:
-        return JsonResponse({"error": f"Error processing metadata: {str(e)}"}, status=500)
+    except Exception:
+        logger.exception(GENERIC_ERROR)
+        return _error(GENERIC_ERROR, HTTP_SERVER_ERROR)

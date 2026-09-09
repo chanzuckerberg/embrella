@@ -48,10 +48,10 @@ PROCESSING_TEMPLATES = [
 REVIEW_TEMPLATES = [
     "/hpc/projects/group.czii/{scope}.processing/{proc_software}/{msi_session}/{proc_run}/",
     "{http_base}{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{vol_suffix}/{position}_Vol.zarr",
-    "{http_base}{scope}.processing/aretomo3/{msi_session}/{proc_run}/{thumb_kind}/",
+    "{http_base}{scope}.processing/{proc_software}/{msi_session}/{proc_run}/{thumb_kind}/",
     "{http_base}{scope}.processing/copick/{msi_session}/{copick_run}/",
     "{http_base}{proc_software}/{msi_session}/{proc_run}/",
-    "{http_base}aretomo3/{msi_session}/{proc_run}/{thumb_kind}/",
+    "{http_base}{proc_software}/{msi_session}/{proc_run}/{thumb_kind}/",
     "{http_base}{proc_software}/{msi_session}/{proc_run}/{vol_suffix}/{position}_Vol.zarr",
 ]
 

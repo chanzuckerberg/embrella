@@ -63,9 +63,6 @@ KEYFILE = os.getenv("SLURM_KEYFILE")
 # Environment Configuration
 ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
 
-# Remote Paths
-DATA_COLLECTION_PATH = "/hpc/instruments/czii.krios1/OffloadData/"
-
 # SLURM Status Mappings
 SLURM_STATE_TO_LABEL = {
     "RUNNING": "Running",
