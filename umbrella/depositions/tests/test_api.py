@@ -672,7 +672,9 @@ class TestAnnotationPersistence:
         with CaptureQueriesContext(connection) as many:
             r = auth_client.get(url)
         assert r.status_code == 200, r.content
-        assert len(r.json()["sessions"][0]["annotations"]) == 20
+        anns = r.json()["sessions"][0]["annotations"]
+        assert len(anns) == 20
+        assert len(anns[0]["method_links"]) == 3  # else a flat count would pass with the link nesting gone
         assert len(many) == len(few), f"query count grew with annotation count: {len(few)} -> {len(many)}"
 
     def test_deposition_payload_annotations_do_not_n_plus_1(self, auth_client, owned_session):
@@ -689,7 +691,12 @@ class TestAnnotationPersistence:
 
         self._patch(auth_client, owned_session, [self._ann(f"a{i}", method_links=links) for i in range(20)])
         with CaptureQueriesContext(connection) as many:
-            assert auth_client.get(url).status_code == 200
+            r = auth_client.get(url)
+        assert r.status_code == 200
+        # Check the links are actually there, so a flat query count can't pass with the nesting gone.
+        anns = r.json()["datasets"][0]["sessions"][0]["annotations"]
+        assert len(anns) == 20
+        assert len(anns[0]["method_links"]) == 3
         assert len(many) == len(few), f"query count grew with annotation count: {len(few)} -> {len(many)}"
 
     def test_patch_response_reflects_written_links(self, auth_client, owned_session):
@@ -702,7 +709,9 @@ class TestAnnotationPersistence:
         assert r.status_code == 200, r.content
         anns = r.json()["annotations"]
         assert [a["copick_ref"] for a in anns] == ["a"]
-        assert anns[0]["method_links"][0]["link"] == "https://fresh.org"
+        link = anns[0]["method_links"][0]
+        assert link["link"] == "https://fresh.org"
+        assert isinstance(link.get("id"), int)
 
 
 @pytest.mark.django_db

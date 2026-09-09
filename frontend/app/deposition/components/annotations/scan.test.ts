@@ -2,6 +2,7 @@ import type { DepositionAnnotation } from '../../types';
 import {
   annotationNeedsMetadata,
   mergeAnnotations,
+  mergeServerIds,
   normalizeScan,
   stripIncompleteLinks,
   type ScannedAnnotation,
@@ -84,6 +85,42 @@ describe('mergeAnnotations', () => {
     const merged = mergeAnnotations(scanned, saved);
     expect(merged.find((a) => a.copick_ref === 'gone:auto/9')).toBeTruthy();
     expect(merged).toHaveLength(3);
+  });
+});
+
+describe('mergeServerIds', () => {
+  const local = (over: Partial<DepositionAnnotation> = {}): DepositionAnnotation => ({
+    copick_kind: 'picks',
+    copick_ref: 'VLP:relion/2',
+    ...over,
+  });
+
+  it('copies annotation + link ids from the saved response onto matching local rows', () => {
+    const before = [local({ method_links: [{ link_type: 'website', link: 'https://a.org' }] })];
+    const saved = [local({ id: 7, method_links: [{ id: 42, link_type: 'website', link: 'https://a.org' }] })];
+    const out = mergeServerIds(before, saved);
+    expect(out[0].id).toBe(7);
+    expect(out[0].method_links![0].id).toBe(42);
+  });
+
+  it('returns the same array reference when nothing changed (no autosave re-trigger)', () => {
+    const before = [local({ id: 7, method_links: [{ id: 42, link_type: 'website', link: 'https://a.org' }] })];
+    const saved = [local({ id: 7, method_links: [{ id: 42, link_type: 'website', link: 'https://a.org' }] })];
+    expect(mergeServerIds(before, saved)).toBe(before);
+  });
+
+  it('does not clobber a link the user edited mid-save (no url match → stays id-less)', () => {
+    const before = [local({ method_links: [{ link_type: 'website', link: 'https://EDITED.org' }] })];
+    const saved = [local({ id: 7, method_links: [{ id: 42, link_type: 'website', link: 'https://a.org' }] })];
+    const out = mergeServerIds(before, saved);
+    expect(out[0].id).toBe(7); // annotation id still merges (stable kind/ref)
+    expect(out[0].method_links![0].id).toBeUndefined(); // edited link keeps its typed value, no stale id
+    expect(out[0].method_links![0].link).toBe('https://EDITED.org');
+  });
+
+  it('leaves unselected/unmatched local rows untouched', () => {
+    const before = [local({ copick_ref: 'other:auto/1' })];
+    expect(mergeServerIds(before, [])).toBe(before);
   });
 });
 

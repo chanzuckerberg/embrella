@@ -55,6 +55,33 @@ export function stripIncompleteLinks(a: DepositionAnnotation): DepositionAnnotat
 
 const annKey = (kind: CopickKind, ref: string) => `${kind}::${ref}`;
 
+/** Copy server ids onto local rows after save so the next autosave updates instead of recreating. Match annotations by kind/ref and links by type+url - a row edited mid-save won't match, so we leave it id-less. Same array back if nothing changed, to avoid kicking autosave again. */
+export function mergeServerIds(local: DepositionAnnotation[], saved: DepositionAnnotation[]): DepositionAnnotation[] {
+  const savedByRef = new Map(saved.map((a) => [annKey(a.copick_kind, a.copick_ref), a]));
+  let changed = false;
+  const out = local.map((a) => {
+    const s = savedByRef.get(annKey(a.copick_kind, a.copick_ref));
+    if (!s) return a;
+    let merged = a;
+    if (a.id == null && s.id != null) merged = { ...merged, id: s.id };
+    const savedLinks = s.method_links;
+    if (a.method_links?.length && savedLinks?.length) {
+      let linksChanged = false;
+      const links = a.method_links.map((l) => {
+        if (l.id != null) return l;
+        const m = savedLinks.find((sl) => sl.link_type === l.link_type && sl.link === l.link);
+        if (!m || m.id == null) return l;
+        linksChanged = true;
+        return { ...l, id: m.id };
+      });
+      if (linksChanged) merged = { ...merged, method_links: links };
+    }
+    if (merged !== a) changed = true;
+    return merged;
+  });
+  return changed ? out : local;
+}
+
 export function mergeAnnotations(scanned: ScannedAnnotation[], saved: DepositionAnnotation[]): DepositionAnnotation[] {
   const savedByKey = new Map(saved.map((a) => [annKey(a.copick_kind, a.copick_ref), a]));
   const merged: DepositionAnnotation[] = [];

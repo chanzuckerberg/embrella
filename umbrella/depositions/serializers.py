@@ -9,6 +9,7 @@ Save model — shallow-nested autosave per wizard step:
 """
 
 from cryo_grids.models import Sample
+from django.db.models import prefetch_related_objects
 from rest_framework import serializers
 
 from .models import (
@@ -197,6 +198,7 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
             self._sync_tomograms(instance, tomo)
         if annotations is not None:
             self._sync_annotations(instance, annotations)
+        prefetch_related_objects([instance], "annotations__method_links")
         return instance
 
     def _sync_tomograms(self, session, tomograms):

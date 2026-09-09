@@ -10,7 +10,12 @@ import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useAnnotationScan } from '../../hooks/useAnnotationScan';
 import { AnnotationList, annId } from '../../components/annotations/AnnotationList';
 import { AnnotationMetadataForm } from '../../components/annotations/AnnotationMetadataForm';
-import { annotationNeedsMetadata, mergeAnnotations, stripIncompleteLinks } from '../../components/annotations/scan';
+import {
+  annotationNeedsMetadata,
+  mergeAnnotations,
+  mergeServerIds,
+  stripIncompleteLinks,
+} from '../../components/annotations/scan';
 import type { Dataset, DepositionAnnotation } from '../../types';
 import type { StepProps } from '../wizardTypes';
 
@@ -59,15 +64,28 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
 
   const save = useCallback(
     async (state: Record<string, DepositionAnnotation[]>) => {
-      await Promise.all(
-        sessions
-          .filter((s) => s.id)
-          .map((s) =>
-            updateSession(s.id as number, {
-              annotations: (state[s.key] ?? []).filter((a) => a.is_selected).map(stripIncompleteLinks),
-            })
-          )
+      const targets = sessions.filter((s) => s.id);
+      const responses = await Promise.all(
+        targets.map((s) =>
+          updateSession(s.id as number, {
+            annotations: (state[s.key] ?? []).filter((a) => a.is_selected).map(stripIncompleteLinks),
+          })
+        )
       );
+      setBySession((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        targets.forEach((s, i) => {
+          const cur = prev[s.key];
+          if (!cur) return;
+          const merged = mergeServerIds(cur, responses[i]?.annotations ?? []);
+          if (merged !== cur) {
+            next[s.key] = merged;
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
       queryClient.invalidateQueries({ queryKey: depositionKeys.dataset(dataset.id) });
     },
     [dataset.id, queryClient, sessions]

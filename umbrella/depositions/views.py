@@ -260,6 +260,13 @@ class DatasetViewSet(viewsets.ModelViewSet):
                             "object_count": 1200,
                             "method_type": "automated",
                             "is_selected": True,
+                            "method_links": [
+                                {
+                                    "link_type": "source_code",
+                                    "link": "https://github.com/example/picking-model",
+                                    "custom_name": "Picking model repo",
+                                },
+                            ],
                         },
                     ],
                 },

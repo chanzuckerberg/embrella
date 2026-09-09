@@ -165,7 +165,7 @@ function MethodLinksEditor({
       <SectionLabel>Method links</SectionLabel>
       <Stack spacing={1}>
         {rows.map((row, i) => (
-          <Stack key={row.id ?? `new-${i}`} direction="row" spacing={1} alignItems="flex-start">
+          <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
             <TextField
               select
               size="small"
