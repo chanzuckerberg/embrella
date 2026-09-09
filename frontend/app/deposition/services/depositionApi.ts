@@ -165,9 +165,6 @@ export async function getAnnotatedCount(sessionName: string, runs: string[]): Pr
   return data.annotated_count ?? 0;
 }
 
-/* Read the cached scan.json for each selected run and merge its picks/segmentations/meshes.
- * `scanned` stays true only if every run has a completed scan — false means no scan.json exists
- * yet (or is unreadable) for at least one run, which the UI uses to show a "no scan yet" state. */
 export async function scanCopickAnnotations(sessionName: string, runs: string[]): Promise<ScanResult> {
   const merged: ScanResult = { scanned: true, picks: [], segmentations: [], meshes: [] };
   for (const run of runs) {

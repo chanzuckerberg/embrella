@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { AnnotationMetadataForm } from './AnnotationMetadataForm';
 import type { DepositionAnnotation } from '../../types';
@@ -8,7 +9,12 @@ const base: DepositionAnnotation = { copick_kind: 'picks', copick_ref: 'ribosome
 
 function setup(over: Partial<DepositionAnnotation> = {}, readOnly = false) {
   const onChange = jest.fn();
-  render(<AnnotationMetadataForm annotation={{ ...base, ...over }} onChange={onChange} readOnly={readOnly} />);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <AnnotationMetadataForm annotation={{ ...base, ...over }} onChange={onChange} readOnly={readOnly} />
+    </QueryClientProvider>
+  );
   return { onChange };
 }
 

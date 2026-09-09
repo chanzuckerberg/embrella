@@ -47,8 +47,6 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
 
   const scan = useAnnotationScan(active?.name ?? '', active?.runs ?? [], !readOnly);
 
-  // Fold scanned candidates into the editable list once the scan resolves — syncing async
-  // scan results into local state the user then edits (merge preserves existing edits + selection).
   useEffect(() => {
     if (!scan.data || !active) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -57,9 +55,6 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       [active.key]: mergeAnnotations(scan.data.annotations, prev[active.key] ?? []),
     }));
   }, [scan.data, active]);
-
-  // Spinner only during the initial read. A completed read with scanned=false means no scan has
-  // run for these configs yet (triggering is #868/#1154), not that one is in progress.
   const scanning = scan.isPending;
 
   const save = useCallback(
@@ -96,7 +91,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       ...prev,
       [active.key]: (prev[active.key] ?? []).map((a) => (annId(a) === id ? { ...a, is_selected: selected } : a)),
     }));
-    setActiveAnnId(id); // selecting a row also opens its metadata form on the right
+    setActiveAnnId(id);
   };
 
   const setAll = (selected: boolean) => {
@@ -141,9 +136,14 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
               Copick scan unavailable - showing saved annotations only.
             </Alert>
           )}
-          {!scan.isError && !!scan.data && !scan.data.scanned && (
+          {!scan.isError && !!scan.data && !scan.data.scanned && scan.data.annotations.length === 0 && (
             <Alert severity="info" sx={{ mb: 1.5 }}>
               No copick scan has run for these configs yet - showing saved annotations only.
+            </Alert>
+          )}
+          {!scan.isError && !!scan.data && !scan.data.scanned && scan.data.annotations.length > 0 && (
+            <Alert severity="info" sx={{ mb: 1.5 }}>
+              Some selected configs haven&apos;t been scanned yet - showing available annotations.
             </Alert>
           )}
           <AnnotationList
@@ -164,6 +164,9 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
                   {activeAnn.copick_ref}
                 </Typography>
                 <Chip label={activeAnn.copick_kind} size="small" />
+                {(active?.runs.length ?? 0) > 0 && (
+                  <Chip label={`from config: ${active?.runs.join(', ')}`} size="small" />
+                )}
               </Box>
               <AnnotationMetadataForm annotation={activeAnn} onChange={patchActive} readOnly={readOnly} />
             </>

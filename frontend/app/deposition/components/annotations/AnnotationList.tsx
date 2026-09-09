@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import SearchIcon from '@mui/icons-material/Search';
+import { Icon } from '@czi-sds/components';
 import { Box, Checkbox, InputAdornment, Link, TextField, Typography } from '@mui/material';
 import { VariableSizeList, type ListChildComponentProps } from 'react-window';
 
@@ -46,6 +46,15 @@ export function AnnotationList({
   const [filter, setFilter] = useState('');
   const q = filter.trim().toLowerCase();
 
+  const [collapsed, setCollapsed] = useState<Set<CopickKind>>(new Set());
+  const toggleKind = (kind: CopickKind) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(kind)) next.delete(kind);
+      else next.add(kind);
+      return next;
+    });
+
   const visible = useMemo(
     () =>
       annotations.filter(
@@ -54,23 +63,22 @@ export function AnnotationList({
     [annotations, q]
   );
 
-  // Flatten grouped (header + items) into a single virtualized row list.
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     for (const kind of KIND_ORDER) {
       const items = visible.filter((a) => a.copick_kind === kind);
       if (items.length === 0) continue;
       out.push({ type: 'header', kind, count: items.length });
+      // A collapsed section shows only its header — but an active filter always reveals matches.
+      if (!q && collapsed.has(kind)) continue;
       for (const a of items) out.push({ type: 'item', ann: a });
     }
     return out;
-  }, [visible]);
+  }, [visible, collapsed, q]);
 
-  // Row heights vary (header vs item) and their positions shift on filter — reset the size cache.
   const listRef = useRef<VariableSizeList>(null);
   useEffect(() => listRef.current?.resetAfterIndex(0), [rows]);
 
-  // react-window needs a numeric width — "100%" renders blank in flex/grid.
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -92,12 +100,19 @@ export function AnnotationList({
   const RowRenderer = ({ index, style }: ListChildComponentProps) => {
     const row = rows[index];
     if (row.type === 'header') {
+      const isCollapsed = !q && collapsed.has(row.kind);
       return (
-        <Box style={style} sx={{ display: 'flex', alignItems: 'flex-end', pb: 0.5 }}>
+        <Box
+          style={style}
+          onClick={() => toggleKind(row.kind)}
+          sx={{ display: 'flex', alignItems: 'center', pb: 0.5, cursor: 'pointer', userSelect: 'none' }}
+        >
+          <Icon sdsIcon={isCollapsed ? 'ChevronRight' : 'ChevronDown'} sdsSize="xs" color="gray" />
+          &nbsp;
           <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-            {KIND_LABEL[row.kind]}{' '}
+            {KIND_LABEL[row.kind]}
             <Box component="span" sx={{ color: 'text.disabled' }}>
-              {row.count} found
+              {` · ${row.count}`}
             </Box>
           </Typography>
         </Box>
@@ -136,9 +151,11 @@ export function AnnotationList({
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }} noWrap>
             {a.copick_ref}
           </Typography>
-          <Typography variant="caption" sx={{ color: st.color, display: 'block' }}>
-            {st.label}
-          </Typography>
+          {a.is_selected && (
+            <Typography variant="caption" sx={{ color: st.color, display: 'block' }}>
+              {st.label}
+            </Typography>
+          )}
         </Box>
       </Box>
     );
@@ -154,7 +171,7 @@ export function AnnotationList({
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon fontSize="small" />
+              <Icon sdsIcon="Search" sdsSize="xs" color="gray" />
             </InputAdornment>
           ),
         }}
