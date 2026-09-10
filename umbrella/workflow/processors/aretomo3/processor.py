@@ -19,6 +19,9 @@ from workflow.processors.base import BaseProcessor
 # What MsiSession.get_session_dir returns when the plan emits no such role
 NO_DIRECTORY = "."
 
+# GatanCeltic gain format; AreTomo3 cannot read it, the script converts it to .mrc first
+DM4_SUFFIX = ".dm4"
+
 # Import register_processor here to avoid circular import
 # (it will be called at module import time but after the class is defined)
 
@@ -120,18 +123,6 @@ class AreTomo3Processor(BaseProcessor):
         if cmd_mode in [1, 2] and resume:
             errors.append(
                 "resume_processing is ignored when cmd_mode is 1 or 2 (per AreTomo3 documentation: -Cmd 1 and -Cmd 2 ignore -Resume)",
-            )
-
-        # Validate EerSampling and McBin pairing
-        eer_sampling = int(params.get("eer_sampling", 2))
-        mc_bin = int(params.get("mc_bin", 2))
-
-        if (eer_sampling == 2 and mc_bin != 2) or (eer_sampling == 1 and mc_bin != 1):
-            errors.append(
-                f"EerSampling and McBin must be paired correctly:\n"
-                f"  - Use EerSampling=2 with McBin=2 (super-res extraction with Fourier cropping)\n"
-                f"  - Use EerSampling=1 with McBin=1 (Fourier zero-padding upsampling)\n"
-                f"Current values: EerSampling={eer_sampling}, McBin={mc_bin}",
             )
 
         return errors
@@ -390,6 +381,7 @@ class AreTomo3Processor(BaseProcessor):
 
         # Add resolved gain file path (computed, not from schema)
         template_vars["gain_file_path"] = params.get("gain_file_path", "")
+        template_vars["gain_is_dm4"] = template_vars["gain_file_path"].endswith(DM4_SUFFIX)
 
         # Add cluster identifier for cluster-specific template logic
         template_vars["cluster"] = run_context.cluster_id
