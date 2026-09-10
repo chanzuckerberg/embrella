@@ -6,7 +6,7 @@ import { Accordion, AccordionDetails, AccordionSummary, Box, Typography } from '
 import type { DatasetSample } from '../../../types';
 import { BIO_ROWS, type BioRow } from './bioClassificationRows';
 import type { RequiredBioField } from './bioRequirements';
-import { OntologyIdInput } from './OntologyIdInput';
+import { OntologyIdInput } from '../../../components/OntologyIdInput';
 import { SectionCard } from './SectionCard';
 
 function OntologyRow({

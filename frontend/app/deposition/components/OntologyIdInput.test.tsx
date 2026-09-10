@@ -1,12 +1,12 @@
 import '@testing-library/jest-dom';
 import type { ComponentProps } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { OntologyIdInput } from './OntologyIdInput';
-import { searchOntology, validateOntologyId } from '../../../services/ols';
+import { searchOntology, validateOntologyId } from '../services/ols';
 
-jest.mock('../../../services/ols', () => ({
+jest.mock('../services/ols', () => ({
   searchOntology: jest.fn(),
   validateOntologyId: jest.fn(),
 }));
@@ -106,4 +106,38 @@ it('restricts GO cell-component suggestions to the Cellular Component branch', a
 it('does not scope suggestions for a field with no branch restriction', async () => {
   renderInput({ ...CL, name: 'neuron' });
   await waitFor(() => expect(mockSearch).toHaveBeenCalledWith('neuron', 'cl', undefined));
+});
+
+it('prefixInValue=false: shows the bare identifier and stores it fully-qualified', () => {
+  const onChange = jest.fn();
+  renderInput({
+    label: 'Object',
+    prefix: 'UniProtKB',
+    ontology: '',
+    manualOnly: true,
+    pattern: '^UniProtKB:.+$',
+    prefixInValue: false,
+    id: 'UniProtKB:P31224',
+    onChange,
+  });
+  const input = screen.getByLabelText(/Object ID/);
+  expect(input).toHaveValue('P31224');
+  fireEvent.change(input, { target: { value: 'P0A6G7' } });
+  expect(onChange).toHaveBeenCalledWith({ id: 'UniProtKB:P0A6G7' });
+});
+
+it('prefixInValue=false: clearing the input stores empty, not a lone prefix', () => {
+  const onChange = jest.fn();
+  renderInput({
+    label: 'Object',
+    prefix: 'UniProtKB',
+    ontology: '',
+    manualOnly: true,
+    pattern: '^UniProtKB:.+$',
+    prefixInValue: false,
+    id: 'UniProtKB:P31224',
+    onChange,
+  });
+  fireEvent.change(screen.getByLabelText(/Object ID/), { target: { value: '' } });
+  expect(onChange).toHaveBeenCalledWith({ id: '' });
 });
