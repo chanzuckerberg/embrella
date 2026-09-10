@@ -73,6 +73,8 @@ export interface JSONSchemaProperty {
     | {
         source: string;
         depends_on_session?: boolean;
+        /** Also accept a typed value not in the list, e.g. an absolute path on the cluster */
+        free_text?: boolean;
       };
   // SLURM/compute resource extensions
   'x-slurm-directive'?: string;

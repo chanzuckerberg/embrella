@@ -1,5 +1,5 @@
 import type { JSONSchema } from '@app/common/types/workflow';
-import { applyUntouched, isSlurmField, missingRequired, splitDefaults } from './defaults';
+import { applyUntouched, isSlurmField, missingRequired, splitDefaults, syncDynamicDefaults } from './defaults';
 
 const schema: JSONSchema = {
   type: 'object',
@@ -54,5 +54,36 @@ describe('missingRequired', () => {
     const missing = missingRequired(['a', 'b', 'c', 'a'], { a: 1, b: '' }, { c: 0 });
 
     expect(missing).toEqual(['b']);
+  });
+});
+
+describe('syncDynamicDefaults', () => {
+  const listed = {
+    gain_file_name: [
+      { value: 'new.gain', label: 'new.gain' },
+      { value: 'old.gain', label: 'old.gain' },
+    ],
+  };
+
+  it('fills a blank field with the first option', () => {
+    expect(syncDynamicDefaults({}, listed)).toEqual({ gain_file_name: 'new.gain' });
+  });
+
+  it('replaces a value the new session no longer lists', () => {
+    expect(syncDynamicDefaults({ gain_file_name: 'from_other_session.gain' }, listed)).toEqual({
+      gain_file_name: 'new.gain',
+    });
+  });
+
+  it('keeps a value that is still listed', () => {
+    expect(syncDynamicDefaults({ gain_file_name: 'old.gain' }, listed)).toEqual({});
+  });
+
+  it('keeps a typed absolute path', () => {
+    expect(syncDynamicDefaults({ gain_file_name: '/elsewhere/ref.gain' }, listed)).toEqual({});
+  });
+
+  it('leaves a field alone when nothing is listed', () => {
+    expect(syncDynamicDefaults({ gain_file_name: 'stale.gain' }, { gain_file_name: [] })).toEqual({});
   });
 });

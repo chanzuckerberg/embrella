@@ -6,7 +6,7 @@
  * bucket without overwriting anything the user already typed.
  */
 
-import type { JSONSchema, JSONSchemaProperty } from '@app/common/types/workflow';
+import type { FieldOption, JSONSchema, JSONSchemaProperty } from '@app/common/types/workflow';
 
 export const isSlurmField = (prop: JSONSchemaProperty | undefined): boolean =>
   Boolean(prop && (prop['x-slurm-directive'] || prop['x-compute-resource']));
@@ -42,6 +42,30 @@ export function applyUntouched(
   }
   for (const key of cleared) {
     if (!touched.has(key)) delete next[key];
+  }
+  return next;
+}
+
+/** A value the user typed as a path on the cluster, valid regardless of what is listed. */
+export const isAbsolutePath = (value: unknown): boolean => typeof value === 'string' && value.startsWith('/');
+
+/**
+ * Dynamic-option fields to reset after the options reload (e.g. on session change).
+ *
+ * A listed value belongs to the session it was listed for: a gain file from the previous
+ * session's folder is not in the new one. Keep a value only while it is still listed, or
+ * is an absolute path; otherwise take the first option.
+ */
+export function syncDynamicDefaults(
+  parameters: Record<string, unknown>,
+  options: Record<string, FieldOption[]>
+): Record<string, string> {
+  const next: Record<string, string> = {};
+  for (const [field, listed] of Object.entries(options)) {
+    if (listed.length === 0) continue;
+    const current = parameters[field];
+    if (isAbsolutePath(current) || listed.some((option) => option.value === current)) continue;
+    next[field] = listed[0].value;
   }
   return next;
 }
