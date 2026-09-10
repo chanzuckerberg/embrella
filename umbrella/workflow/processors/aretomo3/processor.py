@@ -9,11 +9,15 @@ import os
 from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
+from tem.models import GAIN_ROLE
 from umbrella_logger import logger
 
 from workflow.context import RunContext
-from workflow.processors.aretomo3.gain_file_fetcher import DEFAULT_GAIN_DIRECTORY, list_gain_files
+from workflow.processors.aretomo3.gain_file_fetcher import list_gain_files
 from workflow.processors.base import BaseProcessor
+
+# What MsiSession.get_session_dir returns when the plan emits no such role
+NO_DIRECTORY = "."
 
 # Import register_processor here to avoid circular import
 # (it will be called at module import time but after the class is defined)
@@ -179,36 +183,18 @@ class AreTomo3Processor(BaseProcessor):
 
     def _format_cli_path_resolver(self, value: Any, params: Dict[str, Any]) -> str:
         """
-        Resolve file paths - support both filename and full paths.
-
-        Handles hybrid path format for defect files, dark references, etc.
-        - If value starts with '/', treat as absolute path
-        - Otherwise, resolve relative to gain reference directory
+        Absolute path passthrough for defect files, dark references, etc.
 
         Args:
-            value: Filename or full path
+            value: Absolute path on the cluster
             params: All parameters
 
         Returns:
-            Resolved absolute path, or empty string if value is empty
-
-        Example:
-            "defect.txt" → "/hpc/projects/group.czii/krios1.processing/gain_references/defect.txt"
-            "/custom/path/defect.txt" → "/custom/path/defect.txt"
+            The trimmed path, or empty string if value is empty
         """
-        if not value or str(value).strip() == "":
+        if not value:
             return ""
-
-        value_str = str(value).strip()
-
-        # If absolute path, use as-is
-        if value_str.startswith("/"):
-            return value_str
-
-        # Otherwise, resolve relative to gain reference directory
-        # This matches the pattern used for gain files
-        gain_dir = "/hpc/projects/group.czii/krios1.processing/gain_references"
-        return f"{gain_dir}/{value_str}"
+        return str(value).strip()
 
     def _format_cli_at_bin_auto(self, value: Any, params: Dict[str, Any]) -> str:
         """
@@ -292,15 +278,17 @@ class AreTomo3Processor(BaseProcessor):
             "slurm_component_0_gpus": int(params.get("slurm_component_0_gpus", 8)),
         }
 
-    def _resolve_gain_file_path(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _resolve_gain_file_path(self, params: Dict[str, Any], run_context: "RunContext") -> Dict[str, Any]:
         """
         Resolve gain file path for the template.
 
-        If gain_file_name is empty, fetches the most recent gain file from the cluster.
-        Builds the full path by combining the gain directory with the filename.
+        An absolute gain_file_name is used as-is. Otherwise the session's gain
+        directory is resolved (plan binding, else the camera's template); an empty
+        name picks the newest file listed there.
 
         Args:
             params: User-provided parameters
+            run_context: Execution context with session and cluster
 
         Returns:
             Updated params dict with gain_file_path (full path to gain file)
@@ -308,23 +296,30 @@ class AreTomo3Processor(BaseProcessor):
         params = params.copy()  # Don't mutate original
 
         gain_file_name = params.get("gain_file_name", "").strip()
+        if os.path.isabs(gain_file_name):
+            params["gain_file_path"] = gain_file_name
+            return params
+
+        session = run_context.msi_session
+        directory = session.get_session_dir(GAIN_ROLE)
+        if directory == NO_DIRECTORY:
+            raise ValueError(
+                f"Session {session.name} resolves no gain directory; set gain on its camera, "
+                f"bind role '{GAIN_ROLE}' on its plan, or give an absolute path."
+            )
+
         if not gain_file_name:
-            # Fetch most recent gain file from cluster
-            logger.info("No gain file specified, fetching most recent from cluster")
-            result = list_gain_files(cluster_id="czii")
-
-            if result["success"] and result["files"]:
-                gain_file_name = result["files"][0]["filename"]
-                logger.info(f"Resolved gain file to most recent: {gain_file_name}")
-            else:
-                error_msg = result.get("error", "Unknown error")
+            logger.info(f"No gain file specified, fetching most recent from {directory}")
+            pattern = session.get_file_pattern(GAIN_ROLE)
+            result = list_gain_files(directory, cluster_id=run_context.cluster_id, file_pattern=pattern)
+            if not (result["success"] and result["files"]):
+                error_msg = result.get("error") or "no files matched"
                 logger.error(f"Failed to fetch gain files from cluster: {error_msg}")
-                raise ValueError(
-                    f"No gain file specified and failed to fetch from cluster: {error_msg}",
-                )
+                raise ValueError(f"No gain file specified and failed to fetch from cluster: {error_msg}")
+            gain_file_name = result["files"][0]["filename"]
+            logger.info(f"Resolved gain file to most recent: {gain_file_name}")
 
-        # Build full path
-        gain_file_path = os.path.join(DEFAULT_GAIN_DIRECTORY, gain_file_name)
+        gain_file_path = os.path.join(directory, gain_file_name)
         params["gain_file_path"] = gain_file_path
         logger.info(f"Gain file path: {gain_file_path}")
 
@@ -333,7 +328,7 @@ class AreTomo3Processor(BaseProcessor):
     def _mdoc_dir(self, session) -> str:
         """The session's mdoc directory; AreTomo3 cannot run without one."""
         mdoc_dir = session.get_session_dir("mdocs")
-        if mdoc_dir == ".":
+        if mdoc_dir == NO_DIRECTORY:
             raise ValueError(f"Session {session.name} resolves no mdocs directory; bind one on its plan.")
         return mdoc_dir.rstrip("/")
 
@@ -349,7 +344,7 @@ class AreTomo3Processor(BaseProcessor):
             Rendered bash script as string
         """
         # Resolve gain file path (fetches most recent if not specified, builds full path)
-        params = self._resolve_gain_file_path(params)
+        params = self._resolve_gain_file_path(params, run_context)
 
         # Get template from processor's templates directory
         template_dir = os.path.join(os.path.dirname(__file__), "templates")

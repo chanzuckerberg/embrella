@@ -52,7 +52,8 @@ def parse_mdoc_magnification(content: str) -> Optional[int]:
 
 def read_mdoc_magnification(
     session_dir: str,
-    cluster_id: str = "czii",
+    *,
+    cluster_id: str,
     list_glob: str = DEFAULT_MDOC_GLOB,
 ) -> Dict[str, Any]:
     """

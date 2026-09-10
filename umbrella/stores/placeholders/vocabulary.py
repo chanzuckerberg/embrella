@@ -84,7 +84,7 @@ PLACEHOLDERS = (
     Placeholder("sequence", FILE_SCOPED, "capture group", notes="frames filenames."),
     Placeholder("tilt", FILE_SCOPED, "capture group", notes="frames filenames."),
     Placeholder("run_stage_pos", FILE_SCOPED, "capture group", notes="sums and parents filenames."),
-    Placeholder("timestamp", FILE_SCOPED, "capture group", notes="atlas filenames."),
+    Placeholder("timestamp", FILE_SCOPED, "capture group", notes="atlas and gain filenames; gain sorts by it."),
     Placeholder("date", FILE_SCOPED, "capture group", notes="satlas filenames."),
     Placeholder(
         "position",

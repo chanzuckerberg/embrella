@@ -182,13 +182,13 @@ def extract_parameters(json_data, parameter_names):
     return extracted_params
 
 
-def get_remote_file_metadata(remote_path, cluster_id="czii", auth=None):
+def get_remote_file_metadata(remote_path, *, cluster_id, auth=None):
     """
     Get file metadata from a remote path via SSH/SFTP.
 
     Args:
         remote_path (str): Full path to file/directory on remote host
-        cluster_id (str): Cluster identifier (default: 'czii')
+        cluster_id (str): Cluster identifier
         auth (dict, optional): Custom authentication credentials
 
     Returns:
@@ -200,7 +200,7 @@ def get_remote_file_metadata(remote_path, cluster_id="czii", auth=None):
             - error (str, optional): Error message if operation failed
 
     Example:
-        metadata = get_remote_file_metadata('/path/to/file.zarr', 'czii')
+        metadata = get_remote_file_metadata('/path/to/file.zarr', cluster_id='czii')
         if metadata['exists']:
             print(f"Size: {metadata['size_bytes']} bytes")
     """

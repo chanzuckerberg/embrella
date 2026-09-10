@@ -52,13 +52,15 @@ properties:
 
   gain_file_name:
     type: string
-    title: Gain File Name
+    title: Gain Reference File
     description: |
-      Name of the gain reference file to use.
+      Gain reference listed from the session's gain directory, or an absolute path on the cluster (hpc/instruments/...).
     x-bash-skip: true
     x-cli-flag: null
     x-cli-format: null
-    x-dynamic-options: true
+    x-dynamic-options:
+      source: gain_file_name
+      free_text: true
 
   high_tension_kv:
     type: integer
@@ -490,7 +492,7 @@ properties:
   defect_file:
     type: string
     title: Defect File
-    description: Path to defect file (filename or full path). Rectangular defect regions will be replaced
+    description: Absolute path to defect file. Rectangular defect regions will be replaced
     default: ''
     x-parameter-group: gain_dark
     x-bash-var: defect_file
@@ -503,7 +505,7 @@ properties:
   dark_reference:
     type: string
     title: Dark Reference File
-    description: Path to dark reference MRC file (filename or full path)
+    description: Absolute path to dark reference MRC file
     default: ''
     x-parameter-group: gain_dark
     x-bash-var: dark_reference

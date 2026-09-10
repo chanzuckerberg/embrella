@@ -12,33 +12,47 @@ from typing import Any, Dict, List, Optional
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from tem.models import CalibratedPixelSize, Magnification, MsiSession
+from processes.services.cluster_resolver import get_default_cluster_id
+from tem.models import GAIN_ROLE, CalibratedPixelSize, Magnification, MsiSession
 from umbrella_logger import logger
 
 from workflow.processors.aretomo3 import gain_file_fetcher, mdoc_reader
+from workflow.processors.aretomo3.processor import NO_DIRECTORY
 
 
-def get_gain_file_options(cluster_id: str = "czii") -> List[Dict[str, str]]:
+def _request_cluster_id(request) -> str:
+    """The cluster the form is targeting, else the configured default."""
+    return request.GET.get("cluster_id") or get_default_cluster_id()
+
+
+def get_gain_file_options(session: MsiSession, cluster_id: str) -> List[Dict[str, str]]:
     """
     Get gain files formatted as dropdown options for the frontend.
 
-    Files are sorted by modification time (most recent first).
+    The directory and filename convention come from the session's camera (or a plan
+    binding); files are sorted newest first. Empty when no gain directory resolves.
 
     Args:
+        session: The MSI session the job is for
         cluster_id: Cluster to connect to
 
     Returns:
         List of option dicts for frontend dropdown:
         [
-            {'value': 'SuperRef_127684.mrc', 'label': 'SuperRef_127684.mrc (most recent)', 'description': '...'},
-            {'value': 'SuperRef_127683.mrc', 'label': 'SuperRef_127683.mrc', 'description': '...'},
+            {'value': '20251218_093959_EER_GainReference.gain', 'label': '... (most recent)', 'description': '...'},
+            {'value': '20251201_080000_EER_GainReference.gain', 'label': '...', 'description': '...'},
             ...
         ]
     """
-    result = gain_file_fetcher.list_gain_files(cluster_id=cluster_id)
-
     options = []
 
+    directory = session.get_session_dir(GAIN_ROLE)
+    if directory == NO_DIRECTORY:
+        logger.info(f"Session {session.name} resolves no gain directory; offering no gain options")
+        return options
+
+    pattern = session.get_file_pattern(GAIN_ROLE)
+    result = gain_file_fetcher.list_gain_files(directory, cluster_id=cluster_id, file_pattern=pattern)
     if not result["success"]:
         logger.warning(f"Failed to fetch gain files: {result['error']}")
         return options
@@ -72,24 +86,25 @@ def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
         JsonResponse with field options:
         {
             "gain_file_name": [
-                {"value": "", "label": "Auto (most recent)", "description": "..."},
-                {"value": "SuperRef_127684.mrc", "label": "SuperRef_127684.mrc", "description": "..."},
+                {"value": "20251218_093959_EER_GainReference.gain", "label": "... (most recent)", "description": "..."},
                 ...
             ]
         }
     """
-    options = {}
+    options = {"gain_file_name": []}
 
-    # Fetch gain files from the cluster
-    # Note: We always fetch gain files regardless of session_id since they're
-    # stored in a shared location on the microscope
+    # Gain lives where the session's camera says (Falcon4i: a shared folder; GatanCeltic: beside
+    # the frames), so there is nothing to list without a session.
+    session = MsiSession.objects.filter(name=session_id).first() if session_id else None
+    if session is None:
+        return JsonResponse({"success": True, "options": options})
+
     try:
-        gain_options = get_gain_file_options(cluster_id="czii")
+        gain_options = get_gain_file_options(session, _request_cluster_id(request))
         options["gain_file_name"] = gain_options
         logger.info(f"Loaded {len(gain_options)} gain file options for AreTomo3")
     except Exception as e:
         logger.error(f"Error fetching gain files: {e}")
-        options["gain_file_name"] = []
 
     return JsonResponse(
         {
@@ -240,11 +255,12 @@ def validate_session(request, session_id: str = None) -> JsonResponse:
         # assumed scope. "." means the plan's software emits no mdocs; skip quietly,
         # matching how any other read failure is treated below.
         mdocs_dir = session.get_session_dir("mdocs")
-        if mdocs_dir == ".":
+        if mdocs_dir == NO_DIRECTORY:
             return JsonResponse({"success": True, "validation": {}})
         pattern = session.get_file_pattern("mdocs")
         mdoc_result = mdoc_reader.read_mdoc_magnification(
             mdocs_dir,
+            cluster_id=_request_cluster_id(request),
             list_glob=pattern.list_glob if pattern else mdoc_reader.DEFAULT_MDOC_GLOB,
         )
         if mdoc_result["success"]:

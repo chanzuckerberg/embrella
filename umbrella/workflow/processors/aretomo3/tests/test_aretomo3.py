@@ -14,8 +14,9 @@ from processes.models import (
     ProcSoftware,
     Task,
 )
-from stores.models import DataKind, PathType
+from stores.models import DataKind, FilePattern, PathType
 from tem.models import (
+    GAIN_ROLE,
     CalibratedPixelSize,
     Camera,
     ImagingWorkflow,
@@ -23,17 +24,31 @@ from tem.models import (
     Microscope,
     MsiSession,
     SessionPlan,
+    SessionPlanPathBinding,
     Software,
 )
 
 from workflow.execution import PipelineExecutor, RunContext
 from workflow.processors import get_processor
 
+# The test camera's gain template; a Falcon4i-style shared folder.
+GAIN_DIR = "/test/gain/"
+LIST_GAIN_FILES = "workflow.processors.aretomo3.processor.list_gain_files"
+
 
 @pytest.fixture
 def aretomo3_processor():
     """Get the AreTomo3 processor instance."""
     return get_processor("aretomo3")
+
+
+@pytest.fixture
+def gain_path_type(db, test_msi_session):
+    """Give the session's camera a gain template, and return it."""
+    camera = test_msi_session.session_plan.camera
+    camera.gain = PathType.objects.create(data_kind=DataKind.objects.create(data_type="gain"), overlay_path=GAIN_DIR)
+    camera.save(update_fields=["gain"])
+    return camera.gain
 
 
 @pytest.fixture
@@ -200,7 +215,7 @@ class TestAreTomo3Processor:
         errors = aretomo3_processor.validate_parameters(params)
         assert len(errors) > 0
 
-    def test_render_script_basic(self, aretomo3_processor, test_run_context):
+    def test_render_script_basic(self, aretomo3_processor, test_run_context, gain_path_type):
         """Test rendering basic AreTomo3 script."""
         params = {
             "pixel_size": 2.0,
@@ -216,15 +231,97 @@ class TestAreTomo3Processor:
         assert 'run_number="run001"' in script
         assert 'pix_size="2.0"' in script
         assert 'frame_dose="1.5"' in script
-        assert (
-            'gain_fn="/hpc/instruments/czii.krios1/OffloadData/ImagesForProcessing/EF-Falcon/300kV/somegainfile.gain"'
-            in script
-        )
+        assert f'gain_fn="{GAIN_DIR}somegainfile.gain"' in script
 
         # Check calculated binning
         # 5 / 2.0 = 2.5, 10 / 2.0 = 5.0
         assert "tomo_bin_5A=2.5" in script
         assert "tomo_bin_10A=5.0" in script
+
+    def test_path_resolver_passes_absolute_paths_through(self, aretomo3_processor):
+        assert aretomo3_processor._format_cli_path_resolver(" /refs/defect.txt ", {}) == "/refs/defect.txt"
+        assert aretomo3_processor._format_cli_path_resolver("", {}) == ""
+
+
+@pytest.mark.django_db
+class TestGainFilePath:
+    """The -Gain path: absolute wins; else the session's gain directory, resolved per plan and cluster."""
+
+    def resolve(self, processor, run_context, name):
+        return processor._resolve_gain_file_path({"gain_file_name": name}, run_context)["gain_file_path"]
+
+    def test_absolute_path_skips_resolution(self, aretomo3_processor, test_run_context):
+        assert self.resolve(aretomo3_processor, test_run_context, "/elsewhere/ref.gain") == "/elsewhere/ref.gain"
+
+    def test_joins_onto_camera_default(self, aretomo3_processor, test_run_context, gain_path_type):
+        assert self.resolve(aretomo3_processor, test_run_context, "ref.gain") == f"{GAIN_DIR}ref.gain"
+
+    def test_plan_binding_wins(self, aretomo3_processor, test_run_context, gain_path_type):
+        beside_frames = PathType.objects.create(data_kind=gain_path_type.data_kind, overlay_path="/k3f/{msi_session}/")
+        SessionPlanPathBinding.objects.create(
+            session_plan=test_run_context.msi_session.session_plan, role=GAIN_ROLE, path_type=beside_frames
+        )
+        assert self.resolve(aretomo3_processor, test_run_context, "ref.dm4") == "/k3f/24nov10/ref.dm4"
+
+    def test_no_directory_is_an_error(self, aretomo3_processor, test_run_context):
+        with pytest.raises(ValueError, match="resolves no gain directory"):
+            self.resolve(aretomo3_processor, test_run_context, "ref.gain")
+
+    @patch(LIST_GAIN_FILES)
+    def test_empty_name_picks_newest(self, mock_list, aretomo3_processor, test_run_context, gain_path_type):
+        pattern = FilePattern.objects.create(
+            data_kind=gain_path_type.data_kind, label="gain", list_glob="*.gain", regex=r"^(?P<stem>.+)\.gain$"
+        )
+        gain_path_type.file_pattern = pattern
+        gain_path_type.save()
+        mock_list.return_value = {"success": True, "files": [{"filename": "newest.gain"}, {"filename": "older.gain"}]}
+
+        assert self.resolve(aretomo3_processor, test_run_context, "") == f"{GAIN_DIR}newest.gain"
+        mock_list.assert_called_once_with(GAIN_DIR, cluster_id="czii", file_pattern=pattern)
+
+    @patch(LIST_GAIN_FILES, return_value={"success": False, "files": [], "error": "ssh down"})
+    def test_empty_name_with_failed_listing_is_an_error(self, _, aretomo3_processor, test_run_context, gain_path_type):
+        with pytest.raises(ValueError, match="ssh down"):
+            self.resolve(aretomo3_processor, test_run_context, "")
+
+
+@pytest.mark.django_db
+class TestDynamicOptions:
+    """views.get_dynamic_options lists gain files for the session on the requested cluster."""
+
+    FETCH = "workflow.processors.aretomo3.views.gain_file_fetcher.list_gain_files"
+
+    def options(self, rf, session_id, query=""):
+        from workflow.processors.aretomo3.views import get_dynamic_options
+
+        response = get_dynamic_options(rf.get(f"/?{query}"), session_id)
+        return __import__("json").loads(response.content)["options"]["gain_file_name"]
+
+    @patch(FETCH)
+    def test_lists_for_session_on_requested_cluster(self, mock_list, rf, test_msi_session, gain_path_type):
+        mock_list.return_value = {
+            "success": True,
+            "files": [{"filename": "b.gain", "modified_time": "t"}, {"filename": "a.gain", "modified_time": "t"}],
+        }
+
+        options = self.options(rf, test_msi_session.name, "cluster_id=bruno")
+
+        assert [o["value"] for o in options] == ["b.gain", "a.gain"]
+        assert options[0]["label"] == "b.gain (most recent)"
+        mock_list.assert_called_once_with(GAIN_DIR, cluster_id="bruno", file_pattern=None)
+
+    @patch("workflow.processors.aretomo3.views.get_default_cluster_id", return_value="the-default")
+    @patch(FETCH, return_value={"success": True, "files": []})
+    def test_defaults_the_cluster(self, mock_list, _, rf, test_msi_session, gain_path_type):
+        self.options(rf, test_msi_session.name)
+        assert mock_list.call_args.kwargs["cluster_id"] == "the-default"
+
+    @patch(FETCH)
+    def test_empty_without_session_or_directory(self, mock_list, rf, test_msi_session):
+        assert self.options(rf, None) == []
+        assert self.options(rf, "nope") == []
+        assert self.options(rf, test_msi_session.name) == []  # no gain PathType anywhere
+        mock_list.assert_not_called()
 
     def test_get_slurm_options(self, aretomo3_processor):
         """Test SLURM options."""
@@ -329,13 +426,14 @@ class TestValidateSession:
             "error": None,
         }
 
-        request = rf.get("/")
+        request = rf.get("/?cluster_id=bruno")
         response = validate_session(request, session_id=session.name)
         data = response.json() if hasattr(response, "json") else __import__("json").loads(response.content)
 
         assert data["success"] is True
         assert data["validation"]["mismatch"] is False
         assert data["validation"]["mdoc_magnification"] == 50000
+        assert mock_mdoc.call_args.kwargs["cluster_id"] == "bruno"
 
     @patch("workflow.processors.aretomo3.views.mdoc_reader.read_mdoc_magnification")
     def test_magnification_mismatch(self, mock_mdoc, test_msi_session, rf):
@@ -405,6 +503,7 @@ class TestAreTomo3Integration:
         test_proc_run,
         test_pipe_in_plan,
         test_user,
+        gain_path_type,
     ):
         """Test full AreTomo3 execution flow."""
         # Mock the RemoteJobSubmitter
