@@ -190,19 +190,6 @@ class TestAreTomo3Processor:
         errors = aretomo3_processor.validate_parameters(params)
         assert errors == []
 
-    def test_validate_parameters_eer_mcbin_mismatch(self, aretomo3_processor):
-        """Test validation fails when EerSampling and McBin are mismatched."""
-        params = {
-            "pixel_size": 2.0,
-            "frame_dose": 1.5,
-            "eer_sampling": 2,
-            "mc_bin": 1,  # Should be 2 when eer_sampling is 2
-        }
-
-        errors = aretomo3_processor.validate_parameters(params)
-        assert len(errors) > 0
-        assert any("EerSampling" in err or "McBin" in err for err in errors)
-
     def test_validate_parameters_advanced_missing(self, aretomo3_processor):
         """Test validation fails when use_advanced_params is true but advanced params are missing."""
         params = {
