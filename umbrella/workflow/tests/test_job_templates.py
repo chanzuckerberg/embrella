@@ -77,7 +77,8 @@ def run_context(session, software_rows):
     )
 
 
-ARETOMO3_PARAMS = {"pixel_size": 2.0, "frame_dose": 1.5, "gain_file_name": "gain.gain"}
+# Absolute gain path: no gain directory to resolve, so the session fixture stays minimal.
+ARETOMO3_PARAMS = {"pixel_size": 2.0, "frame_dose": 1.5, "gain_file_name": "/gain/gain.gain"}
 
 
 class TestAretomo3Script:

@@ -5,6 +5,8 @@ from stores.models import fill_place_holders
 from stores.placeholders import placeholders_in
 
 from .models import (
+    CAMERA_PATH_ROLES,
+    ROLE_OWNERS,
     SOFTWARE_PATH_ROLES,
     AtlasSession,
     CalibratedPixelSize,
@@ -18,8 +20,8 @@ from .models import (
     SessionPlanPathBinding,
     Software,
     plan_replacement_map,
-    resolve_software_file_pattern,
-    resolve_software_path_type,
+    resolve_role_file_pattern,
+    resolve_role_path_type,
 )
 
 _RESOLVES_TO_CSS = mark_safe(
@@ -31,10 +33,15 @@ _RESOLVES_TO_CSS = mark_safe(
 
 # Register your models here.
 admin.site.register(Microscope)
-admin.site.register(Camera)
 admin.site.register(Magnification)
 admin.site.register(CalibratedPixelSize)
 admin.site.register(ImagingWorkflow)
+
+
+@admin.register(Camera)
+class CameraAdmin(admin.ModelAdmin):
+    list_display = ("name", "root_dir", "frame_format", *CAMERA_PATH_ROLES)
+    autocomplete_fields = CAMERA_PATH_ROLES
 
 
 @admin.register(Software)
@@ -103,24 +110,25 @@ class SessionPlanAdmin(admin.ModelAdmin):
         """
         if obj is None or obj.pk is None:
             return "Save the plan first."
-        example = {**plan_replacement_map(obj), "msi_session": "24nov10"}
+        example = {**plan_replacement_map(obj), "msi_session": "{msi_session}"}
         overridden = {b.role for b in obj.path_bindings.filter(is_active=True, path_type__isnull=False)}
         rows = []
-        for role in SOFTWARE_PATH_ROLES:
-            path_type = resolve_software_path_type(obj, role)
+        for role in SOFTWARE_PATH_ROLES + CAMERA_PATH_ROLES:
+            owner = ROLE_OWNERS[role]
+            path_type = resolve_role_path_type(obj, role)
             if path_type is None:
-                rows.append((role, "unset", "—", "—", "software does not produce this role"))
+                rows.append((role, "unset", "—", "—", f"{owner} does not produce this role"))
                 continue
             resolved = fill_place_holders(path_type.overlay_path, example)
             leftover = placeholders_in(resolved)
             note = "unsubstituted: " + ", ".join(sorted("{%s}" % t for t in leftover)) if leftover else ""
             # The directory is only half the answer since the split -- without the pattern
             # the panel reads as if the filenames were lost.
-            pattern = resolve_software_file_pattern(obj, role)
+            pattern = resolve_role_file_pattern(obj, role)
             rows.append(
                 (
                     role,
-                    "binding" if role in overridden else "software default",
+                    "binding" if role in overridden else f"{owner} default",
                     resolved,
                     pattern.list_glob if pattern else "—",
                     note,

@@ -53,11 +53,12 @@ import {
 } from '@app/common/services/workflowApi';
 import { SessionRunSelector, SessionRunSelection } from './SessionRunSelector';
 import { DependencyChecker } from './DependencyChecker';
+import { FreeTextOptionField } from './FreeTextOptionField';
 import ScriptPreviewModal from './ScriptPreviewModal';
 import { SSHSetupModal } from '@app/common/components/SSHSetupModal';
 import { API, DJANGO_URL } from '@app/common/constants/api';
 import { fetchResource, postResource } from '@app/common/queries/fetchResource';
-import { applyUntouched, missingRequired, splitDefaults } from '../utils/defaults';
+import { applyUntouched, missingRequired, splitDefaults, syncDynamicDefaults } from '../utils/defaults';
 
 export default function WorkflowLaunchForm({
   processor,
@@ -282,32 +283,17 @@ export default function WorkflowLaunchForm({
       try {
         // Load dynamic options
         setIsLoadingOptions(true);
-        // Pass current parameter values that affect dynamic options (e.g., import_tomo_type for Copick)
-        const additionalParams: Record<string, string | number> = {};
+        // Pass current parameter values that affect dynamic options (e.g., import_tomo_type for Copick).
+        // Options listed from the cluster (e.g. gain files) depend on which cluster.
+        const additionalParams: Record<string, string | number> = { cluster_id: cluster };
         if (parameters.import_tomo_type) {
           additionalParams.import_tomo_type = parameters.import_tomo_type as string | number;
         }
-        const optionsResult = await fetchProcessorOptions(
-          processor.name,
-          sessionName,
-          Object.keys(additionalParams).length > 0 ? additionalParams : undefined
-        );
+        const optionsResult = await fetchProcessorOptions(processor.name, sessionName, additionalParams);
         setInternalDynamicOptions(optionsResult.options);
 
-        // Set default values for dynamic option fields (first option) if not already set
-        const newDefaults: Record<string, string | number | boolean> = {};
-        for (const [fieldName, fieldOptions] of Object.entries(optionsResult.options)) {
-          const options = fieldOptions as FieldOption[];
-          if (options.length > 0 && !parameters[fieldName]) {
-            newDefaults[fieldName] = options[0].value;
-          }
-        }
-        if (Object.keys(newDefaults).length > 0) {
-          setParameters((prev) => ({
-            ...prev,
-            ...newDefaults,
-          }));
-        }
+        // First option for dynamic fields whose value is blank or no longer listed for this session
+        setParameters((prev) => ({ ...prev, ...syncDynamicDefaults(prev, optionsResult.options) }));
 
         setIsLoadingOptions(false);
       } catch (error) {
@@ -318,7 +304,7 @@ export default function WorkflowLaunchForm({
 
     loadSessionData();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- parameters is intentionally omitted to prevent infinite loops
-  }, [sessionRunSelection.sessionName, processor.name]);
+  }, [sessionRunSelection.sessionName, processor.name, cluster]);
 
   // Load initial options for Membraneseg (even without session selected)
   useEffect(() => {
@@ -856,6 +842,22 @@ export default function WorkflowLaunchForm({
       const sourceName =
         typeof dynamicOptionsConfig === 'object' && dynamicOptionsConfig.source ? dynamicOptionsConfig.source : name;
       const options = dynamicOptions[sourceName] || [];
+
+      // Listed options plus a typed value (e.g. an absolute gain path): never disabled when empty
+      if (typeof dynamicOptionsConfig === 'object' && dynamicOptionsConfig.free_text) {
+        return (
+          <FreeTextOptionField
+            key={name}
+            name={name}
+            label={label}
+            value={String(value)}
+            options={options}
+            required={isRequired}
+            helperText={prop.description || 'Pick a listed file or type an absolute path'}
+            onChange={handleChange}
+          />
+        );
+      }
 
       return (
         <FormControl key={name} fullWidth margin="normal">
