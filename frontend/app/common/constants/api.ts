@@ -129,7 +129,6 @@ export enum API {
   DEPOSITIONS = '/depositions/v1/depositions/',
   DEPOSITION_DATASETS = '/depositions/v1/datasets/',
   DEPOSITION_SESSIONS = '/depositions/v1/sessions/',
-  DEPOSITION_METHOD_LINKS = '/depositions/v1/method-links/',
   PEOPLE = '/people/v1/people/',
   INSTITUTIONS = '/people/v1/institutions/',
 }
