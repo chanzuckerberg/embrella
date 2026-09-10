@@ -125,18 +125,6 @@ class AreTomo3Processor(BaseProcessor):
                 "resume_processing is ignored when cmd_mode is 1 or 2 (per AreTomo3 documentation: -Cmd 1 and -Cmd 2 ignore -Resume)",
             )
 
-        # Validate EerSampling and McBin pairing
-        eer_sampling = int(params.get("eer_sampling", 2))
-        mc_bin = int(params.get("mc_bin", 2))
-
-        if (eer_sampling == 2 and mc_bin != 2) or (eer_sampling == 1 and mc_bin != 1):
-            errors.append(
-                f"EerSampling and McBin must be paired correctly:\n"
-                f"  - Use EerSampling=2 with McBin=2 (super-res extraction with Fourier cropping)\n"
-                f"  - Use EerSampling=1 with McBin=1 (Fourier zero-padding upsampling)\n"
-                f"Current values: EerSampling={eer_sampling}, McBin={mc_bin}",
-            )
-
         return errors
 
     # Custom formatters for schema-driven CLI generation
