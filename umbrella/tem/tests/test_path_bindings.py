@@ -5,6 +5,7 @@ from django.db.utils import IntegrityError
 from stores.models import Cluster, DataKind, FilePattern, Path, PathType, pick_for_cluster
 
 from tem.models import (
+    GAIN_ROLE,
     SOFTWARE_PATH_ROLES,
     TILT_SERIES_ROLE,
     Camera,
@@ -14,6 +15,7 @@ from tem.models import (
     SessionPlan,
     SessionPlanPathBinding,
     Software,
+    resolve_kind_source,
     resolve_plan_file_pattern,
     resolve_software_file_pattern,
     resolve_software_path_type,
@@ -235,6 +237,76 @@ class TestTiltSeriesBinding:
         """Guards the double-duty tuple: Software must not grow a tilt_series FK.
         software currently only has 5 FKs, and tilt_series is not one of them currently."""
         assert TILT_SERIES_ROLE not in SOFTWARE_PATH_ROLES
+
+
+@pytest.mark.django_db
+class TestKindBackedRoles:
+    """gain has no Software FK: its default is the stores template for the `gain` kind,
+    picked per cluster, and a plan binding overrides it (krios2 writes gain beside its frames)."""
+
+    GAIN_DEFAULT = "/hpc/instruments/czii.{scope}/gain/"
+    GAIN_IN_FRAMES = "/data/{scope}/frames/{msi_session}/"
+
+    def make_cluster(self, cluster_id):
+        return Cluster.objects.create(
+            cluster_id=cluster_id, name=cluster_id, http_base_url="https://a/", ssh_hostname="h"
+        )
+
+    def test_stores_default_when_no_binding(self, camera, workflow, software):
+        plan = make_plan("krios1", camera, workflow, software)
+        default = make_path_type("gain", self.GAIN_DEFAULT)
+        assert resolve_kind_source(plan, GAIN_ROLE) == (default, None)
+
+    def test_binding_wins_over_default(self, camera, workflow, software):
+        plan = make_plan("krios2", camera, workflow, software)
+        make_path_type("gain", self.GAIN_DEFAULT)
+        theirs = make_path_type("gain", self.GAIN_IN_FRAMES)
+        SessionPlanPathBinding.objects.create(session_plan=plan, role=GAIN_ROLE, path_type=theirs)
+        assert resolve_kind_source(plan, GAIN_ROLE)[0] == theirs
+
+    def test_cluster_row_beats_agnostic_default(self, camera, workflow, software):
+        plan = make_plan("krios1", camera, workflow, software)
+        cluster = self.make_cluster("c1")
+        make_path_type("gain", self.GAIN_DEFAULT)
+        specific = make_path_type("gain", "/on-c1/gain/", cluster=cluster)
+        assert resolve_kind_source(plan, GAIN_ROLE, cluster=cluster.cluster_id)[0] == specific
+
+    def test_none_when_nothing_resolves(self, camera, workflow, software):
+        plan = make_plan("krios1", camera, workflow, software)
+        assert resolve_kind_source(plan, GAIN_ROLE) == (None, None)
+
+    def test_pattern_follows_directory(self, camera, workflow, software):
+        plan = make_plan("krios1", camera, workflow, software)
+        pattern = attach_pattern(make_path_type("gain", self.GAIN_DEFAULT), "*.gain")
+        assert resolve_kind_source(plan, GAIN_ROLE)[1] == pattern
+
+    def test_binding_pattern_wins(self, camera, workflow, software):
+        plan = make_plan("krios2", camera, workflow, software)
+        attach_pattern(make_path_type("gain", self.GAIN_DEFAULT), "*.gain")
+        theirs = make_file_pattern("*.dm4", regex=r"^(?P<stem>.+)\.dm4$")
+        SessionPlanPathBinding.objects.create(session_plan=plan, role=GAIN_ROLE, file_pattern=theirs)
+        assert resolve_kind_source(plan, GAIN_ROLE)[1] == theirs
+
+    def test_session_substitutes_tokens(self, camera, workflow, software):
+        plan = make_plan("krios2", camera, workflow, software)
+        SessionPlanPathBinding.objects.create(
+            session_plan=plan, role=GAIN_ROLE, path_type=make_path_type("gain", self.GAIN_IN_FRAMES)
+        )
+        session = MsiSession.objects.create(name="24nov10", session_plan=plan)
+        assert session.get_kind_source(GAIN_ROLE) == ("/data/krios2/frames/24nov10/", None)
+
+    def test_session_none_when_unresolved(self, camera, workflow, software):
+        session = MsiSession.objects.create(name="24nov10", session_plan=make_plan("k1", camera, workflow, software))
+        assert session.get_kind_source(GAIN_ROLE) == (None, None)
+
+    def test_role_is_a_legal_choice(self, camera, workflow, software):
+        plan = make_plan("krios2", camera, workflow, software)
+        binding = SessionPlanPathBinding(session_plan=plan, role=GAIN_ROLE, path_type=make_path_type("gain", "/g/"))
+        binding.full_clean()  # raises on an unknown role choice
+
+    def test_not_a_software_field_role(self):
+        """Software must not grow a gain FK; the default rung is stores."""
+        assert GAIN_ROLE not in SOFTWARE_PATH_ROLES
 
 
 @pytest.mark.django_db

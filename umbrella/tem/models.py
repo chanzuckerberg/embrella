@@ -117,7 +117,14 @@ RESOLVED_ROLES = tuple(role for role in SOFTWARE_PATH_ROLES if role != INHERITED
 
 # The plan's tilt-series stack naming
 TILT_SERIES_ROLE = "tilt_series"
-BINDING_ROLES = SOFTWARE_PATH_ROLES + (TILT_SERIES_ROLE,)
+
+# Roles whose default is a stores DataKind template rather than a Software FK.
+# Gain depends on the camera, not the acquisition software, so its default lives
+# in stores (`PathType.resolve("gain", cluster)`) and a plan binding overrides it.
+GAIN_ROLE = "gain"
+KIND_ROLES = {GAIN_ROLE: "gain"}
+
+BINDING_ROLES = SOFTWARE_PATH_ROLES + (TILT_SERIES_ROLE, GAIN_ROLE)
 
 
 class Software(models.Model):
@@ -284,6 +291,23 @@ def resolve_software_file_pattern(plan, role):
     return path_type.file_pattern if path_type else None
 
 
+def resolve_kind_source(plan, role, cluster=None):
+    """(PathType, FilePattern) for a kind-backed `role`: binding first, then the stores default.
+
+    Either half may be None. The pattern follows the same ladder as
+    `resolve_software_file_pattern`: the binding's own, else the directory's.
+    """
+    binding = _active_binding(plan, role)
+    path_type = binding.path_type if binding and binding.path_type else None
+    if path_type is None:
+        path_type = PathType.resolve(KIND_ROLES[role], cluster=cluster)
+
+    pattern = binding.file_pattern if binding and binding.file_pattern else None
+    if pattern is None and path_type:
+        pattern = path_type.file_pattern
+    return path_type, pattern
+
+
 def plan_replacement_map(plan):
     """Placeholder values derivable from a SessionPlan alone.
 
@@ -440,6 +464,13 @@ class MsiSession(models.Model):
         inherited = role == INHERITED_ROLE and self.atlas_session
         plan = self.atlas_session.group.session_plan if inherited else self.session_plan
         return resolve_software_file_pattern(plan, role)
+
+    def get_kind_source(self, role, cluster=None):
+        """(directory, FilePattern) for a kind-backed `role`, e.g. gain; (None, None) when unresolved."""
+        path_type, pattern = resolve_kind_source(self.session_plan, role, cluster=cluster)
+        if not path_type:
+            return None, None
+        return fill_place_holders(path_type.overlay_path, self.get_replacement_map()), pattern
 
     def _resolve_path_row(self, role):
         """The persisted `stores.Path` for `role`, created if this directory has none yet.
