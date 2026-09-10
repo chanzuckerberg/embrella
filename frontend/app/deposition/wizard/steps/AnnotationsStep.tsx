@@ -42,9 +42,8 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   const readOnly = readOnlyProp || dataset.status !== 'draft';
   const sessions = useMemo(() => toSessionRefs(dataset), [dataset]);
   const [activeKey, setActiveKey] = useState(sessions[0]?.key ?? '');
-  const active = sessions.find((s) => s.key === activeKey) ?? sessions[0];
+  const active = useMemo(() => sessions.find((s) => s.key === activeKey) ?? sessions[0], [sessions, activeKey]);
 
-  // Merged, user-editable annotation list per session (seeded from saved rows).
   const [bySession, setBySession] = useState<Record<string, DepositionAnnotation[]>>(() =>
     Object.fromEntries(sessions.map((s) => [s.key, s.saved]))
   );
@@ -96,8 +95,14 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     reportSave?.({ status, lastSavedAt, saveNow });
   }, [status, lastSavedAt, saveNow, reportSave]);
 
-  const list = bySession[active?.key ?? ''] ?? [];
+  const list = useMemo(() => bySession[active?.key ?? ''] ?? [], [bySession, active]);
   const activeAnn = list.find((a) => annId(a) === activeAnnId) ?? null;
+
+  useEffect(() => {
+    if (list.length === 0 || (activeAnnId && list.some((a) => annId(a) === activeAnnId))) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveAnnId(annId(list.find((a) => a.is_selected) ?? list[0]));
+  }, [activeAnnId, list]);
 
   const patchActive = (patch: Partial<DepositionAnnotation>) => {
     if (!active || !activeAnn) return;
@@ -179,23 +184,21 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         </Box>
 
         <Box sx={{ position: { md: 'sticky' }, top: 0, alignSelf: 'start' }}>
-          {activeAnn ? (
+          {activeAnn && (
             <>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>
                   {activeAnn.copick_ref}
                 </Typography>
                 <Chip label={activeAnn.copick_kind} size="small" />
-                {(active?.runs.length ?? 0) > 0 && (
-                  <Chip label={`from config: ${active?.runs.join(', ')}`} size="small" />
-                )}
               </Box>
-              <AnnotationMetadataForm annotation={activeAnn} onChange={patchActive} readOnly={readOnly} />
+              <AnnotationMetadataForm
+                key={annId(activeAnn)}
+                annotation={activeAnn}
+                onChange={patchActive}
+                readOnly={readOnly}
+              />
             </>
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-              Select an annotation on the left to edit its metadata.
-            </Typography>
           )}
         </Box>
       </Box>

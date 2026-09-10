@@ -18,39 +18,47 @@ function setup(over: Partial<DepositionAnnotation> = {}, readOnly = false) {
   return { onChange };
 }
 
-it('renders the value of a text field', () => {
+const expand = (title: RegExp) => fireEvent.click(screen.getByRole('button', { name: title }));
+
+it('renders the object name in the always-open OBJECT block', () => {
   setup({ object_name: 'ribosome' });
-  expect(screen.getByLabelText('Object name')).toHaveValue('ribosome');
+  expect(screen.getByLabelText(/Object name/)).toHaveValue('ribosome');
 });
 
-it('emits a patch when a text field changes', () => {
+it('emits a patch when the object name changes', () => {
   const { onChange } = setup();
-  fireEvent.change(screen.getByLabelText('Object name'), { target: { value: 'ribosome' } });
+  fireEvent.change(screen.getByLabelText(/Object name/), { target: { value: 'ribosome' } });
   expect(onChange).toHaveBeenCalledWith({ object_name: 'ribosome' });
 });
 
-it('parses object count as a number and clears empty to null', () => {
-  const { onChange } = setup({ object_count: 5 });
-  fireEvent.change(screen.getByLabelText('Object count'), { target: { value: '1200' } });
-  expect(onChange).toHaveBeenCalledWith({ object_count: 1200 });
-  fireEvent.change(screen.getByLabelText('Object count'), { target: { value: '' } });
-  expect(onChange).toHaveBeenCalledWith({ object_count: null });
+it('edits object state after expanding Details', () => {
+  const { onChange } = setup();
+  expand(/Details/);
+  fireEvent.change(screen.getByLabelText('Object state'), { target: { value: 'apo' } });
+  expect(onChange).toHaveBeenCalledWith({ object_state: 'apo' });
 });
 
-it('toggles a boolean flag', () => {
+it('toggles a boolean flag after expanding Details', () => {
   const { onChange } = setup();
-  fireEvent.click(screen.getByLabelText('Ground truth'));
+  expand(/Details/);
+  fireEvent.click(screen.getByLabelText(/Ground truth/));
   expect(onChange).toHaveBeenCalledWith({ ground_truth_status: true });
 });
 
 it('disables all inputs when readOnly', () => {
-  setup({ object_name: 'x' }, true);
-  expect(screen.getByLabelText('Object name')).toBeDisabled();
-  expect(screen.getByLabelText('Ground truth')).toBeDisabled();
+  setup({ object_name: 'x', ground_truth_status: true }, true);
+  expect(screen.getByLabelText(/Object name/)).toBeDisabled();
+  expect(screen.getByLabelText(/Ground truth/)).toBeDisabled();
 });
 
-it('adds a method link with a default type', () => {
+it('shows the DOI count in the merged Details summary', () => {
+  setup({ annotation_publication: '10.1/a, 10.2/b' });
+  expect(screen.getByRole('button', { name: /Details/ })).toHaveTextContent('2 DOIs');
+});
+
+it('adds a method link with a default type (inside Method & links)', () => {
   const { onChange } = setup();
+  expand(/Method & links/);
   fireEvent.click(screen.getByRole('button', { name: /add link/i }));
   expect(onChange).toHaveBeenCalledWith({ method_links: [{ link_type: 'source_code', link: '' }] });
 });
@@ -61,4 +69,36 @@ it('edits an existing method link url', () => {
   expect(onChange).toHaveBeenCalledWith({
     method_links: [{ id: 1, link_type: 'website', link: 'https://example.org' }],
   });
+});
+
+it('collapses Method & links and Details by default on an empty annotation', () => {
+  setup();
+  expect(screen.getByRole('button', { name: /Method & links/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Details/ })).toBeInTheDocument();
+  expect(screen.queryByLabelText('Annotation method')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Object state')).not.toBeInTheDocument();
+});
+
+it('auto-opens Details when a flag is already set (no click needed)', () => {
+  setup({ ground_truth_status: true });
+  expect(screen.getByLabelText(/Ground truth/)).toBeInTheDocument();
+});
+
+it('counts a method field in the Method & links summary', () => {
+  setup({ annotation_method: 'TM' });
+  expect(screen.getByRole('button', { name: /Method & links/ })).toHaveTextContent('1 of 2');
+});
+
+it('clears the object id when the ontology is changed', () => {
+  const { onChange } = setup({ object_id: 'GO:0005840' });
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Ontology' }));
+  fireEvent.click(screen.getByRole('option', { name: 'UniProtKB' }));
+  expect(onChange).toHaveBeenCalledWith({ object_id: '' });
+});
+
+it('toggles the default-in-viewer flag after expanding Details', () => {
+  const { onChange } = setup();
+  expand(/Details/);
+  fireEvent.click(screen.getByLabelText('Default in viewer'));
+  expect(onChange).toHaveBeenCalledWith({ is_visualization_default: true });
 });

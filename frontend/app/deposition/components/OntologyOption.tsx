@@ -2,7 +2,7 @@
 
 import { Box, Typography } from '@mui/material';
 
-import type { OntologyTerm } from '../../../services/ols';
+import type { OntologyTerm } from '../services/ols';
 
 export function OntologyOption({ term }: { term: OntologyTerm }) {
   return (

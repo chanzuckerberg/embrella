@@ -5,9 +5,9 @@ import { Icon } from '@czi-sds/components';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Autocomplete, Box, Chip, Link, Stack, TextField } from '@mui/material';
 
-import { useDebounced } from '../../../hooks/useDebounced';
-import { useOntologySearch, useOntologyTerm } from '../../../hooks/useOntology';
-import type { OntologyTerm } from '../../../services/ols';
+import { useDebounced } from '../hooks/useDebounced';
+import { useOntologySearch, useOntologyTerm } from '../hooks/useOntology';
+import type { OntologyTerm } from '../services/ols';
 import { OntologyOption } from './OntologyOption';
 
 export function OntologyIdInput({
@@ -24,6 +24,7 @@ export function OntologyIdInput({
   idPlaceholder,
   required = false,
   childrenOf,
+  prefixInValue = true,
 }: {
   label: string;
   ontology: string;
@@ -38,11 +39,22 @@ export function OntologyIdInput({
   idPlaceholder?: string;
   required?: boolean;
   childrenOf?: string; // restrict suggestions to descendants
+  prefixInValue?: boolean;
 }) {
   const [query, setQuery] = useState(name);
   const debouncedQuery = useDebounced(query, 300);
   const debouncedId = useDebounced(id, 400);
   const olsEnabled = !manualOnly;
+
+  const idInputValue = prefixInValue || !id.startsWith(`${prefix}:`) ? id : id.slice(prefix.length + 1);
+  const handleIdChange = (raw: string) => {
+    if (prefixInValue) {
+      onChange({ id: raw });
+      return;
+    }
+    const bare = raw.trim().replace(new RegExp(`^${prefix}:`), '');
+    onChange({ id: bare ? `${prefix}:${bare}` : '' });
+  };
 
   const {
     data: options = [],
@@ -122,8 +134,8 @@ export function OntologyIdInput({
       </Box>
       <TextField
         label={`${label} ID`}
-        value={id}
-        onChange={(e) => onChange({ id: e.target.value })}
+        value={idInputValue}
+        onChange={(e) => handleIdChange(e.target.value)}
         placeholder={idPlaceholder}
         size="small"
         sx={{ flex: 1 }}

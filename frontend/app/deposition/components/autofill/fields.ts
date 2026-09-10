@@ -172,24 +172,15 @@ export const TOMOGRAM_FIELDS: FieldDef[] = [
   },
   { key: 'is_visualization_default', label: 'is_visualization_default', section: 'Reconstruction', type: 'boolean' },
   { key: 'processing', label: 'processing', section: 'Reconstruction', type: 'text' },
-  { key: 'processing_software', label: 'processing_software', section: 'Reconstruction', type: 'text' },
+  { key: 'processing_software', label: 'processing_software', section: 'Reconstruction', type: 'text', required: true },
 ];
 const PER_FLAVOR_TOMOGRAM_KEYS = new Set(['processing', 'processing_software', 'is_visualization_default']);
 export const SHARED_TOMOGRAM_FIELDS = TOMOGRAM_FIELDS.filter((f) => !PER_FLAVOR_TOMOGRAM_KEYS.has(f.key));
 
-function buildPerFlavorTomogramFields(flavor: TomogramFlavor): FieldDef[] {
-  return TOMOGRAM_FIELDS.filter((f) => f.key === 'processing' || f.key === 'processing_software').map((f) =>
-    f.key === 'processing_software' ? { ...f, required: flavor === 'denoised' } : f
-  );
-}
+const PER_FLAVOR_FIELDS = TOMOGRAM_FIELDS.filter((f) => f.key === 'processing' || f.key === 'processing_software');
 
-const PER_FLAVOR_TOMOGRAM_FIELDS: Record<TomogramFlavor, FieldDef[]> = {
-  denoised: buildPerFlavorTomogramFields('denoised'),
-  filtered: buildPerFlavorTomogramFields('filtered'),
-};
-
-export function perFlavorTomogramFields(flavor: TomogramFlavor): FieldDef[] {
-  return PER_FLAVOR_TOMOGRAM_FIELDS[flavor];
+export function perFlavorTomogramFields(_flavor: TomogramFlavor): FieldDef[] {
+  return PER_FLAVOR_FIELDS;
 }
 
 export type Provenance = 'init' | 'overridden' | 'required' | 'none';

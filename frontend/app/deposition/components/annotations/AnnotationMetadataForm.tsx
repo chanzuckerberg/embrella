@@ -10,13 +10,17 @@ import {
   IconButton,
   MenuItem,
   Stack,
+  type SxProps,
+  type Theme,
   TextField,
   Typography,
 } from '@mui/material';
 
 import { IdentifierField } from '../IdentifierField';
-import { OntologyIdInput } from '../../datasets/[id]/sections/OntologyIdInput';
+import { OntologyIdInput } from '../OntologyIdInput';
 import type { AnnotationMethodType, DepositionAnnotation, DepositionMethodLink, MethodLinkType } from '../../types';
+import { CollapsibleSection } from './CollapsibleSection';
+import { detailsFilled, doiCount, flagsSet, linkCount, methodFilled } from './sectionSummary';
 
 const OBJECT_ONTOLOGIES = [
   {
@@ -73,17 +77,6 @@ const LINK_TYPES: { value: MethodLinkType; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <Typography
-      variant="overline"
-      sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1 }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
 function AnnotationPublications({
   value,
   onChange,
@@ -110,40 +103,41 @@ function AnnotationPublications({
   };
 
   return (
-    <Box>
-      <SectionLabel>Publications</SectionLabel>
-      <Stack spacing={1}>
-        {rows.map((doi, i) => (
-          <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
-            <IdentifierField
-              kind="doi"
-              size="small"
-              fullWidth
-              placeholder="10.1021/…"
-              value={doi}
-              disabled={disabled}
-              onChange={(v) => sync(rows.map((d, j) => (j === i ? v : d)))}
-            />
-            {!disabled && (
-              <IconButton aria-label="Remove DOI" size="small" onClick={() => sync(rows.filter((_, j) => j !== i))}>
-                <Icon sdsIcon="TrashCan" sdsSize="s" color="gray" />
-              </IconButton>
-            )}
-          </Stack>
-        ))}
+    <Stack spacing={1}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          Publications
+        </Typography>
         {!disabled && (
           <Button
             size="small"
             variant="text"
             startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
             onClick={() => sync([...rows, ''])}
-            sx={{ alignSelf: 'flex-start' }}
           >
             Add DOI
           </Button>
         )}
       </Stack>
-    </Box>
+      {rows.map((doi, i) => (
+        <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
+          <IdentifierField
+            kind="doi"
+            size="small"
+            fullWidth
+            placeholder="10.1021/…"
+            value={doi}
+            disabled={disabled}
+            onChange={(v) => sync(rows.map((d, j) => (j === i ? v : d)))}
+          />
+          {!disabled && (
+            <IconButton aria-label="Remove DOI" size="small" onClick={() => sync(rows.filter((_, j) => j !== i))}>
+              <Icon sdsIcon="TrashCan" sdsSize="s" color="red" />
+            </IconButton>
+          )}
+        </Stack>
+      ))}
+    </Stack>
   );
 }
 
@@ -156,15 +150,28 @@ function MethodLinksEditor({
   onChange: (value: DepositionMethodLink[]) => void;
   disabled?: boolean;
 }) {
-  const rows = value;
   const update = (i: number, patch: Partial<DepositionMethodLink>) =>
-    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+    onChange(value.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   return (
     <Box>
-      <SectionLabel>Method links</SectionLabel>
-      <Stack spacing={1}>
-        {rows.map((row, i) => (
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          Method links
+        </Typography>
+        {!disabled && (
+          <Button
+            size="small"
+            variant="text"
+            startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
+            onClick={() => onChange([...value, { link_type: 'source_code', link: '' }])}
+          >
+            Add link
+          </Button>
+        )}
+      </Stack>
+      <Stack spacing={2.5}>
+        {value.map((row, i) => (
           <Stack key={i} direction="row" spacing={1} alignItems="flex-start">
             <TextField
               select
@@ -190,7 +197,7 @@ function MethodLinksEditor({
               value={row.link ?? ''}
               onChange={(e) => update(i, { link: e.target.value })}
               disabled={disabled}
-              sx={{ width: 460 }}
+              sx={{ flex: 2 }}
             />
             <TextField
               size="small"
@@ -199,30 +206,19 @@ function MethodLinksEditor({
               value={row.custom_name ?? ''}
               onChange={(e) => update(i, { custom_name: e.target.value })}
               disabled={disabled}
-              fullWidth
+              sx={{ flex: 1 }}
             />
             {!disabled && (
               <IconButton
                 aria-label="Remove link"
                 size="small"
-                onClick={() => onChange(rows.filter((_, j) => j !== i))}
+                onClick={() => onChange(value.filter((_, j) => j !== i))}
               >
-                <Icon sdsIcon="TrashCan" sdsSize="s" color="gray" />
+                <Icon sdsIcon="TrashCan" sdsSize="s" color="red" />
               </IconButton>
             )}
           </Stack>
         ))}
-        {!disabled && (
-          <Button
-            size="small"
-            variant="text"
-            startIcon={<Icon sdsIcon="Plus" sdsSize="s" />}
-            onClick={() => onChange([...rows, { link_type: 'source_code', link: '' }])}
-            sx={{ alignSelf: 'flex-start' }}
-          >
-            Add link
-          </Button>
-        )}
       </Stack>
     </Box>
   );
@@ -233,26 +229,31 @@ function ObjectOntologyField({
   id,
   onChange,
   disabled,
+  sx,
 }: {
   name: string;
   id: string;
   onChange: (patch: Partial<DepositionAnnotation>) => void;
   disabled?: boolean;
+  sx?: SxProps<Theme>;
 }) {
   const detected = OBJECT_ONTOLOGIES.find((o) => id.startsWith(`${o.prefix}:`)) ?? OBJECT_ONTOLOGIES[0];
   const [type, setType] = useState<string>(detected.type);
   const cfg = OBJECT_ONTOLOGIES.find((o) => o.type === type) ?? OBJECT_ONTOLOGIES[0];
 
   return (
-    <Box>
+    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-start' }} sx={sx}>
       <TextField
         select
         size="small"
         label="Ontology"
         value={type}
-        onChange={(e) => setType(e.target.value)}
+        onChange={(e) => {
+          setType(e.target.value);
+          onChange({ object_id: '' });
+        }}
         disabled={disabled}
-        sx={{ minWidth: 160, mb: 2 }}
+        sx={{ minWidth: 160 }}
       >
         {OBJECT_ONTOLOGIES.map((o) => (
           <MenuItem key={o.type} value={o.type}>
@@ -260,24 +261,28 @@ function ObjectOntologyField({
           </MenuItem>
         ))}
       </TextField>
-      <OntologyIdInput
-        label="Object"
-        ontology={cfg.ontology}
-        pattern={cfg.pattern}
-        prefix={cfg.prefix}
-        lookup={cfg.lookup}
-        manualOnly={'manualOnly' in cfg && cfg.manualOnly}
-        name={name}
-        id={id}
-        onChange={(p) => {
-          const patch: Partial<DepositionAnnotation> = {};
-          if (p.name !== undefined) patch.object_name = p.name;
-          if (p.id !== undefined) patch.object_id = p.id;
-          onChange(patch);
-        }}
-        disabled={disabled}
-      />
-    </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <OntologyIdInput
+          label="Object"
+          ontology={cfg.ontology}
+          pattern={cfg.pattern}
+          prefix={cfg.prefix}
+          lookup={cfg.lookup}
+          manualOnly={'manualOnly' in cfg && cfg.manualOnly}
+          required
+          prefixInValue={false}
+          name={name}
+          id={id}
+          onChange={(p) => {
+            const patch: Partial<DepositionAnnotation> = {};
+            if (p.name !== undefined) patch.object_name = p.name;
+            if (p.id !== undefined) patch.object_id = p.id;
+            onChange(patch);
+          }}
+          disabled={disabled}
+        />
+      </Box>
+    </Stack>
   );
 }
 
@@ -303,39 +308,41 @@ export function AnnotationMetadataForm({
     />
   );
 
-  const grid = { display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, columnGap: 2, rowGap: 2.5 };
+  const links = linkCount(annotation);
+  const linksSuffix = links > 0 ? ` · ${links} links` : '';
+  const dois = doiCount(annotation);
+  const doisSuffix = dois > 0 ? ` · ${dois} DOIs` : '';
+  const flags = flagsSet(annotation);
+  const details = detailsFilled(annotation);
+  const methods = methodFilled(annotation);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Box>
-        <SectionLabel>Object</SectionLabel>
+        <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary' }}>
+          OBJECT{' '}
+          <Box component="span" sx={{ letterSpacing: 0, textTransform: 'none', color: 'text.disabled' }}>
+            Name and ontology ID are required
+          </Box>
+        </Typography>
         <ObjectOntologyField
-          key={`${annotation.copick_kind}:${annotation.copick_ref}`}
           name={annotation.object_name ?? ''}
           id={annotation.object_id ?? ''}
           onChange={onChange}
           disabled={readOnly}
+          sx={{ mt: 4 }}
         />
-        <Box sx={{ ...grid, mt: 2 }}>
-          {text('object_state', 'Object state')}
-          <TextField
-            label="Object count"
-            type="number"
-            value={annotation.object_count ?? ''}
-            onChange={(e) => onChange({ object_count: e.target.value === '' ? null : Number(e.target.value) })}
-            size="small"
-            fullWidth
-            disabled={readOnly}
-          />
-        </Box>
-        <Box sx={{ mt: 2 }}>{text('object_description', 'Object description', true)}</Box>
       </Box>
 
-      <Box>
-        <SectionLabel>Method</SectionLabel>
-        <Box sx={grid}>
+      <CollapsibleSection
+        title="Method & links"
+        summary={`${methods} of 2 filled${linksSuffix}`}
+        defaultOpen={methods > 0 || links > 0}
+      >
+        <Box
+          sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, columnGap: 2, rowGap: 2.5 }}
+        >
           {text('annotation_method', 'Annotation method')}
-          {text('annotation_software', 'Annotation software')}
           <TextField
             select
             label="Method type"
@@ -352,47 +359,75 @@ export function AnnotationMetadataForm({
               </MenuItem>
             ))}
           </TextField>
+          {text('annotation_software', 'Annotation software')}
         </Box>
-      </Box>
-
-      <AnnotationPublications
-        key={`${annotation.copick_kind}:${annotation.copick_ref}`}
-        value={annotation.annotation_publication ?? ''}
-        onChange={(v) => onChange({ annotation_publication: v })}
-        disabled={readOnly}
-      />
-
-      <MethodLinksEditor
-        value={annotation.method_links ?? []}
-        onChange={(v) => onChange({ method_links: v })}
-        disabled={readOnly}
-      />
-
-      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-        <SectionLabel>Flags</SectionLabel>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={!!annotation.ground_truth_status}
-                onChange={(e) => onChange({ ground_truth_status: e.target.checked })}
-                disabled={readOnly}
-              />
-            }
-            label="Ground truth"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={!!annotation.is_visualization_default}
-                onChange={(e) => onChange({ is_visualization_default: e.target.checked })}
-                disabled={readOnly}
-              />
-            }
-            label="is_visualization_default"
+        <Box sx={{ mt: 2.5 }}>
+          <MethodLinksEditor
+            value={annotation.method_links ?? []}
+            onChange={(v) => onChange({ method_links: v })}
+            disabled={readOnly}
           />
         </Box>
-      </Box>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Details"
+        summary={`${details + flags} of 4 filled${doisSuffix}`}
+        defaultOpen={details > 0 || flags > 0 || dois > 0}
+      >
+        <Stack spacing={3}>
+          <Box
+            sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '3fr 7fr' }, gap: 2, alignItems: 'stretch' }}
+          >
+            <TextField
+              label="Object state"
+              value={annotation.object_state ?? ''}
+              onChange={(e) => onChange({ object_state: e.target.value })}
+              size="small"
+              fullWidth
+              disabled={readOnly}
+              sx={{ '& .MuiOutlinedInput-root': { height: '100%', alignItems: 'flex-start' } }}
+            />
+            {text('object_description', 'Object description', true)}
+          </Box>
+
+          <AnnotationPublications
+            value={annotation.annotation_publication ?? ''}
+            onChange={(v) => onChange({ annotation_publication: v })}
+            disabled={readOnly}
+          />
+
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+              Flags
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1.5, sm: 3 }}>
+              <FormControlLabel
+                sx={{ m: 0 }}
+                control={
+                  <Checkbox
+                    checked={!!annotation.ground_truth_status}
+                    onChange={(e) => onChange({ ground_truth_status: e.target.checked })}
+                    disabled={readOnly}
+                  />
+                }
+                label="Ground truth"
+              />
+              <FormControlLabel
+                sx={{ m: 0 }}
+                control={
+                  <Checkbox
+                    checked={!!annotation.is_visualization_default}
+                    onChange={(e) => onChange({ is_visualization_default: e.target.checked })}
+                    disabled={readOnly}
+                  />
+                }
+                label="Default in viewer"
+              />
+            </Stack>
+          </Box>
+        </Stack>
+      </CollapsibleSection>
     </Box>
   );
 }

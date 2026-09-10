@@ -8,7 +8,7 @@ import { Autocomplete, Box, Chip, Link, Stack, TextField } from '@mui/material';
 import { useDebounced } from '../../../hooks/useDebounced';
 import { useOntologySearch, useOntologyTerm } from '../../../hooks/useOntology';
 import type { OntologyTerm } from '../../../services/ols';
-import { OntologyOption } from './OntologyOption';
+import { OntologyOption } from '../../../components/OntologyOption';
 import { SectionCard } from './SectionCard';
 
 const NCBITAXON = 'ncbitaxon';
