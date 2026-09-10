@@ -63,9 +63,22 @@ class Camera(models.Model):
     root_dir = models.CharField(max_length=80, unique=True)
     frame_format = models.CharField(max_length=20)
     initial_frame_base_dir = models.CharField(max_length=20)
+    gain = models.ForeignKey(
+        PathType,
+        related_name="gain_type",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="path pattern to the gain reference files this camera writes",
+    )
 
     def __str__(self):
         return self.name
+
+    @property
+    def role_path_types(self):
+        """role -> its default template, None where this camera writes no such data."""
+        return {role: getattr(self, role) for role in CAMERA_PATH_ROLES}
 
     class Meta:
         app_label = "tem"
@@ -118,13 +131,18 @@ RESOLVED_ROLES = tuple(role for role in SOFTWARE_PATH_ROLES if role != INHERITED
 # The plan's tilt-series stack naming
 TILT_SERIES_ROLE = "tilt_series"
 
-# Roles whose default is a stores DataKind template rather than a Software FK.
-# Gain depends on the camera, not the acquisition software, so its default lives
-# in stores (`PathType.resolve("gain", cluster)`) and a plan binding overrides it.
+# Gain depends on the camera, not the acquisition software: Falcon4i writes .gain files
+# into a shared folder, GatanCeltic writes one .dm4 beside the session's frames.
 GAIN_ROLE = "gain"
-KIND_ROLES = {GAIN_ROLE: "gain"}
+CAMERA_PATH_ROLES = (GAIN_ROLE,)
 
-BINDING_ROLES = SOFTWARE_PATH_ROLES + (TILT_SERIES_ROLE, GAIN_ROLE)
+BINDING_ROLES = SOFTWARE_PATH_ROLES + (TILT_SERIES_ROLE,) + CAMERA_PATH_ROLES
+
+# Which plan member holds a role's default template. Binding-only roles (tilt_series) have none.
+#
+#   plan.software ── frames, sums, mdocs, parents, atlas
+#   plan.camera   ── gain
+ROLE_OWNERS = dict.fromkeys(SOFTWARE_PATH_ROLES, "software") | dict.fromkeys(CAMERA_PATH_ROLES, "camera")
 
 
 class Software(models.Model):
@@ -263,16 +281,25 @@ def _active_binding(plan, role):
     return plan.path_bindings.filter(role=role, is_active=True).first()
 
 
-def resolve_software_path_type(plan, role):
-    """The PathType for `role` on `plan`: binding first, then the software default.
+def _role_default(plan, role):
+    """The owner's template for `role` (see ROLE_OWNERS), None for binding-only roles."""
+    owner = ROLE_OWNERS.get(role)
+    if owner is None:
+        return None
+    return getattr(plan, owner).role_path_types[role]
 
-    Returns None when the software does not emit this role at all -- a terminal answer,
+
+def resolve_role_path_type(plan, role):
+    """The PathType for `role` on `plan`: binding first, then the role owner's default --
+    Software for acquisition roles, Camera for gain.
+
+    Returns None when the owner does not emit this role at all -- a terminal answer,
     unlike a missing binding, which only means "use the default".
     """
     binding = _active_binding(plan, role)
     if binding and binding.path_type:
         return binding.path_type
-    return plan.software.role_path_types[role]
+    return _role_default(plan, role)
 
 
 def resolve_plan_file_pattern(plan, role):
@@ -281,31 +308,14 @@ def resolve_plan_file_pattern(plan, role):
     return binding.file_pattern if binding else None
 
 
-def resolve_software_file_pattern(plan, role):
+def resolve_role_file_pattern(plan, role):
     """The FilePattern for `role` on `plan`: binding first, then the directory's own."""
     bound = resolve_plan_file_pattern(plan, role)
     if bound:
         return bound
 
-    path_type = resolve_software_path_type(plan, role)
+    path_type = resolve_role_path_type(plan, role)
     return path_type.file_pattern if path_type else None
-
-
-def resolve_kind_source(plan, role, cluster=None):
-    """(PathType, FilePattern) for a kind-backed `role`: binding first, then the stores default.
-
-    Either half may be None. The pattern follows the same ladder as
-    `resolve_software_file_pattern`: the binding's own, else the directory's.
-    """
-    binding = _active_binding(plan, role)
-    path_type = binding.path_type if binding and binding.path_type else None
-    if path_type is None:
-        path_type = PathType.resolve(KIND_ROLES[role], cluster=cluster)
-
-    pattern = binding.file_pattern if binding and binding.file_pattern else None
-    if pattern is None and path_type:
-        pattern = path_type.file_pattern
-    return path_type, pattern
 
 
 def plan_replacement_map(plan):
@@ -388,7 +398,7 @@ class AtlasSession(models.Model):
 
     def get_session_dir(self, role=INHERITED_ROLE):
         """The directory `role` resolves to. A screening session only produces its atlas."""
-        path_type = resolve_software_path_type(self.group.session_plan, role)
+        path_type = resolve_role_path_type(self.group.session_plan, role)
         if not path_type:
             return "."
         return fill_place_holders(
@@ -451,7 +461,7 @@ class MsiSession(models.Model):
         """The directory `role` resolves to, or "." when the software emits no such data."""
         if role == INHERITED_ROLE and self.atlas_session:
             return self.atlas_session.get_session_dir(INHERITED_ROLE)
-        path_type = resolve_software_path_type(self.session_plan, role)
+        path_type = resolve_role_path_type(self.session_plan, role)
         if not path_type:
             return "."
         return fill_place_holders(
@@ -463,14 +473,7 @@ class MsiSession(models.Model):
         """The filename convention expected in this session's `role` directory."""
         inherited = role == INHERITED_ROLE and self.atlas_session
         plan = self.atlas_session.group.session_plan if inherited else self.session_plan
-        return resolve_software_file_pattern(plan, role)
-
-    def get_kind_source(self, role, cluster=None):
-        """(directory, FilePattern) for a kind-backed `role`, e.g. gain; (None, None) when unresolved."""
-        path_type, pattern = resolve_kind_source(self.session_plan, role, cluster=cluster)
-        if not path_type:
-            return None, None
-        return fill_place_holders(path_type.overlay_path, self.get_replacement_map()), pattern
+        return resolve_role_file_pattern(plan, role)
 
     def _resolve_path_row(self, role):
         """The persisted `stores.Path` for `role`, created if this directory has none yet.
@@ -497,7 +500,7 @@ class MsiSession(models.Model):
         `atlas` is inherited from the linked screening session
         """
         for role in RESOLVED_ROLES:
-            if resolve_software_path_type(self.session_plan, role):
+            if resolve_role_path_type(self.session_plan, role):
                 setattr(self, role, self._resolve_path_row(role))
         if self.atlas_session:
             self.atlas = self.atlas_session.atlas
