@@ -396,6 +396,22 @@ properties:
     x-cli-format: direct
     x-cli-default: 1 # CLI default is 1, our form default is 2
 
+  fm_int:
+    type: integer
+    title: Frame Interpolation
+    description: Number of raw frames summed together to form a rendered frame. Needed for EER (default 10), generally not needed for TIFF
+    minimum: 1
+    maximum: 80
+    default: 10
+    x-parameter-group: motion_correction
+    x-bash-var: fm_int
+    x-bash-format: unquoted
+    x-bash-type: number
+    x-bash-skip: false
+    x-cli-flag: '-FmInt'
+    x-cli-format: direct
+    x-cli-default: 10
+
   eer_sampling:
     type: integer
     title: EER Sampling Factor
