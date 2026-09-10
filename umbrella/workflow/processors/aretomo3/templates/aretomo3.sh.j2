@@ -71,6 +71,21 @@ if [[ "${temp:-0}" != "0" ]] && [[ -n "${temp}" ]]; then
     mkdir -p "${temp}"
 fi
 
+{% if gain_is_dm4 -%}
+# GatanCeltic writes its gain as .dm4
+# Copy it into this run's folder and convert to aretomo-compatible version.
+ml anaconda
+ml imod
+gain_dm4="${out_path}/$(basename "${gain_fn}")"
+gain_mrc="${gain_dm4%.dm4}.mrc"
+cp "${gain_fn}" "${gain_dm4}" && dm2mrc "${gain_dm4}" "${gain_mrc}" || {
+    echo "gain conversion failed: ${gain_fn}" >&2
+    exit 1
+}
+rm -f "${gain_dm4}"
+export gain_fn="${gain_mrc}"
+
+{% endif -%}
 # Print the collected inputs
 echo "Project Name: ${project_name}"
 echo "Gain Path: ${gain_fn}"

@@ -19,6 +19,9 @@ from workflow.processors.base import BaseProcessor
 # What MsiSession.get_session_dir returns when the plan emits no such role
 NO_DIRECTORY = "."
 
+# GatanCeltic gain format; AreTomo3 cannot read it, the script converts it to .mrc first
+DM4_SUFFIX = ".dm4"
+
 # Import register_processor here to avoid circular import
 # (it will be called at module import time but after the class is defined)
 
@@ -390,6 +393,7 @@ class AreTomo3Processor(BaseProcessor):
 
         # Add resolved gain file path (computed, not from schema)
         template_vars["gain_file_path"] = params.get("gain_file_path", "")
+        template_vars["gain_is_dm4"] = template_vars["gain_file_path"].endswith(DM4_SUFFIX)
 
         # Add cluster identifier for cluster-specific template logic
         template_vars["cluster"] = run_context.cluster_id

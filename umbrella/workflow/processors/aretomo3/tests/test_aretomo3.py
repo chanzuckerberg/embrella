@@ -238,6 +238,28 @@ class TestAreTomo3Processor:
         assert "tomo_bin_5A=2.5" in script
         assert "tomo_bin_10A=5.0" in script
 
+    def test_render_dm4_gain_converts(self, aretomo3_processor, test_run_context, gain_path_type):
+        """A .dm4 gain is copied into the run folder, converted with dm2mrc, and -Gain gets the .mrc."""
+        params = {"pixel_size": 2.0, "gain_file_name": "ref.dm4"}
+
+        script = aretomo3_processor.render_script(params, test_run_context)
+
+        assert f'gain_fn="{GAIN_DIR}ref.dm4"' in script
+        assert "ml imod" in script
+        assert 'dm2mrc "${gain_dm4}" "${gain_mrc}"' in script
+        assert 'gain_mrc="${gain_dm4%.dm4}.mrc"' in script
+        assert 'rm -f "${gain_dm4}"' in script
+        assert 'export gain_fn="${gain_mrc}"' in script
+        # Conversion must precede the srun functions so they inherit the new gain_fn
+        assert script.index("dm2mrc") < script.index("run_aretomo3_gpu()")
+
+    def test_render_gain_file_skips_conversion(self, aretomo3_processor, test_run_context, gain_path_type):
+        params = {"pixel_size": 2.0, "gain_file_name": "ref.gain"}
+
+        script = aretomo3_processor.render_script(params, test_run_context)
+
+        assert "dm2mrc" not in script
+
     def test_path_resolver_passes_absolute_paths_through(self, aretomo3_processor):
         assert aretomo3_processor._format_cli_path_resolver(" /refs/defect.txt ", {}) == "/refs/defect.txt"
         assert aretomo3_processor._format_cli_path_resolver("", {}) == ""
