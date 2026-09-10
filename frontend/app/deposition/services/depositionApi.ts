@@ -12,7 +12,6 @@ import type {
   CopickRunOption,
   Dataset,
   Deposition,
-  DepositionMethodLink,
   DepositionSession,
   Institution,
   Person,
@@ -198,16 +197,4 @@ export async function uploadSubsetCsv(sessionId: number, file: File): Promise<{ 
   const form = new FormData();
   form.append('file', file);
   return parse(await postFormData(url(`${API.DEPOSITION_SESSIONS}${sessionId}/subset-csv/`), form));
-}
-
-export async function createMethodLink(data: Partial<DepositionMethodLink>): Promise<DepositionMethodLink> {
-  return parse(await postResource(url(API.DEPOSITION_METHOD_LINKS), data as Record<string, unknown>));
-}
-
-export async function updateMethodLink(id: number, data: Partial<DepositionMethodLink>): Promise<DepositionMethodLink> {
-  return parse(await patchResource(url(`${API.DEPOSITION_METHOD_LINKS}${id}/`), data));
-}
-
-export async function deleteMethodLink(id: number): Promise<void> {
-  return parse(await deleteResource(url(`${API.DEPOSITION_METHOD_LINKS}${id}/`)));
 }

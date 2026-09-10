@@ -5,7 +5,6 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 from .models import (
     Dataset,
     Deposition,
-    DepositionAnnotationMethodLink,
     DepositionSession,
 )
 
@@ -17,8 +16,6 @@ def deposition_owner_id(obj):
         return obj.deposition.submitter_user_id
     if isinstance(obj, DepositionSession):
         return obj.dataset.deposition.submitter_user_id
-    if isinstance(obj, DepositionAnnotationMethodLink):
-        return obj.annotation.session.dataset.deposition.submitter_user_id
     return None
 
 

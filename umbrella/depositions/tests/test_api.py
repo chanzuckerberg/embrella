@@ -12,7 +12,6 @@ from rest_framework.test import APIClient
 DEPOSITIONS = "/depositions/v1/depositions/"
 DATASETS = "/depositions/v1/datasets/"
 SESSIONS = "/depositions/v1/sessions/"
-METHOD_LINKS = "/depositions/v1/method-links/"
 
 
 @pytest.fixture(autouse=True)
@@ -581,78 +580,138 @@ class TestAnnotationPersistence:
         r = self._patch(client, owned_session, [self._ann("a")])
         assert r.status_code == 403
 
-
-@pytest.mark.django_db
-class TestMethodLinkCrud:
-    """/v1/method-links/ CRUD — owner-guarded, no PUT."""
-
-    def _annotation(self, session):
+    def test_creates_nested_method_links(self, auth_client, owned_session):
         from depositions.models import DepositionAnnotation
 
-        return DepositionAnnotation.objects.create(
-            session=session, copick_kind="picks", copick_ref="ribosome-0", object_name="ribosome"
-        )
-
-    def _link(self, annotation, **over):
-        from depositions.models import DepositionAnnotationMethodLink
-
-        return DepositionAnnotationMethodLink.objects.create(
-            annotation=annotation, link_type="website", link="https://example.org", **over
-        )
-
-    def test_create_ties_to_annotation(self, auth_client, owned_session):
-        ann = self._annotation(owned_session)
-        r = auth_client.post(
-            METHOD_LINKS,
-            {"annotation": ann.id, "link_type": "source_code", "link": "https://github.com/x/y"},
-            format="json",
-        )
-        assert r.status_code == 201, r.content
-        assert ann.method_links.count() == 1
-
-    def test_non_owner_cannot_create(self, owned_session):
-        ann = self._annotation(owned_session)
-        other = User.objects.create_user(username="mallory@example.com", password="pw")
-        client = APIClient()
-        client.force_login(other)
-        r = client.post(
-            METHOD_LINKS,
-            {"annotation": ann.id, "link_type": "source_code", "link": "https://github.com/x/y"},
-            format="json",
-        )
-        assert r.status_code == 403
-
-    def test_owner_can_update(self, auth_client, owned_session):
-        ml = self._link(self._annotation(owned_session))
-        r = auth_client.patch(f"{METHOD_LINKS}{ml.id}/", {"custom_name": "Project site"}, format="json")
+        links = [
+            {"link_type": "source_code", "link": "https://github.com/x/y"},
+            {"link_type": "website", "link": "https://example.org", "custom_name": "Project"},
+        ]
+        r = self._patch(auth_client, owned_session, [self._ann("a", method_links=links)])
         assert r.status_code == 200, r.content
-        ml.refresh_from_db()
-        assert ml.custom_name == "Project site"
+        ann = DepositionAnnotation.objects.get(session=owned_session, copick_ref="a")
+        assert ann.method_links.count() == 2
+        assert set(ann.method_links.values_list("link_type", flat=True)) == {"source_code", "website"}
 
-    def test_owner_can_delete(self, auth_client, owned_session):
-        from depositions.models import DepositionAnnotationMethodLink
+    def test_upserts_and_drops_method_links_by_id(self, auth_client, owned_session):
+        from depositions.models import DepositionAnnotation
 
-        ml = self._link(self._annotation(owned_session))
-        r = auth_client.delete(f"{METHOD_LINKS}{ml.id}/")
-        assert r.status_code == 204
-        assert not DepositionAnnotationMethodLink.objects.filter(id=ml.id).exists()
-
-    def test_non_owner_cannot_delete(self, owned_session):
-        ml = self._link(self._annotation(owned_session))
-        other = User.objects.create_user(username="mallory@example.com", password="pw")
-        client = APIClient()
-        client.force_login(other)
-        r = client.delete(f"{METHOD_LINKS}{ml.id}/")
-        assert r.status_code == 403
-
-    def test_put_not_allowed(self, auth_client, owned_session):
-        ml = self._link(self._annotation(owned_session))
-        r = auth_client.put(
-            f"{METHOD_LINKS}{ml.id}/",
-            {"annotation": ml.annotation_id, "link_type": "website", "link": "https://b.com"},
-            format="json",
+        r = self._patch(
+            auth_client,
+            owned_session,
+            [self._ann("a", method_links=[{"link_type": "website", "link": "https://a.org"}])],
         )
-        assert r.status_code == 405
+        link = DepositionAnnotation.objects.get(session=owned_session, copick_ref="a").method_links.get()
+        # Re-patch with the id present (edit) - should update in place, not duplicate.
+        r = self._patch(
+            auth_client,
+            owned_session,
+            [self._ann("a", method_links=[{"id": link.id, "link_type": "website", "link": "https://b.org"}])],
+        )
+        assert r.status_code == 200, r.content
+        ann = DepositionAnnotation.objects.get(session=owned_session, copick_ref="a")
+        assert ann.method_links.count() == 1
+        assert ann.method_links.get().link == "https://b.org"
+        # Re-patch with an empty list - should drop the link.
+        self._patch(auth_client, owned_session, [self._ann("a", method_links=[])])
+        assert ann.method_links.count() == 0
+
+    def test_stale_link_id_creates_new_row_not_integrity_error(self, auth_client, owned_session):
+        from depositions.models import DepositionAnnotation
+
+        # An id that doesn't belong to this annotation must NOT crash - it's treated as a new row.
+        r = self._patch(
+            auth_client,
+            owned_session,
+            [self._ann("a", method_links=[{"id": 999999, "link_type": "website", "link": "https://a.org"}])],
+        )
+        assert r.status_code == 200, r.content
+        ann = DepositionAnnotation.objects.get(session=owned_session, copick_ref="a")
+        assert ann.method_links.count() == 1
+        assert ann.method_links.get().id != 999999
+
+    def test_get_returns_nested_method_links(self, auth_client, owned_session):
+        self._patch(
+            auth_client,
+            owned_session,
+            [self._ann("a", method_links=[{"link_type": "website", "link": "https://a.org"}])],
+        )
+        r = auth_client.get(self._url(owned_session))
+        assert r.status_code == 200
+        links = r.json()["annotations"][0]["method_links"]
+        assert links[0]["link"] == "https://a.org"
+        assert "id" in links[0]
+
+    def test_dataset_payload_reloads_annotations_with_method_links(self, auth_client, owned_session):
+        """The wizard seeds from GET /datasets/<id> — its nested sessions must carry annotations back."""
+        self._patch(
+            auth_client,
+            owned_session,
+            [self._ann("a", object_id="GO:1", method_links=[{"link_type": "website", "link": "https://a.org"}])],
+        )
+        r = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
+        assert r.status_code == 200, r.content
+        session = r.json()["sessions"][0]
+        assert [a["copick_ref"] for a in session["annotations"]] == ["a"]
+        assert session["annotations"][0]["object_id"] == "GO:1"
+        assert session["annotations"][0]["method_links"][0]["link"] == "https://a.org"
+
+    def test_dataset_payload_annotations_do_not_n_plus_1(self, auth_client, owned_session):
+        """GET /datasets/<id> query count must not grow with annotation count."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        url = f"{DATASETS}{owned_session.dataset_id}/"
+        links = [{"link_type": "website", "link": f"https://l{i}.org"} for i in range(3)]
+
+        self._patch(auth_client, owned_session, [self._ann(f"a{i}", method_links=links) for i in range(2)])
+        with CaptureQueriesContext(connection) as few:
+            assert auth_client.get(url).status_code == 200
+
+        self._patch(auth_client, owned_session, [self._ann(f"a{i}", method_links=links) for i in range(20)])
+        with CaptureQueriesContext(connection) as many:
+            r = auth_client.get(url)
+        assert r.status_code == 200, r.content
+        anns = r.json()["sessions"][0]["annotations"]
+        assert len(anns) == 20
+        assert len(anns[0]["method_links"]) == 3  # else a flat count would pass with the link nesting gone
+        assert len(many) == len(few), f"query count grew with annotation count: {len(few)} -> {len(many)}"
+
+    def test_deposition_payload_annotations_do_not_n_plus_1(self, auth_client, owned_session):
+        """GET /depositions/<id> nests the same annotations -> method_links; query count must stay flat."""
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        url = f"{DEPOSITIONS}{owned_session.dataset.deposition_id}/"
+        links = [{"link_type": "website", "link": f"https://l{i}.org"} for i in range(3)]
+
+        self._patch(auth_client, owned_session, [self._ann(f"a{i}", method_links=links) for i in range(2)])
+        with CaptureQueriesContext(connection) as few:
+            assert auth_client.get(url).status_code == 200
+
+        self._patch(auth_client, owned_session, [self._ann(f"a{i}", method_links=links) for i in range(20)])
+        with CaptureQueriesContext(connection) as many:
+            r = auth_client.get(url)
+        assert r.status_code == 200
+        # Check the links are actually there, so a flat query count can't pass with the nesting gone.
+        anns = r.json()["datasets"][0]["sessions"][0]["annotations"]
+        assert len(anns) == 20
+        assert len(anns[0]["method_links"]) == 3
+        assert len(many) == len(few), f"query count grew with annotation count: {len(few)} -> {len(many)}"
+
+    def test_patch_response_reflects_written_links(self, auth_client, owned_session):
+        """The PATCH body itself must serialize freshly-written annotations + links (not a stale prefetch)."""
+        r = self._patch(
+            auth_client,
+            owned_session,
+            [self._ann("a", method_links=[{"link_type": "website", "link": "https://fresh.org"}])],
+        )
+        assert r.status_code == 200, r.content
+        anns = r.json()["annotations"]
+        assert [a["copick_ref"] for a in anns] == ["a"]
+        link = anns[0]["method_links"][0]
+        assert link["link"] == "https://fresh.org"
+        assert isinstance(link.get("id"), int)
 
 
 @pytest.mark.django_db

@@ -48,3 +48,17 @@ it('disables all inputs when readOnly', () => {
   expect(screen.getByLabelText('Object name')).toBeDisabled();
   expect(screen.getByLabelText('Ground truth')).toBeDisabled();
 });
+
+it('adds a method link with a default type', () => {
+  const { onChange } = setup();
+  fireEvent.click(screen.getByRole('button', { name: /add link/i }));
+  expect(onChange).toHaveBeenCalledWith({ method_links: [{ link_type: 'source_code', link: '' }] });
+});
+
+it('edits an existing method link url', () => {
+  const { onChange } = setup({ method_links: [{ id: 1, link_type: 'website', link: '' }] });
+  fireEvent.change(screen.getByLabelText(/Link URL/), { target: { value: 'https://example.org' } });
+  expect(onChange).toHaveBeenCalledWith({
+    method_links: [{ id: 1, link_type: 'website', link: 'https://example.org' }],
+  });
+});

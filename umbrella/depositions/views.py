@@ -18,7 +18,6 @@ from stores.models import Cluster, resolve_review_path
 from .models import (
     Dataset,
     Deposition,
-    DepositionAnnotationMethodLink,
     DepositionSession,
     TiltseriesMetadata,
     TomogramMetadata,
@@ -26,7 +25,6 @@ from .models import (
 from .permissions import IsDepositionOwnerOrReadOnly
 from .serializers import (
     DatasetSerializer,
-    DepositionAnnotationMethodLinkSerializer,
     DepositionSerializer,
     DepositionSessionSerializer,
     SubmissionDepositionSerializer,
@@ -96,7 +94,9 @@ class DepositionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         if self.request.query_params.get("scope") == "mine":
-            return qs.filter(submitter_user=self.request.user)
+            qs = qs.filter(submitter_user=self.request.user)
+        if self.action == "retrieve":
+            qs = qs.prefetch_related("datasets__sessions__annotations__method_links")
         return qs
 
     def perform_create(self, serializer):
@@ -174,7 +174,11 @@ class DatasetViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DatasetSerializer
-    queryset = Dataset.objects.all().select_related("deposition", "job").prefetch_related("funding", "sessions")
+    queryset = (
+        Dataset.objects.all()
+        .select_related("deposition", "job")
+        .prefetch_related("funding", "sessions", "sessions__annotations__method_links")
+    )
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -216,7 +220,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         summary="Save a session (metadata + annotations)",
         description="Saves session metadata and copick annotations in one PATCH. `annotations` "
         "upsert by (copick_kind, copick_ref) and are full-replace — any omitted is "
-        "removed. Method links are managed via their own endpoint.",
+        "removed. Each annotation's `method_links` are written inline (upsert by id).",
         examples=[
             OpenApiExample(
                 "Save metadata + annotations",
@@ -256,6 +260,13 @@ class DatasetViewSet(viewsets.ModelViewSet):
                             "object_count": 1200,
                             "method_type": "automated",
                             "is_selected": True,
+                            "method_links": [
+                                {
+                                    "link_type": "source_code",
+                                    "link": "https://github.com/example/picking-model",
+                                    "custom_name": "Picking model repo",
+                                },
+                            ],
                         },
                     ],
                 },
@@ -270,6 +281,12 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
     http_method_names = HTTP_METHODS_NO_PUT
     serializer_class = DepositionSessionSerializer
     queryset = DepositionSession.objects.all().select_related("dataset__deposition")
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action == "retrieve":
+            qs = qs.prefetch_related("annotations__method_links")
+        return qs
 
     @action(detail=True, methods=["post"], url_path="auto-fill")
     def auto_fill(self, request, pk=None):
@@ -375,38 +392,3 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
         session.subset_csv_path = ""
         session.save(update_fields=["subset_selection", "subset_filename", "subset_csv_path", "updated_at"])
         return Response({"subset_selection": selection, "subset_filename": upload.name})
-
-
-@extend_schema_view(
-    create=extend_schema(
-        summary="Add a method link to an annotation",
-        description="`annotation` is the annotation's `id`. `link_type` is one of: "
-        "documentation / models_weights / other / source_code / website.",
-        examples=[
-            OpenApiExample(
-                "New method link",
-                request_only=True,
-                value={
-                    "annotation": 1,
-                    "link_type": "source_code",
-                    "link": "https://github.com/example/picking-model",
-                    "custom_name": "Picking model repo",
-                },
-            )
-        ],
-    ),
-)
-class MethodLinkViewSet(viewsets.ModelViewSet):
-    """CRUD for annotation method links (not nested writes)."""
-
-    permission_classes = [IsAuthenticated, IsDepositionOwnerOrReadOnly]
-    http_method_names = HTTP_METHODS_NO_PUT
-    serializer_class = DepositionAnnotationMethodLinkSerializer
-    queryset = DepositionAnnotationMethodLink.objects.select_related("annotation__session__dataset__deposition")
-
-    def perform_create(self, serializer):
-        annotation = serializer.validated_data["annotation"]
-        owner_id = annotation.session.dataset.deposition.submitter_user_id
-        if owner_id != self.request.user.id:
-            raise PermissionDenied("You can only add method links to your own depositions.")
-        serializer.save()
