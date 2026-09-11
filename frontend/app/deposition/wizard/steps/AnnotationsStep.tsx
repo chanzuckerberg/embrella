@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 
@@ -14,6 +14,7 @@ import {
   annotationNeedsMetadata,
   mergeAnnotations,
   mergeServerIds,
+  staleAnnotationIds,
   stripIncompleteLinks,
 } from '../../components/annotations/scan';
 import type { Dataset, DepositionAnnotation } from '../../types';
@@ -49,9 +50,8 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     Object.fromEntries(sessions.map((s) => [s.key, s.saved]))
   );
   const [activeAnnId, setActiveAnnId] = useState<string | null>(null);
-  const [triggered, setTriggered] = useState(false); // true only after a scan job is kicked off
 
-  const scan = useAnnotationScan(active?.name ?? '', active?.runs ?? [], !readOnly, triggered);
+  const scan = useAnnotationScan(active?.name ?? '', active?.runs ?? [], !readOnly);
 
   // Fold scanned candidates into the editable list once the scan resolves — syncing async
   // scan results into local state the user then edits (merge preserves existing edits + selection).
@@ -63,19 +63,48 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       [active.key]: mergeAnnotations(scan.data.annotations, prev[active.key] ?? []),
     }));
   }, [scan.data, active]);
-  // Only "scanning" during the initial read, a re-scan submit, or while polling a job we triggered.
-  // Without a trigger, scanned=false just means "no scan has run yet" — don't spin forever.
+  // "Scanning" during the initial read, a re-scan submit, or while a job the server marks `pending`
+  // is running (covers both the Re-scan click and a Sources pre-warm, #1154). A missing file
+  // (scanned=false, not pending) means "no scan yet" and a failed job clears pending — either way
+  // we stop, so the spinner never outlives the job. `pending` is the single source of truth.
   const [rescanning, setRescanning] = useState(false);
-  const scanning = scan.isPending || rescanning || (triggered && !scan.data?.scanned);
+  const [rescanError, setRescanError] = useState<string | null>(null);
+  const scanning = scan.isPending || rescanning || (!!scan.data?.pending && !scan.data?.scanned);
+
+  // TEMP (#1154 tuning): log copick-scan wall-clock per session/runs to the console. Remove before merge.
+  const scanTimerRef = useRef<{ session: string; t: number } | null>(null);
+  useEffect(() => {
+    if (!active) return;
+    const cur = scanTimerRef.current;
+    if (scanning && (!cur || cur.session !== active.name)) {
+      scanTimerRef.current = { session: active.name, t: Date.now() };
+      console.log(
+        `[copick-scan] START ${active.name} runs=[${active.runs.join(', ')}] @ ${new Date().toLocaleTimeString()}`
+      );
+    } else if (!scanning && cur && cur.session === active.name) {
+      const secs = ((Date.now() - cur.t) / 1000).toFixed(1);
+      const anns = scan.data?.annotations ?? [];
+      const by = (k: string) => anns.filter((a) => a.copick_kind === k).length;
+      console.log(
+        `[copick-scan] DONE  ${active.name} runs=[${active.runs.join(', ')}] @ ${new Date().toLocaleTimeString()} ` +
+          `(${secs}s on-screen) — scanned=${!!scan.data?.scanned} ` +
+          `picks=${by('picks')} segs=${by('segmentations')} meshes=${by('meshes')}` +
+          (scan.data?.error ? ` ERROR=${scan.data.error}` : '')
+      );
+      scanTimerRef.current = null;
+    }
+  }, [scanning, scan.data, active]);
 
   const handleRescan = useCallback(async () => {
     if (!active || active.runs.length === 0) return;
     setRescanning(true);
+    setRescanError(null);
     try {
       await rescanCopick(active.name, active.runs);
-      setTriggered(true); // start polling scan.json until the new job writes it
-      // Restart the read query so polling picks up the fresh job's scan.json when it lands.
+      // Re-read scan.json: the trigger wrote the pending marker, which now drives polling + spinner.
       await queryClient.invalidateQueries({ queryKey: ['copick-scan', active.name, [...active.runs].sort()] });
+    } catch {
+      setRescanError('Couldn’t start the scan. Try again.');
     } finally {
       setRescanning(false);
     }
@@ -149,22 +178,86 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     }));
   };
 
+  // Drop a stale row (saved, but no longer in the latest scan) from the deposit.
+  const removeStale = (id: string) => {
+    if (!active) return;
+    setBySession((prev) => ({
+      ...prev,
+      [active.key]: (prev[active.key] ?? []).filter((a) => annId(a) !== id),
+    }));
+    if (activeAnnId === id) setActiveAnnId(null);
+  };
+
   if (sessions.length === 0) {
-    return <Alert severity="info">Add imaging sessions with copick configs on the Sources step first.</Alert>;
+    return <Alert severity="info">Add sessions with copick configs on Sources first.</Alert>;
   }
 
   const needCount = list.filter(annotationNeedsMetadata).length;
 
+  const staleIds = staleAnnotationIds(list, scan.data);
+
+  const scanAlerts = (
+    <>
+      {scanning && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+          <CircularProgress size={14} />
+          <Typography variant="caption" color="text.secondary">
+            Scanning new configs…
+          </Typography>
+        </Box>
+      )}
+      {scan.isError && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          Copick scan unavailable - showing saved annotations only.
+        </Alert>
+      )}
+      {!scan.isError && !!scan.data && scan.data.error && (
+        <Alert severity="error" sx={{ mb: 1.5 }}>
+          Scan failed - {scan.data.error}.
+        </Alert>
+      )}
+      {!scan.isError &&
+        !!scan.data &&
+        !scan.data.scanned &&
+        !scan.data.pending &&
+        !scan.data.error &&
+        scan.data.annotations.length === 0 && (
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            No scan yet - click Re-scan copick.
+          </Alert>
+        )}
+      {!scan.isError && !!scan.data && !scan.data.scanned && scan.data.annotations.length > 0 && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          Some configs aren’t scanned yet - showing what’s available.
+        </Alert>
+      )}
+    </>
+  );
+
   let body: ReactNode;
   if ((active?.runs.length ?? 0) === 0) {
-    body = <Alert severity="info">No copick configs selected for this session on the Sources step.</Alert>;
-  } else if (scanning) {
+    body = <Alert severity="info">No copick configs selected on Sources.</Alert>;
+  } else if (scanning && list.length === 0) {
+    // Full spinner ONLY when there's nothing to show yet. If we already have annotations (e.g. a
+    // config was just added on top of scanned ones), keep them on screen with an inline indicator.
     body = (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 4, justifyContent: 'center' }}>
         <CircularProgress size={20} />
         <Typography variant="body2" color="text.secondary">
-          Scanning copick configs… this can take a few minutes.
+          Scanning copick configs…
         </Typography>
+      </Box>
+    );
+  } else if (list.length === 0) {
+    // Nothing to list or edit → no split layout (a divider + empty right pane just reads as broken).
+    body = (
+      <Box>
+        {scanAlerts}
+        {!!scan.data?.scanned && !scan.data.error && (
+          <Typography variant="body2" color="text.secondary">
+            No annotations found in the selected copick configs.
+          </Typography>
+        )}
       </Box>
     );
   } else {
@@ -178,27 +271,15 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         }}
       >
         <Box sx={{ borderRight: { md: '1px solid' }, borderColor: { md: 'divider' }, pr: { md: 2 } }}>
-          {scan.isError && (
-            <Alert severity="warning" sx={{ mb: 1.5 }}>
-              Copick scan unavailable — showing saved annotations only.
-            </Alert>
-          )}
-          {!scan.isError && !!scan.data && !scan.data.scanned && !triggered && scan.data.annotations.length === 0 && (
-            <Alert severity="info" sx={{ mb: 1.5 }}>
-              No copick scan has run for these configs yet — click “Re-scan copick” to enumerate annotations.
-            </Alert>
-          )}
-          {!scan.isError && !!scan.data && !scan.data.scanned && scan.data.annotations.length > 0 && (
-            <Alert severity="info" sx={{ mb: 1.5 }}>
-              Some selected configs haven&apos;t been scanned yet — showing available annotations.
-            </Alert>
-          )}
+          {scanAlerts}
           <AnnotationList
             annotations={list}
             activeId={activeAnnId}
             onActivate={setActiveAnnId}
             onToggle={toggle}
             onSetAll={setAll}
+            onRemove={removeStale}
+            staleIds={staleIds}
             readOnly={readOnly}
           />
         </Box>
@@ -228,45 +309,58 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   return (
     <Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Choose which annotations from your copick configs to deposit, then complete the metadata for each. Only selected
-        annotations are submitted.
+        Select annotations to deposit, then fill in metadata for each.
       </Typography>
 
-      {sessions.length > 1 && (
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={active?.key}
-          onChange={(_, v: string | null) => {
-            if (v) {
-              setActiveKey(v);
-              setActiveAnnId(null);
-              setTriggered(false); // each session's scan state is independent
-            }
-          }}
-          sx={{ mb: 2, flexWrap: 'wrap' }}
-        >
-          {sessions.map((s) => (
-            <ToggleButton key={s.key} value={s.key} sx={{ textTransform: 'none' }}>
-              {s.name || 'Session'}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-      )}
-
-      {(active?.runs.length ?? 0) > 0 && !readOnly && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+      <Box
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2 }}
+      >
+        {sessions.length > 1 ? (
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={active?.key}
+            onChange={(_, v: string | null) => {
+              if (v) {
+                setActiveKey(v);
+                setActiveAnnId(null);
+              }
+            }}
+            sx={{ flexWrap: 'wrap' }}
+          >
+            {sessions.map((s) => (
+              <ToggleButton key={s.key} value={s.key} sx={{ textTransform: 'none' }}>
+                {s.name || 'Session'}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        ) : (
+          <Box />
+        )}
+        {(active?.runs.length ?? 0) > 0 && !readOnly && (
           <Button size="small" variant="outlined" onClick={handleRescan} disabled={scanning || rescanning}>
             {scanning || rescanning ? 'Scanning…' : 'Re-scan copick'}
           </Button>
-        </Box>
+        )}
+      </Box>
+
+      {rescanError && (
+        <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setRescanError(null)}>
+          {rescanError}
+        </Alert>
       )}
 
       {body}
 
+      {staleIds.size > 0 && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          {staleIds.size} annotation{staleIds.size === 1 ? '' : 's'} no longer in the scan - remove with trash.
+        </Alert>
+      )}
+
       {needCount > 0 && (
         <Alert severity="warning" sx={{ mt: 2 }}>
-          {needCount} selected annotation{needCount === 1 ? '' : 's'} still need a name and ontology ID.
+          {needCount} selected annotation{needCount === 1 ? '' : 's'} need a name and ontology ID.
         </Alert>
       )}
     </Box>

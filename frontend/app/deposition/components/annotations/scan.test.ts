@@ -4,6 +4,7 @@ import {
   mergeAnnotations,
   mergeServerIds,
   normalizeScan,
+  staleAnnotationIds,
   stripIncompleteLinks,
   type ScannedAnnotation,
 } from './scan';
@@ -31,14 +32,16 @@ describe('normalizeScan', () => {
   it('maps the aggregated picks/segmentations/meshes rows through copick_ref + total_count', () => {
     const out = normalizeScan({
       scanned: true,
-      picks: [{ copick_ref: 'VLP:relion/2', object_name: 'VLP', run_count: 3, total_count: 12345 }],
+      picks: [
+        { copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: 'GO:0170047', run_count: 3, total_count: 12345 },
+      ],
       segmentations: [{ copick_ref: 'membrane:auto/1', object_name: 'membrane', run_count: 1, total_count: 0 }],
       meshes: [{ copick_ref: 'VLP_shells:auto/1', object_name: 'VLP_shells', run_count: 1, total_count: 0 }],
     });
     expect(out).toEqual([
-      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', count: 12345 },
-      { copick_kind: 'segmentations', copick_ref: 'membrane:auto/1', object_name: 'membrane', count: 0 },
-      { copick_kind: 'meshes', copick_ref: 'VLP_shells:auto/1', object_name: 'VLP_shells', count: 0 },
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: 'GO:0170047', count: 12345 },
+      { copick_kind: 'segmentations', copick_ref: 'membrane:auto/1', object_name: 'membrane', object_id: '', count: 0 },
+      { copick_kind: 'meshes', copick_ref: 'VLP_shells:auto/1', object_name: 'VLP_shells', object_id: '', count: 0 },
     ]);
   });
 
@@ -50,8 +53,8 @@ describe('normalizeScan', () => {
 
 describe('mergeAnnotations', () => {
   const scanned: ScannedAnnotation[] = [
-    { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP' },
-    { copick_kind: 'picks', copick_ref: 'GroEL:upload/1', object_name: 'GroEL' },
+    { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: 'GO:0170047' },
+    { copick_kind: 'picks', copick_ref: 'GroEL:upload/1', object_name: 'GroEL', object_id: '' },
   ];
 
   it('carries saved metadata + is_selected onto matching scanned items', () => {
@@ -70,10 +73,23 @@ describe('mergeAnnotations', () => {
     expect(merged.every((a) => a.is_selected === false)).toBe(true);
   });
 
+  it('seeds object_id from the scan onto a fresh candidate', () => {
+    const [vlp] = mergeAnnotations(scanned, []);
+    expect(vlp.object_id).toBe('GO:0170047');
+  });
+
+  it('keeps a user-entered object_id over the scanned one', () => {
+    const saved: DepositionAnnotation[] = [
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: 'UniProtKB:P0A6G7' },
+    ];
+    const vlp = mergeAnnotations(scanned, saved).find((a) => a.copick_ref === 'VLP:relion/2')!;
+    expect(vlp.object_id).toBe('UniProtKB:P0A6G7');
+  });
+
   it('dedupes the same (kind, ref) appearing across multiple runs', () => {
     const dupes: ScannedAnnotation[] = [
-      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP' },
-      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP' },
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: '' },
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: '' },
     ];
     expect(mergeAnnotations(dupes, [])).toHaveLength(1);
   });
@@ -150,5 +166,32 @@ describe('stripIncompleteLinks', () => {
   it('is a no-op when there are no links', () => {
     const a = ann();
     expect(stripIncompleteLinks(a)).toBe(a);
+  });
+});
+
+describe('staleAnnotationIds', () => {
+  const row = (ref: string): DepositionAnnotation => ({ copick_kind: 'picks', copick_ref: ref });
+  const scanned = (ref: string): ScannedAnnotation => ({
+    copick_kind: 'picks',
+    copick_ref: ref,
+    object_name: '',
+    object_id: '',
+  });
+
+  it('flags saved rows the completed scan no longer returns', () => {
+    const list = [row('VLP:relion/2'), row('gone:auto/9')];
+    const stale = staleAnnotationIds(list, { scanned: true, annotations: [scanned('VLP:relion/2')] });
+    expect([...stale]).toEqual(['picks::gone:auto/9']);
+  });
+
+  it('flags nothing while the scan is still pending (not authoritative)', () => {
+    const list = [row('gone:auto/9')];
+    expect(staleAnnotationIds(list, { scanned: false, annotations: [] }).size).toBe(0);
+    expect(staleAnnotationIds(list, null).size).toBe(0);
+  });
+
+  it('flags nothing when every saved row is still scanned', () => {
+    const list = [row('VLP:relion/2')];
+    expect(staleAnnotationIds(list, { scanned: true, annotations: [scanned('VLP:relion/2')] }).size).toBe(0);
   });
 });

@@ -5,6 +5,7 @@ import { Button, Icon } from '@czi-sds/components';
 import { Box, Chip, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 
 import { useCopickRuns } from '../../hooks/useSources';
+import { rescanCopick } from '../../services/depositionApi';
 import { outlineChipSx } from './chipStyles';
 import type { SourceRow } from './types';
 
@@ -141,6 +142,12 @@ export function CopickConfigs({
             key={r.name}
             onClick={() => {
               onChange({ selected_copick_runs: [...configs, r.name] });
+              if (row.msi_session_name) {
+                console.log(
+                  `[copick-scan] TRIGGER ${row.msi_session_name} run=${r.name} @ ${new Date().toLocaleTimeString()}`
+                );
+                rescanCopick(row.msi_session_name, [r.name]).catch(() => undefined);
+              }
               setAnchor(null);
             }}
           >

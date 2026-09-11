@@ -168,7 +168,7 @@ export async function getAnnotatedCount(sessionName: string, runs: string[]): Pr
  * `scanned` stays true only if every run has a completed scan — false means a scan job is still
  * pending (or unreadable) for at least one run, which callers use to keep polling. */
 export async function scanCopickAnnotations(sessionName: string, runs: string[]): Promise<ScanResult> {
-  const merged: ScanResult = { scanned: true, picks: [], segmentations: [], meshes: [] };
+  const merged: ScanResult = { scanned: true, pending: false, picks: [], segmentations: [], meshes: [] };
   for (const run of runs) {
     const path = `${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/?scan=true`;
     const res = await fetchResource(url(path));
@@ -179,6 +179,9 @@ export async function scanCopickAnnotations(sessionName: string, runs: string[])
     const data = (await res.json()) as { project?: { annotations?: ScanResult } };
     const ann = data.project?.annotations ?? {};
     if (!ann.scanned) merged.scanned = false;
+    // A pending marker (job running/triggered) is distinct from a missing file (never scanned).
+    if (ann.pending) merged.pending = true;
+    if (ann.error && !merged.error) merged.error = ann.error;
     merged.picks!.push(...(ann.picks ?? []));
     merged.segmentations!.push(...(ann.segmentations ?? []));
     merged.meshes!.push(...(ann.meshes ?? []));
@@ -186,19 +189,24 @@ export async function scanCopickAnnotations(sessionName: string, runs: string[])
   return merged;
 }
 
-/* Trigger a fresh copick scan job for each selected run. The backend resolves the cluster
- * server-side (same as the ?scan=true read) and submits CopickScanProcessor, so no cluster is
- * passed from here. Idempotent — the job atomically overwrites scan.json.
- * NOTE: depends on the backend re-trigger endpoint (#865) being wired on the copick project route. */
+/* Trigger a fresh copick scan job for each selected run (#865). The backend resolves the cluster
+ * server-side (same as the ?scan=true read) and submits CopickScanProcessor over the service
+ * account, so no cluster is passed from here. Idempotent — the job atomically overwrites scan.json. */
 export async function rescanCopick(sessionName: string, runs: string[]): Promise<void> {
-  await Promise.all(
-    runs.map((run) =>
-      postResource(
+  const results = await Promise.allSettled(
+    runs.map(async (run) => {
+      const res = await postResource(
         url(`${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/scan/`),
         {}
-      )
-    )
+      );
+      // postResource doesn't throw on non-OK; a failed submit must surface, not silently "succeed".
+      if (!res.ok) throw new Error(`Copick scan could not be started for ${run} (${res.status})`);
+    })
   );
+  // Only fail loudly if EVERY run failed to start; a partial start still has jobs to poll.
+  if (results.length > 0 && results.every((r) => r.status === 'rejected')) {
+    throw new Error('Copick scan could not be started.');
+  }
 }
 
 /* Total tomograms for a session + AreTomo run, from the metadata summary (num_tomograms). */

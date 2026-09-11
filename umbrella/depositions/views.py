@@ -343,7 +343,11 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
         mapped = map_session_to_metadata(raw)
         TiltseriesMetadata.objects.update_or_create(
             session=session,
-            defaults={**mapped["tiltseries"], "autofill_metadata": raw},
+            defaults={
+                **mapped["tiltseries"],
+                "data_acquisition_software": msi_session.session_plan.software.name,
+                "autofill_metadata": raw,
+            },
         )
         for tomo in mapped["tomograms"]:
             TomogramMetadata.objects.update_or_create(

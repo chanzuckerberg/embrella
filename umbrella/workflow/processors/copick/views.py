@@ -17,10 +17,10 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from processes.models import PipeExecution, ProcPlan, ProcRun
+from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun
 from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 
@@ -33,6 +33,7 @@ from .processor import CopickProcessor
 logger = logging.getLogger(__name__)
 
 COPICK_PLAN_NAME = "czii-copick"
+COPICK_SCAN_PROCESSOR = "copick-scan"
 COPICK_DEFAULT_CLUSTER_ID = CopickProcessor.cluster
 
 
@@ -867,18 +868,144 @@ def list_copick_projects(request) -> JsonResponse:
 @require_http_methods(["GET"])
 def get_copick_project_detail(request, session_name: str, run_name: str) -> JsonResponse:
     """Return a single copick project by (session_name, run_name)."""
-    try:
-        run = ProcRun.objects.select_related("msi_session__session_plan__scope").get(
-            proc_plan__name=COPICK_PLAN_NAME,
-            msi_session__name=session_name,
-            name=run_name,
-        )
-    except ProcRun.DoesNotExist:
-        return JsonResponse({"success": False, "error": "Copick project not found"}, status=404)
-
-    project = _build_copick_project(run)
+    # .filter().first() (not .get()) tolerates duplicate ProcRuns for the same (session, run) —
+    # ProcRun has no unique constraint, so races/retries can leave more than one; .get() would 500.
+    run = (
+        ProcRun.objects.select_related("msi_session__session_plan__scope")
+        .filter(proc_plan__name=COPICK_PLAN_NAME, msi_session__name=session_name, name=run_name)
+        .order_by("id")
+        .first()
+    )
+    if run is not None:
+        project = _build_copick_project(run)
+    else:
+        # Cluster-only config: the Sources dropdown offers configs physically on the cluster even
+        # when they were never created through Embrella (no ProcRun) — _list_cluster_copick_runs.
+        # Still serve their scan by resolving the path from (session, run) directly, so a selected
+        # config isn't permanently unreadable (404). The deposition read only needs root_url + annotations.
+        session = MsiSession.objects.filter(name=session_name).first()
+        if session is None:
+            return JsonResponse({"success": False, "error": "Copick project not found"}, status=404)
+        try:
+            root_url = _copick_root_url(session, run_name)
+        except Exception as exc:  # noqa: BLE001 - unresolvable path (no cluster row, etc.) → not found
+            logger.warning("copick project path unresolved for %s/%s: %s", session_name, run_name, exc)
+            return JsonResponse({"success": False, "error": "Copick project not found"}, status=404)
+        project = {"session_name": session_name, "run_name": run_name, "root_url": root_url}
 
     if request.GET.get("scan", "").lower() in ("1", "true", "yes"):
         project["annotations"] = _read_scan_json(project["root_url"])
 
     return JsonResponse({"success": True, "project": project})
+
+
+def _write_scan_marker(cluster_id: str, session_name: str, run_name: str, marker: dict) -> None:
+    """Write a small scan.json marker (pending / error) beside config.json. Best-effort:
+    on the first scan there's no file/dir yet, and if SSH is down the job/read degrade anyway."""
+    from workflow.processors import get_processor
+
+    base = get_processor("copick").get_processing_base_path(cluster=cluster_id).rstrip("/")
+    scan_path = f"{base}/{session_name}/{run_name}/scan.json"
+    try:
+        clusterio.write_remote_file(cluster_id, scan_path, json.dumps({**_empty_scan(), **marker}))
+    except Exception as exc:  # noqa: BLE001 - non-fatal; the job overwrites scan.json on success
+        logger.warning("copick scan.json marker write skipped for %s/%s: %s", session_name, run_name, exc)
+
+
+def _invalidate_scan_json(cluster_id: str, session_name: str, run_name: str) -> None:
+    """Mark the previous scan.json pending BEFORE submitting a new job.
+
+    `pending:true` is distinct from a missing file (never scanned) so the frontend can poll a
+    running job — including a Sources pre-warm the user never explicitly triggered (#1154).
+    The producer's end-of-job os.replace clears it (its output has no `pending` key); the only
+    case that must clear it manually is a submit that never reached SLURM (see _mark_scan_failed).
+    """
+    _write_scan_marker(cluster_id, session_name, run_name, {"pending": True})
+
+
+def _mark_scan_failed(cluster_id: str, session_name: str, run_name: str, message: str) -> None:
+    """Submit failed before SLURM ran, so no job will overwrite the pending marker: clear it to an
+    error state so polling stops and the frontend surfaces the failure instead of spinning forever."""
+    _write_scan_marker(cluster_id, session_name, run_name, {"error": message})
+
+
+@extend_schema(
+    methods=["POST"],
+    tags=["Copick Projects"],
+    description=(
+        "Submit a copick-scan SLURM job for (session, run) and return immediately. Re-runs the "
+        "same producer that first wrote scan.json (atomic overwrite); poll GET ?scan=true for the result."
+    ),
+    responses={202: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT, 503: OpenApiTypes.OBJECT},
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonResponse:
+    """Kick off (or re-kick) the copick scan for one project run.
+
+    Submitting SLURM requires login (unlike the AllowAny read). Cluster is resolved server-side
+    and the job runs over the service account — no per-user SSH credentials, no cluster from the
+    client. The ProcRun name IS the copick project run so the job writes scan.json in that run's dir.
+    """
+    from workflow.execution import PipelineExecutor
+
+    try:
+        session = MsiSession.objects.get(name=session_name)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({"success": False, "error": f"Session '{session_name}' not found"}, status=404)
+
+    pipe_in_plan = (
+        PipeInPlan.objects.filter(pipe__software__processor_class=COPICK_SCAN_PROCESSOR)
+        .select_related("plan", "pipe", "pipe__software")
+        .first()
+    )
+    if not pipe_in_plan:
+        return JsonResponse({"success": False, "error": "copick-scan plan is not configured"}, status=404)
+
+    # Everything from cluster resolution through submit is wrapped so any failure returns a clean
+    # error the UI can show — never a 500 stack (cluster lookup, get_or_create, or SSH can all raise).
+    cluster_id = None
+    try:
+        cluster_id = cluster_id_for_run(session_name, run_name, default=COPICK_DEFAULT_CLUSTER_ID)
+
+        # Mark the old result pending BEFORE submit so polling can tell a running job from the last one.
+        _invalidate_scan_json(cluster_id, session_name, run_name)
+
+        # filter().first()-or-create (not get_or_create) so a pre-existing duplicate ProcRun
+        # doesn't raise MultipleObjectsReturned — reuse the earliest, only create when none exist.
+        proc_run = (
+            ProcRun.objects.filter(msi_session=session, name=run_name, proc_plan=pipe_in_plan.plan)
+            .order_by("id")
+            .first()
+        )
+        if proc_run is None:
+            proc_run = ProcRun.objects.create(msi_session=session, name=run_name, proc_plan=pipe_in_plan.plan)
+
+        # execute_pipe creates a PipeExecution(proc_run, pipe_in_plan), which is unique_together. Re-scan
+        # reuses the same run+pipe (so scan.json lands beside config.json), so a prior row would trip the
+        # constraint. The scan is idempotent — drop the old execution and keep only the latest submission.
+        PipeExecution.objects.filter(proc_run=proc_run, pipe_in_plan=pipe_in_plan).delete()
+
+        result = PipelineExecutor().execute_pipe(
+            pipe_in_plan=pipe_in_plan,
+            proc_run=proc_run,
+            user=request.user,  # attributes the PipeExecution row; NOT used as SSH auth
+            parameters={},
+            auth=clusterio.get_auth_service_user(),
+            cluster_id=cluster_id,
+        )
+    except clusterio.SSHDisabledError:
+        if cluster_id:
+            _mark_scan_failed(cluster_id, session_name, run_name, "Cluster access is unavailable.")
+        return JsonResponse({"success": False, "error": "Cluster access is unavailable."}, status=503)
+    except Exception:
+        # Log the detail server-side; return a generic message to the client
+        logger.exception("copick scan submit failed for %s/%s", session_name, run_name)
+        if cluster_id:
+            _mark_scan_failed(cluster_id, session_name, run_name, "Submitting the copick scan failed.")
+        return JsonResponse({"success": False, "error": "Submitting the copick scan failed."}, status=502)
+
+    return JsonResponse(
+        {"success": True, "job_id": result.get("job_id"), "status": "submitted"},
+        status=202,
+    )

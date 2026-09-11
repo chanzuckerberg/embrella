@@ -43,7 +43,7 @@ agg = {}
 annotated_runs = set()
 
 
-def _add(kind, obj, user_id, session_id, run_name, count):
+def _add(kind, obj, obj_id, user_id, session_id, run_name, count):
     annotated_runs.add(run_name)
     key = (kind, _ref(obj, user_id, session_id))
     entry = agg.get(key)
@@ -52,6 +52,9 @@ def _add(kind, obj, user_id, session_id, run_name, count):
             "copick_kind": kind,
             "copick_ref": _ref(obj, user_id, session_id),
             "object_name": obj or "",
+            # Ontology id from the config's pickable_objects (GO/UniProtKB/CHEBI/…); "" if unset,
+            # so the metadata form pre-fills it instead of the user typing it by hand.
+            "object_id": obj_id or "",
             "run_count": 0,
             "total_count": 0,
         }
@@ -62,24 +65,35 @@ def _add(kind, obj, user_id, session_id, run_name, count):
         entry["total_count"] += count
 
 
+# Outer try: only "the env/config won't even load" — nothing enumerated, so scanned:false.
+# Per-run try (inside the loop): isolate one bad run so the rest of the scan still lands.
+warnings = []
 try:
-    import copick  # inside the try: a bad env surfaces as scanned:false+error
+    import copick
 
     root = copick.from_file(config_path)
-    for run in root.runs:
-        rn = run.name
-        for p in run.picks or []:
-            pts = getattr(p, "points", None)
-            _add("picks", getattr(p, "pickable_object_name", None), p.user_id, p.session_id, rn,
-                 len(pts) if pts is not None else 0)
-        for s in run.segmentations or []:
-            _add("segmentations", getattr(s, "name", None), s.user_id, s.session_id, rn, 0)
-        for m in run.meshes or []:
-            _add("meshes", getattr(m, "pickable_object_name", None) or getattr(m, "name", None),
-                 m.user_id, m.session_id, rn, 0)
-except Exception as exc:  # noqa: BLE001 - env/copick/config failure is recorded in scan.json
+    # object_name -> ontology identifier, from the config (the id lives on the PickableObject,
+    # not on the individual pick/seg/mesh), so we can seed object_id per annotation.
+    id_map = {getattr(o, "name", None): getattr(o, "identifier", None) for o in (root.pickable_objects or [])}
+except Exception as exc:  # noqa: BLE001 - env/copick/config load failure is recorded in scan.json
     out = {"scanned": False, "error": str(exc), "session": msi_session, "run": msi_run, "config_path": config_path}
 else:
+    for run in root.runs:
+        rn = run.name
+        try:
+            for p in run.picks or []:
+                pts = getattr(p, "points", None)
+                name = getattr(p, "pickable_object_name", None)
+                _add("picks", name, id_map.get(name), p.user_id, p.session_id, rn,
+                     len(pts) if pts is not None else 0)
+            for s in run.segmentations or []:
+                name = getattr(s, "name", None)
+                _add("segmentations", name, id_map.get(name), s.user_id, s.session_id, rn, 0)
+            for m in run.meshes or []:
+                name = getattr(m, "pickable_object_name", None) or getattr(m, "name", None)
+                _add("meshes", name, id_map.get(name), m.user_id, m.session_id, rn, 0)
+        except Exception as exc:  # noqa: BLE001 - one bad run must not sink the whole scan
+            warnings.append("%s: %s" % (rn, exc))
     out = {
         "scanned": True,
         "session": msi_session,
@@ -90,6 +104,8 @@ else:
         "meshes": [v for v in agg.values() if v["copick_kind"] == "meshes"],
         "annotated_runs": sorted(annotated_runs),
     }
+    if warnings:
+        out["warnings"] = warnings
 
 # Atomic write so a caddy reader never sees a half-written file.
 tmp_path = out_path + ".tmp"
