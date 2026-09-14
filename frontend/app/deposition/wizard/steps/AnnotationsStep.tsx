@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 
@@ -45,7 +45,6 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   const [activeKey, setActiveKey] = useState(sessions[0]?.key ?? '');
   const active = useMemo(() => sessions.find((s) => s.key === activeKey) ?? sessions[0], [sessions, activeKey]);
 
-  // Merged, user-editable annotation list per session (seeded from saved rows).
   const [bySession, setBySession] = useState<Record<string, DepositionAnnotation[]>>(() =>
     Object.fromEntries(sessions.map((s) => [s.key, s.saved]))
   );
@@ -53,8 +52,6 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
 
   const scan = useAnnotationScan(active?.name ?? '', active?.runs ?? [], !readOnly);
 
-  // Fold scanned candidates into the editable list once the scan resolves — syncing async
-  // scan results into local state the user then edits (merge preserves existing edits + selection).
   useEffect(() => {
     if (!scan.data || !active) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -63,37 +60,9 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       [active.key]: mergeAnnotations(scan.data.annotations, prev[active.key] ?? []),
     }));
   }, [scan.data, active]);
-  // "Scanning" during the initial read, a re-scan submit, or while a job the server marks `pending`
-  // is running (covers both the Re-scan click and a Sources pre-warm, #1154). A missing file
-  // (scanned=false, not pending) means "no scan yet" and a failed job clears pending — either way
-  // we stop, so the spinner never outlives the job. `pending` is the single source of truth.
   const [rescanning, setRescanning] = useState(false);
   const [rescanError, setRescanError] = useState<string | null>(null);
   const scanning = scan.isPending || rescanning || (!!scan.data?.pending && !scan.data?.scanned);
-
-  // TEMP (#1154 tuning): log copick-scan wall-clock per session/runs to the console. Remove before merge.
-  const scanTimerRef = useRef<{ session: string; t: number } | null>(null);
-  useEffect(() => {
-    if (!active) return;
-    const cur = scanTimerRef.current;
-    if (scanning && (!cur || cur.session !== active.name)) {
-      scanTimerRef.current = { session: active.name, t: Date.now() };
-      console.log(
-        `[copick-scan] START ${active.name} runs=[${active.runs.join(', ')}] @ ${new Date().toLocaleTimeString()}`
-      );
-    } else if (!scanning && cur && cur.session === active.name) {
-      const secs = ((Date.now() - cur.t) / 1000).toFixed(1);
-      const anns = scan.data?.annotations ?? [];
-      const by = (k: string) => anns.filter((a) => a.copick_kind === k).length;
-      console.log(
-        `[copick-scan] DONE  ${active.name} runs=[${active.runs.join(', ')}] @ ${new Date().toLocaleTimeString()} ` +
-          `(${secs}s on-screen) — scanned=${!!scan.data?.scanned} ` +
-          `picks=${by('picks')} segs=${by('segmentations')} meshes=${by('meshes')}` +
-          (scan.data?.error ? ` ERROR=${scan.data.error}` : '')
-      );
-      scanTimerRef.current = null;
-    }
-  }, [scanning, scan.data, active]);
 
   const handleRescan = useCallback(async () => {
     if (!active || active.runs.length === 0) return;
@@ -238,8 +207,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   if ((active?.runs.length ?? 0) === 0) {
     body = <Alert severity="info">No copick configs selected on Sources.</Alert>;
   } else if (scanning && list.length === 0) {
-    // Full spinner ONLY when there's nothing to show yet. If we already have annotations (e.g. a
-    // config was just added on top of scanned ones), keep them on screen with an inline indicator.
+    // Full spinner ONLY when there's nothing to show yet.
     body = (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 4, justifyContent: 'center' }}>
         <CircularProgress size={20} />
@@ -249,7 +217,6 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       </Box>
     );
   } else if (list.length === 0) {
-    // Nothing to list or edit → no split layout (a divider + empty right pane just reads as broken).
     body = (
       <Box>
         {scanAlerts}

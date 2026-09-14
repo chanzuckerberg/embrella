@@ -52,8 +52,7 @@ def _add(kind, obj, obj_id, user_id, session_id, run_name, count):
             "copick_kind": kind,
             "copick_ref": _ref(obj, user_id, session_id),
             "object_name": obj or "",
-            # Ontology id from the config's pickable_objects (GO/UniProtKB/CHEBI/…); "" if unset,
-            # so the metadata form pre-fills it instead of the user typing it by hand.
+            # Ontology id from the config's pickable_objects (GO/UniProtKB/CHEBI/…)
             "object_id": obj_id or "",
             "run_count": 0,
             "total_count": 0,
@@ -65,17 +64,14 @@ def _add(kind, obj, obj_id, user_id, session_id, run_name, count):
         entry["total_count"] += count
 
 
-# Outer try: only "the env/config won't even load" — nothing enumerated, so scanned:false.
-# Per-run try (inside the loop): isolate one bad run so the rest of the scan still lands.
 warnings = []
 try:
     import copick
 
     root = copick.from_file(config_path)
-    # object_name -> ontology identifier, from the config (the id lives on the PickableObject,
-    # not on the individual pick/seg/mesh), so we can seed object_id per annotation.
+    # object_name -> ontology identifier, from the config ,
     id_map = {getattr(o, "name", None): getattr(o, "identifier", None) for o in (root.pickable_objects or [])}
-except Exception as exc:  # noqa: BLE001 - env/copick/config load failure is recorded in scan.json
+except Exception as exc: 
     out = {"scanned": False, "error": str(exc), "session": msi_session, "run": msi_run, "config_path": config_path}
 else:
     for run in root.runs:

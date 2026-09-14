@@ -1,19 +1,13 @@
 import type { CopickKind, DepositionAnnotation } from '../../types';
 
-/** A copick annotation discovered by the cluster scan (before the user adds metadata). */
 export interface ScannedAnnotation {
   copick_kind: CopickKind;
   copick_ref: string; // "<object>:<user_id>/<session_id>"
   object_name: string;
-  object_id: string; // ontology id from the config's pickable_objects; '' when unset
+  object_id: string; // ontology id from the config's pickable_objects
   count?: number | null; // total_count — picks only; 0 for segmentations/meshes
 }
 
-/**
- * A row in an `annotations` section, already aggregated by (copick_kind, copick_ref)
- * by the copick scan job: copick_ref is pre-computed on the cluster, and
- * counts are rolled up (run_count = # runs carrying it, total_count = summed points).
- */
 interface RawRow {
   copick_ref: string;
   object_name?: string | null;
@@ -22,7 +16,6 @@ interface RawRow {
   total_count?: number;
 }
 
-/** Raw `annotations` block from GET /copick/v1/projects/<session>/<run>/?scan=true. */
 export interface ScanResult {
   scanned?: boolean;
   // A scan job is running (or was just triggered) - distinct from a missing file (never scanned).
@@ -56,7 +49,6 @@ export function normalizeScan(scan: ScanResult): ScannedAnnotation[] {
   return out;
 }
 
-/** A selected annotation is incomplete until it has the portal-required name + ontology id. */
 export function annotationNeedsMetadata(a: DepositionAnnotation): boolean {
   return !!a.is_selected && (!a.object_name?.trim() || !a.object_id?.trim());
 }
@@ -69,11 +61,7 @@ export function stripIncompleteLinks(a: DepositionAnnotation): DepositionAnnotat
 
 const annKey = (kind: CopickKind, ref: string) => `${kind}::${ref}`;
 
-/**
- * Ids (kind::ref) of saved rows the latest scan no longer returns — "stale" (#868).
- * Only a completed scan is authoritative; while a scan is pending we flag nothing
- * (mergeAnnotations keeps the rows either way, so no data is lost).
- */
+/** Ids (kind::ref) of saved rows a *completed* scan no longer returns stale . */
 export function staleAnnotationIds(
   list: DepositionAnnotation[],
   scan: { scanned: boolean; annotations: ScannedAnnotation[] } | null | undefined
@@ -83,7 +71,6 @@ export function staleAnnotationIds(
   return new Set(list.map((a) => annKey(a.copick_kind, a.copick_ref)).filter((key) => !present.has(key)));
 }
 
-/** Copy server ids onto local rows after save so the next autosave updates instead of recreating. Match annotations by kind/ref and links by type+url - a row edited mid-save won't match, so we leave it id-less. Same array back if nothing changed, to avoid kicking autosave again. */
 export function mergeServerIds(local: DepositionAnnotation[], saved: DepositionAnnotation[]): DepositionAnnotation[] {
   const savedByRef = new Map(saved.map((a) => [annKey(a.copick_kind, a.copick_ref), a]));
   let changed = false;
@@ -110,12 +97,6 @@ export function mergeServerIds(local: DepositionAnnotation[], saved: DepositionA
   return changed ? out : local;
 }
 
-/**
- * Merge scanned candidates with saved annotations by (copick_kind, copick_ref):
- * - scanned + saved  -> saved metadata + is_selected win (user edits preserved)
- * - scanned only     -> fresh candidate, is_selected=false
- * - saved only (no longer scanned) -> kept so user data isn't lost; stale UX is #868
- */
 export function mergeAnnotations(scanned: ScannedAnnotation[], saved: DepositionAnnotation[]): DepositionAnnotation[] {
   const savedByKey = new Map(saved.map((a) => [annKey(a.copick_kind, a.copick_ref), a]));
   const merged: DepositionAnnotation[] = [];
@@ -123,7 +104,7 @@ export function mergeAnnotations(scanned: ScannedAnnotation[], saved: Deposition
 
   for (const sc of scanned) {
     const k = annKey(sc.copick_kind, sc.copick_ref);
-    if (seen.has(k)) continue; // same (kind, ref) can appear across runs — one row per identity
+    if (seen.has(k)) continue;
     seen.add(k);
     const existing = savedByKey.get(k);
     merged.push(
@@ -131,7 +112,7 @@ export function mergeAnnotations(scanned: ScannedAnnotation[], saved: Deposition
         ? {
             ...existing,
             object_name: existing.object_name || sc.object_name,
-            object_id: existing.object_id || sc.object_id, // user edit wins; else seed from the scan
+            object_id: existing.object_id || sc.object_id,
           }
         : {
             copick_kind: sc.copick_kind,

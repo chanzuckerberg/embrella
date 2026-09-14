@@ -164,9 +164,7 @@ export async function getAnnotatedCount(sessionName: string, runs: string[]): Pr
   return data.annotated_count ?? 0;
 }
 
-/* Read the cached scan.json for each selected run and merge its picks/segmentations/meshes.
- * `scanned` stays true only if every run has a completed scan — false means a scan job is still
- * pending (or unreadable) for at least one run, which callers use to keep polling. */
+/* Read the cached scan.json for each selected run and merge its picks/segmentations/meshes. */
 export async function scanCopickAnnotations(sessionName: string, runs: string[]): Promise<ScanResult> {
   const merged: ScanResult = { scanned: true, pending: false, picks: [], segmentations: [], meshes: [] };
   for (const run of runs) {
@@ -189,9 +187,6 @@ export async function scanCopickAnnotations(sessionName: string, runs: string[])
   return merged;
 }
 
-/* Trigger a fresh copick scan job for each selected run (#865). The backend resolves the cluster
- * server-side (same as the ?scan=true read) and submits CopickScanProcessor over the service
- * account, so no cluster is passed from here. Idempotent — the job atomically overwrites scan.json. */
 export async function rescanCopick(sessionName: string, runs: string[]): Promise<void> {
   const results = await Promise.allSettled(
     runs.map(async (run) => {
@@ -199,11 +194,9 @@ export async function rescanCopick(sessionName: string, runs: string[]): Promise
         url(`${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/scan/`),
         {}
       );
-      // postResource doesn't throw on non-OK; a failed submit must surface, not silently "succeed".
       if (!res.ok) throw new Error(`Copick scan could not be started for ${run} (${res.status})`);
     })
   );
-  // Only fail loudly if EVERY run failed to start; a partial start still has jobs to poll.
   if (results.length > 0 && results.every((r) => r.status === 'rejected')) {
     throw new Error('Copick scan could not be started.');
   }

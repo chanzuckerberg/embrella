@@ -868,8 +868,7 @@ def list_copick_projects(request) -> JsonResponse:
 @require_http_methods(["GET"])
 def get_copick_project_detail(request, session_name: str, run_name: str) -> JsonResponse:
     """Return a single copick project by (session_name, run_name)."""
-    # .filter().first() (not .get()) tolerates duplicate ProcRuns for the same (session, run) —
-    # ProcRun has no unique constraint, so races/retries can leave more than one; .get() would 500.
+    # filter().first() (not .get()) tolerates duplicate ProcRuns - no unique constraint on ProcRun.
     run = (
         ProcRun.objects.select_related("msi_session__session_plan__scope")
         .filter(proc_plan__name=COPICK_PLAN_NAME, msi_session__name=session_name, name=run_name)
@@ -879,16 +878,13 @@ def get_copick_project_detail(request, session_name: str, run_name: str) -> Json
     if run is not None:
         project = _build_copick_project(run)
     else:
-        # Cluster-only config: the Sources dropdown offers configs physically on the cluster even
-        # when they were never created through Embrella (no ProcRun) — _list_cluster_copick_runs.
-        # Still serve their scan by resolving the path from (session, run) directly, so a selected
-        # config isn't permanently unreadable (404). The deposition read only needs root_url + annotations.
+        # Cluster-only config (selectable but no ProcRun): resolve the path directly.
         session = MsiSession.objects.filter(name=session_name).first()
         if session is None:
             return JsonResponse({"success": False, "error": "Copick project not found"}, status=404)
         try:
             root_url = _copick_root_url(session, run_name)
-        except Exception as exc:  # noqa: BLE001 - unresolvable path (no cluster row, etc.) → not found
+        except Exception as exc:
             logger.warning("copick project path unresolved for %s/%s: %s", session_name, run_name, exc)
             return JsonResponse({"success": False, "error": "Copick project not found"}, status=404)
         project = {"session_name": session_name, "run_name": run_name, "root_url": root_url}
@@ -900,8 +896,7 @@ def get_copick_project_detail(request, session_name: str, run_name: str) -> Json
 
 
 def _write_scan_marker(cluster_id: str, session_name: str, run_name: str, marker: dict) -> None:
-    """Write a small scan.json marker (pending / error) beside config.json. Best-effort:
-    on the first scan there's no file/dir yet, and if SSH is down the job/read degrade anyway."""
+    """Write a small scan.json marker (pending / error) beside config.json."""
     from workflow.processors import get_processor
 
     base = get_processor("copick").get_processing_base_path(cluster=cluster_id).rstrip("/")
@@ -913,19 +908,12 @@ def _write_scan_marker(cluster_id: str, session_name: str, run_name: str, marker
 
 
 def _invalidate_scan_json(cluster_id: str, session_name: str, run_name: str) -> None:
-    """Mark the previous scan.json pending BEFORE submitting a new job.
-
-    `pending:true` is distinct from a missing file (never scanned) so the frontend can poll a
-    running job — including a Sources pre-warm the user never explicitly triggered (#1154).
-    The producer's end-of-job os.replace clears it (its output has no `pending` key); the only
-    case that must clear it manually is a submit that never reached SLURM (see _mark_scan_failed).
-    """
+    """Mark the previous scan.json pending BEFORE submitting a new job."""
     _write_scan_marker(cluster_id, session_name, run_name, {"pending": True})
 
 
 def _mark_scan_failed(cluster_id: str, session_name: str, run_name: str, message: str) -> None:
-    """Submit failed before SLURM ran, so no job will overwrite the pending marker: clear it to an
-    error state so polling stops and the frontend surfaces the failure instead of spinning forever."""
+    """Submit failed before SLURM ran, so no job will overwrite the pending marker."""
     _write_scan_marker(cluster_id, session_name, run_name, {"error": message})
 
 
@@ -941,12 +929,7 @@ def _mark_scan_failed(cluster_id: str, session_name: str, run_name: str, message
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonResponse:
-    """Kick off (or re-kick) the copick scan for one project run.
-
-    Submitting SLURM requires login (unlike the AllowAny read). Cluster is resolved server-side
-    and the job runs over the service account — no per-user SSH credentials, no cluster from the
-    client. The ProcRun name IS the copick project run so the job writes scan.json in that run's dir.
-    """
+    """Kick off (or re-kick) the copick scan for one project run."""
     from workflow.execution import PipelineExecutor
 
     try:
@@ -962,8 +945,7 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
     if not pipe_in_plan:
         return JsonResponse({"success": False, "error": "copick-scan plan is not configured"}, status=404)
 
-    # Everything from cluster resolution through submit is wrapped so any failure returns a clean
-    # error the UI can show — never a 500 stack (cluster lookup, get_or_create, or SSH can all raise).
+    # Wrap cluster-resolve → submit so any failure is a clean error, not a 500.
     cluster_id = None
     try:
         cluster_id = cluster_id_for_run(session_name, run_name, default=COPICK_DEFAULT_CLUSTER_ID)
@@ -971,8 +953,7 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
         # Mark the old result pending BEFORE submit so polling can tell a running job from the last one.
         _invalidate_scan_json(cluster_id, session_name, run_name)
 
-        # filter().first()-or-create (not get_or_create) so a pre-existing duplicate ProcRun
-        # doesn't raise MultipleObjectsReturned — reuse the earliest, only create when none exist.
+        # filter().first()-or-create (not get_or_create) avoids MultipleObjectsReturned on dup ProcRuns.
         proc_run = (
             ProcRun.objects.filter(msi_session=session, name=run_name, proc_plan=pipe_in_plan.plan)
             .order_by("id")
@@ -981,15 +962,13 @@ def trigger_copick_scan(request, session_name: str, run_name: str) -> JsonRespon
         if proc_run is None:
             proc_run = ProcRun.objects.create(msi_session=session, name=run_name, proc_plan=pipe_in_plan.plan)
 
-        # execute_pipe creates a PipeExecution(proc_run, pipe_in_plan), which is unique_together. Re-scan
-        # reuses the same run+pipe (so scan.json lands beside config.json), so a prior row would trip the
-        # constraint. The scan is idempotent — drop the old execution and keep only the latest submission.
+        # PipeExecution is unique per (proc_run, pipe_in_plan); drop the prior one so re-scan doesn't dup-key.
         PipeExecution.objects.filter(proc_run=proc_run, pipe_in_plan=pipe_in_plan).delete()
 
         result = PipelineExecutor().execute_pipe(
             pipe_in_plan=pipe_in_plan,
             proc_run=proc_run,
-            user=request.user,  # attributes the PipeExecution row; NOT used as SSH auth
+            user=request.user,
             parameters={},
             auth=clusterio.get_auth_service_user(),
             cluster_id=cluster_id,
