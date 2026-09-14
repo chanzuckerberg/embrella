@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 
-import { updateSession } from '../../services/depositionApi';
+import { rescanCopick, updateSession } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
 import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useAnnotationScan } from '../../hooks/useAnnotationScan';
@@ -14,6 +14,7 @@ import {
   annotationNeedsMetadata,
   mergeAnnotations,
   mergeServerIds,
+  staleAnnotationIds,
   stripIncompleteLinks,
 } from '../../components/annotations/scan';
 import type { Dataset, DepositionAnnotation } from '../../types';
@@ -59,7 +60,24 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       [active.key]: mergeAnnotations(scan.data.annotations, prev[active.key] ?? []),
     }));
   }, [scan.data, active]);
-  const scanning = scan.isPending;
+  const [rescanning, setRescanning] = useState(false);
+  const [rescanError, setRescanError] = useState<string | null>(null);
+  const scanning = scan.isPending || rescanning || (!!scan.data?.pending && !scan.data?.scanned);
+
+  const handleRescan = useCallback(async () => {
+    if (!active || active.runs.length === 0) return;
+    setRescanning(true);
+    setRescanError(null);
+    try {
+      await rescanCopick(active.name, active.runs);
+      // Re-read scan.json: the trigger wrote the pending marker, which now drives polling + spinner.
+      await queryClient.invalidateQueries({ queryKey: ['copick-scan', active.name, [...active.runs].sort()] });
+    } catch {
+      setRescanError('Couldn’t start the scan. Try again.');
+    } finally {
+      setRescanning(false);
+    }
+  }, [active, queryClient]);
 
   const save = useCallback(
     async (state: Record<string, DepositionAnnotation[]>) => {
@@ -118,7 +136,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       ...prev,
       [active.key]: (prev[active.key] ?? []).map((a) => (annId(a) === id ? { ...a, is_selected: selected } : a)),
     }));
-    setActiveAnnId(id);
+    setActiveAnnId(id); // selecting a row also opens its metadata form on the right
   };
 
   const setAll = (selected: boolean) => {
@@ -129,22 +147,84 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     }));
   };
 
+  // Drop a stale row (saved, but no longer in the latest scan) from the deposit.
+  const removeStale = (id: string) => {
+    if (!active) return;
+    setBySession((prev) => ({
+      ...prev,
+      [active.key]: (prev[active.key] ?? []).filter((a) => annId(a) !== id),
+    }));
+    if (activeAnnId === id) setActiveAnnId(null);
+  };
+
   if (sessions.length === 0) {
-    return <Alert severity="info">Add imaging sessions with copick configs on the Sources step first.</Alert>;
+    return <Alert severity="info">Add sessions with copick configs on Sources first.</Alert>;
   }
 
   const needCount = list.filter(annotationNeedsMetadata).length;
 
+  const staleIds = staleAnnotationIds(list, scan.data);
+
+  const scanAlerts = (
+    <>
+      {scanning && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+          <CircularProgress size={14} />
+          <Typography variant="caption" color="text.secondary">
+            Scanning new configs…
+          </Typography>
+        </Box>
+      )}
+      {scan.isError && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          Copick scan unavailable - showing saved annotations only.
+        </Alert>
+      )}
+      {!scan.isError && !!scan.data && scan.data.error && (
+        <Alert severity="error" sx={{ mb: 1.5 }}>
+          Scan failed - {scan.data.error}.
+        </Alert>
+      )}
+      {!scan.isError &&
+        !!scan.data &&
+        !scan.data.scanned &&
+        !scan.data.pending &&
+        !scan.data.error &&
+        scan.data.annotations.length === 0 && (
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            No scan yet - click Re-scan copick.
+          </Alert>
+        )}
+      {!scan.isError && !!scan.data && !scan.data.scanned && scan.data.annotations.length > 0 && (
+        <Alert severity="info" sx={{ mb: 1.5 }}>
+          Some configs aren’t scanned yet - showing what’s available.
+        </Alert>
+      )}
+    </>
+  );
+
   let body: ReactNode;
   if ((active?.runs.length ?? 0) === 0) {
-    body = <Alert severity="info">No copick configs selected for this session on the Sources step.</Alert>;
-  } else if (scanning) {
+    body = <Alert severity="info">No copick configs selected on Sources.</Alert>;
+  } else if (scanning && list.length === 0) {
+    // Full spinner ONLY when there's nothing to show yet.
     body = (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 4, justifyContent: 'center' }}>
         <CircularProgress size={20} />
         <Typography variant="body2" color="text.secondary">
-          Scanning copick configs… this can take a few minutes.
+          Scanning copick configs…
         </Typography>
+      </Box>
+    );
+  } else if (list.length === 0) {
+    body = (
+      <Box>
+        {scanAlerts}
+        {!!scan.data?.scanned && !scan.data.error && (
+          <Typography variant="body2" color="text.secondary">
+            No annotations found in the selected copick configs.
+          </Typography>
+        )}
       </Box>
     );
   } else {
@@ -158,27 +238,15 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         }}
       >
         <Box sx={{ borderRight: { md: '1px solid' }, borderColor: { md: 'divider' }, pr: { md: 2 } }}>
-          {scan.isError && (
-            <Alert severity="warning" sx={{ mb: 1.5 }}>
-              Copick scan unavailable - showing saved annotations only.
-            </Alert>
-          )}
-          {!scan.isError && !!scan.data && !scan.data.scanned && scan.data.annotations.length === 0 && (
-            <Alert severity="info" sx={{ mb: 1.5 }}>
-              No copick scan has run for these configs yet - showing saved annotations only.
-            </Alert>
-          )}
-          {!scan.isError && !!scan.data && !scan.data.scanned && scan.data.annotations.length > 0 && (
-            <Alert severity="info" sx={{ mb: 1.5 }}>
-              Some selected configs haven&apos;t been scanned yet - showing available annotations.
-            </Alert>
-          )}
+          {scanAlerts}
           <AnnotationList
             annotations={list}
             activeId={activeAnnId}
             onActivate={setActiveAnnId}
             onToggle={toggle}
             onSetAll={setAll}
+            onRemove={removeStale}
+            staleIds={staleIds}
             readOnly={readOnly}
           />
         </Box>
@@ -208,36 +276,58 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   return (
     <Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Choose which annotations from your copick configs to deposit, then complete the metadata for each. Only selected
-        annotations are submitted.
+        Select annotations to deposit, then fill in metadata for each.
       </Typography>
 
-      {sessions.length > 1 && (
-        <ToggleButtonGroup
-          exclusive
-          size="small"
-          value={active?.key}
-          onChange={(_, v: string | null) => {
-            if (v) {
-              setActiveKey(v);
-              setActiveAnnId(null);
-            }
-          }}
-          sx={{ mb: 2, flexWrap: 'wrap' }}
-        >
-          {sessions.map((s) => (
-            <ToggleButton key={s.key} value={s.key} sx={{ textTransform: 'none' }}>
-              {s.name || 'Session'}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+      <Box
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2 }}
+      >
+        {sessions.length > 1 ? (
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={active?.key}
+            onChange={(_, v: string | null) => {
+              if (v) {
+                setActiveKey(v);
+                setActiveAnnId(null);
+              }
+            }}
+            sx={{ flexWrap: 'wrap' }}
+          >
+            {sessions.map((s) => (
+              <ToggleButton key={s.key} value={s.key} sx={{ textTransform: 'none' }}>
+                {s.name || 'Session'}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        ) : (
+          <Box />
+        )}
+        {(active?.runs.length ?? 0) > 0 && !readOnly && (
+          <Button size="small" variant="outlined" onClick={handleRescan} disabled={scanning || rescanning}>
+            {scanning || rescanning ? 'Scanning…' : 'Re-scan copick'}
+          </Button>
+        )}
+      </Box>
+
+      {rescanError && (
+        <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setRescanError(null)}>
+          {rescanError}
+        </Alert>
       )}
 
       {body}
 
+      {staleIds.size > 0 && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          {staleIds.size} annotation{staleIds.size === 1 ? '' : 's'} no longer in the scan - remove with trash.
+        </Alert>
+      )}
+
       {needCount > 0 && (
         <Alert severity="warning" sx={{ mt: 2 }}>
-          {needCount} selected annotation{needCount === 1 ? '' : 's'} still need a name and ontology ID.
+          {needCount} selected annotation{needCount === 1 ? '' : 's'} need a name and ontology ID.
         </Alert>
       )}
     </Box>

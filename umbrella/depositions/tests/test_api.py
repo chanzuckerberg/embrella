@@ -359,6 +359,7 @@ class TestAutoFill:
         assert ts.acceleration_voltage == 300.0
         assert ts.total_flux == 120.0
         assert ts.tilt_axis is None
+        assert ts.data_acquisition_software == "SW"
         assert ts.autofill_metadata == raw
         tomos = {t.flavor: t for t in TomogramMetadata.objects.filter(session=owned_session)}
         assert set(tomos) == {"denoised", "filtered"}
