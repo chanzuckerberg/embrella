@@ -213,11 +213,13 @@ except ImportError:
     print("ERROR: pyarrow not installed in this environment")
     sys.exit(1)
 
-survey_id = os.environ.get('SLURM_JOB_NAME', '').replace('fs_survey_', '') or '{{ survey_id }}'
 output_dir = "{{ output_dir }}"
 jsonl_file = f"{output_dir}/survey_{{ survey_id }}_raw.jsonl"
 zarr_sizes_file = f"{output_dir}/zarr_sizes_{{ survey_id }}.jsonl"
 parquet_file = f"{output_dir}/survey_{{ survey_id }}.parquet"
+
+# Rows per Parquet row group.
+CHUNK_ROWS = 1_000_000
 
 # Define schema
 schema = pa.schema([
@@ -263,60 +265,68 @@ def latin1_safe(path):
     return "".join(map_char(ch) for ch in path)
 
 
-# Read main JSONL file and zarr sizes
-rows = []
-zarr_sizes = {}
-
-# Read zarr sizes first
-if os.path.exists(zarr_sizes_file):
-    with open(zarr_sizes_file, encoding='utf-8', errors='replace') as f:
+def read_jsonl(path):
+    with open(path, encoding='utf-8', errors='replace') as f:
         for line in f:
-            if line.strip():
-                try:
-                    entry = json.loads(line)
-                    entry['path'] = latin1_safe(entry['path'])
-                    zarr_sizes[entry['path']] = entry
-                except json.JSONDecodeError:
-                    continue
-
-# Read main JSONL file
-with open(jsonl_file, encoding='utf-8', errors='replace') as f:
-    for line in f:
-        if line.strip():
+            if not line.strip():
+                continue
             try:
                 entry = json.loads(line)
-                entry['path'] = latin1_safe(entry['path'])
-                # Replace zarr entries with computed sizes
-                if entry.get('type') == 'zarr' and entry['path'] in zarr_sizes:
-                    entry = zarr_sizes[entry['path']]
-                rows.append(entry)
             except json.JSONDecodeError:
                 continue
+            entry['path'] = latin1_safe(entry['path'])
+            yield entry
 
-print(f"Loaded {len(rows)} entries")
+
+# Zarr sizes are small (one row per bundle), so they fit in memory
+zarr_sizes = {}
+if os.path.exists(zarr_sizes_file):
+    for entry in read_jsonl(zarr_sizes_file):
+        zarr_sizes[entry['path']] = entry
+
+
+def merged_rows():
+    # Replace zarr placeholders from find with computed sizes
+    for entry in read_jsonl(jsonl_file):
+        if entry.get('type') == 'zarr':
+            entry = zarr_sizes.get(entry['path'], entry)
+        yield entry
+
+
+total_rows = 0
+total_size = 0
+type_counts = Counter()
+
+# Stream JSONL -> Parquet one row group at a time
+with pq.ParquetWriter(parquet_file, schema, compression='snappy') as writer:
+    chunk = []
+    for entry in merged_rows():
+        chunk.append(entry)
+        total_size += entry.get('size', 0)
+        type_counts[entry.get('type')] += 1
+
+        if len(chunk) < CHUNK_ROWS:
+            continue
+        writer.write_table(pa.Table.from_pylist(chunk, schema=schema))
+        total_rows += len(chunk)
+        chunk = []
+        print(f"  Wrote {total_rows} rows", flush=True)
+
+    if chunk:
+        writer.write_table(pa.Table.from_pylist(chunk, schema=schema))
+        total_rows += len(chunk)
+
+print(f"Wrote {total_rows} rows to {parquet_file}")
 
 if replaced:
     print(f"Transliterated {sum(replaced.values())} non-latin1 characters in paths:")
     for ch, n in replaced.most_common():
         print(f"  U+{ord(ch):04X} {ch!r} -> {map_char(ch)!r}  ({n} occurrences)")
 
-# Convert to Arrow table
-table = pa.Table.from_pylist(rows, schema=schema)
-
-# Write to Parquet with snappy compression
-pq.write_table(table, parquet_file, compression='snappy')
-print(f"Wrote {len(rows)} rows to {parquet_file}")
-
-# Print statistics
-total_size = sum(r.get('size', 0) for r in rows)
-file_count = sum(1 for r in rows if r.get('type') == 'file')
-dir_count = sum(1 for r in rows if r.get('type') == 'directory')
-zarr_count = sum(1 for r in rows if r.get('type') == 'zarr')
-
 print(f"Statistics:")
-print(f"  Total files: {file_count}")
-print(f"  Total directories: {dir_count}")
-print(f"  Total zarr bundles: {zarr_count}")
+print(f"  Total files: {type_counts['file']}")
+print(f"  Total directories: {type_counts['directory']}")
+print(f"  Total zarr bundles: {type_counts['zarr']}")
 print(f"  Total size: {total_size / (1024**4):.2f} TB")
 PYEOF
 
