@@ -156,6 +156,30 @@ def read_remote_file(cluster_id, remote_path, auth=None):
         ssh.close()
 
 
+def write_remote_file(cluster_id, remote_path, content, auth=None):
+    """Overwrite a file on a cluster over SFTP with UTF-8 content.
+
+    Args:
+        cluster_id: Target cluster (e.g., 'czii', 'bruno').
+        remote_path: Absolute path on the cluster filesystem.
+        content: Text to write (the file is truncated/created).
+        auth: Optional auth dict; defaults to cached service-user auth.
+
+    Raises:
+        FileNotFoundError: if the parent directory does not exist.
+    """
+    ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
+    try:
+        sftp = ssh.open_sftp()
+        try:
+            with sftp.file(remote_path, "w") as remote_file:
+                remote_file.write(content.encode("utf-8"))
+        finally:
+            sftp.close()
+    finally:
+        ssh.close()
+
+
 def jsonify(data):
     if data is None:
         raise ValueError("input data is empty, please provide data")

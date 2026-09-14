@@ -164,8 +164,9 @@ export async function getAnnotatedCount(sessionName: string, runs: string[]): Pr
   return data.annotated_count ?? 0;
 }
 
+/* Read the cached scan.json for each selected run and merge its picks/segmentations/meshes. */
 export async function scanCopickAnnotations(sessionName: string, runs: string[]): Promise<ScanResult> {
-  const merged: ScanResult = { scanned: true, picks: [], segmentations: [], meshes: [] };
+  const merged: ScanResult = { scanned: true, pending: false, picks: [], segmentations: [], meshes: [] };
   for (const run of runs) {
     const path = `${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/?scan=true`;
     const res = await fetchResource(url(path));
@@ -176,12 +177,31 @@ export async function scanCopickAnnotations(sessionName: string, runs: string[])
     const data = (await res.json()) as { project?: { annotations?: ScanResult } };
     const ann = data.project?.annotations ?? {};
     if (!ann.scanned) merged.scanned = false;
+    // A pending marker (job running/triggered) is distinct from a missing file (never scanned).
+    if (ann.pending) merged.pending = true;
+    if (ann.error && !merged.error) merged.error = ann.error;
     merged.picks!.push(...(ann.picks ?? []));
     merged.segmentations!.push(...(ann.segmentations ?? []));
     merged.meshes!.push(...(ann.meshes ?? []));
   }
   return merged;
 }
+
+export async function rescanCopick(sessionName: string, runs: string[]): Promise<void> {
+  const results = await Promise.allSettled(
+    runs.map(async (run) => {
+      const res = await postResource(
+        url(`${API.COPICK_PROJECT_DETAIL}${encodeURIComponent(sessionName)}/${encodeURIComponent(run)}/scan/`),
+        {}
+      );
+      if (!res.ok) throw new Error(`Copick scan could not be started for ${run} (${res.status})`);
+    })
+  );
+  if (results.length > 0 && results.every((r) => r.status === 'rejected')) {
+    throw new Error('Copick scan could not be started.');
+  }
+}
+
 /* Total tomograms for a session + AreTomo run, from the metadata summary (num_tomograms). */
 export async function getTomogramCount(sessionName: string, runNumber: string): Promise<number> {
   const run = runNumber.startsWith('run') ? runNumber : `run${runNumber}`;

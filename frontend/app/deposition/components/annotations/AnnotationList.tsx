@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@czi-sds/components';
-import { Box, Checkbox, InputAdornment, Link, TextField, Typography } from '@mui/material';
+import { Box, Checkbox, IconButton, InputAdornment, Link, TextField, Typography } from '@mui/material';
 import { VariableSizeList, type ListChildComponentProps } from 'react-window';
 
 import type { CopickKind, DepositionAnnotation } from '../../types';
@@ -20,7 +20,8 @@ const LIST_H = 460;
 
 export const annId = (a: DepositionAnnotation) => `${a.copick_kind}::${a.copick_ref}`;
 
-function status(a: DepositionAnnotation): { label: string; color: string } {
+function status(a: DepositionAnnotation, isStale: boolean): { label: string; color: string } {
+  if (isStale) return { label: 'No longer in scan', color: 'error.main' };
   if (!a.is_selected) return { label: 'Not selected', color: 'text.disabled' };
   if (annotationNeedsMetadata(a)) return { label: 'Needs metadata', color: 'warning.main' };
   return { label: 'Ready to deposit', color: 'success.main' };
@@ -34,6 +35,8 @@ export function AnnotationList({
   onActivate,
   onToggle,
   onSetAll,
+  onRemove,
+  staleIds,
   readOnly = false,
 }: {
   annotations: DepositionAnnotation[];
@@ -41,6 +44,9 @@ export function AnnotationList({
   onActivate: (id: string) => void;
   onToggle: (id: string, selected: boolean) => void;
   onSetAll: (selected: boolean) => void;
+  // A stale row can be dropped from the deposit.
+  onRemove?: (id: string) => void;
+  staleIds?: Set<string>;
   readOnly?: boolean;
 }) {
   const [filter, setFilter] = useState('');
@@ -120,7 +126,8 @@ export function AnnotationList({
     }
     const a = row.ann;
     const id = annId(a);
-    const st = status(a);
+    const isStale = staleIds?.has(id) ?? false;
+    const st = status(a, isStale);
     const activeRow = id === activeId;
     return (
       <Box
@@ -147,16 +154,29 @@ export function AnnotationList({
           onChange={(e) => onToggle(id, e.target.checked)}
           sx={{ p: 0.25 }}
         />
-        <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace' }} noWrap>
             {a.copick_ref}
           </Typography>
-          {a.is_selected && (
+          {(a.is_selected || isStale) && (
             <Typography variant="caption" sx={{ color: st.color, display: 'block' }}>
               {st.label}
             </Typography>
           )}
         </Box>
+        {isStale && onRemove && !readOnly && (
+          <IconButton
+            aria-label={`Remove ${a.copick_ref}`}
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(id);
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <Icon sdsIcon="TrashCan" sdsSize="xs" color="red" shade={400} />
+          </IconButton>
+        )}
       </Box>
     );
   };

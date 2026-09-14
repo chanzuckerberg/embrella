@@ -1,22 +1,27 @@
 import type { CopickKind, DepositionAnnotation } from '../../types';
 
-/** A copick annotation discovered by the cluster scan . */
 export interface ScannedAnnotation {
   copick_kind: CopickKind;
   copick_ref: string; // "<object>:<user_id>/<session_id>"
   object_name: string;
-  count?: number | null; // total_count - only for picks, 0 for segmentations/meshes
+  object_id: string; // ontology id from the config's pickable_objects
+  count?: number | null; // total_count — picks only; 0 for segmentations/meshes
 }
 
 interface RawRow {
   copick_ref: string;
   object_name?: string | null;
+  object_id?: string | null;
   run_count?: number;
   total_count?: number;
 }
 
 export interface ScanResult {
   scanned?: boolean;
+  // A scan job is running (or was just triggered) - distinct from a missing file (never scanned).
+  pending?: boolean;
+  // The last job failed to enumerate (env/config/run error) — distinct from "never scanned".
+  error?: string;
   picks?: RawRow[];
   segmentations?: RawRow[];
   meshes?: RawRow[];
@@ -36,6 +41,7 @@ export function normalizeScan(scan: ScanResult): ScannedAnnotation[] {
         copick_kind: kind,
         copick_ref: r.copick_ref,
         object_name: r.object_name ?? '',
+        object_id: r.object_id ?? '',
         count: r.total_count ?? null,
       });
     }
@@ -55,7 +61,16 @@ export function stripIncompleteLinks(a: DepositionAnnotation): DepositionAnnotat
 
 const annKey = (kind: CopickKind, ref: string) => `${kind}::${ref}`;
 
-/** Copy server ids onto local rows after save so the next autosave updates instead of recreating. Match annotations by kind/ref and links by type+url - a row edited mid-save won't match, so we leave it id-less. Same array back if nothing changed, to avoid kicking autosave again. */
+/** Ids (kind::ref) of saved rows a *completed* scan no longer returns stale . */
+export function staleAnnotationIds(
+  list: DepositionAnnotation[],
+  scan: { scanned: boolean; annotations: ScannedAnnotation[] } | null | undefined
+): Set<string> {
+  if (!scan?.scanned) return new Set();
+  const present = new Set(scan.annotations.map((a) => annKey(a.copick_kind, a.copick_ref)));
+  return new Set(list.map((a) => annKey(a.copick_kind, a.copick_ref)).filter((key) => !present.has(key)));
+}
+
 export function mergeServerIds(local: DepositionAnnotation[], saved: DepositionAnnotation[]): DepositionAnnotation[] {
   const savedByRef = new Map(saved.map((a) => [annKey(a.copick_kind, a.copick_ref), a]));
   let changed = false;
@@ -89,13 +104,23 @@ export function mergeAnnotations(scanned: ScannedAnnotation[], saved: Deposition
 
   for (const sc of scanned) {
     const k = annKey(sc.copick_kind, sc.copick_ref);
-    if (seen.has(k)) continue; // same (kind, ref) can appear across runs — one row per identity
+    if (seen.has(k)) continue;
     seen.add(k);
     const existing = savedByKey.get(k);
     merged.push(
       existing
-        ? { ...existing, object_name: existing.object_name || sc.object_name }
-        : { copick_kind: sc.copick_kind, copick_ref: sc.copick_ref, object_name: sc.object_name, is_selected: false }
+        ? {
+            ...existing,
+            object_name: existing.object_name || sc.object_name,
+            object_id: existing.object_id || sc.object_id,
+          }
+        : {
+            copick_kind: sc.copick_kind,
+            copick_ref: sc.copick_ref,
+            object_name: sc.object_name,
+            object_id: sc.object_id,
+            is_selected: false,
+          }
     );
   }
   for (const a of saved) {

@@ -4,11 +4,13 @@ The scan itself now runs as a SLURM job (CopickScanProcessor) that writes an agg
 scan.json next to config.json; the endpoints read it over caddy via _read_scan_json.
 """
 
+import json
 from unittest import mock
 
 import pytest
 from django.contrib.auth.models import User
 from processes.models import ProcPlan, ProcRun
+from rest_framework.test import APIClient
 from tem.models import Camera, ImagingWorkflow, Microscope, MsiSession, SessionPlan, Software
 
 from workflow.processors.copick import views as copick_views
@@ -95,6 +97,23 @@ class TestDetailScanWiring:
         assert r.status_code == 200
         assert r.json()["project"]["annotations"] == ann
         read_mock.assert_called_once_with("http://caddy/26feb20b/run001/")
+
+    def test_cluster_only_run_without_procrun_still_serves_scan(self, client, copick_session):
+        """A config selectable from the cluster but with no ProcRun (run999) must not 404 — it
+        resolves the path from (session, run) and serves scan.json (else it's permanently unreadable)."""
+        ann = {"scanned": True, "picks": [], "segmentations": [], "meshes": [], "annotated_runs": []}
+        with (
+            mock.patch.object(copick_views, "_copick_root_url", return_value="http://caddy/26feb20b/run999/"),
+            mock.patch.object(copick_views, "_read_scan_json", return_value=ann) as read_mock,
+        ):
+            r = client.get(COPICK_DETAIL_URL.format(session="26feb20b", run="run999"), {"scan": "true"})
+        assert r.status_code == 200
+        assert r.json()["project"]["annotations"] == ann
+        read_mock.assert_called_once_with("http://caddy/26feb20b/run999/")
+
+    def test_unknown_session_still_404s(self, client, db):
+        r = client.get(COPICK_DETAIL_URL.format(session="does-not-exist", run="run001"), {"scan": "true"})
+        assert r.status_code == 404
 
     def test_default_does_not_scan(self, client, copick_session):
         with (
@@ -219,3 +238,157 @@ class TestCopickScanWiring:
         assert resolve_dir("dataportal_env", cluster=None) in script
         assert "#SBATCH --partition=cpu" in script
         assert "#SBATCH --time=00:30:00" in script
+
+
+SCAN_URL = "/copick/v1/projects/{session}/{run}/scan/"
+
+
+@pytest.fixture
+def api(db):
+    """DRF client, authenticated (force_authenticate skips CSRF/session for the POST)."""
+    c = APIClient()
+    c.force_authenticate(User.objects.create_user(username="svc-tester", password="pw"))
+    return c
+
+
+@pytest.mark.django_db
+class TestTriggerCopickScan:
+    """POST .../scan/ submits the copick-scan job (service SSH) and returns immediately."""
+
+    def test_submits_scan_job_and_returns_202(self, api, copick_session):
+        with (
+            mock.patch.object(copick_views.clusterio, "get_auth_service_user", return_value={"username": "svc"}),
+            mock.patch.object(copick_views, "_invalidate_scan_json") as invalidate,
+            mock.patch.object(copick_views, "cluster_id_for_run", return_value="czii"),
+            mock.patch("workflow.execution.PipelineExecutor") as Executor,
+        ):
+            Executor.return_value.execute_pipe.return_value = {"job_id": "9001"}
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+
+        assert r.status_code == 202
+        body = r.json()
+        assert body["success"] is True
+        assert body["job_id"] == "9001"
+        # invalidate the old scan.json BEFORE submitting
+        invalidate.assert_called_once_with("czii", "26feb20b", "run001")
+        # submitted the copick-scan pipe with SERVICE auth (not per-user), no client params
+        _, kwargs = Executor.return_value.execute_pipe.call_args
+        assert kwargs["pipe_in_plan"].pipe.software.processor_class == "copick-scan"
+        assert kwargs["auth"] == {"username": "svc"}
+        assert kwargs["parameters"] == {}
+        assert kwargs["cluster_id"] == "czii"
+        # ProcRun reused under the copick-scan plan, named as the copick project run
+        assert ProcRun.objects.filter(name="run001", proc_plan__name="copick-scan").exists()
+
+    def test_rescan_clears_prior_execution_row(self, api, copick_session):
+        """Re-scan reuses the same run+pipe; PipeExecution(run,pipe) is unique_together, so the prior
+        row must be cleared before submit or the second scan 1062s (the live bug this fixes)."""
+        from processes.models import PipeExecution, PipeInPlan, ProcPlan, ProcRun
+
+        plan = ProcPlan.objects.get(name="copick-scan")
+        pip = PipeInPlan.objects.get(plan=plan)
+        session = MsiSession.objects.get(name="26feb20b")
+        proc_run = ProcRun.objects.create(name="run001", proc_plan=plan, msi_session=session)
+        stale = PipeExecution.objects.create(proc_run=proc_run, pipe_in_plan=pip, status="submitted", job_id="old")
+
+        with (
+            mock.patch.object(copick_views.clusterio, "get_auth_service_user", return_value={"username": "svc"}),
+            mock.patch.object(copick_views, "_invalidate_scan_json"),
+            mock.patch.object(copick_views, "cluster_id_for_run", return_value="czii"),
+            mock.patch("workflow.execution.PipelineExecutor") as Executor,
+        ):
+            Executor.return_value.execute_pipe.return_value = {"job_id": "new"}
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+
+        assert r.status_code == 202
+        assert not PipeExecution.objects.filter(id=stale.id).exists()  # prior row cleared → no 1062
+
+    def test_tolerates_duplicate_procruns(self, api, copick_session):
+        """Duplicate ProcRuns for the same (session, run, plan) must not crash the trigger with
+        MultipleObjectsReturned — ProcRun has no unique constraint, so races can leave more than one."""
+        from processes.models import ProcPlan, ProcRun
+
+        plan = ProcPlan.objects.get(name="copick-scan")
+        session = MsiSession.objects.get(name="26feb20b")
+        ProcRun.objects.create(name="run001", proc_plan=plan, msi_session=session)
+        ProcRun.objects.create(name="run001", proc_plan=plan, msi_session=session)  # duplicate
+
+        with (
+            mock.patch.object(copick_views.clusterio, "get_auth_service_user", return_value={"username": "svc"}),
+            mock.patch.object(copick_views, "_invalidate_scan_json"),
+            mock.patch.object(copick_views, "cluster_id_for_run", return_value="czii"),
+            mock.patch("workflow.execution.PipelineExecutor") as Executor,
+        ):
+            Executor.return_value.execute_pipe.return_value = {"job_id": "9001"}
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+        assert r.status_code == 202  # used the earliest ProcRun, no MultipleObjectsReturned
+
+    def test_requires_login(self, copick_session):
+        r = APIClient().post(SCAN_URL.format(session="26feb20b", run="run001"))
+        # DRF IsAuthenticated → 401/403; a global LoginRequiredMiddleware may 302 to login instead.
+        assert r.status_code in (302, 401, 403)
+
+    def test_unknown_session_is_404(self, api, db):
+        r = api.post(SCAN_URL.format(session="does-not-exist", run="run001"))
+        assert r.status_code == 404
+        assert r.json()["success"] is False
+
+    def test_ssh_disabled_degrades_to_503(self, api, copick_session):
+        with (
+            mock.patch.object(copick_views, "_invalidate_scan_json"),
+            mock.patch.object(copick_views, "_mark_scan_failed") as mark_failed,
+            mock.patch.object(copick_views, "cluster_id_for_run", return_value="czii"),
+            mock.patch.object(
+                copick_views.clusterio,
+                "get_auth_service_user",
+                side_effect=copick_views.clusterio.SSHDisabledError("off"),
+            ),
+        ):
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+        assert r.status_code == 503
+        assert r.json()["success"] is False
+        mark_failed.assert_called_once()  # pending marker cleared so polling doesn't hang
+
+    def test_submit_failure_clears_pending_and_502s(self, api, copick_session):
+        """A failed submit must clear the pending marker it just wrote, else polling spins forever."""
+        with (
+            mock.patch.object(copick_views, "_invalidate_scan_json"),
+            mock.patch.object(copick_views, "_mark_scan_failed") as mark_failed,
+            mock.patch.object(copick_views, "cluster_id_for_run", return_value="czii"),
+            mock.patch.object(copick_views.clusterio, "get_auth_service_user", return_value={"username": "svc"}),
+            mock.patch("workflow.execution.PipelineExecutor") as Executor,
+        ):
+            Executor.return_value.execute_pipe.side_effect = RuntimeError("sbatch blew up")
+            r = api.post(SCAN_URL.format(session="26feb20b", run="run001"))
+        assert r.status_code == 502
+        mark_failed.assert_called_once()
+
+
+@pytest.mark.django_db
+class TestInvalidateScanJson:
+    """_invalidate_scan_json writes a pending marker so polling can tell a new job from the last."""
+
+    def test_writes_pending_marker_next_to_config(self):
+        with (
+            mock.patch("workflow.processors.get_processor") as get_processor,
+            mock.patch.object(copick_views.clusterio, "write_remote_file") as writer,
+        ):
+            get_processor.return_value.get_processing_base_path.return_value = "/copick/base/"
+            copick_views._invalidate_scan_json("czii", "26feb20b", "run001")
+
+        writer.assert_called_once()
+        args, _ = writer.call_args
+        assert args[0] == "czii"
+        assert args[1] == "/copick/base/26feb20b/run001/scan.json"
+        payload = json.loads(args[2])
+        # pending:true distinguishes "job running" from a missing file ("never scanned")
+        assert payload["scanned"] is False
+        assert payload["pending"] is True
+
+    def test_write_failure_is_non_fatal(self):
+        with (
+            mock.patch("workflow.processors.get_processor") as get_processor,
+            mock.patch.object(copick_views.clusterio, "write_remote_file", side_effect=FileNotFoundError("no dir")),
+        ):
+            get_processor.return_value.get_processing_base_path.return_value = "/copick/base/"
+            copick_views._invalidate_scan_json("czii", "26feb20b", "run001")  # must not raise

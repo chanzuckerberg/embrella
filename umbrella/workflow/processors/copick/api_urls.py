@@ -15,4 +15,9 @@ urlpatterns = [
         views.get_copick_project_detail,
         name="copick_project_detail",
     ),
+    path(
+        "v1/projects/<str:session_name>/<str:run_name>/scan/",
+        views.trigger_copick_scan,
+        name="copick_trigger_scan",
+    ),
 ]
