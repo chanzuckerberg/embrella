@@ -14,6 +14,32 @@ from umbrella_logger import logger
 
 from processes.tasks.job_tasks import check_job_status
 
+OUTPUT_SYNC_INTERVAL = timedelta(minutes=5)
+SACCT_POLL_INTERVAL = timedelta(seconds=60)
+SACCT_NOT_YET_LISTED_DELAY = timedelta(seconds=30)
+SACCT_ERROR_BACKOFF = timedelta(seconds=120)
+
+
+def _run_later(func, args, name, delay, timeout=None, hook=""):
+    # Django-Q2 has no per-task eta; a plain async_task would run again
+    # immediately. A one-shot Schedule fires once at next_run, then deletes itself.
+    from django_q.models import Schedule
+
+    kwargs = {"task_name": name}
+    if timeout:
+        kwargs["timeout"] = timeout
+
+    Schedule.objects.filter(name=name).delete()
+    Schedule.objects.create(
+        name=name,
+        func=func,
+        args=repr(args),
+        kwargs=repr(kwargs),
+        hook=hook,
+        schedule_type=Schedule.ONCE,
+        next_run=timezone.now() + delay,
+    )
+
 
 def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job_id):
     """
@@ -127,17 +153,13 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
         syncer.sync_results()
 
         # Schedule next iteration (5 minutes from now)
-        async_task(
+        _run_later(
             "processes.tasks.run_syncer_iteration",
-            syncer_class_path,
-            base_path,
-            session_name,
-            run_id,
-            job_id,
-            task_name=f"syncer_{session_name}_{run_id}",
+            (syncer_class_path, base_path, session_name, run_id, job_id),
+            name=f"syncer_{session_name}_{run_id}",
+            delay=OUTPUT_SYNC_INTERVAL,
             timeout=300,  # 5 minute timeout
             hook="django_q.hooks.default",  # Use default hook for error handling
-            q_options={"eta": timezone.now() + timedelta(minutes=5)},
         )
 
         logger.info(f"Syncer iteration completed for {session_name}/{run_id}. Next run in 5 minutes.")
@@ -252,12 +274,11 @@ def run_job_status_syncer(job_id: str, cluster_id: str = "czii"):
         if job_info is None:
             # Job not in sacct yet (just submitted) - reschedule in 30 seconds
             logger.debug(f"Job {job_id} not in sacct yet, rescheduling...")
-            async_task(
+            _run_later(
                 "processes.tasks.run_job_status_syncer",
-                job_id,
-                cluster_id,
-                task_name=f"job_status_{job_id}",
-                q_options={"eta": timezone.now() + timedelta(seconds=30)},
+                (job_id, cluster_id),
+                name=f"job_status_{job_id}",
+                delay=SACCT_NOT_YET_LISTED_DELAY,
             )
             return {"status": "waiting", "job_id": job_id}
 
@@ -279,24 +300,22 @@ def run_job_status_syncer(job_id: str, cluster_id: str = "czii"):
 
         # Job still running - reschedule for 60 seconds from now
         logger.debug(f"Job {job_id} still {job_info['state']}, rescheduling...")
-        async_task(
+        _run_later(
             "processes.tasks.run_job_status_syncer",
-            job_id,
-            cluster_id,
-            task_name=f"job_status_{job_id}",
-            q_options={"eta": timezone.now() + timedelta(seconds=60)},
+            (job_id, cluster_id),
+            name=f"job_status_{job_id}",
+            delay=SACCT_POLL_INTERVAL,
         )
         return {"status": "running", "job_id": job_id, "state": job_info["state"]}
 
     except Exception as e:
         logger.error(f"Error in job status syncer for {job_id}: {e}")
         # Reschedule anyway to retry (with backoff)
-        async_task(
+        _run_later(
             "processes.tasks.run_job_status_syncer",
-            job_id,
-            cluster_id,
-            task_name=f"job_status_{job_id}",
-            q_options={"eta": timezone.now() + timedelta(seconds=120)},  # 2 min backoff on error
+            (job_id, cluster_id),
+            name=f"job_status_{job_id}",
+            delay=SACCT_ERROR_BACKOFF,
         )
         return {"status": "error", "job_id": job_id, "error": str(e)}
 
