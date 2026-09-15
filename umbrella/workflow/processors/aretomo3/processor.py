@@ -22,6 +22,15 @@ NO_DIRECTORY = "."
 # GatanCeltic gain format; AreTomo3 cannot read it, the script converts it to .mrc first
 DM4_SUFFIX = ".dm4"
 
+# Super-resolution frames have half the sensor pixel. Read off the session, not the form,
+# so the key is injected into params at render time and is never a schema property.
+SUPER_RES_KEY = "super_resolution"
+SUPER_RES_FACTOR = 2
+
+# Auto -AtBin targets, in Angstroms per voxel
+TARGET_5A = 5
+TARGET_10A = 10
+
 # Import register_processor here to avoid circular import
 # (it will be called at module import time but after the class is defined)
 
@@ -36,27 +45,45 @@ class AreTomo3Processor(BaseProcessor):
     allowed_clusters = ["czii", "bruno"]
     task_name = "tomographic_reconstruction"
 
-    def _calculate_auto_binning(self, pixel_size: float) -> Dict[str, float]:
+    def _schema_default(self, key: str) -> Any:
+        return self.get_parameter_schema()["properties"][key].get("default")
+
+    def _param(self, params: Dict[str, Any], key: str) -> Any:
+        """The posted value, else the schema default: bare params (validation) lack merged defaults."""
+        value = params.get(key)
+        return self._schema_default(key) if value in (None, "") else value
+
+    def _frame_pixel_size(self, params: Dict[str, Any]) -> float:
+        """What -PixSize gets: the sensor pixel, halved for super-resolution frames."""
+        pixel_size = float(params["pixel_size"])
+        if params.get(SUPER_RES_KEY):
+            return pixel_size / SUPER_RES_FACTOR
+        return pixel_size
+
+    def _calculate_auto_binning(self, params: Dict[str, Any]) -> Dict[str, float]:
         """
-        Calculate auto-binning factors based on pixel size.
+        -AtBin factors that land the tomograms at 5Å and 10Å.
 
-        Computes binning factors to achieve target resolutions:
-        - tomo_bin_5A: binning for 5Å tomogram
-        - tomo_bin_10A: binning for 10Å tomogram
+        -AtBin is relative to the motion-corrected series, whose pixel is:
 
-        Args:
-            pixel_size: Calibrated pixel size in Angstroms
+            sensor_px ──(÷2 if super_res)──▶ frame_px ──(× McBin ÷ EerSampling)──▶ mc_px
 
-        Returns:
-            Dict with tomo_bin_5A and tomo_bin_10A values
+        EerSampling only upsamples EER frames; an admin ParameterDefaults row sets it to 1
+        for TIFF cameras.
 
         Example:
-            pixel_size=1.54 → {"tomo_bin_5A": 3.25, "tomo_bin_10A": 6.49}
+            pixel_size=1.54, mc_bin=2, eer_sampling=2 → {"tomo_bin_5A": 3.25, "tomo_bin_10A": 6.49}
         """
+        mc_pixel = self._frame_pixel_size(params) * float(self._param(params, "mc_bin"))
+        mc_pixel /= float(self._param(params, "eer_sampling"))
         return {
-            "tomo_bin_5A": round(5 / pixel_size, 2),
-            "tomo_bin_10A": round(10 / pixel_size, 2),
+            "tomo_bin_5A": round(TARGET_5A / mc_pixel, 3),
+            "tomo_bin_10A": round(TARGET_10A / mc_pixel, 3),
         }
+
+    def _apply_acquisition(self, params: Dict[str, Any], run_context: "RunContext") -> Dict[str, Any]:
+        """Copy of params carrying the session's acquisition facts the formatters need."""
+        return {**params, SUPER_RES_KEY: run_context.msi_session.super_resolution}
 
     def validate_parameters(self, params: Dict[str, Any]) -> List[str]:
         """
@@ -83,7 +110,7 @@ class AreTomo3Processor(BaseProcessor):
         pixel_size = params.get("pixel_size")
         if pixel_size:
             try:
-                binning = self._calculate_auto_binning(float(pixel_size))
+                binning = self._calculate_auto_binning(params)
                 if binning["tomo_bin_5A"] < 1 or binning["tomo_bin_10A"] < 1:
                     errors.append("Pixel size results in invalid binning factors (< 1)")
             except (ValueError, ZeroDivisionError):
@@ -187,15 +214,17 @@ class AreTomo3Processor(BaseProcessor):
             return ""
         return str(value).strip()
 
+    def _format_cli_pix_size_frame(self, value: Any, params: Dict[str, Any]) -> str:
+        """-PixSize is the frame pixel, not the sensor pixel the form holds. See _frame_pixel_size."""
+        return str(self._frame_pixel_size(params))
+
     def _format_cli_at_bin_auto(self, value: Any, params: Dict[str, Any]) -> str:
         """
         Format -AtBin parameter with auto-calculation when empty.
 
         If at_bin has a user-provided value, use it directly.
-        If at_bin is empty, auto-calculate binning factors based on pixel_size:
-        - First tomogram: binning for 5Å (5 / pixel_size)
-        - Second tomogram: binning for 10Å (10 / pixel_size)
-        - Third tomogram: binning for 10Å (10 / pixel_size)
+        If at_bin is empty, auto-calculate from the motion-corrected pixel (see
+        _calculate_auto_binning): 5Å, 10Å, 10Å.
 
         Args:
             value: User-provided at_bin value (may be empty string)
@@ -205,7 +234,7 @@ class AreTomo3Processor(BaseProcessor):
             Formatted string with 1 or 3 binning factors
 
         Example:
-            value="" with pixel_size=1.54 → "3.25 6.49 6.49"
+            value="" with pixel_size=1.54, mc_bin=2, eer_sampling=2 → "3.25 6.49 6.49"
             value="2.0" → "2.0"
             value="1.5 3.0 3.0" → "1.5 3.0 3.0"
         """
@@ -220,7 +249,7 @@ class AreTomo3Processor(BaseProcessor):
             return ""
 
         try:
-            binning = self._calculate_auto_binning(float(pixel_size))
+            binning = self._calculate_auto_binning(params)
             return f"{binning['tomo_bin_5A']} {binning['tomo_bin_10A']} {binning['tomo_bin_10A']}"
         except (ValueError, ZeroDivisionError):
             return ""
@@ -261,9 +290,10 @@ class AreTomo3Processor(BaseProcessor):
         Returns:
             Dict with calculated variables for template
         """
-        pixel_size = float(params["pixel_size"])
-        binning = self._calculate_auto_binning(pixel_size)
+        binning = self._calculate_auto_binning(params)
         return {
+            "sensor_pix_size": float(params["pixel_size"]),
+            "frame_pix_size": self._frame_pixel_size(params),
             "tomo_bin_5A": binning["tomo_bin_5A"],
             "tomo_bin_10A": binning["tomo_bin_10A"],
             "slurm_component_0_gpus": int(params.get("slurm_component_0_gpus", 8)),
@@ -336,6 +366,7 @@ class AreTomo3Processor(BaseProcessor):
         """
         # Resolve gain file path (fetches most recent if not specified, builds full path)
         params = self._resolve_gain_file_path(params, run_context)
+        params = self._apply_acquisition(params, run_context)
 
         # Get template from processor's templates directory
         template_dir = os.path.join(os.path.dirname(__file__), "templates")

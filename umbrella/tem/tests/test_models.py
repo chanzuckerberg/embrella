@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from tem.models import (
+    AcquisitionSettings,
     CalibratedPixelSize,
     Camera,
     ImagingWorkflow,
@@ -135,3 +136,32 @@ class TestSessionPlanNamePrefix:
         session_plan.name_prefix = prefix
         with pytest.raises(ValidationError):
             session_plan.full_clean()
+
+
+@pytest.mark.django_db
+class TestAcquisitionSettings:
+    def test_plan_without_profile_reports_field_defaults(self, session_plan):
+        assert session_plan.acquisition_values() == {"super_resolution": False}
+
+    def test_snapshot_copies_then_overrides(self):
+        profile = AcquisitionSettings.objects.create(label="krios2", super_resolution=True)
+
+        copy = profile.snapshot("snapshot 26sep15a")
+        assert copy.values() == {"super_resolution": True}
+        assert str(copy) == "snapshot 26sep15a"
+        assert profile.snapshot("x", super_resolution=False).values() == {"super_resolution": False}
+
+    def test_snapshot_does_not_alias_the_profile(self, msi_session):
+        profile = AcquisitionSettings.objects.create(label="krios2", super_resolution=True)
+        msi_session.acquisition = profile.snapshot(AcquisitionSettings.snapshot_label(msi_session.name))
+        msi_session.save()
+
+        profile.super_resolution = False
+        profile.save()
+
+        msi_session.refresh_from_db()
+        assert msi_session.acquisition.pk != profile.pk
+        assert msi_session.super_resolution is True
+
+    def test_session_without_row_is_not_super_resolution(self, msi_session):
+        assert msi_session.super_resolution is False

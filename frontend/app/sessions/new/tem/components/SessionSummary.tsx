@@ -48,6 +48,9 @@ export function SessionSummary({ session, notice }: SessionSummaryProps) {
     { label: 'Grid', value: session.grid_name },
     { label: 'Session Plan', value: session.session_plan_name },
     ...(session.magnification_display ? [{ label: 'Magnification', value: session.magnification_display }] : []),
+    ...(session.acquisition
+      ? [{ label: 'Super-resolution', value: session.acquisition.super_resolution ? 'Yes' : 'No' }]
+      : []),
   ];
 
   const paths = [
