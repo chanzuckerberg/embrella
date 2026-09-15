@@ -97,34 +97,42 @@ export function mergeServerIds(local: DepositionAnnotation[], saved: DepositionA
   return changed ? out : local;
 }
 
+/**
+ * Merge scanned candidates into saved rows by copick_kind::copick_ref:
+ * - existing saved row -> fill object_name/object_id from the scan only where the user hasn't set them
+ * - scanned-only       -> appended as an unselected candidate
+ * - saved-only (no longer scanned) -> kept in place (no data loss; stale UX is #868)
+ * Saved order is preserved, and the SAME `saved` reference is returned when nothing changed — so a
+ * re-fold from an unchanged scan poll produces no new state (which would otherwise retrigger autosave).
+ */
 export function mergeAnnotations(scanned: ScannedAnnotation[], saved: DepositionAnnotation[]): DepositionAnnotation[] {
-  const savedByKey = new Map(saved.map((a) => [annKey(a.copick_kind, a.copick_ref), a]));
-  const merged: DepositionAnnotation[] = [];
-  const seen = new Set<string>();
-
+  const scannedByKey = new Map<string, ScannedAnnotation>();
   for (const sc of scanned) {
     const k = annKey(sc.copick_kind, sc.copick_ref);
-    if (seen.has(k)) continue;
-    seen.add(k);
-    const existing = savedByKey.get(k);
-    merged.push(
-      existing
-        ? {
-            ...existing,
-            object_name: existing.object_name || sc.object_name,
-            object_id: existing.object_id || sc.object_id,
-          }
-        : {
-            copick_kind: sc.copick_kind,
-            copick_ref: sc.copick_ref,
-            object_name: sc.object_name,
-            object_id: sc.object_id,
-            is_selected: false,
-          }
-    );
+    if (!scannedByKey.has(k)) scannedByKey.set(k, sc); // same (kind, ref) across runs -> one identity
   }
-  for (const a of saved) {
-    if (!seen.has(annKey(a.copick_kind, a.copick_ref))) merged.push(a);
+  const savedKeys = new Set(saved.map((a) => annKey(a.copick_kind, a.copick_ref)));
+
+  let changed = false;
+  const out = saved.map((a) => {
+    const sc = scannedByKey.get(annKey(a.copick_kind, a.copick_ref));
+    if (!sc) return a;
+    const object_name = a.object_name || sc.object_name;
+    const object_id = a.object_id || sc.object_id;
+    if (object_name === a.object_name && object_id === a.object_id) return a;
+    changed = true;
+    return { ...a, object_name, object_id };
+  });
+  for (const sc of scannedByKey.values()) {
+    if (savedKeys.has(annKey(sc.copick_kind, sc.copick_ref))) continue;
+    out.push({
+      copick_kind: sc.copick_kind,
+      copick_ref: sc.copick_ref,
+      object_name: sc.object_name,
+      object_id: sc.object_id,
+      is_selected: false,
+    });
+    changed = true;
   }
-  return merged;
+  return changed ? out : saved;
 }

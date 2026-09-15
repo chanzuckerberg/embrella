@@ -121,6 +121,48 @@ def _read_metrics(loc):
     return df
 
 
+@require_http_methods(["GET"])
+def get_copick_aretomo_compat(request):
+    """Copick runs that aren't in the deposited AreTomo run ."""
+    loc, error = _locate_run(request)
+    if error:
+        return error
+
+    try:
+        aretomo_runs = set(_read_metrics(loc)["Tilt_Series"])
+    except FileNotFoundError:
+        return _error("Required files not found", HTTP_NOT_FOUND)
+
+    # Lazy import: the copick scan helpers live in the copick processor module.
+    from workflow.processors.copick.views import _copick_root_url, _read_scan_json
+
+    copick_runs = [r.strip() for r in request.GET.get("copick_runs", "").split(",") if r.strip()]
+    annotated: set[str] = set()
+    scanned = True
+    for run in copick_runs:
+        try:
+            result = _read_scan_json(_copick_root_url(loc.msi_session, run))
+        except Exception as exc:  # a bad run degrades to "not scanned", never a 500
+            logger.warning("copick-compat: resolve failed for %s/%s: %s", loc.msi_session.name, run, exc)
+            result = {"scanned": False}
+        if not result.get("scanned"):
+            scanned = False
+        annotated.update(result.get("annotated_runs", []))
+
+    incompatible = sorted(annotated - aretomo_runs)
+    return JsonResponse(
+        {
+            "success": True,
+            "compatible": not incompatible,
+            "incompatible_runs": incompatible,
+            "aretomo_run_count": len(aretomo_runs),
+            "annotated_run_count": len(annotated),
+            # scanned=false → the copick scan is still incomplete, so this result is provisional.
+            "scanned": scanned,
+        }
+    )
+
+
 def get_metadata_summary(request):
     """
     Fetch and compute summary statistics for tomogram metadata.

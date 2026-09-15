@@ -86,6 +86,21 @@ describe('mergeAnnotations', () => {
     expect(vlp.object_id).toBe('UniProtKB:P0A6G7');
   });
 
+  it('returns the same saved reference when the scan adds nothing new (no autosave churn)', () => {
+    const saved: DepositionAnnotation[] = [
+      {
+        copick_kind: 'picks',
+        copick_ref: 'VLP:relion/2',
+        object_name: 'VLP',
+        object_id: 'GO:0170047',
+        is_selected: true,
+      },
+      { copick_kind: 'picks', copick_ref: 'GroEL:upload/1', object_name: 'GroEL', object_id: '', is_selected: false },
+    ];
+    // Every scanned identity is already present with its values → no change → same ref back.
+    expect(mergeAnnotations(scanned, saved)).toBe(saved);
+  });
+
   it('dedupes the same (kind, ref) appearing across multiple runs', () => {
     const dupes: ScannedAnnotation[] = [
       { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: '' },

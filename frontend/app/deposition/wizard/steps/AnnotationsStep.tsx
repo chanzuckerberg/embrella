@@ -8,6 +8,7 @@ import { rescanCopick, updateSession } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
 import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useAnnotationScan } from '../../hooks/useAnnotationScan';
+import { useCopickAretomoCompat } from '../../hooks/useCopickAretomoCompat';
 import { AnnotationList, annId } from '../../components/annotations/AnnotationList';
 import { AnnotationMetadataForm } from '../../components/annotations/AnnotationMetadataForm';
 import {
@@ -24,6 +25,7 @@ interface SessionRef {
   key: string;
   id?: number;
   name: string;
+  aretomoRun: string;
   runs: string[];
   saved: DepositionAnnotation[];
 }
@@ -33,6 +35,7 @@ function toSessionRefs(dataset: Dataset): SessionRef[] {
     key: `ann-${s.id ?? i}`,
     id: s.id,
     name: s.msi_session_name ?? '',
+    aretomoRun: s.aretomo_run_name ?? '',
     runs: Array.isArray(s.selected_copick_runs) ? (s.selected_copick_runs as string[]) : [],
     saved: s.annotations ?? [],
   }));
@@ -52,13 +55,24 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
 
   const scan = useAnnotationScan(active?.name ?? '', active?.runs ?? [], !readOnly);
 
+  const compat = useCopickAretomoCompat(
+    active?.name ?? '',
+    active?.aretomoRun ?? '',
+    active?.runs ?? [],
+    !readOnly && !!scan.data?.scanned
+  );
+
   useEffect(() => {
     if (!scan.data || !active) return;
+    const key = active.key;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setBySession((prev) => ({
-      ...prev,
-      [active.key]: mergeAnnotations(scan.data.annotations, prev[active.key] ?? []),
-    }));
+    setBySession((prev) => {
+      const cur = prev[key] ?? [];
+      const merged = mergeAnnotations(scan.data.annotations, cur);
+      // Same ref back when the scan added nothing → don't churn state (and don't retrigger autosave)
+      // on every poll of a still-running scan.
+      return merged === cur ? prev : { ...prev, [key]: merged };
+    });
   }, [scan.data, active]);
   const [rescanning, setRescanning] = useState(false);
   const [rescanError, setRescanError] = useState<string | null>(null);
@@ -72,6 +86,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       await rescanCopick(active.name, active.runs);
       // Re-read scan.json: the trigger wrote the pending marker, which now drives polling + spinner.
       await queryClient.invalidateQueries({ queryKey: ['copick-scan', active.name, [...active.runs].sort()] });
+      queryClient.invalidateQueries({ queryKey: ['copick-aretomo-compat', active.name] });
     } catch {
       setRescanError('Couldn’t start the scan. Try again.');
     } finally {
@@ -325,9 +340,17 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         </Alert>
       )}
 
+      {compat.data && !compat.data.compatible && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          {compat.data.incompatible_runs.length} annotated run
+          {compat.data.incompatible_runs.length === 1 ? '' : 's'} not produced by AreTomo run {active?.aretomoRun}:{' '}
+          {compat.data.incompatible_runs.join(', ')}
+        </Alert>
+      )}
+
       {needCount > 0 && (
         <Alert severity="warning" sx={{ mt: 2 }}>
-          {needCount} selected annotation{needCount === 1 ? '' : 's'} need a name and ontology ID.
+          {needCount} selected annotation{needCount === 1 ? ' is' : 's are'} incomplete (name + ontology ID required).
         </Alert>
       )}
     </Box>

@@ -164,6 +164,30 @@ export async function getAnnotatedCount(sessionName: string, runs: string[]): Pr
   return data.annotated_count ?? 0;
 }
 
+export interface CopickAretomoCompat {
+  compatible: boolean;
+  incompatible_runs: string[]; // annotated runs not produced by the deposited AreTomo run
+  scanned: boolean;
+}
+
+export async function fetchCopickAretomoCompat(
+  sessionName: string,
+  aretomoRun: string,
+  copickRuns: string[]
+): Promise<CopickAretomoCompat> {
+  const run = aretomoRun.startsWith('run') ? aretomoRun : `run${aretomoRun}`;
+  const q =
+    `?session_name=${encodeURIComponent(sessionName)}` +
+    `&run_number=${encodeURIComponent(run)}` +
+    `&copick_runs=${encodeURIComponent(copickRuns.join(','))}`;
+  const data = await parse<Partial<CopickAretomoCompat>>(await fetchResource(url(`${API.COPICK_ARETOMO_COMPAT}${q}`)));
+  return {
+    compatible: data.compatible ?? true,
+    incompatible_runs: data.incompatible_runs ?? [],
+    scanned: data.scanned ?? false,
+  };
+}
+
 /* Read the cached scan.json for each selected run and merge its picks/segmentations/meshes. */
 export async function scanCopickAnnotations(sessionName: string, runs: string[]): Promise<ScanResult> {
   const merged: ScanResult = { scanned: true, pending: false, picks: [], segmentations: [], meshes: [] };

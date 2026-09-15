@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { normalizeScan, type ScannedAnnotation } from '../components/annotations/scan';
 import { scanCopickAnnotations } from '../services/depositionApi';
@@ -31,9 +31,10 @@ export function useAnnotationScan(sessionName: string, runs: string[], enabled =
     },
     enabled: enabled && !!sessionName && sortedRuns.length > 0,
     staleTime: STALE,
-    // Adding/removing a config changes the query key; keep the prior result on screen during the
-    // refetch, so the annotations list doesn't flash empty.
-    placeholderData: keepPreviousData,
+    // Keep the prior result on screen ONLY when the run list changed within the SAME session (add/
+    // remove config), so the list doesn't flash empty. Scoped by sessionName so a session switch does
+    // NOT carry one session's annotations into another's draft .
+    placeholderData: (prev, prevQuery) => (prevQuery?.queryKey[1] === sessionName ? prev : undefined),
     refetchInterval: (query) => {
       const data = query.state.data;
       return !data?.scanned && !!data?.pending ? POLL : false;

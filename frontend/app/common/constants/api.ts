@@ -23,6 +23,7 @@ export enum API {
   ANNOTATIONS_FILTERLIST = '/annotations/v1/filterlist/',
   METADATA_SUMMARY = '/workflow/metadata/api/v1/summary/',
   METADATA_VIZ = '/workflow/metadata/api/v1/data/',
+  COPICK_ARETOMO_COMPAT = '/workflow/metadata/api/v1/copick-compat/',
   REVIEWS = '/api/reviews/',
 
   // Storage Explorer (Filesystem Surveys & Directories)
