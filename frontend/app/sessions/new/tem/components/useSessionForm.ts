@@ -83,6 +83,7 @@ export function useSessionForm(): UseSessionFormReturn {
     magnificationId: null,
     name: '',
     filterUserId: currentUserId,
+    superResolution: false,
   });
   const [planSelection, setPlanSelection] = useState<PlanSelection>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -159,11 +160,13 @@ export function useSessionForm(): UseSessionFormReturn {
 
   const selectSessionPlan = useCallback(
     (sessionPlanId: number | null) => {
-      // The magnification list belongs to the old plan.
-      setState((prev) => ({ ...prev, sessionPlanId, magnificationId: null }));
+      // The magnification list belongs to the old plan; Other Settings restart from the new plan's profile.
+      const plan = plans.find((p) => p.id === sessionPlanId);
+      const superResolution = plan?.acquisition_defaults.super_resolution ?? false;
+      setState((prev) => ({ ...prev, sessionPlanId, magnificationId: null, superResolution }));
       clearError('sessionPlanId');
     },
-    [clearError]
+    [plans, clearError]
   );
 
   const planTierOptions = useMemo(
@@ -232,6 +235,7 @@ export function useSessionForm(): UseSessionFormReturn {
         grid_id: state.gridId,
         // might not have any magnification options, so this is optional
         ...(state.magnificationId ? { magnification_id: state.magnificationId } : {}),
+        super_resolution: state.superResolution,
       });
 
       if (res.ok) {

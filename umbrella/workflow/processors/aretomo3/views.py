@@ -158,6 +158,7 @@ def get_session_info(session: MsiSession) -> Dict[str, Any]:
     """
     session_info = {
         "user": session.user.username if session.user else None,
+        "super_resolution": session.super_resolution,
     }
 
     # Add magnification info for transparency

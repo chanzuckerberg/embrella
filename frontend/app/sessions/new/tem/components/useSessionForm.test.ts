@@ -20,6 +20,7 @@ const TOMO5_PLAN = {
   scope: 'krios1',
   software: 'tomo5',
   camera: 'Falcon4i',
+  acquisition_defaults: { super_resolution: false },
 };
 const SERIALEM_PLAN = {
   id: 7,
@@ -28,6 +29,7 @@ const SERIALEM_PLAN = {
   scope: 'krios1',
   software: 'serialEM',
   camera: 'Falcon4i',
+  acquisition_defaults: { super_resolution: true },
 };
 // What the backend does: the chosen plan's name_prefix in front of the date.
 const PLAN_PREFIX: Record<number, string> = { [TOMO5_PLAN.id]: '', [SERIALEM_PLAN.id]: 's' };
@@ -202,6 +204,18 @@ describe('useSessionForm dependent lists', () => {
     expect(result.current.magnifications).toEqual([]);
     // The unprefixed name is re-requested for "no plan"; magnifications are not.
     expect(magnificationCalls()).toBe(calls);
+  });
+
+  it('selecting a plan restarts Other Settings from its acquisition profile', async () => {
+    const { result } = await mountForm();
+    act(() => result.current.selectSessionPlan(TOMO5_PLAN.id));
+    act(() => result.current.updateField('superResolution', true));
+
+    act(() => result.current.selectSessionPlan(SERIALEM_PLAN.id));
+    expect(result.current.state.superResolution).toBe(true);
+
+    act(() => result.current.selectSessionPlan(TOMO5_PLAN.id));
+    expect(result.current.state.superResolution).toBe(false);
   });
 
   it('selecting a user loads their grids and pre-selects the default one', async () => {

@@ -48,6 +48,7 @@ export interface CreateSessionPayload {
   project_id: number | null;
   grid_id: number | null;
   magnification_id?: number;
+  super_resolution?: boolean;
 }
 
 /** Field errors come back as `{ field: [messages] }`, so the raw response is returned for the caller to read. */

@@ -2,7 +2,14 @@
 
 import React, { useMemo } from 'react';
 import { Alert, alpha, Box, CircularProgress, SxProps, TextField, Theme } from '@mui/material';
-import { Button, SegmentedControl } from '@czi-sds/components';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionHeader,
+  Button,
+  InputToggle,
+  SegmentedControl,
+} from '@czi-sds/components';
 import { DropdownSelect } from '@app/common/components/DropdownSelect';
 import { primary100, primary500 } from '@app/common/theme';
 import { CreatedSession, PLAN_TIERS, PlanTier } from '../types';
@@ -213,6 +220,20 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
           sx={{ mt: '4px' }}
         />
       </Box>
+
+      {/* Accessory acquisition parameters, prefilled from the plan's profile. Collapsed: they rarely change. */}
+      <Accordion id="session-other-settings" togglePosition="left">
+        <AccordionHeader>Other Settings</AccordionHeader>
+        <AccordionDetails>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <InputToggle
+              checked={state.superResolution}
+              onChange={() => updateField('superResolution', !state.superResolution)}
+            />
+            <span>Super-resolution frames</span>
+          </Box>
+        </AccordionDetails>
+      </Accordion>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 1 }}>
         {onCancel && (

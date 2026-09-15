@@ -1,3 +1,8 @@
+/** Accessory acquisition parameters; mirrors `tem.models.ACQUISITION_FIELDS`. */
+export interface AcquisitionValues {
+  super_resolution: boolean;
+}
+
 /** A plan and the four choices that identify it; the form offers those as tiers. */
 export interface SessionPlanOption {
   id: number;
@@ -6,6 +11,8 @@ export interface SessionPlanOption {
   scope: string;
   software: string;
   camera: string;
+  /** Prefills Other Settings when the plan is chosen. */
+  acquisition_defaults: AcquisitionValues;
 }
 
 // Top tier first. Scope then software is the real decision; workflow and camera mostly follow.
@@ -61,6 +68,8 @@ export interface CreatedSession {
   grid_name: string;
   session_plan_name: string;
   magnification_display: string | null;
+  /** Null on sessions created before acquisition settings existed. */
+  acquisition: AcquisitionValues | null;
   frames: RolePath;
   sums: RolePath;
   mdocs: RolePath;
@@ -76,4 +85,5 @@ export interface SessionFormState {
   magnificationId: number | null;
   name: string;
   filterUserId: number | null;
+  superResolution: boolean;
 }
