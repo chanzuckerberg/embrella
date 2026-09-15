@@ -46,6 +46,11 @@ class Microscope(models.Model):
 
     name = models.CharField(max_length=20, default="Krios1", unique=True)
     cs = models.FloatField(default=2.7, help_text="Spherical abberation constant in mm")
+    manufacturer = models.CharField(max_length=256, blank=True, default="")
+    model = models.CharField(max_length=256, blank=True, default="")
+    energy_filter = models.CharField(max_length=256, blank=True, default="")
+    phase_plate = models.CharField(max_length=256, blank=True, default="")
+    image_correctors = models.JSONField(default=list, blank=True, help_text='e.g. ["Cs corrector", "Cc corrector"]')
 
     def __str__(self):
         return self.name
@@ -60,6 +65,8 @@ class Camera(models.Model):
     """
 
     name = models.CharField(max_length=20, default="Falcon4i", unique=True)
+    manufacturer = models.CharField(max_length=256, blank=True, default="")
+    model = models.CharField(max_length=256, blank=True, default="")
     root_dir = models.CharField(max_length=80, unique=True)
     frame_format = models.CharField(max_length=20)
     initial_frame_base_dir = models.CharField(max_length=20)
