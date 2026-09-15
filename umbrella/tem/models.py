@@ -221,11 +221,57 @@ class ImagingWorkflow(models.Model):
         return "%s %s" % (self.get_imaging_mode_display(), self.get_workflow_display())
 
 
+# Accessory acquisition parameters. Adding one: a column below, and its name here.
+ACQUISITION_FIELDS = ("super_resolution",)
+
+
+class AcquisitionSettings(models.Model):
+    """Accessory acquisition parameters that vary per setup, not per software.
+
+    One table, used for: session plan defaults for acquisition settings, and snapshots by msi sessions
+    """
+
+    label = models.CharField(
+        max_length=40, blank=True, default="", help_text="Names a plan profile. Blank on snapshots."
+    )
+    super_resolution = models.BooleanField(
+        default=False,
+        help_text="Camera wrote super-resolution frames: frame pixel size is half the calibrated one.",
+    )
+
+    class Meta:
+        app_label = "tem"
+        verbose_name_plural = "acquisition settings"
+
+    def values(self):
+        return {field: getattr(self, field) for field in ACQUISITION_FIELDS}
+
+    def snapshot(self, label, **overrides):
+        """A new, saved copy named `label` with `overrides` applied. Never shares a row with the profile."""
+        return AcquisitionSettings.objects.create(label=label, **{**self.values(), **overrides})
+
+    @staticmethod
+    def snapshot_label(session_name):
+        """How a session's snapshot reads in the admin list, e.g. "snapshot p26sep14a"."""
+        return "snapshot %s" % session_name
+
+    def __str__(self):
+        return self.label or "snapshot %s" % self.pk
+
+
 class SessionPlan(models.Model):
     scope = models.ForeignKey(Microscope, on_delete=models.CASCADE)
     camera = models.ForeignKey(Camera, on_delete=models.CASCADE)
     imaging_workflow = models.ForeignKey(ImagingWorkflow, on_delete=models.CASCADE)
     software = models.ForeignKey(Software, on_delete=models.CASCADE)
+    acquisition_defaults = models.ForeignKey(
+        AcquisitionSettings,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="plans",
+        help_text="Profile copied into each new session; the operator may override at create time.",
+    )
     name_prefix = models.CharField(
         max_length=4,
         blank=True,
@@ -235,6 +281,10 @@ class SessionPlan(models.Model):
         "this scope/software pair are told apart at a glance. Blank for none. "
         "E.g. 's' suggests s26jun08a; blank suggests 26jun08a.",
     )
+
+    def acquisition_values(self):
+        """The profile's values, or the field defaults when the plan has no profile."""
+        return (self.acquisition_defaults or AcquisitionSettings()).values()
 
     def __str__(self):
         return "%s collected with %s on %s and %s" % (self.imaging_workflow, self.software, self.scope, self.camera)
@@ -445,6 +495,14 @@ class MsiSession(models.Model):
     magnification = models.ForeignKey(
         Magnification, on_delete=models.SET_NULL, null=True, blank=True, help_text="Magnification used for this session"
     )
+    acquisition = models.OneToOneField(
+        AcquisitionSettings,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="session",
+        help_text="Snapshot of the plan's acquisition defaults, with the operator's overrides",
+    )
     created_at = models.DateTimeField(default=timezone.now, editable=False)
     updated_at = models.DateTimeField(default=timezone.now)
 
@@ -504,6 +562,11 @@ class MsiSession(models.Model):
                 setattr(self, role, self._resolve_path_row(role))
         if self.atlas_session:
             self.atlas = self.atlas_session.atlas
+
+    @property
+    def super_resolution(self):
+        """Sessions predating acquisition settings read as not super-resolution."""
+        return bool(self.acquisition and self.acquisition.super_resolution)
 
     def get_calibrated_pixel_size(self):
         """Return the most recent calibrated pixel spacing for this session's magnification and camera, or None."""

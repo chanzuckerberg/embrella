@@ -11,6 +11,7 @@ class MsiSessionCreateSerializer(serializers.Serializer):
     project_id = serializers.IntegerField()
     grid_id = serializers.IntegerField()
     magnification_id = serializers.IntegerField(required=False, allow_null=True)
+    super_resolution = serializers.BooleanField(required=False)
 
     def validate_name(self, value):
         if re.search(r"[@_!#$%^&*()<>?/\\|}{~:\s]", value):
@@ -18,6 +19,12 @@ class MsiSessionCreateSerializer(serializers.Serializer):
         if MsiSession.objects.filter(name=value).exists():
             raise serializers.ValidationError("Session name already exists.")
         return value
+
+
+class AcquisitionSerializer(serializers.Serializer):
+    """Accessory acquisition parameters; one field per `tem.models.ACQUISITION_FIELDS` entry."""
+
+    super_resolution = serializers.BooleanField()
 
 
 class SessionPlanOptionSerializer(serializers.Serializer):
@@ -29,6 +36,7 @@ class SessionPlanOptionSerializer(serializers.Serializer):
     scope = serializers.CharField()
     software = serializers.CharField()
     camera = serializers.CharField()
+    acquisition_defaults = AcquisitionSerializer()
 
 
 class SessionListItemSerializer(serializers.Serializer):
@@ -91,6 +99,7 @@ class SessionDetailSerializer(serializers.Serializer):
     grid_name = serializers.CharField(allow_null=True)
     session_plan_name = serializers.CharField()
     magnification_display = serializers.CharField(allow_null=True)
+    acquisition = AcquisitionSerializer(allow_null=True)
     frames = RolePathSerializer()
     sums = RolePathSerializer()
     mdocs = RolePathSerializer()
