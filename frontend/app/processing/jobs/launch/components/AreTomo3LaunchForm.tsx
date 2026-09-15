@@ -11,9 +11,9 @@
  * - MDOC magnification validation for pixel size verification
  */
 
-import { Alert, Box, CircularProgress, TextField } from '@mui/material';
+import { Alert, Box, CircularProgress, InputAdornment, TextField } from '@mui/material';
 import { useCallback, useState } from 'react';
-import { Button, Icon } from '@czi-sds/components';
+import { Button, Icon, Tooltip } from '@czi-sds/components';
 import type {
   FormFieldConfig,
   ValidationError,
@@ -23,6 +23,13 @@ import type {
 import { fetchProcessorSessionValidation } from '@app/common/services/workflowApi';
 import WorkflowLaunchForm from './WorkflowLaunchForm';
 import CLIParserModal from './CLIParserModal';
+import { PIXEL_SIZE_DECIMALS, resolvedPixelSize, SUPER_RES_FACTOR } from '../utils/pixelSize';
+
+/** The two form parameters the motion-corrected pixel size depends on. */
+interface BinningParams {
+  mcBin: unknown;
+  eerSampling: unknown;
+}
 
 interface PixelSizeValidation {
   mdocMagnification?: number;
@@ -37,7 +44,12 @@ interface PixelSizeValidation {
 
 type AreTomo3LaunchFormProps = Omit<
   WorkflowLaunchFormProps,
-  'customFields' | 'additionalSections' | 'customValidation' | 'headerActions' | 'onSessionInfoLoaded'
+  | 'customFields'
+  | 'additionalSections'
+  | 'customValidation'
+  | 'headerActions'
+  | 'onSessionInfoLoaded'
+  | 'onParametersChange'
 >;
 
 export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
@@ -45,9 +57,22 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
   const [cliParserOpen, setCliParserOpen] = useState(false);
   const [pixelSizeValidation, setPixelSizeValidation] = useState<PixelSizeValidation>({});
   const [isValidating, setIsValidating] = useState(false);
+  // Super-res is a session fact, hidden from the form; it halves the frame pixel the tooltip resolves.
+  const [superResolution, setSuperResolution] = useState(false);
+  const [binning, setBinning] = useState<BinningParams>({ mcBin: undefined, eerSampling: undefined });
+
+  const handleParametersChange = useCallback((params: Record<string, unknown>) => {
+    setBinning((prev) =>
+      prev.mcBin === params.mc_bin && prev.eerSampling === params.eer_sampling
+        ? prev
+        : { mcBin: params.mc_bin, eerSampling: params.eer_sampling }
+    );
+  }, []);
 
   const handleSessionInfoLoaded = useCallback(
-    (_sessionInfo: Record<string, unknown>, sessionName: string) => {
+    (sessionInfo: Record<string, unknown>, sessionName: string) => {
+      setSuperResolution(Boolean(sessionInfo.super_resolution));
+
       // Fire async MDOC magnification validation (separate from defaults to avoid blocking form)
       setPixelSizeValidation({});
       setIsValidating(true);
@@ -208,6 +233,12 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
         }
       }
 
+      // What the tomograms' -AtBin is relative to; shown so the sensor value is not mistaken for it.
+      const resolved = resolvedPixelSize(value, superResolution, binning.mcBin, binning.eerSampling);
+      const superResStep = superResolution ? ` ÷ ${SUPER_RES_FACTOR}` : '';
+      const formula = `${value}${superResStep} × McBin ${binning.mcBin} ÷ EerSampling ${binning.eerSampling}`;
+      const resolvedText = resolved === null ? '' : `${resolved.toFixed(PIXEL_SIZE_DECIMALS)} Å/px = ${formula}`;
+
       return (
         <TextField
           key={name}
@@ -224,13 +255,28 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
           helperText={helperText}
           error={Boolean(error)}
           inputProps={{ min: fieldSchema.minimum, max: fieldSchema.maximum, step: 'any' }}
+          InputProps={
+            resolved === null
+              ? undefined
+              : {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Tooltip title="Motion-corrected pixel size" subtitle={resolvedText} placement="top">
+                        <Button aria-label="About motion-corrected pixel size" sdsStyle="minimal" sdsType="secondary">
+                          <Icon sdsIcon="InfoCircle" sdsSize="s" />
+                        </Button>
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                }
+          }
           margin="normal"
           sx={{ bgcolor: 'grey.50' }}
           FormHelperTextProps={helperColor && !error ? { sx: { color: helperColor } } : undefined}
         />
       );
     },
-    [pixelSizeValidation, isValidating]
+    [pixelSizeValidation, isValidating, superResolution, binning]
   );
 
   /**
@@ -276,6 +322,7 @@ export default function AreTomo3LaunchForm(props: AreTomo3LaunchFormProps) {
       additionalSections={additionalSections ? [additionalSections] : undefined}
       headerActions={headerActions}
       onSessionInfoLoaded={handleSessionInfoLoaded}
+      onParametersChange={handleParametersChange}
     />
   );
 }
