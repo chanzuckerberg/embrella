@@ -24,16 +24,14 @@ properties:
   # Basic parameters (required)
   pixel_size:
     type: number
-    title: Pixel Size (Å)
-    description: Calibrated pixel size in Angstroms
+    title: Sensor Pixel Size (Å)
+    description: Calibrated physical pixel size in Angstroms. -PixSize is derived from it, halved when the session recorded super-resolution frames.
     minimum: 0.5
     maximum: 20.0
-    x-bash-var: pix_size
-    x-bash-format: quoted
-    x-bash-type: number
-    x-bash-skip: false
+    # Not exported as-is: the script gets sensor_pix_size and frame_pix_size (calculated vars)
+    x-bash-skip: true
     x-cli-flag: '-PixSize'
-    x-cli-format: direct
+    x-cli-format: pix_size_frame
 
   frame_dose:
     type: number
