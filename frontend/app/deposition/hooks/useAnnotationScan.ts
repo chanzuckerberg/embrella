@@ -10,6 +10,8 @@ export interface AnnotationScan {
   scanned: boolean;
   pending: boolean;
   error?: string;
+  progressDone?: number;
+  progressTotal?: number;
   annotations: ScannedAnnotation[];
 }
 
@@ -26,6 +28,8 @@ export function useAnnotationScan(sessionName: string, runs: string[], enabled =
         scanned: res.scanned ?? false,
         pending: res.pending ?? false,
         error: res.error,
+        progressDone: res.progress_done,
+        progressTotal: res.progress_total,
         annotations: normalizeScan(res),
       };
     },

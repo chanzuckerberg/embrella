@@ -6,6 +6,7 @@ export interface ScannedAnnotation {
   object_name: string;
   object_id: string; // ontology id from the config's pickable_objects
   count?: number | null; // total_count — picks only; 0 for segmentations/meshes
+  runs: string[]; // distinct run names this annotation appears in
 }
 
 interface RawRow {
@@ -14,6 +15,7 @@ interface RawRow {
   object_id?: string | null;
   run_count?: number;
   total_count?: number;
+  runs?: string[];
 }
 
 export interface ScanResult {
@@ -22,6 +24,9 @@ export interface ScanResult {
   pending?: boolean;
   // The last job failed to enumerate (env/config/run error) — distinct from "never scanned".
   error?: string;
+  // Live progress while a scan job runs: runs enumerated so far / total runs in the project.
+  progress_done?: number;
+  progress_total?: number;
   picks?: RawRow[];
   segmentations?: RawRow[];
   meshes?: RawRow[];
@@ -43,6 +48,7 @@ export function normalizeScan(scan: ScanResult): ScannedAnnotation[] {
         object_name: r.object_name ?? '',
         object_id: r.object_id ?? '',
         count: r.total_count ?? null,
+        runs: r.runs ?? [],
       });
     }
   }
@@ -60,6 +66,32 @@ export function stripIncompleteLinks(a: DepositionAnnotation): DepositionAnnotat
 }
 
 const annKey = (kind: CopickKind, ref: string) => `${kind}::${ref}`;
+
+/** Map of kind::ref -> the runs the scan found that annotation in (for the detail-panel chip). */
+export function scanRunsByKey(scanned: ScannedAnnotation[]): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const sc of scanned) out.set(annKey(sc.copick_kind, sc.copick_ref), sc.runs ?? []);
+  return out;
+}
+
+/**
+ * The subset of an annotation's runs that the deposited AreTomo run produced.
+ */
+export function compatibleRuns(runs: string[], aretomoRuns: string[] | undefined): string[] {
+  if (!aretomoRuns?.length) return runs;
+  const allowed = new Set(aretomoRuns);
+  return runs.filter((r) => allowed.has(r));
+}
+
+/**
+ * The subset of an annotation's runs the deposited AreTomo run did NOT produce.
+ * Empty while the AreTomo set is unknown (compat still loading) - nothing to flag yet.
+ */
+export function incompatibleRuns(runs: string[], aretomoRuns: string[] | undefined): string[] {
+  if (!aretomoRuns?.length) return [];
+  const allowed = new Set(aretomoRuns);
+  return runs.filter((r) => !allowed.has(r));
+}
 
 /** Ids (kind::ref) of saved rows a *completed* scan no longer returns stale . */
 export function staleAnnotationIds(

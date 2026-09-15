@@ -155,6 +155,7 @@ def get_copick_aretomo_compat(request):
             "success": True,
             "compatible": not incompatible,
             "incompatible_runs": incompatible,
+            "aretomo_runs": sorted(aretomo_runs),
             "aretomo_run_count": len(aretomo_runs),
             "annotated_run_count": len(annotated),
             # scanned=false → the copick scan is still incomplete, so this result is provisional.

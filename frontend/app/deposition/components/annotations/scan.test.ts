@@ -1,9 +1,12 @@
 import type { DepositionAnnotation } from '../../types';
 import {
   annotationNeedsMetadata,
+  compatibleRuns,
+  incompatibleRuns,
   mergeAnnotations,
   mergeServerIds,
   normalizeScan,
+  scanRunsByKey,
   staleAnnotationIds,
   stripIncompleteLinks,
   type ScannedAnnotation,
@@ -33,15 +36,43 @@ describe('normalizeScan', () => {
     const out = normalizeScan({
       scanned: true,
       picks: [
-        { copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: 'GO:0170047', run_count: 3, total_count: 12345 },
+        {
+          copick_ref: 'VLP:relion/2',
+          object_name: 'VLP',
+          object_id: 'GO:0170047',
+          run_count: 3,
+          total_count: 12345,
+          runs: ['run001', 'run003'],
+        },
       ],
       segmentations: [{ copick_ref: 'membrane:auto/1', object_name: 'membrane', run_count: 1, total_count: 0 }],
       meshes: [{ copick_ref: 'VLP_shells:auto/1', object_name: 'VLP_shells', run_count: 1, total_count: 0 }],
     });
     expect(out).toEqual([
-      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: 'GO:0170047', count: 12345 },
-      { copick_kind: 'segmentations', copick_ref: 'membrane:auto/1', object_name: 'membrane', object_id: '', count: 0 },
-      { copick_kind: 'meshes', copick_ref: 'VLP_shells:auto/1', object_name: 'VLP_shells', object_id: '', count: 0 },
+      {
+        copick_kind: 'picks',
+        copick_ref: 'VLP:relion/2',
+        object_name: 'VLP',
+        object_id: 'GO:0170047',
+        count: 12345,
+        runs: ['run001', 'run003'],
+      },
+      {
+        copick_kind: 'segmentations',
+        copick_ref: 'membrane:auto/1',
+        object_name: 'membrane',
+        object_id: '',
+        count: 0,
+        runs: [],
+      },
+      {
+        copick_kind: 'meshes',
+        copick_ref: 'VLP_shells:auto/1',
+        object_name: 'VLP_shells',
+        object_id: '',
+        count: 0,
+        runs: [],
+      },
     ]);
   });
 
@@ -53,8 +84,8 @@ describe('normalizeScan', () => {
 
 describe('mergeAnnotations', () => {
   const scanned: ScannedAnnotation[] = [
-    { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: 'GO:0170047' },
-    { copick_kind: 'picks', copick_ref: 'GroEL:upload/1', object_name: 'GroEL', object_id: '' },
+    { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: 'GO:0170047', runs: ['run001'] },
+    { copick_kind: 'picks', copick_ref: 'GroEL:upload/1', object_name: 'GroEL', object_id: '', runs: ['run002'] },
   ];
 
   it('carries saved metadata + is_selected onto matching scanned items', () => {
@@ -103,8 +134,8 @@ describe('mergeAnnotations', () => {
 
   it('dedupes the same (kind, ref) appearing across multiple runs', () => {
     const dupes: ScannedAnnotation[] = [
-      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: '' },
-      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: '' },
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: '', runs: ['run001'] },
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: '', runs: ['run001'] },
     ];
     expect(mergeAnnotations(dupes, [])).toHaveLength(1);
   });
@@ -116,6 +147,56 @@ describe('mergeAnnotations', () => {
     const merged = mergeAnnotations(scanned, saved);
     expect(merged.find((a) => a.copick_ref === 'gone:auto/9')).toBeTruthy();
     expect(merged).toHaveLength(3);
+  });
+});
+
+describe('compatibleRuns', () => {
+  it('keeps only runs the AreTomo run produced', () => {
+    expect(compatibleRuns(['run001', 'run003', 'run007'], ['run001', 'run002', 'run003', 'run004', 'run005'])).toEqual([
+      'run001',
+      'run003',
+    ]);
+  });
+
+  it('returns runs unfiltered while the AreTomo set is unknown (compat still loading)', () => {
+    expect(compatibleRuns(['run001', 'run007'], undefined)).toEqual(['run001', 'run007']);
+    expect(compatibleRuns(['run001', 'run007'], [])).toEqual(['run001', 'run007']);
+  });
+
+  it('is empty when no run overlaps the AreTomo output', () => {
+    expect(compatibleRuns(['run007', 'run008'], ['run001', 'run002'])).toEqual([]);
+  });
+});
+
+describe('incompatibleRuns', () => {
+  it('returns runs the AreTomo run did not produce', () => {
+    expect(incompatibleRuns(['run001', 'run003', 'run007'], ['run001', 'run002', 'run003'])).toEqual(['run007']);
+  });
+
+  it('is empty while the AreTomo set is unknown (nothing to flag yet)', () => {
+    expect(incompatibleRuns(['run007'], undefined)).toEqual([]);
+    expect(incompatibleRuns(['run007'], [])).toEqual([]);
+  });
+
+  it('is empty when every run is from the AreTomo output', () => {
+    expect(incompatibleRuns(['run001', 'run002'], ['run001', 'run002', 'run003'])).toEqual([]);
+  });
+});
+
+describe('scanRunsByKey', () => {
+  it('indexes each annotation by kind::ref -> its runs', () => {
+    const map = scanRunsByKey([
+      {
+        copick_kind: 'picks',
+        copick_ref: 'VLP:relion/2',
+        object_name: 'VLP',
+        object_id: '',
+        runs: ['run001', 'run003'],
+      },
+      { copick_kind: 'meshes', copick_ref: 'm:auto/1', object_name: 'm', object_id: '', runs: ['run002'] },
+    ]);
+    expect(map.get('picks::VLP:relion/2')).toEqual(['run001', 'run003']);
+    expect(map.get('meshes::m:auto/1')).toEqual(['run002']);
   });
 });
 
@@ -191,6 +272,7 @@ describe('staleAnnotationIds', () => {
     copick_ref: ref,
     object_name: '',
     object_id: '',
+    runs: [],
   });
 
   it('flags saved rows the completed scan no longer returns', () => {

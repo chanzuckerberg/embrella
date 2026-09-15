@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 
 import { rescanCopick, updateSession } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
@@ -13,8 +24,11 @@ import { AnnotationList, annId } from '../../components/annotations/AnnotationLi
 import { AnnotationMetadataForm } from '../../components/annotations/AnnotationMetadataForm';
 import {
   annotationNeedsMetadata,
+  compatibleRuns,
+  incompatibleRuns,
   mergeAnnotations,
   mergeServerIds,
+  scanRunsByKey,
   staleAnnotationIds,
   stripIncompleteLinks,
 } from '../../components/annotations/scan';
@@ -77,6 +91,12 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   const [rescanning, setRescanning] = useState(false);
   const [rescanError, setRescanError] = useState<string | null>(null);
   const scanning = scan.isPending || rescanning || (!!scan.data?.pending && !scan.data?.scanned);
+  // Live "N of M runs" progress the scan job writes while it enumerates the project.
+  const scanProgress = scan.data?.progressTotal
+    ? { done: scan.data.progressDone ?? 0, total: scan.data.progressTotal }
+    : null;
+  const configCount = active?.runs.length ?? 0;
+  const configLabel = `${configCount} copick config${configCount === 1 ? '' : 's'}`;
 
   const handleRescan = useCallback(async () => {
     if (!active || active.runs.length === 0) return;
@@ -130,6 +150,31 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
 
   const list = useMemo(() => bySession[active?.key ?? ''] ?? [], [bySession, active]);
   const activeAnn = list.find((a) => annId(a) === activeAnnId) ?? null;
+
+  const runsByKey = useMemo(() => scanRunsByKey(scan.data?.annotations ?? []), [scan.data]);
+  const activeRuns = activeAnn ? (runsByKey.get(annId(activeAnn)) ?? []) : [];
+  const activeCompatRuns = compatibleRuns(activeRuns, compat.data?.aretomo_runs);
+  const activeIncompatRuns = incompatibleRuns(activeRuns, compat.data?.aretomo_runs);
+
+
+  const runsChip = ((): ReactNode => {
+    const total = activeRuns.length;
+    if (total === 0) return null;
+    // Compat not loaded yet - show the raw count without a compatibility claim.
+    if (!compat.data) return <Chip size="small" variant="outlined" label={`${total} run${total === 1 ? '' : 's'}`} />;
+    if (activeCompatRuns.length === 0)
+      return <Chip size="small" color="warning" label="no runs from this AreTomo run" />;
+    const label = `${activeCompatRuns.length} of ${total} runs from this AreTomo run`;
+    if (activeIncompatRuns.length === 0) return <Chip size="small" variant="outlined" label={label} />;
+    const MAX = 20;
+    const shown = activeIncompatRuns.slice(0, MAX).join(', ');
+    const more = activeIncompatRuns.length > MAX ? ` +${activeIncompatRuns.length - MAX} more` : '';
+    return (
+      <Tooltip title={`Not from this AreTomo run: ${shown}${more}`}>
+        <Chip size="small" color="warning" label={label} />
+      </Tooltip>
+    );
+  })();
 
   useEffect(() => {
     if (list.length === 0 || (activeAnnId && list.some((a) => annId(a) === activeAnnId))) return;
@@ -186,7 +231,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
           <CircularProgress size={14} />
           <Typography variant="caption" color="text.secondary">
-            Scanning new configs…
+            {scanProgress ? `Scanning… ${scanProgress.done} of ${scanProgress.total} runs` : `Scanning ${configLabel}…`}
           </Typography>
         </Box>
       )}
@@ -222,13 +267,21 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   if ((active?.runs.length ?? 0) === 0) {
     body = <Alert severity="info">No copick configs selected on Sources.</Alert>;
   } else if (scanning && list.length === 0) {
-    // Full spinner ONLY when there's nothing to show yet.
     body = (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 4, justifyContent: 'center' }}>
-        <CircularProgress size={20} />
-        <Typography variant="body2" color="text.secondary">
-          Scanning copick configs…
+      <Box sx={{ py: 5, maxWidth: 380, mx: 'auto', textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          {scanProgress
+            ? `Scanning copick runs… ${scanProgress.done} of ${scanProgress.total}`
+            : `Scanning ${configLabel}…`}
         </Typography>
+        {scanProgress ? (
+          <LinearProgress
+            variant="determinate"
+            value={scanProgress.total > 0 ? (scanProgress.done / scanProgress.total) * 100 : 0}
+          />
+        ) : (
+          <LinearProgress />
+        )}
       </Box>
     );
   } else if (list.length === 0) {
@@ -269,11 +322,12 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         <Box sx={{ position: { md: 'sticky' }, top: 0, alignSelf: 'start' }}>
           {activeAnn && (
             <>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>
                   {activeAnn.copick_ref}
                 </Typography>
                 <Chip label={activeAnn.copick_kind} size="small" />
+                {runsChip}
               </Box>
               <AnnotationMetadataForm
                 key={annId(activeAnn)}
@@ -337,14 +391,6 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       {staleIds.size > 0 && (
         <Alert severity="warning" sx={{ mt: 2 }}>
           {staleIds.size} annotation{staleIds.size === 1 ? '' : 's'} no longer in the scan - remove with trash.
-        </Alert>
-      )}
-
-      {compat.data && !compat.data.compatible && (
-        <Alert severity="warning" sx={{ mt: 2 }}>
-          {compat.data.incompatible_runs.length} annotated run
-          {compat.data.incompatible_runs.length === 1 ? '' : 's'} not produced by AreTomo run {active?.aretomoRun}:{' '}
-          {compat.data.incompatible_runs.join(', ')}
         </Alert>
       )}
 

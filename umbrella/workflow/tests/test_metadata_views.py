@@ -151,6 +151,7 @@ class TestCopickAretomoCompat:
         assert status == 200
         assert body["compatible"] is True
         assert body["incompatible_runs"] == []
+        assert body["aretomo_runs"] == ["Position_13", "Position_8_ts_011.mrc"]
 
     def test_run_not_in_aretomo_is_flagged(self, cluster, test_msi_session, metrics_csv):
         url_mock, scan_mock = self._scan(["Position_13", "Position_99"])
