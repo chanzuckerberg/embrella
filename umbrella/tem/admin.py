@@ -35,7 +35,6 @@ _RESOLVES_TO_CSS = mark_safe(
 )
 
 # Register your models here.
-admin.site.register(Microscope)
 admin.site.register(Magnification)
 admin.site.register(CalibratedPixelSize)
 admin.site.register(ImagingWorkflow)
@@ -70,9 +69,15 @@ class AcquisitionSettingsAdmin(admin.ModelAdmin):
         return obj.plan_count or ""
 
 
+@admin.register(Microscope)
+class MicroscopeAdmin(admin.ModelAdmin):
+    list_display = ("name", "manufacturer", "model", "cs", "energy_filter", "phase_plate", "image_correctors")
+    search_fields = ("name", "manufacturer", "model")
+
+
 @admin.register(Camera)
 class CameraAdmin(admin.ModelAdmin):
-    list_display = ("name", "root_dir", "frame_format", *CAMERA_PATH_ROLES)
+    list_display = ("name", "manufacturer", "model", "root_dir", "frame_format", *CAMERA_PATH_ROLES)
     autocomplete_fields = CAMERA_PATH_ROLES
 
 
