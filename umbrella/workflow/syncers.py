@@ -18,6 +18,9 @@ from tem.models import MsiSession
 from common import clusterio
 from workflow.views import track_jobs
 
+# How many pattern-rejected basenames a sync warning quotes.
+UNMATCHED_EXAMPLES = 5
+
 
 def generate_uuid():
     return str(uuid.uuid4())
@@ -122,30 +125,32 @@ def parse_zarr_filename(filename: str, pattern: FilePattern) -> str | None:
     return groups["position"] if groups else None
 
 
-def check_zarr_exists(full_path: str, pattern: FilePattern, cluster_id=None) -> tuple[list[tuple[str, str]], int]:
-    """((basename, position_id) pairs, count of .zarr entries seen) for a run directory."""
+def check_zarr_exists(full_path: str, pattern: FilePattern, cluster_id=None) -> tuple[list[tuple[str, str]], list[str]]:
+    """((basename, position_id) pairs, basenames the pattern rejected) for a run directory."""
     from processes.services.cluster_resolver import get_default_cluster_id
 
     cluster_id = cluster_id or get_default_cluster_id()
     # "*.zarr" on purpose, not pattern.list_glob: entries the pattern can't parse must
-    # still be counted, so the "Matched X of Y" gap surfaces a wrong pattern.
+    # still be reported, so the "Matched X of Y" gap surfaces a wrong pattern.
     listing = clusterio.list_files(full_path, "*.zarr", cluster_id=cluster_id, include_dirs=True)
     if not listing["success"]:
         log.warning(f"Could not list {full_path}: {listing.get('error')}")
-        return [], 0
+        return [], []
 
     names = [entry["name"] for entry in listing["files"]]
 
     found_zarrs = []
+    unmatched = []
     for name in names:
         position_id = parse_zarr_filename(name, pattern=pattern)
         if position_id:
             found_zarrs.append((name, position_id))
         else:
+            unmatched.append(name)
             log.warning(f"Could not parse position ID from filename: {name}")
 
     log.info(f"Matched {len(found_zarrs)} of {len(names)} .zarr entries in {full_path}")
-    return found_zarrs, len(names)
+    return found_zarrs, unmatched
 
 
 class ProcessSyncer(object):
@@ -298,17 +303,20 @@ class ProcessSyncer(object):
         )
 
         pattern = self._output_pattern()
-        found_zarrs, candidates = check_zarr_exists(path_to_zarrs, pattern, cluster_id=self.cluster_id)
+        found_zarrs, unmatched = check_zarr_exists(path_to_zarrs, pattern, cluster_id=self.cluster_id)
 
-        unmatched = candidates - len(found_zarrs)
+        # Name a few rejects so the log shows which naming the pattern refuses.
+        candidates = len(found_zarrs) + len(unmatched)
         if unmatched:
             self._log_to_db(
                 "warning",
-                f"{unmatched} of {candidates} .zarr entries did not match the rec file pattern",
+                f"{len(unmatched)} of {candidates} .zarr entries did not match the rec file pattern",
                 {
                     "reconstruction_type": recon_type,
                     "candidates": candidates,
-                    "unmatched": unmatched,
+                    "unmatched": len(unmatched),
+                    "pattern": pattern.regex,
+                    "examples": unmatched[:UNMATCHED_EXAMPLES],
                 },
             )
 
