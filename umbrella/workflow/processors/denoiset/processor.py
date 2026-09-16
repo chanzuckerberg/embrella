@@ -109,6 +109,7 @@ class DenoisETProcessor(BaseProcessor):
         from workflow.processors import get_processor
 
         template_vars["denoise_root"] = self.get_processing_base_path(cluster=run_context.cluster_id)
+        template_vars["out_dir"] = f"{template_vars['denoise_root']}/{session_name}/{denoise_run}"
         template_vars["script_dir"] = self.get_script_directory(cluster=run_context.cluster_id)
         template_vars["software_root"] = self.get_software_root(cluster=run_context.cluster_id)
         template_vars["aretomo3_root"] = get_processor("aretomo3").get_processing_base_path(

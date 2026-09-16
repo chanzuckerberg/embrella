@@ -1,31 +1,31 @@
 #!/bin/bash
-#SBATCH --partition=cpu
-#SBATCH --nodes=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=16G
-#SBATCH --time=4:00:00
-#SBATCH --job-name=denoise_zarr
-#SBATCH --output=JOB%j.out
-#SBATCH --error=JOB%j.err
 
-# Convert denoised MRC volumes to zarr using zarrczar.
+# Convert denoised MRC volumes to zarr as they appear, using zarrczar.
 #
-# Usage: $0 <directory>
+# Runs in the background of the denoise job while predict3d writes to <directory>.
+# Each pass converts every *.mrc that has no sibling .zarr yet. The loop ends after
+# one final pass once <done_file> exists (touched when predict3d exits), or after
+# <max_checks> passes as a safety net.
+#
+# Usage: $0 <directory> <done_file> <wait_time> <max_checks>
 #
 # Example:
-#   $0 /hpc/projects/group.czii/krios1.processing/denoise/session123/denoise_run
+#   $0 /hpc/.../denoise/24nov10/run001 /hpc/.../denoise/24nov10/run001/denoise_complete.txt 180 960
 
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <directory>"
+if [ "$#" -ne 4 ]; then
+    echo "Usage: $0 <directory> <done_file> <wait_time> <max_checks>"
     exit 1
 fi
 
 directory="$1"
-MAX_JOBS=4
-CHUNK_SIZE=128
+done_file="$2"
+wait_time="$3"
+max_checks="$4"
 
-ml anaconda
-conda activate /hpc/projects/group.czii/krios1.processing/aretomo3/scripts/zarrczar_env
+CHUNK_SIZE=128
+MAX_JOBS="${SLURM_CPUS_PER_TASK:-2}"
+
+launched_files=()
 
 wait_for_jobs() {
     while (( $(jobs -rp | wc -l) >= MAX_JOBS )); do
@@ -33,6 +33,7 @@ wait_for_jobs() {
     done
 }
 
+# Each MRC is attempted once. On failure the partial zarr is removed and the file is skipped.
 convert_one() {
     local mrc_path="$1"
     local zarr_path="${mrc_path%.mrc}.zarr"
@@ -48,27 +49,36 @@ convert_one() {
     echo "[INFO] Done: $zarr_path"
 }
 
-if [ ! -d "$directory" ]; then
-    echo "[ERROR] Directory not found: $directory"
-    exit 1
-fi
+# One sweep of the directory: launch a conversion per MRC not yet converted or in flight.
+convert_pass() {
+    for mrc_path in "${directory}"/*.mrc; do
+        [ -f "$mrc_path" ] || continue
+        [ -d "${mrc_path%.mrc}.zarr" ] && continue
+        [[ " ${launched_files[*]} " == *" ${mrc_path} "* ]] && continue
 
-launched=0
-skipped=0
-for mrc_path in "${directory}"/*.mrc; do
-    [ -f "$mrc_path" ] || continue
+        wait_for_jobs
+        convert_one "$mrc_path" &
+        launched_files+=("$mrc_path")
+    done
+}
 
-    if [ -d "${mrc_path%.mrc}.zarr" ]; then
-        echo "[SKIP] Zarr exists: $mrc_path"
-        ((skipped++))
-        continue
+mkdir -p "$directory"
+
+for ((i = 1; i <= max_checks; i++)); do
+    echo "[INFO] Pass $i of $max_checks at $(date)"
+    convert_pass
+
+    if [ -f "$done_file" ]; then
+        echo "[INFO] Found $done_file, final pass complete"
+        break
     fi
 
-    wait_for_jobs
-    convert_one "$mrc_path" &
-    ((launched++))
+    sleep "$wait_time"
 done
 
-echo "[INFO] Launched $launched conversion jobs, skipped $skipped, waiting for completion..."
+echo "[INFO] Waiting for ${#launched_files[@]} conversion jobs to finish..."
 wait
-echo "[INFO] All done."
+
+# Consume the marker so a rerun in this directory polls again instead of exiting at once.
+rm -f "$done_file"
+echo "[INFO] All done at $(date)"

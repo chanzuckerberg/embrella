@@ -128,7 +128,7 @@ properties:
     description: Number of CPU cores per task
     minimum: 1
     maximum: 64
-    default: 1
+    default: 4
     x-slurm-directive: "--cpus-per-task"
     x-compute-resource: true
     x-bash-skip: true
@@ -148,7 +148,7 @@ properties:
     type: string
     title: "Memory per CPU"
     description: Memory per CPU (e.g., 4G, 8G, 16G). Leave blank for SLURM default.
-    default: "196G"
+    default: "48G"
     pattern: "^([0-9]+[KMGT]){0,1}$"
     x-slurm-directive: "--mem-per-cpu"
     x-compute-resource: true
