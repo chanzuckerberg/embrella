@@ -158,9 +158,12 @@ describe('compatibleRuns', () => {
     ]);
   });
 
-  it('returns runs unfiltered while the AreTomo set is unknown (compat still loading)', () => {
+  it('returns runs unfiltered only while the AreTomo set is unknown (undefined = compat loading)', () => {
     expect(compatibleRuns(['run001', 'run007'], undefined)).toEqual(['run001', 'run007']);
-    expect(compatibleRuns(['run001', 'run007'], [])).toEqual(['run001', 'run007']);
+  });
+
+  it('treats a known-empty AreTomo set ([]) as "nothing matched", not "loading"', () => {
+    expect(compatibleRuns(['run001', 'run007'], [])).toEqual([]);
   });
 
   it('is empty when no run overlaps the AreTomo output', () => {
@@ -173,9 +176,12 @@ describe('incompatibleRuns', () => {
     expect(incompatibleRuns(['run001', 'run003', 'run007'], ['run001', 'run002', 'run003'])).toEqual(['run007']);
   });
 
-  it('is empty while the AreTomo set is unknown (nothing to flag yet)', () => {
+  it('is empty while the AreTomo set is unknown (undefined = nothing to flag yet)', () => {
     expect(incompatibleRuns(['run007'], undefined)).toEqual([]);
-    expect(incompatibleRuns(['run007'], [])).toEqual([]);
+  });
+
+  it('flags everything against a known-empty AreTomo set ([] = produced nothing)', () => {
+    expect(incompatibleRuns(['run007', 'run008'], [])).toEqual(['run007', 'run008']);
   });
 
   it('is empty when every run is from the AreTomo output', () => {
@@ -197,6 +203,14 @@ describe('scanRunsByKey', () => {
     ]);
     expect(map.get('picks::VLP:relion/2')).toEqual(['run001', 'run003']);
     expect(map.get('meshes::m:auto/1')).toEqual(['run002']);
+  });
+
+  it('UNIONS runs when the same (kind, ref) comes from more than one selected config', () => {
+    const map = scanRunsByKey([
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: '', runs: ['TS_1', 'TS_2'] },
+      { copick_kind: 'picks', copick_ref: 'VLP:relion/2', object_name: 'VLP', object_id: '', runs: ['TS_3', 'TS_2'] },
+    ]);
+    expect(map.get('picks::VLP:relion/2')).toEqual(['TS_1', 'TS_2', 'TS_3']);
   });
 });
 

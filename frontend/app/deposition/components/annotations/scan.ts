@@ -67,33 +67,38 @@ export function stripIncompleteLinks(a: DepositionAnnotation): DepositionAnnotat
 
 const annKey = (kind: CopickKind, ref: string) => `${kind}::${ref}`;
 
-/** Map of kind::ref -> the runs the scan found that annotation in (for the detail-panel chip). */
+/** kind::ref -> distinct runs the scan found it in, unioned across configs (for the detail chip). */
 export function scanRunsByKey(scanned: ScannedAnnotation[]): Map<string, string[]> {
+  const seen = new Map<string, Set<string>>();
+  for (const sc of scanned) {
+    const key = annKey(sc.copick_kind, sc.copick_ref);
+    let runs = seen.get(key);
+    if (!runs) {
+      runs = new Set();
+      seen.set(key, runs);
+    }
+    for (const r of sc.runs ?? []) runs.add(r);
+  }
   const out = new Map<string, string[]>();
-  for (const sc of scanned) out.set(annKey(sc.copick_kind, sc.copick_ref), sc.runs ?? []);
+  for (const [key, runs] of seen) out.set(key, [...runs].sort());
   return out;
 }
 
-/**
- * The subset of an annotation's runs that the deposited AreTomo run produced.
- */
+/** Runs the AreTomo run produced. undefined AreTomo set = still loading, so return all. */
 export function compatibleRuns(runs: string[], aretomoRuns: string[] | undefined): string[] {
-  if (!aretomoRuns?.length) return runs;
+  if (aretomoRuns == null) return runs;
   const allowed = new Set(aretomoRuns);
   return runs.filter((r) => allowed.has(r));
 }
 
-/**
- * The subset of an annotation's runs the deposited AreTomo run did NOT produce.
- * Empty while the AreTomo set is unknown (compat still loading) - nothing to flag yet.
- */
+/** Runs the AreTomo run did NOT produce. Empty while the AreTomo set is unknown (loading). */
 export function incompatibleRuns(runs: string[], aretomoRuns: string[] | undefined): string[] {
-  if (!aretomoRuns?.length) return [];
+  if (aretomoRuns == null) return [];
   const allowed = new Set(aretomoRuns);
   return runs.filter((r) => !allowed.has(r));
 }
 
-/** Ids (kind::ref) of saved rows a *completed* scan no longer returns stale . */
+/** Ids (kind::ref) of saved rows that a *completed* scan no longer returns - i.e. stale. */
 export function staleAnnotationIds(
   list: DepositionAnnotation[],
   scan: { scanned: boolean; annotations: ScannedAnnotation[] } | null | undefined
@@ -129,19 +134,12 @@ export function mergeServerIds(local: DepositionAnnotation[], saved: DepositionA
   return changed ? out : local;
 }
 
-/**
- * Merge scanned candidates into saved rows by copick_kind::copick_ref:
- * - existing saved row -> fill object_name/object_id from the scan only where the user hasn't set them
- * - scanned-only       -> appended as an unselected candidate
- * - saved-only (no longer scanned) -> kept in place (no data loss; stale UX is #868)
- * Saved order is preserved, and the SAME `saved` reference is returned when nothing changed — so a
- * re-fold from an unchanged scan poll produces no new state (which would otherwise retrigger autosave).
- */
+/** Merge scan into saved rows: fill blanks, append new as unselected, keep saved-only, same ref if unchanged. */
 export function mergeAnnotations(scanned: ScannedAnnotation[], saved: DepositionAnnotation[]): DepositionAnnotation[] {
   const scannedByKey = new Map<string, ScannedAnnotation>();
   for (const sc of scanned) {
     const k = annKey(sc.copick_kind, sc.copick_ref);
-    if (!scannedByKey.has(k)) scannedByKey.set(k, sc); // same (kind, ref) across runs -> one identity
+    if (!scannedByKey.has(k)) scannedByKey.set(k, sc); // same (kind, ref) across runs - one identity
   }
   const savedKeys = new Set(saved.map((a) => annKey(a.copick_kind, a.copick_ref)));
 

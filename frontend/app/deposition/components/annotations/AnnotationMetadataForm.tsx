@@ -237,8 +237,7 @@ function ObjectOntologyField({
   disabled?: boolean;
   sx?: SxProps<Theme>;
 }) {
-  // Derive the ontology from the id when it's set, so the dropdown stays in sync if the scan fills
-  // object_id after mount; fall back to the user's pick (when the id is empty) or the default.
+  // If we know the id, trust its prefix for the ontology, otherwise go with what the user picked.
   const detectedType = OBJECT_ONTOLOGIES.find((o) => id.startsWith(`${o.prefix}:`))?.type;
   const [picked, setPicked] = useState<string | null>(null);
   const type = detectedType ?? picked ?? OBJECT_ONTOLOGIES[0].type;

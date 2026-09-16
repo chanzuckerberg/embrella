@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Copick scan: enumerate a project's picks/segmentations/meshes, aggregate by copick_ref,
-# and write scan.json beside config.json .
+# and write scan.json beside config.json.
 
 #SBATCH --job-name=copick_scan
 {% for directive in slurm_directives -%}
@@ -36,9 +36,8 @@ def _ref(obj, user_id, session_id):
     return "%s:%s/%s" % (obj or "", user_id or "", session_id or "")
 
 
-# Aggregate by (kind, copick_ref): one row per distinct identity across all runs.
-# Also track distinct run names that carry any annotation — the annotated-count
-# endpoint needs run names, which the copick_ref aggregation collapses away.
+# Aggregate by (kind, copick_ref): one row per identity across runs.
+# annotated_runs keeps the distinct run names the aggregation collapses away.
 agg = {}
 annotated_runs = set()
 
@@ -56,7 +55,8 @@ def _add(kind, obj, obj_id, user_id, session_id, run_name, count):
             "object_id": obj_id or "",
             "run_count": 0,
             "total_count": 0,
-            # filtered to the runs the deposited AreTomo run produced.
+            # Every run this annotation appears in. The job does NOT filter; the UI intersects
+            # these with the deposited AreTomo run's produced runs.
             "runs": [],
         }
         agg[key] = entry
@@ -73,7 +73,7 @@ try:
     import copick
 
     root = copick.from_file(config_path)
-    # object_name -> ontology identifier, from the config ,
+    # object_name -> ontology identifier, from the config
     id_map = {getattr(o, "name", None): getattr(o, "identifier", None) for o in (root.pickable_objects or [])}
 except Exception as exc: 
     out = {"scanned": False, "error": str(exc), "session": msi_session, "run": msi_run, "config_path": config_path}

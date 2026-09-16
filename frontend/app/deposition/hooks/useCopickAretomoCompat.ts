@@ -4,9 +4,7 @@ import { fetchCopickAretomoCompat, type CopickAretomoCompat } from '../services/
 
 const STALE = 5 * 60 * 1000;
 
-/**
-   check whether the annotated copick runs are part of the deposited AreTomo run.
- */
+/** Check whether the annotated copick runs are part of the deposited AreTomo run. */
 export function useCopickAretomoCompat(sessionName: string, aretomoRun: string, copickRuns: string[], enabled = true) {
   const sortedRuns = [...copickRuns].sort();
   return useQuery<CopickAretomoCompat>({

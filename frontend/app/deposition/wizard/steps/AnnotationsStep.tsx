@@ -83,15 +83,14 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     setBySession((prev) => {
       const cur = prev[key] ?? [];
       const merged = mergeAnnotations(scan.data.annotations, cur);
-      // Same ref back when the scan added nothing → don't churn state (and don't retrigger autosave)
-      // on every poll of a still-running scan.
+      // Unchanged poll - same ref - no state churn, no autosave.
       return merged === cur ? prev : { ...prev, [key]: merged };
     });
   }, [scan.data, active]);
   const [rescanning, setRescanning] = useState(false);
   const [rescanError, setRescanError] = useState<string | null>(null);
   const scanning = scan.isPending || rescanning || (!!scan.data?.pending && !scan.data?.scanned);
-  // Live "N of M runs" progress the scan job writes while it enumerates the project.
+  // Live "N of M runs" progress the scan job writes as it runs.
   const scanProgress = scan.data?.progressTotal
     ? { done: scan.data.progressDone ?? 0, total: scan.data.progressTotal }
     : null;
@@ -104,7 +103,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     setRescanError(null);
     try {
       await rescanCopick(active.name, active.runs);
-      // Re-read scan.json: the trigger wrote the pending marker, which now drives polling + spinner.
+      // Re-read scan.json - the pending marker now drives polling + spinner.
       await queryClient.invalidateQueries({ queryKey: ['copick-scan', active.name, [...active.runs].sort()] });
       queryClient.invalidateQueries({ queryKey: ['copick-aretomo-compat', active.name] });
     } catch {
@@ -156,11 +155,10 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   const activeCompatRuns = compatibleRuns(activeRuns, compat.data?.aretomo_runs);
   const activeIncompatRuns = incompatibleRuns(activeRuns, compat.data?.aretomo_runs);
 
-
   const runsChip = ((): ReactNode => {
     const total = activeRuns.length;
     if (total === 0) return null;
-    // Compat not loaded yet - show the raw count without a compatibility claim.
+    // Compat still loading - plain count, no compat claim.
     if (!compat.data) return <Chip size="small" variant="outlined" label={`${total} run${total === 1 ? '' : 's'}`} />;
     if (activeCompatRuns.length === 0)
       return <Chip size="small" color="warning" label="no runs from this AreTomo run" />;
@@ -207,7 +205,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     }));
   };
 
-  // Drop a stale row (saved, but no longer in the latest scan) from the deposit.
+  // Drop a stale row (no longer in the scan) from the deposit.
   const removeStale = (id: string) => {
     if (!active) return;
     setBySession((prev) => ({
@@ -289,9 +287,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       <Box>
         {scanAlerts}
         {!!scan.data?.scanned && !scan.data.error && (
-          <Typography variant="body2" color="text.secondary">
-            No annotations found in the selected copick configs.
-          </Typography>
+          <Alert severity="info">No annotations found in the selected copick configs.</Alert>
         )}
       </Box>
     );

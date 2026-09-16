@@ -123,7 +123,7 @@ def _read_metrics(loc):
 
 @require_http_methods(["GET"])
 def get_copick_aretomo_compat(request):
-    """Copick runs that aren't in the deposited AreTomo run ."""
+    """Annotated copick runs not produced by the deposited AreTomo run."""
     loc, error = _locate_run(request)
     if error:
         return error
@@ -158,7 +158,7 @@ def get_copick_aretomo_compat(request):
             "aretomo_runs": sorted(aretomo_runs),
             "aretomo_run_count": len(aretomo_runs),
             "annotated_run_count": len(annotated),
-            # scanned=false → the copick scan is still incomplete, so this result is provisional.
+            # scanned=false → scan incomplete, result is provisional.
             "scanned": scanned,
         }
     )
