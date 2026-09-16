@@ -14,12 +14,23 @@ NAME = "job_status_123"
 FAKE_TASK_ID = "0123456789abcdef0123456789abcdef"
 
 
+def run_scheduler():
+    # scheduler() closes "old" connections first; inside pytest-django's
+    # test transaction that kills the MySQL connection. Sqlite masks it.
+    with (
+        patch("django_q.scheduler.close_old_django_connections"),
+        patch("django_q.scheduler.async_task", return_value=FAKE_TASK_ID) as enqueue,
+    ):
+        scheduler()
+
+    return enqueue
+
+
 @pytest.mark.django_db
 def test_run_later_fires_once_with_name_and_args():
     syncer_tasks._run_later(FUNC, ARGS, name=NAME, delay=timedelta(seconds=-1), timeout=300)
 
-    with patch("django_q.scheduler.async_task", return_value=FAKE_TASK_ID) as enqueue:
-        scheduler()
+    enqueue = run_scheduler()
 
     enqueue.assert_called_once()
     args, kwargs = enqueue.call_args
@@ -33,8 +44,7 @@ def test_run_later_fires_once_with_name_and_args():
 def test_run_later_waits_for_delay():
     syncer_tasks._run_later(FUNC, ARGS, name=NAME, delay=timedelta(seconds=60))
 
-    with patch("django_q.scheduler.async_task", return_value=FAKE_TASK_ID) as enqueue:
-        scheduler()
+    enqueue = run_scheduler()
 
     enqueue.assert_not_called()
     assert Schedule.objects.get(name=NAME).next_run > timezone.now()

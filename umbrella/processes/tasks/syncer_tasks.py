@@ -20,7 +20,7 @@ SACCT_NOT_YET_LISTED_DELAY = timedelta(seconds=30)
 SACCT_ERROR_BACKOFF = timedelta(seconds=120)
 
 
-def _run_later(func, args, name, delay, timeout=None, hook=""):
+def _run_later(func, args, name, delay, timeout=None):
     # Django-Q2 has no per-task eta; a plain async_task would run again
     # immediately. A one-shot Schedule fires once at next_run, then deletes itself.
     from django_q.models import Schedule
@@ -35,7 +35,6 @@ def _run_later(func, args, name, delay, timeout=None, hook=""):
         func=func,
         args=repr(args),
         kwargs=repr(kwargs),
-        hook=hook,
         schedule_type=Schedule.ONCE,
         next_run=timezone.now() + delay,
     )
@@ -159,7 +158,6 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
             name=f"syncer_{session_name}_{run_id}",
             delay=OUTPUT_SYNC_INTERVAL,
             timeout=300,  # 5 minute timeout
-            hook="django_q.hooks.default",  # Use default hook for error handling
         )
 
         logger.info(f"Syncer iteration completed for {session_name}/{run_id}. Next run in 5 minutes.")
