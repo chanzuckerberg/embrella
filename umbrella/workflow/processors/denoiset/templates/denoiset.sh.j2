@@ -39,7 +39,25 @@ in_dir="{{ aretomo3_root }}/${session}/${aretomo_run}/vol001"
 out_dir="{{ denoise_root }}/${session}/${denoise_run}"
 model="{{ software_root }}/denoiset/denoiset/models/${model_name}"
 
-predict3d --model ${model} --input ${in_dir} --output ${out_dir}{% if live_denoising %} --live --t_exit 180000{% endif %}{% if use_custom_params and custom_command_line %} {{ custom_command_line }}{% endif %}
+# --- Concurrent mrc -> zarr conversion
+# predict3d (--live) can idle for hours after the last volume, so zarrs are converted
+# in the background. The done file tells the loop to make a final pass and exit.
+zarr_wait_time=180
+zarr_max_checks=960
+done_file="${out_dir}/denoise_complete.txt"
+mkdir -p "${out_dir}"
+rm -f "${done_file}"  # stale marker from a killed run would end the loop at once
 
-# --- Rechunk denoised volumes (5 checks, wait 10s between)
-bash {{ script_dir }}/rechunk.sh "${out_dir}" 5 10
+run_mrc_to_zarr() {
+    conda activate {{ software_root }}/zarrczar_env
+    bash {{ script_dir }}/mrc_to_zarr.sh "${out_dir}" "${done_file}" ${zarr_wait_time} ${zarr_max_checks}
+}
+
+run_mrc_to_zarr &
+
+predict3d --model ${model} --input ${in_dir} --output ${out_dir}{% if live_denoising %} --live --t_exit 180000{% endif %}{% if use_custom_params and custom_command_line %} {{ custom_command_line }}{% endif %}
+predict_status=$?
+
+touch "${done_file}"
+wait
+exit ${predict_status}
