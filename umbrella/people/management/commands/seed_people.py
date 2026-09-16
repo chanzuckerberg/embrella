@@ -1,5 +1,4 @@
-"""Fill the author directory so Add-author isn't empty.
-"""
+"""Fill the author directory so Add-author isn't empty."""
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
@@ -21,7 +20,7 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         User = get_user_model()
         # Only named accounts with no directory entry yet — skips old/test logins that have no
-        # first/last name (Person requires given/family). 
+        # first/last name (Person requires given/family).
         users = (
             User.objects.filter(is_active=True, person__isnull=True)
             .exclude(first_name="")
