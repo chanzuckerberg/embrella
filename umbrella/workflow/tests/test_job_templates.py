@@ -212,6 +212,8 @@ class TestDenoisetScript:
 
         assert f'in_dir="{PROCESSING_ROOT}/aretomo3/${{session}}/${{aretomo_run}}/vol001"' in script
         assert f'out_dir="{PROCESSING_ROOT}/denoise/${{session}}/${{denoise_run}}"' in script
+        assert f"#SBATCH -o {PROCESSING_ROOT}/denoise/24nov10/run001/JOB%j_denoise.out" in script
+        assert f"#SBATCH -e {PROCESSING_ROOT}/denoise/24nov10/run001/JOB%j_denoise.err" in script
         assert f'model="{PROCESSING_ROOT}/software/denoiset/denoiset/models/${{model_name}}"' in script
         assert f"conda activate {PROCESSING_ROOT}/software/zarrczar_env" in script
         assert f"bash {PROCESSING_ROOT}/denoise/scripts/mrc_to_zarr.sh" in script

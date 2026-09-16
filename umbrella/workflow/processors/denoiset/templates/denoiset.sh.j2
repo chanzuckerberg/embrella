@@ -8,6 +8,8 @@
 #SBATCH {{ directive.directive }}={{ directive.value }}
 {% endif -%}
 {% endfor %}
+#SBATCH -o {{ out_dir }}/JOB%j_denoise.out
+#SBATCH -e {{ out_dir }}/JOB%j_denoise.err
 {% if cluster == "czii" -%}
 #SBATCH --qos=embrella
 {% endif %}
