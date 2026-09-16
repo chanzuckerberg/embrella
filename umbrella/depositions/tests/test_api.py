@@ -324,6 +324,98 @@ class TestAutoFill:
         r = auth_client.post(self._url(owned_session))
         assert r.status_code == 400
 
+    def test_populates_instrument_from_tem(self, auth_client, owned_session):
+        """Facility-record fields come from the session's Microscope/Camera."""
+        from depositions.models import TiltseriesMetadata
+
+        plan = owned_session.msi_session.session_plan
+        plan.scope.manufacturer = "TFS"
+        plan.scope.model = "Krios G4"
+        plan.scope.energy_filter = "Selectris X"
+        plan.scope.phase_plate = "Volta"
+        plan.scope.image_correctors = ["Cs corrector"]
+        plan.scope.save()
+        plan.camera.manufacturer = "Gatan"
+        plan.camera.model = "K3"
+        plan.camera.save()
+
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+
+        c1, c2, c3 = self._patch_cluster()
+        with (
+            c1,
+            c2,
+            c3,
+            mock.patch(
+                "depositions.views.run_autofill_init",
+                return_value={"filled": True, "session": {"acquisition": {}}, "reason": None},
+            ),
+        ):
+            r = auth_client.post(self._url(owned_session))
+
+        assert r.status_code == 200, r.content
+        ts = TiltseriesMetadata.objects.get(session=owned_session)
+        assert ts.microscope_manufacturer == "TFS"
+        assert ts.microscope_model == "Krios G4"
+        assert ts.microscope_energy_filter == "Selectris X"
+        assert ts.microscope_phase_plate == "Volta"
+        assert ts.microscope_image_corrector == "Cs corrector"
+        assert ts.camera_manufacturer == "Gatan"
+        assert ts.camera_model == "K3"
+
+    def test_rerun_with_blank_tem_keeps_manual_instrument_edits(self, auth_client, owned_session):
+        """A second auto-fill must not wipe instrument fields the user typed while the tem row is blank."""
+        from depositions.models import TiltseriesMetadata
+
+        # tem scope/camera are blank (defaults); the user typed a phase_plate by hand.
+        TiltseriesMetadata.objects.create(session=owned_session, microscope_phase_plate="Volta (manual)")
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+
+        c1, c2, c3 = self._patch_cluster()
+        with (
+            c1,
+            c2,
+            c3,
+            mock.patch(
+                "depositions.views.run_autofill_init",
+                return_value={"filled": True, "session": {"acquisition": {}}, "reason": None},
+            ),
+        ):
+            r = auth_client.post(self._url(owned_session))
+
+        assert r.status_code == 200, r.content
+        ts = TiltseriesMetadata.objects.get(session=owned_session)
+        assert ts.microscope_phase_plate == "Volta (manual)"  # blank tem didn't overwrite the edit
+
+    def test_populated_tem_overwrites_existing_value(self, auth_client, owned_session):
+        """The other half of the contract: a populated tem value wins over an existing row value."""
+        from depositions.models import TiltseriesMetadata
+
+        TiltseriesMetadata.objects.create(session=owned_session, microscope_manufacturer="OldCorp")
+        plan = owned_session.msi_session.session_plan
+        plan.scope.manufacturer = "TFS"
+        plan.scope.save()
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+
+        c1, c2, c3 = self._patch_cluster()
+        with (
+            c1,
+            c2,
+            c3,
+            mock.patch(
+                "depositions.views.run_autofill_init",
+                return_value={"filled": True, "session": {"acquisition": {}}, "reason": None},
+            ),
+        ):
+            r = auth_client.post(self._url(owned_session))
+
+        assert r.status_code == 200, r.content
+        ts = TiltseriesMetadata.objects.get(session=owned_session)
+        assert ts.microscope_manufacturer == "TFS"  # tem value overwrote the old one
+
     def test_populates_metadata_and_stamps(self, auth_client, owned_session):
         from depositions.models import TiltseriesMetadata, TomogramMetadata
 

@@ -3,6 +3,7 @@
 import logging
 import shlex
 import uuid
+from typing import TYPE_CHECKING
 
 import yaml
 from stores.models import PathType
@@ -10,7 +11,13 @@ from stores.paths import resolve_dir
 
 from common import clusterio
 
+if TYPE_CHECKING:
+    from tem.models import SessionPlan
+
 logger = logging.getLogger(__name__)
+
+# Width of the microscope_image_corrector column.
+_IMAGE_CORRECTOR_MAXLEN = 256
 
 # Markers so we can pull the config YAML out of noisy conda/click stdout.
 _YAML_BEGIN = "AUTOFILL_YAML_BEGIN"
@@ -104,6 +111,41 @@ def map_session_to_metadata(session: dict | None) -> dict:
         },
     ]
     return {"tiltseries": tiltseries, "tomograms": tomograms}
+
+
+def map_session_plan_to_instrument_metadata(session_plan: "SessionPlan") -> dict:
+    """Instrument/facility fields from the session's Microscope/Camera + software (reads the ORM).
+
+    Returns only non-blank values, so a blank tem column won't clobber what the user typed.
+    """
+    scope = session_plan.scope
+    camera = session_plan.camera
+    # image_correctors is raw JSON in admin: ignore a non-list, drop blanks, keep whole names within
+    # the column (never slice mid-name into an invalid corrector).
+    correctors = scope.image_correctors if isinstance(scope.image_correctors, (list, tuple)) else []
+    names = [str(c).strip() for c in correctors if str(c).strip()]
+    kept: list[str] = []
+    for name in names:
+        # Keep a contiguous prefix - stop at the first name that won't fit rather than reordering.
+        if len(", ".join([*kept, name])) > _IMAGE_CORRECTOR_MAXLEN:
+            break
+        kept.append(name)
+    if len(kept) < len(names):
+        logger.warning(
+            "image_correctors for %s truncated to fit the column: kept %d of %d", scope.name, len(kept), len(names)
+        )
+    image_corrector = ", ".join(kept)
+    fields = {
+        "microscope_manufacturer": scope.manufacturer,
+        "microscope_model": scope.model,
+        "microscope_energy_filter": scope.energy_filter,
+        "microscope_phase_plate": scope.phase_plate,
+        "microscope_image_corrector": image_corrector,
+        "camera_manufacturer": camera.manufacturer,
+        "camera_model": camera.model,
+        "data_acquisition_software": session_plan.software.name,  # from the plan; filtered like the rest
+    }
+    return {k: v for k, v in fields.items() if v}
 
 
 def _voxel_spacing(pixel_spacing, binned_voxel_ratio) -> float | None:
