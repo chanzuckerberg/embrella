@@ -93,8 +93,30 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
 
         logger.info(f"Job {job_id} uses cluster: {cluster_id}")
 
-        # Check if job is still active
+        # Read liveness before syncing. If the job already ended, this pass
+        # sees everything it wrote, so stopping after it loses nothing.
         job_active = check_job_status(job_id, cluster_id=cluster_id)
+
+        # Verify session exists
+        session = MsiSession.objects.filter(name=session_name).first()
+        if not session:
+            logger.error(f"Session {session_name} not found")
+            return {
+                "success": False,
+                "error": "Session not found",
+                "session": session_name,
+            }
+
+        # Instantiate syncer and run one iteration
+        syncer = syncer_class(base_path=base_path, log_dir="/tmp")  # log_dir not used in task mode
+        syncer.job_id = job_id  # Set job_id before setup so it's available for logging
+
+        # Setup syncer with session and run info (creates initial log entry and SyncerProcess record)
+        syncer.setup(run_id=run_id, session_name=session_name, cluster_id=cluster_id)
+
+        # Run one sync iteration
+        logger.info(f"Running syncer iteration for {session_name}/{run_id}")
+        syncer.sync_results()
 
         if not job_active:
             logger.info(
@@ -129,27 +151,6 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
                 "run_id": run_id,
                 "job_id": job_id,
             }
-
-        # Verify session exists
-        session = MsiSession.objects.filter(name=session_name).first()
-        if not session:
-            logger.error(f"Session {session_name} not found")
-            return {
-                "success": False,
-                "error": "Session not found",
-                "session": session_name,
-            }
-
-        # Instantiate syncer and run one iteration
-        syncer = syncer_class(base_path=base_path, log_dir="/tmp")  # log_dir not used in task mode
-        syncer.job_id = job_id  # Set job_id before setup so it's available for logging
-
-        # Setup syncer with session and run info (creates initial log entry and SyncerProcess record)
-        syncer.setup(run_id=run_id, session_name=session_name, cluster_id=cluster_id)
-
-        # Run one sync iteration
-        logger.info(f"Running syncer iteration for {session_name}/{run_id}")
-        syncer.sync_results()
 
         # Schedule next iteration (5 minutes from now)
         _run_later(
