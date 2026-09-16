@@ -76,6 +76,10 @@ class TestReDoSGuard:
     def test_bounded_quantifier_passes(self):
         assert validate_file_regex(r"^(?P<tilt>-?\d+(?:\.\d+)?)\.eer$")
 
+    def test_freestyle_stem_passes(self):
+        """The serialEM rec pattern: an unquantified group holding one unbounded repeat is linear."""
+        assert validate_file_regex(r"^(?P<position>.+)\.mrc_Vol\.zarr$")
+
 
 class TestCompiled:
     def test_bad_regex_raises_at_first_read(self):

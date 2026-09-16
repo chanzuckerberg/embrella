@@ -98,7 +98,7 @@ class TestAretomo3Script:
     def test_tool_trees_resolve(self, run_context):
         script = get_processor("aretomo3").render_script(dict(ARETOMO3_PARAMS), run_context)
 
-        assert f"conda activate {PROCESSING_ROOT}/aretomo3/scripts/zarrczar_env" in script
+        assert f"conda activate {PROCESSING_ROOT}/software/zarrczar_env" in script
         assert f"{PROCESSING_ROOT}/software/executables/AreTomo3_" in script
         assert f"python {PROCESSING_ROOT}/software/diagnostics/scripts/plot_aretomo3_metrics.py" in script
 
@@ -212,8 +212,21 @@ class TestDenoisetScript:
 
         assert f'in_dir="{PROCESSING_ROOT}/aretomo3/${{session}}/${{aretomo_run}}/vol001"' in script
         assert f'out_dir="{PROCESSING_ROOT}/denoise/${{session}}/${{denoise_run}}"' in script
+        assert f"#SBATCH -o {PROCESSING_ROOT}/denoise/24nov10/run001/JOB%j_denoise.out" in script
+        assert f"#SBATCH -e {PROCESSING_ROOT}/denoise/24nov10/run001/JOB%j_denoise.err" in script
         assert f'model="{PROCESSING_ROOT}/software/denoiset/denoiset/models/${{model_name}}"' in script
-        assert f"bash {PROCESSING_ROOT}/denoise/scripts/rechunk.sh" in script
+        assert f"conda activate {PROCESSING_ROOT}/software/zarrczar_env" in script
+        assert f"bash {PROCESSING_ROOT}/denoise/scripts/mrc_to_zarr.sh" in script
+
+    def test_zarr_loop_runs_alongside_predict3d(self, run_context):
+        """Zarrs must land while predict3d is still live, and the loop must be told when it exits."""
+        script = get_processor("denoiset").render_script({"aretomo_run": "run001", "model_name": "m.pth"}, run_context)
+
+        loop_start = script.index("run_mrc_to_zarr &")
+        predict = script.index("predict3d --model")
+        done = script.index('touch "${done_file}"')
+        assert loop_start < predict < done
+        assert 'done_file="${out_dir}/denoise_complete.txt"' in script
 
 
 class TestMembranesegScript:

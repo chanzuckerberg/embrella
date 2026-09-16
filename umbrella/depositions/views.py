@@ -30,7 +30,11 @@ from .serializers import (
     SubmissionDepositionSerializer,
 )
 from .services import get_reservation_service
-from .services.autofill import map_session_to_metadata, run_autofill_init
+from .services.autofill import (
+    map_session_plan_to_instrument_metadata,
+    map_session_to_metadata,
+    run_autofill_init,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -345,7 +349,7 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
             session=session,
             defaults={
                 **mapped["tiltseries"],
-                "data_acquisition_software": msi_session.session_plan.software.name,
+                **map_session_plan_to_instrument_metadata(msi_session.session_plan),
                 "autofill_metadata": raw,
             },
         )

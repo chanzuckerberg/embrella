@@ -17,6 +17,7 @@ from processes.models import (
 from stores.models import DataKind, FilePattern, PathType
 from tem.models import (
     GAIN_ROLE,
+    AcquisitionSettings,
     CalibratedPixelSize,
     Camera,
     ImagingWorkflow,
@@ -216,7 +217,8 @@ class TestAreTomo3Processor:
         assert "#!/bin/bash" in script
         assert 'project_name="24nov10"' in script
         assert 'run_number="run001"' in script
-        assert 'pix_size="2.0"' in script
+        assert "export sensor_pix_size=2.0" in script
+        assert "export frame_pix_size=2.0" in script
         assert 'frame_dose="1.5"' in script
         assert f'gain_fn="{GAIN_DIR}somegainfile.gain"' in script
 
@@ -390,6 +392,60 @@ class TestSessionDefaults:
         assert aretomo3_processor.session_defaults(test_msi_session) == {}
 
 
+def _cli_value(processor, params, flag):
+    return next(arg["value"] for arg in processor.generate_cli_arguments_structured(params) if arg["flag"] == flag)
+
+
+@pytest.mark.django_db
+class TestPixelSizeDerivation:
+    """The form holds the sensor pixel; -PixSize and auto -AtBin follow super-res, McBin and EerSampling.
+
+    sensor 2.0 ──(÷2 if super_res)──▶ frame ──(× mc_bin ÷ eer_sampling)──▶ mc pixel ──▶ 5 / mc
+    """
+
+    def test_default_binning_lands_on_the_sensor_pixel(self, aretomo3_processor):
+        # mc_bin 2 and eer_sampling 2 cancel: mc pixel == sensor pixel
+        params = {"pixel_size": 2.0}
+
+        assert aretomo3_processor._calculate_auto_binning(params) == {"tomo_bin_5A": 2.5, "tomo_bin_10A": 5.0}
+        assert _cli_value(aretomo3_processor, params, "-PixSize") == "2.0"
+        assert _cli_value(aretomo3_processor, params, "-AtBin") == "2.5 5.0 5.0"
+
+    def test_super_resolution_halves_the_frame_pixel(self, aretomo3_processor):
+        params = {"pixel_size": 2.0, "super_resolution": True}
+
+        assert _cli_value(aretomo3_processor, params, "-PixSize") == "1.0"
+        assert _cli_value(aretomo3_processor, params, "-AtBin") == "5.0 10.0 10.0"
+
+    def test_mc_bin_scales_the_binning(self, aretomo3_processor):
+        params = {"pixel_size": 2.0, "mc_bin": 1}
+
+        assert aretomo3_processor._calculate_auto_binning(params)["tomo_bin_5A"] == 5.0
+
+    def test_eer_sampling_scales_the_binning(self, aretomo3_processor):
+        params = {"pixel_size": 2.0, "eer_sampling": 1}
+
+        assert aretomo3_processor._calculate_auto_binning(params)["tomo_bin_5A"] == 1.25
+
+    def test_render_reads_super_resolution_off_the_session(
+        self, aretomo3_processor, test_run_context, test_msi_session, gain_path_type
+    ):
+        test_msi_session.acquisition = AcquisitionSettings.objects.create(super_resolution=True)
+        test_msi_session.save()
+        params = {"pixel_size": 2.0, "gain_file_name": "ref.gain"}
+
+        script = aretomo3_processor.render_script(params, test_run_context)
+
+        assert "-PixSize 1.0" in script
+        assert "tomo_bin_5A=5.0" in script
+        assert "export sensor_pix_size=2.0" in script  # the form's value, kept for the log
+        assert "export frame_pix_size=1.0" in script
+        assert 'pix_size="' not in script
+
+    def test_validation_accepts_bare_params(self, aretomo3_processor):
+        assert aretomo3_processor.validate_parameters({"pixel_size": 2.0}) == []
+
+
 @pytest.mark.django_db
 class TestGetSessionInfo:
     """views.get_session_info describes the session; it decides no parameter values."""
@@ -409,7 +465,7 @@ class TestGetSessionInfo:
     def test_minimal_session(self, test_msi_session):
         from workflow.processors.aretomo3.views import get_session_info
 
-        assert get_session_info(test_msi_session) == {"user": None}
+        assert get_session_info(test_msi_session) == {"user": None, "super_resolution": False}
 
 
 @pytest.mark.django_db

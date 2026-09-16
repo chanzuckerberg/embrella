@@ -15,17 +15,20 @@ from tem.models import (
     SessionPlanPathBinding,
     Software,
 )
-from workflow.syncers import ProcessSyncer
+from workflow.syncers import ProcessSyncer, parse_zarr_filename
 
 pytestmark = pytest.mark.django_db
 
 REC_LABEL = "{position}_Vol.zarr"
 
-# One discovered zarr, as (basename, position_id) from check_zarr_exists.
-ONE_ZARR = ([("Position_1_Vol.zarr", "Position_1")], 1)
+# One discovered zarr, as ((basename, position_id) pairs, rejected basenames) from check_zarr_exists.
+ONE_ZARR = ([("Position_1_Vol.zarr", "Position_1")], [])
 
 # The same, for a scope whose acquisition names stacks the serialEM way.
-SERIALEM_ZARR = ([("pt712_ts_001.mrc_Vol.zarr", "pt712_ts_001")], 1)
+SERIALEM_ZARR = ([("pt712_ts_001.mrc_Vol.zarr", "pt712_ts_001")], [])
+
+# Freestyle stems: only the pipeline-appended .mrc_Vol.zarr tail is fixed.
+SERIALEM_REC_REGEX = r"^(?P<position>.+)\.mrc_Vol\.zarr$"
 
 
 @pytest.fixture
@@ -88,12 +91,44 @@ class TestDiscoveredFilePath:
         assert ReviewTomogram.objects.count() == 1
 
 
-def bind_plan_pattern(plan):
+def serialem_pattern():
     kind, _ = DataKind.objects.get_or_create(data_type="rec")
-    pattern = FilePattern.objects.create(
-        data_kind=kind, label="serialEM rec", regex=r"^(?P<position>\w+_ts_\d+)\.mrc_Vol\.zarr$"
+    return FilePattern.objects.create(data_kind=kind, label="serialEM rec", regex=SERIALEM_REC_REGEX)
+
+
+def bind_plan_pattern(plan):
+    SessionPlanPathBinding.objects.create(session_plan=plan, role=TILT_SERIES_ROLE, file_pattern=serialem_pattern())
+
+
+class TestFreestyleStem:
+    """Operators name stacks as they like; the id is whatever precedes the fixed tail."""
+
+    @pytest.mark.parametrize(
+        "basename, position_id",
+        [
+            ("pt712_ts_001.mrc_Vol.zarr", "pt712_ts_001"),
+            ("grid3-sq2_lamella_ts_004.mrc_Vol.zarr", "grid3-sq2_lamella_ts_004"),
+            ("L2 cell 7.mrc_Vol.zarr", "L2 cell 7"),
+        ],
     )
-    SessionPlanPathBinding.objects.create(session_plan=plan, role=TILT_SERIES_ROLE, file_pattern=pattern)
+    def test_stem_is_the_id(self, basename, position_id):
+        assert parse_zarr_filename(basename, pattern=serialem_pattern()) == position_id
+
+    @pytest.mark.parametrize("basename", ["pt712_ts_001.mrc_EVN_Vol.zarr", "pt712_ts_001.mrc_ODD_Vol.zarr"])
+    def test_half_volumes_rejected(self, basename):
+        assert parse_zarr_filename(basename, pattern=serialem_pattern()) is None
+
+
+class TestUnmatchedWarning:
+    @patch("workflow.syncers.check_zarr_exists", return_value=(ONE_ZARR[0], ["odd_name.zarr", "other.zarr"]))
+    def test_names_the_rejects(self, _check, msi_session, tmp_path):
+        syncer = given_syncer(msi_session, tmp_path)
+        syncer.process_zarr_directory("SART", "/proc/aretomo3/25aug25a/run003/vol003", rel_dir="vol003")
+
+        entry = SyncerLog.objects.get(action_type="warning")
+        assert entry.message.startswith("2 of 3 .zarr entries")
+        assert entry.metadata["examples"] == ["odd_name.zarr", "other.zarr"]
+        assert entry.metadata["pattern"] == FilePattern.objects.get(label=REC_LABEL).regex
 
 
 class TestPlanBoundPattern:
@@ -107,7 +142,7 @@ class TestPlanBoundPattern:
         syncer.process_zarr_directory("SART", "/proc/aretomo3/25aug25a/run003/vol003", rel_dir="vol003")
 
         pattern = _check.call_args.args[1]
-        assert pattern.regex == r"^(?P<position>\w+_ts_\d+)\.mrc_Vol\.zarr$"
+        assert pattern.regex == SERIALEM_REC_REGEX
 
         entry = SyncerLog.objects.get(action_type="tomogram_created")
         assert entry.metadata["pattern"] == "serialEM rec"

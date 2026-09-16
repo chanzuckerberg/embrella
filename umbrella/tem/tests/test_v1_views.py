@@ -4,6 +4,7 @@ import pytest
 from stores.models import Path
 
 from tem.models import (
+    AcquisitionSettings,
     ImagingWorkflow,
     MsiSession,
     SessionPlan,
@@ -40,6 +41,15 @@ class TestFormOptions:
         assert plan["scope"] == session_plan.scope.name
         assert plan["software"] == str(session_plan.software)
         assert plan["camera"] == session_plan.camera.name
+
+    def test_plan_option_carries_acquisition_defaults(self, client, test_user, session_plan):
+        session_plan.acquisition_defaults = AcquisitionSettings.objects.create(label="k2", super_resolution=True)
+        session_plan.save()
+        client.force_login(test_user)
+
+        plan = client.get("/tem/v1/sessions/form-options/").json()["session_plans"][0]
+
+        assert plan["acquisition_defaults"] == {"super_resolution": True}
 
     def test_filters_to_tomo_and_sngl_workflows(self, client, test_user, microscope, camera, software):
         client.force_login(test_user)
@@ -250,6 +260,51 @@ class TestCreateSession:
         assert response.status_code == 201
         session = MsiSession.objects.get(name="26mar06c")
         assert session.magnification is None
+
+    def _create(self, client, session_plan, project, grid, **extra):
+        return client.post(
+            "/tem/v1/sessions/",
+            data={
+                "name": "26mar06f",
+                "session_plan_id": session_plan.id,
+                "project_id": project.id,
+                "grid_id": grid.id,
+                **extra,
+            },
+            content_type="application/json",
+        )
+
+    def test_posted_acquisition_wins_over_the_plan_profile(self, client, test_user, session_plan, project, grid):
+        session_plan.acquisition_defaults = AcquisitionSettings.objects.create(label="k2", super_resolution=True)
+        session_plan.save()
+        client.force_login(test_user)
+
+        response = self._create(client, session_plan, project, grid, super_resolution=False)
+
+        assert response.status_code == 201
+        assert response.json()["acquisition"] == {"super_resolution": False}
+        session = MsiSession.objects.get(name="26mar06f")
+        assert session.super_resolution is False
+        assert session.acquisition.pk != session_plan.acquisition_defaults.pk
+
+    def test_omitted_acquisition_copies_the_plan_profile(self, client, test_user, session_plan, project, grid):
+        session_plan.acquisition_defaults = AcquisitionSettings.objects.create(label="k2", super_resolution=True)
+        session_plan.save()
+        client.force_login(test_user)
+
+        response = self._create(client, session_plan, project, grid)
+
+        assert response.status_code == 201
+        assert MsiSession.objects.get(name="26mar06f").super_resolution is True
+
+    def test_plan_without_profile_still_gets_a_row(self, client, test_user, session_plan, project, grid):
+        client.force_login(test_user)
+
+        response = self._create(client, session_plan, project, grid)
+
+        assert response.status_code == 201
+        assert response.json()["acquisition"] == {"super_resolution": False}
+        assert str(MsiSession.objects.get(name="26mar06f").acquisition) == "snapshot 26mar06f"
 
     def test_rejects_duplicate_name(self, client, test_user, session_plan, project, grid):
         client.force_login(test_user)

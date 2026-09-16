@@ -6,6 +6,8 @@ from rest_framework.response import Response
 
 from common.sorting import msi_session_sort_key
 from tem.models import (
+    ACQUISITION_FIELDS,
+    AcquisitionSettings,
     AtlasSession,
     CryoGrid,
     Magnification,
@@ -89,10 +91,21 @@ def _create_session(request):
     # Auto-create Path objects based on software config
     # default to the latest screening grid atlas if available
     session.atlas_session = AtlasSession.objects.filter(grid=grid).last()
+    session.acquisition = _snapshot_acquisition(session_plan, data)
     session.resolve_role_paths()
     session.save()
 
     return Response(SessionDetailSerializer(_session_payload(session)).data, status=status.HTTP_201_CREATED)
+
+
+def _snapshot_acquisition(session_plan, data):
+    """The session's own acquisition row: the plan's profile, with whatever the form posted on top."""
+    overrides = {field: data[field] for field in ACQUISITION_FIELDS if field in data}
+    label = AcquisitionSettings.snapshot_label(data["name"])
+    profile = session_plan.acquisition_defaults
+    if profile:
+        return profile.snapshot(label, **overrides)
+    return AcquisitionSettings.objects.create(label=label, **overrides)
 
 
 @extend_schema(
@@ -104,7 +117,9 @@ def _create_session(request):
 @api_view(["GET"])
 def session_detail(request, name):
     session = (
-        MsiSession.objects.filter(name=name).select_related("project", "grid", "session_plan", "magnification").first()
+        MsiSession.objects.filter(name=name)
+        .select_related("project", "grid", "session_plan", "magnification", "acquisition")
+        .first()
     )
     if session is None:
         return Response({"detail": "Session '%s' not found." % name}, status=status.HTTP_404_NOT_FOUND)
@@ -120,6 +135,7 @@ def _session_payload(session):
         "grid_name": str(session.grid) if session.grid else None,
         "session_plan_name": str(session.session_plan),
         "magnification_display": str(session.magnification) if session.magnification else None,
+        "acquisition": session.acquisition.values() if session.acquisition else None,
         "legacy_url": f"/legacy/tem/{session.id}/",
     }
     for role, path in session.role_paths.items():
@@ -144,7 +160,7 @@ def _role_halves(path, pattern):
 def form_options(request):
     session_plans = SessionPlan.objects.filter(
         imaging_workflow__workflow__in=["tomo", "sngl"],
-    ).select_related("scope", "camera", "imaging_workflow", "software")
+    ).select_related("scope", "camera", "imaging_workflow", "software", "acquisition_defaults")
 
     projects = Project.objects.all().order_by("name")
 
@@ -158,6 +174,7 @@ def form_options(request):
                     "scope": sp.scope.name,
                     "software": str(sp.software),
                     "camera": sp.camera.name,
+                    "acquisition_defaults": sp.acquisition_values(),
                 }
                 for sp in session_plans
             ],

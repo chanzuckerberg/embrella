@@ -6,8 +6,9 @@ One Software row serves both scopes, so per-plan path bindings are used for krio
 - krios2 (K3) writes a differently-shaped tree, so its plan binds its own directories.
 - Each plan binds its own rec naming (tilt_series role) -- the stems differ per scope.
 
-Idempotent: every row is get_or_create, so re-running repairs a partial state, never
-duplicates, and never clobbers admin edits. Run inside the devcontainer:
+Idempotent: rows are get_or_create, so re-running repairs a partial state and never
+duplicates. FilePattern rows are the exception: their regex/glob/samples are rewritten on
+every run so a loosened pattern reaches existing installs. Run inside the devcontainer:
 
     python umbrella/manage.py runscript 008_init_serialem
 """
@@ -37,10 +38,12 @@ CELTIC_FRAMES = {"label": "serialEM frames (tif)", "list_glob": "*.tif", "regex"
 # Everything scope-specific in one place. `name_prefix` is the letter the New Session form
 # puts in front of suggested names (s26jun08a / p26jun08a) so the two serialEM plans are
 # told apart. `session_dir` differing from the default gets
-# bound on that scope's plan. `rec` names the reconstruction zarrs: the stem is the
-# tilt-series stack name (capture excludes .mrc, so position_id reads "pt712_ts_001"),
-# the _Vol.zarr tail is a static match. Copick derives --run-regex by replacing a
-# literal \.zarr$ tail -- keep that spelling.
+# bound on that scope's plan. `rec` names the reconstruction zarrs: the stem is whatever
+# the operator called the tilt-series stack (freestyle, so `.+`); only the .mrc_Vol.zarr
+# tail is fixed, appended by the pipeline. Capturing the stem alone makes position_id read
+# "pt712_ts_001". Half-volumes end in _EVN_Vol.zarr / _ODD_Vol.zarr, so the tail excludes
+# them. Copick derives --run-regex by replacing a literal \.zarr$ tail -- keep that spelling.
+REC_REGEX = r"^(?P<position>.+)\.mrc_Vol\.zarr$"
 SCOPES = {
     "krios1": {
         "name_prefix": "s",
@@ -54,8 +57,8 @@ SCOPES = {
         "frames": DEFAULT_FRAMES,
         "rec": {
             "label": "serialEM rec (krios1)",
-            "regex": r"^(?P<position>Position_\d+(?:_\d+)*_ts_\d+)\.mrc_Vol\.zarr$",
-            "samples": ["Position_10_ts_001.mrc_Vol.zarr"],
+            "regex": REC_REGEX,
+            "samples": ["Position_10_ts_001.mrc_Vol.zarr", "Lam_03_pos_22.mrc_Vol.zarr"],
         },
     },
     "krios2": {
@@ -70,8 +73,8 @@ SCOPES = {
         "frames": CELTIC_FRAMES,
         "rec": {
             "label": "serialEM rec (krios2)",
-            "regex": r"^(?P<position>pt\d+_ts_\d+)\.mrc_Vol\.zarr$",
-            "samples": ["pt712_ts_001.mrc_Vol.zarr", "pt729_ts_001.mrc_Vol.zarr", "pt729_ts_002.mrc_Vol.zarr"],
+            "regex": REC_REGEX,
+            "samples": ["pt712_ts_001.mrc_Vol.zarr", "pt729_ts_002.mrc_Vol.zarr", "pt729_ts_002.mrc_Vol.zarr"],
         },
     },
 }
@@ -86,9 +89,9 @@ def get_camera(spec):
 
 
 def get_pattern(data_type, label, *, list_glob, regex, samples=(), notes=""):
-    """The (kind, label) row, validated against its samples."""
+    """The (kind, label) row, its matching rules rewritten to this spec and validated against the samples."""
     kind, _ = DataKind.objects.get_or_create(data_type=data_type)
-    pattern, _ = FilePattern.objects.get_or_create(
+    pattern, _ = FilePattern.objects.update_or_create(
         data_kind=kind,
         label=label,
         defaults={"list_glob": list_glob, "regex": regex, "sample_filenames": list(samples), "notes": notes},
@@ -113,8 +116,8 @@ def mdoc_pattern():
         "mdoc",
         "serialEM {run}.mrc.mdoc",
         list_glob="*.mrc.mdoc",
-        regex=r"^(?P<run>\w+_ts_\d+)\.mrc\.mdoc$",
-        samples=["Position_10_ts_001.mrc.mdoc", "pt712_ts_001.mrc.mdoc"],
+        regex=r"^(?P<run>.+)\.mrc\.mdoc$",
+        samples=["Position_10_ts_001.mrc.mdoc", "pt712_ts_001.mrc.mdoc", "Lam_04_pos_26.mrc.mdoc"],
     )
 
 

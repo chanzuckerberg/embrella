@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.contrib.admin.views.main import ChangeList
+from django.db.models import Count
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from stores.models import fill_place_holders
@@ -8,6 +10,7 @@ from .models import (
     CAMERA_PATH_ROLES,
     ROLE_OWNERS,
     SOFTWARE_PATH_ROLES,
+    AcquisitionSettings,
     AtlasSession,
     CalibratedPixelSize,
     Camera,
@@ -32,15 +35,49 @@ _RESOLVES_TO_CSS = mark_safe(
 )
 
 # Register your models here.
-admin.site.register(Microscope)
 admin.site.register(Magnification)
 admin.site.register(CalibratedPixelSize)
 admin.site.register(ImagingWorkflow)
 
 
+class _ProfilesFirstChangeList(ChangeList):
+    """Profiles (rows plans default to) first, then the per-session snapshots newest first.
+
+    Lives on the changelist, not `ModelAdmin.ordering`/`get_ordering`: those also feed the
+    system check (admin.E033) and SessionPlan's autocomplete widget, neither of which has
+    the `plan_count` annotation. Column-header sorting still overrides this.
+    """
+
+    def _get_default_ordering(self):
+        return ["-plan_count", "label", "-pk"]
+
+
+@admin.register(AcquisitionSettings)
+class AcquisitionSettingsAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "super_resolution", "plan_count", "session")
+    list_filter = ("super_resolution",)
+    search_fields = ("label",)
+
+    def get_changelist(self, request, **kwargs):
+        return _ProfilesFirstChangeList
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(plan_count=Count("plans")).select_related("session")
+
+    @admin.display(description="plans", ordering="plan_count")
+    def plan_count(self, obj):
+        return obj.plan_count or ""
+
+
+@admin.register(Microscope)
+class MicroscopeAdmin(admin.ModelAdmin):
+    list_display = ("name", "manufacturer", "model", "cs", "energy_filter", "phase_plate", "image_correctors")
+    search_fields = ("name", "manufacturer", "model")
+
+
 @admin.register(Camera)
 class CameraAdmin(admin.ModelAdmin):
-    list_display = ("name", "root_dir", "frame_format", *CAMERA_PATH_ROLES)
+    list_display = ("name", "manufacturer", "model", "root_dir", "frame_format", *CAMERA_PATH_ROLES)
     autocomplete_fields = CAMERA_PATH_ROLES
 
 
@@ -78,6 +115,7 @@ class SessionPlanAdmin(admin.ModelAdmin):
     list_filter = ("scope", "camera", "software")
     inlines = (SessionPlanPathBindingInline,)
     readonly_fields = ("resolves_to",)
+    autocomplete_fields = ("acquisition_defaults",)
     fieldsets = (
         (None, {"fields": ("scope", "camera", "imaging_workflow", "software")}),
         (
@@ -85,6 +123,13 @@ class SessionPlanAdmin(admin.ModelAdmin):
             {
                 "fields": ("name_prefix",),
                 "description": "Prefix for suggested MSI session names. 's' gives s26jun08a.",
+            },
+        ),
+        (
+            "Acquisition defaults",
+            {
+                "fields": ("acquisition_defaults",),
+                "description": "Profile copied into each new session; the operator may override at create time.",
             },
         ),
         (
@@ -158,7 +203,7 @@ class SessionPlanAdmin(admin.ModelAdmin):
 class MsiSessionAdmin(admin.ModelAdmin):
     list_display = ("name", "user", "project", "session_plan", "magnification", "created_at")
     list_filter = ("session_plan", "magnification")
-    raw_id_fields = ("grid", "frames", "mdocs", "sums", "parents", "atlas", "atlas_session")
+    raw_id_fields = ("grid", "frames", "mdocs", "sums", "parents", "atlas", "atlas_session", "acquisition")
 
 
 admin.site.register(ScreenSessionGroup)

@@ -90,7 +90,8 @@ export gain_fn="${gain_mrc}"
 echo "Project Name: ${project_name}"
 echo "Gain Path: ${gain_fn}"
 echo "Output Path: ${out_path}"
-echo "Pixel Size: ${pix_size}"
+echo "Sensor pixel size: ${sensor_pix_size}"
+echo "Frame pixel size (-PixSize): ${frame_pix_size}"
 echo "At binning for 5A vol: ${tomo_bin_5A}"
 echo "At binning for 10A vol: ${tomo_bin_10A}"
 {% if frame_dose %}
@@ -109,7 +110,7 @@ run_aretomo3_gpu() {
     ml cuda
 
     # AreTomo3 command with fixed flags and schema-generated variable flags
-    {{ software_root }}/executables/AreTomo3_2.3.0_Cuda13_03-21-2026 \
+    {{ software_root }}/executables/AreTomo3_2.3.3_Cuda13_09-14-2026 \
         -Gain ${gain_fn} \
         -OutDir ${out_path} \
         -Gpu {% for i in range(slurm_component_0_gpus) -%}{{ i }}{% if not loop.last %},{% endif %}{% endfor %} \
@@ -122,7 +123,7 @@ run_reformat_cpu() {
     set -e
     umask 0002
     ml anaconda
-    conda activate {{ script_dir }}/zarrczar_env
+    conda activate {{ software_root }}/zarrczar_env
     bash {{ script_dir }}/mrc_to_zarr_and_thumbnails.sh ${out_path} 960 180
 
     conda activate {{ software_root }}/slabpick/pySlabPick
