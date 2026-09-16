@@ -1,5 +1,6 @@
 """Unit tests for the autofill service parsing/mapping (no SSH, no DB)."""
 
+from types import SimpleNamespace
 from unittest import mock
 
 from stores.models import PathType
@@ -9,6 +10,7 @@ from depositions.services.autofill import (
     _between,
     _extract_session,
     _short_reason,
+    map_session_plan_to_instrument_metadata,
     map_session_to_metadata,
 )
 
@@ -150,3 +152,87 @@ class TestShortReason:
 
     def test_defaults_when_no_error_line(self):
         assert _short_reason("nothing useful here") == "no_config_emitted"
+
+
+class TestInstrumentMetadata:
+    def test_maps_populated_scope_and_camera_fields(self):
+        plan = SimpleNamespace(
+            scope=SimpleNamespace(
+                manufacturer="TFS",
+                model="Krios G4",
+                energy_filter="Selectris X",
+                phase_plate="Volta",
+                image_correctors=["Cs corrector", "Cc corrector"],
+            ),
+            camera=SimpleNamespace(manufacturer="Gatan", model="K3"),
+            software=SimpleNamespace(name="tomo5"),
+        )
+        assert map_session_plan_to_instrument_metadata(plan) == {
+            "microscope_manufacturer": "TFS",
+            "microscope_model": "Krios G4",
+            "microscope_energy_filter": "Selectris X",
+            "microscope_phase_plate": "Volta",
+            "microscope_image_corrector": "Cs corrector, Cc corrector",
+            "camera_manufacturer": "Gatan",
+            "camera_model": "K3",
+            "data_acquisition_software": "tomo5",
+        }
+
+    def test_blank_fields_are_dropped_so_reruns_dont_wipe_edits(self):
+        plan = SimpleNamespace(
+            scope=SimpleNamespace(manufacturer="TFS", model="", energy_filter="", phase_plate="", image_correctors=[]),
+            camera=SimpleNamespace(manufacturer="", model=""),
+            software=SimpleNamespace(name="tomo5"),
+        )
+        # Only the non-blank fields come back; blanks are omitted, not written as "".
+        assert map_session_plan_to_instrument_metadata(plan) == {
+            "microscope_manufacturer": "TFS",
+            "data_acquisition_software": "tomo5",
+        }
+
+    def test_non_list_image_correctors_is_ignored(self):
+        plan = SimpleNamespace(
+            scope=SimpleNamespace(
+                manufacturer="", model="", energy_filter="", phase_plate="", image_correctors="Cs corrector"
+            ),
+            camera=SimpleNamespace(manufacturer="", model=""),
+            software=SimpleNamespace(name="tomo5"),
+        )
+        # A stray string must not be char-split into "C, s, ...".
+        assert "microscope_image_corrector" not in map_session_plan_to_instrument_metadata(plan)
+
+    def test_blank_and_whitespace_correctors_dont_leave_stray_separators(self):
+        plan = SimpleNamespace(
+            scope=SimpleNamespace(
+                manufacturer="",
+                model="",
+                energy_filter="",
+                phase_plate="",
+                image_correctors=["Cs corrector", "", "  ", "Cc corrector"],
+            ),
+            camera=SimpleNamespace(manufacturer="", model=""),
+            software=SimpleNamespace(name="tomo5"),
+        )
+        assert (
+            map_session_plan_to_instrument_metadata(plan)["microscope_image_corrector"] == "Cs corrector, Cc corrector"
+        )
+
+    def test_correctors_over_the_column_width_drop_whole_names(self, caplog):
+        long = "x" * 200  # two of these + ", " = 402 > 256
+        plan = SimpleNamespace(
+            scope=SimpleNamespace(
+                name="krios1",
+                manufacturer="",
+                model="",
+                energy_filter="",
+                phase_plate="",
+                image_correctors=[long, long],
+            ),
+            camera=SimpleNamespace(manufacturer="", model=""),
+            software=SimpleNamespace(name=""),
+        )
+        with caplog.at_level("WARNING"):
+            result = map_session_plan_to_instrument_metadata(plan)["microscope_image_corrector"]
+        assert result == long
+        assert len(result) <= 256
+        assert "truncated" in caplog.text.lower()  # the drop is logged, not silent
