@@ -95,7 +95,7 @@ const NAV: NavItem[] = [
   { key: 'organism', label: 'Organism', required: true },
   { key: 'bioclass', label: 'Biological classification', required: false },
   { key: 'authors', label: 'Authors', required: true },
-  { key: 'funding', label: 'Funding & references', required: true },
+  { key: 'funding', label: 'Funding & references', required: false },
 ];
 
 export function DatasetForm({
@@ -181,6 +181,18 @@ export function DatasetForm({
   const bioMet = isRequiredBioFieldMet(form.sample, req);
   const organismMet = !!form.sample.organism_name?.trim() && form.sample.organism_taxid != null;
 
+  // Any biological-classification field the user actually filled (optional counts only if filled).
+  const bioHasContent = [
+    form.sample.tissue_name,
+    form.sample.cell_name,
+    form.sample.cell_strain_name,
+    form.sample.cell_component_name,
+    form.sample.development_stage_name,
+    form.sample.disease_name,
+    form.assay_label,
+    form.assay_ontology_id,
+  ].some((v) => !!v?.trim());
+
   const nav = NAV.map((n) => {
     if (n.key === 'organism') return { ...n, required: req.organismRequired };
     if (n.key === 'bioclass') return { ...n, required: req.requiredBioField != null };
@@ -190,17 +202,19 @@ export function DatasetForm({
   const done: Record<string, boolean> = {
     basic: !!form.title.trim() && !!form.description.trim(),
     sample: !!form.sample.sample_type,
-    organism: req.organismRequired ? organismMet : true,
-    bioclass: bioMet,
+    organism: organismMet,
+    bioclass: req.requiredBioField ? bioMet : bioHasContent,
     authors: true,
-    funding: form.funding.length > 0,
+    funding:
+      form.funding.some((f) => !!f.funding_agency_name?.trim() || !!f.grant_id?.trim()) ||
+      form.crossRefs.some((c) => !!c.value?.trim()),
   };
   const subLabel = (key: string): string => {
     if (key === 'bioclass') {
-      if (!req.requiredBioField) return 'Optional';
+      if (!req.requiredBioField) return bioHasContent ? 'Complete' : 'Optional';
       return bioMet ? 'Complete' : 'Required';
     }
-    if (key === 'organism' && !req.organismRequired) return 'Optional';
+    if (key === 'organism' && !req.organismRequired) return organismMet ? 'Complete' : 'Optional';
     if (key === 'authors') return form.is_authors_same_as_deposition ? 'Deposition authors' : 'Custom';
     if (key === 'funding') return `${form.funding.length} ${form.funding.length === 1 ? 'entry' : 'entries'}`;
     return done[key] ? 'Complete' : 'Incomplete';
