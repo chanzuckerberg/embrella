@@ -201,9 +201,11 @@ export function SourcesTable({
         </Box>
 
         {rows.length === 0 && (
-          <Callout intent="info" sdsStyle="persistent">
-            No sessions yet. Add the imaging sessions this dataset was built from.
-          </Callout>
+          <Callout
+            intent="info"
+            sdsStyle="persistent"
+            body="No sessions yet. Add the imaging sessions this dataset was built from."
+          />
         )}
 
         {rows.map((row, i) => (
