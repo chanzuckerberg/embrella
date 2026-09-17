@@ -164,6 +164,32 @@ export async function getAnnotatedCount(sessionName: string, runs: string[]): Pr
   return data.annotated_count ?? 0;
 }
 
+export interface CopickAretomoCompat {
+  compatible: boolean;
+  incompatible_runs: string[]; // annotated runs not produced by the deposited AreTomo run
+  aretomo_runs: string[]; // full produced-run set, used to filter each annotation's runs
+  scanned: boolean;
+}
+
+export async function fetchCopickAretomoCompat(
+  sessionName: string,
+  aretomoRun: string,
+  copickRuns: string[]
+): Promise<CopickAretomoCompat> {
+  const run = aretomoRun.startsWith('run') ? aretomoRun : `run${aretomoRun}`;
+  const q =
+    `?session_name=${encodeURIComponent(sessionName)}` +
+    `&run_number=${encodeURIComponent(run)}` +
+    `&copick_runs=${encodeURIComponent(copickRuns.join(','))}`;
+  const data = await parse<Partial<CopickAretomoCompat>>(await fetchResource(url(`${API.COPICK_ARETOMO_COMPAT}${q}`)));
+  return {
+    compatible: data.compatible ?? true,
+    incompatible_runs: data.incompatible_runs ?? [],
+    aretomo_runs: data.aretomo_runs ?? [],
+    scanned: data.scanned ?? false,
+  };
+}
+
 /* Read the cached scan.json for each selected run and merge its picks/segmentations/meshes. */
 export async function scanCopickAnnotations(sessionName: string, runs: string[]): Promise<ScanResult> {
   const merged: ScanResult = { scanned: true, pending: false, picks: [], segmentations: [], meshes: [] };
@@ -180,6 +206,11 @@ export async function scanCopickAnnotations(sessionName: string, runs: string[])
     // A pending marker (job running/triggered) is distinct from a missing file (never scanned).
     if (ann.pending) merged.pending = true;
     if (ann.error && !merged.error) merged.error = ann.error;
+    // Sum in-flight progress across the configs still scanning.
+    if (typeof ann.progress_total === 'number') {
+      merged.progress_total = (merged.progress_total ?? 0) + ann.progress_total;
+      merged.progress_done = (merged.progress_done ?? 0) + (ann.progress_done ?? 0);
+    }
     merged.picks!.push(...(ann.picks ?? []));
     merged.segmentations!.push(...(ann.segmentations ?? []));
     merged.meshes!.push(...(ann.meshes ?? []));
