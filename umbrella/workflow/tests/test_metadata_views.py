@@ -11,7 +11,11 @@ import pytest
 from django.test import RequestFactory, override_settings
 from stores.models import Cluster, DataKind, PathType
 from workflow.views import metadata_views
-from workflow.views.metadata_views import get_metadata_summary, get_metadata_viz_data
+from workflow.views.metadata_views import (
+    get_copick_aretomo_compat,
+    get_metadata_summary,
+    get_metadata_viz_data,
+)
 
 HTTP_BASE = "http://files.test/"
 RUN_URL = HTTP_BASE + "krios1.processing/aretomo3/24nov10/run001/"
@@ -123,3 +127,47 @@ class TestRunLookup:
 
         assert status == 404
         assert "error" in body
+
+
+class TestCopickAretomoCompat:
+    """copick runs not in the deposited AreTomo run's tomograms (metrics = Position_13, Position_8_ts_011.mrc)."""
+
+    def _scan(self, annotated, scanned=True):
+        # The endpoint lazy-imports these from the copick processor module.
+        return (
+            mock.patch("workflow.processors.copick.views._copick_root_url", return_value="http://caddy/x/"),
+            mock.patch(
+                "workflow.processors.copick.views._read_scan_json",
+                return_value={"scanned": scanned, "annotated_runs": annotated},
+            ),
+        )
+
+    def test_all_annotated_runs_present_is_compatible(self, cluster, test_msi_session, metrics_csv):
+        url_mock, scan_mock = self._scan(["Position_13"])
+        with url_mock, scan_mock:
+            status, body = _call(
+                get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003"
+            )
+        assert status == 200
+        assert body["compatible"] is True
+        assert body["incompatible_runs"] == []
+        assert body["aretomo_runs"] == ["Position_13", "Position_8_ts_011.mrc"]
+
+    def test_run_not_in_aretomo_is_flagged(self, cluster, test_msi_session, metrics_csv):
+        url_mock, scan_mock = self._scan(["Position_13", "Position_99"])
+        with url_mock, scan_mock:
+            status, body = _call(
+                get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003"
+            )
+        assert status == 200
+        assert body["compatible"] is False
+        assert body["incompatible_runs"] == ["Position_99"]  # not produced by the AreTomo run
+
+    def test_incomplete_scan_marks_provisional(self, cluster, test_msi_session, metrics_csv):
+        url_mock, scan_mock = self._scan([], scanned=False)
+        with url_mock, scan_mock:
+            status, body = _call(
+                get_copick_aretomo_compat, session_name="24nov10", run_number="run001", copick_runs="run003"
+            )
+        assert status == 200
+        assert body["scanned"] is False  # caller should treat the result as provisional

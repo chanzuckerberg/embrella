@@ -7,8 +7,10 @@ which is necessary because test files import Django models at the module level.
 
 import os
 
-# Force SQLite for tests (override USE_MYSQL if set)
-os.environ["USE_MYSQL"] = "False"
+# Force SQLite for tests (override USE_MYSQL if set). PYTEST_MYSQL=True keeps
+# the MariaDB config so the PyMySQL driver path can be exercised on demand.
+if os.getenv("PYTEST_MYSQL") != "True":
+    os.environ["USE_MYSQL"] = "False"
 
 # Set the settings module before importing anything else
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "umbrella.settings")

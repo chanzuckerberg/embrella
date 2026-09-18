@@ -10,6 +10,7 @@ This module handles:
 """
 
 import re
+from datetime import timedelta
 from typing import Dict, Optional, Tuple
 
 from django.utils import timezone as django_timezone
@@ -22,6 +23,31 @@ MAX_LOG_SIZE = 1024 * 1024  # 1MB in bytes
 
 # Size to keep when truncating (last 800KB)
 TRUNCATE_KEEP_SIZE = 800 * 1024
+
+# Live jobs re-read their logs on request, but no more often than this.
+LIVE_LOG_COOLDOWN = timedelta(seconds=15)
+LIVE_STATUSES = {"running"}
+TERMINAL_STATUSES = {"completed", "failed", "cancelled"}
+
+
+def logs_need_fetch(execution) -> bool:
+    """Whether the stored logs are missing or older than the job's output.
+
+    Terminal jobs fetch once after they end. Running jobs re-fetch on each
+    request, subject to LIVE_LOG_COOLDOWN, so the modal acts as a live tail.
+    """
+    fetched = execution.logs_fetched_at
+    if fetched is None:
+        return execution.status in LIVE_STATUSES | TERMINAL_STATUSES
+
+    # Fetched while still running: the final output is not in yet.
+    if execution.status in TERMINAL_STATUSES:
+        return execution.completed_at is not None and fetched < execution.completed_at
+
+    if execution.status in LIVE_STATUSES:
+        return django_timezone.now() - fetched > LIVE_LOG_COOLDOWN
+
+    return False
 
 
 def parse_log_paths_from_script(script_content: str, job_id: str) -> Tuple[Optional[str], Optional[str]]:

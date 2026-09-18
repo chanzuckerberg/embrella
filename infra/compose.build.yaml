@@ -4,20 +4,25 @@
 # This overlay re-adds the build context and is layered in ONLY for local dev
 
 services:
+  # All three share one image tag, so they must build the same target.
+  # `dev` = runtime deps + test tools + MariaDB CLI.
   migrate:
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
+      target: dev
 
   backend:
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
+      target: dev
 
   worker:
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
+      target: dev
 
   frontend:
     build:

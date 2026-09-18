@@ -110,7 +110,7 @@ from .job_api import bulk_cancel_jobs, get_jobs_filterlist, get_jobs_list, get_s
 from .job_views import cancel_jobs, get_job_logs, track_jobs, user_info
 
 # Import and re-export metadata views
-from .metadata_views import get_metadata_summary, get_metadata_viz_data
+from .metadata_views import get_copick_aretomo_compat, get_metadata_summary, get_metadata_viz_data
 
 # Import and re-export SSH views
 from .ssh_views import check_ssh_setup, setup_ssh_key
@@ -184,6 +184,7 @@ __all__ = [
     "get_copick_annotated_count",
     "get_copick_template_maps",
     # Metadata views
+    "get_copick_aretomo_compat",
     "get_metadata_summary",
     "get_metadata_viz_data",
     # Job views
