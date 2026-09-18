@@ -908,12 +908,13 @@ def bulk_cancel_jobs(request):
         return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
 
 
-# Processors with a syncer, and the label SyncerLog rows carry. The spawned
-# syncer.py resolves its own base path from the processing_root template.
+# Processors with a syncer, and the label SyncerLog rows carry. The label is
+# also the class name under workflow.processors.<processor>.syncer.
 SYNCER_TYPES = {
     "aretomo3": "AretomoSyncer",
     "denoiset": "DenoiseSyncer",
 }
+SYNCER_CLASS_PATH = "workflow.processors.{processor}.syncer.{cls}"
 
 
 def _get_syncer_status_for_job(job_id: str, pipe_execution: PipeExecution = None):
@@ -1080,7 +1081,7 @@ def rerun_syncer(request, job_id: str):
 
     This will:
     1. Mark any existing syncer process as stopped
-    2. Trigger a new syncer subprocess
+    2. Queue a one-shot syncer task
     3. Return success status
 
     Returns:
@@ -1170,38 +1171,23 @@ def rerun_syncer(request, job_id: str):
             run_id=run_name,
         )
 
-        # Trigger syncer via subprocess (using existing trigger_syncer pattern)
-        import os
-        import subprocess
+        # Same Django-Q task on_job_submit uses. The job is already done, so the
+        # task syncs once and stops instead of rescheduling.
+        from processes.tasks import start_syncer_monitoring
 
-        syncer_script = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            "processors",
-            processor_name,
-            "syncer.py",
-        )
+        from workflow.processors import get_processor
 
-        # Spawn syncer process (run once, not continuous - job is already completed)
-        cmd = [
-            "python",
-            syncer_script,
-            "--session",
-            session_name,
-            "--run",
-            run_name,
-            "--job-id",
-            actual_job_id,
-            # Note: NOT using --continuous since this is a re-run for a completed job
-        ]
+        cluster_id = cluster_id_from_parameters(pipe_exec.parameters)
+        base_path = get_processor(processor_name).get_processing_base_path(cluster=cluster_id)
 
-        logger.info(f"Starting syncer re-run: {' '.join(cmd)}")
+        logger.info(f"Starting syncer re-run for {session_name}/{run_name} (job {actual_job_id})")
 
-        # Start subprocess in background
-        subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
+        start_syncer_monitoring(
+            syncer_class_path=SYNCER_CLASS_PATH.format(processor=processor_name, cls=SYNCER_TYPES[processor_name]),
+            base_path=base_path,
+            session_name=session_name,
+            run_id=run_name,
+            job_id=actual_job_id,
         )
 
         return JsonResponse(
