@@ -678,7 +678,7 @@ class TestExecutionAPI:
 class TestSyncerIntegration:
     """Tests for syncer task startup and status monitoring."""
 
-    def test_status_monitoring_scheduled_on_execution(
+    def test_job_status_syncer_started_on_execution(
         self,
         test_msi_session,
         test_proc_run,
@@ -687,7 +687,7 @@ class TestSyncerIntegration:
         test_proc_software,
         registered_test_processor,
     ):
-        """Test that Django-Q status monitoring is scheduled after job submission."""
+        """Test that the sacct-backed job status syncer is started after job submission."""
         # Update software to use test processor
         test_proc_software.processor_class = "test_processor"
         test_proc_software.save()
@@ -701,11 +701,9 @@ class TestSyncerIntegration:
             mock_submitter.run_script.return_value = ("Submitted batch job 123456", "")
             mock_submitter_class.return_value = mock_submitter
 
-            # Mock schedule_pipe_execution_monitoring
-            with patch("processes.tasks.schedule_pipe_execution_monitoring") as mock_schedule:
-                mock_schedule.return_value = "schedule_id_123"
-
-                result = executor.execute_pipe(
+            # PipeExecution status is owned by the sacct syncer alone
+            with patch("processes.tasks.start_job_status_syncer") as mock_start:
+                executor.execute_pipe(
                     pipe_in_plan=test_pipe_in_plan,
                     proc_run=test_proc_run,
                     user=test_user,
@@ -713,11 +711,7 @@ class TestSyncerIntegration:
                     auth={"username": "test", "password": "test"},
                 )
 
-                # Verify monitoring was scheduled
-                assert mock_schedule.called
-                call_args = mock_schedule.call_args[0]
-                assert call_args[0] == result["pipe_execution_id"]  # PipeExecution ID
-                assert call_args[1] == "123456"  # Job ID
+                mock_start.assert_called_once_with(job_id="123456", cluster_id="czii")
 
     def test_aretomo3_processor_spawns_syncer(
         self,
