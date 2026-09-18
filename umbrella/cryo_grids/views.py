@@ -279,8 +279,11 @@ def apply_filters(queryset, filters):
 
 
 def format_queryset_results(queryset):
+    rows = list(queryset)
+    specimens = load_specimens(rows)
+
     formatted_result = {}
-    for item in queryset:
+    for item in rows:
         grid_id = item["id"]
         fz_session_datetime = (
             item["fz_session_datetime"].strftime("%Y-%m-%d %H:%M") if item["fz_session_datetime"] else None
@@ -292,7 +295,7 @@ def format_queryset_results(queryset):
                 "project": format_project(item).model_dump(),
                 "puck": format_puck(item).model_dump(),
                 "user": format_user(item).model_dump(),
-                "specimen": format_specimen(item),
+                "specimen": specimens.get(item["specimen_uniq_id"], {}),
                 "freezingSession": format_freezing_session(item).model_dump(),
                 "screeningSession": item["screening_session_name"],
                 "msiSession": [],
@@ -431,33 +434,34 @@ def format_user(item):
     )
 
 
-def get_specimen_info(specimen_id):
-    try:
-        specimen = Specimen.objects.get(id=specimen_id)
-        samples_list = []
-        for sample in specimen.samples.all():
-            sample_url = f"/admin/cryo_grids/sample/{sample.id}"
-            samples_list.append(
-                {
-                    "id": sample.id,
-                    "name": sample.name,
-                    "url": sample_url,
-                }
-            )
-        # Extract all sample names
-        sample_names = [sample["name"] for sample in samples_list]
-
-        return {
-            "id": specimen.id,
-            "name": f"Specimen ({', '.join(sample_names)})" if sample_names else "Specimen (no samples)",
-            "samples": samples_list,
-        }
-    except ObjectDoesNotExist:
-        return {}
+def load_specimens(rows):
+    """
+    Specimen payloads keyed by id, loaded in two queries for the whole result.
+    """
+    ids = {row["specimen_uniq_id"] for row in rows} - {None}
+    specimens = Specimen.objects.filter(id__in=ids).prefetch_related("samples")
+    return {specimen.id: specimen_info(specimen) for specimen in specimens}
 
 
-def format_specimen(item):
-    return get_specimen_info(item["specimen_uniq_id"])
+def specimen_info(specimen):
+    samples_list = []
+    for sample in specimen.samples.all():
+        sample_url = f"/admin/cryo_grids/sample/{sample.id}"
+        samples_list.append(
+            {
+                "id": sample.id,
+                "name": sample.name,
+                "url": sample_url,
+            }
+        )
+    # Extract all sample names
+    sample_names = [sample["name"] for sample in samples_list]
+
+    return {
+        "id": specimen.id,
+        "name": f"Specimen ({', '.join(sample_names)})" if sample_names else "Specimen (no samples)",
+        "samples": samples_list,
+    }
 
 
 def format_freezing_session(item):
