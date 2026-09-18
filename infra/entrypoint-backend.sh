@@ -16,7 +16,7 @@ set -e
 if [ "$USE_MYSQL" = "True" ] && [ -n "$MYSQL_HOST" ]; then
   echo "Waiting for MySQL at $MYSQL_HOST:${MYSQL_PORT:-3306}..."
   i=0
-  until python -c "import MySQLdb, os; MySQLdb.connect(host=os.environ['MYSQL_HOST'], user=os.environ['MYSQL_USER'], passwd=os.environ['MYSQL_PWD'], db=os.environ['MYSQL_NAME'], port=int(os.environ.get('MYSQL_PORT','3306')))" 2>/dev/null; do
+  until python -c "import pymysql, os; pymysql.connect(host=os.environ['MYSQL_HOST'], user=os.environ['MYSQL_USER'], password=os.environ['MYSQL_PWD'], database=os.environ['MYSQL_NAME'], port=int(os.environ.get('MYSQL_PORT','3306')))" 2>/dev/null; do
     i=$((i+1))
     if [ "$i" -gt 60 ]; then
       echo "MySQL did not become reachable in time" >&2

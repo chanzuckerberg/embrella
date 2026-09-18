@@ -9,18 +9,6 @@ ENV UV_LINK_MODE=copy \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    rm -f /etc/apt/apt.conf.d/docker-clean \
-    && apt-get update && apt-get install -y --no-install-recommends \
-      build-essential \
-      pkg-config \
-      default-libmysqlclient-dev \
-      git \
-      curl \
-      ca-certificates \
-      openssh-client
-
 COPY --from=ghcr.io/astral-sh/uv:0.9.4 /uv /usr/local/bin/uv
 
 WORKDIR /app
@@ -41,8 +29,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
     && apt-get update && apt-get install -y --no-install-recommends \
-      default-libmysqlclient-dev \
-      default-mysql-client \
       openssh-client \
       curl \
       ca-certificates \
@@ -71,6 +57,19 @@ USER embrella
 FROM app AS test
 ENV UV_LINK_MODE=copy
 RUN --mount=type=cache,target=/home/embrella/.cache/uv,uid=1000,gid=1000 uv sync --locked
+
+# ---- dev stage: adds the MariaDB CLI (mysql/mysqldump) for loaddevdb,
+# dbbackupdev and ad-hoc queries. Dev only — staging/prod never need it.
+FROM test AS dev
+USER root
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+      default-mysql-client
+USER embrella
+# Same entrypoint as `runtime`: compose's `migrate` service runs `true` and
+# relies on the entrypoint (EMBRELLA_MIGRATE=1) to apply migrations.
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
 
 # ---- runtime stage ----
 FROM app AS runtime

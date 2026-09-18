@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pymysql
 from corsheaders.defaults import default_headers as default_cors_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -58,6 +59,8 @@ STATIC_URL = "/static/"
 DOCUMENTATION_ROOT = Path(BASE_DIR).resolve().parent / "docs_build"
 DOCUMENTATION_HTML_ROOT = DOCUMENTATION_ROOT
 DOCUMENTATION_XSENDFILE = False
+
+pymysql.install_as_MySQLdb()
 
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 mysql_db = {
