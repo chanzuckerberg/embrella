@@ -1172,10 +1172,10 @@ def get_execution_by_job_id(request, job_id: str):
                     status=404,
                 )
 
-        # On-demand log fetching for completed jobs that don't have logs yet
-        if execution.status == "completed" and execution.logs_fetched_at is None:
-            from workflow.log_fetcher import fetch_job_logs
+        # On-demand log fetching: once after the job ends, live while it runs
+        from workflow.log_fetcher import fetch_job_logs, logs_need_fetch
 
+        if logs_need_fetch(execution):
             logger.info(f"Fetching logs on-demand for job {job_id}")
             try:
                 fetch_job_logs(execution)
