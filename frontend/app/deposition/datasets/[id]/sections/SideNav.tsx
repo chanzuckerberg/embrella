@@ -20,12 +20,12 @@ export function SideNav({
   subLabel: (key: string) => string;
   onJump: (key: string) => void;
 }) {
-  const requiredNav = nav.filter((n) => n.required);
-  const doneReq = requiredNav.filter((n) => done[n.key]).length;
-  const progress = requiredNav.length ? (doneReq / requiredNav.length) * 100 : 0;
+  const doneCount = nav.filter((n) => done[n.key]).length;
+  const progress = nav.length ? (doneCount / nav.length) * 100 : 0;
 
   const statusIcon = (n: NavItem, isActive: boolean) => {
-    if (!n.required) {
+    if (done[n.key]) return <Icon sdsIcon="CheckCircle" sdsSize="l" color="green" />;
+    if (!n.required)
       return (
         <Box
           sx={{
@@ -37,8 +37,6 @@ export function SideNav({
           }}
         />
       );
-    }
-    if (done[n.key]) return <Icon sdsIcon="CheckCircle" sdsSize="l" color="green" />;
     if (isActive) {
       return (
         <Box
@@ -96,7 +94,7 @@ export function SideNav({
                   {n.label}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
-                  {subLabel(n.key)}
+                  {!n.required && !done[n.key] ? 'Optional' : subLabel(n.key)}
                 </Typography>
               </Box>
             </Box>
@@ -107,10 +105,10 @@ export function SideNav({
       <Paper variant="outlined" sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: 'background.paper' }}>
         <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            Required sections
+            Progress Status
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main' }}>
-            {doneReq}/{requiredNav.length}
+            {doneCount}/{nav.length}
           </Typography>
         </Box>
         <LinearProgress

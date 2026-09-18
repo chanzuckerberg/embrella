@@ -181,16 +181,7 @@ class PipelineExecutor:
             script_content,  # Pass the rendered script content for storage
         )
 
-        # 7. Start Django-Q monitoring for status updates
-        try:
-            from processes.tasks import schedule_pipe_execution_monitoring
-
-            schedule_pipe_execution_monitoring(pipe_exec.id, job_id)
-            logger.info(f"Started Django-Q monitoring for PipeExecution {pipe_exec.id}")
-        except Exception as e:
-            logger.warning(f"Error starting status monitoring: {e}", exc_info=True)
-
-        # 7b. Start universal job status syncer (uses sacct for accurate timing)
+        # 7. Start universal job status syncer (uses sacct for accurate timing)
         try:
             from processes.tasks import start_job_status_syncer
 

@@ -13,8 +13,6 @@ Django-Q task references.
 # Job/execution monitoring tasks
 from processes.tasks.job_tasks import (
     check_job_status,
-    poll_pipe_execution_status,
-    schedule_pipe_execution_monitoring,
 )
 
 # Survey tasks
@@ -35,8 +33,6 @@ from processes.tasks.syncer_tasks import (
 __all__ = [
     # Job tasks
     "check_job_status",
-    "poll_pipe_execution_status",
-    "schedule_pipe_execution_monitoring",
     # Syncer tasks
     "run_syncer_iteration",
     "start_syncer_monitoring",
