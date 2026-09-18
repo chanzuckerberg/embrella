@@ -2,18 +2,33 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Chip, CircularProgress, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 
 import { rescanCopick, updateSession } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
 import { useDraftAutoSave } from '../../hooks/useDraftAutoSave';
 import { useAnnotationScan } from '../../hooks/useAnnotationScan';
+import { useCopickAretomoCompat } from '../../hooks/useCopickAretomoCompat';
 import { AnnotationList, annId } from '../../components/annotations/AnnotationList';
 import { AnnotationMetadataForm } from '../../components/annotations/AnnotationMetadataForm';
 import {
   annotationNeedsMetadata,
+  compatibleRuns,
+  incompatibleRuns,
   mergeAnnotations,
   mergeServerIds,
+  scanRunsByKey,
   staleAnnotationIds,
   stripIncompleteLinks,
 } from '../../components/annotations/scan';
@@ -24,6 +39,7 @@ interface SessionRef {
   key: string;
   id?: number;
   name: string;
+  aretomoRun: string;
   runs: string[];
   saved: DepositionAnnotation[];
 }
@@ -33,6 +49,7 @@ function toSessionRefs(dataset: Dataset): SessionRef[] {
     key: `ann-${s.id ?? i}`,
     id: s.id,
     name: s.msi_session_name ?? '',
+    aretomoRun: s.aretomo_run_name ?? '',
     runs: Array.isArray(s.selected_copick_runs) ? (s.selected_copick_runs as string[]) : [],
     saved: s.annotations ?? [],
   }));
@@ -52,17 +69,33 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
 
   const scan = useAnnotationScan(active?.name ?? '', active?.runs ?? [], !readOnly);
 
+  const compat = useCopickAretomoCompat(
+    active?.name ?? '',
+    active?.aretomoRun ?? '',
+    active?.runs ?? [],
+    !readOnly && !!scan.data?.scanned
+  );
+
   useEffect(() => {
     if (!scan.data || !active) return;
+    const key = active.key;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setBySession((prev) => ({
-      ...prev,
-      [active.key]: mergeAnnotations(scan.data.annotations, prev[active.key] ?? []),
-    }));
+    setBySession((prev) => {
+      const cur = prev[key] ?? [];
+      const merged = mergeAnnotations(scan.data.annotations, cur);
+      // Unchanged poll - same ref - no state churn, no autosave.
+      return merged === cur ? prev : { ...prev, [key]: merged };
+    });
   }, [scan.data, active]);
   const [rescanning, setRescanning] = useState(false);
   const [rescanError, setRescanError] = useState<string | null>(null);
   const scanning = scan.isPending || rescanning || (!!scan.data?.pending && !scan.data?.scanned);
+  // Live "N of M runs" progress the scan job writes as it runs.
+  const scanProgress = scan.data?.progressTotal
+    ? { done: scan.data.progressDone ?? 0, total: scan.data.progressTotal }
+    : null;
+  const configCount = active?.runs.length ?? 0;
+  const configLabel = `${configCount} copick config${configCount === 1 ? '' : 's'}`;
 
   const handleRescan = useCallback(async () => {
     if (!active || active.runs.length === 0) return;
@@ -70,8 +103,9 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     setRescanError(null);
     try {
       await rescanCopick(active.name, active.runs);
-      // Re-read scan.json: the trigger wrote the pending marker, which now drives polling + spinner.
+      // Re-read scan.json - the pending marker now drives polling + spinner.
       await queryClient.invalidateQueries({ queryKey: ['copick-scan', active.name, [...active.runs].sort()] });
+      queryClient.invalidateQueries({ queryKey: ['copick-aretomo-compat', active.name] });
     } catch {
       setRescanError('Couldn’t start the scan. Try again.');
     } finally {
@@ -116,6 +150,30 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   const list = useMemo(() => bySession[active?.key ?? ''] ?? [], [bySession, active]);
   const activeAnn = list.find((a) => annId(a) === activeAnnId) ?? null;
 
+  const runsByKey = useMemo(() => scanRunsByKey(scan.data?.annotations ?? []), [scan.data]);
+  const activeRuns = activeAnn ? (runsByKey.get(annId(activeAnn)) ?? []) : [];
+  const activeCompatRuns = compatibleRuns(activeRuns, compat.data?.aretomo_runs);
+  const activeIncompatRuns = incompatibleRuns(activeRuns, compat.data?.aretomo_runs);
+
+  const runsChip = ((): ReactNode => {
+    const total = activeRuns.length;
+    if (total === 0) return null;
+    // Compat still loading - plain count, no compat claim.
+    if (!compat.data) return <Chip size="small" variant="outlined" label={`${total} run${total === 1 ? '' : 's'}`} />;
+    if (activeCompatRuns.length === 0)
+      return <Chip size="small" color="warning" label="no runs from this AreTomo run" />;
+    const label = `${activeCompatRuns.length} of ${total} runs from this AreTomo run`;
+    if (activeIncompatRuns.length === 0) return <Chip size="small" variant="outlined" label={label} />;
+    const MAX = 20;
+    const shown = activeIncompatRuns.slice(0, MAX).join(', ');
+    const more = activeIncompatRuns.length > MAX ? ` +${activeIncompatRuns.length - MAX} more` : '';
+    return (
+      <Tooltip title={`Not from this AreTomo run: ${shown}${more}`}>
+        <Chip size="small" color="warning" label={label} />
+      </Tooltip>
+    );
+  })();
+
   useEffect(() => {
     if (list.length === 0 || (activeAnnId && list.some((a) => annId(a) === activeAnnId))) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -147,7 +205,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
     }));
   };
 
-  // Drop a stale row (saved, but no longer in the latest scan) from the deposit.
+  // Drop a stale row (no longer in the scan) from the deposit.
   const removeStale = (id: string) => {
     if (!active) return;
     setBySession((prev) => ({
@@ -171,7 +229,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
           <CircularProgress size={14} />
           <Typography variant="caption" color="text.secondary">
-            Scanning new configs…
+            {scanProgress ? `Scanning… ${scanProgress.done} of ${scanProgress.total} runs` : `Scanning ${configLabel}…`}
           </Typography>
         </Box>
       )}
@@ -207,13 +265,21 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   if ((active?.runs.length ?? 0) === 0) {
     body = <Alert severity="info">No copick configs selected on Sources.</Alert>;
   } else if (scanning && list.length === 0) {
-    // Full spinner ONLY when there's nothing to show yet.
     body = (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 4, justifyContent: 'center' }}>
-        <CircularProgress size={20} />
-        <Typography variant="body2" color="text.secondary">
-          Scanning copick configs…
+      <Box sx={{ py: 5, maxWidth: 380, mx: 'auto', textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          {scanProgress
+            ? `Scanning copick runs… ${scanProgress.done} of ${scanProgress.total}`
+            : `Scanning ${configLabel}…`}
         </Typography>
+        {scanProgress ? (
+          <LinearProgress
+            variant="determinate"
+            value={scanProgress.total > 0 ? (scanProgress.done / scanProgress.total) * 100 : 0}
+          />
+        ) : (
+          <LinearProgress />
+        )}
       </Box>
     );
   } else if (list.length === 0) {
@@ -221,9 +287,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
       <Box>
         {scanAlerts}
         {!!scan.data?.scanned && !scan.data.error && (
-          <Typography variant="body2" color="text.secondary">
-            No annotations found in the selected copick configs.
-          </Typography>
+          <Alert severity="info">No annotations found in the selected copick configs.</Alert>
         )}
       </Box>
     );
@@ -254,11 +318,12 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
         <Box sx={{ position: { md: 'sticky' }, top: 0, alignSelf: 'start' }}>
           {activeAnn && (
             <>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, fontFamily: 'monospace' }}>
                   {activeAnn.copick_ref}
                 </Typography>
                 <Chip label={activeAnn.copick_kind} size="small" />
+                {runsChip}
               </Box>
               <AnnotationMetadataForm
                 key={annId(activeAnn)}
@@ -327,7 +392,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
 
       {needCount > 0 && (
         <Alert severity="warning" sx={{ mt: 2 }}>
-          {needCount} selected annotation{needCount === 1 ? '' : 's'} need a name and ontology ID.
+          {needCount} selected annotation{needCount === 1 ? ' is' : 's are'} incomplete (name + ontology ID required).
         </Alert>
       )}
     </Box>

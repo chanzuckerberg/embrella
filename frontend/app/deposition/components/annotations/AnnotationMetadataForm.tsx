@@ -237,8 +237,10 @@ function ObjectOntologyField({
   disabled?: boolean;
   sx?: SxProps<Theme>;
 }) {
-  const detected = OBJECT_ONTOLOGIES.find((o) => id.startsWith(`${o.prefix}:`)) ?? OBJECT_ONTOLOGIES[0];
-  const [type, setType] = useState<string>(detected.type);
+  // If we know the id, trust its prefix for the ontology, otherwise go with what the user picked.
+  const detectedType = OBJECT_ONTOLOGIES.find((o) => id.startsWith(`${o.prefix}:`))?.type;
+  const [picked, setPicked] = useState<string | null>(null);
+  const type = detectedType ?? picked ?? OBJECT_ONTOLOGIES[0].type;
   const cfg = OBJECT_ONTOLOGIES.find((o) => o.type === type) ?? OBJECT_ONTOLOGIES[0];
 
   return (
@@ -249,7 +251,7 @@ function ObjectOntologyField({
         label="Ontology"
         value={type}
         onChange={(e) => {
-          setType(e.target.value);
+          setPicked(e.target.value);
           onChange({ object_id: '' });
         }}
         disabled={disabled}

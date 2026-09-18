@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Copick scan: enumerate a project's picks/segmentations/meshes, aggregate by copick_ref,
-# and write scan.json beside config.json .
+# and write scan.json beside config.json.
 
 #SBATCH --job-name=copick_scan
 {% for directive in slurm_directives -%}
@@ -36,9 +36,8 @@ def _ref(obj, user_id, session_id):
     return "%s:%s/%s" % (obj or "", user_id or "", session_id or "")
 
 
-# Aggregate by (kind, copick_ref): one row per distinct identity across all runs.
-# Also track distinct run names that carry any annotation — the annotated-count
-# endpoint needs run names, which the copick_ref aggregation collapses away.
+# Aggregate by (kind, copick_ref): one row per identity across runs.
+# annotated_runs keeps the distinct run names the aggregation collapses away.
 agg = {}
 annotated_runs = set()
 
@@ -56,9 +55,14 @@ def _add(kind, obj, obj_id, user_id, session_id, run_name, count):
             "object_id": obj_id or "",
             "run_count": 0,
             "total_count": 0,
+            # Every run this annotation appears in. The job does NOT filter; the UI intersects
+            # these with the deposited AreTomo run's produced runs.
+            "runs": [],
         }
         agg[key] = entry
     entry["run_count"] += 1
+    if run_name not in entry["runs"]:
+        entry["runs"].append(run_name)
     # Only picks have point counts; segmentations/meshes stay at 0.
     if count:
         entry["total_count"] += count
@@ -69,12 +73,25 @@ try:
     import copick
 
     root = copick.from_file(config_path)
-    # object_name -> ontology identifier, from the config ,
+    # object_name -> ontology identifier, from the config
     id_map = {getattr(o, "name", None): getattr(o, "identifier", None) for o in (root.pickable_objects or [])}
 except Exception as exc: 
     out = {"scanned": False, "error": str(exc), "session": msi_session, "run": msi_run, "config_path": config_path}
 else:
-    for run in root.runs:
+    runs = list(root.runs)
+    total_runs = len(runs)
+    # Emit progress every ~4% so the web UI can show "N of M runs" while the job runs.
+    step = max(1, total_runs // 25)
+
+    def _write_progress(done):
+        prog = {"scanned": False, "pending": True, "progress_done": done, "progress_total": total_runs}
+        tmp = out_path + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump(prog, fh)
+        os.replace(tmp, out_path)
+
+    _write_progress(0)
+    for i, run in enumerate(runs, start=1):
         rn = run.name
         try:
             for p in run.picks or []:
@@ -90,6 +107,10 @@ else:
                 _add("meshes", name, id_map.get(name), m.user_id, m.session_id, rn, 0)
         except Exception as exc:  # noqa: BLE001 - one bad run must not sink the whole scan
             warnings.append("%s: %s" % (rn, exc))
+        if i % step == 0 or i == total_runs:
+            _write_progress(i)
+    for v in agg.values():
+        v["runs"].sort()  # deterministic order for the UI chip
     out = {
         "scanned": True,
         "session": msi_session,
