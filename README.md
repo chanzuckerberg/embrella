@@ -1,8 +1,9 @@
+<h1 align="center">
+  <img src="docs/assets/embrella_logo.png" alt="" width="48" valign="middle">
+  Embrella
+</h1>
+
 <div align="center">
-
-<img src="docs/assets/embrella_logo.png" alt="Embrella logo" width="120">
-
-# Embrella
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/chanzuckerberg/embrella)](https://github.com/chanzuckerberg/embrella/releases)
