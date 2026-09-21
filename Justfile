@@ -468,7 +468,7 @@ mirrorproddbtostaging: initenv
     scp ./.scratch/.dbenv svc.czii.umbrella@umbrella-dev:/srv/dbbackups/.dbenv
 
     echo "Importing database from snapshot $LATEST..."
-    mysql_cli='export $(cat /srv/dbbackups/.dbenv | xargs) && mysql -u umbrella'
+    mysql_cli='export $(cat /srv/dbbackups/.dbenv | xargs) && mysql -h 127.0.0.1 -P $MYSQL_PORT -u umbrella'
     ssh svc.czii.umbrella@umbrella-dev "$mysql_cli < /srv/dbbackups/$LATEST"
 
 mirrorproddbtolocal: initenv
