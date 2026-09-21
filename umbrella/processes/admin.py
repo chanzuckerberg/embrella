@@ -22,6 +22,7 @@ from .models import (
     Review,
     ReviewTomogram,
     RunPipeData,
+    StorageDecision,
     Task,
     TiltAngles,
     Tomograms,
@@ -251,3 +252,19 @@ class DirectorySummaryAdmin(admin.ModelAdmin):
     ordering = ("path",)
     raw_id_fields = ("survey", "status_updated_by")
     list_per_page = 50
+
+
+# Read-only audit of who decided what in the storage explorer.
+@admin.register(StorageDecision)
+class StorageDecisionAdmin(admin.ModelAdmin):
+    list_display = ("path_prefix", "cluster", "status", "decided_by", "decided_at")
+    list_filter = ("decided_by", "status", "cluster")
+    readonly_fields = ("cluster", "path_prefix", "status", "notes", "decided_by", "decided_at")
+    ordering = ("-decided_at",)
+    list_per_page = 50
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
