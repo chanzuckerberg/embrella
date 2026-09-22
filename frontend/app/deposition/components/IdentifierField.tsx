@@ -6,7 +6,14 @@ import { Box, TextField, type TextFieldProps } from '@mui/material';
 
 import { useDebounced } from '../hooks/useDebounced';
 import { useIdentifierLookup } from '../hooks/useIdentifier';
-import { DOI_RE, ORCID_RE, orcidChecksumOk, RELATED_DB_RE, type IdentifierKind } from '../services/identifiers';
+import {
+  DOI_RE,
+  normalizeDoi,
+  ORCID_RE,
+  orcidChecksumOk,
+  RELATED_DB_RE,
+  type IdentifierKind,
+} from '../services/identifiers';
 
 const LABELS: Record<IdentifierKind, { name: string; invalid: string }> = {
   orcid: { name: 'ORCID', invalid: 'Invalid ORCID format' },
@@ -75,7 +82,7 @@ export function IdentifierField({
   return (
     <TextField
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => onChange(kind === 'doi' ? normalizeDoi(e.target.value) : e.target.value)}
       disabled={disabled}
       error={error}
       helperText={helper}
