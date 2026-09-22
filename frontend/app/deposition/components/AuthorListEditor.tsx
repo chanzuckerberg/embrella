@@ -147,6 +147,13 @@ export function AuthorListEditor({
                   <Icon sdsIcon="Search" sdsSize="s" color="gray" />
                 </InputAdornment>
               ),
+              endAdornment: search ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" aria-label="Clear search" onClick={() => setSearch('')} disabled={disabled}>
+                    <Icon sdsIcon="XMark" sdsSize="xs" color="gray" />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
             }}
           />
           <Button sdsType="secondary" sdsStyle="outline" disabled={disabled} onClick={() => setAddOpen(true)}>
