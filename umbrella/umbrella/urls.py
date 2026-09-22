@@ -150,7 +150,6 @@ legacy_patterns = [
     path("tem/", include((tem_legacy_urlpatterns, "tem"))),
     path("processes/", include((processes_legacy_urlpatterns, "processes"), namespace="legacy_processes")),
     path("cryo_grids/", include(("cryo_grids.urls", "cryo_grids"), namespace="legacy_cryo_grids")),
-    path("workflow/", include(("workflow.urls", "workflow"), namespace="legacy_workflow")),
 ]
 
 urlpatterns = (

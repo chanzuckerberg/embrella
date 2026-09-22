@@ -6,7 +6,6 @@ including data processing, formatting, parsing, and sorting utilities.
 """
 
 import pandas as pd
-from processes.models import JobLog
 from umbrella_logger import logger
 
 from common import clusterio
@@ -39,28 +38,6 @@ def track_jobs_internal(cluster_id="czii"):
     except Exception as e:
         logger.error(f"Error fetching jobs from {cluster_id}: {str(e)}")
         return {"jobs": []}
-
-
-def store_log(job_name, request, data_sanitized, error, advanced_status=False, job_id=None):
-    """
-    Store a job log entry in the database.
-
-    Args:
-        job_name: Name of the job
-        request: Django request object containing user info
-        data_sanitized: Sanitized job parameters
-        error: Error message or exception
-        advanced_status: Whether this is an advanced job
-        job_id: Optional job ID
-    """
-    JobLog.objects.create(
-        user=request.user,
-        job_name=job_name,
-        advanced=advanced_status,
-        job_id=job_id,
-        parameters=data_sanitized,
-        error_message=str(error),
-    )
 
 
 def format_job_output(output):
@@ -113,60 +90,6 @@ def format_job_output(output):
         jobs.append(job_info)
 
     return jobs
-
-
-def parse_script_output(raw_output):
-    """
-    Parse the raw output string from the status-check script into a structured dict.
-
-    Expected raw_output example:
-        1) Number of raw data .mdoc files: 323
-        2) Alignment files in aretomo3:
-           run001: 298
-        3) SART volumes in aretomo3:
-           run001: 296
-        4) Denoise volumes in denoise:
-
-    Returns a dict similar to:
-        {
-            "raw_data_files": 323,
-            "alignment_files": {"run001": 298},
-            "sart_volumes": {"run001": 296},
-            "denoise_volumes": {}
-        }
-    """
-    result = {}
-    current_section = None
-    for line in raw_output.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-
-        if stripped.startswith("1)"):
-            # e.g., "1) Number of raw data .mdoc files: 323"
-            try:
-                number = int(stripped.split(":")[-1].strip())
-                result["raw_data_files"] = number
-            except Exception:
-                result["raw_data_files"] = None
-        elif stripped.startswith("2)"):
-            current_section = "alignment_files"
-            result[current_section] = {}
-        elif stripped.startswith("3)"):
-            current_section = "sart_volumes_aretomo"
-            result[current_section] = {}
-        elif stripped.startswith("4)"):
-            current_section = "denoise_volumes"
-            result[current_section] = {}
-        else:
-            # Lines in the indented sections like "run001: 298"
-            if current_section and ":" in stripped:
-                try:
-                    key, val = stripped.split(":", 1)
-                    result[current_section][key.strip()] = int(val.strip())
-                except Exception:
-                    result[current_section][key.strip()] = val.strip()
-    return result
 
 
 def compute_stats(df: pd.DataFrame) -> list:
