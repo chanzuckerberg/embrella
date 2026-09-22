@@ -8,6 +8,11 @@ import type { Dataset } from '../types';
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 
+const mockSaveNow = jest.fn<Promise<boolean>, []>();
+jest.mock('../hooks/useDraftAutoSave', () => ({
+  useDraftAutoSave: () => ({ status: 'saved', lastSavedAt: null, saveNow: mockSaveNow }),
+}));
+
 const DATASET = { id: 5, deposition: 1, dataset_id: 100, title: 'My dataset', status: 'draft', funding: [] } as Dataset;
 const TOMOS_ONLY = { ...DATASET, type: 'Tomos only' } as Dataset;
 
@@ -21,6 +26,11 @@ function renderWizard(dataset: Dataset = DATASET) {
 }
 
 describe('WizardLayout', () => {
+  beforeEach(() => {
+    mockPush.mockReset();
+    mockSaveNow.mockReset().mockResolvedValue(true);
+  });
+
   it('starts on step 1 (Sources) with Back disabled', () => {
     renderWizard();
     expect(screen.getByText('Step 1 of 6')).toBeInTheDocument();
@@ -28,22 +38,43 @@ describe('WizardLayout', () => {
     expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
   });
 
-  it('advances to the next step via Next', () => {
+  it('advances to the next step via Next', async () => {
     renderWizard();
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(screen.getByRole('heading', { name: 'Deposition' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Deposition' })).toBeInTheDocument();
   });
 
-  it('jumps to a step from the stepper', () => {
+  it('stays on the current step when saving before Next fails', async () => {
+    mockSaveNow.mockResolvedValueOnce(false);
+    renderWizard();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+    await waitFor(() => expect(mockSaveNow).toHaveBeenCalled());
+    expect(screen.getByRole('heading', { name: 'Sources' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Deposition' })).not.toBeInTheDocument();
+  });
+
+  it('jumps to a step from the stepper', async () => {
     renderWizard();
     fireEvent.click(screen.getByRole('button', { name: /Step 3: Dataset/ }));
-    expect(screen.getByRole('heading', { name: 'Dataset' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Dataset' })).toBeInTheDocument();
   });
 
   it('closes back to submissions', async () => {
     renderWizard();
     fireEvent.click(screen.getByRole('button', { name: /Close wizard/ }));
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/deposition/submissions'));
+  });
+
+  it('does not exit when saving the draft fails', async () => {
+    mockSaveNow.mockResolvedValueOnce(false);
+    renderWizard();
+
+    fireEvent.click(screen.getByRole('button', { name: /Save draft & exit/ }));
+
+    await waitFor(() => expect(mockSaveNow).toHaveBeenCalled());
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('skips Annotations for a tomograms-only dataset', () => {

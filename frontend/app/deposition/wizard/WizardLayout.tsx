@@ -26,19 +26,17 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
 
   const step = WIZARD_STEPS.find((s) => s.num === current) ?? WIZARD_STEPS[0];
   const Body = step.Component;
-  // Step change "Next/Back button" unmounts the body; autosave flushes pending edits.
-  const go = (n: number) => {
+  // Save before leaving this step; abort on failure.
+  const go = async (n: number) => {
+    if (!readOnly && save && (await save.saveNow()) === false) return;
     setSave(null);
     setBlocking(0);
     setCurrent(n);
   };
 
   const saveAndExit = async () => {
-    try {
-      if (!readOnly) await save?.saveNow();
-    } finally {
-      router.push(SUBMISSIONS_HREF);
-    }
+    if (!readOnly && save && (await save.saveNow()) === false) return;
+    router.push(SUBMISSIONS_HREF);
   };
 
   return (
@@ -77,9 +75,9 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {!readOnly && save && (
-                <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onSaveNow={save.saveNow} />
+                <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onRetry={save.saveNow} />
               )}
-              <Tooltip title="Close - your draft is saved">
+              <Tooltip title={readOnly ? 'Close wizard' : 'Save draft and close'}>
                 <IconButton onClick={saveAndExit} aria-label="Close wizard">
                   <Icon sdsIcon="XMark" sdsSize="l" />
                 </IconButton>

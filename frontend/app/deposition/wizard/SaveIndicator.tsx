@@ -11,11 +11,11 @@ const TIME = { hour: '2-digit', minute: '2-digit', second: '2-digit' } as const;
 export function SaveIndicator({
   status,
   lastSavedAt,
-  onSaveNow,
+  onRetry,
 }: {
   status: SaveStatus;
   lastSavedAt: Date | null;
-  onSaveNow: () => void;
+  onRetry: () => void;
 }) {
   let icon: ReactNode = null;
   let label = '';
@@ -34,17 +34,19 @@ export function SaveIndicator({
     label = `Saved${at}`;
   }
 
+  if (!label) return null;
+
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-      {label && icon}
-      {label && (
-        <Typography variant="caption" sx={{ color }}>
-          {label}
-        </Typography>
+      {icon}
+      <Typography variant="caption" sx={{ color }}>
+        {label}
+      </Typography>
+      {status === 'error' && (
+        <Button sdsType="secondary" sdsStyle="minimal" size="small" onClick={onRetry}>
+          Retry
+        </Button>
       )}
-      <Button sdsType="secondary" sdsStyle="minimal" size="small" onClick={onSaveNow} disabled={status === 'saving'}>
-        Save now
-      </Button>
     </Box>
   );
 }
