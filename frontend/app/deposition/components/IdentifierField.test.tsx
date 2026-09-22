@@ -54,6 +54,15 @@ it('does not block when the API is unreachable', async () => {
   expect(await screen.findByText(/lookup unavailable/i)).toBeInTheDocument();
 });
 
+it('normalizes a pasted doi.org URL to a bare DOI in the input', async () => {
+  mockValidate.mockResolvedValue(null);
+  render(<Harness kind="doi" />);
+  const input = screen.getByLabelText('id');
+  await userEvent.click(input);
+  await userEvent.paste('https://doi.org/10.1038/nature12373');
+  expect(input).toHaveValue('10.1038/nature12373');
+});
+
 it('resolves a valid ORCID pre-filled on mount (no interaction)', async () => {
   mockValidate.mockResolvedValue({ label: 'Josiah Carberry' });
   render(<Harness kind="orcid" initial="0000-0002-1825-0097" />);

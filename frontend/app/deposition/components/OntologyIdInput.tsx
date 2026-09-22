@@ -114,9 +114,10 @@ export function OntologyIdInput({
           filterOptions={(x) => x}
           getOptionLabel={(o) => (typeof o === 'string' ? o : o.label)}
           inputValue={query}
-          onInputChange={(_, v) => {
+          onInputChange={(_, v, reason) => {
             setQuery(v);
-            onChange({ name: v });
+            if (reason === 'clear') onChange({ name: '', id: '' });
+            else onChange({ name: v });
           }}
           onChange={(_, val) => {
             if (val && typeof val !== 'string') onChange({ name: val.label, id: val.id });

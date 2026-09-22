@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Autocomplete, Box, Divider, Stack, TextField, Typography } from '@mui/material';
+import { Icon } from '@czi-sds/components';
+import { Autocomplete, Box, Divider, IconButton, Stack, TextField, Typography } from '@mui/material';
 
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { IdentifierField } from '../components/IdentifierField';
@@ -25,6 +26,7 @@ export function AddAuthorDialog({
   const queryClient = useQueryClient();
   const [picked, setPicked] = useState<Person | null>(null);
   const [term, setTerm] = useState('');
+  const [input, setInput] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [givenName, setGivenName] = useState('');
   const [familyName, setFamilyName] = useState('');
@@ -41,6 +43,13 @@ export function AddAuthorDialog({
   const onInput = (value: string) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => setTerm(value), 300);
+  };
+
+  const clearSearch = () => {
+    if (timer.current) clearTimeout(timer.current);
+    setInput('');
+    setTerm('');
+    setPicked(null);
   };
 
   const create = useMutation({
@@ -92,13 +101,45 @@ export function AddAuthorDialog({
           getOptionLabel={personName}
           isOptionEqualToValue={(a, b) => a.id === b.id}
           value={picked}
+          inputValue={input}
           loading={isFetching}
           filterOptions={(x) => x}
           disabled={create.isPending}
-          onInputChange={(_, v) => onInput(v)}
+          onInputChange={(_, v, reason) => {
+            if (reason === 'clear') {
+              clearSearch();
+              return;
+            }
+            setInput(v);
+            onInput(v);
+          }}
           onChange={(_, v) => setPicked(v)}
           noOptionsText={term.trim().length < 2 ? 'Type at least 2 characters…' : 'No matches'}
-          renderInput={(params) => <TextField {...params} size="small" placeholder="Search people…" />}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              size="small"
+              placeholder="Search people…"
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {input && !picked && (
+                      <IconButton
+                        size="small"
+                        aria-label="Clear search"
+                        onClick={clearSearch}
+                        disabled={create.isPending}
+                      >
+                        <Icon sdsIcon="XMark" sdsSize="xs" color="gray" />
+                      </IconButton>
+                    )}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              }}
+            />
+          )}
         />
       </Box>
 

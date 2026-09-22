@@ -41,9 +41,15 @@ export async function validateOrcid(orcid: string): Promise<ResolvedIdentifier |
   return { label };
 }
 
+// Strip a resolver-URL prefix
+export function normalizeDoi(value: string): string {
+  return value.replace(/^\s*(?:https?:\/\/)?(?:www\.|dx\.)?doi\.org\//i, '');
+}
+
 export async function validateDoi(doi: string): Promise<ResolvedIdentifier | null> {
-  const id = doi.trim().replace(/^doi:/i, '');
-  if (!DOI_RE.test(doi.trim())) return null;
+  const normalized = normalizeDoi(doi).trim();
+  const id = normalized.replace(/^doi:/i, '');
+  if (!DOI_RE.test(normalized)) return null;
 
   const res = await fetch(`https://api.crossref.org/works/${id}`);
   if (res.ok) {
