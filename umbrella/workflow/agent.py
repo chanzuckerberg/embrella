@@ -1,6 +1,5 @@
 import os
 
-from jinja2 import Environment, FileSystemLoader
 from umbrella_logger import logger
 
 from common import clusterio
@@ -60,7 +59,7 @@ class StatusChecker(object):
             logger.info("SSH connection closed.")
 
 
-# A generic class to submit remote jobs using a Jinja2 template
+# Uploads a rendered SLURM script and submits it with sbatch
 
 
 class RemoteJobSubmitter:
@@ -70,21 +69,15 @@ class RemoteJobSubmitter:
         self.auth = auth
         self.remote_script_dir = remote_script_dir
         self.ssh = None
+        self.last_script_path = None
 
     def connect(self):
         self.ssh = clusterio.get_cluster_ssh_connection(cluster_id=self.cluster_id, auth=self.auth)
 
-    def run_script(self, template_path: str, job_name: str, **kwargs):
-        if template_path is None and "script_content" in kwargs:
-            rendered = kwargs["script_content"]
-        else:
-            # Render any Jinja template with arbitrary parameters
-            env = Environment(loader=FileSystemLoader(os.path.dirname(template_path)))
-            template = env.get_template(os.path.basename(template_path))
-            rendered = template.render(**kwargs)
-
-        # Upload to remote
+    def run_script(self, script_content: str, job_name: str):
+        """Upload `script_content` as `{job_name}.sh` and sbatch it. Returns (stdout, stderr)."""
         remote_script = os.path.join(self.remote_script_dir, f"{job_name}.sh")
+        self.last_script_path = remote_script
         sftp = self.ssh.open_sftp()
         try:
             # Ensure remote directory exists
@@ -107,7 +100,7 @@ class RemoteJobSubmitter:
                     sftp.mkdir(dir_path)
 
             with sftp.file(remote_script, "w") as f:
-                f.write(rendered)
+                f.write(script_content)
             sftp.chmod(remote_script, 0o755)
         finally:
             sftp.close()
