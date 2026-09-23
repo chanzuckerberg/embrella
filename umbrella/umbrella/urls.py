@@ -139,7 +139,6 @@ api_patterns = [
 # Legacy template-based routes (will be migrated to Next.js)
 # Top-level mount owns the bare namespace; legacy gets `legacy_*` to avoid urls.W005.
 legacy_patterns = [
-    path("projects/", include(("projects.urls", "projects"), namespace="legacy_projects")),
     path("tem/", include((tem_legacy_urlpatterns, "tem"))),
     path("cryo_grids/", include(("cryo_grids.urls", "cryo_grids"), namespace="legacy_cryo_grids")),
 ]
