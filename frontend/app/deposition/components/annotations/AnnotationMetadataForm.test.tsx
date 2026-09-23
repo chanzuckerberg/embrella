@@ -1,9 +1,19 @@
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { AnnotationMetadataForm } from './AnnotationMetadataForm';
+import { searchOntology } from '../../services/ols';
 import type { DepositionAnnotation } from '../../types';
+
+jest.mock('../../services/ols', () => ({
+  ...jest.requireActual('../../services/ols'),
+  searchOntology: jest.fn().mockResolvedValue([]),
+  validateOntologyId: jest.fn().mockResolvedValue(null),
+}));
+
+const mockSearch = searchOntology as jest.Mock;
+afterEach(() => jest.clearAllMocks());
 
 const base: DepositionAnnotation = { copick_kind: 'picks', copick_ref: 'ribosome:relion/1' };
 
@@ -87,6 +97,51 @@ it('auto-opens Details when a flag is already set (no click needed)', () => {
 it('counts a method field in the Method & links summary', () => {
   setup({ annotation_method: 'TM' });
   expect(screen.getByRole('button', { name: /Method & links/ })).toHaveTextContent('1 of 2');
+});
+
+it('scopes GO object search to the cellular component branch', async () => {
+  setup();
+  fireEvent.change(screen.getByLabelText(/Object name/), { target: { value: 'ribosome' } });
+  await waitFor(() =>
+    expect(mockSearch).toHaveBeenCalledWith('ribosome', 'go', 'http://purl.obolibrary.org/obo/GO_0005575')
+  );
+});
+
+it('stores an EMDB object id in EMD-#### form (hyphen separator)', () => {
+  const { onChange } = setup();
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Ontology' }));
+  fireEvent.click(screen.getByRole('option', { name: 'EMDB' }));
+  fireEvent.change(screen.getByLabelText(/Object ID/), { target: { value: '1234' } });
+  expect(onChange).toHaveBeenCalledWith({ object_id: 'EMD-1234' });
+});
+
+it('stores a PDB object id in PDB-xxxx form (hyphen separator)', () => {
+  const { onChange } = setup();
+  fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Ontology' }));
+  fireEvent.click(screen.getByRole('option', { name: 'PDB' }));
+  fireEvent.change(screen.getByLabelText(/Object ID/), { target: { value: '4hhb' } });
+  expect(onChange).toHaveBeenCalledWith({ object_id: 'PDB-4hhb' });
+});
+
+it('round-trips an existing EMD- object id back to the EMDB type and bare value', () => {
+  setup({ object_id: 'EMD-1234' });
+  expect(screen.getByRole('combobox', { name: 'Ontology' })).toHaveTextContent('EMDB');
+  expect(screen.getByLabelText(/Object ID/)).toHaveValue('1234');
+});
+
+it('warns when the object name is filled but no ontology id is selected', () => {
+  setup({ object_name: 'ribosome', object_id: '' });
+  expect(screen.getByText(/no ontology id/i)).toBeInTheDocument();
+});
+
+it('does not warn once the object has both a name and an id', () => {
+  setup({ object_name: 'ribosome', object_id: 'GO:0005840' });
+  expect(screen.queryByText(/no ontology id/i)).not.toBeInTheDocument();
+});
+
+it('does not warn in read-only mode', () => {
+  setup({ object_name: 'ribosome', object_id: '' }, true);
+  expect(screen.queryByText(/no ontology id/i)).not.toBeInTheDocument();
 });
 
 it('clears the object id when the ontology is changed', () => {

@@ -1,3 +1,4 @@
+import { GO_CELLULAR_COMPONENT_IRI } from '../../../services/ols';
 import type { DatasetSample } from '../../../types';
 
 export interface BioRow {
@@ -14,10 +15,6 @@ export interface BioRow {
   /** Restrict OLS suggestions */
   childrenOf?: string;
 }
-
-// GO has three branches; Cell component must only suggest from the Cellular Component
-// eslint-disable-next-line sonarjs/no-clear-text-protocols
-export const GO_CELLULAR_COMPONENT_IRI = 'http://purl.obolibrary.org/obo/GO_0005575';
 
 export const BIO_ROWS: BioRow[] = [
   {

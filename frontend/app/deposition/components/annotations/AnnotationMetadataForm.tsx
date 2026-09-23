@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Icon } from '@czi-sds/components';
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
@@ -18,6 +19,7 @@ import {
 
 import { IdentifierField } from '../IdentifierField';
 import { OntologyIdInput } from '../OntologyIdInput';
+import { GO_CELLULAR_COMPONENT_IRI } from '../../services/ols';
 import type { AnnotationMethodType, DepositionAnnotation, DepositionMethodLink, MethodLinkType } from '../../types';
 import { CollapsibleSection } from './CollapsibleSection';
 import { detailsFilled, doiCount, flagsSet, linkCount, methodFilled } from './sectionSummary';
@@ -29,6 +31,8 @@ const OBJECT_ONTOLOGIES = [
     pattern: '^GO:[0-9]{7}$',
     prefix: 'GO',
     lookup: 'https://www.ebi.ac.uk/ols4/ontologies/go',
+    // GO objects are cellular components; scope search to that branch.
+    childrenOf: GO_CELLULAR_COMPONENT_IRI,
   },
   {
     type: 'UBERON',
@@ -58,6 +62,25 @@ const OBJECT_ONTOLOGIES = [
     pattern: '^CDPO:[0-9]{7}$',
     prefix: 'CDPO',
     lookup: 'https://cryoetdataportal.czscience.com',
+    manualOnly: true,
+  },
+  // EMDB/PDB structure references use a hyphen separator (EMD-####, PDB-xxxx), like related-db IDs.
+  {
+    type: 'EMDB',
+    ontology: '',
+    pattern: '^EMD-[0-9]{4,5}$',
+    prefix: 'EMD',
+    separator: '-',
+    lookup: 'https://www.ebi.ac.uk/emdb/',
+    manualOnly: true,
+  },
+  {
+    type: 'PDB',
+    ontology: '',
+    pattern: '^PDB-[0-9a-zA-Z]{4,8}$',
+    prefix: 'PDB',
+    separator: '-',
+    lookup: 'https://www.rcsb.org/',
     manualOnly: true,
   },
 ] as const;
@@ -238,7 +261,9 @@ function ObjectOntologyField({
   sx?: SxProps<Theme>;
 }) {
   // If we know the id, trust its prefix for the ontology, otherwise go with what the user picked.
-  const detectedType = OBJECT_ONTOLOGIES.find((o) => id.startsWith(`${o.prefix}:`))?.type;
+  const detectedType = OBJECT_ONTOLOGIES.find((o) =>
+    id.startsWith(`${o.prefix}${'separator' in o ? o.separator : ':'}`)
+  )?.type;
   const [picked, setPicked] = useState<string | null>(null);
   const type = detectedType ?? picked ?? OBJECT_ONTOLOGIES[0].type;
   const cfg = OBJECT_ONTOLOGIES.find((o) => o.type === type) ?? OBJECT_ONTOLOGIES[0];
@@ -271,6 +296,8 @@ function ObjectOntologyField({
           prefix={cfg.prefix}
           lookup={cfg.lookup}
           manualOnly={'manualOnly' in cfg && cfg.manualOnly}
+          childrenOf={'childrenOf' in cfg ? cfg.childrenOf : undefined}
+          separator={'separator' in cfg ? cfg.separator : ':'}
           required
           prefixInValue={false}
           name={name}
@@ -327,6 +354,11 @@ export function AnnotationMetadataForm({
             Name and ontology ID are required
           </Box>
         </Typography>
+        {!readOnly && !!annotation.object_name?.trim() && !annotation.object_id?.trim() && (
+          <Alert severity="warning" sx={{ mt: 1, py: 0 }}>
+            This object has a name but no ontology ID selected - search and choose one below.
+          </Alert>
+        )}
         <ObjectOntologyField
           name={annotation.object_name ?? ''}
           id={annotation.object_id ?? ''}
