@@ -20,19 +20,6 @@ class ArrayData(DataRecord):
 """
 
 
-def getattr_from_globals(attr_name):
-    # get attributes of this python module
-    all_attrs = globals()
-    my_attr = None
-    for name, value in all_attrs.items():
-        if name == attr_name:
-            my_attr = value
-            break
-    if not my_attr:
-        raise ValueError("%s not an attribute of module %s" % (attr_name, __file__))
-    return my_attr
-
-
 """
 PathData
     name
@@ -405,78 +392,6 @@ class ProcRun(models.Model):
 
     def __str__(self):
         return "%s-%s" % (self.proc_plan, self.name)
-
-    # NOTE: save_pipe_run_data / create_tomogram_collection and the delegating helpers below
-    # have no caller since the legacy run-creation pages were removed. Kept with their
-    # services (processes/services/) for a future run-creation flow.
-    def save_pipe_run_data(self):
-        """
-        Creation of ProcRun instance triggers saving of pipe_run_data which are
-        output data of the run.
-
-        Delegates to PipelineDataService for actual implementation.
-        """
-        from processes.services import PipelineDataService
-
-        return PipelineDataService.save_pipe_run_data(self)
-
-    def create_frames_runpipedata(self, msi_session):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.create_frames_runpipedata(self, msi_session)
-
-    def _get_pipe_joints(self, pipe):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.get_pipe_joints(pipe)
-
-    def _get_input_pipe_pks(self, pipe):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.get_input_pipe_pks(self, pipe)
-
-    def create_tomogram_collection(self, input_objects={}):
-        """
-        Save data-portal schema-like record. Return True if the run adds data to these records.
-
-        Delegates to RunCreationService for actual implementation.
-        """
-        from processes.services import RunCreationService
-
-        return RunCreationService.create_tomogram_collection(self, input_objects)
-
-    def _add_other_objects(self, class_name, my_rpdata, input_pipe_pks):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.add_other_objects(self, class_name, my_rpdata, input_pipe_pks)
-
-    def is_recon_ctf_deconvolved(self, pipe):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.is_recon_ctf_deconvolved(self, pipe)
-
-    def _get_tomo_pipe(self, pipe_joints):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.get_tomo_pipe(pipe_joints)
-
-    def _save_instance(self, pdata, input_pipe_pks, input_objects={}):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.save_instance(self, pdata, input_pipe_pks, input_objects)
-
-    def _get_pipe_range(self, all_input_pipe_pks, my_pipe, input_objects):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.get_pipe_range(self, all_input_pipe_pks, my_pipe, input_objects)
 
 
 class RunPipeData(models.Model):
