@@ -48,9 +48,7 @@ from processes.api.views import (
     ReviewView,
     export_review_results,
     get_review_tomograms,
-    get_tomo_by_msi_session,
 )
-from processes.urls import legacy_urlpatterns as processes_legacy_urlpatterns
 from processes.urls import v1_urlpatterns as processes_v1_urlpatterns
 from processes.views import available_annotation_filter
 from rest_framework.routers import DefaultRouter
@@ -135,7 +133,6 @@ api_patterns = [
     path("version", version_info, name="version_info"),
     path("get_grids_by_user/", get_grids_by_user, name="get_grids_by_user"),
     path("get_grids_by_cassette/", get_grids_by_cassette, name="get_grids_by_cassette"),
-    path("get_tomo_by_msi_session/", get_tomo_by_msi_session, name="get_tomo_by_msi_session"),
     path("available_grids", get_available_grids, name="get_available_grids"),
     path("annotations/v1/filterlist/", available_annotation_filter, name="get filter list for annotations"),
     # External resources (documentation links)
@@ -148,7 +145,6 @@ legacy_patterns = [
     path("umbrella/", include("custom.urls"), name="umbrella"),
     path("projects/", include(("projects.urls", "projects"), namespace="legacy_projects")),
     path("tem/", include((tem_legacy_urlpatterns, "tem"))),
-    path("processes/", include((processes_legacy_urlpatterns, "processes"), namespace="legacy_processes")),
     path("cryo_grids/", include(("cryo_grids.urls", "cryo_grids"), namespace="legacy_cryo_grids")),
 ]
 

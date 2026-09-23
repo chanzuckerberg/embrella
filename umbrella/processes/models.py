@@ -1,4 +1,3 @@
-import sys
 import uuid
 
 from django.contrib.auth.models import User
@@ -407,6 +406,9 @@ class ProcRun(models.Model):
     def __str__(self):
         return "%s-%s" % (self.proc_plan, self.name)
 
+    # NOTE: save_pipe_run_data / create_tomogram_collection and the delegating helpers below
+    # have no caller since the legacy run-creation pages were removed. Kept with their
+    # services (processes/services/) for a future run-creation flow.
     def save_pipe_run_data(self):
         """
         Creation of ProcRun instance triggers saving of pipe_run_data which are
@@ -842,34 +844,6 @@ class ParticleGallery(models.Model):
 
     def __str__(self):
         return "%s" % (self.pipe_data)
-
-
-def suggest_name(prefix, msi_session, plan, model_name="ProcRun"):
-    """
-    Make unique name by advancing to next integer.
-    """
-    model_instance = getattr(sys.modules[__name__], model_name)
-    if prefix:
-        prefix_search = prefix
-        old_runs = model_instance.objects.filter(
-            Q(name__startswith=prefix_search), proc_plan=plan, msi_session=msi_session
-        )
-        used_names = list(map((lambda x: x.name), old_runs))
-        if not used_names:
-            # first session of the day
-            return prefix_search + "%03d" % 1
-        used_numbers = list(map((lambda x: int(x.split(prefix_search)[-1])), used_names))
-        return "%s%03d" % (prefix, max(used_numbers) + 1)
-    else:
-        raise ValueError("Prefix must not be empty string for run name")
-
-
-def select_plan_ids_by_input_data_types(selected_data_types):
-    selected_kinds = DataKind.objects.filter(data_type__in=selected_data_types)
-    selected_pipes = Pipe.objects.filter(input__in=selected_kinds)
-    pipe_in_plans = PipeInPlan.objects.filter(pipe__in=selected_pipes)
-    plan_ids = list(map((lambda x: x.plan.id), pipe_in_plans))
-    return plan_ids
 
 
 class JobLog(models.Model):
