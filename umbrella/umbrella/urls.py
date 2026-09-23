@@ -17,7 +17,6 @@ Including another URLconf
 
 # Import API views from their respective app-level modules
 from cryo_grids.api.views import (
-    get_available_grids,
     get_grids_by_cassette,
     get_grids_by_user,
 )
@@ -130,7 +129,6 @@ api_patterns = [
     path("ping/", ping),
     path("get_grids_by_user/", get_grids_by_user, name="get_grids_by_user"),
     path("get_grids_by_cassette/", get_grids_by_cassette, name="get_grids_by_cassette"),
-    path("available_grids", get_available_grids, name="get_available_grids"),
     path("annotations/v1/filterlist/", available_annotation_filter, name="get filter list for annotations"),
     # External resources (documentation links)
     path("api/external-resources/", include("external_links.urls")),
@@ -140,7 +138,6 @@ api_patterns = [
 # Top-level mount owns the bare namespace; legacy gets `legacy_*` to avoid urls.W005.
 legacy_patterns = [
     path("tem/", include((tem_legacy_urlpatterns, "tem"))),
-    path("cryo_grids/", include(("cryo_grids.urls", "cryo_grids"), namespace="legacy_cryo_grids")),
 ]
 
 urlpatterns = (

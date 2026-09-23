@@ -11,7 +11,6 @@ from django.db.models import BooleanField, Case, F, Value, When
 from django.http import JsonResponse
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.decorators import api_view
-from tem.models import Project
 
 from cryo_grids.models import CryoGrid
 
@@ -92,65 +91,6 @@ def get_grids_by_user(request):
         )
 
     return JsonResponse(grids_data, safe=False)
-
-
-@extend_schema(
-    methods=["GET"],
-    description="Returns a list of available cryo grids for a given project ID.",
-    parameters=[
-        OpenApiParameter(name="project_id", required=True, type=str, description="ID of the project"),
-    ],
-    responses={
-        200: "List of available cryo grids",
-        400: "Missing project_id",
-        404: "Project not found",
-    },
-)
-@api_view(["GET"])
-def get_available_grids(request):
-    """
-    Get available cryo grids for a given project.
-
-    Query Parameters:
-        project_id (required): Project ID to filter grids
-
-    Returns:
-        JSON list of available grids with grid_box information
-    """
-    project_id = request.GET.get("project_id")
-
-    if project_id:
-        # Ensure project_id is valid
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            return JsonResponse({"error": "Project not found."}, status=404)
-
-        # Get the available grids for the given project
-        available_grids = (
-            CryoGrid.objects.filter(
-                trashed=False,
-                msisession__project=project,
-            )
-            .select_related("grid_box")
-            .distinct()
-        )
-
-        # Format the data
-        grids_data = []
-        for grid in available_grids:
-            grids_data.append(
-                {
-                    "grid_id": grid.id,
-                    "grid_name": grid.name,
-                    "grid_box_id": grid.grid_box.id,
-                    "grid_box_name": grid.grid_box.name,
-                }
-            )
-
-        return JsonResponse(grids_data, safe=False)
-    else:
-        return JsonResponse({"error": "Project ID not provided."}, status=400)
 
 
 @extend_schema(
