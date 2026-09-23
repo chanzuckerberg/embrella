@@ -45,7 +45,6 @@ stack:
           - { path: /api, pathType: Prefix }
           - { path: /user, pathType: Prefix }
           - { path: /ping, pathType: Prefix }
-          - { path: /version, pathType: Prefix }
           - { path: /docs, pathType: Prefix }
           - { path: /legacy, pathType: Prefix }
           - { path: /workflow, pathType: Prefix }
@@ -58,8 +57,6 @@ stack:
           - { path: /tem, pathType: Prefix }
           - { path: /get_grids_by_user, pathType: Prefix }
           - { path: /get_grids_by_cassette, pathType: Prefix }
-          - { path: /get_tomo_by_msi_session, pathType: Prefix }
-          - { path: /available_grids, pathType: Prefix }
           - { path: /annotations, pathType: Prefix }
 
     frontend:
