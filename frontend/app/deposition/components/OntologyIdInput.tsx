@@ -25,6 +25,7 @@ export function OntologyIdInput({
   required = false,
   childrenOf,
   prefixInValue = true,
+  separator = ':',
 }: {
   label: string;
   ontology: string;
@@ -40,20 +41,22 @@ export function OntologyIdInput({
   required?: boolean;
   childrenOf?: string; // restrict suggestions to descendants
   prefixInValue?: boolean;
+  separator?: string; // joins prefix and bare id when prefixInValue is false (':' ontologies, '-' for EMD/PDB)
 }) {
   const [query, setQuery] = useState(name);
   const debouncedQuery = useDebounced(query, 300);
   const debouncedId = useDebounced(id, 400);
   const olsEnabled = !manualOnly;
 
-  const idInputValue = prefixInValue || !id.startsWith(`${prefix}:`) ? id : id.slice(prefix.length + 1);
+  const qualifier = `${prefix}${separator}`;
+  const idInputValue = prefixInValue || !id.startsWith(qualifier) ? id : id.slice(qualifier.length);
   const handleIdChange = (raw: string) => {
     if (prefixInValue) {
       onChange({ id: raw });
       return;
     }
-    const bare = raw.trim().replace(new RegExp(`^${prefix}:`), '');
-    onChange({ id: bare ? `${prefix}:${bare}` : '' });
+    const bare = raw.trim().replace(new RegExp(`^${prefix}${separator}`), '');
+    onChange({ id: bare ? `${qualifier}${bare}` : '' });
   };
 
   const {

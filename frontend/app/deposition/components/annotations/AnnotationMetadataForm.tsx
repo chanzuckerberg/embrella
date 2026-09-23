@@ -10,57 +10,15 @@ import {
   IconButton,
   MenuItem,
   Stack,
-  type SxProps,
-  type Theme,
   TextField,
   Typography,
 } from '@mui/material';
 
 import { IdentifierField } from '../IdentifierField';
-import { OntologyIdInput } from '../OntologyIdInput';
 import type { AnnotationMethodType, DepositionAnnotation, DepositionMethodLink, MethodLinkType } from '../../types';
 import { CollapsibleSection } from './CollapsibleSection';
+import { ObjectOntologyField } from './ObjectOntologyField';
 import { detailsFilled, doiCount, flagsSet, linkCount, methodFilled } from './sectionSummary';
-
-const OBJECT_ONTOLOGIES = [
-  {
-    type: 'GO',
-    ontology: 'go',
-    pattern: '^GO:[0-9]{7}$',
-    prefix: 'GO',
-    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/go',
-  },
-  {
-    type: 'UBERON',
-    ontology: 'uberon',
-    pattern: '^UBERON:[0-9]{7}$',
-    prefix: 'UBERON',
-    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/uberon',
-  },
-  {
-    type: 'CHEBI',
-    ontology: 'chebi',
-    pattern: '^CHEBI:[0-9]+$',
-    prefix: 'CHEBI',
-    lookup: 'https://www.ebi.ac.uk/ols4/ontologies/chebi',
-  },
-  {
-    type: 'UniProtKB',
-    ontology: '',
-    pattern: '^UniProtKB:(?:[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9](?:[A-Z][A-Z0-9]{2}[0-9]){1,2})$',
-    prefix: 'UniProtKB',
-    lookup: 'https://www.uniprot.org',
-    manualOnly: true,
-  },
-  {
-    type: 'CDPO',
-    ontology: '',
-    pattern: '^CDPO:[0-9]{7}$',
-    prefix: 'CDPO',
-    lookup: 'https://cryoetdataportal.czscience.com',
-    manualOnly: true,
-  },
-] as const;
 
 const METHOD_TYPES: { value: AnnotationMethodType; label: string }[] = [
   { value: 'manual', label: 'Manual' },
@@ -224,70 +182,6 @@ function MethodLinksEditor({
   );
 }
 
-function ObjectOntologyField({
-  name,
-  id,
-  onChange,
-  disabled,
-  sx,
-}: {
-  name: string;
-  id: string;
-  onChange: (patch: Partial<DepositionAnnotation>) => void;
-  disabled?: boolean;
-  sx?: SxProps<Theme>;
-}) {
-  // If we know the id, trust its prefix for the ontology, otherwise go with what the user picked.
-  const detectedType = OBJECT_ONTOLOGIES.find((o) => id.startsWith(`${o.prefix}:`))?.type;
-  const [picked, setPicked] = useState<string | null>(null);
-  const type = detectedType ?? picked ?? OBJECT_ONTOLOGIES[0].type;
-  const cfg = OBJECT_ONTOLOGIES.find((o) => o.type === type) ?? OBJECT_ONTOLOGIES[0];
-
-  return (
-    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-start' }} sx={sx}>
-      <TextField
-        select
-        size="small"
-        label="Ontology"
-        value={type}
-        onChange={(e) => {
-          setPicked(e.target.value);
-          onChange({ object_id: '' });
-        }}
-        disabled={disabled}
-        sx={{ minWidth: 160 }}
-      >
-        {OBJECT_ONTOLOGIES.map((o) => (
-          <MenuItem key={o.type} value={o.type}>
-            {o.type}
-          </MenuItem>
-        ))}
-      </TextField>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <OntologyIdInput
-          label="Object"
-          ontology={cfg.ontology}
-          pattern={cfg.pattern}
-          prefix={cfg.prefix}
-          lookup={cfg.lookup}
-          manualOnly={'manualOnly' in cfg && cfg.manualOnly}
-          required
-          prefixInValue={false}
-          name={name}
-          id={id}
-          onChange={(p) => {
-            const patch: Partial<DepositionAnnotation> = {};
-            if (p.name !== undefined) patch.object_name = p.name;
-            if (p.id !== undefined) patch.object_id = p.id;
-            onChange(patch);
-          }}
-          disabled={disabled}
-        />
-      </Box>
-    </Stack>
-  );
-}
-
 export function AnnotationMetadataForm({
   annotation,
   onChange,
@@ -332,7 +226,7 @@ export function AnnotationMetadataForm({
           id={annotation.object_id ?? ''}
           onChange={onChange}
           disabled={readOnly}
-          sx={{ mt: 4 }}
+          sx={{ mt: 2 }}
         />
       </Box>
 
