@@ -37,11 +37,9 @@ from cryo_grids.viewsets import (
     SpecimenViewSet,
     StandardSamplesViewSet,
 )
-from custom.views import version_info
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
-from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from processes.api.views import (
     ReviewTomogramView,
@@ -130,7 +128,6 @@ api_patterns = [
     # Other API endpoints
     path("user", get_user_info, name="user_info"),
     path("ping/", ping),
-    path("version", version_info, name="version_info"),
     path("get_grids_by_user/", get_grids_by_user, name="get_grids_by_user"),
     path("get_grids_by_cassette/", get_grids_by_cassette, name="get_grids_by_cassette"),
     path("available_grids", get_available_grids, name="get_available_grids"),
@@ -142,7 +139,6 @@ api_patterns = [
 # Legacy template-based routes (will be migrated to Next.js)
 # Top-level mount owns the bare namespace; legacy gets `legacy_*` to avoid urls.W005.
 legacy_patterns = [
-    path("umbrella/", include("custom.urls"), name="umbrella"),
     path("projects/", include(("projects.urls", "projects"), namespace="legacy_projects")),
     path("tem/", include((tem_legacy_urlpatterns, "tem"))),
     path("cryo_grids/", include(("cryo_grids.urls", "cryo_grids"), namespace="legacy_cryo_grids")),
@@ -150,9 +146,6 @@ legacy_patterns = [
 
 urlpatterns = (
     [
-        # Root redirect to legacy umbrella (for direct Django access)
-        # In production, nginx routes root (/) to Next.js frontend
-        path("", RedirectView.as_view(url="/legacy/umbrella/", permanent=False)),
         # Django admin
         path("admin/", admin.site.urls, name="admin"),
         # Authentication (django-allauth: /accounts/login, /accounts/logout,
@@ -183,4 +176,4 @@ urlpatterns += router.urls
 # change header name
 admin.site.site_header = "Embrella"
 admin.site.site_title = "Embrella"
-admin.site.site_url = "/legacy/umbrella"
+admin.site.site_url = "/"

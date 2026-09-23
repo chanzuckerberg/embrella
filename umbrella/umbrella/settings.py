@@ -11,10 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
-import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import pymysql
 from corsheaders.defaults import default_headers as default_cors_headers
@@ -28,18 +25,6 @@ DEBUG = ENVIRONMENT == "development"
 # no cluster access
 SSH_DISABLED = os.getenv("SSH_DISABLED") == "True"
 
-
-def run_with_args(args):
-    try:
-        return subprocess.check_output(args, cwd=BASE_DIR).decode("utf-8")
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        return "N/A"
-
-
-# TODO: Below GIT vars are not used except in legacy html. Plan to remove
-GIT_HASH = run_with_args(["git", "rev-parse", "--short", "HEAD"])
-GIT_BRANCH = run_with_args(["git", "rev-parse", "--abbrev-ref", "HEAD"])
-START_TIME = datetime.now(tz=timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).strftime("%Y-%m-%d %H:%M %z")
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "America/Los_Angeles"
@@ -90,7 +75,6 @@ INSTALLED_APPS = [
     "workflow",
     "tem",
     "stores",
-    "custom",
     "processes",
     "accounts",
     "people",
