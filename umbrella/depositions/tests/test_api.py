@@ -351,6 +351,8 @@ class TestAutoFill:
 
     def test_populates_instrument_from_tem(self, auth_client, owned_session):
         """Facility-record fields come from the session's Microscope/Camera."""
+        from tem.models import AcquisitionSettings
+
         from depositions.models import TiltseriesMetadata
 
         plan = owned_session.msi_session.session_plan
@@ -363,6 +365,11 @@ class TestAutoFill:
         plan.camera.manufacturer = "Gatan"
         plan.camera.model = "K3"
         plan.camera.save()
+
+        owned_session.msi_session.acquisition = AcquisitionSettings.objects.create(
+            phase_plate_used=True, energy_filter_used=True
+        )
+        owned_session.msi_session.save(update_fields=["acquisition"])
 
         owned_session.aretomo_run_name = "run001"
         owned_session.save(update_fields=["aretomo_run_name"])
@@ -388,6 +395,66 @@ class TestAutoFill:
         assert ts.microscope_image_corrector == "Cs corrector"
         assert ts.camera_manufacturer == "Gatan"
         assert ts.camera_model == "K3"
+
+    def test_installed_but_unused_phase_plate_is_not_asserted(self, auth_client, owned_session):
+        """An installed phase plate that wasn't operated this session must not populate the record."""
+        from depositions.models import TiltseriesMetadata
+
+        plan = owned_session.msi_session.session_plan
+        plan.scope.phase_plate = "Volta"
+        plan.scope.save()
+        # No acquisition record → usage unknown → the installed phase plate is not asserted.
+
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+
+        c1, c2, c3 = self._patch_cluster()
+        with (
+            c1,
+            c2,
+            c3,
+            mock.patch(
+                "depositions.views.run_autofill_init",
+                return_value={"filled": True, "session": {"acquisition": {}}, "reason": None},
+            ),
+        ):
+            r = auth_client.post(self._url(owned_session))
+
+        assert r.status_code == 200, r.content
+        ts = TiltseriesMetadata.objects.get(session=owned_session)
+        assert ts.microscope_phase_plate == ""
+
+    def test_rerun_clears_phase_plate_when_flipped_to_not_used(self, auth_client, owned_session):
+        """used=True writes the phase plate; flipping to used=False and re-running must clear it."""
+        from tem.models import AcquisitionSettings
+
+        from depositions.models import TiltseriesMetadata
+
+        plan = owned_session.msi_session.session_plan
+        plan.scope.phase_plate = "Volta"
+        plan.scope.save()
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+
+        msi = owned_session.msi_session
+        msi.acquisition = AcquisitionSettings.objects.create(phase_plate_used=True)
+        msi.save(update_fields=["acquisition"])
+
+        init = {"filled": True, "session": {"acquisition": {}}, "reason": None}
+
+        c1, c2, c3 = self._patch_cluster()
+        with c1, c2, c3, mock.patch("depositions.views.run_autofill_init", return_value=init):
+            auth_client.post(self._url(owned_session))
+        assert TiltseriesMetadata.objects.get(session=owned_session).microscope_phase_plate == "Volta"
+
+        # Operator marks it not used and re-runs auto-fill → the stale value must be cleared.
+        msi.acquisition.phase_plate_used = False
+        msi.acquisition.save(update_fields=["phase_plate_used"])
+
+        c1, c2, c3 = self._patch_cluster()
+        with c1, c2, c3, mock.patch("depositions.views.run_autofill_init", return_value=init):
+            auth_client.post(self._url(owned_session))
+        assert TiltseriesMetadata.objects.get(session=owned_session).microscope_phase_plate == ""
 
     def test_rerun_with_blank_tem_keeps_manual_instrument_edits(self, auth_client, owned_session):
         """A second auto-fill must not wipe instrument fields the user typed while the tem row is blank."""

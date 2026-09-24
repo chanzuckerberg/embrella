@@ -54,8 +54,8 @@ class _ProfilesFirstChangeList(ChangeList):
 
 @admin.register(AcquisitionSettings)
 class AcquisitionSettingsAdmin(admin.ModelAdmin):
-    list_display = ("__str__", "super_resolution", "plan_count", "session")
-    list_filter = ("super_resolution",)
+    list_display = ("__str__", "super_resolution", "phase_plate_used", "energy_filter_used", "plan_count", "session")
+    list_filter = ("super_resolution", "phase_plate_used", "energy_filter_used")
     search_fields = ("label",)
 
     def get_changelist(self, request, **kwargs):

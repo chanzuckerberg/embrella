@@ -1,6 +1,8 @@
 /** Accessory acquisition parameters; mirrors `tem.models.ACQUISITION_FIELDS`. */
 export interface AcquisitionValues {
   super_resolution: boolean;
+  phase_plate_used: boolean | null;
+  energy_filter_used: boolean | null;
 }
 
 /** A plan and the four choices that identify it; the form offers those as tiers. */
@@ -85,4 +87,6 @@ export interface SessionFormState {
   name: string;
   filterUserId: number | null;
   superResolution: boolean;
+  phasePlateUsed: boolean;
+  energyFilterUsed: boolean;
 }

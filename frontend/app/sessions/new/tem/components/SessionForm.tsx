@@ -225,12 +225,28 @@ export function SessionForm({ onSuccess, onCancel, compact = false }: SessionFor
       <Accordion id="session-other-settings" togglePosition="left">
         <AccordionHeader>Other Settings</AccordionHeader>
         <AccordionDetails>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <InputToggle
-              checked={state.superResolution}
-              onChange={() => updateField('superResolution', !state.superResolution)}
-            />
-            <span>Super-resolution frames</span>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <InputToggle
+                checked={state.superResolution}
+                onChange={() => updateField('superResolution', !state.superResolution)}
+              />
+              <span>Super-resolution frames</span>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <InputToggle
+                checked={state.phasePlateUsed}
+                onChange={() => updateField('phasePlateUsed', !state.phasePlateUsed)}
+              />
+              <span>Phase plate used</span>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <InputToggle
+                checked={state.energyFilterUsed}
+                onChange={() => updateField('energyFilterUsed', !state.energyFilterUsed)}
+              />
+              <span>Energy filter used</span>
+            </Box>
           </Box>
         </AccordionDetails>
       </Accordion>
