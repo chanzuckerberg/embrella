@@ -18,6 +18,7 @@ from workflow.processors.copick import views as copick_views
 COPICK_RUNS_URL = "/workflow/v1/processors/copick/runs/"
 COPICK_DETAIL_URL = "/copick/v1/projects/{session}/{run}/"
 ANNOTATED_COUNT_URL = "/workflow/v1/processors/copick/annotated-count/"
+RUN_OBJECTS_URL = "/workflow/v1/processors/copick/run-objects/"
 
 
 @pytest.fixture
@@ -392,3 +393,40 @@ class TestInvalidateScanJson:
         ):
             get_processor.return_value.get_processing_base_path.return_value = "/copick/base/"
             copick_views._invalidate_scan_json("czii", "26feb20b", "run001")  # must not raise
+
+
+@pytest.mark.django_db
+class TestRunObjectsEndpoint:
+    """run-objects returns the pickable-object names from a run's config.json."""
+
+    URL = RUN_OBJECTS_URL
+
+    def _fake_url(self):
+        return mock.patch.object(copick_views, "_copick_root_url", side_effect=lambda _s, run: f"http://caddy/{run}/")
+
+    def test_returns_pickable_object_names(self, client, copick_session):
+        config = json.dumps({"pickable_objects": [{"name": "ribosome"}, {"name": "membrane"}, {"foo": "bar"}]})
+        with self._fake_url(), mock.patch.object(copick_views, "fetch_remote_text", return_value=config):
+            r = client.get(self.URL, {"session_id": "26feb20b", "run": "run001"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["success"] is True
+        assert body["objects"] == ["ribosome", "membrane"]  # nameless entry is skipped
+
+    def test_requires_session_and_run(self, client, copick_session):
+        r = client.get(self.URL, {"session_id": "26feb20b"})
+        assert r.status_code == 200
+        assert r.json()["success"] is False
+        assert r.json()["objects"] == []
+
+    def test_missing_config_returns_empty(self, client, copick_session):
+        with self._fake_url(), mock.patch.object(copick_views, "fetch_remote_text", side_effect=FileNotFoundError):
+            r = client.get(self.URL, {"session_id": "26feb20b", "run": "run001"})
+        assert r.status_code == 200
+        assert r.json()["objects"] == []
+
+    def test_resolve_failure_degrades_not_500(self, client, copick_session):
+        with mock.patch.object(copick_views, "_copick_root_url", side_effect=RuntimeError("no cluster")):
+            r = client.get(self.URL, {"session_id": "26feb20b", "run": "run001"})
+        assert r.status_code == 200
+        assert r.json()["objects"] == []

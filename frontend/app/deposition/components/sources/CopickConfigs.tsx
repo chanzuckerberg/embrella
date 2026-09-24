@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
 import { Box, Chip, IconButton, Menu, MenuItem, Typography } from '@mui/material';
 
-import { useCopickRuns } from '../../hooks/useSources';
+import { useCopickRunObjects, useCopickRuns } from '../../hooks/useSources';
 import { rescanCopick } from '../../services/depositionApi';
 import { outlineChipSx } from './chipStyles';
 import type { SourceRow } from './types';
@@ -74,9 +74,6 @@ export function CopickConfigs({
           <Box
             key={c}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
               bgcolor: 'background.paper',
               border: '1px solid',
               borderColor: 'divider',
@@ -86,46 +83,49 @@ export function CopickConfigs({
               mb: 1,
             }}
           >
-            <Typography
-              variant="body2"
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                fontSize: '0.7rem',
-                color: 'text.secondary',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-              title={path}
-            >
-              {path}
-            </Typography>
-            <Chip size="small" label={c} sx={outlineChipSx('info.main')} />
-            <IconButton
-              size="small"
-              onClick={() => copyPath(path)}
-              aria-label={`Copy path for ${c}`}
-              title={copied === path ? 'Copied!' : 'Copy path'}
-              sx={{ color: copied === path ? 'success.main' : 'text.secondary' }}
-            >
-              <Icon
-                sdsIcon={copied === path ? 'Check' : 'Copy'}
-                sdsSize="xs"
-                color={copied === path ? 'green' : 'gray'}
-                shade={copied === path ? 400 : 500}
-              />
-            </IconButton>
-            <IconButton
-              size="small"
-              disabled={readOnly}
-              onClick={() => onChange({ selected_copick_runs: configs.filter((x) => x !== c) })}
-              aria-label={`Remove ${c}`}
-              sx={{ color: 'error.main' }}
-            >
-              <Icon sdsIcon="TrashCan" sdsSize="xs" color="red" shade={400} />
-            </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  fontSize: '0.7rem',
+                  color: 'text.secondary',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+                title={path}
+              >
+                {path}
+              </Typography>
+              <Chip size="small" label={c} sx={outlineChipSx('info.main')} />
+              <IconButton
+                size="small"
+                onClick={() => copyPath(path)}
+                aria-label={`Copy path for ${c}`}
+                title={copied === path ? 'Copied!' : 'Copy path'}
+                sx={{ color: copied === path ? 'success.main' : 'text.secondary' }}
+              >
+                <Icon
+                  sdsIcon={copied === path ? 'Check' : 'Copy'}
+                  sdsSize="xs"
+                  color={copied === path ? 'green' : 'gray'}
+                  shade={copied === path ? 400 : 500}
+                />
+              </IconButton>
+              <IconButton
+                size="small"
+                disabled={readOnly}
+                onClick={() => onChange({ selected_copick_runs: configs.filter((x) => x !== c) })}
+                aria-label={`Remove ${c}`}
+                sx={{ color: 'error.main' }}
+              >
+                <Icon sdsIcon="TrashCan" sdsSize="xs" color="red" shade={400} />
+              </IconButton>
+            </Box>
+            <ConfigObjects session={row.msi_session_name} run={c} />
           </Box>
         );
       })}
@@ -151,6 +151,29 @@ export function CopickConfigs({
         ))}
         {!copick.isFetching && available.length === 0 && <MenuItem disabled>No copick configs found</MenuItem>}
       </Menu>
+    </Box>
+  );
+}
+
+function ConfigObjects({ session, run }: { session: string; run: string }) {
+  const { data, isFetching } = useCopickRunObjects(session, run, !!session && !!run);
+  const objects = data ?? [];
+  if (isFetching && objects.length === 0) {
+    return (
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
+        Loading objects…
+      </Typography>
+    );
+  }
+  if (objects.length === 0) return null;
+  return (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5, alignSelf: 'center' }}>
+        Objects:
+      </Typography>
+      {objects.map((o) => (
+        <Chip key={o} size="small" label={o} sx={outlineChipSx('text.secondary')} />
+      ))}
     </Box>
   );
 }

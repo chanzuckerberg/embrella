@@ -156,12 +156,25 @@ export async function listCopickRuns(sessionName: string): Promise<CopickRunOpti
   return data.copick_runs ?? [];
 }
 
+export interface AnnotatedCount {
+  count: number;
+  scanned: boolean;
+}
+
+export async function getCopickRunObjects(sessionName: string, run: string): Promise<string[]> {
+  const q = `?session_id=${encodeURIComponent(sessionName)}&run=${encodeURIComponent(run)}`;
+  const data = await parse<{ objects?: string[] }>(await fetchResource(url(`${API.COPICK_RUN_OBJECTS}${q}`)));
+  return data.objects ?? [];
+}
+
 /* Annotated-tomogram count for a session's selected copick configs, from the cached scan.json. */
-export async function getAnnotatedCount(sessionName: string, runs: string[]): Promise<number> {
-  if (runs.length === 0) return 0;
+export async function getAnnotatedCount(sessionName: string, runs: string[]): Promise<AnnotatedCount> {
+  if (runs.length === 0) return { count: 0, scanned: true };
   const q = `?session_id=${encodeURIComponent(sessionName)}&runs=${encodeURIComponent(runs.join(','))}`;
-  const data = await parse<{ annotated_count?: number }>(await fetchResource(url(`${API.COPICK_ANNOTATED_COUNT}${q}`)));
-  return data.annotated_count ?? 0;
+  const data = await parse<{ annotated_count?: number; scanned?: boolean }>(
+    await fetchResource(url(`${API.COPICK_ANNOTATED_COUNT}${q}`))
+  );
+  return { count: data.annotated_count ?? 0, scanned: data.scanned ?? false };
 }
 
 export interface CopickAretomoCompat {

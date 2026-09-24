@@ -59,18 +59,24 @@ export function SessionCard({
   // Annotated count is a slow SSH scan, so only fetch it when Annotated mode is active.
   const annotatedMode = subsetMode === 'annotated';
   const annotated = useAnnotatedCount(session, row.selected_copick_runs, annotatedMode);
-  const annotatedCount = annotatedMode ? annotated.data : undefined;
+  const annotatedReady = annotatedMode && (annotated.data?.scanned ?? false);
+  const annotatedCount = annotatedReady ? annotated.data?.count : undefined;
   useEffect(() => {
     onAnnotated?.(row.key, annotatedCount);
   }, [row.key, annotatedCount, onAnnotated]);
 
   const rowWithCount = { ...row, tomogram_total: total, tomogram_selected: annotatedCount };
   const selected = rowSelected(rowWithCount, subsetMode);
-  const scanningAnnotated = annotatedMode && annotated.isFetching;
+  const scanEnabled = annotatedMode && !!session && row.selected_copick_runs.length > 0;
+  const scanningAnnotated = scanEnabled && annotated.isFetching && !annotated.data;
+  const scanFailed = scanEnabled && annotated.isError;
+  const notScanned = scanEnabled && !annotated.isError && annotated.data != null && !annotated.data.scanned;
   let tomoBadge = '— tomograms';
   if (scanningAnnotated) tomoBadge = 'scanning annotations…';
-  else if (total != null) tomoBadge = `${selected ?? '—'} / ${total} tomograms`;
-  const badgeWarn = !scanningAnnotated && selected === 0;
+  else if (scanFailed) tomoBadge = 'count unavailable';
+  else if (notScanned) tomoBadge = total != null ? `- / ${total} · not scanned yet` : 'not scanned yet';
+  else if (total != null) tomoBadge = `${selected ?? '-'} / ${total} tomograms`;
+  const badgeWarn = !scanningAnnotated && !scanFailed && !notScanned && selected === 0;
   const [open, setOpen] = useState(index === 0);
 
   return (
