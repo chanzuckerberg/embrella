@@ -96,10 +96,9 @@ def get_aretomo3_json(request):
         error_msg = "File not found"
         logger.error(error_msg)
         return JsonResponse({"error": error_msg}, status=404)
-    except Exception as err:
-        error_msg = f"Please check the server status: {str(err)}"
-        logger.error(error_msg)
-        return JsonResponse({"error": error_msg}, status=500)
+    except Exception:
+        logger.exception(f"Failed to fetch AreTomo3 JSON: {session_json_url}")
+        return JsonResponse({"error": "Please check the server status."}, status=500)
 
 
 @extend_schema(
@@ -117,9 +116,9 @@ def get_msi_session_list(request):
     try:
         session_names = list(MsiSession.objects.values_list("name", flat=True))
         return JsonResponse({"session_names": sorted(session_names, key=msi_session_sort_key)}, status=200)
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {str(e)}")
-        return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
+    except Exception:
+        logger.exception("Failed to list MSI sessions")
+        return JsonResponse({"error": "An unexpected error occurred."}, status=500)
 
 
 @csrf_exempt
@@ -137,5 +136,6 @@ def get_msisession_id(request):
         return JsonResponse({"session_id": session.id})
     except MsiSession.DoesNotExist:
         return JsonResponse({"error": f"Session {session_name} not found"}, status=404)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    except Exception:
+        logger.exception(f"Failed to get MsiSession ID: {session_name}")
+        return JsonResponse({"error": "An unexpected error occurred."}, status=500)
