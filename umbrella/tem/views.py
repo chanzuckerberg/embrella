@@ -13,13 +13,7 @@ from stores.models import Path
 
 from tem.models import (
     AtlasSession,
-    MsiSessionBase,
-    PathInfo,
-    ProjectBase,
     ScreenSessionGroup,
-    SoftwareFieldsResponse,
-    SoftwareResponseModel,
-    UserBase,
 )
 
 from . import models
@@ -27,7 +21,7 @@ from .forms import (
     ReserveScreenSessionGroupForm,
     UpdateNotesForm,
 )
-from .models import CryoGrid, Magnification, MsiSession, SessionPlan, Software
+from .models import CryoGrid, Magnification, MsiSession, SessionPlan
 
 
 def detail(request, session_id):
@@ -271,134 +265,6 @@ def _create_scrn_session(user, group_instance, grid):
 
 @extend_schema(
     methods=["GET"],
-    description="Returns all MSI sessions and their related paths and metadata. Supports optional filtering by session name.",
-    parameters=[
-        OpenApiParameter(name="valid", required=True, type=OpenApiTypes.BOOL, description="Must be 'true'"),
-        OpenApiParameter(
-            name="name", required=False, type=OpenApiTypes.STR, description="Optional session name filter"
-        ),
-    ],
-    responses={
-        200: OpenApiTypes.OBJECT,
-        400: OpenApiTypes.OBJECT,
-    },
-)
-@api_view(["GET"])
-@require_http_methods(["GET"])
-def get_all_sessions(request):
-    if request.GET.get("valid", "true") != "true":
-        return JsonResponse({"error": "Invalid request"}, status=400)
-    # Retrieve the 'name' parameter from the GET request, defaulting to None if not provided
-    session_name = request.GET.get("name", None)
-
-    # Fetch sessions and related stores_path records, filter by name if provided
-    if session_name:
-        sessions = MsiSession.objects.filter(name=session_name).select_related(
-            "grid",
-            "project",
-            "user",
-            "mdocs",
-            "sums",
-            "parents",
-            "atlas",
-            "frames",
-        )
-    else:
-        sessions = MsiSession.objects.select_related(
-            "grid",
-            "project",
-            "user",
-            "mdocs",
-            "sums",
-            "parents",
-            "atlas",
-            "frames",
-        ).all()
-
-    session_list = []
-    for session in sessions:
-        # Create Pydantic model instances
-        session_data = MsiSessionBase(
-            id=session.id,
-            name=session.name,
-            notes=session.notes,
-            user=UserBase(username=session.user.username),
-            project=ProjectBase(name=session.project.name),
-            frames=PathInfo(overlay_path=session.frames.overlay_path if session.frames.overlay_path else None),
-            mdocs=PathInfo(overlay_path=session.mdocs.overlay_path if session.mdocs.overlay_path else None),
-            sums=PathInfo(overlay_path=session.sums.overlay_path if session.sums.overlay_path else None),
-            parents=PathInfo(overlay_path=session.parents.overlay_path if session.parents.overlay_path else None),
-            atlas=PathInfo(overlay_path=session.atlas.overlay_path if session.atlas.overlay_path else None),
-        )
-        # Convert Pydantic model to dictionary and append to the list
-        session_list.append(session_data.dict())
-
-    # Use JsonResponse to send back a list of dictionaries
-    return JsonResponse(session_list, safe=False)
-
-
-@extend_schema(
-    methods=["GET"],
-    description="Returns all image path data from the Software table. Can filter by software name.",
-    parameters=[
-        OpenApiParameter(name="valid", required=True, type=OpenApiTypes.BOOL, description="Must be 'true'"),
-        OpenApiParameter(name="name", required=False, type=OpenApiTypes.STR, description="Software name to filter by"),
-    ],
-    responses={
-        200: OpenApiTypes.OBJECT,
-        400: OpenApiTypes.OBJECT,
-        404: OpenApiTypes.OBJECT,
-    },
-)
-@api_view(["GET"])
-@require_http_methods(["GET"])
-def get_all_image_paths(request):
-    # Check for a valid request
-    if request.GET.get("valid", "true") != "true":
-        return JsonResponse({"error": "Invalid request"}, status=400)
-
-    name_param = request.GET.get("name")
-
-    # Only overlay_path is reported now, so the five role FKs are all this needs.
-    software_query = Software.objects.select_related(
-        "frames",
-        "sums",
-        "mdocs",
-        "parents",
-        "atlas",
-    ).all()
-
-    result_list = []
-    for software in software_query:
-        # Constructing the response data with nested paths
-        software_data = SoftwareResponseModel(
-            model="tem.software",
-            pk=software.pk,
-            fields=SoftwareFieldsResponse(
-                name=software.name,
-                frames=PathInfo(overlay_path=software.frames.overlay_path if software.frames else None),
-                sums=PathInfo(overlay_path=software.sums.overlay_path if software.sums else None),
-                mdocs=PathInfo(overlay_path=software.mdocs.overlay_path if software.mdocs else None),
-                parents=PathInfo(overlay_path=software.parents.overlay_path if software.parents else None),
-                atlas=PathInfo(overlay_path=software.atlas.overlay_path if software.atlas else None),
-            ),
-        )
-        result_list.append(software_data.dict())
-
-    if not name_param:
-        return JsonResponse(result_list, safe=False)
-
-    # Filter results based on the name parameter
-    filtered_results = [item for item in result_list if item["fields"]["name"].lower() == name_param.lower()]
-    if filtered_results:
-        return JsonResponse(filtered_results[0], safe=False)
-
-    # Return error if no matching software is found
-    return JsonResponse({"error": "No matching software found"}, status=404, safe=False)
-
-
-@extend_schema(
-    methods=["GET"],
     description="Returns all unique screen session group names.",
     parameters=[
         OpenApiParameter(name="valid", required=True, type=OpenApiTypes.BOOL, description="Must be 'true'"),
@@ -487,37 +353,3 @@ def get_specific_session(request):
         return JsonResponse({"sessions": session_data}, status=200)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
-
-@extend_schema(
-    methods=["GET"],
-    description="Fetches all project records with `id` and `name` fields.",
-    responses={200: OpenApiTypes.OBJECT},
-)
-@api_view(["GET"])
-def get_projects(request):
-    projects = Project.objects.all().values("id", "name")  # Adjust fields as needed
-    return JsonResponse(list(projects), safe=False)
-
-
-def get_magnifications(request):
-    """Return magnifications filtered by session_plan_id's scope."""
-    session_plan_id = request.GET.get("session_plan_id")
-    if not session_plan_id:
-        return JsonResponse([], safe=False)
-    try:
-        plan = SessionPlan.objects.get(pk=session_plan_id)
-    except SessionPlan.DoesNotExist:
-        return JsonResponse([], safe=False)
-    mags = (
-        Magnification.objects.filter(scope=plan.scope)
-        .order_by("index")
-        .values(
-            "id",
-            "nominal_mag",
-            "mode",
-            "index",
-            "scope__name",
-        )
-    )
-    return JsonResponse(list(mags), safe=False)

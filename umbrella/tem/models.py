@@ -9,7 +9,6 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 from projects.models import Project
-from pydantic import BaseModel
 from stores.models import FilePattern, Path, PathType, fill_place_holders
 from stores.paths import assert_fully_resolved
 
@@ -597,50 +596,6 @@ class MsiSession(models.Model):
 
 def parse_integer_order_list(text):
     return list((map((lambda x: int(x)), text.split(","))))
-
-
-class PathInfo(BaseModel):
-    overlay_path: str | None
-
-
-class SoftwareFieldsResponse(BaseModel):
-    name: str
-    frames: PathInfo
-    sums: PathInfo
-    mdocs: PathInfo
-    parents: PathInfo
-    atlas: PathInfo
-
-
-class SoftwareResponseModel(BaseModel):
-    model: str
-    pk: int  # redundant info
-    fields: SoftwareFieldsResponse
-
-
-class ErrorResponse(BaseModel):
-    error: str
-
-
-class UserBase(BaseModel):
-    username: str
-
-
-class ProjectBase(BaseModel):
-    name: str
-
-
-class MsiSessionBase(BaseModel):
-    id: int
-    name: str
-    notes: str | None
-    user: UserBase
-    project: ProjectBase
-    frames: PathInfo
-    mdocs: PathInfo
-    sums: PathInfo
-    parents: PathInfo
-    atlas: PathInfo
 
 
 def suggest_name(prefix, model_name="MsiSession"):
