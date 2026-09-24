@@ -62,6 +62,7 @@ export enum API {
   PLAN_RUNS = '/workflow/v1/execution/plan_runs/',
   COPICK_RUNS = '/workflow/v1/processors/copick/runs/',
   COPICK_ANNOTATED_COUNT = '/workflow/v1/processors/copick/annotated-count/',
+  COPICK_RUN_OBJECTS = '/workflow/v1/processors/copick/run-objects/',
   COPICK_TEMPLATE_MAPS = '/workflow/v1/processors/copick/template_maps/',
   COPICK_PROJECT_DETAIL = '/copick/v1/projects/',
 
