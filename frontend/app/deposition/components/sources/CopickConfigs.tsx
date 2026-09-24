@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
-import { Box, Chip, IconButton, Menu, MenuItem, Typography } from '@mui/material';
+import { Box, Chip, IconButton, Link, Menu, MenuItem, Typography } from '@mui/material';
 
 import { useCopickRunObjects, useCopickRuns } from '../../hooks/useSources';
 import { rescanCopick } from '../../services/depositionApi';
@@ -155,9 +155,13 @@ export function CopickConfigs({
   );
 }
 
+const OBJECT_CHIP_CAP = 5;
+
 function ConfigObjects({ session, run }: { session: string; run: string }) {
-  const { data, isFetching } = useCopickRunObjects(session, run, !!session && !!run);
+  const { data, isFetching, isError } = useCopickRunObjects(session, run, !!session && !!run);
+  const [expanded, setExpanded] = useState(false);
   const objects = data ?? [];
+
   if (isFetching && objects.length === 0) {
     return (
       <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
@@ -165,15 +169,41 @@ function ConfigObjects({ session, run }: { session: string; run: string }) {
       </Typography>
     );
   }
-  if (objects.length === 0) return null;
-  return (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75 }}>
-      <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5, alignSelf: 'center' }}>
-        Objects:
+  if (isError) {
+    return (
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
+        Objects unavailable
       </Typography>
-      {objects.map((o) => (
+    );
+  }
+  if (objects.length === 0) {
+    return (
+      <Typography variant="caption" color="error.main" sx={{ mt: 0.75, display: 'block', fontWeight: 600 }}>
+        No objects defined
+      </Typography>
+    );
+  }
+
+  const shown = expanded ? objects : objects.slice(0, OBJECT_CHIP_CAP);
+  const hidden = objects.length - shown.length;
+  return (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, mt: 0.75 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
+        {objects.length} object{objects.length === 1 ? '' : 's'}:
+      </Typography>
+      {shown.map((o) => (
         <Chip key={o} size="small" label={o} sx={outlineChipSx('text.secondary')} />
       ))}
+      {hidden > 0 && (
+        <Link component="button" type="button" variant="caption" onClick={() => setExpanded(true)} sx={{ ml: 0.5 }}>
+          +{hidden} more
+        </Link>
+      )}
+      {expanded && objects.length > OBJECT_CHIP_CAP && (
+        <Link component="button" type="button" variant="caption" onClick={() => setExpanded(false)} sx={{ ml: 0.5 }}>
+          Show less
+        </Link>
+      )}
     </Box>
   );
 }
