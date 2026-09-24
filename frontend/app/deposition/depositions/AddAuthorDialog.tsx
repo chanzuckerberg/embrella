@@ -2,7 +2,8 @@
 
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Autocomplete, Box, Divider, Stack, TextField, Typography } from '@mui/material';
+import { Icon } from '@czi-sds/components';
+import { Autocomplete, Box, Button, IconButton, Link, Stack, TextField, Typography } from '@mui/material';
 
 import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
 import { IdentifierField } from '../components/IdentifierField';
@@ -10,6 +11,8 @@ import { createPerson, searchPeople } from '../services/depositionApi';
 import { ORCID_RE, orcidChecksumOk } from '../services/identifiers';
 import type { Person } from '../types';
 import { personName } from '../components/authorHelpers';
+
+type Mode = 'search' | 'create';
 
 export function AddAuthorDialog({
   open,
@@ -23,8 +26,10 @@ export function AddAuthorDialog({
   onAdd: (personId: number) => void;
 }) {
   const queryClient = useQueryClient();
+  const [mode, setMode] = useState<Mode>('search');
   const [picked, setPicked] = useState<Person | null>(null);
   const [term, setTerm] = useState('');
+  const [input, setInput] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [givenName, setGivenName] = useState('');
   const [familyName, setFamilyName] = useState('');
@@ -43,6 +48,13 @@ export function AddAuthorDialog({
     timer.current = setTimeout(() => setTerm(value), 300);
   };
 
+  const clearSearch = () => {
+    if (timer.current) clearTimeout(timer.current);
+    setInput('');
+    setTerm('');
+    setPicked(null);
+  };
+
   const create = useMutation({
     mutationFn: () =>
       createPerson({
@@ -54,19 +66,39 @@ export function AddAuthorDialog({
     onSuccess: (person) => {
       queryClient.invalidateQueries({ queryKey: ['people'] });
       onAdd(person.id);
-      onClose();
+      handleClose();
     },
   });
+
+  const reset = () => {
+    if (timer.current) clearTimeout(timer.current);
+    setMode('search');
+    setPicked(null);
+    setTerm('');
+    setInput('');
+    setGivenName('');
+    setFamilyName('');
+    setOrcid('');
+    setEmail('');
+    create.reset();
+  };
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
 
   const orcidTrimmed = orcid.trim();
   const orcidOk = orcidTrimmed === '' || (ORCID_RE.test(orcidTrimmed) && orcidChecksumOk(orcidTrimmed));
   const canSave =
-    !create.isPending && orcidOk && (picked !== null || (givenName.trim() !== '' && familyName.trim() !== ''));
+    !create.isPending &&
+    (mode === 'search' ? picked !== null : orcidOk && givenName.trim() !== '' && familyName.trim() !== '');
 
   const handleSave = () => {
-    if (picked) {
-      onAdd(picked.id);
-      onClose();
+    if (mode === 'search') {
+      if (picked) {
+        onAdd(picked.id);
+        handleClose();
+      }
       return;
     }
     create.mutate();
@@ -75,7 +107,7 @@ export function AddAuthorDialog({
   return (
     <BaseFormDialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       sdsSize="xs"
       title="Add author"
       saveButtonText="Add"
@@ -83,71 +115,148 @@ export function AddAuthorDialog({
       disabled={!canSave}
       onSave={handleSave}
     >
-      <Box>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75 }}>
-          Add from directory
-        </Typography>
-        <Autocomplete
-          options={options}
-          getOptionLabel={personName}
-          isOptionEqualToValue={(a, b) => a.id === b.id}
-          value={picked}
-          loading={isFetching}
-          filterOptions={(x) => x}
-          disabled={create.isPending}
-          onInputChange={(_, v) => onInput(v)}
-          onChange={(_, v) => setPicked(v)}
-          noOptionsText={term.trim().length < 2 ? 'Type at least 2 characters…' : 'No matches'}
-          renderInput={(params) => <TextField {...params} size="small" placeholder="Search people…" />}
-        />
-      </Box>
+      {mode === 'search' ? (
+        <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75 }}>
+            Search the directory
+          </Typography>
 
-      <Divider>or add a new author</Divider>
+          {picked ? (
+            <Box
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                p: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1,
+              }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                  {personName(picked)}
+                </Typography>
+                {picked.orcid && (
+                  <Typography variant="caption" color="text.secondary">
+                    {picked.orcid}
+                  </Typography>
+                )}
+              </Box>
+              <Button size="small" onClick={clearSearch} disabled={create.isPending}>
+                Change
+              </Button>
+            </Box>
+          ) : (
+            <>
+              <Autocomplete
+                options={options}
+                getOptionLabel={personName}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                value={picked}
+                inputValue={input}
+                loading={isFetching}
+                filterOptions={(x) => x}
+                onInputChange={(_, v, reason) => {
+                  if (reason === 'clear') {
+                    clearSearch();
+                    return;
+                  }
+                  setInput(v);
+                  onInput(v);
+                }}
+                onChange={(_, v) => setPicked(v)}
+                noOptionsText={term.trim().length < 2 ? 'Type at least 2 characters…' : 'No matches'}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    placeholder="Search by name, email or ORCID"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {input && (
+                            <IconButton size="small" aria-label="Clear search" onClick={clearSearch}>
+                              <Icon sdsIcon="XMark" sdsSize="xs" color="gray" />
+                            </IconButton>
+                          )}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+              <Typography variant="body2" sx={{ mt: 1.5, color: 'text.secondary' }}>
+                Not in the directory?{' '}
+                <Link component="button" type="button" onClick={() => setMode('create')}>
+                  Add a new author
+                </Link>
+              </Typography>
+            </>
+          )}
+        </Box>
+      ) : (
+        <Box>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              New author
+            </Typography>
+            <Link component="button" type="button" disabled={create.isPending} onClick={() => setMode('search')}>
+              ← Back to directory search
+            </Link>
+          </Stack>
 
-      <Stack spacing={2}>
-        <Stack direction="row" spacing={2}>
-          <TextField
-            label="Given name"
-            value={givenName}
-            onChange={(e) => setGivenName(e.target.value)}
-            size="small"
-            fullWidth
-            disabled={picked !== null || create.isPending}
-          />
-          <TextField
-            label="Family name"
-            value={familyName}
-            onChange={(e) => setFamilyName(e.target.value)}
-            size="small"
-            fullWidth
-            disabled={picked !== null || create.isPending}
-          />
-        </Stack>
-        <IdentifierField
-          kind="orcid"
-          label="ORCID"
-          placeholder="xxxx-xxxx-xxxx-xxxx"
-          value={orcid}
-          onChange={setOrcid}
-          size="small"
-          fullWidth
-          disabled={picked !== null || create.isPending}
-        />
-        <TextField
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          size="small"
-          fullWidth
-          disabled={picked !== null || create.isPending}
-        />
-      </Stack>
+          <Stack spacing={2}>
+            <Stack direction="row" spacing={2}>
+              <TextField
+                label="Given name"
+                required
+                value={givenName}
+                onChange={(e) => setGivenName(e.target.value)}
+                size="small"
+                fullWidth
+                disabled={create.isPending}
+              />
+              <TextField
+                label="Family name"
+                required
+                value={familyName}
+                onChange={(e) => setFamilyName(e.target.value)}
+                size="small"
+                fullWidth
+                disabled={create.isPending}
+              />
+            </Stack>
+            <IdentifierField
+              kind="orcid"
+              label="ORCID"
+              placeholder="xxxx-xxxx-xxxx-xxxx"
+              value={orcid}
+              onChange={setOrcid}
+              size="small"
+              fullWidth
+              disabled={create.isPending}
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              size="small"
+              fullWidth
+              disabled={create.isPending}
+            />
+          </Stack>
 
-      {create.isError && (
-        <Typography variant="body2" color="error.main">
-          Could not add the author - check the ORCID format (xxxx-xxxx-xxxx-xxxx) and try again.
-        </Typography>
+          {create.isError && (
+            <Typography variant="body2" color="error.main" sx={{ mt: 1.5 }}>
+              Could not add the author - check the ORCID format (xxxx-xxxx-xxxx-xxxx) and try again.
+            </Typography>
+          )}
+        </Box>
       )}
     </BaseFormDialog>
   );

@@ -59,6 +59,18 @@ def _read_scan_json(root_url: str) -> dict:
         return _empty_scan()
 
 
+def _read_config_objects(root_url: str) -> list[str]:
+    """Pickable-object names declared in a copick project's config.json."""
+    try:
+        config = json.loads(fetch_remote_text(root_url + "config.json"))
+    except FileNotFoundError:
+        return []
+    except Exception as exc:
+        logger.warning("copick config.json read failed for %s: %s", root_url, exc)
+        return []
+    return [o["name"] for o in config.get("pickable_objects", []) if isinstance(o, dict) and o.get("name")]
+
+
 @require_http_methods(["GET"])
 def get_dynamic_options(request, session_id: str = None) -> JsonResponse:
     """
@@ -714,6 +726,28 @@ def get_copick_annotated_count(request) -> JsonResponse:
             "scanned": scanned,
         }
     )
+
+
+@require_http_methods(["GET"])
+def get_copick_run_objects(request) -> JsonResponse:
+    """Pickable objects declared in a copick run's config.json — shown when a config is selected."""
+    session_id = request.GET.get("session_id")
+    run = (request.GET.get("run") or "").strip()
+    if not session_id or not run:
+        return JsonResponse({"success": False, "error": "session_id and run are required", "objects": []})
+
+    try:
+        session = MsiSession.objects.get(name=session_id)
+    except MsiSession.DoesNotExist:
+        return JsonResponse({"success": False, "error": "session not found", "objects": []})
+
+    try:
+        objects = _read_config_objects(_copick_root_url(session, run))
+    except Exception as exc:
+        logger.warning("copick run objects: resolve failed for %s/%s: %s", session_id, run, exc)
+        objects = []
+
+    return JsonResponse({"success": True, "objects": objects})
 
 
 def _list_cluster_copick_runs(session_id: str) -> set[str]:

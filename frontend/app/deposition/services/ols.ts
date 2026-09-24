@@ -1,5 +1,9 @@
 const OLS_BASE = 'https://www.ebi.ac.uk/ols4/api';
 
+// GO: scope Cell component / annotation-object suggestions to Cellular Component.
+// eslint-disable-next-line sonarjs/no-clear-text-protocols
+export const GO_CELLULAR_COMPONENT_IRI = 'http://purl.obolibrary.org/obo/GO_0005575';
+
 export interface OntologyTerm {
   id: string; // OBO id, e.g. "UBERON:0000955"
   label: string;

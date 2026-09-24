@@ -126,6 +126,13 @@ it('prefixInValue=false: shows the bare identifier and stores it fully-qualified
   expect(onChange).toHaveBeenCalledWith({ id: 'UniProtKB:P0A6G7' });
 });
 
+it('clears the paired ID when the ontology name is cleared via the X', () => {
+  const onChange = jest.fn();
+  renderInput({ ...CL, name: 'neuron', id: 'CL:0000540', onChange });
+  fireEvent.click(screen.getByTitle('Clear'));
+  expect(onChange).toHaveBeenCalledWith({ name: '', id: '' });
+});
+
 it('prefixInValue=false: clearing the input stores empty, not a lone prefix', () => {
   const onChange = jest.fn();
   renderInput({

@@ -9,6 +9,7 @@ import {
   Container,
   FormControl,
   FormControlLabel,
+  IconButton,
   InputAdornment,
   MenuItem,
   Paper,
@@ -256,6 +257,13 @@ export default function SubmissionsPage() {
                   <Icon sdsIcon="Search" sdsSize="s" color="gray" />
                 </InputAdornment>
               ),
+              endAdornment: search ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" aria-label="Clear search" onClick={() => setSearch('')}>
+                    <Icon sdsIcon="XMark" sdsSize="xs" color="gray" />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
             }}
           />
         </Box>

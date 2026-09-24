@@ -194,6 +194,13 @@ export function AnnotationList({
               <Icon sdsIcon="Search" sdsSize="xs" color="gray" />
             </InputAdornment>
           ),
+          endAdornment: filter ? (
+            <InputAdornment position="end">
+              <IconButton size="small" aria-label="Clear filter" onClick={() => setFilter('')}>
+                <Icon sdsIcon="XMark" sdsSize="xs" color="gray" />
+              </IconButton>
+            </InputAdornment>
+          ) : null,
         }}
         sx={{ mb: 1.5 }}
       />

@@ -1,4 +1,5 @@
 import {
+  normalizeDoi,
   orcidChecksumOk,
   validateDoi,
   validateOrcid,
@@ -33,6 +34,20 @@ describe('format regexes', () => {
   });
   it('DOI_RE rejects a non-DOI string', () => {
     expect(DOI_RE.test('nature12373')).toBe(false);
+  });
+});
+
+describe('normalizeDoi', () => {
+  it('strips a doi.org resolver URL to a bare DOI', () => {
+    expect(normalizeDoi('https://doi.org/10.1038/nature12373')).toBe('10.1038/nature12373');
+    expect(normalizeDoi('http://doi.org/10.1038/nature12373')).toBe('10.1038/nature12373');
+    expect(normalizeDoi('https://dx.doi.org/10.1038/nature12373')).toBe('10.1038/nature12373');
+    expect(normalizeDoi('https://www.doi.org/10.1038/nature12373')).toBe('10.1038/nature12373');
+    expect(normalizeDoi('doi.org/10.1038/nature12373')).toBe('10.1038/nature12373');
+  });
+  it('leaves a bare or doi:-prefixed DOI untouched', () => {
+    expect(normalizeDoi('10.1038/nature12373')).toBe('10.1038/nature12373');
+    expect(normalizeDoi('doi:10.1038/nature12373')).toBe('doi:10.1038/nature12373');
   });
 });
 
@@ -72,6 +87,15 @@ describe('validateDoi', () => {
     const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
     expect(url).toContain('10.1038');
     expect(url).not.toContain('doi:');
+  });
+  it('accepts a pasted doi.org URL by stripping the prefix first', async () => {
+    mockFetch({ message: { title: ['Nanometre-scale thermometry in a living cell'] } });
+    expect(await validateDoi('https://doi.org/10.1038/nature12373')).toEqual({
+      label: 'Nanometre-scale thermometry in a living cell',
+    });
+    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('10.1038/nature12373');
+    expect(url).not.toContain('doi.org/10.1038');
   });
   it('returns null when both CrossRef and doi.org miss (404)', async () => {
     mockFetch({}, 404);

@@ -14,6 +14,7 @@ Workflow views submodule.
 # Import copick-specific views
 from workflow.processors.copick.views import (
     get_copick_annotated_count,
+    get_copick_run_objects,
     get_copick_runs,
 )
 from workflow.processors.copick.views import (
@@ -91,6 +92,7 @@ __all__ = [
     # Copick views
     "get_copick_runs",
     "get_copick_annotated_count",
+    "get_copick_run_objects",
     "get_copick_template_maps",
     # Metadata views
     "get_copick_aretomo_compat",

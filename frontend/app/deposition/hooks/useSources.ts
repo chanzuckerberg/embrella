@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
 import {
+  type AnnotatedCount,
   getAnnotatedCount,
+  getCopickRunObjects,
   getTomogramCount,
   listCopickRuns,
   listMsiSessions,
@@ -13,6 +15,8 @@ const sourceKeys = {
   msiSessions: ['deposition', 'sources', 'msi-sessions'] as const,
   planRuns: (plan: string, session: string) => ['deposition', 'sources', 'plan-runs', plan, session] as const,
   copickRuns: (session: string) => ['deposition', 'sources', 'copick-runs', session] as const,
+  copickRunObjects: (session: string, run: string) =>
+    ['deposition', 'sources', 'copick-run-objects', session, run] as const,
   tomoCount: (session: string, run: string) => ['deposition', 'sources', 'tomo-count', session, run] as const,
   annotatedCount: (session: string, runs: string[]) =>
     ['deposition', 'sources', 'annotated-count', session, runs.join(',')] as const,
@@ -56,14 +60,26 @@ export function useTomogramCount(sessionName: string, aretomoRun: string) {
   });
 }
 
-/**
- * Annotated-tomogram count for a session's selected copick configs .
- */
+export function useCopickRunObjects(sessionName: string, run: string, enabled: boolean) {
+  return useQuery<string[]>({
+    queryKey: sourceKeys.copickRunObjects(sessionName, run),
+    queryFn: () => getCopickRunObjects(sessionName, run),
+    enabled: enabled && sessionName.trim().length > 0 && run.trim().length > 0,
+    staleTime: STALE,
+  });
+}
+
+const ANNOTATED_POLL_MS = 5000;
+
+export const annotatedRefetchInterval = (data: AnnotatedCount | undefined, isError = false): number | false =>
+  !isError && data && !data.scanned ? ANNOTATED_POLL_MS : false;
+
 export function useAnnotatedCount(sessionName: string, runs: string[], enabled: boolean) {
-  return useQuery<number>({
+  return useQuery<AnnotatedCount>({
     queryKey: sourceKeys.annotatedCount(sessionName, runs),
     queryFn: () => getAnnotatedCount(sessionName, runs),
     enabled: enabled && sessionName.trim().length > 0 && runs.length > 0,
     staleTime: STALE,
+    refetchInterval: (query) => annotatedRefetchInterval(query.state.data, query.state.status === 'error'),
   });
 }
