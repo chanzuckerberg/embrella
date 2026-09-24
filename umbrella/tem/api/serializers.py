@@ -12,6 +12,8 @@ class MsiSessionCreateSerializer(serializers.Serializer):
     grid_id = serializers.IntegerField()
     magnification_id = serializers.IntegerField(required=False, allow_null=True)
     super_resolution = serializers.BooleanField(required=False)
+    phase_plate_used = serializers.BooleanField(required=False)
+    energy_filter_used = serializers.BooleanField(required=False)
 
     def validate_name(self, value):
         if re.search(r"[@_!#$%^&*()<>?/\\|}{~:\s]", value):
@@ -25,6 +27,8 @@ class AcquisitionSerializer(serializers.Serializer):
     """Accessory acquisition parameters; one field per `tem.models.ACQUISITION_FIELDS` entry."""
 
     super_resolution = serializers.BooleanField()
+    phase_plate_used = serializers.BooleanField(allow_null=True)
+    energy_filter_used = serializers.BooleanField(allow_null=True)
 
 
 class SessionPlanOptionSerializer(serializers.Serializer):

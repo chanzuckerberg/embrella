@@ -31,6 +31,11 @@ function PathRow({ label, path }: { label: string; path: RolePath }) {
   );
 }
 
+function usageLabel(used: boolean | null): string {
+  if (used == null) return 'Unknown';
+  return used ? 'Yes' : 'No';
+}
+
 interface SessionSummaryProps {
   session: CreatedSession;
   /** Rendered between the identity rows and the paths, e.g. a review notice. */
@@ -49,7 +54,11 @@ export function SessionSummary({ session, notice }: SessionSummaryProps) {
     { label: 'Session Plan', value: session.session_plan_name },
     ...(session.magnification_display ? [{ label: 'Magnification', value: session.magnification_display }] : []),
     ...(session.acquisition
-      ? [{ label: 'Super-resolution', value: session.acquisition.super_resolution ? 'Yes' : 'No' }]
+      ? [
+          { label: 'Super-resolution', value: session.acquisition.super_resolution ? 'Yes' : 'No' },
+          { label: 'Phase plate used', value: usageLabel(session.acquisition.phase_plate_used) },
+          { label: 'Energy filter used', value: usageLabel(session.acquisition.energy_filter_used) },
+        ]
       : []),
   ];
 
