@@ -1,8 +1,7 @@
 """
 API views for cryo-grid management.
 
-Contains API endpoints for querying and managing cryo grids by user, project,
-and cassette.
+Contains API endpoints for querying and managing cryo grids by user and project.
 """
 
 import logging
@@ -91,48 +90,3 @@ def get_grids_by_user(request):
         )
 
     return JsonResponse(grids_data, safe=False)
-
-
-@extend_schema(
-    methods=["GET"],
-    description="Returns grids associated with a given cassette ID.",
-    parameters=[
-        OpenApiParameter(name="cassette_id", required=True, type=str, description="ID of the grid cassette"),
-    ],
-    responses={
-        200: "List of grids by cassette",
-        400: "Missing cassette_id",
-    },
-)
-@api_view(["GET"])
-def get_grids_by_cassette(request):
-    """
-    Get grids associated with a specific cassette.
-
-    Query Parameters:
-        cassette_id (required): Cassette ID to filter grids
-
-    Returns:
-        JSON list of grids with user, specimen, slot, and project information
-    """
-    cassette_id = request.GET.get("cassette_id")
-    if cassette_id:
-        grids = CryoGrid.objects.filter(grid_cassette__id=cassette_id)
-        # Format the data
-        logger.debug(f"Found {grids.count()} grids for cassette {cassette_id}")
-        grids_data = []
-        for grid in grids:
-            grids_data.append(
-                {
-                    "grid_id": grid.id,
-                    "grid_user": grid.user.username,
-                    "grid_name": grid.name,
-                    "grid_specimen": grid.specimen.__str__(),
-                    "grid_slot_number": grid.slot_number_in_cassette,
-                    "grid_project_name": grid.intended_project.name,
-                }
-            )
-
-        return JsonResponse(grids_data, safe=False)
-    else:
-        return JsonResponse({"error": "Cassette ID not provided."}, status=400)

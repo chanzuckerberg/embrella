@@ -16,10 +16,7 @@ Including another URLconf
 """
 
 # Import API views from their respective app-level modules
-from cryo_grids.api.views import (
-    get_grids_by_cassette,
-    get_grids_by_user,
-)
+from cryo_grids.api.views import get_grids_by_user
 from cryo_grids.viewsets import (
     CaneViewSet,
     CryoGridBoxViewSet,
@@ -50,7 +47,6 @@ from processes.urls import v1_urlpatterns as processes_v1_urlpatterns
 from processes.views import available_annotation_filter
 from rest_framework.routers import DefaultRouter
 from tem.api.views import SessionView
-from tem.urls import legacy_urlpatterns as tem_legacy_urlpatterns
 from tem.urls import v1_urlpatterns as tem_v1_urlpatterns
 
 from umbrella.ping import ping
@@ -128,16 +124,9 @@ api_patterns = [
     path("user", get_user_info, name="user_info"),
     path("ping/", ping),
     path("get_grids_by_user/", get_grids_by_user, name="get_grids_by_user"),
-    path("get_grids_by_cassette/", get_grids_by_cassette, name="get_grids_by_cassette"),
     path("annotations/v1/filterlist/", available_annotation_filter, name="get filter list for annotations"),
     # External resources (documentation links)
     path("api/external-resources/", include("external_links.urls")),
-]
-
-# Legacy template-based routes (will be migrated to Next.js)
-# Top-level mount owns the bare namespace; legacy gets `legacy_*` to avoid urls.W005.
-legacy_patterns = [
-    path("tem/", include((tem_legacy_urlpatterns, "tem"))),
 ]
 
 urlpatterns = (
@@ -149,10 +138,7 @@ urlpatterns = (
         path("accounts/", include("allauth.urls")),
         # Documentation
         re_path(r"^docs/(?P<path>.*)$", documentation_view, name="docs"),
-        # Legacy template-based views (all under /legacy/ prefix)
-        path("legacy/", include(legacy_patterns)),
         # API routes for Next.js frontend (these apps have v1/ API endpoints)
-        # Note: These also include legacy template routes which should eventually move to /legacy/
         path("workflow/", include("workflow.urls"), name="workflow"),
         path("cryo_grids/", include("cryo_grids.urls"), name="cryo_grids"),
         path("depositions/", include("depositions.urls"), name="depositions"),

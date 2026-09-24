@@ -69,7 +69,6 @@ const SUB_NAV_ITEMS: Record<NavSection, SubNavItem[]> = {
   ],
   sessions: [
     { label: 'New TEM Session', href: '/sessions/new/tem' },
-    { label: 'Screen Multiple Grids', href: '/sessions/screen' },
     { label: 'Browse Sessions', href: '/sessions/browse' },
   ],
   processing: [], // Will be populated dynamically

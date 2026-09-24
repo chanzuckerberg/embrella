@@ -108,7 +108,7 @@ class TestSessionDetail:
         assert data["project_name"] == project.name
         assert data["grid_name"] == str(grid)
         assert data["session_plan_name"] == str(session_plan)
-        assert set(data) >= {"frames", "sums", "mdocs", "parents", "atlas", "legacy_url"}
+        assert set(data) >= {"frames", "sums", "mdocs", "parents", "atlas"}
 
     def test_tolerates_missing_project_and_grid(self, client, test_user, session_plan):
         client.force_login(test_user)

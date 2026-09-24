@@ -136,7 +136,6 @@ def _session_payload(session):
         "session_plan_name": str(session.session_plan),
         "magnification_display": str(session.magnification) if session.magnification else None,
         "acquisition": session.acquisition.values() if session.acquisition else None,
-        "legacy_url": f"/legacy/tem/{session.id}/",
     }
     for role, path in session.role_paths.items():
         payload[role] = _role_halves(path, session.get_file_pattern(role))

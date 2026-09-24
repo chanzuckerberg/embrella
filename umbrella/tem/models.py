@@ -632,16 +632,3 @@ def suggest_name(prefix, model_name="MsiSession"):
             return last_name + "a"
         except Exception:
             raise
-
-
-def suggest_scrn_session_name(prefix, group_instance):
-    model_instance = AtlasSession
-    used_names = list(
-        map((lambda x: x.name), model_instance.objects.filter(Q(group=group_instance, name__startswith=prefix)))
-    )
-    software = group_instance.session_plan.software
-    # TODO need to find a way to decide whether names are defined as Sample%d
-    if software.name == "tfs multi-grid":
-        return "Sample%d" % (len(used_names) + 1,)
-    else:
-        return suggest_name(prefix, model_name="AtlasSession")
