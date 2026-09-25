@@ -29,6 +29,10 @@ stack:
       # Public demo: any Google account may sign in (no email-domain gate)
       - name: SSO_ALLOWED_DOMAINS
         value: '*'
+      - name: TIME_ZONE
+        value: 'America/Los_Angeles'
+      - name: EMBRELLA_HOSTS
+        value: 'embrella.apps-staging.czbiohub.org'
       - name: FILESERVER_ALLOWED_HOSTS
         value: 'https://embrella.apps-staging.czbiohub.org,https://$(__ARGUS_STACK_INGRESS_HOST)'
       - name: EMBRELLA_DEMO_BASE_URL
