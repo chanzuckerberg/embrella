@@ -73,10 +73,7 @@ router.register(r"cryo_grids/v1/screening-grids", ScreeningGridsViewSet, basenam
 router.register(r"cryo_grids/v1/pucks", PuckListViewSet, basename="puck-list")
 router.register(r"cryo_grids/v1/counts", GridInventoryCountsViewSet, basename="grid-inventory-counts")
 
-import mimetypes
-
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
 from django.views.static import serve
 
 
@@ -86,20 +83,9 @@ def documentation_view(request, path):
         path = "index.html"
     elif path[-1] == "/":
         path = f"{path}index.html"
-    # if not settings.DOCUMENTATION_ACCESS_FUNCTION(request.user):
-    #    return HttpResponseRedirect(settings.LOGIN_REDIRECT_URL)
-    if not settings.DOCUMENTATION_XSENDFILE:
-        return serve(request, path, settings.DOCUMENTATION_HTML_ROOT)
-    mimetype, encoding = mimetypes.guess_type(path)
-    response = HttpResponse(content_type=mimetype)
-    response["Content-Encoding"] = encoding
-    response["Content-Disposition"] = ""
-    response["X-Sendfile"] = "".join([settings.DOCUMENTATION_HTML_ROOT, path])
-    return response
+    return serve(request, path, settings.DOCUMENTATION_ROOT)
 
 
-# sURLs =[static(settings.STATIC_URL, document_root=settings.STATIC_ROOT),
-#         static("/docs/", document_root=settings.STATIC_ROOT),]
 # API-only endpoints (no template rendering)
 api_patterns = [
     # API endpoints for data

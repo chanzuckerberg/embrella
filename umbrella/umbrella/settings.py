@@ -15,7 +15,6 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import pymysql
-from corsheaders.defaults import default_headers as default_cors_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # Build paths inside the project like this: BASE_DIR / 'subdir'.
 ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
@@ -60,8 +59,6 @@ STATICFILES_DIRS = [
 STATIC_URL = "/static/"
 
 DOCUMENTATION_ROOT = Path(BASE_DIR).resolve().parent / "docs_build"
-DOCUMENTATION_HTML_ROOT = DOCUMENTATION_ROOT
-DOCUMENTATION_XSENDFILE = False
 
 pymysql.install_as_MySQLdb()
 
@@ -192,7 +189,6 @@ JAZZMIN_SETTINGS = {
         # App groups
         "cryo_grids": "fas fa-snowflake",
         "tem": "fas fa-microscope",
-        "django_google_sso": "fas fa-key",
         "processes": "fas fa-cogs",
         "workflow": "fas fa-project-diagram",
         "projects": "fas fa-folder-open",
@@ -298,8 +294,7 @@ CORS_ALLOW_METHODS = [
     "POST",
     "PUT",
 ]
-CORS_ALLOW_HEADERS = default_cors_headers + ("Access-Control-Allow-Origin",)
-CORS_EXPOSE_HEADERS = ["Access-Control-Allow-Origin", "Content-Type", "Location"]
+CORS_EXPOSE_HEADERS = ["Content-Type", "Location"]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
