@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon, Button } from '@czi-sds/components';
 import { Alert, Box, CircularProgress, FormControlLabel, Switch, Tab, Tabs, Typography } from '@mui/material';
 
@@ -19,9 +19,30 @@ import {
   isIssue,
   SECTION_SOURCE,
   TILTSERIES_FIELDS,
+  TOMOGRAM_FIELDS,
   type FieldDef,
 } from './fields';
 import { sessionToYaml, yamlToSession } from './yaml';
+
+function isFieldEdited(f: FieldDef, meta: Record<string, FieldValue>): boolean {
+  const v = meta[f.key];
+  if (v === undefined || v === null || v === '') return false;
+  return f.default === undefined || v !== f.default;
+}
+
+function hasSavedEdits(session: SessionMeta): boolean {
+  const tiltseries = session.tiltseries as Record<string, FieldValue>;
+  if (TILTSERIES_FIELDS.some((f) => isFieldEdited(f, tiltseries))) return true;
+  return TOMOGRAM_FLAVORS.some((flavor) => {
+    const tomo = session.tomograms[flavor] as Record<string, FieldValue>;
+    return TOMOGRAM_FIELDS.some((f) => {
+      if (f.key === 'is_visualization_default') {
+        return tomo[f.key] != null && tomo[f.key] !== (flavor === 'denoised');
+      }
+      return isFieldEdited(f, tomo);
+    });
+  });
+}
 
 export interface SessionMeta {
   key: string;
@@ -113,6 +134,8 @@ export function SessionMetadataCard({
   autoFillError,
   onAutoFill,
   onFieldChange,
+  manualEntered,
+  onManualEntry,
 }: {
   session: SessionMeta;
   readOnly: boolean;
@@ -120,17 +143,20 @@ export function SessionMetadataCard({
   autoFillError?: string | null;
   onAutoFill: () => void;
   onFieldChange: (tab: TabKey, key: string, value: FieldValue) => void;
+  manualEntered: boolean;
+  onManualEntry: () => void;
 }) {
   const [tab, setTab] = useState<ViewTab>('tiltseries');
   const [showOnlyIssues, setShowOnlyIssues] = useState(false);
   const [showYaml, setShowYaml] = useState(false);
   const [confirmReRun, setConfirmReRun] = useState(false);
   const hasRun = Boolean(session.aretomoRun);
-  // Confirm re-run: overwrites prior autofill (and manual edits).
-  const handleAutoFillClick = () => {
-    if (session.lastAutofillAt) setConfirmReRun(true);
-    else onAutoFill();
-  };
+  const savedEdits = hasSavedEdits(session);
+  useEffect(() => {
+    if (!readOnly && !session.lastAutofillAt && savedEdits && !manualEntered) onManualEntry();
+  }, [readOnly, session.lastAutofillAt, savedEdits, manualEntered, onManualEntry]);
+  const gateUp = !readOnly && hasRun && !session.lastAutofillAt && !manualEntered && !savedEdits;
+  const canAutoFill = !readOnly && hasRun && (Boolean(session.lastAutofillAt) || manualEntered || savedEdits);
 
   const tsIssues = countIssues(TILTSERIES_FIELDS, session.tiltseries as never);
   const tomoIssues = countTomogramIssues(session.tomograms);
@@ -180,14 +206,14 @@ export function SessionMetadataCard({
               : 'Not auto-filled yet'}
           </Typography>
         </Box>
-        {!readOnly && (
+        {canAutoFill && (
           <Button
             sdsType="primary"
             sdsStyle="outline"
             size="small"
             startIcon={autoFilling ? <CircularProgress size={14} /> : undefined}
-            disabled={autoFilling || !hasRun}
-            onClick={handleAutoFillClick}
+            disabled={autoFilling}
+            onClick={() => setConfirmReRun(true)}
             sx={{ flexShrink: 0 }}
           >
             {session.lastAutofillAt ? 'Re-run auto-fill' : 'Auto-fill'}
@@ -198,7 +224,7 @@ export function SessionMetadataCard({
       <BaseFormDialog
         open={confirmReRun}
         onClose={() => setConfirmReRun(false)}
-        title="Re-run auto-fill?"
+        title={session.lastAutofillAt ? 'Re-run auto-fill?' : 'Auto-fill this session?'}
         saveButtonText="Replace values"
         onSave={() => {
           setConfirmReRun(false);
@@ -206,8 +232,8 @@ export function SessionMetadataCard({
         }}
       >
         <Typography variant="body1" color="text.secondary">
-          This replaces the current values - including any edits you made here or in the YAML - with freshly computed
-          ones.
+          Auto-fill updates the fields it can populate, replacing any edits to those fields here or in the YAML.
+          Binning from frames is entered manually and will be kept. Review that value after auto-fill.
         </Typography>
       </BaseFormDialog>
 
@@ -217,97 +243,163 @@ export function SessionMetadataCard({
             Pick an AreTomo run for this session on the Sources step to enable auto-fill.
           </Alert>
         )}
-        {autoFillError && (
+        {autoFillError && !gateUp && (
           <Alert severity="error" sx={{ mb: 1.5 }}>
             {autoFillError}
           </Alert>
         )}
 
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 1,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            mb: 1.5,
-          }}
-        >
-          <Tabs
-            value={tab}
-            onChange={(_, v: ViewTab) => setTab(v)}
-            sx={{
-              minHeight: 36,
-              '& .MuiTab-root': { minHeight: 36, py: 0.5, textTransform: 'none', fontWeight: 600 },
-            }}
-          >
-            <Tab value="tiltseries" label={tabLabel('Tilt series', tsIssues)} />
-            <Tab value="tomograms" label={tabLabel('Tomograms', tomoIssues)} />
-          </Tabs>
+        <Box sx={{ position: 'relative' }}>
+          {gateUp && (
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 2,
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                pt: 6,
+                px: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  maxWidth: 420,
+                  width: '100%',
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  boxShadow: 6,
+                  p: 4,
+                }}
+              >
+                <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+                  Start with auto-fill
+                </Typography>
+                {autoFillError ? (
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {autoFillError}
+                  </Alert>
+                ) : (
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 5, lineHeight: 1.6 }}>
+                    We read your session to auto-fill the acquisition metadata. You can edit everything after, if
+                    needed.
+                  </Typography>
+                )}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button
+                    sdsType="primary"
+                    sdsStyle="solid"
+                    startIcon={autoFilling ? <CircularProgress size={14} /> : undefined}
+                    disabled={autoFilling}
+                    onClick={onAutoFill}
+                  >
+                    {autoFillError ? 'Try again' : 'Auto-fill'}
+                  </Button>
+                  {autoFillError && (
+                    <Button sdsType="primary" sdsStyle="minimal" disabled={autoFilling} onClick={onManualEntry}>
+                      Fill manually
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+          )}
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pb: 0.25 }}>
-            <FormControlLabel
-              control={
-                <Switch size="small" checked={showOnlyIssues} onChange={(e) => setShowOnlyIssues(e.target.checked)} />
-              }
-              label={<Typography variant="body2">Show only issues</Typography>}
-              sx={{ mr: 0.5 }}
-            />
-            <Button sdsType="primary" sdsStyle="minimal" size="small" onClick={() => setShowYaml((o) => !o)}>
-              {showYaml ? 'Hide YAML' : 'View YAML'}
-            </Button>
+          <Box inert={gateUp} sx={gateUp ? { opacity: 0.35, userSelect: 'none' } : undefined}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 1,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                mb: 1.5,
+              }}
+            >
+              <Tabs
+                value={tab}
+                onChange={(_, v: ViewTab) => setTab(v)}
+                sx={{
+                  minHeight: 36,
+                  '& .MuiTab-root': { minHeight: 36, py: 0.5, textTransform: 'none', fontWeight: 600 },
+                }}
+              >
+                <Tab value="tiltseries" label={tabLabel('Tilt series', tsIssues)} />
+                <Tab value="tomograms" label={tabLabel('Tomograms', tomoIssues)} />
+              </Tabs>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pb: 0.25 }}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={showOnlyIssues}
+                      onChange={(e) => setShowOnlyIssues(e.target.checked)}
+                    />
+                  }
+                  label={<Typography variant="body2">Show only issues</Typography>}
+                  sx={{ mr: 0.5 }}
+                />
+                <Button sdsType="primary" sdsStyle="minimal" size="small" onClick={() => setShowYaml((o) => !o)}>
+                  {showYaml ? 'Hide YAML' : 'View YAML'}
+                </Button>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: showYaml ? { xs: '1fr', md: 'minmax(0, 1fr) minmax(340px, 440px)' } : '1fr',
+                gap: 2,
+                alignItems: 'start',
+              }}
+            >
+              {tab === 'tiltseries' ? (
+                <MetadataTable
+                  fields={TILTSERIES_FIELDS}
+                  meta={session.tiltseries}
+                  readOnly={readOnly}
+                  showOnlyIssues={showOnlyIssues}
+                  columns={showYaml ? 1 : 2}
+                  loading={autoFilling}
+                  onChange={(key, v) => onFieldChange('tiltseries', key, v)}
+                />
+              ) : (
+                <TomogramPanel
+                  tomograms={session.tomograms}
+                  readOnly={readOnly}
+                  loading={autoFilling}
+                  columns={showYaml ? 1 : 2}
+                  runName={session.aretomoRun}
+                  showOnlyIssues={showOnlyIssues}
+                  onShared={(key, v) => {
+                    onFieldChange('denoised', key, v);
+                    onFieldChange('filtered', key, v);
+                  }}
+                  onFlavor={(flavor, key, v) => {
+                    onFieldChange(flavor, key, v);
+                    if (key === 'is_visualization_default' && v === true) {
+                      const other = flavor === 'denoised' ? 'filtered' : 'denoised';
+                      onFieldChange(other, 'is_visualization_default', false);
+                    }
+                  }}
+                />
+              )}
+              {showYaml && (
+                <YamlPreview
+                  yaml={sessionToYaml(session.tiltseries, session.tomograms)}
+                  title={yamlTitle}
+                  onClose={() => setShowYaml(false)}
+                  onChange={readOnly ? undefined : applyYaml}
+                />
+              )}
+            </Box>
           </Box>
-        </Box>
-
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: showYaml ? { xs: '1fr', md: 'minmax(0, 1fr) minmax(340px, 440px)' } : '1fr',
-            gap: 2,
-            alignItems: 'start',
-          }}
-        >
-          {tab === 'tiltseries' ? (
-            <MetadataTable
-              fields={TILTSERIES_FIELDS}
-              meta={session.tiltseries}
-              readOnly={readOnly}
-              showOnlyIssues={showOnlyIssues}
-              columns={showYaml ? 1 : 2}
-              loading={autoFilling}
-              onChange={(key, v) => onFieldChange('tiltseries', key, v)}
-            />
-          ) : (
-            <TomogramPanel
-              tomograms={session.tomograms}
-              readOnly={readOnly}
-              loading={autoFilling}
-              columns={showYaml ? 1 : 2}
-              runName={session.aretomoRun}
-              showOnlyIssues={showOnlyIssues}
-              onShared={(key, v) => {
-                onFieldChange('denoised', key, v);
-                onFieldChange('filtered', key, v);
-              }}
-              onFlavor={(flavor, key, v) => {
-                onFieldChange(flavor, key, v);
-                if (key === 'is_visualization_default' && v === true) {
-                  const other = flavor === 'denoised' ? 'filtered' : 'denoised';
-                  onFieldChange(other, 'is_visualization_default', false);
-                }
-              }}
-            />
-          )}
-          {showYaml && (
-            <YamlPreview
-              yaml={sessionToYaml(session.tiltseries, session.tomograms)}
-              title={yamlTitle}
-              onClose={() => setShowYaml(false)}
-              onChange={readOnly ? undefined : applyYaml}
-            />
-          )}
         </Box>
       </Box>
     </Box>

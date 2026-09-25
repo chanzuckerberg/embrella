@@ -453,6 +453,9 @@ class TestAutoFill:
         assert ts.tilt_axis is None
         assert ts.data_acquisition_software == "SW"
         assert ts.autofill_metadata == raw
+        assert ts.is_aligned is False
+        assert ts.aligned_tiltseries_binning == 1
+        assert ts.binning_from_frames is None
         tomos = {t.flavor: t for t in TomogramMetadata.objects.filter(session=owned_session)}
         assert set(tomos) == {"denoised", "filtered"}
         assert tomos["denoised"].reconstruction_software == "AreTomo3 2.1.0"
@@ -465,6 +468,42 @@ class TestAutoFill:
         owned_session.refresh_from_db()
         assert owned_session.last_autofill_at is not None
         assert owned_session.last_autofill_duration_seconds is not None
+
+    def _run_autofill(self, auth_client, session, raw):
+        c1, c2, c3 = self._patch_cluster()
+        with (
+            c1,
+            c2,
+            c3,
+            mock.patch("depositions.views.run_autofill_init", return_value={"filled": True, "session": raw, "reason": None}),
+        ):
+            return auth_client.post(self._url(session))
+
+    def test_rerun_preserves_manual_binning_that_differs_from_volume_binning(self, auth_client, owned_session):
+        """binning_from_frames is manual; the mapper never sets it, so a re-run keeps the stored value."""
+        from depositions.models import TiltseriesMetadata
+
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+        TiltseriesMetadata.objects.create(session=owned_session, binning_from_frames=2)
+
+        r = self._run_autofill(auth_client, owned_session, {"acquisition": {"binned_voxel_ratio": 8}})
+
+        assert r.status_code == 200, r.content
+        assert TiltseriesMetadata.objects.get(session=owned_session).binning_from_frames == 2
+
+    def test_rerun_preserves_manual_binning_that_matches_volume_binning(self, auth_client, owned_session):
+        """A deliberate value equal to volume binning must survive — equality does not prove it was auto-set."""
+        from depositions.models import TiltseriesMetadata
+
+        owned_session.aretomo_run_name = "run001"
+        owned_session.save(update_fields=["aretomo_run_name"])
+        TiltseriesMetadata.objects.create(session=owned_session, binning_from_frames=8)
+
+        r = self._run_autofill(auth_client, owned_session, {"acquisition": {"binned_voxel_ratio": 8}})
+
+        assert r.status_code == 200, r.content
+        assert TiltseriesMetadata.objects.get(session=owned_session).binning_from_frames == 8
 
     def test_prunes_stale_flavor_rows(self, auth_client, owned_session):
         """Re-running auto-fill drops a leftover pre-migration flavor="" row."""
@@ -569,6 +608,30 @@ class TestTomogramFlavorValidation:
     def test_rejects_duplicate_flavor(self, auth_client, owned_session):
         r = self._patch(auth_client, owned_session, [{"flavor": "denoised"}, {"flavor": "denoised"}])
         assert r.status_code == 400
+
+
+@pytest.mark.django_db
+class TestManualSaveStampsAlignment:
+    def _patch(self, auth_client, session, tiltseries):
+        return auth_client.patch(f"{SESSIONS}{session.id}/", {"tiltseries_metadata": tiltseries}, format="json")
+
+    def test_manual_tiltseries_save_sets_alignment_values(self, auth_client, owned_session):
+        from depositions.models import TiltseriesMetadata
+
+        r = self._patch(auth_client, owned_session, {"acceleration_voltage": 300, "pixel_spacing": 1.54})
+        assert r.status_code == 200, r.content
+        ts = TiltseriesMetadata.objects.get(session=owned_session)
+        assert ts.is_aligned is False
+        assert ts.aligned_tiltseries_binning == 1
+
+    def test_fixed_pair_wins_over_any_client_supplied_values(self, auth_client, owned_session):
+        from depositions.models import TiltseriesMetadata
+
+        r = self._patch(auth_client, owned_session, {"is_aligned": True, "aligned_tiltseries_binning": 4})
+        assert r.status_code == 200, r.content
+        ts = TiltseriesMetadata.objects.get(session=owned_session)
+        assert ts.is_aligned is False
+        assert ts.aligned_tiltseries_binning == 1
 
 
 @pytest.mark.django_db
