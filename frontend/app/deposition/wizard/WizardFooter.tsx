@@ -6,12 +6,14 @@ import { Box } from '@mui/material';
 export function WizardFooter({
   disableBack,
   disableNext,
+  savingNext = false,
   onBack,
   onNext,
   onSaveAndExit,
 }: {
   disableBack: boolean;
   disableNext: boolean;
+  savingNext?: boolean;
   onBack: () => void;
   onNext: () => void;
   onSaveAndExit: () => void;
@@ -33,11 +35,11 @@ export function WizardFooter({
       <Button
         sdsType="primary"
         sdsStyle="solid"
-        endIcon={<Icon sdsIcon="ChevronRight" sdsSize="xs" />}
-        disabled={disableNext}
+        endIcon={savingNext ? undefined : <Icon sdsIcon="ChevronRight" sdsSize="xs" />}
+        disabled={disableNext || savingNext}
         onClick={onNext}
       >
-        Next
+        {savingNext ? 'Saving…' : 'Next'}
       </Button>
     </Box>
   );

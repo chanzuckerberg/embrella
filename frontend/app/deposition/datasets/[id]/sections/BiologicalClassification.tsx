@@ -17,6 +17,7 @@ function OntologyRow({
   children,
   isLast,
   required = false,
+  description,
 }: {
   label: string;
   summary: string;
@@ -25,6 +26,7 @@ function OntologyRow({
   children: React.ReactNode;
   isLast?: boolean;
   required?: boolean;
+  description?: string;
 }) {
   return (
     <Accordion
@@ -56,14 +58,21 @@ function OntologyRow({
           },
         }}
       >
-        <Typography sx={{ fontWeight: 600 }}>
-          {label}
-          {required && (
-            <Box component="span" sx={{ color: 'error.main', ml: 0.5 }}>
-              *
-            </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 600 }}>
+            {label}
+            {required && (
+              <Box component="span" sx={{ color: 'error.main', ml: 0.5 }}>
+                *
+              </Box>
+            )}
+          </Typography>
+          {description && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {description}
+            </Typography>
           )}
-        </Typography>
+        </Box>
         <Typography
           variant="body2"
           color={required && !set ? 'error.main' : 'text.secondary'}
@@ -113,6 +122,7 @@ export function BiologicalClassification({
         readOnly={readOnly}
         isLast={isLast}
         required={required}
+        description={row.description}
       >
         <OntologyIdInput
           label={row.label}

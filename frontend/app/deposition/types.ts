@@ -170,7 +170,16 @@ export interface DatasetSample {
   disease_ontology_id?: string;
 }
 
+export interface PreparationSource {
+  key: string;
+  label: string;
+  sample_preparation: string;
+  grid_preparation: string;
+  sample: DatasetSample;
+}
+
 export interface Dataset {
+  preparation_sources?: PreparationSource[];
   id: number;
   deposition: number;
   dataset_id?: number | null;

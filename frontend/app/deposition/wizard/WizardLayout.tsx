@@ -19,6 +19,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const [current, setCurrent] = useState(1);
   const [save, setSave] = useState<AutoSaveState | null>(null);
   const [blocking, setBlocking] = useState(0);
+  const [savingStep, setSavingStep] = useState<number | null>(null);
   const [manualAutofillSessions, setManualAutofillSessions] = useState<Set<string>>(() => new Set());
   const readOnly = dataset.is_owner === false;
   const skippedNums = WIZARD_STEPS.filter((s) => isStepSkipped(s, dataset)).map((s) => s.num);
@@ -29,13 +30,20 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const Body = step.Component;
   // Save before leaving this step; abort on failure.
   const go = async (n: number) => {
-    if (!readOnly && save && (await save.saveNow()) === false) return;
-    setSave(null);
-    setBlocking(0);
-    setCurrent(n);
+    if (savingStep !== null) return;
+    setSavingStep(n);
+    try {
+      if (!readOnly && save && (await save.saveNow()) === false) return;
+      setSave(null);
+      setBlocking(0);
+      setCurrent(n);
+    } finally {
+      setSavingStep(null);
+    }
   };
 
   const saveAndExit = async () => {
+    if (savingStep !== null) return;
     if (!readOnly && save && (await save.saveNow()) === false) return;
     router.push(SUBMISSIONS_HREF);
   };
@@ -128,8 +136,9 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
 
         <Box sx={{ flexShrink: 0, px: { xs: 3, md: 5 }, py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
           <WizardFooter
-            disableBack={pos <= 0}
-            disableNext={pos < 0 || pos >= activeNums.length - 1 || blocking > 0}
+            disableBack={pos <= 0 || savingStep !== null}
+            disableNext={pos < 0 || pos >= activeNums.length - 1 || blocking > 0 || savingStep !== null}
+            savingNext={savingStep !== null && savingStep === activeNums[pos + 1]}
             onBack={() => pos > 0 && go(activeNums[pos - 1])}
             onNext={() => pos >= 0 && pos < activeNums.length - 1 && go(activeNums[pos + 1])}
             onSaveAndExit={saveAndExit}

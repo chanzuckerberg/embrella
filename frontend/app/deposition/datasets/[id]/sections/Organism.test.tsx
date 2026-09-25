@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import type { ComponentProps } from 'react';
+import { type ComponentProps, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -25,17 +25,30 @@ function renderOrganism(props: Partial<ComponentProps<typeof Organism>> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const onChangeOrganismName = jest.fn();
   const onChangeOrganismTaxid = jest.fn();
+  function Controlled() {
+    const [name, setName] = useState(props.organismName ?? '');
+    const [taxid, setTaxid] = useState<number | null>(props.organismTaxid ?? null);
+    return (
+      <Organism
+        {...props}
+        organismName={name}
+        organismTaxid={taxid}
+        onChangeOrganismName={(value) => {
+          setName(value);
+          onChangeOrganismName(value);
+        }}
+        onChangeOrganismTaxid={(value) => {
+          setTaxid(value);
+          onChangeOrganismTaxid(value);
+        }}
+        readOnly={props.readOnly ?? false}
+        innerRef={() => {}}
+      />
+    );
+  }
   render(
     <QueryClientProvider client={client}>
-      <Organism
-        organismName=""
-        organismTaxid={null}
-        onChangeOrganismName={onChangeOrganismName}
-        onChangeOrganismTaxid={onChangeOrganismTaxid}
-        readOnly={false}
-        innerRef={() => {}}
-        {...props}
-      />
+      <Controlled />
     </QueryClientProvider>
   );
   return { onChangeOrganismName, onChangeOrganismTaxid };
@@ -70,4 +83,19 @@ it('auto-fills name + numeric tax ID when a suggestion is picked', async () => {
 
   await waitFor(() => expect(onChangeOrganismName).toHaveBeenCalledWith('Homo sapiens'));
   expect(onChangeOrganismTaxid).toHaveBeenCalledWith(9606);
+});
+
+it('fills the name field and saves the resolved name after entering a tax ID', async () => {
+  mockValidate.mockResolvedValue({ id: 'NCBITaxon:9606', label: 'Homo sapiens', synonyms: [] });
+  const { onChangeOrganismName } = renderOrganism({ organismName: 'Old organism' });
+  await userEvent.type(screen.getByLabelText(/NCBI tax ID/i), '9606');
+  await waitFor(() => expect(screen.getByLabelText(/organism name/i)).toHaveValue('Homo sapiens'));
+  expect(onChangeOrganismName).toHaveBeenCalledWith('Homo sapiens');
+});
+
+it('does not change a saved name in read-only mode', async () => {
+  mockValidate.mockResolvedValue({ id: 'NCBITaxon:9606', label: 'Homo sapiens', synonyms: [] });
+  const { onChangeOrganismName } = renderOrganism({ organismTaxid: 9606, readOnly: true });
+  await screen.findByText('Homo sapiens');
+  expect(onChangeOrganismName).not.toHaveBeenCalled();
 });
