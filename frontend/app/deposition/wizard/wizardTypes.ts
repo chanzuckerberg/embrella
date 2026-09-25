@@ -9,6 +9,8 @@ export interface StepProps {
   /** Report how many required fields are still blocking. */
   reportBlocking?: (count: number) => void;
   readOnly: boolean;
+  manualAutofillSessions?: Set<string>;
+  onManualAutofillEntry?: (sessionKey: string) => void;
 }
 
 export type StepKey = 'sources' | 'deposition' | 'dataset' | 'autofill' | 'annotations' | 'submit';

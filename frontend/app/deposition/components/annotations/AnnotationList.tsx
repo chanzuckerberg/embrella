@@ -16,7 +16,6 @@ const KIND_LABEL: Record<CopickKind, string> = {
 const KIND_ORDER: CopickKind[] = ['picks', 'segmentations', 'meshes'];
 const HEADER_H = 34;
 const ITEM_H = 56;
-const LIST_H = 460;
 
 export const annId = (a: DepositionAnnotation) => `${a.copick_kind}::${a.copick_ref}`;
 
@@ -86,13 +85,16 @@ export function AnnotationList({
   useEffect(() => listRef.current?.resetAfterIndex(0), [rows]);
 
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
+  const [size, setSize] = useState({ width: 0, height: 0 });
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return undefined;
-    const ro = new ResizeObserver((entries) => setWidth(entries[0].contentRect.width));
+    const ro = new ResizeObserver(([entry]) => {
+      setSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
     ro.observe(el);
-    setWidth(el.getBoundingClientRect().width);
+    const rect = el.getBoundingClientRect();
+    setSize({ width: rect.width, height: rect.height });
     return () => ro.disconnect();
   }, []);
 
@@ -182,7 +184,7 @@ export function AnnotationList({
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, flex: 1 }}>
       <TextField
         size="small"
         placeholder="Filter by reference or object"
@@ -233,17 +235,18 @@ export function AnnotationList({
         )}
       </Box>
 
-      <Box ref={wrapRef} sx={{ width: '100%' }}>
+      <Box ref={wrapRef} sx={{ width: '100%', height: { xs: 320, md: 'auto' }, flex: { md: 1 }, minHeight: 120 }}>
         {emptyMessage ? (
           <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
             {emptyMessage}
           </Typography>
         ) : (
-          width > 0 && (
+          size.width > 0 &&
+          size.height > 0 && (
             <VariableSizeList
               ref={listRef}
-              height={LIST_H}
-              width={width}
+              height={size.height}
+              width={size.width}
               itemCount={rows.length}
               itemSize={(i) => (rows[i].type === 'header' ? HEADER_H : ITEM_H)}
               overscanCount={8}

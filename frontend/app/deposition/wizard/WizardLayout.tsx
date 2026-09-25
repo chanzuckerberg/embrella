@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Icon } from '@czi-sds/components';
+import { Button, Icon } from '@czi-sds/components';
 import { Alert, Box, Container, IconButton, Paper, Tooltip, Typography } from '@mui/material';
 
 import type { Dataset } from '../types';
@@ -19,6 +19,7 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
   const [current, setCurrent] = useState(1);
   const [save, setSave] = useState<AutoSaveState | null>(null);
   const [blocking, setBlocking] = useState(0);
+  const [manualAutofillSessions, setManualAutofillSessions] = useState<Set<string>>(() => new Set());
   const readOnly = dataset.is_owner === false;
   const skippedNums = WIZARD_STEPS.filter((s) => isStepSkipped(s, dataset)).map((s) => s.num);
   const activeNums = WIZARD_STEPS.filter((s) => !skippedNums.includes(s.num)).map((s) => s.num);
@@ -75,7 +76,18 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {!readOnly && save && (
-                <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onRetry={save.saveNow} />
+                <>
+                  <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onRetry={save.saveNow} />
+                  <Button
+                    sdsType="secondary"
+                    sdsStyle="outline"
+                    size="small"
+                    disabled={save.status === 'saving'}
+                    onClick={save.saveNow}
+                  >
+                    Save now
+                  </Button>
+                </>
               )}
               <Tooltip title={readOnly ? 'Close wizard' : 'Save draft and close'}>
                 <IconButton onClick={saveAndExit} aria-label="Close wizard">
@@ -91,7 +103,9 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           sx={{
             flex: 1,
             minHeight: 0,
-            overflowY: 'scroll',
+            overflowY: 'auto',
+            display: step.key === 'annotations' ? 'flex' : 'block',
+            flexDirection: 'column',
             scrollbarGutter: 'stable',
             px: { xs: 3, md: 5 },
             py: { xs: 4, md: 5 },
@@ -102,7 +116,14 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
               You&apos;re viewing another user&apos;s submission - it&apos;s read-only.
             </Alert>
           )}
-          <Body dataset={dataset} reportSave={setSave} reportBlocking={setBlocking} readOnly={readOnly} />
+          <Body
+            dataset={dataset}
+            reportSave={setSave}
+            reportBlocking={setBlocking}
+            readOnly={readOnly}
+            manualAutofillSessions={manualAutofillSessions}
+            onManualAutofillEntry={(key) => setManualAutofillSessions((prev) => new Set(prev).add(key))}
+          />
         </Box>
 
         <Box sx={{ flexShrink: 0, px: { xs: 3, md: 5 }, py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>

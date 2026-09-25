@@ -21,7 +21,6 @@ import { OntologyOption } from '../OntologyOption';
 
 interface ObjectOntology {
   type: string;
-  covers: string;
   ontology: string;
   pattern: string;
   prefix: string;
@@ -34,17 +33,15 @@ interface ObjectOntology {
 const OBJECT_ONTOLOGIES: ObjectOntology[] = [
   {
     type: 'GO',
-    covers: 'Cellular components',
     ontology: 'go',
     pattern: '^GO:[0-9]{7}$',
     prefix: 'GO',
     childrenOf: GO_CELLULAR_COMPONENT_IRI,
   },
-  { type: 'UBERON', covers: 'Anatomy', ontology: 'uberon', pattern: '^UBERON:[0-9]{7}$', prefix: 'UBERON' },
-  { type: 'CHEBI', covers: 'Chemical entities', ontology: 'chebi', pattern: '^CHEBI:[0-9]+$', prefix: 'CHEBI' },
+  { type: 'UBERON', ontology: 'uberon', pattern: '^UBERON:[0-9]{7}$', prefix: 'UBERON' },
+  { type: 'CHEBI', ontology: 'chebi', pattern: '^CHEBI:[0-9]+$', prefix: 'CHEBI' },
   {
     type: 'UniProtKB',
-    covers: 'Proteins',
     ontology: '',
     pattern: '^UniProtKB:(?:[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9](?:[A-Z][A-Z0-9]{2}[0-9]){1,2})$',
     prefix: 'UniProtKB',
@@ -53,7 +50,6 @@ const OBJECT_ONTOLOGIES: ObjectOntology[] = [
   },
   {
     type: 'CDPO',
-    covers: 'Portal-defined objects',
     ontology: '',
     pattern: '^CDPO:[0-9]{7}$',
     prefix: 'CDPO',
@@ -62,7 +58,6 @@ const OBJECT_ONTOLOGIES: ObjectOntology[] = [
   },
   {
     type: 'EMDB',
-    covers: 'EM density maps',
     ontology: '',
     pattern: '^EMD-[0-9]{4,5}$',
     prefix: 'EMD',
@@ -72,7 +67,6 @@ const OBJECT_ONTOLOGIES: ObjectOntology[] = [
   },
   {
     type: 'PDB',
-    covers: 'PDB structures',
     ontology: '',
     pattern: '^PDB-[0-9a-zA-Z]{4,8}$',
     prefix: 'PDB',
@@ -264,12 +258,7 @@ export function ObjectOntologyField({
       >
         {OBJECT_ONTOLOGIES.map((o) => (
           <MenuItem key={o.type} value={o.type}>
-            <Box>
-              <Typography variant="body2">{o.type}</Typography>
-              <Typography variant="caption" color="text.secondary">
-                {o.covers}
-              </Typography>
-            </Box>
+            {o.type}
           </MenuItem>
         ))}
       </TextField>

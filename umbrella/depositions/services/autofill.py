@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 # Width of the microscope_image_corrector column.
 _IMAGE_CORRECTOR_MAXLEN = 256
 
+TILTSERIES_PIPELINE_VALUES = {"is_aligned": False, "aligned_tiltseries_binning": 1}
+
 # Markers so we can pull the config YAML out of noisy conda/click stdout.
 _YAML_BEGIN = "AUTOFILL_YAML_BEGIN"
 _YAML_END = "AUTOFILL_YAML_END"
@@ -84,9 +86,9 @@ def map_session_to_metadata(session: dict | None) -> dict:
             "spherical_aberration_constant": acq.get("spherical_aberration_constant"),
             "total_flux": session.get("total_dose"),
             "tilt_axis": session.get("tilt_axis_angle"),
-            "binning_from_frames": acq.get("binned_voxel_ratio"),
         }
     )
+    tiltseries.update(TILTSERIES_PIPELINE_VALUES)
     aretomo_version = acq.get("aretomo_version")
     shared = _compact(
         {

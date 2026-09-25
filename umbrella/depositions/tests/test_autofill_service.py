@@ -70,7 +70,8 @@ class TestMapSessionToMetadata:
             "acceleration_voltage": 300.0,
             "spherical_aberration_constant": 2.7,
             "total_flux": 120.0,
-            "binning_from_frames": 8,
+            "is_aligned": False,
+            "aligned_tiltseries_binning": 1,
         }
         # Two flavors (denoised + filtered) mirroring deposition_prep._tomograms.
         # voxel_spacing = round(pixel_spacing * binned_voxel_ratio, 3) — mirrors deposition_prep.
@@ -105,7 +106,7 @@ class TestMapSessionToMetadata:
 
     def test_empty_or_none_session_is_safe(self):
         for out in (map_session_to_metadata(None), map_session_to_metadata({})):
-            assert out["tiltseries"] == {}
+            assert out["tiltseries"] == {"is_aligned": False, "aligned_tiltseries_binning": 1}
             assert [t["flavor"] for t in out["tomograms"]] == ["denoised", "filtered"]
 
 
