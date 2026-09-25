@@ -24,6 +24,7 @@ from .models import (
     TomogramMetadata,
 )
 from .permissions import deposition_owner_id
+from .services.autofill import TILTSERIES_PIPELINE_VALUES
 
 
 def validate_authors_json(value):
@@ -193,7 +194,7 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
         instance.save()
 
         if ts is not None:
-            TiltseriesMetadata.objects.update_or_create(session=instance, defaults=ts)
+            TiltseriesMetadata.objects.update_or_create(session=instance, defaults={**ts, **TILTSERIES_PIPELINE_VALUES})
         if tomo is not None:
             self._sync_tomograms(instance, tomo)
         if annotations is not None:

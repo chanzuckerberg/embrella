@@ -54,7 +54,14 @@ function sessionIssues(s: SessionMeta): number {
   return countIssues(TILTSERIES_FIELDS, s.tiltseries as never) + countTomogramIssues(s.tomograms);
 }
 
-export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: readOnlyProp }: StepProps) {
+export function AutofillStep({
+  dataset,
+  reportSave,
+  reportBlocking,
+  readOnly: readOnlyProp,
+  manualAutofillSessions,
+  onManualAutofillEntry,
+}: StepProps) {
   const queryClient = useQueryClient();
   const readOnly = readOnlyProp || dataset.status !== 'draft';
   const [sessions, setSessions] = useState<SessionMeta[]>(() => toSessionMeta(dataset));
@@ -162,6 +169,8 @@ export function AutofillStep({ dataset, reportSave, reportBlocking, readOnly: re
         autoFillError={autofill.variables === active.id ? autoFillErr : null}
         onAutoFill={() => active.id && autofill.mutate(active.id)}
         onFieldChange={(tab, fieldKey, value) => setField(active.key, tab, fieldKey, value)}
+        manualEntered={manualAutofillSessions?.has(active.key) ?? false}
+        onManualEntry={() => onManualAutofillEntry?.(active.key)}
       />
 
       {totalIssues > 0 && (

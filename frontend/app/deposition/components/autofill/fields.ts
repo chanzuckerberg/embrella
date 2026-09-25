@@ -32,13 +32,7 @@ export const TILTSERIES_FIELDS: FieldDef[] = [
     required: true,
     autofillPath: 'acquisition.acceleration_voltage_kv',
   },
-  {
-    key: 'binning_from_frames',
-    label: 'binning_from_frames',
-    section: 'Acquisition',
-    type: 'number',
-    autofillPath: 'acquisition.binned_voxel_ratio',
-  },
+  { key: 'binning_from_frames', label: 'binning_from_frames', section: 'Acquisition', type: 'number' },
   { key: 'data_acquisition_software', label: 'data_acquisition_software', section: 'Acquisition', type: 'text' },
   {
     key: 'pixel_spacing',
@@ -69,15 +63,6 @@ export const TILTSERIES_FIELDS: FieldDef[] = [
     readOnly: true,
     autofillPath: 'total_dose',
   },
-  { key: 'is_aligned', label: 'is_aligned', section: 'Acquisition', type: 'boolean', default: false },
-  {
-    key: 'aligned_tiltseries_binning',
-    label: 'aligned_tiltseries_binning',
-    section: 'Acquisition',
-    type: 'number',
-    default: 1,
-  },
-
   { key: 'microscope_manufacturer', label: 'microscope_manufacturer', section: 'Instrument', type: 'text' },
   { key: 'microscope_model', label: 'microscope_model', section: 'Instrument', type: 'text' },
   { key: 'camera_manufacturer', label: 'camera_manufacturer', section: 'Instrument', type: 'text' },
