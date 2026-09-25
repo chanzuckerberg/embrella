@@ -232,8 +232,8 @@ export function SessionMetadataCard({
         }}
       >
         <Typography variant="body1" color="text.secondary">
-          Auto-fill updates the fields it can populate, replacing any edits to those fields here or in the YAML.
-          Binning from frames is entered manually and will be kept. Review that value after auto-fill.
+          Auto-fill updates the fields it can populate, replacing any edits to those fields here or in the YAML. Binning
+          from frames is entered manually and will be kept. Review that value after auto-fill.
         </Typography>
       </BaseFormDialog>
 

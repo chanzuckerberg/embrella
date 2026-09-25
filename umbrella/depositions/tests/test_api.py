@@ -475,7 +475,9 @@ class TestAutoFill:
             c1,
             c2,
             c3,
-            mock.patch("depositions.views.run_autofill_init", return_value={"filled": True, "session": raw, "reason": None}),
+            mock.patch(
+                "depositions.views.run_autofill_init", return_value={"filled": True, "session": raw, "reason": None}
+            ),
         ):
             return auth_client.post(self._url(session))
 

@@ -298,10 +298,21 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 320px) minmax(0, 1fr)' },
           gap: 3,
-          alignItems: 'start',
+          alignItems: 'stretch',
+          flex: { md: 1 },
+          minHeight: { md: 240 },
         }}
       >
-        <Box sx={{ borderRight: { md: '1px solid' }, borderColor: { md: 'divider' }, pr: { md: 2 } }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            borderRight: { md: '1px solid' },
+            borderColor: { md: 'divider' },
+            pr: { md: 2 },
+          }}
+        >
           {scanAlerts}
           <AnnotationList
             annotations={list}
@@ -315,7 +326,7 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
           />
         </Box>
 
-        <Box sx={{ position: { md: 'sticky' }, top: 0, alignSelf: 'start' }}>
+        <Box sx={{ minHeight: 0, overflowY: { md: 'auto' } }}>
           {activeAnn && (
             <>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
@@ -339,7 +350,15 @@ export function AnnotationsStep({ dataset, reportSave, readOnly: readOnlyProp }:
   }
 
   return (
-    <Box>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        '& > :not(:last-child)': { flexShrink: 0 },
+      }}
+    >
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Select annotations to deposit, then fill in metadata for each.
       </Typography>

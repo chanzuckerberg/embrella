@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Icon } from '@czi-sds/components';
+import { Button, Icon } from '@czi-sds/components';
 import { Alert, Box, Container, IconButton, Paper, Tooltip, Typography } from '@mui/material';
 
 import type { Dataset } from '../types';
@@ -76,7 +76,18 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {!readOnly && save && (
-                <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onRetry={save.saveNow} />
+                <>
+                  <SaveIndicator status={save.status} lastSavedAt={save.lastSavedAt} onRetry={save.saveNow} />
+                  <Button
+                    sdsType="secondary"
+                    sdsStyle="outline"
+                    size="small"
+                    disabled={save.status === 'saving'}
+                    onClick={save.saveNow}
+                  >
+                    Save now
+                  </Button>
+                </>
               )}
               <Tooltip title={readOnly ? 'Close wizard' : 'Save draft and close'}>
                 <IconButton onClick={saveAndExit} aria-label="Close wizard">
@@ -92,7 +103,9 @@ export function WizardLayout({ dataset }: { dataset: Dataset }) {
           sx={{
             flex: 1,
             minHeight: 0,
-            overflowY: 'scroll',
+            overflowY: 'auto',
+            display: step.key === 'annotations' ? 'flex' : 'block',
+            flexDirection: 'column',
             scrollbarGutter: 'stable',
             px: { xs: 3, md: 5 },
             py: { xs: 4, md: 5 },

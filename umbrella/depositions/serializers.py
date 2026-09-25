@@ -194,9 +194,7 @@ class DepositionSessionSerializer(serializers.ModelSerializer):
         instance.save()
 
         if ts is not None:
-            TiltseriesMetadata.objects.update_or_create(
-                session=instance, defaults={**ts, **TILTSERIES_PIPELINE_VALUES}
-            )
+            TiltseriesMetadata.objects.update_or_create(session=instance, defaults={**ts, **TILTSERIES_PIPELINE_VALUES})
         if tomo is not None:
             self._sync_tomograms(instance, tomo)
         if annotations is not None:
