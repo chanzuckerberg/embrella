@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import type { ComponentProps } from 'react';
+import { type ComponentProps, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
@@ -147,4 +147,85 @@ it('prefixInValue=false: clearing the input stores empty, not a lone prefix', ()
   });
   fireEvent.change(screen.getByLabelText(/Object ID/), { target: { value: '' } });
   expect(onChange).toHaveBeenCalledWith({ id: '' });
+});
+
+it('backfills an empty name from an exact ID lookup', async () => {
+  mockValidate.mockResolvedValue({ id: 'CL:0000540', label: 'neuron', synonyms: [] });
+  const onChange = jest.fn();
+  renderInput({ ...CL, id: 'CL:0000540', onChange });
+  await waitFor(() => expect(onChange).toHaveBeenCalledWith({ name: 'neuron' }));
+});
+
+it('does not replace an existing name just by loading the field', async () => {
+  mockValidate.mockResolvedValue({ id: 'CL:0000540', label: 'neuron', synonyms: [] });
+  const onChange = jest.fn();
+  renderInput({ ...CL, id: 'CL:0000540', name: 'Saved label', onChange });
+  await screen.findByText('neuron');
+  expect(onChange).not.toHaveBeenCalled();
+});
+
+it('does not write lookup results into read-only metadata', async () => {
+  mockValidate.mockResolvedValue({ id: 'CL:0000540', label: 'neuron', synonyms: [] });
+  const onChange = jest.fn();
+  renderInput({ ...CL, id: 'CL:0000540', disabled: true, onChange });
+  await screen.findByText('neuron');
+  expect(onChange).not.toHaveBeenCalled();
+});
+
+it('fills an existing name when a different ID is entered', async () => {
+  mockValidate.mockImplementation(async (id: string) =>
+    id === 'CL:0000540' ? { id, label: 'neuron', synonyms: [] } : null
+  );
+  function Controlled() {
+    const [pair, setPair] = useState({ name: 'Previous name', id: '' });
+    return (
+      <OntologyIdInput
+        {...CL}
+        lookup="https://example.org"
+        {...pair}
+        onChange={(patch) => setPair((previous) => ({ ...previous, ...patch }))}
+      />
+    );
+  }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <Controlled />
+    </QueryClientProvider>
+  );
+  fireEvent.change(screen.getByLabelText(/Cell type ID/), { target: { value: 'CL:0000540' } });
+  await waitFor(() => expect(screen.getByLabelText(/Cell type name/)).toHaveValue('neuron'));
+});
+
+it('does not apply a late result after the user starts a new name search', async () => {
+  let finish!: (term: { id: string; label: string; synonyms: string[] }) => void;
+  mockValidate.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      })
+  );
+  function Controlled() {
+    const [pair, setPair] = useState({ name: '', id: 'CL:0000540' });
+    return (
+      <OntologyIdInput
+        {...CL}
+        lookup="https://example.org"
+        {...pair}
+        onChange={(patch) => setPair((previous) => ({ ...previous, ...patch }))}
+      />
+    );
+  }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <Controlled />
+    </QueryClientProvider>
+  );
+  await waitFor(() => expect(mockValidate).toHaveBeenCalled());
+  fireEvent.change(screen.getByLabelText(/Cell type name/), { target: { value: 'New search' } });
+  finish({ id: 'CL:0000540', label: 'neuron', synonyms: [] });
+  await waitFor(() => expect(client.isFetching()).toBe(0));
+  expect(screen.getByLabelText(/Cell type name/)).toHaveValue('New search');
+  expect(screen.getByLabelText(/Cell type ID/)).toHaveValue('CL:0000540');
 });

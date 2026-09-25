@@ -916,3 +916,65 @@ class TestSelectedCopickRunsShape:
             format="json",
         )
         assert r.status_code == 400
+
+
+@pytest.mark.django_db
+class TestPreparationSources:
+    def test_offers_selected_grid_notes_without_writing_dataset(self, auth_client, owned_session):
+        from cryo_grids.models import CryoGrid, PlungeFreezingDevice, PlungeFreezingSession, Sample, Site, Specimen
+
+        sample = Sample.objects.create(name="Source cells", organism_name="Human", organism_taxid=9606)
+        specimen = Specimen.objects.create(notes="Cultured and washed")
+        specimen.samples.add(sample)
+        device = PlungeFreezingDevice.objects.create(name="Freezer", site=Site.objects.create(name="Test site"))
+        freezing = PlungeFreezingSession.objects.create(device=device, device_temperature=4, humidity=90)
+        grid = CryoGrid.objects.create(
+            name="grid1", specimen=specimen, notes="Glow discharged", blot_time=3, freezing_session=freezing
+        )
+        msi = owned_session.msi_session
+        msi.grid = grid
+        msi.save(update_fields=["grid"])
+        response = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
+        assert response.status_code == 200
+        sources = response.json()["preparation_sources"]
+        assert len(sources) == 1
+        assert sources[0]["sample_preparation"] == "Cultured and washed"
+        assert "Glow discharged" in sources[0]["grid_preparation"]
+        assert "3 s" in sources[0]["grid_preparation"]
+        assert "Freezer" in sources[0]["grid_preparation"]
+        assert "4 °C; humidity 90%" in sources[0]["grid_preparation"]
+        assert sources[0]["sample"]["organism_taxid"] == 9606
+        owned_session.dataset.refresh_from_db()
+        assert owned_session.dataset.sample_preparation == ""
+        assert owned_session.dataset.sample_id is None
+
+    def test_default_grid_omits_placeholder_freezing_values(self, auth_client, owned_session):
+        """A 'default grid' placeholder must not offer its default freezing/blot values as 'recorded'."""
+        from cryo_grids.models import CryoGrid, PlungeFreezingDevice, PlungeFreezingSession, Sample, Site, Specimen
+
+        specimen = Specimen.objects.create()
+        specimen.samples.add(Sample.objects.create(name="unknown"))
+        device = PlungeFreezingDevice.objects.create(name="GP2", site=Site.objects.create(name="Default site"))
+        freezing = PlungeFreezingSession.objects.create(device=device, device_temperature=4, humidity=95)
+        grid = CryoGrid.objects.create(
+            name="default grid",
+            specimen=specimen,
+            notes="This is a default grid when no corresponding grid information available in the database.",
+            blot_time=6,
+            freezing_session=freezing,
+        )
+        msi = owned_session.msi_session
+        msi.grid = grid
+        msi.save(update_fields=["grid"])
+
+        response = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
+        assert response.status_code == 200
+        grid_prep = response.json()["preparation_sources"][0]["grid_preparation"]
+        assert "default grid" in grid_prep.lower()  # the disclaimer note is kept
+        assert "Recorded freezing settings" not in grid_prep  # placeholder values not offered as recorded
+        assert "Recorded blot time" not in grid_prep
+
+    def test_no_grid_has_no_sources(self, auth_client, owned_session):
+        response = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
+        assert response.status_code == 200
+        assert response.json()["preparation_sources"] == []

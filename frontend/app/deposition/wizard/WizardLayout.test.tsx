@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { WizardLayout } from './WizardLayout';
 import type { Dataset } from '../types';
@@ -42,6 +42,28 @@ describe('WizardLayout', () => {
     renderWizard();
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     expect(await screen.findByRole('heading', { name: 'Deposition' })).toBeInTheDocument();
+  });
+
+  it.each([true, false])('shows Saving… until the next-step save resolves with %s', async (success) => {
+    let finish!: (value: boolean) => void;
+    mockSaveNow.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    renderWizard();
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
+    expect(screen.getByRole('heading', { name: 'Sources' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Saving…' }));
+    expect(mockSaveNow).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      finish(success);
+    });
+    expect(screen.queryByRole('button', { name: 'Saving…' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: success ? 'Deposition' : 'Sources' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
   });
 
   it('stays on the current step when saving before Next fails', async () => {

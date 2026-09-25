@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import {
   Autocomplete,
   Box,
@@ -117,6 +117,12 @@ export function ObjectOntologyField({
     if (!id.trim()) return null;
     return idResolved && resolved ? resolved : { id, label: id, synonyms: [] };
   }, [id, idResolved, resolved]);
+
+  useEffect(() => {
+    if (disabled || !idResolved || !resolved) return;
+    if (name.trim() !== '') return;
+    onChange({ object_name: resolved.label });
+  }, [disabled, idResolved, resolved, name, onChange]);
 
   const selectType = (type: string) => {
     setPicked(OBJECT_ONTOLOGIES.find((o) => o.type === type) ?? null);
@@ -269,7 +275,15 @@ export function ObjectOntologyField({
         size="small"
         sx={{ flex: 1, minWidth: 0 }}
         value={name}
-        onChange={(e) => onChange({ object_name: e.target.value })}
+        onChange={(e) => {
+          if (e.target.value.trim() === '') {
+            lockOntology();
+            setQuery('');
+            onChange({ object_name: '', object_id: '' });
+          } else {
+            onChange({ object_name: e.target.value });
+          }
+        }}
         disabled={disabled}
         error={!disabled && nameEmpty}
         helperText={nameHelper}

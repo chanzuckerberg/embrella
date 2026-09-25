@@ -14,6 +14,7 @@ export interface BioRow {
   idPlaceholder?: string;
   /** Restrict OLS suggestions */
   childrenOf?: string;
+  description: string;
 }
 
 export const BIO_ROWS: BioRow[] = [
@@ -26,6 +27,7 @@ export const BIO_ROWS: BioRow[] = [
     nameKey: 'tissue_name',
     idKey: 'tissue_id',
     lookup: 'https://www.ebi.ac.uk/ols4/ontologies/uberon',
+    description: 'The tissue or anatomical structure the sample came from',
   },
   {
     key: 'cell_type',
@@ -36,6 +38,7 @@ export const BIO_ROWS: BioRow[] = [
     nameKey: 'cell_name',
     idKey: 'cell_type_id',
     lookup: 'https://www.ebi.ac.uk/ols4/ontologies/cl',
+    description: 'The kind of cell imaged (e.g. neuron, T cell)',
   },
   {
     // Not in OLS - manual id entry (format-validated) + Cellosaurus lookup.
@@ -49,6 +52,7 @@ export const BIO_ROWS: BioRow[] = [
     nameKey: 'cell_strain_name',
     idKey: 'cell_strain_id',
     lookup: 'https://www.cellosaurus.org',
+    description: 'A specific cell line or strain (e.g. HeLa)',
   },
   {
     key: 'cell_component',
@@ -60,6 +64,7 @@ export const BIO_ROWS: BioRow[] = [
     idKey: 'ontology',
     lookup: 'https://www.ebi.ac.uk/ols4/ontologies/go',
     childrenOf: GO_CELLULAR_COMPONENT_IRI,
+    description: 'The subcellular structure or organelle imaged',
   },
   {
     key: 'development_stage',
@@ -71,6 +76,7 @@ export const BIO_ROWS: BioRow[] = [
     nameKey: 'development_stage_name',
     idKey: 'development_stage_ontology_id',
     lookup: 'https://www.ebi.ac.uk/ols4/ontologies/uberon',
+    description: 'The developmental stage of the organism',
   },
   {
     key: 'disease',
@@ -81,5 +87,6 @@ export const BIO_ROWS: BioRow[] = [
     nameKey: 'disease_name',
     idKey: 'disease_ontology_id',
     lookup: 'https://www.ebi.ac.uk/ols4/ontologies/mondo',
+    description: 'Any disease or condition associated with the sample',
   },
 ];
