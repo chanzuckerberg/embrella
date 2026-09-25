@@ -227,5 +227,5 @@ it('does not apply a late result after the user starts a new name search', async
   finish({ id: 'CL:0000540', label: 'neuron', synonyms: [] });
   await waitFor(() => expect(client.isFetching()).toBe(0));
   expect(screen.getByLabelText(/Cell type name/)).toHaveValue('New search');
-  expect(screen.getByLabelText(/Cell type ID/)).toHaveValue('');
+  expect(screen.getByLabelText(/Cell type ID/)).toHaveValue('CL:0000540');
 });

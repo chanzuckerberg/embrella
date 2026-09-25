@@ -130,7 +130,8 @@ export function OntologyIdInput({
           onInputChange={(_, v, reason) => {
             if (reason === 'reset') return;
             pendingId.current = null;
-            onChange({ name: v, id: '' });
+            if (reason === 'clear' || v.trim() === '') onChange({ name: '', id: '' });
+            else onChange({ name: v });
           }}
           onChange={(_, val) => {
             if (val && typeof val !== 'string') onChange({ name: val.label, id: val.id });

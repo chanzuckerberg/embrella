@@ -35,7 +35,7 @@ export function Organism({
   readOnly: boolean;
   innerRef: (el: HTMLDivElement | null) => void;
 }) {
-  const pendingTaxid = useRef<number | null>(null);
+  const autofilledName = useRef<string | null>(null);
   const debouncedQuery = useDebounced(organismName, 400);
 
   const MIN_CHARS = 3;
@@ -51,10 +51,10 @@ export function Organism({
 
   useEffect(() => {
     if (readOnly || !taxidResolved || !resolved) return;
-    if (pendingTaxid.current !== organismTaxid && organismName.trim() !== '') return;
-    pendingTaxid.current = null;
+    if (organismName.trim() !== '' && organismName !== autofilledName.current) return;
+    autofilledName.current = resolved.label;
     if (organismName !== resolved.label) onChangeOrganismName(resolved.label);
-  }, [readOnly, taxidResolved, resolved, organismTaxid, organismName, onChangeOrganismName]);
+  }, [readOnly, taxidResolved, resolved, organismName, onChangeOrganismName]);
 
   let taxidHelper: ReactNode = ' ';
   if (taxidSet) {
@@ -90,12 +90,13 @@ export function Organism({
           inputValue={organismName}
           onInputChange={(_, v, reason) => {
             if (reason === 'reset') return;
-            pendingTaxid.current = null;
-            onChangeOrganismTaxid(null);
+            if (reason === 'input') autofilledName.current = null;
+            if (reason === 'clear' || v.trim() === '') onChangeOrganismTaxid(null);
             onChangeOrganismName(v);
           }}
           onChange={(_, val) => {
             if (val && typeof val !== 'string') {
+              autofilledName.current = val.label;
               onChangeOrganismName(val.label);
               const taxid = taxidFromOboId(val.id);
               if (taxid != null) onChangeOrganismTaxid(taxid);
@@ -116,11 +117,9 @@ export function Organism({
           required={taxidRequired}
           value={organismTaxid ?? ''}
           onChange={(e) => {
-            const raw = e.target.value.trim();
+            const raw = e.target.value.trim().replace(/^NCBITaxon:/i, '');
             if (raw !== '' && !/^\d+$/.test(raw)) return;
-            const taxid = raw === '' ? null : Number(raw);
-            pendingTaxid.current = taxid;
-            onChangeOrganismTaxid(taxid);
+            onChangeOrganismTaxid(raw === '' ? null : Number(raw));
           }}
           size="small"
           sx={{ flex: 1 }}
