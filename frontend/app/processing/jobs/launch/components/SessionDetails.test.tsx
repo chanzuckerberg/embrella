@@ -14,7 +14,6 @@ const SESSION = {
   mdocs: { directory: '/hpc/instruments/czii.krios2.k3/p52sep01a/', pattern: '*.mrc.mdoc' },
   parents: { directory: null, pattern: null },
   atlas: { directory: null, pattern: null },
-  legacy_url: '/legacy/tem/7/',
 };
 
 beforeEach(() => {

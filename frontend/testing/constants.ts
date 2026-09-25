@@ -45,7 +45,6 @@ export const GRID_A: GridData = {
     {
       id: 0,
       name: 'bar baz',
-      url: 'foobarfoofoo',
     },
   ],
   labels: [],
@@ -89,7 +88,6 @@ export const GRID_B: GridData = {
     {
       id: 1,
       name: 'foo baz baz bazfoobaz',
-      url: 'foofoofoobazfoobarbar',
     },
   ],
   labels: [],

@@ -3,7 +3,6 @@ import json
 from cryo_grids.serializers import ProjectSerializer
 from django.core.serializers import serialize
 from django.http import JsonResponse
-from django.shortcuts import render
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -12,14 +11,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Project
-
-
-def index(request):
-    project_list = Project.objects.all()
-    context = {
-        "projects": project_list,
-    }
-    return render(request, "projects/index.html", context)
 
 
 @extend_schema(

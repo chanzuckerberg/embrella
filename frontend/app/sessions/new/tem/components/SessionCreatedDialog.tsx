@@ -33,9 +33,6 @@ export function SessionCreatedDialog({ open, session, onCreateAnother, onDone }:
         <Button sdsType="secondary" sdsStyle="outline" onClick={onCreateAnother}>
           Create Another
         </Button>
-        <Button sdsType="secondary" sdsStyle="outline" onClick={() => window.open(session.legacy_url, '_blank')}>
-          View Details
-        </Button>
         <Button sdsType="primary" sdsStyle="solid" onClick={onDone}>
           Done
         </Button>

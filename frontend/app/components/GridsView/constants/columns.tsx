@@ -1,5 +1,4 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { Link } from '@czi-sds/components';
 
 import { EntityDataTypes } from '@app/common/types/tableState';
 import { formatDate, humanize } from '@app/common/utils/format';
@@ -71,18 +70,14 @@ export const GRID_COLUMN_DEFS: ColumnDef<EntityDataTypes, AccessorReturnType>[] 
   },
   {
     id: GRID_COLUMN_IDS.MSI_SESSION,
-    accessorFn: (rowData: EntityDataTypes): LinkCellProps[] =>
-      getLinkPropsFromLinkFieldList((rowData as GridData).msiSession),
+    accessorFn: (rowData: EntityDataTypes): string =>
+      ((rowData as GridData).msiSession ?? []).map((session) => session.name).join(', '),
     cell: ({ row }) => {
       const sessions = (row.original as GridData).msiSession ?? [];
       return (
         <div style={{ maxHeight: '5.6em', overflowY: 'auto', width: '100%' }}>
           {sessions.map((session) => (
-            <div key={session.id}>
-              <Link href={session.url} sdsStyle="default" target="_blank">
-                {session.name}
-              </Link>
-            </div>
+            <div key={session.id}>{session.name}</div>
           ))}
         </div>
       );

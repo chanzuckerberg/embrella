@@ -132,9 +132,8 @@ class PipelineExecutor:
 
             # Upload and submit script
             output, error = submitter.run_script(
-                template_path=None,  # We already have rendered content
-                job_name=context.job_name,  # Use job_name from RunContext
-                script_content=script_content,  # Pass pre-rendered content
+                script_content=script_content,
+                job_name=context.job_name,
             )
 
             # Log stderr if present
@@ -176,7 +175,7 @@ class PipelineExecutor:
             user,
             job_id,
             parameters_with_metadata,
-            submitter.last_script_path if hasattr(submitter, "last_script_path") else None,
+            submitter.last_script_path,
             context.job_name,  # Pass the full job name from context
             script_content,  # Pass the rendered script content for storage
         )
@@ -199,7 +198,7 @@ class PipelineExecutor:
 
         return {
             "job_id": job_id,
-            "script_path": submitter.last_script_path if hasattr(submitter, "last_script_path") else None,
+            "script_path": submitter.last_script_path,
             "status": "submitted",
             "pipe_execution_id": pipe_exec.id,
         }

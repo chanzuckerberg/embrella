@@ -5,62 +5,12 @@ from . import views
 app_name = "workflow"
 
 urlpatterns = [
-    # ============================================================================
-    # LEGACY ENDPOINTS (see workflow/legacy/)
-    # These use old patterns: Django templates and agent-based job submission
-    # For modern API-only patterns, see "MODERN API ENDPOINTS" section below
-    # ============================================================================
-    # Legacy template-based pages (server-side rendering)
-    path("", views.custom_workflow_page, name="custom_workflow"),
-    # TODO(legacy-removal): `cancel`/`track` pages superseded by the Next.js jobs
-    # UI; remove with their views in workflow/legacy/views/template_views.py.
-    path("cancel", views.custom_workflow_cancel, name="cancle workflow jobs"),
-    path("track", views.custom_workflow_track, name="track workflow jobs"),
-    path("logs", views.custom_workflow_logs, name="job logs"),
-    # Legacy dashboard (template + API hybrid)
-    path("dashboard/", views.dashboard, name="dashboard"),
-    path("data/", views.workflow_get_data, name="dashboard_data"),
-    # Legacy job submission (old agent-based pattern)
+    # Pre-v1 paths the Next.js app still calls (see workflow/views/session_views.py, job_views.py)
     path("get_aretomo3", views.get_aretomo3_json, name="json_aretomo3"),
-    # LEGACY TEMPLATE-BASED LAUNCH PAGES - FULLY DEPRECATED AND COMMENTED OUT
-    # These Django template views have been replaced by the new React-based interface at /processing/pipelines
-    # Commented out but kept for reference. Can be removed in a future cleanup.
-    # path("run", views.custom_run_workflow_page, name='custom_run_workflow_page'),  # AreTomo3
-    # path("denoiset_run", views.cutom_run_denoise_workflow_page, name="custom_denoise_workflow"),
-    # path("copick_run", views.cutom_run_create_and_import_copick_page, name="custom_copick_workflow"),
-    # path("membraneseg_run", views.custom_run_membraneseg_page, name="custom_membraneseg_workflow"),
-    # path("octopi_run", views.custom_run_octopi_page, name="custom_octopi_workflow"),
-    # LEGACY JOB SUBMISSION ENDPOINTS - DEPRECATED
-    # These endpoints were used by the old template-based forms.
-    # New job submissions use /workflow/v1/execution/execute/ via /processing/pipelines
-    # path("run_aretomo3", views.run_aretomo3, name='run_aretomo3'),
-    # path("run_advanced_aretomo3", views.run_aretomo3_advanced, name='run_advanced_aretomo3'),
-    # path("run_denoiset", views.run_denoiset, name='run denoiset'),
-    # path("run-create-copick/", views.run_create_copick, name="run_create_copick"),
-    # path("run-import-tomogram-copick/", views.run_import_tomogram_copick, name="run_import_tomogram_copick"),
-    # path("run-copick-add-object/", views.run_copick_add_object, name="run_add_object_copick"),
-    # Legacy utility endpoints (used by dashboard and legacy pages)
-    # TODO(legacy-removal): the next three back legacy template pages only (not the
-    # Next.js app); remove with cancel_jobs/track_jobs/user_info in
-    # workflow/views/job_views.py. See TODO there. (job_logs below is NOT legacy.)
-    path("cancel_jobs", views.cancel_jobs, name="cancel_jobs"),
-    path("track_jobs", views.track_jobs, name="track_jobs"),
-    path("user_info", views.user_info, name="user_details"),
     path("get_msi_session_list", views.get_msi_session_list, name="get all msi session name"),
-    path("aretomo3_params", views.get_msi_params_list, name="get parameters"),
-    path("denoise_params", views.get_msi_params_list, name="get denoise parameters"),
-    path("octopi_params", views.get_msi_params_list, name="get octopi parameters"),
-    path("job_logs", views.get_job_logs, name="fetching logs"),
-    path("get_plan_id", views.get_plan_id, name="get_plan_id"),
     path("get_msisession_id", views.get_msisession_id, name="get_msisession_id"),
-    path("trigger_syncer/", views.trigger_syncer, name="trigger_syncer"),
-    path("template_maps/", views.get_template_map_json, name="template_maps"),
-    path("status/", views.status_check_api, name="workflow status"),
-    # ============================================================================
-    # MODERN API ENDPOINTS (for Next.js frontend)
-    # These follow API-only patterns and should be used for new development
-    # ============================================================================
-    # Job Management API (modern)
+    path("job_logs", views.get_job_logs, name="fetching logs"),
+    # Job Management API
     path("v1/jobs/", views.get_jobs_list, name="get_jobs_list"),
     path("v1/jobs/filterlist/", views.get_jobs_filterlist, name="get_jobs_filterlist"),
     path("v1/jobs/bulk_cancel/", views.bulk_cancel_jobs, name="bulk_cancel_jobs"),

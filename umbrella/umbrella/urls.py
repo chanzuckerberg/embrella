@@ -16,11 +16,7 @@ Including another URLconf
 """
 
 # Import API views from their respective app-level modules
-from cryo_grids.api.views import (
-    get_available_grids,
-    get_grids_by_cassette,
-    get_grids_by_user,
-)
+from cryo_grids.api.views import get_grids_by_user
 from cryo_grids.viewsets import (
     CaneViewSet,
     CryoGridBoxViewSet,
@@ -37,25 +33,20 @@ from cryo_grids.viewsets import (
     SpecimenViewSet,
     StandardSamplesViewSet,
 )
-from custom.views import version_info
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
-from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from processes.api.views import (
     ReviewTomogramView,
     ReviewView,
     export_review_results,
     get_review_tomograms,
-    get_tomo_by_msi_session,
 )
-from processes.urls import legacy_urlpatterns as processes_legacy_urlpatterns
 from processes.urls import v1_urlpatterns as processes_v1_urlpatterns
 from processes.views import available_annotation_filter
 from rest_framework.routers import DefaultRouter
 from tem.api.views import SessionView
-from tem.urls import legacy_urlpatterns as tem_legacy_urlpatterns
 from tem.urls import v1_urlpatterns as tem_v1_urlpatterns
 
 from umbrella.ping import ping
@@ -132,32 +123,14 @@ api_patterns = [
     # Other API endpoints
     path("user", get_user_info, name="user_info"),
     path("ping/", ping),
-    path("version", version_info, name="version_info"),
     path("get_grids_by_user/", get_grids_by_user, name="get_grids_by_user"),
-    path("get_grids_by_cassette/", get_grids_by_cassette, name="get_grids_by_cassette"),
-    path("get_tomo_by_msi_session/", get_tomo_by_msi_session, name="get_tomo_by_msi_session"),
-    path("available_grids", get_available_grids, name="get_available_grids"),
     path("annotations/v1/filterlist/", available_annotation_filter, name="get filter list for annotations"),
     # External resources (documentation links)
     path("api/external-resources/", include("external_links.urls")),
 ]
 
-# Legacy template-based routes (will be migrated to Next.js)
-# Top-level mount owns the bare namespace; legacy gets `legacy_*` to avoid urls.W005.
-legacy_patterns = [
-    path("umbrella/", include("custom.urls"), name="umbrella"),
-    path("projects/", include(("projects.urls", "projects"), namespace="legacy_projects")),
-    path("tem/", include((tem_legacy_urlpatterns, "tem"))),
-    path("processes/", include((processes_legacy_urlpatterns, "processes"), namespace="legacy_processes")),
-    path("cryo_grids/", include(("cryo_grids.urls", "cryo_grids"), namespace="legacy_cryo_grids")),
-    path("workflow/", include(("workflow.urls", "workflow"), namespace="legacy_workflow")),
-]
-
 urlpatterns = (
     [
-        # Root redirect to legacy umbrella (for direct Django access)
-        # In production, nginx routes root (/) to Next.js frontend
-        path("", RedirectView.as_view(url="/legacy/umbrella/", permanent=False)),
         # Django admin
         path("admin/", admin.site.urls, name="admin"),
         # Authentication (django-allauth: /accounts/login, /accounts/logout,
@@ -165,10 +138,7 @@ urlpatterns = (
         path("accounts/", include("allauth.urls")),
         # Documentation
         re_path(r"^docs/(?P<path>.*)$", documentation_view, name="docs"),
-        # Legacy template-based views (all under /legacy/ prefix)
-        path("legacy/", include(legacy_patterns)),
         # API routes for Next.js frontend (these apps have v1/ API endpoints)
-        # Note: These also include legacy template routes which should eventually move to /legacy/
         path("workflow/", include("workflow.urls"), name="workflow"),
         path("cryo_grids/", include("cryo_grids.urls"), name="cryo_grids"),
         path("depositions/", include("depositions.urls"), name="depositions"),
@@ -188,4 +158,4 @@ urlpatterns += router.urls
 # change header name
 admin.site.site_header = "Embrella"
 admin.site.site_title = "Embrella"
-admin.site.site_url = "/legacy/umbrella"
+admin.site.site_url = "/"

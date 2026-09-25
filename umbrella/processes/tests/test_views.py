@@ -13,9 +13,7 @@ class TestModularStructure(SimpleTestCase):
         from processes import views
 
         # Check that key functions are available at package level
-        self.assertTrue(hasattr(views, "create_run"))
         self.assertTrue(hasattr(views, "get_tomo_details"))
-        self.assertTrue(hasattr(views, "get_session_id"))
         self.assertTrue(hasattr(views, "available_filters"))
         self.assertTrue(hasattr(views, "get_directories"))
 
@@ -32,15 +30,11 @@ class TestModularStructure(SimpleTestCase):
             constants,
             directory_views,
             filter_views,
-            run_views,
-            session_views,
             tomogram_views,
         )
 
         # Just checking they import without error
-        self.assertTrue(hasattr(run_views, "create_run"))
         self.assertTrue(hasattr(tomogram_views, "get_tomo_details"))
-        self.assertTrue(hasattr(session_views, "get_session_id"))
         self.assertTrue(hasattr(filter_views, "available_filters"))
         self.assertTrue(hasattr(annotation_views, "get_annotation_details"))
         self.assertTrue(hasattr(directory_views, "get_directories"))

@@ -21,7 +21,7 @@ export interface GridData {
     createdAt: string;
   };
   screeningSession: string;
-  msiSession: MSISessionField[];
+  msiSession: Pick<MSISessionField, 'id' | 'name'>[];
   labels: { id: number; name: string; color: string }[];
 }
 

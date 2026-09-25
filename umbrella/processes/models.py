@@ -1,4 +1,3 @@
-import sys
 import uuid
 
 from django.contrib.auth.models import User
@@ -19,19 +18,6 @@ class ArrayData(DataRecord):
     is_stack
     sub_array_of
 """
-
-
-def getattr_from_globals(attr_name):
-    # get attributes of this python module
-    all_attrs = globals()
-    my_attr = None
-    for name, value in all_attrs.items():
-        if name == attr_name:
-            my_attr = value
-            break
-    if not my_attr:
-        raise ValueError("%s not an attribute of module %s" % (attr_name, __file__))
-    return my_attr
 
 
 """
@@ -407,75 +393,6 @@ class ProcRun(models.Model):
     def __str__(self):
         return "%s-%s" % (self.proc_plan, self.name)
 
-    def save_pipe_run_data(self):
-        """
-        Creation of ProcRun instance triggers saving of pipe_run_data which are
-        output data of the run.
-
-        Delegates to PipelineDataService for actual implementation.
-        """
-        from processes.services import PipelineDataService
-
-        return PipelineDataService.save_pipe_run_data(self)
-
-    def create_frames_runpipedata(self, msi_session):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.create_frames_runpipedata(self, msi_session)
-
-    def _get_pipe_joints(self, pipe):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.get_pipe_joints(pipe)
-
-    def _get_input_pipe_pks(self, pipe):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.get_input_pipe_pks(self, pipe)
-
-    def create_tomogram_collection(self, input_objects={}):
-        """
-        Save data-portal schema-like record. Return True if the run adds data to these records.
-
-        Delegates to RunCreationService for actual implementation.
-        """
-        from processes.services import RunCreationService
-
-        return RunCreationService.create_tomogram_collection(self, input_objects)
-
-    def _add_other_objects(self, class_name, my_rpdata, input_pipe_pks):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.add_other_objects(self, class_name, my_rpdata, input_pipe_pks)
-
-    def is_recon_ctf_deconvolved(self, pipe):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.is_recon_ctf_deconvolved(self, pipe)
-
-    def _get_tomo_pipe(self, pipe_joints):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.get_tomo_pipe(pipe_joints)
-
-    def _save_instance(self, pdata, input_pipe_pks, input_objects={}):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.save_instance(self, pdata, input_pipe_pks, input_objects)
-
-    def _get_pipe_range(self, all_input_pipe_pks, my_pipe, input_objects):
-        """Delegates to RunCreationService."""
-        from processes.services import RunCreationService
-
-        return RunCreationService.get_pipe_range(self, all_input_pipe_pks, my_pipe, input_objects)
-
 
 class RunPipeData(models.Model):
     """
@@ -842,34 +759,6 @@ class ParticleGallery(models.Model):
 
     def __str__(self):
         return "%s" % (self.pipe_data)
-
-
-def suggest_name(prefix, msi_session, plan, model_name="ProcRun"):
-    """
-    Make unique name by advancing to next integer.
-    """
-    model_instance = getattr(sys.modules[__name__], model_name)
-    if prefix:
-        prefix_search = prefix
-        old_runs = model_instance.objects.filter(
-            Q(name__startswith=prefix_search), proc_plan=plan, msi_session=msi_session
-        )
-        used_names = list(map((lambda x: x.name), old_runs))
-        if not used_names:
-            # first session of the day
-            return prefix_search + "%03d" % 1
-        used_numbers = list(map((lambda x: int(x.split(prefix_search)[-1])), used_names))
-        return "%s%03d" % (prefix, max(used_numbers) + 1)
-    else:
-        raise ValueError("Prefix must not be empty string for run name")
-
-
-def select_plan_ids_by_input_data_types(selected_data_types):
-    selected_kinds = DataKind.objects.filter(data_type__in=selected_data_types)
-    selected_pipes = Pipe.objects.filter(input__in=selected_kinds)
-    pipe_in_plans = PipeInPlan.objects.filter(pipe__in=selected_pipes)
-    plan_ids = list(map((lambda x: x.plan.id), pipe_in_plans))
-    return plan_ids
 
 
 class JobLog(models.Model):

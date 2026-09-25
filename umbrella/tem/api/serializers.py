@@ -105,4 +105,3 @@ class SessionDetailSerializer(serializers.Serializer):
     mdocs = RolePathSerializer()
     parents = RolePathSerializer()
     atlas = RolePathSerializer()
-    legacy_url = serializers.CharField()

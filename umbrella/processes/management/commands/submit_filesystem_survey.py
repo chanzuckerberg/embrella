@@ -228,9 +228,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"Submitting job {job_name}...")
 
                 output, error = submitter.run_script(
-                    template_path=None,
-                    job_name=job_name,
                     script_content=rendered_script,
+                    job_name=job_name,
                 )
 
                 if error:

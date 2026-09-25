@@ -75,7 +75,6 @@ export interface CreatedSession {
   mdocs: RolePath;
   parents: RolePath;
   atlas: RolePath;
-  legacy_url: string;
 }
 
 export interface SessionFormState {

@@ -3,20 +3,18 @@ import logging
 log = logging.getLogger(__name__)
 
 import argparse
-import json
 import logging
 import os
 import time
 import uuid
 from datetime import datetime
 
-from django.http import HttpRequest
 from processes.models import PipeExecution, Review, ReviewTomogram, SyncerLog, SyncerProcess
+from processes.tasks.job_tasks import check_job_status
 from stores.models import FilePattern
 from tem.models import MsiSession
 
 from common import clusterio
-from workflow.views import track_jobs
 
 # How many pattern-rejected basenames a sync warning quotes.
 UNMATCHED_EXAMPLES = 5
@@ -32,10 +30,6 @@ def fix_run_id(run_id):
     while run_id.startswith("run"):
         run_id = run_id[3:]
     return f"run{str(int(run_id)).zfill(3)}"
-
-
-def is_slurm_state_active(state):
-    return state in ["PENDING", "CONFIGURING", "RUNNING", "COMPLETING"]
 
 
 def setup_logging(log_path):
@@ -55,46 +49,6 @@ def setup_logging(log_path):
 
     log.setLevel(logging.INFO)
     log.info(f"Logging to file: {log_path}")
-
-
-def check_job_status(job_id):
-    """Check if the job is still running"""
-    # Create a mock request object
-    request = HttpRequest()
-    request.method = "GET"
-    # Don't specify job_name to get all jobs, then filter by job_id
-    request.GET = {}
-
-    # Get job status
-    response = track_jobs(request)
-    if response.status_code != 200:
-        log.error(f"Failed to get job status: {response.status_code}")
-        return False
-
-    jobs_data = json.loads(response.content)
-    if "jobs" not in jobs_data:
-        log.error("No jobs data in response")
-        return False
-
-    # Check if job exists and its status
-    log.info(f"Checking {len(jobs_data['jobs'])} jobs for job_id: {job_id}")
-    for job in jobs_data["jobs"]:
-        log.debug(f"Checking job: {job['JOBID']} (looking for {job_id})")
-        if job["JOBID"] == job_id:
-            status = job["ST"]
-            is_running = is_slurm_state_active(job["ST"])
-            log.info(f"Job {job_id} status: {status} ({'Running' if is_running else 'Not running'})")
-
-            # Log additional job details
-            log.info(f"Job details - Name: {job['NAME']}, User: {job['USER']}, Time: {job['TIME']}")
-
-            return is_running
-
-    log.warning(f"Job {job_id} not found in job list - it may have completed or failed")
-    # If job is not found, it might have completed successfully
-    # Return False to stop the continuous syncing
-
-    return False
 
 
 def cleanup_transient_syncer_logs(job_id):
@@ -462,7 +416,7 @@ class ProcessSyncer(object):
 
                 # If job_id is provided, check if job is still running
                 if args.job_id:
-                    job_running = check_job_status(self.job_id)
+                    job_running = check_job_status(self.job_id, self.cluster_id)
                     self._log_to_db(
                         "job_check",
                         f"Job {self.job_id} status: {'running' if job_running else 'not running'}",

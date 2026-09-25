@@ -19,155 +19,19 @@ from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
-from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework.decorators import api_view
 from stores.models import Cluster, resolve_review_path
 from tem.models import MsiSession
 from umbrella.contrast_limits import compute_optimal_contrast_limits
 
 from common.sorting import natural_sort_key
 from processes.models import (
-    Annotation,
-    PipeInPlan,
-    PipeJoint,
-    ProcPlan,
     Review,
     ReviewTomogram,
-    Tomograms,
 )
 from processes.services.cluster_resolver import cluster_id_for_run
 from processes.validation import SortMetadataModel
 
 logger = logging.getLogger(__name__)
-
-
-def _get_data_by_msi_session_data_type(plan, session, data_types=[]):
-    """
-    Helper function to get valid pipes for a given plan and session based on data types.
-
-    Args:
-        plan: ProcPlan instance
-        session: MsiSession instance
-        data_types: List of data type strings to filter by
-
-    Returns:
-        List of valid pipes
-    """
-    # Find the first pipe in the plan
-    valid_pipes_in_plan = PipeInPlan.objects.filter(plan=plan, step=1).distinct()
-    if len(valid_pipes_in_plan) > 1:
-        raise ValueError("Plan can only have one first pipe.")
-    # Get the available tomogram for the given session and plan input pipe
-    valid_pipes = []
-    for vpp in valid_pipes_in_plan:
-        my_pipe = vpp.pipe
-        # filter data_types as the right input_pipe
-        input_joints = PipeJoint.objects.filter(
-            pipe_in_plan__pipe=my_pipe, input_pathtype__data_kind__data_type__in=data_types
-        )
-        if not input_joints:
-            continue
-        # there should always be only one
-        valid_pipes.append(input_joints[0].input_pipe_in_plan.pipe)
-    return valid_pipes
-
-
-@extend_schema(
-    methods=["GET"],
-    description="""
-    Returns form selector options for Tomograms and Annotations belonging to an MSI session,
-    that are valid as inputs of the first pipe in the specified processing plan.
-    Returns a 2-element list:
-    1. List of tomograms with `rec`/`deno` data types.
-    2. List of annotation picks (`point` type) with `pick` data type.
-    """,
-    parameters=[
-        OpenApiParameter(name="plan_id", required=True, type=str, description="Processing Plan ID"),
-        OpenApiParameter(name="session_id", required=True, type=str, description="MSI Session ID"),
-    ],
-    responses={
-        200: "List of tomograms and picks",
-        400: "Missing required parameters",
-        404: "Plan or Session not found, or data fetch error",
-    },
-)
-@api_view(["GET"])
-def get_tomo_by_msi_session(request):
-    """
-    Return form selector options as json response of Tomograms
-    that belong to the session and are valid as the input of the first pipe in the plan.
-    """
-    plan_id = request.GET.get("plan_id")
-    session_id = request.GET.get("session_id")
-    run_number = request.GET.get("run_number")
-    if not plan_id:
-        return JsonResponse({"error": "Processing Plan ID not provided."}, status=400)
-    else:
-        # Ensure session_id is valid
-        try:
-            plan = ProcPlan.objects.get(id=plan_id)
-        except MsiSession.DoesNotExist:
-            return JsonResponse({"error": "Processing Plan not found."}, status=404)
-    if not session_id:
-        return JsonResponse({"error": "MsiSession ID not provided."}, status=400)
-    else:
-        # Ensure session_id is valid
-        try:
-            session = MsiSession.objects.get(id=session_id)
-        except MsiSession.DoesNotExist:
-            return JsonResponse({"error": "MsiSession not found."}, status=404)
-    # tomo
-    try:
-        valid_pipes = _get_data_by_msi_session_data_type(plan, session, data_types=["rec", "deno"])
-    except Exception as e:
-        return JsonResponse({"error": e}, status=404)
-
-    input_tomos = []
-    for valid_pipe in valid_pipes:
-        tomo = Tomograms.objects.filter(
-            msi_session=session,
-            pipe_data__pipe=valid_pipe,
-        )
-        if run_number and run_number.strip():  # Check if run_number exists and is not empty
-            tomo = tomo.filter(pipe_data__run__name=run_number)
-        tomo = tomo.distinct()
-        input_tomos.extend(list(tomo))
-    tomo_data = []
-    for tomo in input_tomos:
-        tomo_data.append(
-            {
-                "id": tomo.id,
-                "name": tomo.pipe_data.__str__(),
-            }
-        )
-
-    try:
-        valid_pipes = _get_data_by_msi_session_data_type(plan, session, data_types=["pick"])
-    except Exception as e:
-        return JsonResponse({"error": e}, status=404)
-    if not valid_pipes:
-        return JsonResponse([tomo_data, []], safe=False)
-    input_picks = []
-    for valid_pipe in valid_pipes:
-        pick = Annotation.objects.filter(
-            msi_session=session,
-            pipe_data__pipe=valid_pipe,
-            annotation_type="point",
-        )
-        if run_number and run_number.strip():  # Check if run_number exists and is not empty
-            pick = pick.filter(pipe_data__run__name=run_number)
-        pick = pick.distinct()
-        input_picks.extend(list(pick))
-    pick_data = []
-    for pick in input_picks:
-        pick_data.append(
-            {
-                "id": pick.id,
-                "name": pick.pipe_data.__str__(),
-            }
-        )
-
-    return JsonResponse([tomo_data, pick_data], safe=False)
 
 
 @method_decorator(csrf_exempt, name="dispatch")
