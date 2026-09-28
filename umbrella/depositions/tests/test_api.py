@@ -228,6 +228,31 @@ class TestDatasetFundingSync:
 
 @pytest.mark.django_db
 class TestDatasetSessionGuard:
+    def test_duplicate_sessions_rejected_without_changing_saved_data(self, auth_client, owned_session):
+        from depositions.models import DepositionAnnotation, TiltseriesMetadata
+
+        metadata = TiltseriesMetadata.objects.create(session=owned_session, acceleration_voltage=300)
+        annotation = DepositionAnnotation.objects.create(session=owned_session, copick_kind="picks", copick_ref="run1")
+        response = auth_client.patch(
+            f"{DATASETS}{owned_session.dataset_id}/",
+            {
+                "title": "Must not be saved",
+                "sessions": [
+                    {"msi_session": owned_session.msi_session_id, "aretomo_run_name": "run1"},
+                    {"msi_session": owned_session.msi_session_id, "aretomo_run_name": "run2"},
+                ],
+            },
+            format="json",
+        )
+        assert response.status_code == 400
+        assert "sessions" in response.json()
+        owned_session.refresh_from_db()
+        owned_session.dataset.refresh_from_db()
+        assert owned_session.aretomo_run_name == ""
+        assert owned_session.dataset.title == "DS"
+        assert TiltseriesMetadata.objects.filter(pk=metadata.pk).exists()
+        assert DepositionAnnotation.objects.filter(pk=annotation.pk).exists()
+
     def test_session_without_msi_session_returns_400(self, auth_client):
         """Missing msi_session must be a clean 400, not a 500 KeyError."""
         dep = _make_deposition(auth_client)
