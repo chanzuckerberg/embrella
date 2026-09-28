@@ -285,6 +285,17 @@ class DatasetSerializer(serializers.ModelSerializer):
         # dataset_id reserved; status/dates set by syncer/system.
         read_only_fields = ["dataset_id", "status", "created_at", "updated_at"]
 
+    def validate_sessions(self, sessions):
+        seen = set()
+        for row in sessions:
+            msi_session = row.get("msi_session")
+            if msi_session is None:
+                raise serializers.ValidationError("Each session entry requires msi_session.")
+            if msi_session.pk in seen:
+                raise serializers.ValidationError("Each MSI session can only be selected once.")
+            seen.add(msi_session.pk)
+        return sessions
+
     def get_preparation_sources(self, obj):
         """Offer recorded grid/sample data for explicit reuse; never alter the source records."""
         sources = []
@@ -404,6 +415,7 @@ class DatasetSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"sessions": "Each session entry requires msi_session."})
             obj, _ = DepositionSession.objects.update_or_create(dataset=dataset, msi_session=msi_session, defaults=row)
             seen.add(obj.id)
+        # Omitted sessions are removed on purpose (Remove session), cascading metadata and annotations.
         dataset.sessions.exclude(id__in=seen).delete()
 
 

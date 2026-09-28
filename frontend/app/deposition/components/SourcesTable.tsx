@@ -4,6 +4,8 @@ import { useCallback, useState } from 'react';
 import { Button, Callout, Icon } from '@czi-sds/components';
 import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 
+import { ConfirmDialog } from '@app/common/components/Forms/ConfirmDialog';
+
 import type { TomogramSubsetMode } from '../types';
 import { rollup } from './sources/counts';
 import { DepositionSummary } from './sources/DepositionSummary';
@@ -49,7 +51,16 @@ export function SourcesTable({
   onUploadSubset: (row: SourceRow, file: File) => void;
 }) {
   const updateRow = (key: string, next: SourceRow) => onChange(rows.map((r) => (r.key === key ? next : r)));
-  const removeRow = (key: string) => onChange(rows.filter((r) => r.key !== key));
+  const [pendingRemoval, setPendingRemoval] = useState<SourceRow | null>(null);
+  const removeRow = (row: SourceRow) => {
+    if (row.id != null) setPendingRemoval(row);
+    else onChange(rows.filter((r) => r.key !== row.key));
+  };
+  const [pendingSessionChange, setPendingSessionChange] = useState<SourceRow | null>(null);
+  // pendingSessionChange is the replacement row, the title names the session it replaces.
+  const changingFrom = pendingSessionChange
+    ? rows.find((r) => r.key === pendingSessionChange.key)?.msi_session_name
+    : undefined;
   const addRow = () => onChange([...rows, emptyRow(`new-${rows.length}-${sessionOptions.length}`)]);
 
   const [counts, setCounts] = useState<Record<string, number | undefined>>({});
@@ -83,6 +94,32 @@ export function SourcesTable({
         alignItems: 'start',
       }}
     >
+      <ConfirmDialog
+        open={pendingRemoval !== null}
+        onClose={() => setPendingRemoval(null)}
+        onConfirm={() => {
+          if (pendingRemoval) onChange(rows.filter((r) => r.key !== pendingRemoval.key));
+          setPendingRemoval(null);
+        }}
+        intent="danger"
+        title={
+          pendingRemoval?.msi_session_name ? `Remove session ${pendingRemoval.msi_session_name}?` : 'Remove session?'
+        }
+        heading="This deletes its metadata and annotations."
+        body="This action cannot be undone."
+      />
+      <ConfirmDialog
+        open={pendingSessionChange !== null}
+        onClose={() => setPendingSessionChange(null)}
+        onConfirm={() => {
+          if (pendingSessionChange) updateRow(pendingSessionChange.key, pendingSessionChange);
+          setPendingSessionChange(null);
+        }}
+        intent="warning"
+        title={changingFrom ? `Change session ${changingFrom}?` : 'Change session?'}
+        heading="This deletes its metadata and annotations."
+        body="The current session's metadata and annotations will not carry over to the new one."
+      />
       <Box sx={{ minWidth: 0 }}>
         <Box
           sx={{
@@ -170,11 +207,14 @@ export function SourcesTable({
             key={row.key}
             index={i}
             row={row}
-            sessionOptions={sessionOptions}
+            sessionOptions={sessionOptions.filter(
+              (name) => name === row.msi_session_name || !rows.some((r) => r.msi_session_name === name)
+            )}
             subsetMode={subsetMode}
             readOnly={readOnly}
             onChange={(next) => updateRow(row.key, next)}
-            onRemove={() => removeRow(row.key)}
+            onRemove={() => removeRow(row)}
+            onRequestSessionChange={setPendingSessionChange}
             onUploadSubset={(file) => onUploadSubset(row, file)}
             onCount={reportCount}
             onAnnotated={reportAnnotated}

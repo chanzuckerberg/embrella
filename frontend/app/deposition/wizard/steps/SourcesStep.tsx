@@ -17,6 +17,17 @@ interface SourcesState {
   subsetMode: TomogramSubsetMode;
 }
 
+export function sourceValidationError(rows: SourceRow[]): string | null {
+  if (rows.some((row) => row.id != null && !row.msi_session_name.trim())) {
+    return 'Select an imaging session or use Remove session to delete it. Your changes have not been saved.';
+  }
+  const names = rows.map((row) => row.msi_session_name.trim()).filter(Boolean);
+  if (new Set(names).size !== names.length) {
+    return 'Each imaging session can only be selected once. Your changes have not been saved.';
+  }
+  return null;
+}
+
 function toRows(dataset: Dataset): SourceRow[] {
   return (dataset.sessions ?? []).map((s, i) => ({
     key: `s-${s.id ?? i}`,
@@ -42,6 +53,8 @@ export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: Ste
 
   const save = useCallback(
     async (state: SourcesState) => {
+      const error = sourceValidationError(state.rows);
+      if (error) throw new Error(error);
       const complete = state.rows.filter((r) => r.msi_session_name.trim());
       const payload = await Promise.all(
         complete.map(async (r) => ({
@@ -76,6 +89,7 @@ export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: Ste
     [dataset.id, queryClient]
   );
 
+  const validationError = sourceValidationError(rows);
   const formState = useMemo<SourcesState>(() => ({ rows, subsetMode }), [rows, subsetMode]);
   const { status, lastSavedAt, saveNow } = useDraftAutoSave(formState, save, { enabled: !readOnly });
   useEffect(() => {
@@ -95,6 +109,11 @@ export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: Ste
 
   return (
     <Box>
+      {validationError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {validationError}
+        </Alert>
+      )}
       {sessions.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           Could not load the list of sessions. Try reloading the page.
