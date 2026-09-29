@@ -114,6 +114,31 @@ class DatasetJob(models.Model):
         ("failed", "Failed"),
     ]
 
+    # Submit state machine
+    TRANSITIONS = {
+        "pending": {"prep_submitted"},
+        "prep_submitted": {"prep_running", "prep_completed", "failed"},
+        "prep_running": {"prep_completed", "failed"},
+        "prep_completed": {"push_submitted", "pending", "failed"},
+        "push_submitted": {"push_running", "completed", "failed"},
+        "push_running": {"completed", "failed"},
+        "failed": {"prep_submitted", "pending"},
+        "completed": set(),
+    }
+    # Metadata is frozen while a submission is in flight or staged; edits are
+    # allowed only in pending or failed.
+    LOCKED_STATES = frozenset(TRANSITIONS) - {"pending", "failed"}
+    DATASET_STATUS = {
+        "pending": "syncing",
+        "prep_submitted": "syncing",
+        "prep_running": "syncing",
+        "prep_completed": "syncing",
+        "push_submitted": "syncing",
+        "push_running": "syncing",
+        "completed": "pushed",
+        "failed": "failed",
+    }
+
     dataset = models.OneToOneField(Dataset, on_delete=models.CASCADE, related_name="job")
     prep_slurm_job_id = models.CharField(max_length=32, null=True, blank=True)
     push_slurm_job_id = models.CharField(max_length=32, null=True, blank=True)
@@ -130,6 +155,25 @@ class DatasetJob(models.Model):
 
     def __str__(self):
         return f"DatasetJob {self.pk} ({self.state}) for Dataset {self.dataset_id}"
+
+    @property
+    def is_locked(self):
+        """Metadata is frozen because a submission is in flight or staged."""
+        return self.state in self.LOCKED_STATES
+
+    @property
+    def dataset_status(self):
+        """Coarse Dataset.status this job maps to."""
+        return self.DATASET_STATUS[self.state]
+
+    def can_transition_to(self, new_state):
+        return new_state in self.TRANSITIONS.get(self.state, set())
+
+    def transition_to(self, new_state):
+        """Validate and set the next state; the caller persists."""
+        if not self.can_transition_to(new_state):
+            raise ValueError(f"Invalid DatasetJob transition: {self.state} -> {new_state}")
+        self.state = new_state
 
 
 class DepositionSession(models.Model):
