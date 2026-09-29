@@ -31,7 +31,7 @@ export function GroupHeaderRow({
           </IconButton>
           <Typography sx={{ fontWeight: 700 }}>Deposition {idLabel}</Typography>
           <Typography color="text.secondary" noWrap sx={{ flex: 1 }}>
-            — {deposition.title}
+            - {deposition.title}
           </Typography>
           {deposition.is_owner && (
             <Button

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Icon, Button } from '@czi-sds/components';
 import { Alert, Box, CircularProgress, FormControlLabel, Switch, Tab, Tabs, Typography } from '@mui/material';
 
-import { BaseFormDialog } from '@app/common/components/Forms/BaseFormDialog';
+import { ConfirmDialog } from '@app/common/components/Forms/ConfirmDialog';
 
 import type { TiltseriesMetadata, TomogramFlavor, TomogramMetadata } from '../../types';
 import { TOMOGRAM_FLAVORS } from '../../types';
@@ -157,6 +157,9 @@ export function SessionMetadataCard({
   }, [readOnly, session.lastAutofillAt, savedEdits, manualEntered, onManualEntry]);
   const gateUp = !readOnly && hasRun && !session.lastAutofillAt && !manualEntered && !savedEdits;
   const canAutoFill = !readOnly && hasRun && (Boolean(session.lastAutofillAt) || manualEntered || savedEdits);
+  let gateActionLabel = 'Auto-fill';
+  if (autoFilling) gateActionLabel = 'Auto-filling...';
+  else if (autoFillError) gateActionLabel = 'Try again';
 
   const tsIssues = countIssues(TILTSERIES_FIELDS, session.tiltseries as never);
   const tomoIssues = countTomogramIssues(session.tomograms);
@@ -221,21 +224,20 @@ export function SessionMetadataCard({
         )}
       </Box>
 
-      <BaseFormDialog
+      <ConfirmDialog
         open={confirmReRun}
         onClose={() => setConfirmReRun(false)}
-        title={session.lastAutofillAt ? 'Re-run auto-fill?' : 'Auto-fill this session?'}
-        saveButtonText="Replace values"
-        onSave={() => {
+        onConfirm={() => {
           setConfirmReRun(false);
           onAutoFill();
         }}
-      >
-        <Typography variant="body1" color="text.secondary">
-          Auto-fill updates the fields it can populate, replacing any edits to those fields here or in the YAML. Binning
-          from frames is entered manually and will be kept. Review that value after auto-fill.
-        </Typography>
-      </BaseFormDialog>
+        title="Auto-fill"
+        heading={session.lastAutofillAt ? 'Re-run auto-fill?' : 'Auto-fill this session?'}
+        intent="warning"
+        confirmText="Replace values"
+        cancelText="Cancel"
+        body="Auto-fill overwrites your edits to the fields it populates, both here and in the YAML. Binning from frames is kept; review it after auto-fill."
+      />
 
       <Box sx={{ px: 2, pb: 2 }}>
         {!hasRun && (
@@ -296,7 +298,7 @@ export function SessionMetadataCard({
                     disabled={autoFilling}
                     onClick={onAutoFill}
                   >
-                    {autoFillError ? 'Try again' : 'Auto-fill'}
+                    {gateActionLabel}
                   </Button>
                   {autoFillError && (
                     <Button sdsType="primary" sdsStyle="minimal" disabled={autoFilling} onClick={onManualEntry}>

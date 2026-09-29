@@ -5,7 +5,7 @@ export interface ScannedAnnotation {
   copick_ref: string; // "<object>:<user_id>/<session_id>"
   object_name: string;
   object_id: string; // ontology id from the config's pickable_objects
-  count?: number | null; // total_count — picks only; 0 for segmentations/meshes
+  count?: number | null; // total_count - picks only; 0 for segmentations/meshes
   runs: string[]; // distinct run names this annotation appears in
 }
 
@@ -22,7 +22,7 @@ export interface ScanResult {
   scanned?: boolean;
   // A scan job is running (or was just triggered) - distinct from a missing file (never scanned).
   pending?: boolean;
-  // The last job failed to enumerate (env/config/run error) — distinct from "never scanned".
+  // Distinguish scan failures from sessions never scanned.
   error?: string;
   // Live progress while a scan job runs: runs enumerated so far / total runs in the project.
   progress_done?: number;

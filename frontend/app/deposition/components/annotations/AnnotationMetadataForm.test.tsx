@@ -201,7 +201,7 @@ it('clears the object id when the ontology is changed', () => {
 it('keeps the inferred ontology when an existing ID is cleared', async () => {
   render(<StatefulForm initial={{ ...base, object_id: 'GO:0005840', object_name: 'ribosome' }} />);
   await userEvent.clear(screen.getByLabelText(/Object ID/));
-  // The searchable field must stay put — not collapse back to the gated "choose an ontology" state.
+  // Keep the search field visible.
   expect(screen.queryByPlaceholderText('Choose an ontology first')).not.toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: /Ontology/ })).toHaveTextContent('GO');
 });
