@@ -12,9 +12,9 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pymysql
-from corsheaders.defaults import default_headers as default_cors_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # Build paths inside the project like this: BASE_DIR / 'subdir'.
 ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
@@ -26,8 +26,25 @@ DEBUG = ENVIRONMENT == "development"
 SSH_DISABLED = os.getenv("SSH_DISABLED") == "True"
 
 
+def _env_list(name):
+    """Comma-separated env var as a list, e.g. "a, b," -> ["a", "b"]."""
+    return [v.strip() for v in os.environ.get(name, "").split(",") if v.strip()]
+
+
+def _host_origin(entry):
+    """Split an EMBRELLA_HOSTS entry into (ALLOWED_HOSTS host, origin).
+
+    "x.org" -> ("x.org", "https://x.org"); "http://x.org" -> ("x.org", "http://x.org");
+    ".x.org" -> (".x.org", "https://*.x.org") — Django's subdomain wildcard forms.
+    """
+    parts = urlsplit(entry if "://" in entry else f"https://{entry}")
+    host = parts.netloc.split(":")[0]
+    netloc = f"*{parts.netloc}" if parts.netloc.startswith(".") else parts.netloc
+    return host, f"{parts.scheme}://{netloc}"
+
+
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "America/Los_Angeles"
+TIME_ZONE = os.getenv("TIME_ZONE", "UTC")
 USE_I18N = True
 USE_TZ = True
 
@@ -42,8 +59,6 @@ STATICFILES_DIRS = [
 STATIC_URL = "/static/"
 
 DOCUMENTATION_ROOT = Path(BASE_DIR).resolve().parent / "docs_build"
-DOCUMENTATION_HTML_ROOT = DOCUMENTATION_ROOT
-DOCUMENTATION_XSENDFILE = False
 
 pymysql.install_as_MySQLdb()
 
@@ -174,7 +189,6 @@ JAZZMIN_SETTINGS = {
         # App groups
         "cryo_grids": "fas fa-snowflake",
         "tem": "fas fa-microscope",
-        "django_google_sso": "fas fa-key",
         "processes": "fas fa-cogs",
         "workflow": "fas fa-project-diagram",
         "projects": "fas fa-folder-open",
@@ -244,39 +258,33 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION = True  # match existing local users by email
 ACCOUNT_LOGOUT_ON_GET = True
 SOCIALACCOUNT_ADAPTER = "umbrella.adapters.UmbrellaSocialAccountAdapter"
 ACCOUNT_ADAPTER = "umbrella.adapters.UmbrellaAccountAdapter"
-# Restrict SSO to these email domains. Unset -> the CZI domains below; a bare "*"
+# Restrict SSO to these email domains. Unset -> no SSO sign-ins; a bare "*"
 # opens SSO to any Google account (the public demo).
-_sso_allowed_domains = [
-    d.strip().lower().lstrip("@") for d in os.environ.get("SSO_ALLOWED_DOMAINS", "").split(",") if d.strip()
-]
-SSO_ALLOWED_DOMAINS = _sso_allowed_domains or ["czii.org", "czbiohub.org", "biohub.org"]
+SSO_ALLOWED_DOMAINS = [d.lower().lstrip("@") for d in _env_list("SSO_ALLOWED_DOMAINS")]
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+
+# Public hosts come from EMBRELLA_HOSTS and feed ALLOWED_HOSTS, CSRF and CORS
+# alike (same-origin behind nginx). Defaults cover local dev and in-stack names.
+_public_hosts = [_host_origin(e) for e in _env_list("EMBRELLA_HOSTS")]
+_public_origins = [origin for _, origin in _public_hosts]
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    "*.czbiohub.org",
-    "umbrella.czbiohub.org",
-    "umbrella-dev.czbiohub.org",
-    "embrella.apps-staging.czbiohub.org",
     "host.containers.internal",
     "host.docker.internal",
     "nginx",
+    *(host for host, _ in _public_hosts),
 ]
-ALLOWED_DOMAINS = ["czii.org", "czbiohub.org"]
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
+# CORS has no wildcard syntax, so "*." origins are CSRF-only.
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "https://umbrella.czbiohub.org",
-    "https://umbrella-dev.czbiohub.org",
-    "https://embrella.apps-staging.czbiohub.org",
-    # HTTP versions for staging (if not behind HTTPS termination)
-    "http://umbrella.czbiohub.org",
-    "http://umbrella-dev.czbiohub.org",
+    *(o for o in _public_origins if "*" not in o),
 ]
 CORS_ALLOW_METHODS = [
     "DELETE",
@@ -286,17 +294,11 @@ CORS_ALLOW_METHODS = [
     "POST",
     "PUT",
 ]
-CORS_ALLOW_HEADERS = default_cors_headers + ("Access-Control-Allow-Origin",)
-CORS_EXPOSE_HEADERS = ["Access-Control-Allow-Origin", "Content-Type", "Location"]
+CORS_EXPOSE_HEADERS = ["Content-Type", "Location"]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://umbrella.czbiohub.org",
-    "https://umbrella-dev.czbiohub.org",
-    "https://embrella.apps-staging.czbiohub.org",
-    # HTTP versions for staging (if not behind HTTPS termination)
-    "http://umbrella.czbiohub.org",
-    "http://umbrella-dev.czbiohub.org",
+    *_public_origins,
 ]
 
 # Argus/k8s ingress host, injected by the argus-config subchart from
@@ -318,9 +320,7 @@ if _ARGUS_INGRESS_HOST:
 # server-side, so a tampered value is a content-injection + SSRF risk. Only these
 # origins (scheme://host[:port], comma-separated) may be used as a cluster base
 # URL. Empty = no restriction (backwards compatible); set it in staging/prod.
-FILESERVER_ALLOWED_HOSTS = [
-    h.strip().rstrip("/") for h in os.environ.get("FILESERVER_ALLOWED_HOSTS", "").split(",") if h.strip()
-]
+FILESERVER_ALLOWED_HOSTS = [h.rstrip("/") for h in _env_list("FILESERVER_ALLOWED_HOSTS")]
 
 # Base URL the backend uses to build server-side-fetched file-server paths
 # used for compose with caddy, or in k8s stack

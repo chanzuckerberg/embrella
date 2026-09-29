@@ -2,6 +2,6 @@
 Constants used across process views.
 """
 
-import os
+from django.conf import settings
 
-ENVIRONMENT = os.getenv("DJANGO_ENV", "development")
+ENVIRONMENT = settings.ENVIRONMENT
