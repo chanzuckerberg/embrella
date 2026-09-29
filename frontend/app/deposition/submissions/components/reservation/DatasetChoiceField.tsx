@@ -42,7 +42,7 @@ export function DatasetChoiceField({
                 </MenuItem>
                 {datasets.map((ds) => (
                   <MenuItem key={ds.id} value={String(ds.id)}>
-                    {datasetLabel(ds.dataset_id)} — {ds.title || '(untitled)'}
+                    {datasetLabel(ds.dataset_id)} - {ds.title || '(untitled)'}
                   </MenuItem>
                 ))}
               </Select>

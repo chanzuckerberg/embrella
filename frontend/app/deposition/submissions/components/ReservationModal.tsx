@@ -121,7 +121,7 @@ function ExistingDepositionPicker({
               </MenuItem>
               {depositions.map((d) => (
                 <MenuItem key={d.id} value={String(d.id)}>
-                  {depositionLabel(d.deposition_id)} — {d.title || '(untitled)'}
+                  {depositionLabel(d.deposition_id)} - {d.title || '(untitled)'}
                 </MenuItem>
               ))}
             </Select>
@@ -271,7 +271,7 @@ export function ReservationModal({
                 </MenuItem>
                 {allDatasets.map((ds) => (
                   <MenuItem key={ds.id} value={String(ds.id)}>
-                    {datasetLabel(ds.dataset_id)} — {ds.title || '(untitled)'}
+                    {datasetLabel(ds.dataset_id)} - {ds.title || '(untitled)'}
                   </MenuItem>
                 ))}
               </Select>

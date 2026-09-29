@@ -4,7 +4,7 @@ import type { Dataset, Deposition } from '../types';
 import type { ChipColor, SortKey } from './constants';
 
 export function timeAgo(iso?: string): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (min < 1) return 'just now';
   if (min < 60) return `${min}m ago`;

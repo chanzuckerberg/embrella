@@ -24,7 +24,7 @@ export function DepositionSummary({ rows, subsetMode }: { rows: SourceRow[]; sub
   const s = rollup(rows, subsetMode);
   let tomograms = '-';
   if (s.totalTomograms > 0) {
-    tomograms = s.selectedKnown ? `${s.selectedTomograms} of ${s.totalTomograms}` : `— of ${s.totalTomograms}`;
+    tomograms = s.selectedKnown ? `${s.selectedTomograms} of ${s.totalTomograms}` : `- of ${s.totalTomograms}`;
   }
 
   return (

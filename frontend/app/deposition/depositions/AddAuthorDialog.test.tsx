@@ -105,7 +105,7 @@ it('resets to directory search (no stale create form) when reopened', async () =
 });
 
 it('disables the back link while the new author is being created', async () => {
-  mockCreate.mockReturnValue(new Promise(() => {})); // never resolves — stays pending
+  mockCreate.mockReturnValue(new Promise(() => {})); // never resolves - stays pending
   renderDialog();
   await userEvent.click(screen.getByRole('button', { name: /add a new author/i }));
   await userEvent.type(screen.getByLabelText(/Given name/), 'Ada');

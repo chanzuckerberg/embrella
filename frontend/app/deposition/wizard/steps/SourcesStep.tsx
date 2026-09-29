@@ -98,7 +98,7 @@ export function SourcesStep({ dataset, reportSave, readOnly: readOnlyProp }: Ste
 
   const handleUploadSubset = async (row: SourceRow, file: File) => {
     if (!row.id) return;
-    // Upload mode stores the parsed selection in the DB, keep the filename for display only.
+    // Store parsed selections; retain the filename for display.
     const { subset_selection } = await uploadSubsetCsv(row.id, file);
     setRows((prev) =>
       prev.map((r) =>

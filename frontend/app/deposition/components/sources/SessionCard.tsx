@@ -83,7 +83,7 @@ export function SessionCard({
   const scanningAnnotated = scanEnabled && annotated.isFetching && !annotated.data;
   const scanFailed = scanEnabled && annotated.isError;
   const notScanned = scanEnabled && !annotated.isError && annotated.data != null && !annotated.data.scanned;
-  let tomoBadge = '— tomograms';
+  let tomoBadge = '- tomograms';
   if (scanningAnnotated) tomoBadge = 'scanning annotations…';
   else if (scanFailed) tomoBadge = 'count unavailable';
   else if (notScanned) tomoBadge = total != null ? `- / ${total} · not scanned yet` : 'not scanned yet';
@@ -102,7 +102,7 @@ export function SessionCard({
         overflow: 'hidden',
       }}
     >
-      {/* Header row — chevron toggle + session identity + status chips */}
+      {/* Header: toggle, session identity, status chips. */}
       <Box
         sx={{
           display: 'flex',
