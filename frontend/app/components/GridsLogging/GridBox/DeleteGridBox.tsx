@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Typography, CircularProgress } from '@mui/material';
-import { Button, Icon, Dialog, DialogTitle, DialogContent } from '@czi-sds/components';
 import { PuckList } from '@app/common/types/gridLogging';
 import { GridBoxDetailResponse } from '@app/common/types/gridLogging';
 import { DJANGO_URL } from '@app/common/constants/api';
 import { deleteResource } from '@app/common/queries/fetchResource';
+import { ConfirmDialog } from '@app/common/components/Forms/ConfirmDialog';
 
 interface DeleteGridBoxProps {
   open: boolean;
@@ -63,62 +62,22 @@ export const DeleteGridBox: React.FC<DeleteGridBoxProps> = ({
   };
 
   return (
-    <Dialog onClose={onClose} open={open} sdsSize="xs">
-      <DialogTitle title={`Delete Grid Box ${gridBoxName}?`} onClose={onClose} />
-      <DialogContent>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 48,
-              height: 48,
-              borderRadius: '50%',
-              backgroundColor: hasGrids ? '#ffebee' : '#fff3e0',
-              flexShrink: 0,
-            }}
-          >
-            <Icon sdsIcon="ExclamationMarkCircle" sdsSize="l" />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            {hasGrids ? (
-              <>
-                <Typography variant="h6" color="error" sx={{ mb: 1 }}>
-                  Gridbox {selectedSlot} has filled grids!
-                </Typography>
-                <Typography variant="caption" sx={{ mb: 2 }}>
-                  if proceeding with deleting, all grids in the gridbox will be trashed
-                </Typography>
-              </>
-            ) : (
-              <>
-                <Typography variant="h6" color="warning.main" sx={{ mb: 1 }}>
-                  This Gridbox is empty and can be safely deleted.
-                </Typography>
-                <Typography variant="caption" sx={{ mb: 2 }}>
-                  Would you like to proceed with deleting this gridbox?
-                </Typography>
-              </>
-            )}
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-          <Button sdsType="secondary" sdsStyle="outline" onClick={onClose} disabled={isDeleting}>
-            No
-          </Button>
-          <Button
-            sdsType="primary"
-            sdsStyle="solid"
-            onClick={handleConfirmDelete}
-            disabled={isDeleting}
-            startIcon={isDeleting ? <CircularProgress size={16} /> : undefined}
-          >
-            {isDeleting ? 'Deleting...' : 'Yes'}
-          </Button>
-        </Box>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      onClose={onClose}
+      onConfirm={handleConfirmDelete}
+      intent={hasGrids ? 'danger' : 'warning'}
+      title={`Delete Grid Box ${gridBoxName}?`}
+      heading={
+        hasGrids ? `Gridbox ${selectedSlot} has filled grids!` : 'This Gridbox is empty and can be safely deleted.'
+      }
+      body={
+        hasGrids
+          ? 'if proceeding with deleting, all grids in the gridbox will be trashed'
+          : 'Would you like to proceed with deleting this gridbox?'
+      }
+      submittingText="Deleting..."
+      isSubmitting={isDeleting}
+    />
   );
 };

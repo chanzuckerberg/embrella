@@ -190,3 +190,10 @@ it('does not gate in read-only mode', () => {
   renderCard({ readOnly: true });
   expect(screen.queryByText(/start with auto-fill/i)).not.toBeInTheDocument();
 });
+
+it('blocks manual entry while retrying auto-fill', () => {
+  // Both actions are disabled during a retry, so manual entry cannot be triggered.
+  renderCard({ autoFillError: 'Cluster unavailable', autoFilling: true });
+  expect(screen.getByRole('button', { name: 'Auto-filling...' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Fill manually' })).toBeDisabled();
+});

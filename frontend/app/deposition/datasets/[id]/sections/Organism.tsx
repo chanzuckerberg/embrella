@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { Icon } from '@czi-sds/components';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Autocomplete, Box, Chip, Link, Stack, TextField } from '@mui/material';
@@ -35,8 +35,8 @@ export function Organism({
   readOnly: boolean;
   innerRef: (el: HTMLDivElement | null) => void;
 }) {
-  const [query, setQuery] = useState(organismName);
-  const debouncedQuery = useDebounced(query, 400);
+  const autofilledName = useRef<string | null>(null);
+  const debouncedQuery = useDebounced(organismName, 400);
 
   const MIN_CHARS = 3;
   const searchTerm = debouncedQuery.trim().length >= MIN_CHARS ? debouncedQuery : '';
@@ -49,6 +49,13 @@ export function Organism({
   const taxidSet = organismTaxid != null;
   const taxidResolved = !!resolved && resolved.id.toLowerCase() === taxidStr.toLowerCase();
 
+  useEffect(() => {
+    if (readOnly || !taxidResolved || !resolved) return;
+    if (organismName.trim() !== '' && organismName !== autofilledName.current) return;
+    autofilledName.current = resolved.label;
+    if (organismName !== resolved.label) onChangeOrganismName(resolved.label);
+  }, [readOnly, taxidResolved, resolved, organismName, onChangeOrganismName]);
+
   let taxidHelper: ReactNode = ' ';
   if (taxidSet) {
     if (validating || debouncedTaxid !== taxidStr) taxidHelper = 'Checking…';
@@ -60,11 +67,16 @@ export function Organism({
   const taxidValid = taxidSet && (taxidResolved || lookupError);
 
   let noOptionsText = 'No matches';
-  if (query.trim().length < MIN_CHARS) noOptionsText = `Type ${MIN_CHARS}+ characters to search`;
+  if (organismName.trim().length < MIN_CHARS) noOptionsText = `Type ${MIN_CHARS}+ characters to search`;
   else if (searchError) noOptionsText = 'Ontology lookup unavailable';
 
   return (
-    <SectionCard title="Organism" sectionKey="organism" innerRef={innerRef}>
+    <SectionCard
+      title="Organism"
+      subtitle="Search by name, or paste an NCBI tax ID to fill the field."
+      sectionKey="organism"
+      innerRef={innerRef}
+    >
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'flex-start' }}>
         <Autocomplete
           sx={{ flex: 1 }}
@@ -75,13 +87,16 @@ export function Organism({
           noOptionsText={noOptionsText}
           filterOptions={(x) => x}
           getOptionLabel={(o) => (typeof o === 'string' ? o : o.label)}
-          inputValue={query}
-          onInputChange={(_, v) => {
-            setQuery(v);
+          inputValue={organismName}
+          onInputChange={(_, v, reason) => {
+            if (reason === 'reset') return;
+            if (reason === 'input') autofilledName.current = null;
+            if (reason === 'clear' || v.trim() === '') onChangeOrganismTaxid(null);
             onChangeOrganismName(v);
           }}
           onChange={(_, val) => {
             if (val && typeof val !== 'string') {
+              autofilledName.current = val.label;
               onChangeOrganismName(val.label);
               const taxid = taxidFromOboId(val.id);
               if (taxid != null) onChangeOrganismTaxid(taxid);
@@ -101,7 +116,11 @@ export function Organism({
           label="NCBI tax ID"
           required={taxidRequired}
           value={organismTaxid ?? ''}
-          onChange={(e) => onChangeOrganismTaxid(e.target.value === '' ? null : Number(e.target.value))}
+          onChange={(e) => {
+            const raw = e.target.value.trim().replace(/^NCBITaxon:/i, '');
+            if (raw !== '' && !/^\d+$/.test(raw)) return;
+            onChangeOrganismTaxid(raw === '' ? null : Number(raw));
+          }}
           size="small"
           sx={{ flex: 1 }}
           disabled={readOnly}

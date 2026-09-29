@@ -12,6 +12,7 @@ export function SectionCard({
   badgeTone = 'default',
   sectionKey,
   action,
+  info,
   collapsible = false,
   defaultExpanded = true,
   innerRef,
@@ -23,6 +24,7 @@ export function SectionCard({
   badgeTone?: 'default' | 'primary';
   sectionKey: string;
   action?: React.ReactNode;
+  info?: React.ReactNode;
   collapsible?: boolean;
   defaultExpanded?: boolean;
   innerRef: (el: HTMLDivElement | null) => void;
@@ -88,6 +90,11 @@ export function SectionCard({
           <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.125rem', lineHeight: 1.3 }}>
             {title}
           </Typography>
+          {info && (
+            <Box component="span" onClick={(e) => e.stopPropagation()} sx={{ display: 'inline-flex' }}>
+              {info}
+            </Box>
+          )}
           {badge && (
             <Chip
               label={badge}

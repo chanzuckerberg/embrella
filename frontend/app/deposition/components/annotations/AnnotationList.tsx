@@ -74,7 +74,7 @@ export function AnnotationList({
       const items = visible.filter((a) => a.copick_kind === kind);
       if (items.length === 0) continue;
       out.push({ type: 'header', kind, count: items.length });
-      // A collapsed section shows only its header — but an active filter always reveals matches.
+      // Filters reveal matches even in collapsed sections.
       if (!q && collapsed.has(kind)) continue;
       for (const a of items) out.push({ type: 'item', ann: a });
     }

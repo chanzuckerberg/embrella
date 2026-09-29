@@ -75,3 +75,21 @@ describe('OLS service', () => {
     expect(url).toContain('queryFields=obo_id');
   });
 });
+
+it('puts exact organism names ahead of strain suggestions and deduplicates results', async () => {
+  const species = { obo_id: 'NCBITaxon:562', label: 'Escherichia coli', synonym: ['E. coli'] };
+  const strain = { obo_id: 'NCBITaxon:83333', label: 'Escherichia coli K-12' };
+  global.fetch = jest.fn().mockImplementation(async (url: string) => ({
+    ok: true,
+    json: async () => ({ response: { docs: url.includes('/select?') ? [strain, species] : [species] } }),
+  }));
+  expect((await searchOntology('E. coli', 'ncbitaxon')).map((term) => term.id)).toEqual([
+    'NCBITaxon:562',
+    'NCBITaxon:83333',
+  ]);
+});
+
+it('does not resolve an ID to a different returned term', async () => {
+  mockFetch([DOC]);
+  expect(await validateOntologyId('UBERON:9999999', 'uberon')).toBeNull();
+});

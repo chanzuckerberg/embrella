@@ -276,6 +276,7 @@ class DatasetSerializer(serializers.ModelSerializer):
     sessions = DepositionSessionLinkSerializer(many=True, required=False)
     sample = DatasetSampleSerializer(required=False)
     job = DatasetJobSerializer(read_only=True)
+    preparation_sources = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
 
     class Meta:
@@ -283,6 +284,59 @@ class DatasetSerializer(serializers.ModelSerializer):
         fields = "__all__"
         # dataset_id reserved; status/dates set by syncer/system.
         read_only_fields = ["dataset_id", "status", "created_at", "updated_at"]
+
+    def validate_sessions(self, sessions):
+        seen = set()
+        for row in sessions:
+            msi_session = row.get("msi_session")
+            if msi_session is None:
+                raise serializers.ValidationError("Each session entry requires msi_session.")
+            if msi_session.pk in seen:
+                raise serializers.ValidationError("Each MSI session can only be selected once.")
+            seen.add(msi_session.pk)
+        return sessions
+
+    def get_preparation_sources(self, obj):
+        """Offer recorded grid/sample data for explicit reuse; never alter the source records."""
+        sources = []
+        seen = set()
+        sessions = obj.sessions.select_related(
+            "msi_session__grid__specimen", "msi_session__grid__freezing_session__device"
+        ).prefetch_related("msi_session__grid__specimen__samples")
+        for session in sessions:
+            grid = session.msi_session.grid if session.msi_session else None
+            if grid is None or grid.pk in seen:
+                continue
+            seen.add(grid.pk)
+            specimen = grid.specimen
+            samples = list(specimen.samples.all()) if specimen else []
+            # A "default grid" is a placeholder for a session with no real grid in the DB (matches
+            # is_default in cryo_grids.api.views). Its freezing values are defaults, not measured, so
+            # skip them and show one clean note instead of echoing the raw DB text.
+            is_default_grid = "default grid" in (grid.name or "").lower()
+            if is_default_grid:
+                grid_notes = ["Default grid - no grid information recorded for this session."]
+            else:
+                grid_notes = [grid.notes] if grid.notes else []
+                freezing = grid.freezing_session
+                if freezing:
+                    grid_notes.append(
+                        f"Recorded freezing settings: {freezing.device.name}; "
+                        f"chamber temperature {freezing.device_temperature:g} °C; humidity {freezing.humidity}%."
+                    )
+                if grid.blot_time is not None:
+                    grid_notes.append(f"Recorded blot time: {grid.blot_time:g} s.")
+            for sample in samples or [None]:
+                sources.append(
+                    {
+                        "key": f"{grid.pk}:{sample.pk if sample else ''}",
+                        "label": f"{session.msi_session.name} / {grid.name}" + (f" / {sample.name}" if sample else ""),
+                        "sample_preparation": specimen.notes if specimen else "",
+                        "grid_preparation": "\n".join(grid_notes),
+                        "sample": DatasetSampleSerializer(sample).data if sample else {},
+                    }
+                )
+        return sources
 
     def get_is_owner(self, obj) -> bool:
         return _is_owner(self, obj)
@@ -361,6 +415,7 @@ class DatasetSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"sessions": "Each session entry requires msi_session."})
             obj, _ = DepositionSession.objects.update_or_create(dataset=dataset, msi_session=msi_session, defaults=row)
             seen.add(obj.id)
+        # Omitted sessions are removed on purpose (Remove session), cascading metadata and annotations.
         dataset.sessions.exclude(id__in=seen).delete()
 
 

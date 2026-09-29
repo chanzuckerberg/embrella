@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Icon } from '@czi-sds/components';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { Autocomplete, Box, Chip, Link, Stack, TextField } from '@mui/material';
@@ -43,8 +43,8 @@ export function OntologyIdInput({
   prefixInValue?: boolean;
   separator?: string; // joins prefix and bare id when prefixInValue is false (':' ontologies, '-' for EMD/PDB)
 }) {
-  const [query, setQuery] = useState(name);
-  const debouncedQuery = useDebounced(query, 300);
+  const pendingId = useRef<string | null>(null);
+  const debouncedQuery = useDebounced(name, 300);
   const debouncedId = useDebounced(id, 400);
   const olsEnabled = !manualOnly;
 
@@ -52,11 +52,14 @@ export function OntologyIdInput({
   const idInputValue = prefixInValue || !id.startsWith(qualifier) ? id : id.slice(qualifier.length);
   const handleIdChange = (raw: string) => {
     if (prefixInValue) {
+      pendingId.current = raw.trim();
       onChange({ id: raw });
       return;
     }
     const bare = raw.trim().replace(new RegExp(`^${prefix}${separator}`), '');
-    onChange({ id: bare ? `${qualifier}${bare}` : '' });
+    const nextId = bare ? `${qualifier}${bare}` : '';
+    pendingId.current = nextId;
+    onChange({ id: nextId });
   };
 
   const {
@@ -77,6 +80,13 @@ export function OntologyIdInput({
   const isOlsPrefix = olsEnabled && ontology.toLowerCase().split(',').includes(idPrefix);
   const idResolved = !!resolved && resolved.id.toLowerCase() === trimmedId.toLowerCase();
   const idValid = formatOk && (isOlsPrefix ? idResolved || lookupError : true);
+
+  useEffect(() => {
+    if (disabled || manualOnly || !formatOk || !idResolved || !resolved) return;
+    if (pendingId.current !== trimmedId && name.trim() !== '') return;
+    pendingId.current = null;
+    if (name !== resolved.label) onChange({ name: resolved.label });
+  }, [disabled, manualOnly, formatOk, idResolved, resolved, trimmedId, name, onChange]);
 
   const requiredMissing = required && !idSet;
   let idHelper = ' ';
@@ -116,10 +126,11 @@ export function OntologyIdInput({
           noOptionsText={searchError ? 'Ontology lookup unavailable' : 'No matches'}
           filterOptions={(x) => x}
           getOptionLabel={(o) => (typeof o === 'string' ? o : o.label)}
-          inputValue={query}
+          inputValue={name}
           onInputChange={(_, v, reason) => {
-            setQuery(v);
-            if (reason === 'clear') onChange({ name: '', id: '' });
+            if (reason === 'reset') return;
+            pendingId.current = null;
+            if (reason === 'clear' || v.trim() === '') onChange({ name: '', id: '' });
             else onChange({ name: v });
           }}
           onChange={(_, val) => {

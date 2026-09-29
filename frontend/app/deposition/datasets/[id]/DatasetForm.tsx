@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Icon } from '@czi-sds/components';
-import { Box, Stack } from '@mui/material';
+import { Box, IconButton, Stack, MenuItem, TextField, Tooltip, Typography } from '@mui/material';
 
 import { updateDataset } from '../../services/depositionApi';
 import { depositionKeys } from '../../queryKeys';
@@ -17,6 +17,7 @@ import { BiologicalClassification } from './sections/BiologicalClassification';
 import { bioRequirements, isRequiredBioFieldMet } from './sections/bioRequirements';
 import { Funding } from './sections/Funding';
 import { Organism } from './sections/Organism';
+import { mergePreparation } from './preparation';
 import { Sample } from './sections/Sample';
 import { SectionCard } from './sections/SectionCard';
 import { type NavItem, SideNav } from './sections/SideNav';
@@ -114,6 +115,7 @@ export function DatasetForm({
   const readOnly = readOnlyProp || dataset.status !== 'draft';
   const refs = useRef<Record<string, HTMLDivElement | null>>({});
   const [active, setActive] = useState('basic');
+  const [reusedFrom, setReusedFrom] = useState('');
 
   useEffect(() => {
     const scroller = getScrollParent(refs.current.basic);
@@ -248,6 +250,58 @@ export function DatasetForm({
               refs.current.basic = el;
             }}
           />
+
+          {!readOnly && !!dataset.preparation_sources?.length && (
+            <SectionCard
+              title="Reuse recorded preparation"
+              sectionKey="preparation-source"
+              innerRef={() => {}}
+              info={
+                <Tooltip
+                  title="Pick a grid and sample from your selected sessions to copy its recorded prep."
+                  arrow
+                  placement="top"
+                >
+                  <IconButton size="small" aria-label="Reuse preparation help">
+                    <Icon sdsIcon="InfoCircle" sdsSize="s" color="purple" />
+                  </IconButton>
+                </Tooltip>
+              }
+              action={
+                reusedFrom ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Copied - review below
+                    </Typography>
+                  </Box>
+                ) : undefined
+              }
+            >
+              <TextField
+                select
+                label="Copy from grid / sample"
+                helperText="Pick a grid and sample from your selected sessions to copy its recorded prep."
+                value={reusedFrom}
+                size="small"
+                fullWidth
+                onChange={(event) => setReusedFrom(event.target.value)}
+              >
+                {dataset.preparation_sources.map((source) => (
+                  <MenuItem
+                    key={source.key}
+                    value={source.key}
+                    onClick={() => {
+                      setForm((previous) => mergePreparation(previous, source));
+                      setReusedFrom(source.key);
+                    }}
+                  >
+                    {source.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </SectionCard>
+          )}
 
           <Sample
             sampleType={form.sample.sample_type ?? ''}

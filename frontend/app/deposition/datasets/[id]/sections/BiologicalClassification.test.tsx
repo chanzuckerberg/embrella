@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -24,19 +25,25 @@ afterEach(() => jest.clearAllMocks());
 
 function renderBio() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={client}>
+  function Controlled() {
+    const [sample, setSample] = useState<DatasetSample>({});
+    return (
       <BiologicalClassification
-        sample={{} as DatasetSample}
+        sample={sample}
         requiredBioField={null}
         assayLabel=""
         assayOntologyId=""
-        onChangeSample={jest.fn()}
+        onChangeSample={(key, value) => setSample((previous) => ({ ...previous, [key]: value }))}
         onChangeAssayLabel={jest.fn()}
         onChangeAssayOntologyId={jest.fn()}
         readOnly={false}
         innerRef={() => {}}
       />
+    );
+  }
+  render(
+    <QueryClientProvider client={client}>
+      <Controlled />
     </QueryClientProvider>
   );
 }

@@ -32,13 +32,25 @@ async function olsQuery(endpoint: 'search' | 'select', params: Record<string, st
   return docs.map(toTerm).filter((t): t is OntologyTerm => t !== null);
 }
 
-export function searchOntology(term: string, ontology: string, childrenOf?: string): Promise<OntologyTerm[]> {
+export async function searchOntology(term: string, ontology: string, childrenOf?: string): Promise<OntologyTerm[]> {
   const q = term.trim();
   if (!q) return Promise.resolve([]);
   const params: Record<string, string> = { q, ontology: ontology.toLowerCase() };
   // Restrict to subtree rooted at this IRI
   if (childrenOf) params.childrenOf = childrenOf;
-  return olsQuery('select', params);
+  if (ontology.toLowerCase() !== 'ncbitaxon') return olsQuery('select', params);
+  const [suggestions, exact] = await Promise.all([
+    olsQuery('select', { ...params, rows: '50' }),
+    olsQuery('search', { ...params, exact: 'true', queryFields: 'label,synonym', rows: '50' }),
+  ]);
+  const terms = [...new Map([...exact, ...suggestions].map((term) => [term.id, term])).values()];
+  const query = q.toLowerCase();
+  const rank = (term: OntologyTerm) => {
+    if (term.label.toLowerCase() === query) return 0;
+    if (term.synonyms.some((synonym) => synonym.toLowerCase() === query)) return 1;
+    return term.label.toLowerCase().startsWith(query) ? 2 : 3;
+  };
+  return terms.sort((a, b) => rank(a) - rank(b) || a.label.length - b.label.length).slice(0, 50);
 }
 
 /** Validate an OBO id */
@@ -51,5 +63,5 @@ export async function validateOntologyId(id: string, ontology: string): Promise<
     exact: 'true',
     queryFields: 'obo_id',
   });
-  return results.find((t) => t.id.toLowerCase() === q.toLowerCase()) ?? results[0] ?? null;
+  return results.find((t) => t.id.toLowerCase() === q.toLowerCase()) ?? null;
 }

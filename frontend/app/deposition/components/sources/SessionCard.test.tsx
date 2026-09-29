@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { SessionCard } from './SessionCard';
 import { useAnnotatedCount } from '../../hooks/useSources';
@@ -10,6 +10,8 @@ jest.mock('../../hooks/useSources', () => ({
   useTomogramCount: () => ({ data: 10 }),
   useAnnotatedCount: jest.fn(),
 }));
+
+jest.mock('./CopickConfigs', () => ({ CopickConfigs: () => null }));
 
 const mockAnnotated = useAnnotatedCount as jest.Mock;
 afterEach(() => jest.clearAllMocks());
@@ -35,6 +37,7 @@ function renderCard(over: Partial<SourceRow> = {}) {
       readOnly={false}
       onChange={jest.fn()}
       onRemove={jest.fn()}
+      onRequestSessionChange={jest.fn()}
       onUploadSubset={jest.fn()}
     />
   );
@@ -78,4 +81,62 @@ it('does not flicker to "scanning" during a background poll (data present, refet
   renderCard();
   expect(screen.getByText(/not scanned yet/i)).toBeInTheDocument();
   expect(screen.queryByText(/scanning annotations/i)).not.toBeInTheDocument();
+});
+
+it('routes a saved-card session switch through confirmation instead of applying it directly', async () => {
+  mockAnnotated.mockReturnValue({ data: undefined, isFetching: false });
+  const onChange = jest.fn();
+  const onRequestSessionChange = jest.fn();
+  render(
+    <SessionCard
+      index={1}
+      row={{ ...row, id: 10, msi_session: 1, msi_session_name: 'sess' }}
+      sessionOptions={['sess', 'sess-2']}
+      subsetMode="annotated"
+      readOnly={false}
+      onChange={onChange}
+      onRemove={jest.fn()}
+      onRequestSessionChange={onRequestSessionChange}
+      onUploadSubset={jest.fn()}
+    />
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Expand session' }));
+  const input = screen.getByPlaceholderText('Select session…');
+  expect(input).toBeEnabled();
+  fireEvent.mouseDown(input);
+  fireEvent.click(await screen.findByRole('option', { name: 'sess-2' }));
+  expect(onRequestSessionChange).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 10, msi_session_name: 'sess-2', msi_session: null })
+  );
+  expect(onChange).not.toHaveBeenCalled();
+});
+
+it('leaves a saved card untouched when its session is cleared, keeping run settings intact', () => {
+  mockAnnotated.mockReturnValue({ data: undefined, isFetching: false });
+  const onChange = jest.fn();
+  const onRequestSessionChange = jest.fn();
+  render(
+    <SessionCard
+      index={1}
+      row={{ ...row, id: 10, msi_session: 1, msi_session_name: 'sess', aretomo_run_name: 'run1' }}
+      sessionOptions={['sess', 'sess-2']}
+      subsetMode="annotated"
+      readOnly={false}
+      onChange={onChange}
+      onRemove={jest.fn()}
+      onRequestSessionChange={onRequestSessionChange}
+      onUploadSubset={jest.fn()}
+    />
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Expand session' }));
+  fireEvent.click(screen.getByTitle('Clear'));
+  expect(onChange).not.toHaveBeenCalled();
+  expect(onRequestSessionChange).not.toHaveBeenCalled();
+});
+
+it('allows selecting an imaging session on an unsaved card', () => {
+  mockAnnotated.mockReturnValue({ data: undefined, isFetching: false });
+  renderCard();
+  fireEvent.click(screen.getByRole('button', { name: 'Expand session' }));
+  expect(screen.getByPlaceholderText('Select session…')).toBeEnabled();
 });

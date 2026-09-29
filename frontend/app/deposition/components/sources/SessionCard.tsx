@@ -21,6 +21,7 @@ export function SessionCard({
   readOnly,
   onChange,
   onRemove,
+  onRequestSessionChange,
   onUploadSubset,
   onCount,
   onAnnotated,
@@ -32,6 +33,7 @@ export function SessionCard({
   readOnly: boolean;
   onChange: (row: SourceRow) => void;
   onRemove: () => void;
+  onRequestSessionChange: (next: SourceRow) => void;
   onUploadSubset: (file: File) => void;
   onCount?: (key: string, total: number | undefined) => void;
   onAnnotated?: (key: string, count: number | undefined) => void;
@@ -41,14 +43,24 @@ export function SessionCard({
   const denoise = usePlanRuns('denoiset', session);
   const set = (patch: Partial<SourceRow>) => onChange({ ...row, ...patch });
 
-  const selectSession = (name: string) =>
-    set({
-      msi_session_name: name,
-      msi_session: null,
-      aretomo_run_name: '',
-      denoise_run_name: '',
-      selected_copick_runs: [],
-    });
+  const buildSessionChange = (name: string): SourceRow => ({
+    ...row,
+    msi_session_name: name,
+    msi_session: null,
+    aretomo_run_name: '',
+    denoise_run_name: '',
+    selected_copick_runs: [],
+  });
+  // Confirm before switching a saved session; that deletes its metadata on save.
+  const selectSession = (name: string) => {
+    if (name === session) return;
+    if (row.id != null) {
+      if (!name) return;
+      onRequestSessionChange(buildSessionChange(name));
+      return;
+    }
+    onChange(buildSessionChange(name));
+  };
 
   const tomoCount = useTomogramCount(session, row.aretomo_run_name);
   const total = tomoCount.data;
@@ -71,7 +83,7 @@ export function SessionCard({
   const scanningAnnotated = scanEnabled && annotated.isFetching && !annotated.data;
   const scanFailed = scanEnabled && annotated.isError;
   const notScanned = scanEnabled && !annotated.isError && annotated.data != null && !annotated.data.scanned;
-  let tomoBadge = '— tomograms';
+  let tomoBadge = '- tomograms';
   if (scanningAnnotated) tomoBadge = 'scanning annotations…';
   else if (scanFailed) tomoBadge = 'count unavailable';
   else if (notScanned) tomoBadge = total != null ? `- / ${total} · not scanned yet` : 'not scanned yet';
@@ -90,7 +102,7 @@ export function SessionCard({
         overflow: 'hidden',
       }}
     >
-      {/* Header row — chevron toggle + session identity + status chips */}
+      {/* Header: toggle, session identity, status chips. */}
       <Box
         sx={{
           display: 'flex',

@@ -291,7 +291,7 @@ export function AuthorListEditor({
                             </Typography>
                           </Tooltip>
                         ) : (
-                          '—'
+                          '-'
                         )}
                       </TableCell>
                       <TableCell sx={{ ...cellSx, color: p?.orcid ? 'text.primary' : 'text.disabled' }}>
@@ -313,7 +313,7 @@ export function AuthorListEditor({
                             </Typography>
                           </Tooltip>
                         ) : (
-                          '—'
+                          '-'
                         )}
                       </TableCell>
                       <TableCell align="right" sx={{ ...cellSx, overflow: 'visible' }}>

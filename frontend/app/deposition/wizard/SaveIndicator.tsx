@@ -26,7 +26,7 @@ export function SaveIndicator({
     label = 'Saving…';
   } else if (status === 'error') {
     icon = <Icon sdsIcon="ExclamationMarkCircle" sdsSize="s" color="red" />;
-    label = 'Save failed — retry';
+    label = 'Save failed - retry';
     color = 'error.main';
   } else if (status === 'saved' || lastSavedAt) {
     icon = <Icon sdsIcon="CheckCircle" sdsSize="s" color="green" />;
