@@ -112,5 +112,6 @@ from . import (  # noqa: E402, F401
     aretomo3,
     copick,
     denoiset,
+    deposition_prep,
     membraneseg,
 )
