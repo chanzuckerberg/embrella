@@ -1,0 +1,15 @@
+# DepositionPushProcessor parameters.
+type: object
+properties:
+  slurm_partition:
+    type: string
+    default: cpu
+    x-slurm-directive: "--partition"
+  slurm_time:
+    type: string
+    default: "72:00:00"
+    x-slurm-directive: "--time"
+  slurm_mem:
+    type: string
+    default: "8G"
+    x-slurm-directive: "--mem"

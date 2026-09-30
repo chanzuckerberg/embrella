@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#SBATCH --job-name=deposition_push
+{% for directive in slurm_directives -%}
+{% if directive.directive.startswith('-') and not directive.directive.startswith('--') -%}
+#SBATCH {{ directive.directive }} {{ directive.value }}
+{% else -%}
+#SBATCH {{ directive.directive }}={{ directive.value }}
+{% endif -%}
+{% endfor -%}
+{% if cluster == "czii" %}
+#SBATCH --qos=embrella
+{% endif %}
+
+umask 0002
+set -euo pipefail
+
+export PATH={{ aws_cli_path }}:$PATH
+
+# Assign both before export so the second read still uses the node role.
+aws_key="$(aws ssm get-parameters --names {{ aws_key_param }} --with-decryption --query "Parameters[0].Value" --output text)"
+aws_secret="$(aws ssm get-parameters --names {{ aws_secret_param }} --with-decryption --query "Parameters[0].Value" --output text)"
+if [ -z "$aws_key" ] || [ "$aws_key" = "None" ] || [ -z "$aws_secret" ] || [ "$aws_secret" = "None" ]; then
+  echo "Failed to read AWS credentials from SSM" >&2
+  exit 1
+fi
+export AWS_ACCESS_KEY_ID="$aws_key"
+export AWS_SECRET_ACCESS_KEY="$aws_secret"
+# This key is not a session. Drop any inherited token.
+unset AWS_SESSION_TOKEN
+
+# The staged tree is symlinks; upload the files they point at.
+aws s3 sync --follow-symlinks {{ staged_dir }} {{ s3_dest }}
+
+echo "Deposition push completed."
