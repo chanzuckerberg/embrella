@@ -12,24 +12,15 @@
 #SBATCH --qos=embrella
 {% endif %}
 
+# Group-writable staged tree.
 umask 0002
+
+# -u deferred: prologue activates conda and reads unset vars.
+set -e
+{{ prologue }}
 set -euo pipefail
 
-export PATH={{ aws_cli_path }}:$PATH
-
-# Assign both before export so the second read still uses the node role.
-aws_key="$(aws ssm get-parameters --names {{ aws_key_param }} --with-decryption --query "Parameters[0].Value" --output text)"
-aws_secret="$(aws ssm get-parameters --names {{ aws_secret_param }} --with-decryption --query "Parameters[0].Value" --output text)"
-if [ -z "$aws_key" ] || [ "$aws_key" = "None" ] || [ -z "$aws_secret" ] || [ "$aws_secret" = "None" ]; then
-  echo "Failed to read AWS credentials from SSM" >&2
-  exit 1
-fi
-export AWS_ACCESS_KEY_ID="$aws_key"
-export AWS_SECRET_ACCESS_KEY="$aws_secret"
-# This key is not a session. Drop any inherited token.
-unset AWS_SESSION_TOKEN
-
-# The staged tree is symlinks; upload the files they point at.
-aws s3 sync --follow-symlinks {{ staged_dir }} {{ s3_dest }}
+# AWS CLI uses the job account's credentials.
+aws s3 sync {{ staged_dir }} {{ s3_dest }} --follow-symlinks{% for pattern in exclude_patterns %} --exclude '{{ pattern }}'{% endfor %}
 
 echo "Deposition push completed."

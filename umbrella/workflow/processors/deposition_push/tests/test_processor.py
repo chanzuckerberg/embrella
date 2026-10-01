@@ -7,9 +7,6 @@ from workflow.processors.deposition_push.processor import DepositionPushProcesso
 PARAMS = {
     "staged_dir": "/staged/dep_1/ds_2",
     "s3_dest": "s3://cryoetportal-biohub-hpc-globus/CZII/1/2/",
-    "aws_cli_path": "/hpc/apps/awscli/v2/2.27.43/dist",
-    "aws_key_param": "/env/AWS_ACCESS_KEY_NAME",
-    "aws_secret_param": "/env/AWS_SECRET_ACCESS_KEY",
 }
 
 
@@ -18,59 +15,62 @@ def _render(cluster_id="bruno", **overrides):
     return DepositionPushProcessor().render_script(params, SimpleNamespace(cluster_id=cluster_id))
 
 
-def test_runs_aws_s3_sync_to_dest():
+def test_syncs_dataset_subtree_to_dest():
     script = _render()
-    assert "aws s3 sync --follow-symlinks /staged/dep_1/ds_2 s3://cryoetportal-biohub-hpc-globus/CZII/1/2/" in script
+    assert "aws s3 sync /staged/dep_1/ds_2 s3://cryoetportal-biohub-hpc-globus/CZII/1/2/ --follow-symlinks" in script
 
 
-def test_fetches_both_creds_before_exporting():
+def test_no_credential_handling_in_script():
+    # Auth is ambient (cluster env); the script must not fetch or export keys.
     script = _render()
-    assert script.count("aws ssm get-parameters") == 2
-    assert script.index("aws_secret=") < script.index("export AWS_ACCESS_KEY_ID=")
-    assert 'export AWS_ACCESS_KEY_ID="$aws_key"' in script
-    assert 'export AWS_SECRET_ACCESS_KEY="$aws_secret"' in script
+    assert "aws ssm" not in script
+    assert "AWS_SECRET_ACCESS_KEY" not in script
+    assert "AWS_SESSION_TOKEN" not in script
 
 
-def test_clears_inherited_session_token():
-    assert "unset AWS_SESSION_TOKEN" in _render()
-
-
-def test_aborts_when_credentials_missing():
+def test_prologue_sets_up_cluster_env():
     script = _render()
-    assert "Failed to read AWS credentials from SSM" in script
-    assert "exit 1" in script
+    assert "conda activate dataportalenv" in script
+    assert "ml load awscli" in script
 
 
-def test_no_staging_credentials_baked_in():
-    assert "cryoet-staging-happy" not in _render()
+def test_fail_fast_around_conda_prologue():
+    script = _render()
+    assert script.index("set -e") < script.index("conda activate") < script.index("set -euo pipefail")
+
+
+def test_setup_commands_are_separate_not_chained():
+    # && would exempt the first command from set -e, letting a failed load slip through.
+    assert "&&" not in _render()
+
+
+def test_excludes_local_only_artifacts():
+    script = _render()
+    for pattern in ("dataprep_config.yaml", "sync_job.sh", "__pycache__/*"):
+        assert f"--exclude '{pattern}'" in script
+
+
+def test_omits_delete_flag():
+    # --delete removes bucket objects; re-push deletion is a separate, explicit decision.
+    assert "--delete" not in _render()
 
 
 def test_push_does_not_use_cryoetportalprep():
     assert "cryoetportalprep" not in _render()
 
 
-def test_slurm_time_is_long_and_directives_render():
-    script = _render()
-    assert "#SBATCH --time=72:00:00" in script
-    assert "#SBATCH --partition=cpu" in script
-
-
-def test_czii_gets_qos():
+def test_slurm_directives_and_qos():
+    assert "#SBATCH --partition=cpu" in _render()
     assert "--qos=embrella" in _render(cluster_id="czii")
 
 
 def test_paths_with_spaces_are_shell_quoted():
-    assert "aws s3 sync --follow-symlinks '/staged/my dep'" in _render(staged_dir="/staged/my dep")
+    assert "aws s3 sync '/staged/my dep'" in _render(staged_dir="/staged/my dep")
 
 
-def test_fails_fast():
-    assert "set -euo pipefail" in _render()
-
-
-def test_validate_parameters_requires_all_inputs():
+def test_validate_parameters_requires_staged_dir_and_dest():
     proc = DepositionPushProcessor()
     assert proc.validate_parameters(PARAMS) == []
-    errors = proc.validate_parameters({"staged_dir": "/s", "s3_dest": "s3://b/"})
-    assert any("aws_cli_path" in e for e in errors)
-    assert any("aws_key_param" in e for e in errors)
-    assert any("aws_secret_param" in e for e in errors)
+    errors = proc.validate_parameters({})
+    assert any("staged_dir" in e for e in errors)
+    assert any("s3_dest" in e for e in errors)

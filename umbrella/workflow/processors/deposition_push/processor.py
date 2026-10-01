@@ -1,4 +1,6 @@
-"""DepositionPushProcessor - Runs one SLURM job that uploads a prep-staged dataset to S3 portal bucket."""
+"""DepositionPushProcessor - Runs one SLURM job that uploads a prep-staged dataset to S3 Portal.
+``aws s3 sync`` of the dataset subtree; mirrors ``cryoetportalprep push``.
+"""
 
 import logging
 import os
@@ -13,8 +15,20 @@ from workflow.processors.base import BaseProcessor
 
 logger = logging.getLogger(__name__)
 
-# Caller supplies paths and SSM names. No credentials baked in.
-REQUIRED_PARAMS = ("staged_dir", "s3_dest", "aws_cli_path", "aws_key_param", "aws_secret_param")
+REQUIRED_PARAMS = ("staged_dir", "s3_dest")
+# Software setup before the sync; one command per line so set -e catches a failed load.
+DEFAULT_PROLOGUE = "ml load anaconda\nconda activate dataportalenv\nml load awscli"
+# Local-only artifacts kept out of the upload (mirrors cryoetportalprep SYNC_EXCLUDE_PATTERNS).
+EXCLUDE_PATTERNS = [
+    "dataprep_config.yaml",
+    "sync_job.sh",
+    "cryoetprep_push_*",
+    "notes.md",
+    ".venv/*",
+    "__pycache__/*",
+    "*.pyc",
+    ".pytest_cache/*",
+]
 
 
 class DepositionPushProcessor(BaseProcessor):
@@ -36,9 +50,8 @@ class DepositionPushProcessor(BaseProcessor):
         return template.render(
             staged_dir=shlex.quote(params["staged_dir"]),
             s3_dest=shlex.quote(params["s3_dest"]),
-            aws_cli_path=shlex.quote(params["aws_cli_path"]),
-            aws_key_param=shlex.quote(params["aws_key_param"]),
-            aws_secret_param=shlex.quote(params["aws_secret_param"]),
+            prologue=params.get("prologue", DEFAULT_PROLOGUE),
+            exclude_patterns=EXCLUDE_PATTERNS,
             cluster=run_context.cluster_id,
             slurm_directives=self.generate_slurm_directives(params),
         )
