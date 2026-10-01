@@ -345,11 +345,16 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
 
         raw = result["session"]
         mapped = map_session_to_metadata(raw)
+        acq = msi_session.acquisition
         TiltseriesMetadata.objects.update_or_create(
             session=session,
             defaults={
                 **mapped["tiltseries"],
-                **map_session_plan_to_instrument_metadata(msi_session.session_plan),
+                **map_session_plan_to_instrument_metadata(
+                    msi_session.session_plan,
+                    phase_plate_used=acq.phase_plate_used if acq else None,
+                    energy_filter_used=acq.energy_filter_used if acq else None,
+                ),
                 "autofill_metadata": raw,
             },
         )

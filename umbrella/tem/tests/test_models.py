@@ -141,15 +141,23 @@ class TestSessionPlanNamePrefix:
 @pytest.mark.django_db
 class TestAcquisitionSettings:
     def test_plan_without_profile_reports_field_defaults(self, session_plan):
-        assert session_plan.acquisition_values() == {"super_resolution": False}
+        assert session_plan.acquisition_values() == {
+            "super_resolution": False,
+            "phase_plate_used": False,
+            "energy_filter_used": False,
+        }
 
     def test_snapshot_copies_then_overrides(self):
         profile = AcquisitionSettings.objects.create(label="krios2", super_resolution=True)
 
         copy = profile.snapshot("snapshot 26sep15a")
-        assert copy.values() == {"super_resolution": True}
+        assert copy.values() == {"super_resolution": True, "phase_plate_used": False, "energy_filter_used": False}
         assert str(copy) == "snapshot 26sep15a"
-        assert profile.snapshot("x", super_resolution=False).values() == {"super_resolution": False}
+        assert profile.snapshot("x", super_resolution=False).values() == {
+            "super_resolution": False,
+            "phase_plate_used": False,
+            "energy_filter_used": False,
+        }
 
     def test_snapshot_does_not_alias_the_profile(self, msi_session):
         profile = AcquisitionSettings.objects.create(label="krios2", super_resolution=True)
