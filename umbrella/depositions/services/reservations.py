@@ -34,17 +34,28 @@ class ReservationService(ABC):
 
 
 class StubReservationService(ReservationService):
-    """In-memory stub for local dev. Class-level counters from 10000; reset on process restart."""
+    """In-memory stub for local dev. Ids start above the current DB max so they can't collide with
+    already-seeded deposition_id/dataset_id (the real lambda owns the id space in prod)."""
 
     _next_deposition_id = 10000
     _next_dataset_id = 10000
 
     def reserve_new_deposition(self) -> int:
-        StubReservationService._next_deposition_id += 1
+        from django.db.models import Max
+
+        from depositions.models import Deposition
+
+        db_max = Deposition.objects.aggregate(m=Max("deposition_id"))["m"] or 0
+        StubReservationService._next_deposition_id = max(db_max, StubReservationService._next_deposition_id) + 1
         return StubReservationService._next_deposition_id
 
     def reserve_new_dataset(self) -> int:
-        StubReservationService._next_dataset_id += 1
+        from django.db.models import Max
+
+        from depositions.models import Dataset
+
+        db_max = Dataset.objects.aggregate(m=Max("dataset_id"))["m"] or 0
+        StubReservationService._next_dataset_id = max(db_max, StubReservationService._next_dataset_id) + 1
         return StubReservationService._next_dataset_id
 
     def validate_deposition(self, deposition_id: int) -> Dict[str, Any]:
