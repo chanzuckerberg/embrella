@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#SBATCH --job-name=deposition_push
+{% for directive in slurm_directives -%}
+{% if directive.directive.startswith('-') and not directive.directive.startswith('--') -%}
+#SBATCH {{ directive.directive }} {{ directive.value }}
+{% else -%}
+#SBATCH {{ directive.directive }}={{ directive.value }}
+{% endif -%}
+{% endfor -%}
+{% if cluster == "czii" %}
+#SBATCH --qos=embrella
+{% endif %}
+
+# Group-writable staged tree.
+umask 0002
+
+# -u deferred: prologue activates conda and reads unset vars.
+set -e
+{{ prologue }}
+set -euo pipefail
+
+# AWS CLI uses the job account's credentials.
+aws s3 sync {{ staged_dir }} {{ s3_dest }} --follow-symlinks{% for pattern in exclude_patterns %} --exclude '{{ pattern }}'{% endfor %}
+
+echo "Deposition push completed."
