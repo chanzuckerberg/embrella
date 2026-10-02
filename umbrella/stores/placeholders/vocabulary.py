@@ -74,6 +74,12 @@ PLACEHOLDERS = (
         "for aretomo volumes: vol001/vol003, empty for denoised",
     ),
     Placeholder("copick_run", SESSION_SCOPED, "caller kwarg -- ProcRun.name for a copick project"),
+    Placeholder(
+        "deposition_id",
+        SESSION_SCOPED,
+        "caller kwarg -- Deposition.deposition_id",
+        notes="Deposition staging templates",
+    ),
     # -- File-scoped: unknowable at create time, so they are capture groups, not substitutions --
     Placeholder(
         "run",
