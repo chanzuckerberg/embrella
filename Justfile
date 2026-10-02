@@ -294,13 +294,9 @@ initenv:
     if [ ! -f ".env" ]; then
       echo "No environment file setup. Making one from a template."
       echo -e "${RED}FILL OUT THIS FILE:${NC} ./.env"
-      cp ./helpers/.env_template ./.env
+      cp ./docker/compose/docker-compose.env ./.env
       echo ""
     else
-      if [ ! -z "${YOUDIDNOTUPDATETHIS:-}" ]; then
-        echo -e "${RED}You need to fill out the environment variable file:${NC} ./.env"
-        exit 1
-      fi
       echo -e "${GREEN}Using environment variable file:${NC} ./.env"
     fi
 

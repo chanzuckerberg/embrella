@@ -33,7 +33,6 @@ logs/
 # Local dev / secrets
 .env
 .env.*
-!.env_template
 *.pem
 *.key
 id_*
