@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.1.0](https://github.com/chanzuckerberg/embrella/compare/v1.0.0...v1.1.0) (2026-10-02)
+
+
+### Features
+
+* **deposition:** add DatasetJob submit state machine ([#1277](https://github.com/chanzuckerberg/embrella/issues/1277)) ([bac1d52](https://github.com/chanzuckerberg/embrella/commit/bac1d52e64d174b539a253be98ca10ce1aa56231))
+* **deposition:** add DepositionPrepProcessor ([#1281](https://github.com/chanzuckerberg/embrella/issues/1281)) ([c6f5af6](https://github.com/chanzuckerberg/embrella/commit/c6f5af668700337e9954e68c3adf97cf1f81cb29))
+* **deposition:** add DepositionPushProcessor ([#1282](https://github.com/chanzuckerberg/embrella/issues/1282)) ([986ae33](https://github.com/chanzuckerberg/embrella/commit/986ae334086b9178009b1a50298ce2aa4bea57b4))
+* **deposition:** keep DatasetJob transitions on the current database… ([#1290](https://github.com/chanzuckerberg/embrella/issues/1290)) ([4170e64](https://github.com/chanzuckerberg/embrella/commit/4170e64587a624ef9ede465f23a3218a98f346ea))
+* **stores:** seed deposition_staging PathType for deposition prep/push ([#1294](https://github.com/chanzuckerberg/embrella/issues/1294)) ([ee30b9f](https://github.com/chanzuckerberg/embrella/commit/ee30b9f749d105d367cb7b8f5dccfc6c6300757d))
+
+
+### Misc
+
+* bump django from 5.2.16 to 5.2.17 ([#1284](https://github.com/chanzuckerberg/embrella/issues/1284)) ([7e8f241](https://github.com/chanzuckerberg/embrella/commit/7e8f241fb4eb0c0705e76441bad2235d28931cdf))
+* bump next from 16.3.3 to 16.3.6 in /frontend ([#1287](https://github.com/chanzuckerberg/embrella/issues/1287)) ([5a35beb](https://github.com/chanzuckerberg/embrella/commit/5a35beb94d376a7813707fef31c02a7bddbc8c20))
+* bump oauthlib from 3.3.1 to 4.0.0 ([#1286](https://github.com/chanzuckerberg/embrella/issues/1286)) ([0b4890d](https://github.com/chanzuckerberg/embrella/commit/0b4890d6922d2baec0f1d5d7b7c4859af40d3499))
+* bump pyjwt from 2.13.0 to 2.15.0 ([#1283](https://github.com/chanzuckerberg/embrella/issues/1283)) ([327d1c8](https://github.com/chanzuckerberg/embrella/commit/327d1c855bdea8a0b5e6e15398bab4844edff987))
+* bump urllib3 from 2.7.0 to 2.8.0 ([#1285](https://github.com/chanzuckerberg/embrella/issues/1285)) ([2537158](https://github.com/chanzuckerberg/embrella/commit/2537158e42a08a02c1dd6c2aa4c8440d168a52b1))
+* update 'stack' helm chart version for embrella staging ([#1279](https://github.com/chanzuckerberg/embrella/issues/1279)) ([900638d](https://github.com/chanzuckerberg/embrella/commit/900638d19a26551572f80f6889759463b3f0ab1b))
+* update 'stack' helm chart version for embrella staging ([#1288](https://github.com/chanzuckerberg/embrella/issues/1288)) ([6d98069](https://github.com/chanzuckerberg/embrella/commit/6d9806945e45262acd1651d5ab201a8a13f8ada5))
+
 ## [1.0.0](https://github.com/chanzuckerberg/embrella/compare/v1.1.2...v1.0.0) (2026-09-29)
 
 
