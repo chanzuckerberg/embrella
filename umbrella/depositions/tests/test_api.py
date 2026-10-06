@@ -10,6 +10,9 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
+from depositions.services.exceptions import SubmissionValidationError
+from depositions.services.launch import LaunchError
+
 DEPOSITIONS = "/depositions/v1/depositions/"
 DATASETS = "/depositions/v1/datasets/"
 SESSIONS = "/depositions/v1/sessions/"
@@ -1025,18 +1028,20 @@ class TestSubmitEndpoint:
         assert r.json() == {"state": "prep_submitted", "dataset_status": "syncing"}
         m.assert_called_once()
 
-    def test_valueerror_maps_to_400(self, auth_client):
+    def test_validation_error_maps_to_400(self, auth_client):
         ds = self._owned_dataset(auth_client)
-        with mock.patch(self.SERVICE, side_effect=ValueError("not ready")):
+        with mock.patch(self.SERVICE, side_effect=SubmissionValidationError("not ready")):
             r = auth_client.post(f"{DATASETS}{ds['id']}/submit/")
         assert r.status_code == 400
         assert r.json()["detail"] == "not ready"
 
-    def test_cluster_error_maps_to_502(self, auth_client):
+    @pytest.mark.parametrize("error_type", [OSError, ValueError, LaunchError])
+    def test_unexpected_error_maps_to_generic_502(self, auth_client, error_type):
         ds = self._owned_dataset(auth_client)
-        with mock.patch(self.SERVICE, side_effect=OSError("ssh down")):
+        with mock.patch(self.SERVICE, side_effect=error_type("sensitive cluster diagnostics")):
             r = auth_client.post(f"{DATASETS}{ds['id']}/submit/")
         assert r.status_code == 502
+        assert r.json() == {"detail": "Couldn't reach the cluster to submit. Please try again."}
 
     def test_non_owner_is_forbidden(self, auth_client, db):
         ds = self._owned_dataset(auth_client)
@@ -1068,17 +1073,20 @@ class TestPushEndpoint:
         assert r.json() == {"state": "push_submitted", "dataset_status": "syncing"}
         m.assert_called_once()
 
-    def test_push_valueerror_maps_to_400(self, auth_client):
+    def test_push_validation_error_maps_to_400(self, auth_client):
         ds = self._owned_dataset(auth_client)
-        with mock.patch(self.SERVICE, side_effect=ValueError("push can only start from prep_completed")):
+        with mock.patch(self.SERVICE, side_effect=SubmissionValidationError("push can only start from prep_completed")):
             r = auth_client.post(f"{DATASETS}{ds['id']}/push/")
         assert r.status_code == 400
+        assert r.json() == {"detail": "push can only start from prep_completed"}
 
-    def test_push_cluster_error_maps_to_502(self, auth_client):
+    @pytest.mark.parametrize("error_type", [OSError, ValueError, LaunchError])
+    def test_push_unexpected_error_maps_to_generic_502(self, auth_client, error_type):
         ds = self._owned_dataset(auth_client)
-        with mock.patch(self.SERVICE, side_effect=OSError("ssh down")):
+        with mock.patch(self.SERVICE, side_effect=error_type("sensitive cluster diagnostics")):
             r = auth_client.post(f"{DATASETS}{ds['id']}/push/")
         assert r.status_code == 502
+        assert r.json() == {"detail": "Couldn't reach the cluster to push. Please try again."}
 
     def test_push_non_owner_is_forbidden(self, auth_client, db):
         ds = self._owned_dataset(auth_client)

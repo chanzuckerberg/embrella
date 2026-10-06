@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from depositions.models import DatasetJob
+from depositions.services.exceptions import SubmissionValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ def start_push(job, *, launch, cancel=None):
         if claimed:
             apply_status(job)
     if not claimed:
-        raise ValueError(f"Push can only start from prep_completed, not {job.state!r}.")
+        raise SubmissionValidationError(f"Push can only start from prep_completed, not {job.state!r}.")
     job_id = None
     try:
         from depositions.services.launch import LaunchError

@@ -11,6 +11,7 @@ from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, DepositionAnnotation
 from depositions.services.dataprep_config import DEFAULT_SYNC_DESTINATION, dataprep_config_yaml, dataset_is_ready
+from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.submission import apply_status, on_push_complete, start_push
 
@@ -33,13 +34,15 @@ def submit_dataset_prep(dataset):
     """Write the deposition config and launch this dataset's prep job. Returns the DatasetJob."""
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
-        raise ValueError("Reserve deposition_id and dataset_id before submitting.")
+        raise SubmissionValidationError("Reserve deposition_id and dataset_id before submitting.")
     if not dataset_is_ready(dataset):
-        raise ValueError("This dataset isn't ready to submit — add sessions and run auto-fill first.")
+        raise SubmissionValidationError("This dataset isn't ready to submit — add sessions and run auto-fill first.")
     if DepositionAnnotation.objects.filter(session__dataset=dataset, is_selected=True).exists():
         # Annotation export isn't wired yet; refuse rather than mark the dataset done without it.
         # TODO(#1291): annotation export.
-        raise ValueError("Depositing annotations isn't supported yet; deselect them to submit this dataset.")
+        raise SubmissionValidationError(
+            "Depositing annotations isn't supported yet; deselect them to submit this dataset."
+        )
 
     job, _ = DatasetJob.objects.get_or_create(dataset=dataset)
     # Claim the row before any remote work so a double-submit can't launch two jobs.
@@ -48,7 +51,7 @@ def submit_dataset_prep(dataset):
     )
     if not claimed:
         job.refresh_from_db()
-        raise ValueError(f"Dataset is already {job.state}; it can't be submitted again.")
+        raise SubmissionValidationError(f"Dataset is already {job.state}; it can't be submitted again.")
     job.refresh_from_db()
     apply_status(job)
 
@@ -113,11 +116,11 @@ def submit_dataset_push(dataset):
     """Launch this dataset's push (S3 upload) job from a prep_completed state. Returns the DatasetJob."""
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
-        raise ValueError("Reserve deposition_id and dataset_id before pushing.")
+        raise SubmissionValidationError("Reserve deposition_id and dataset_id before pushing.")
     try:
         job = dataset.job
     except DatasetJob.DoesNotExist:
-        raise ValueError("This dataset hasn't been prepared yet; submit it first.")
+        raise SubmissionValidationError("This dataset hasn't been prepared yet; submit it first.")
 
     # Use the cluster prep staged on, not one re-derived from (mutable) metadata.
     cluster_id = job.cluster_id or _cluster_for_dataset(dataset)

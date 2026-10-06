@@ -11,6 +11,7 @@ from pathlib import PurePosixPath
 import yaml
 
 from depositions.models import TiltseriesMetadata
+from depositions.services.exceptions import SubmissionValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +30,16 @@ def _session_config(session):
     try:
         metadata = session.tiltseries_metadata
     except TiltseriesMetadata.DoesNotExist:
-        raise ValueError(f"Session {name!r} needs autofill before preparing the dataset.")
+        raise SubmissionValidationError(f"Session {name!r} needs autofill before preparing the dataset.")
 
     raw = metadata.autofill_metadata
     if not isinstance(raw, dict) or not raw:
-        raise ValueError(f"Session {name!r} has no saved autofill config.")
+        raise SubmissionValidationError(f"Session {name!r} has no saved autofill config.")
     paths = raw.get("paths")
     if not isinstance(paths, dict) or not paths.get("aretomo3"):
-        raise ValueError(f"Session {name!r} has no saved AreTomo source path.")
+        raise SubmissionValidationError(f"Session {name!r} has no saved AreTomo source path.")
     if not isinstance(raw.get("acquisition"), dict):
-        raise ValueError(f"Session {name!r} has no saved acquisition config.")
+        raise SubmissionValidationError(f"Session {name!r} has no saved acquisition config.")
 
     config = deepcopy(raw)
     for config_field, model_field in ACQUISITION_FIELDS.items():
@@ -51,7 +52,7 @@ def _session_config(session):
             config["acquisition"]["binned_voxel_ratio"] = None
         else:
             if metadata.pixel_spacing is None or metadata.pixel_spacing <= 0 or filtered.voxel_spacing <= 0:
-                raise ValueError(f"Session {name!r} needs positive pixel and voxel spacing.")
+                raise SubmissionValidationError(f"Session {name!r} needs positive pixel and voxel spacing.")
             config["acquisition"]["binned_voxel_ratio"] = filtered.voxel_spacing / metadata.pixel_spacing
     config["tilt_axis_angle"] = metadata.tilt_axis
     config["total_dose"] = metadata.total_flux
@@ -73,7 +74,7 @@ def dataset_is_ready(dataset):
 
 def _dataset_block(dataset):
     if dataset.dataset_id is None:
-        raise ValueError("Reserve the dataset_id before preparing the dataset.")
+        raise SubmissionValidationError("Reserve the dataset_id before preparing the dataset.")
     sessions = {}
     selected_sessions = (
         dataset.sessions.select_related("msi_session", "tiltseries_metadata")
@@ -83,7 +84,7 @@ def _dataset_block(dataset):
     for session in selected_sessions:
         sessions[session.msi_session.name] = _session_config(session)
     if not sessions:
-        raise ValueError("Select at least one session before preparing the dataset.")
+        raise SubmissionValidationError("Select at least one session before preparing the dataset.")
     return {"dataset_id": dataset.dataset_id, "sessions": sessions}
 
 
@@ -91,33 +92,33 @@ def build_dataprep_config(
     deposition, *, output_dir, sync_destination=DEFAULT_SYNC_DESTINATION, required_dataset_ids=None
 ):
     if deposition.deposition_id is None:
-        raise ValueError("Reserve the deposition_id before preparing.")
+        raise SubmissionValidationError("Reserve the deposition_id before preparing.")
     output_dir = str(output_dir) if output_dir is not None else ""
     if not output_dir or not PurePosixPath(output_dir).is_absolute():
-        raise ValueError("output_dir must be an absolute cluster path.")
+        raise SubmissionValidationError("output_dir must be an absolute cluster path.")
     if not isinstance(sync_destination, str) or not sync_destination.startswith("s3://"):
-        raise ValueError("sync_destination must be an S3 destination.")
+        raise SubmissionValidationError("sync_destination must be an S3 destination.")
 
     datasets = {}
     for dataset in deposition.datasets.order_by("dataset_id"):
         is_required = required_dataset_ids is None or dataset.dataset_id in required_dataset_ids
         if not dataset_is_ready(dataset):
             if required_dataset_ids is not None and dataset.dataset_id in required_dataset_ids:
-                raise ValueError(
+                raise SubmissionValidationError(
                     f"Dataset {dataset.dataset_id} is staged or in flight but has no usable autofill; "
                     "fix it before submitting."
                 )
             continue  # a draft/unready sibling has no tree to protect
         try:
             block = _dataset_block(dataset)
-        except ValueError:
+        except SubmissionValidationError:
             if is_required:
                 raise
             logger.warning("Skipping malformed sibling dataset %s from the deposition config.", dataset.dataset_id)
             continue
         datasets[f"dataset_{dataset.dataset_id}"] = block
     if not datasets:
-        raise ValueError("No dataset in this deposition is ready to prepare.")
+        raise SubmissionValidationError("No dataset in this deposition is ready to prepare.")
 
     return {
         "output_dir": output_dir,

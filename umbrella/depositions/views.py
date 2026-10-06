@@ -10,7 +10,7 @@ from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_v
 from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException, PermissionDenied
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from stores.models import Cluster, resolve_review_path
@@ -35,18 +35,11 @@ from .services.autofill import (
     map_session_to_metadata,
     run_autofill_init,
 )
+from .services.exceptions import SubmissionValidationError
 
 logger = logging.getLogger(__name__)
 
 DEPOSITION_DEFAULT_CLUSTER_ID = "bruno"
-
-
-class SubmitValidationError(APIException):
-    status_code = status.HTTP_400_BAD_REQUEST
-    default_detail = "Submission could not be started."
-
-    def __init__(self, detail=None):
-        self.detail = detail or self.default_detail
 
 
 # Wizard autosaves via PATCH only — no PUT full-replace.
@@ -218,8 +211,8 @@ class DatasetViewSet(viewsets.ModelViewSet):
         dataset = self.get_object()
         try:
             job = submit_dataset_prep(dataset)
-        except ValueError as e:
-            raise SubmitValidationError(str(e)) from None
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
             logger.exception("Dataset %s prep submit failed to reach the cluster", pk)
             return Response(
@@ -238,8 +231,8 @@ class DatasetViewSet(viewsets.ModelViewSet):
         dataset = self.get_object()
         try:
             job = submit_dataset_push(dataset)
-        except ValueError as e:
-            raise SubmitValidationError(str(e)) from None
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
             logger.exception("Dataset %s push failed to reach the cluster", pk)
             return Response(

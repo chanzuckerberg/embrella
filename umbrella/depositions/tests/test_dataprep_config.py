@@ -12,6 +12,7 @@ from depositions.services.dataprep_config import (
     build_dataprep_config,
     dataprep_config_yaml,
 )
+from depositions.services.exceptions import SubmissionValidationError
 
 RAW_SESSION = {
     "paths": {
@@ -135,7 +136,7 @@ def test_rejects_invalid_spacing_when_deriving_voxel_ratio(dataset, pixel_spacin
     session = dataset.sessions.get()
     TiltseriesMetadata.objects.filter(session=session).update(pixel_spacing=pixel_spacing)
     TomogramMetadata.objects.create(session=session, flavor="filtered", voxel_spacing=12.32)
-    with pytest.raises(ValueError, match="positive pixel and voxel spacing"):
+    with pytest.raises(SubmissionValidationError, match="positive pixel and voxel spacing"):
         _build(dataset)
 
 
@@ -165,13 +166,13 @@ def test_rejects_missing_reservations(dataset, missing_id):
         dataset.deposition.deposition_id = None  # checked on the passed deposition object
     else:
         Dataset.objects.filter(pk=dataset.pk).update(dataset_id=None)  # datasets are read from the db
-    with pytest.raises(ValueError, match="Reserve"):
+    with pytest.raises(SubmissionValidationError, match="Reserve"):
         build_dataprep_config(dataset.deposition, output_dir="/staging/101")
 
 
 def test_rejects_when_no_dataset_is_ready(dataset):
     dataset.sessions.all().delete()
-    with pytest.raises(ValueError, match="ready to prepare"):
+    with pytest.raises(SubmissionValidationError, match="ready to prepare"):
         _build(dataset)
 
 
@@ -188,13 +189,13 @@ def test_skips_dataset_never_autofilled(dataset, raw):
     metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
     metadata.autofill_metadata = raw
     metadata.save()
-    with pytest.raises(ValueError, match="ready to prepare"):
+    with pytest.raises(SubmissionValidationError, match="ready to prepare"):
         _build(dataset)
 
 
 def test_skips_dataset_without_autofill_metadata(dataset):
     TiltseriesMetadata.objects.filter(session__dataset=dataset).delete()
-    with pytest.raises(ValueError, match="ready to prepare"):
+    with pytest.raises(SubmissionValidationError, match="ready to prepare"):
         _build(dataset)
 
 
@@ -203,7 +204,7 @@ def test_rejects_malformed_saved_autofill(dataset, raw):
     metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
     metadata.autofill_metadata = raw
     metadata.save()
-    with pytest.raises(ValueError, match="saved"):
+    with pytest.raises(SubmissionValidationError, match="saved"):
         _build(dataset)
 
 
@@ -221,13 +222,13 @@ def test_malformed_sibling_is_skipped_when_not_required(dataset, test_session_pl
 
 def test_required_dataset_without_autofill_raises(dataset):
     TiltseriesMetadata.objects.filter(session__dataset=dataset).delete()
-    with pytest.raises(ValueError, match="no usable autofill"):
+    with pytest.raises(SubmissionValidationError, match="no usable autofill"):
         build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
 
 
 def test_required_dataset_without_sessions_raises(dataset):
     dataset.sessions.all().delete()
-    with pytest.raises(ValueError, match="no usable autofill"):
+    with pytest.raises(SubmissionValidationError, match="no usable autofill"):
         build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
 
 
@@ -241,17 +242,17 @@ def test_malformed_required_dataset_still_raises(dataset):
     metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
     metadata.autofill_metadata = {"paths": {"aretomo3": "/a"}}
     metadata.save()
-    with pytest.raises(ValueError, match="saved"):
+    with pytest.raises(SubmissionValidationError, match="saved"):
         build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
 
 
 @pytest.mark.parametrize("output_dir", [None, "", "relative/path"])
 def test_rejects_invalid_output_dir(dataset, output_dir):
-    with pytest.raises(ValueError, match="absolute cluster path"):
+    with pytest.raises(SubmissionValidationError, match="absolute cluster path"):
         build_dataprep_config(dataset.deposition, output_dir=output_dir)
 
 
 @pytest.mark.parametrize("destination", [None, "", "/local/path"])
 def test_rejects_invalid_destination(dataset, destination):
-    with pytest.raises(ValueError, match="S3 destination"):
+    with pytest.raises(SubmissionValidationError, match="S3 destination"):
         _build(dataset, sync_destination=destination)

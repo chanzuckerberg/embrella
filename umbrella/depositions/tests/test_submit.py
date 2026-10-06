@@ -12,6 +12,7 @@ from depositions.models import (
     TiltseriesMetadata,
 )
 from depositions.services import submit
+from depositions.services.exceptions import SubmissionValidationError
 
 
 @pytest.fixture
@@ -71,20 +72,20 @@ class TestSubmitDatasetPrep:
 
     def test_rejects_unreserved_ids(self, dataset, mocks):
         dataset.dataset_id = None  # checked on the passed object
-        with pytest.raises(ValueError, match="Reserve"):
+        with pytest.raises(SubmissionValidationError, match="Reserve"):
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
     def test_rejects_resubmit_while_in_flight(self, dataset, mocks):
         DatasetJob.objects.create(dataset=dataset, state="prep_running", prep_slurm_job_id="old")
-        with pytest.raises(ValueError, match="already"):
+        with pytest.raises(SubmissionValidationError, match="already"):
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
     def test_rejects_selected_annotations_until_supported(self, dataset, mocks):
         session = dataset.sessions.get()
         DepositionAnnotation.objects.create(session=session, copick_kind="picks", copick_ref="ribosome-0")
-        with pytest.raises(ValueError, match="annotations isn't supported"):
+        with pytest.raises(SubmissionValidationError, match="annotations isn't supported"):
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
@@ -99,7 +100,7 @@ class TestSubmitDatasetPrep:
 
     def test_rejects_not_ready_dataset(self, dataset, mocks):
         TiltseriesMetadata.objects.filter(session__dataset=dataset).delete()
-        with pytest.raises(ValueError, match="ready to submit"):
+        with pytest.raises(SubmissionValidationError, match="ready to submit"):
             submit.submit_dataset_prep(dataset)
         assert mocks["launched"] is None
 
@@ -236,11 +237,11 @@ class TestSubmitDatasetPush:
 
     def test_push_rejects_before_prep_completed(self, dataset, mocks):
         DatasetJob.objects.create(dataset=dataset, state="prep_submitted", prep_slurm_job_id="p1")
-        with pytest.raises(ValueError, match="prep_completed"):
+        with pytest.raises(SubmissionValidationError, match="prep_completed"):
             submit.submit_dataset_push(dataset)
         assert mocks["launched"] is None
 
     def test_push_rejects_when_never_prepared(self, dataset, mocks):
-        with pytest.raises(ValueError, match="hasn't been prepared"):
+        with pytest.raises(SubmissionValidationError, match="hasn't been prepared"):
             submit.submit_dataset_push(dataset)
         assert mocks["launched"] is None

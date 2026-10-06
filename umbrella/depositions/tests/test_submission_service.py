@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from depositions.models import Dataset, DatasetJob, Deposition
 from depositions.services import submission
+from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError
 
 
@@ -123,7 +124,7 @@ class TestStartPush:
     def test_rejects_wrong_state_and_does_not_launch(self):
         job = _job("pending")
         launched = []
-        with pytest.raises(ValueError):
+        with pytest.raises(SubmissionValidationError):
             submission.start_push(job, launch=lambda j: launched.append(j) or "x")
         job.refresh_from_db()
         assert job.state == "pending"
@@ -134,7 +135,7 @@ class TestStartPush:
         calls = []
         submission.start_push(job, launch=lambda j: calls.append(j) or "slurm-1")
         # Row is now push_submitted; a second Submit click must not launch again.
-        with pytest.raises(ValueError):
+        with pytest.raises(SubmissionValidationError):
             submission.start_push(job, launch=lambda j: calls.append(j) or "slurm-2")
         assert len(calls) == 1
 
