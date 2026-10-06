@@ -30,6 +30,12 @@ export interface DatasetJob {
   push_slurm_job_id?: string | null;
   error_message?: string | null;
 }
+
+export interface SubmitResponse {
+  state: JobState;
+  dataset_status: DatasetStatus;
+}
+
 export interface Institution {
   id: number;
   name: string;

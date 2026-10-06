@@ -16,6 +16,7 @@ import type {
   Institution,
   Person,
   SubmissionList,
+  SubmitResponse,
 } from '../types';
 
 export interface PersonUpdate {
@@ -110,8 +111,12 @@ export async function deleteDataset(id: number): Promise<void> {
   return parse(await deleteResource(url(`${API.DEPOSITION_DATASETS}${id}/`)));
 }
 
-export async function submitDataset(id: number): Promise<unknown> {
+export async function submitDataset(id: number): Promise<SubmitResponse> {
   return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/submit/`), {}));
+}
+
+export async function pushDataset(id: number): Promise<SubmitResponse> {
+  return parse(await postResource(url(`${API.DEPOSITION_DATASETS}${id}/push/`), {}));
 }
 
 export async function fetchDatasetJobStatus(id: number): Promise<unknown> {
