@@ -24,7 +24,9 @@ To create a new `.env` file, you can use:
 (umbrella) $ just initenv
 ```
 
-This copies `helpers/.env_template` to `.env` if `.env` is not present. Open up `.env`, and fill in the values for each key.
+This copies `docker/compose/docker-compose.env` to `.env` if `.env` is not present. Open up `.env`, and fill in the values for each key. See [Environment Variables](../setup/environment.md) for what each key does.
+
+Then add the dev-only database and SSH key settings; see [Getting Started → Path A](gettingstarted.md#path-a-containerized-recommended).
 
 ### Securely shared .env files
 

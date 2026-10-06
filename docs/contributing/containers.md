@@ -74,7 +74,6 @@ The services read these. Defaults come from `.env` / `.env.<stage>` at repo root
 | `EMBRELLA_MIGRATE`         | entrypoint                         | `1` → run DB migrations. Set only on the one-shot `migrate` service; backend + worker wait on it.                             |
 | `SLURM_KEYFILE`            | clusterio.py                       | In-container path. Dev overrides to `/run/secrets/slurm_key`.                                                                 |
 | `DEBUGPY_LISTEN`           | manage.py                          | `1` opens a debugpy listener on `DEBUGPY_PORT`.                                                                               |
-| `NGINX_RESOLVER`           | nginx\_\*.conf.template (envsubst) | DNS server nginx uses to re-resolve upstreams. Defaults to internal gateway IP (podman); override to `127.0.0.11` for Docker. |
 | `IMAGE_TAG`                | compose.yaml                       | Image tag for both backend + frontend (default `latest`).                                                                     |
 
 ## Debugging

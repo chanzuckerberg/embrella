@@ -1,3 +1,5 @@
+Self-hosting at your institution? See [Setup → Deployment](../setup/deployment.md).
+
 ## Local running
 
 The frontend uses next.js, and runs its own server.
