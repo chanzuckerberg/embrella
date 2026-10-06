@@ -29,6 +29,14 @@ function ask_if_really_sure() {
   fi
 }
 
+# Print a SQL dump, decompressing .gz. Picks by extension, not gzip -f, for BSD/GNU parity.
+function cat_dump() {
+  case "$1" in
+    *.gz) gunzip -c "$1" ;;
+    *)    cat "$1" ;;
+  esac
+}
+
 function encrypt_file() {
   password=$1
   filepath=$2

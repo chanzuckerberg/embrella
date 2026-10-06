@@ -1,0 +1,101 @@
+# Docker Compose file for running Embrella from ghcr.io.
+#
+# This configures Embrella in the following way:
+#
+# - Docker volumes for the database and static files are managed by Docker.
+# - Cluster access is off until enabled in 'docker-compose.env'.
+#
+# To install and update Embrella with this file, do the following:
+#
+# - Copy this file, 'docker-compose.env' and 'nginx.conf' into a folder.
+# - Set DJANGO_SECRET_KEY in 'docker-compose.env'.
+# - Run 'docker compose pull'.
+# - Run 'docker compose up -d'.
+#
+# For production, also change the database password and enable the SLURM key
+# mount below. See the deployment documentation.
+
+name: embrella
+
+x-backend: &backend
+  image: ghcr.io/chanzuckerberg/embrella/backend:latest
+  platform: linux/amd64
+  restart: unless-stopped
+  depends_on:
+    - db
+  env_file: docker-compose.env
+  environment: &backend-env
+    DJANGO_ENV: production
+    USE_MYSQL: 'True'
+    MYSQL_HOST: db
+    MYSQL_NAME: embrella
+    MYSQL_USER: embrella
+    MYSQL_PWD: embrella
+    SLURM_KEYFILE: /run/secrets/slurm_key
+
+services:
+  # One-shot: the entrypoint runs migrations, then exits.
+  migrate:
+    <<: *backend
+    command: ['true']
+    restart: 'no'
+    environment:
+      <<: *backend-env
+      EMBRELLA_MIGRATE: '1'
+
+  backend:
+    <<: *backend
+    depends_on: &after-migrate
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *backend-env
+      EMBRELLA_BUILD_STATIC: '1'
+    volumes:
+      - static:/app/umbrella/staticfiles
+      # Cluster access: the service account's SSH key, copied here as 'slurm_key'.
+      #- ./slurm_key:/run/secrets/slurm_key:ro
+
+  worker:
+    <<: *backend
+    depends_on: *after-migrate
+    command: ['python', 'umbrella/manage.py', 'qcluster']
+    # Cluster access: same key as backend.
+    #volumes:
+    #  - ./slurm_key:/run/secrets/slurm_key:ro
+
+  frontend:
+    image: ghcr.io/chanzuckerberg/embrella/frontend:latest
+    platform: linux/amd64
+    restart: unless-stopped
+
+  db:
+    image: docker.io/library/mariadb:10.5.22
+    restart: unless-stopped
+    volumes:
+      - dbdata:/var/lib/mysql
+    environment:
+      MARIADB_DATABASE: embrella
+      MARIADB_USER: embrella
+      MARIADB_PASSWORD: embrella
+      MARIADB_ROOT_PASSWORD: embrella
+
+  nginx:
+    image: docker.io/library/nginx:stable-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - '8080:80'
+    volumes:
+      - ./nginx.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - static:/srv/staticfiles:ro
+    environment:
+      NGINX_ENTRYPOINT_LOCAL_RESOLVERS: '1'
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_ENVSUBST_FILTER: '^NGINX_'
+
+volumes:
+  dbdata:
+  static:

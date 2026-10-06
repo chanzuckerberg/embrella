@@ -28,9 +28,23 @@ $ podman machine start
 One-time setup:
 
 ```bash
-$ cp helpers/.env_template .env   # if you don't have a .env yet
+$ cp docker/compose/docker-compose.env .env   # if you don't have a .env yet
 # make edits to the .env file. Contact local admin for secrets needed.
 ```
+
+The dev stack also reads the database and SSH key settings from `.env`. Append them:
+
+```bash
+$ cat >> .env <<'EOF'
+MYSQL_NAME=embrella
+MYSQL_USER=root
+MYSQL_PWD=devaccount
+# Host path to your SLURM SSH key; empty = no cluster.
+SLURM_KEYFILE=
+EOF
+```
+
+For cluster access, set `SLURM_KEYFILE`, `SLURM_USER` and `SSH_DISABLED=False`.
 
 Then bring up the stack either way:
 

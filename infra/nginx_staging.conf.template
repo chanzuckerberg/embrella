@@ -28,7 +28,7 @@ http {
     # Re-resolve upstream DNS on each request so container restarts (redeploys
     # via `just deployv2` recreate containers → new IPs) don't leave nginx
     # pointing at a dead IP.
-    resolver ${NGINX_RESOLVER} ipv6=off valid=5s;
+    resolver ${NGINX_LOCAL_RESOLVERS} ipv6=off valid=5s;
 
     server {
         listen 80;

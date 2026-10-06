@@ -6,6 +6,7 @@ every stage of the pipeline so users can manage and standardize their data track
 one place.
 
 [Get Started](userguide/overview.md){ .md-button .md-button--primary }
+[Self-Host](setup/gettingstarted.md){ .md-button }
 [Contributing](contributing/gettingstarted.md){ .md-button }
 
 <!-- TODO: Graphic for Hero Image? -->
@@ -105,6 +106,14 @@ Completed job outputs, both metadata and processed images, are surfaced in two s
   Step-by-step walkthroughs of each part of the app.
 
   :octicons-arrow-right-24: [Read the guide](userguide/overview.md)
+
+- :material-server:{ .lg .middle } **Setup**
+
+  ***
+
+  Requirements and deployment for hosting Embrella at your institution.
+
+  :octicons-arrow-right-24: [Self-host](setup/gettingstarted.md)
 
 - :material-code-braces:{ .lg .middle } **Contributing**
 

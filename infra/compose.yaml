@@ -72,11 +72,11 @@ services:
       - backend_static:/srv/staticfiles:ro
     environment:
       # The nginx image's entrypoint runs envsubst
-      #   RESOLVER= Docker users set 127.0.0.11 in .env.
+      #   LOCAL_RESOLVERS: engine DNS (Docker or Podman) read from /etc/resolv.conf.
       NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/templates
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
       NGINX_ENVSUBST_FILTER: '^NGINX_'
-      NGINX_RESOLVER: ${NGINX_RESOLVER:-10.89.200.1}
+      NGINX_ENTRYPOINT_LOCAL_RESOLVERS: '1'
     restart: unless-stopped
 
 networks:
