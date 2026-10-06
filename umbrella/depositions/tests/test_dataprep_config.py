@@ -53,7 +53,7 @@ def dataset(db, test_msi_session):
 
 
 def _build(dataset, **kwargs):
-    return build_dataprep_config(dataset, output_dir="/staging/101", **kwargs)
+    return build_dataprep_config(dataset.deposition, output_dir="/staging/101", **kwargs)
 
 
 def _session(config, name="24nov10"):
@@ -67,6 +67,19 @@ def test_builds_deployment_config_with_reserved_ids(dataset):
     assert config["sync_destination"] == DEFAULT_SYNC_DESTINATION
     assert config["datasets"]["dataset_202"]["dataset_id"] == 202
     assert _session(config) == RAW_SESSION
+
+
+def test_includes_every_dataset_in_the_deposition(dataset, test_session_plan):
+    other = Dataset.objects.create(deposition=dataset.deposition, title="Dataset 2", dataset_id=303)
+    session = DepositionSession.objects.create(
+        dataset=other,
+        msi_session=MsiSession.objects.create(name="24dec01", session_plan=test_session_plan),
+        aretomo_run_name="run009",
+    )
+    TiltseriesMetadata.objects.create(session=session, autofill_metadata=deepcopy(RAW_SESSION), pixel_spacing=1.54)
+    config = _build(dataset)
+    assert set(config["datasets"]) == {"dataset_202", "dataset_303"}
+    assert config["datasets"]["dataset_303"]["dataset_id"] == 303
 
 
 def test_user_edits_override_autofill_without_changing_saved_raw_data(dataset):
@@ -135,7 +148,9 @@ def test_assembles_all_sessions_and_round_trips_yaml(dataset, test_session_plan)
     raw = deepcopy(RAW_SESSION)
     raw["paths"]["aretomo3"] = "/hpc/aretomo3/24nov11/run003"
     TiltseriesMetadata.objects.create(session=second, autofill_metadata=raw, pixel_spacing=2)
-    text = dataprep_config_yaml(dataset, output_dir="/staging/101", sync_destination="s3://test-bucket/review")
+    text = dataprep_config_yaml(
+        dataset.deposition, output_dir="/staging/101", sync_destination="s3://test-bucket/review"
+    )
     parsed = yaml.safe_load(text)
     assert list(parsed["datasets"]["dataset_202"]["sessions"]) == ["24nov10", "24nov11"]
     assert _session(parsed, "24nov11")["paths"]["aretomo3"] == raw["paths"]["aretomo3"]
@@ -147,27 +162,44 @@ def test_assembles_all_sessions_and_round_trips_yaml(dataset, test_session_plan)
 @pytest.mark.parametrize("missing_id", ["deposition", "dataset"])
 def test_rejects_missing_reservations(dataset, missing_id):
     if missing_id == "deposition":
-        dataset.deposition.deposition_id = None
+        dataset.deposition.deposition_id = None  # checked on the passed deposition object
     else:
-        dataset.dataset_id = None
+        Dataset.objects.filter(pk=dataset.pk).update(dataset_id=None)  # datasets are read from the db
     with pytest.raises(ValueError, match="Reserve"):
-        _build(dataset)
+        build_dataprep_config(dataset.deposition, output_dir="/staging/101")
 
 
-def test_rejects_empty_dataset(dataset):
+def test_rejects_when_no_dataset_is_ready(dataset):
     dataset.sessions.all().delete()
-    with pytest.raises(ValueError, match="at least one session"):
+    with pytest.raises(ValueError, match="ready to prepare"):
         _build(dataset)
 
 
-def test_rejects_missing_autofill_metadata(dataset):
+def test_skips_a_not_ready_dataset(dataset):
+    # A draft dataset (no sessions yet) must not block the ready one.
+    Dataset.objects.create(deposition=dataset.deposition, title="Draft", dataset_id=404)
+    config = _build(dataset)
+    assert set(config["datasets"]) == {"dataset_202"}
+
+
+@pytest.mark.parametrize("raw", [{}, "invalid", []])
+def test_skips_dataset_never_autofilled(dataset, raw):
+    # Empty/missing autofill = a draft that never ran auto-fill - skipped.
+    metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
+    metadata.autofill_metadata = raw
+    metadata.save()
+    with pytest.raises(ValueError, match="ready to prepare"):
+        _build(dataset)
+
+
+def test_skips_dataset_without_autofill_metadata(dataset):
     TiltseriesMetadata.objects.filter(session__dataset=dataset).delete()
-    with pytest.raises(ValueError, match="needs autofill"):
+    with pytest.raises(ValueError, match="ready to prepare"):
         _build(dataset)
 
 
-@pytest.mark.parametrize("raw", [{}, "invalid", [], {"paths": {}}, {"paths": {"aretomo3": "/a"}}])
-def test_rejects_incomplete_saved_autofill(dataset, raw):
+@pytest.mark.parametrize("raw", [{"paths": {}}, {"paths": {"aretomo3": "/a"}}])
+def test_rejects_malformed_saved_autofill(dataset, raw):
     metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
     metadata.autofill_metadata = raw
     metadata.save()
@@ -175,10 +207,48 @@ def test_rejects_incomplete_saved_autofill(dataset, raw):
         _build(dataset)
 
 
+def test_malformed_sibling_is_skipped_when_not_required(dataset, test_session_plan):
+    other = Dataset.objects.create(deposition=dataset.deposition, title="Broken", dataset_id=303)
+    session = DepositionSession.objects.create(
+        dataset=other,
+        msi_session=MsiSession.objects.create(name="24dec02", session_plan=test_session_plan),
+        aretomo_run_name="run009",
+    )
+    TiltseriesMetadata.objects.create(session=session, autofill_metadata={"paths": {"aretomo3": "/a"}})  # malformed
+    config = build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
+    assert set(config["datasets"]) == {"dataset_202"}
+
+
+def test_required_dataset_without_autofill_raises(dataset):
+    TiltseriesMetadata.objects.filter(session__dataset=dataset).delete()
+    with pytest.raises(ValueError, match="no usable autofill"):
+        build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
+
+
+def test_required_dataset_without_sessions_raises(dataset):
+    dataset.sessions.all().delete()
+    with pytest.raises(ValueError, match="no usable autofill"):
+        build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
+
+
+def test_unrequired_draft_sibling_is_skipped(dataset):
+    Dataset.objects.create(deposition=dataset.deposition, title="Draft", dataset_id=303)  # no sessions
+    config = build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
+    assert set(config["datasets"]) == {"dataset_202"}
+
+
+def test_malformed_required_dataset_still_raises(dataset):
+    metadata = TiltseriesMetadata.objects.get(session__dataset=dataset)
+    metadata.autofill_metadata = {"paths": {"aretomo3": "/a"}}
+    metadata.save()
+    with pytest.raises(ValueError, match="saved"):
+        build_dataprep_config(dataset.deposition, output_dir="/staging/101", required_dataset_ids={202})
+
+
 @pytest.mark.parametrize("output_dir", [None, "", "relative/path"])
 def test_rejects_invalid_output_dir(dataset, output_dir):
     with pytest.raises(ValueError, match="absolute cluster path"):
-        build_dataprep_config(dataset, output_dir=output_dir)
+        build_dataprep_config(dataset.deposition, output_dir=output_dir)
 
 
 @pytest.mark.parametrize("destination", [None, "", "/local/path"])

@@ -23,12 +23,14 @@ set -euo pipefail
 
 cd {{ output_dir }}
 
-cryoetportalprep sync {{ config_path }}
+cryoetportalprep sync {{ config_path }}{{ session_flags }}
 
 {% if copick_flags -%}
 copick deposit --config {{ copick_config }} --target-dir {{ target_dir }} {{ copick_flags }}
 {% endif -%}
 
+{% if run_validate -%}
 cryoetportalprep push {{ config_path }} --dry-run
+{% endif -%}
 
 echo "Deposition prep completed."

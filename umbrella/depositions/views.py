@@ -204,7 +204,43 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
-        return _not_implemented()  # TODO: trigger DepositionPrepProcessor (per dataset)
+        from .services.submit import submit_dataset_prep
+
+        dataset = self.get_object()
+        try:
+            job = submit_dataset_prep(dataset)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Dataset %s prep submit failed to reach the cluster", pk)
+            return Response(
+                {"detail": "Couldn't reach the cluster to submit. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response(
+            {"state": job.state, "dataset_status": job.dataset_status},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+    @action(detail=True, methods=["post"])
+    def push(self, request, pk=None):
+        from .services.submit import submit_dataset_push
+
+        dataset = self.get_object()
+        try:
+            job = submit_dataset_push(dataset)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Dataset %s push failed to reach the cluster", pk)
+            return Response(
+                {"detail": "Couldn't reach the cluster to push. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response(
+            {"state": job.state, "dataset_status": job.dataset_status},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
     @action(detail=True, methods=["get"], url_path="job-status")
     def job_status(self, request, pk=None):

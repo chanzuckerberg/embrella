@@ -2,6 +2,7 @@
 
 import itertools
 import json
+from types import SimpleNamespace
 from unittest import mock
 
 import pytest
@@ -1003,3 +1004,88 @@ class TestPreparationSources:
         response = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
         assert response.status_code == 200
         assert response.json()["preparation_sources"] == []
+
+
+@pytest.mark.django_db
+class TestSubmitEndpoint:
+    """View-layer behaviour of POST .../submit/ (service logic is covered in test_submit.py)."""
+
+    SERVICE = "depositions.services.submit.submit_dataset_prep"
+
+    def _owned_dataset(self, client):
+        dep = _make_deposition(client)
+        return _make_dataset(client, dep["id"])
+
+    def test_submit_returns_202_with_state(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        job = SimpleNamespace(state="prep_submitted", dataset_status="syncing")
+        with mock.patch(self.SERVICE, return_value=job) as m:
+            r = auth_client.post(f"{DATASETS}{ds['id']}/submit/")
+        assert r.status_code == 202, r.content
+        assert r.json() == {"state": "prep_submitted", "dataset_status": "syncing"}
+        m.assert_called_once()
+
+    def test_valueerror_maps_to_400(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, side_effect=ValueError("not ready")):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/submit/")
+        assert r.status_code == 400
+        assert r.json()["detail"] == "not ready"
+
+    def test_cluster_error_maps_to_502(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, side_effect=OSError("ssh down")):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/submit/")
+        assert r.status_code == 502
+
+    def test_non_owner_is_forbidden(self, auth_client, db):
+        ds = self._owned_dataset(auth_client)
+        other = User.objects.create_user(username="bob@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        with mock.patch(self.SERVICE) as m:
+            r = client.post(f"{DATASETS}{ds['id']}/submit/")
+        assert r.status_code == 403
+        m.assert_not_called()  # permission check runs before the service
+
+
+@pytest.mark.django_db
+class TestPushEndpoint:
+    """View-layer behaviour of POST .../push/ (service logic is covered in test_submit.py)."""
+
+    SERVICE = "depositions.services.submit.submit_dataset_push"
+
+    def _owned_dataset(self, client):
+        dep = _make_deposition(client)
+        return _make_dataset(client, dep["id"])
+
+    def test_push_returns_202_with_state(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        job = SimpleNamespace(state="push_submitted", dataset_status="syncing")
+        with mock.patch(self.SERVICE, return_value=job) as m:
+            r = auth_client.post(f"{DATASETS}{ds['id']}/push/")
+        assert r.status_code == 202, r.content
+        assert r.json() == {"state": "push_submitted", "dataset_status": "syncing"}
+        m.assert_called_once()
+
+    def test_push_valueerror_maps_to_400(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, side_effect=ValueError("push can only start from prep_completed")):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/push/")
+        assert r.status_code == 400
+
+    def test_push_cluster_error_maps_to_502(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, side_effect=OSError("ssh down")):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/push/")
+        assert r.status_code == 502
+
+    def test_push_non_owner_is_forbidden(self, auth_client, db):
+        ds = self._owned_dataset(auth_client)
+        other = User.objects.create_user(username="grace@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        with mock.patch(self.SERVICE) as m:
+            r = client.post(f"{DATASETS}{ds['id']}/push/")
+        assert r.status_code == 403
+        m.assert_not_called()

@@ -1,5 +1,4 @@
-"""Launch a deposition prep/push processor as a one-off SLURM job.
-"""
+"""Launch a deposition prep/push processor as a one-off SLURM job."""
 
 import logging
 import re
@@ -39,5 +38,17 @@ def launch_deposition_job(*, processor_name, params, cluster_id, job_name, auth=
         job_id = match.group(1)
         logger.info("Launched %s as SLURM job %s on %s", job_name, job_id, cluster_id)
         return job_id
+    finally:
+        submitter.close()
+
+
+def cancel_deposition_job(*, cluster_id, job_id, auth=None):
+    """cancel a SLURM job."""
+    submitter = RemoteJobSubmitter(cluster_id=cluster_id, auth=auth)
+    try:
+        submitter.connect()
+        ok, error = submitter.cancel(job_id)
+        if not ok:
+            raise OSError(f"scancel {job_id} on {cluster_id} failed: {error}")
     finally:
         submitter.close()

@@ -27,6 +27,20 @@ def test_runs_sync_deposit_and_dry_run_push():
     assert "cryoetportalprep push /staged/dep_1/ds_2/dataprep_config.yaml --dry-run" in script
 
 
+def test_session_filter_scopes_sync_to_this_datasets_sessions():
+    script = _render(session_names=["24nov10", "24nov11"])
+    assert "cryoetportalprep sync /staged/dep_1/ds_2/dataprep_config.yaml -s 24nov10 -s 24nov11" in script
+
+
+def test_no_session_filter_syncs_the_whole_config():
+    # Blank session_names leaves the bare sync (processes every dataset in the config).
+    assert "cryoetportalprep sync /staged/dep_1/ds_2/dataprep_config.yaml\n" in _render(session_names=[])
+
+
+def test_validate_can_be_skipped_for_a_per_dataset_job():
+    assert "--dry-run" not in _render(run_validate=False)
+
+
 def test_prep_never_uploads_or_inits():
     script = _render()
     assert "--force" not in script

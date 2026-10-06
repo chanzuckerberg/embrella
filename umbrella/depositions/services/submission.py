@@ -12,11 +12,29 @@ logger = logging.getLogger(__name__)
 PREP_ACTIVE = ("prep_submitted", "prep_running")
 PUSH_ACTIVE = ("push_submitted", "push_running")
 
+# phase -> (submitted_state, running_state, attempt_field)
+_RUNNING = {
+    "prep": ("prep_submitted", "prep_running", "prep_slurm_job_id"),
+    "push": ("push_submitted", "push_running", "push_slurm_job_id"),
+}
 
-def _apply_status(job):
+
+def apply_status(job):
     # Mirror the job state onto the API-facing Dataset.status.
     job.dataset.status = job.dataset_status
     job.dataset.save(update_fields=["status", "updated_at"])
+
+
+def on_job_running(job, phase, *, job_id):
+    """Flip {phase}_submitted -> {phase}_running on the first RUNNING sacct poll. Idempotent."""
+    submitted, running, attempt_field = _RUNNING[phase]
+    updated = DatasetJob.objects.filter(pk=job.pk, state=submitted, **{attempt_field: job_id}).update(
+        state=running, updated_at=timezone.now()
+    )
+    if updated:
+        job.refresh_from_db()
+        apply_status(job)
+    return job
 
 
 @transaction.atomic
@@ -38,7 +56,7 @@ def _record_completion(job, *, active_states, attempt_field, job_id, fields, req
         )
         return job
     job.refresh_from_db()
-    _apply_status(job)
+    apply_status(job)
     return job
 
 
@@ -65,25 +83,40 @@ def on_prep_complete(job, success, *, job_id=None, error_message=None, log_excer
     )
 
 
-def start_push(job, *, launch):
-    """User-triggered push: claim prep_completed -> push_submitted, then launch the job."""
-    # Compare-and-set so two Submit clicks can't both launch; claim before the slow launch.
+def start_push(job, *, launch, cancel=None):
+    """Claim prep_completed -> push_submitted, launch the job, and store its id."""
     with transaction.atomic():
         claimed = DatasetJob.objects.filter(pk=job.pk, state="prep_completed").update(
             state="push_submitted", error_message="", completed_at=None, push_slurm_job_id=""
         )
         job.refresh_from_db()
         if claimed:
-            _apply_status(job)
+            apply_status(job)
     if not claimed:
         raise ValueError(f"Push can only start from prep_completed, not {job.state!r}.")
+    job_id = None
     try:
         job_id = launch(job)
         if not job_id:
             raise ValueError("Push launch returned an empty SLURM job id.")
+        logger.info("Push launched for DatasetJob %s (SLURM job %s)", job.pk, job_id)
+        recorded = DatasetJob.objects.filter(pk=job.pk, state="push_submitted", push_slurm_job_id="").update(
+            push_slurm_job_id=job_id, updated_at=timezone.now()
+        )
+        if not recorded:
+            job.refresh_from_db()
+            if job.state == "push_submitted":
+                raise ValueError("Lost the push claim before the SLURM id could be recorded.")
     except Exception:
-        # Fail only the row we just claimed: still push_submitted with the blank id. Do NOT pass
-        # require_attempt here — it would exclude that blank id and the failed row would never match.
+        if job_id and cancel is not None:
+            try:
+                cancel(job_id)
+            except Exception:
+                # Unconfirmed cancel: leave for an operator, not retryable into a double-upload.
+                logger.exception("Couldn't cancel orphaned push job %s for DatasetJob %s", job_id, job.pk)
+                raise
+        elif job_id:
+            raise
         _record_completion(
             job,
             active_states=("push_submitted",),
@@ -97,12 +130,6 @@ def start_push(job, *, launch):
             },
         )
         raise
-    # Log the id before the write: if that write fails, an operator can restore push_slurm_job_id
-    # from this line. (A crash inside launch, before it returns, leaves no id and no log.)
-    logger.info("Push launched for DatasetJob %s (SLURM job %s)", job.pk, job_id)
-    DatasetJob.objects.filter(pk=job.pk, state="push_submitted", push_slurm_job_id="").update(
-        push_slurm_job_id=job_id, updated_at=timezone.now()
-    )
     job.refresh_from_db()
     return job
 

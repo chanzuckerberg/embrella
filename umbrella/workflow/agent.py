@@ -117,14 +117,14 @@ class RemoteJobSubmitter:
         # Execute the scancel command with the given job number
         stdin, stdout, stderr = self.ssh.exec_command(f"scancel {job_number}")
 
-        # Read the output and error streams
-        output = stdout.read().decode("utf-8")
+        exit_status = stdout.channel.recv_exit_status()
         error = stderr.read().decode("utf-8")
 
-        if error:
-            logger.error(f"Cancel Error: {error}")
+        ok = exit_status == 0
+        if not ok:
+            logger.error(f"Cancel Error (exit {exit_status}): {error}")
 
-        return output == "" and error == "", error
+        return ok, error
 
     def close(self):
         if self.ssh:

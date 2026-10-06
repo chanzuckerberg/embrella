@@ -4,12 +4,15 @@ This is dataprep_config.yaml, separate from the portal metadata YAML in config_y
 Path resolution, remote writes, and launching jobs belong to the submit service.
 """
 
+import logging
 from copy import deepcopy
 from pathlib import PurePosixPath
 
 import yaml
 
 from depositions.models import TiltseriesMetadata
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_SYNC_DESTINATION = "s3://cryoetportal-biohub-hpc-globus/CZII"
 
@@ -55,16 +58,22 @@ def _session_config(session):
     return config
 
 
-def build_dataprep_config(dataset, *, output_dir, sync_destination=DEFAULT_SYNC_DESTINATION):
-    """Build one dataset's deployment config without running init."""
-    if dataset.deposition.deposition_id is None or dataset.dataset_id is None:
-        raise ValueError("Reserve deposition_id and dataset_id before preparing the dataset.")
-    output_dir = str(output_dir) if output_dir is not None else ""
-    if not output_dir or not PurePosixPath(output_dir).is_absolute():
-        raise ValueError("output_dir must be an absolute cluster path.")
-    if not isinstance(sync_destination, str) or not sync_destination.startswith("s3://"):
-        raise ValueError("sync_destination must be an S3 destination.")
+def _session_has_autofill(session):
+    try:
+        raw = session.tiltseries_metadata.autofill_metadata
+    except TiltseriesMetadata.DoesNotExist:
+        return False
+    return isinstance(raw, dict) and bool(raw)
 
+
+def dataset_is_ready(dataset):
+    sessions = list(dataset.sessions.select_related("tiltseries_metadata"))
+    return bool(sessions) and all(_session_has_autofill(s) for s in sessions)
+
+
+def _dataset_block(dataset):
+    if dataset.dataset_id is None:
+        raise ValueError("Reserve the dataset_id before preparing the dataset.")
     sessions = {}
     selected_sessions = (
         dataset.sessions.select_related("msi_session", "tiltseries_metadata")
@@ -72,25 +81,57 @@ def build_dataprep_config(dataset, *, output_dir, sync_destination=DEFAULT_SYNC_
         .order_by("msi_session__name")
     )
     for session in selected_sessions:
-        name = session.msi_session.name
-        sessions[name] = _session_config(session)
+        sessions[session.msi_session.name] = _session_config(session)
     if not sessions:
         raise ValueError("Select at least one session before preparing the dataset.")
+    return {"dataset_id": dataset.dataset_id, "sessions": sessions}
+
+
+def build_dataprep_config(
+    deposition, *, output_dir, sync_destination=DEFAULT_SYNC_DESTINATION, required_dataset_ids=None
+):
+    if deposition.deposition_id is None:
+        raise ValueError("Reserve the deposition_id before preparing.")
+    output_dir = str(output_dir) if output_dir is not None else ""
+    if not output_dir or not PurePosixPath(output_dir).is_absolute():
+        raise ValueError("output_dir must be an absolute cluster path.")
+    if not isinstance(sync_destination, str) or not sync_destination.startswith("s3://"):
+        raise ValueError("sync_destination must be an S3 destination.")
+
+    datasets = {}
+    for dataset in deposition.datasets.order_by("dataset_id"):
+        is_required = required_dataset_ids is None or dataset.dataset_id in required_dataset_ids
+        if not dataset_is_ready(dataset):
+            if required_dataset_ids is not None and dataset.dataset_id in required_dataset_ids:
+                raise ValueError(
+                    f"Dataset {dataset.dataset_id} is staged or in flight but has no usable autofill; "
+                    "fix it before submitting."
+                )
+            continue  # a draft/unready sibling has no tree to protect
+        try:
+            block = _dataset_block(dataset)
+        except ValueError:
+            if is_required:
+                raise
+            logger.warning("Skipping malformed sibling dataset %s from the deposition config.", dataset.dataset_id)
+            continue
+        datasets[f"dataset_{dataset.dataset_id}"] = block
+    if not datasets:
+        raise ValueError("No dataset in this deposition is ready to prepare.")
 
     return {
         "output_dir": output_dir,
         "sync_destination": sync_destination,
-        "deposition_id": dataset.deposition.deposition_id,
-        "datasets": {
-            f"dataset_{dataset.dataset_id}": {
-                "dataset_id": dataset.dataset_id,
-                "sessions": sessions,
-            },
-        },
+        "deposition_id": deposition.deposition_id,
+        "datasets": datasets,
     }
 
 
-def dataprep_config_yaml(dataset, *, output_dir, sync_destination=DEFAULT_SYNC_DESTINATION):
+def dataprep_config_yaml(
+    deposition, *, output_dir, sync_destination=DEFAULT_SYNC_DESTINATION, required_dataset_ids=None
+):
     """Render the prep deployment config as YAML for a later remote write."""
-    config = build_dataprep_config(dataset, output_dir=output_dir, sync_destination=sync_destination)
+    config = build_dataprep_config(
+        deposition, output_dir=output_dir, sync_destination=sync_destination, required_dataset_ids=required_dataset_ids
+    )
     return yaml.safe_dump(config, sort_keys=False, allow_unicode=True, default_flow_style=False)

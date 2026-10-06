@@ -143,6 +143,7 @@ class DatasetJob(models.Model):
     prep_slurm_job_id = models.CharField(max_length=32, null=True, blank=True)
     push_slurm_job_id = models.CharField(max_length=32, null=True, blank=True)
     state = models.CharField(max_length=256, choices=STATE_CHOICES, default="pending", db_index=True)
+    staged_at = models.DateTimeField(null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     log_excerpt = models.TextField(null=True, blank=True)
