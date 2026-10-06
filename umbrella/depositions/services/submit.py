@@ -11,7 +11,7 @@ from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, DepositionAnnotation
 from depositions.services.dataprep_config import DEFAULT_SYNC_DESTINATION, dataprep_config_yaml, dataset_is_ready
-from depositions.services.launch import cancel_deposition_job, launch_deposition_job
+from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.submission import apply_status, on_push_complete, start_push
 
 logger = logging.getLogger(__name__)
@@ -80,12 +80,12 @@ def submit_dataset_prep(dataset):
             processor_name="deposition-prep", params=params, cluster_id=cluster_id, job_name=job_name
         )
         if not slurm_job_id:
-            raise ValueError("Prep launch returned an empty SLURM job id.")
+            raise LaunchError("Prep launch returned an empty SLURM job id.")
         recorded = DatasetJob.objects.filter(pk=job.pk, state="prep_submitted", prep_slurm_job_id="").update(
-            prep_slurm_job_id=slurm_job_id, staged_at=timezone.now()
+            prep_slurm_job_id=slurm_job_id, staged_at=timezone.now(), cluster_id=cluster_id
         )
         if not recorded:
-            raise ValueError("Lost the prep claim before the SLURM id could be recorded.")
+            raise LaunchError("Lost the prep claim before the SLURM id could be recorded.")
         tasks.start_deposition_job_syncer(job.id, "prep", cluster_id, slurm_job_id)
     except Exception:
         # Cancel the orphaned job, then fail the row so the user can retry.
@@ -119,7 +119,8 @@ def submit_dataset_push(dataset):
     except DatasetJob.DoesNotExist:
         raise ValueError("This dataset hasn't been prepared yet; submit it first.")
 
-    cluster_id = _cluster_for_dataset(dataset)
+    # Use the cluster prep staged on, not one re-derived from (mutable) metadata.
+    cluster_id = job.cluster_id or _cluster_for_dataset(dataset)
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     base = output_dir.rstrip("/")
     staged_dir = f"{base}/{dataset.dataset_id}"

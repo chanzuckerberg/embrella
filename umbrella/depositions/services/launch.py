@@ -12,6 +12,11 @@ logger = logging.getLogger(__name__)
 _JOB_ID_RE = re.compile(r"Submitted batch job (\d+)")
 
 
+class LaunchError(Exception):
+    """A cluster/launch/internal failure. Kept distinct from ValueError so the API
+    returns a generic 502 and never echoes raw sbatch output back to the client."""
+
+
 @dataclass
 class DepositionRunContext:
     # Deposition processors only read cluster_id off the context.
@@ -34,7 +39,7 @@ def launch_deposition_job(*, processor_name, params, cluster_id, job_name, auth=
             logger.warning("SLURM stderr for %s: %s", job_name, error)
         match = _JOB_ID_RE.search(output or "")
         if not match:
-            raise ValueError(f"Could not parse SLURM job id from sbatch output: {output!r} (stderr: {error!r})")
+            raise LaunchError(f"Could not parse SLURM job id from sbatch output: {output!r} (stderr: {error!r})")
         job_id = match.group(1)
         logger.info("Launched %s as SLURM job %s on %s", job_name, job_id, cluster_id)
         return job_id

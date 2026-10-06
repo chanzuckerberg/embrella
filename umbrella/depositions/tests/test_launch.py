@@ -74,6 +74,6 @@ def test_submits_under_job_name_and_cluster(proc):
 
 def test_raises_when_job_id_missing_and_still_closes(proc, monkeypatch):
     monkeypatch.setattr(FakeSubmitter, "output", "sbatch: error: boom")
-    with pytest.raises(ValueError, match="Could not parse SLURM job id"):
+    with pytest.raises(launch.LaunchError, match="Could not parse SLURM job id"):
         launch.launch_deposition_job(processor_name="deposition-prep", params={}, cluster_id="bruno", job_name="j")
     assert "close" in FakeSubmitter.instances[-1].calls

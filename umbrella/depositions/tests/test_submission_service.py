@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from depositions.models import Dataset, DatasetJob, Deposition
 from depositions.services import submission
+from depositions.services.launch import LaunchError
 
 
 def _job(state):
@@ -192,7 +193,7 @@ class TestStartPush:
     @pytest.mark.parametrize("empty_id", [None, ""])
     def test_empty_launch_id_marks_job_failed(self, empty_id):
         job = _job("prep_completed")
-        with pytest.raises(ValueError, match="empty SLURM job id"):
+        with pytest.raises(LaunchError, match="empty SLURM job id"):
             submission.start_push(job, launch=lambda j: empty_id)
         job.refresh_from_db()
         assert job.state == "failed"
@@ -262,7 +263,7 @@ class TestStartPush:
             DatasetJob.objects.filter(pk=j.pk).update(push_slurm_job_id="other")
             return "slurm-9"
 
-        with pytest.raises(ValueError, match="Lost the push claim"):
+        with pytest.raises(LaunchError, match="Lost the push claim"):
             submission.start_push(job, launch=launch_then_steal, cancel=lambda jid: cancelled.append(jid))
         assert cancelled == ["slurm-9"]
 

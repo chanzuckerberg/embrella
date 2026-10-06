@@ -10,7 +10,7 @@ from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_v
 from processes.services.cluster_resolver import cluster_id_for_run
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from stores.models import Cluster, resolve_review_path
@@ -39,6 +39,15 @@ from .services.autofill import (
 logger = logging.getLogger(__name__)
 
 DEPOSITION_DEFAULT_CLUSTER_ID = "bruno"
+
+
+class SubmitValidationError(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "Submission could not be started."
+
+    def __init__(self, detail=None):
+        self.detail = detail or self.default_detail
+
 
 # Wizard autosaves via PATCH only — no PUT full-replace.
 HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
@@ -210,7 +219,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         try:
             job = submit_dataset_prep(dataset)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            raise SubmitValidationError(str(e)) from None
         except Exception:
             logger.exception("Dataset %s prep submit failed to reach the cluster", pk)
             return Response(
@@ -230,7 +239,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
         try:
             job = submit_dataset_push(dataset)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            raise SubmitValidationError(str(e)) from None
         except Exception:
             logger.exception("Dataset %s push failed to reach the cluster", pk)
             return Response(

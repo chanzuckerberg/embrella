@@ -196,7 +196,7 @@ class TestSubmitDatasetPrep:
             return "slurm-500"
 
         monkeypatch.setattr(submit, "launch_deposition_job", launch_then_steal)
-        with pytest.raises(ValueError, match="Lost the prep claim"):
+        with pytest.raises(submit.LaunchError, match="Lost the prep claim"):
             submit.submit_dataset_prep(dataset)
         assert cancelled == {"id": "slurm-500"}
         assert mocks["synced"] is None  # poller never started

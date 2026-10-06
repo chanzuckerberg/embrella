@@ -96,9 +96,11 @@ def start_push(job, *, launch, cancel=None):
         raise ValueError(f"Push can only start from prep_completed, not {job.state!r}.")
     job_id = None
     try:
+        from depositions.services.launch import LaunchError
+
         job_id = launch(job)
         if not job_id:
-            raise ValueError("Push launch returned an empty SLURM job id.")
+            raise LaunchError("Push launch returned an empty SLURM job id.")
         logger.info("Push launched for DatasetJob %s (SLURM job %s)", job.pk, job_id)
         recorded = DatasetJob.objects.filter(pk=job.pk, state="push_submitted", push_slurm_job_id="").update(
             push_slurm_job_id=job_id, updated_at=timezone.now()
@@ -106,7 +108,7 @@ def start_push(job, *, launch, cancel=None):
         if not recorded:
             job.refresh_from_db()
             if job.state == "push_submitted":
-                raise ValueError("Lost the push claim before the SLURM id could be recorded.")
+                raise LaunchError("Lost the push claim before the SLURM id could be recorded.")
     except Exception:
         if job_id and cancel is not None:
             try:
