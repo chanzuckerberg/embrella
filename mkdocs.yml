@@ -42,6 +42,10 @@ nav:
       - Launch Processing: 'userguide/launchprocessing.md'
       - View Metadata: 'userguide/metadataapp.md'
       - Review Tomograms: 'userguide/reviewapp.md'
+  - Setup:
+      - Getting Started: 'setup/gettingstarted.md'
+      - Deployment: 'setup/deployment.md'
+      - Environment Variables: 'setup/environment.md'
   - Contributing:
       - Getting Started: 'contributing/gettingstarted.md'
       - Container Layout: 'contributing/containers.md'
