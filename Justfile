@@ -227,9 +227,9 @@ info:
     echo ""
 
     echocolor $GREEN "▸ Database Backups:"
-    if ssh -o BatchMode=yes -o ConnectTimeout=3 svc.czii.umbrella@umbrella "ls -t /srv/dbbackups/backup_*.sql 2>/dev/null | head -n1" 2>/dev/null; then
-        LATEST_BACKUP=$(ssh svc.czii.umbrella@umbrella "ls -t /srv/dbbackups/backup_*.sql 2>/dev/null | head -n1 | xargs basename")
-        BACKUP_SIZE=$(ssh svc.czii.umbrella@umbrella "ls -lh /srv/dbbackups/backup_*.sql 2>/dev/null | head -n1 | awk '{print \$5}'")
+    if ssh -o BatchMode=yes -o ConnectTimeout=3 svc.czii.umbrella@umbrella "ls -t /srv/dbbackups/backup_*.sql* 2>/dev/null | head -n1" 2>/dev/null; then
+        LATEST_BACKUP=$(ssh svc.czii.umbrella@umbrella "ls -t /srv/dbbackups/backup_*.sql* 2>/dev/null | head -n1 | xargs basename")
+        BACKUP_SIZE=$(ssh svc.czii.umbrella@umbrella "ls -lht /srv/dbbackups/backup_*.sql* 2>/dev/null | head -n1 | awk '{print \$5}'")
         echo "  • Latest backup: $LATEST_BACKUP ($BACKUP_SIZE)"
     else
         echo "  • Unable to check backups (no SSH access)"
@@ -450,32 +450,35 @@ backupdb envfile +host="umbrella" :
     scp ./.scratch/.dbenv svc.czii.umbrella@{{host}}:/srv/dbbackups/.dbenv
     ssh svc.czii.umbrella@{{host}} "chmod 600 /srv/dbbackups/.dbenv"
     echo 'Backing up application db ($MYSQL_NAME) on {{host}}... to /srv/dbbackups/...'
-    ssh svc.czii.umbrella@{{host}} 'export $(cat /srv/dbbackups/.dbenv | xargs) && mysqldump -u $MYSQL_USER --databases "$MYSQL_NAME" --add-drop-database --verbose > /srv/dbbackups/backup_$(date +%F.%H%M%S).sql'
+    ssh svc.czii.umbrella@{{host}} 'set -o pipefail && export $(cat /srv/dbbackups/.dbenv | xargs) && mysqldump -u $MYSQL_USER --databases "$MYSQL_NAME" --add-drop-database --verbose | gzip > /srv/dbbackups/backup_$(date +%F.%H%M%S).sql.gz'
     echo "Done. Backups:"
-    ssh svc.czii.umbrella@{{host}} "rm /srv/dbbackups/.dbenv && ls -alh /srv/dbbackups/backup_*.sql"
+    ssh svc.czii.umbrella@{{host}} "rm /srv/dbbackups/.dbenv && ls -alh /srv/dbbackups/backup_*.sql*"
 
 mirrorproddbtostaging: initenv
     #!/bin/bash
     source ./helpers/shell_common.sh
 
-    LATEST=$(ssh svc.czii.umbrella@umbrella "cd /srv/dbbackups && ls -t backup_*.sql | head -n 1")
+    LATEST=$(ssh svc.czii.umbrella@umbrella "cd /srv/dbbackups && ls -t backup_*.sql* | head -n 1")
     # echo $LATEST
     scp svc.czii.umbrella@umbrella:/srv/dbbackups/$LATEST svc.czii.umbrella@umbrella-dev:/srv/dbbackups/$LATEST
     scp ./.scratch/.dbenv svc.czii.umbrella@umbrella-dev:/srv/dbbackups/.dbenv
 
     echo "Importing database from snapshot $LATEST..."
     mysql_cli='export $(cat /srv/dbbackups/.dbenv | xargs) && mysql -h 127.0.0.1 -P $MYSQL_PORT -u umbrella'
-    ssh svc.czii.umbrella@umbrella-dev "$mysql_cli < /srv/dbbackups/$LATEST"
+    # Runs remotely, so cat_dump isn't available; pick the reader here instead.
+    reader="cat"
+    [[ "$LATEST" == *.gz ]] && reader="gunzip -c"
+    ssh svc.czii.umbrella@umbrella-dev "$reader /srv/dbbackups/$LATEST | { $mysql_cli; }"
 
 mirrorproddbtolocal: initenv
     #!/bin/bash
     source ./helpers/shell_common.sh
 
-    LATEST=$(ssh svc.czii.umbrella@umbrella "cd /srv/dbbackups && ls -t backup_*.sql | head -n 1")
+    LATEST=$(ssh svc.czii.umbrella@umbrella "cd /srv/dbbackups && ls -t backup_*.sql* | head -n 1")
     scp svc.czii.umbrella@umbrella:/srv/dbbackups/$LATEST ./.scratch/$LATEST
 
     echo "Importing database from snapshot $LATEST..."
-    mysql -h 127.0.0.1 -u root -pdevaccount < ./.scratch/$LATEST
+    cat_dump ./.scratch/$LATEST | mysql -h 127.0.0.1 -u root -pdevaccount
 
 # Fetch the latest prod DB snapshot from umbrella:/srv/dbbackups into ./.scratch/.
 # Host-side only (needs SSH access to umbrella). Pair with `just loaddevdb` to
@@ -488,7 +491,7 @@ fetchprodsnapshot host="umbrella": initenv
     source ./helpers/shell_common.sh
     set -euo pipefail
 
-    LATEST=$(ssh svc.czii.umbrella@{{host}} "ls -t /srv/dbbackups/backup_*.sql | head -n 1 | xargs basename")
+    LATEST=$(ssh svc.czii.umbrella@{{host}} "ls -t /srv/dbbackups/backup_*.sql* | head -n 1 | xargs basename")
     echo "Fetching {{host}}:/srv/dbbackups/$LATEST → ./.scratch/$LATEST..."
     scp svc.czii.umbrella@{{host}}:/srv/dbbackups/$LATEST ./.scratch/$LATEST
 
@@ -496,9 +499,9 @@ fetchprodsnapshot host="umbrella": initenv
     echo "Next: just devexec just loaddevdb ./.scratch/$LATEST    # (or just loaddevdb ./.scratch/$LATEST from host)"
 
 # Load a SQL snapshot into the dev compose `db` service.
-# `snapshot` is a path to the .sql file (relative or absolute).
+# `snapshot` is a path to the .sql or .sql.gz file (relative or absolute).
 # Usage:
-#   just loaddevdb ./.scratch/backup_2026-05-17.123456.sql       # host
+#   just loaddevdb ./.scratch/backup_2026-05-17.123456.sql.gz    # host
 #   just devexec just loaddevdb ./.scratch/backup_…sql           # devcontainer
 loaddevdb snapshot: initenv
     #!/bin/bash
@@ -516,7 +519,7 @@ loaddevdb snapshot: initenv
     # --skip-ssl: dev db container has no TLS configured; recent MariaDB/MySQL
     # clients require it by default and bail with "SSL is required".
     echo "Importing {{snapshot}} into dev db..."
-    mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount < "{{snapshot}}"
+    cat_dump "{{snapshot}}" | mysql --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount
 
     echocolor $GREEN "Loaded {{snapshot}} into dev db at $DB_TARGET."
 
@@ -527,16 +530,16 @@ loaddevdb snapshot: initenv
 # Usage:
 #   just devexec just dbbackupdev            # devcontainer
 #   just dbbackupdev                         # host (dev stack up)
-#   just loaddevdb ./.scratch/devbackup_<ts>.sql   # to restore it back
+#   just loaddevdb ./.scratch/devbackup_<ts>.sql.gz   # to restore it back
 dbbackupdev: initenv
     #!/bin/bash
     source ./helpers/shell_common.sh
     set -euo pipefail
     mkdir -p ./.scratch
-    OUT="./.scratch/devbackup_$(date +%F.%H%M%S).sql"
+    OUT="./.scratch/devbackup_$(date +%F.%H%M%S).sql.gz"
     echo "Backing up dev compose db (application DB only) → $OUT ..."
     mysqldump --skip-ssl -h "${MYSQL_HOST:-127.0.0.1}" -u root -pdevaccount \
-      --databases "${MYSQL_NAME:-umbrella}" --add-drop-database > "$OUT"
+      --databases "${MYSQL_NAME:-umbrella}" --add-drop-database | gzip > "$OUT"
     echocolor $GREEN "Wrote $OUT"
 
 # Stop production server apps
@@ -865,8 +868,8 @@ deployv2 stage envfile branch tag="latest":
 # one of those, afterwards verify root-from-% access and app-user grants still work.
 #
 # Usage:
-#   just loadcontainerdb staging backup_2026-05-17.123456.sql
-#   just loadcontainerdb prod    backup_2026-05-17.123456.sql
+#   just loadcontainerdb staging backup_2026-05-17.123456.sql.gz
+#   just loadcontainerdb prod    backup_2026-05-17.123456.sql      # legacy .sql works too
 loadcontainerdb stage snapshot:
     #!/bin/bash
     set -euo pipefail
@@ -875,19 +878,28 @@ loadcontainerdb stage snapshot:
     fi
     HOST=umbrella-dev; ENVNAME=staging
     if [[ "{{stage}}" == "prod" ]]; then HOST=umbrella; ENVNAME=production; fi
+    # Runs remotely, so cat_dump isn't available; pick the reader here instead.
+    reader="cat"
+    [[ "{{snapshot}}" == *.gz ]] && reader="gunzip -c"
     echo "Loading /srv/dbbackups/{{snapshot}} into the {{stage}} db container on $HOST, then migrating..."
+    # migrate must run the deployed backend image (e.g. ghcr.io/.../backend:<tag>), not a
+    # short-name default that podman can't resolve or a newer tag with newer migrations.
     ssh svc.czii.umbrella@$HOST "set -euo pipefail; \
       cd /srv/czii-umbrella-django && \
+      IMG=\$(podman ps --filter label=com.docker.compose.service=backend --format '{{{{.Image}}' | head -n 1); \
+      if [[ -z \"\$IMG\" ]]; then echo '  ✗ backend not running; cannot tell which image to migrate with'; exit 1; fi; \
+      export IMAGE_REGISTRY=\${IMG%/backend:*} IMAGE_TAG=\${IMG##*:} && \
+      echo \"  ✓ migrating with \$IMG\" && \
       export \$(grep '^MYSQL' .env.$ENVNAME | xargs) && \
-      podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml \
-        exec -T db mariadb --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" < /srv/dbbackups/{{snapshot}} && \
+      $reader /srv/dbbackups/{{snapshot}} | podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml \
+        exec -T db mariadb --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" && \
       echo 'Restore complete; applying migrations to the restored db...' && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml run --rm migrate"
     echo "Done. (If you restored a legacy --all-databases dump, verify root-from-% access and app-user grants.)"
 
 # On-demand backup of the *containerized* db for a stage's stack. Dumps ONLY the
 # application database ($MYSQL_NAME) to
-# /srv/dbbackups/backup_<ts>.sql on the stack's host (same location/format as legacy
+# /srv/dbbackups/backup_<ts>.sql.gz on the stack's host (same location/format as legacy
 # `backupdb`, so `loadcontainerdb`, `fetchprodsnapshot`, and `loaddevdb` all consume it).
 #
 # Usage:
@@ -910,7 +922,7 @@ dbbackupv2 stage:
       TS=\$(date +%F.%H%M%S) && \
       podman compose --env-file .env.$ENVNAME -f infra/compose.yaml -f infra/compose.{{stage}}.yaml \
         exec -T db mariadb-dump --skip-ssl -h127.0.0.1 --protocol=tcp -uroot -p\"\$MYSQL_PWD\" --databases \"\$MYSQL_NAME\" --add-drop-database \
-        > /srv/dbbackups/.backup_\$TS.sql.partial && \
-      mv /srv/dbbackups/.backup_\$TS.sql.partial /srv/dbbackups/backup_\$TS.sql"
+        | gzip > /srv/dbbackups/.backup_\$TS.sql.gz.partial && \
+      mv /srv/dbbackups/.backup_\$TS.sql.gz.partial /srv/dbbackups/backup_\$TS.sql.gz"
     echo "Done. Latest backups on $HOST:"
-    ssh svc.czii.umbrella@$HOST "ls -alh /srv/dbbackups/backup_*.sql | tail -n 5"
+    ssh svc.czii.umbrella@$HOST "ls -alht /srv/dbbackups/backup_*.sql* | head -n 5"
