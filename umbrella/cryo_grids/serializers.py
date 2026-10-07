@@ -5,10 +5,7 @@ Contains serializers for cryo-EM grid storage models including Pucks, Canes,
 CryoGridBoxes, and CryoGrids.
 """
 
-from django.contrib.auth.models import User
 from django.utils import timezone as django_timezone
-from external_links.models import ExternalResource
-from projects.models import Project
 from rest_framework import serializers
 from umbrella.choices import PUCK_COLORS
 
@@ -722,85 +719,3 @@ class FreezingSessionSerializer(serializers.ModelSerializer):
     def get_display_name(self, obj):
         """Get human-readable display name matching the __str__ method"""
         return str(obj)
-
-
-class ProjectSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Project model
-    """
-
-    project_leader_name = serializers.SerializerMethodField(read_only=True)
-    documentation_space_name = serializers.SerializerMethodField(read_only=True)
-    documentation_space_url = serializers.SerializerMethodField(read_only=True)
-
-    class Meta:
-        model = Project
-        fields = [
-            "id",
-            "name",
-            "description",
-            "project_leader",
-            "project_leader_name",
-            "documentation_space",
-            "documentation_space_name",
-            "documentation_space_url",
-        ]
-        read_only_fields = ["id"]
-
-    def get_project_leader_name(self, obj):
-        """Get project leader's username"""
-        if obj.project_leader:
-            return obj.project_leader.username
-        return None
-
-    def get_documentation_space_name(self, obj):
-        """Get documentation space name"""
-        if obj.documentation_space:
-            return obj.documentation_space.name
-        return None
-
-    def get_documentation_space_url(self, obj):
-        """Get documentation space URL"""
-        if obj.documentation_space:
-            return obj.documentation_space.url
-        return None
-
-    def validate_name(self, value):
-        """
-        Validate that project name is unique and not empty
-        """
-        if not value or not value.strip():
-            raise serializers.ValidationError("Project name is required.")
-
-        # Check for uniqueness (excluding current instance during update)
-        instance = self.instance
-        name_query = Project.objects.filter(name=value.strip())
-        if instance:
-            name_query = name_query.exclude(pk=instance.pk)
-        if name_query.exists():
-            raise serializers.ValidationError(f'A project with name "{value}" already exists.')
-
-        return value.strip()
-
-    def validate(self, data):
-        """
-        Custom validation for project creation
-        """
-        # Validate foreign keys exist if provided
-        if "project_leader" in data and data["project_leader"] is not None:
-            if not User.objects.filter(id=data["project_leader"].id).exists():
-                raise serializers.ValidationError(
-                    {
-                        "project_leader": "Selected user does not exist.",
-                    }
-                )
-
-        if "documentation_space" in data and data["documentation_space"] is not None:
-            if not ExternalResource.objects.filter(id=data["documentation_space"].id).exists():
-                raise serializers.ValidationError(
-                    {
-                        "documentation_space": "Selected documentation space does not exist.",
-                    }
-                )
-
-        return data
