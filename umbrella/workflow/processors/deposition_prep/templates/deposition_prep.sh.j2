@@ -21,6 +21,18 @@ ml anaconda
 conda activate {{ prep_env }}
 set -euo pipefail
 
+output_dir={{ output_dir }}
+config_path={{ config_path }}
+mkdir -p -- "$output_dir"
+tmp=$(mktemp "$output_dir/dataprep_config.yaml.tmp.XXXXXX")
+trap 'rm -f -- "$tmp"' EXIT
+cat > "$tmp" <<'{{ config_delimiter }}'
+{{ config_yaml }}
+{{ config_delimiter }}
+# mktemp ignores umask; give the staging group read/write access before publishing.
+chmod g+rw "$tmp"
+mv -f -- "$tmp" "$config_path"
+
 cd {{ output_dir }}
 
 cryoetportalprep sync {{ config_path }}{{ session_flags }}

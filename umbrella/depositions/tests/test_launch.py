@@ -77,3 +77,11 @@ def test_raises_when_job_id_missing_and_still_closes(proc, monkeypatch):
     with pytest.raises(launch.LaunchError, match="Could not parse SLURM job id"):
         launch.launch_deposition_job(processor_name="deposition-prep", params={}, cluster_id="bruno", job_name="j")
     assert "close" in FakeSubmitter.instances[-1].calls
+
+
+def test_user_credentials_are_forwarded_to_remote_submitter(proc):
+    auth = {"username": "dataset-owner", "pkey": object()}
+    launch.launch_deposition_job(
+        processor_name="deposition-prep", params={}, cluster_id="bruno", job_name="prep", auth=auth
+    )
+    assert FakeSubmitter.instances[-1].auth is auth

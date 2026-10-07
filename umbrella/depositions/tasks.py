@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from django_q.tasks import async_task
 
+from common import clusterio
 from depositions.models import DatasetJob
 from depositions.services import submission
 
@@ -23,13 +24,25 @@ def _exit_ok(exit_code):
     return not exit_code or exit_code.split(":")[0] == "0"
 
 
+def _submitter_auth(job, cluster_id):
+    """The submission owner's cluster auth, so sacct/scancel run as the user who launched the job."""
+    try:
+        auth, error = clusterio.get_auth_for_user(job.dataset.deposition.submitter_user, cluster_id)
+    except Exception:
+        return None
+    return None if error else auth
+
+
 def _give_up(job, phase, cluster_id, slurm_job_id, reason):
     from depositions.services.launch import cancel_deposition_job
 
     logger.warning("Deposition %s syncer giving up on DatasetJob %s: %s", phase, job.pk, reason)
     if slurm_job_id:
         try:
-            cancel_deposition_job(cluster_id=cluster_id, job_id=slurm_job_id)
+            auth = _submitter_auth(job, cluster_id)
+            if not auth:
+                raise RuntimeError("Unable to resolve the submission owner's cluster credentials.")
+            cancel_deposition_job(cluster_id=cluster_id, job_id=slurm_job_id, auth=auth)
         except Exception:
             logger.exception(
                 "Could not cancel %s job %s on give-up; leaving DatasetJob %s for an operator.",
@@ -88,7 +101,7 @@ def run_deposition_job_syncer(dataset_job_id, phase, cluster_id, expected_job_id
         _reschedule(dataset_job_id, phase, cluster_id, expected_job_id, attempts + 1, NOT_LISTED_DELAY)
         return {"status": "waiting_id"}
 
-    syncer = JobStatusSyncer(job_id=slurm_job_id, cluster_id=cluster_id)
+    syncer = JobStatusSyncer(job_id=slurm_job_id, cluster_id=cluster_id, auth=_submitter_auth(job, cluster_id))
     try:
         info = syncer.get_job_info_from_sacct()
         if info is None:

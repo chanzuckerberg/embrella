@@ -10,10 +10,13 @@ class FakeSyncer:
     info = {"state": "COMPLETED", "exit_code": "0:0"}
     terminal = True
     raises = False
+    last_auth = None
 
-    def __init__(self, job_id, cluster_id):
+    def __init__(self, job_id, cluster_id, auth=None):
         self.job_id = job_id
         self.cluster_id = cluster_id
+        self.auth = auth
+        type(self).last_auth = auth
 
     def get_job_info_from_sacct(self):
         if type(self).raises:
@@ -34,9 +37,14 @@ def _job(state, **fields):
 def patched(monkeypatch):
     import workflow.syncers
 
+    monkeypatch.setattr(
+        tasks.clusterio, "get_auth_for_user", lambda user, cluster: ({"username": "cluster-alice"}, None)
+    )
+
     FakeSyncer.info = {"state": "COMPLETED", "exit_code": "0:0"}
     FakeSyncer.terminal = True
     FakeSyncer.raises = False
+    FakeSyncer.last_auth = None
     monkeypatch.setattr(workflow.syncers, "JobStatusSyncer", FakeSyncer)
     import depositions.services.launch as launch_mod
 
@@ -55,6 +63,22 @@ class TestRunDepositionJobSyncer:
         assert result["status"] == "terminal" and result["success"]
         assert job.state == "prep_completed"
         assert patched == []  # terminal: no reschedule
+
+    def test_poll_uses_submitter_auth(self, patched, monkeypatch, test_user):
+        # sacct must be queried as the user who ran the job, not the service account.
+        job = _job("prep_running", prep_slurm_job_id="123")
+        deposition = job.dataset.deposition
+        deposition.submitter_user = test_user
+        deposition.save(update_fields=["submitter_user"])
+
+        def resolve(user, cluster_id):
+            assert user == test_user
+            assert cluster_id == "bruno"
+            return {"username": "cluster-alice"}, None
+
+        monkeypatch.setattr(tasks.clusterio, "get_auth_for_user", resolve)
+        tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+        assert FakeSyncer.last_auth == {"username": "cluster-alice"}
 
     def test_terminal_failure_fails_push(self, patched):
         FakeSyncer.info = {"state": "FAILED", "exit_code": "1:0"}
@@ -151,14 +175,18 @@ class TestRunDepositionJobSyncer:
         monkeypatch.setattr(
             launch_mod,
             "cancel_deposition_job",
-            lambda *, cluster_id, job_id: cancelled.update(id=job_id, cluster=cluster_id),
+            lambda *, cluster_id, job_id, auth: cancelled.update(id=job_id, cluster=cluster_id, auth=auth),
         )
         FakeSyncer.raises = True
         job = _job("prep_running", prep_slurm_job_id="123")
         result = tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123", attempts=tasks.MAX_WAIT_ATTEMPTS)
         job.refresh_from_db()
         assert result == {"status": "gave_up", "reason": "error"}
-        assert cancelled == {"id": "123", "cluster": "bruno"}  # cancelled before failing
+        assert cancelled == {
+            "id": "123",
+            "cluster": "bruno",
+            "auth": {"username": "cluster-alice"},
+        }  # cancelled before failing
         assert job.state == "failed"
 
     def test_push_gives_up_and_fails_with_stored_id(self, patched):
@@ -173,7 +201,7 @@ class TestRunDepositionJobSyncer:
     def test_error_give_up_leaves_row_if_cancel_fails(self, patched, monkeypatch):
         import depositions.services.launch as launch_mod
 
-        def cancel_boom(*, cluster_id, job_id):
+        def cancel_boom(*, cluster_id, job_id, auth):
             raise OSError("scancel failed")
 
         monkeypatch.setattr(launch_mod, "cancel_deposition_job", cancel_boom)
@@ -183,3 +211,66 @@ class TestRunDepositionJobSyncer:
         job.refresh_from_db()
         # Can't confirm the job stopped, so don't make it retryable into a double-run.
         assert job.state == "prep_running"
+
+
+@pytest.mark.django_db
+def test_give_up_resolves_owner_credentials_for_cancellation(patched, monkeypatch, test_user):
+    import depositions.services.launch as launch_mod
+
+    job = _job("prep_running", prep_slurm_job_id="123")
+    deposition = job.dataset.deposition
+    deposition.submitter_user = test_user
+    deposition.save(update_fields=["submitter_user"])
+    auth = {"username": "owner-on-cluster"}
+
+    def resolve(user, cluster):
+        assert user == test_user
+        assert cluster == "bruno"
+        return auth, None
+
+    cancelled = []
+    monkeypatch.setattr(tasks.clusterio, "get_auth_for_user", resolve)
+    monkeypatch.setattr(launch_mod, "cancel_deposition_job", lambda **kwargs: cancelled.append(kwargs))
+    assert tasks._give_up(job, "prep", "bruno", "123", "test")
+    assert cancelled == [{"cluster_id": "bruno", "job_id": "123", "auth": auth}]
+
+
+@pytest.mark.django_db
+def test_give_up_without_credentials_leaves_job_for_operator(patched, monkeypatch):
+    from accounts.cluster_usernames import MissingClusterCredentialsError
+
+    import depositions.services.launch as launch_mod
+
+    job = _job("prep_running", prep_slurm_job_id="123")
+
+    def missing(*args):
+        raise MissingClusterCredentialsError(None, "bruno")
+
+    cancelled = []
+    monkeypatch.setattr(tasks.clusterio, "get_auth_for_user", missing)
+    monkeypatch.setattr(launch_mod, "cancel_deposition_job", lambda **kwargs: cancelled.append(kwargs))
+    assert not tasks._give_up(job, "prep", "bruno", "123", "test")
+    job.refresh_from_db()
+    assert job.state == "prep_running"
+    assert cancelled == []
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("failure", ["missing", "error"])
+def test_poll_falls_back_when_owner_auth_cannot_be_resolved(patched, monkeypatch, failure):
+    from accounts.cluster_usernames import MissingClusterCredentialsError
+
+    def unresolved(*args):
+        if failure == "missing":
+            raise MissingClusterCredentialsError(None, "bruno")
+        return None, {"error": "cluster unavailable"}
+
+    monkeypatch.setattr(tasks.clusterio, "get_auth_for_user", unresolved)
+    FakeSyncer.info = None
+    job = _job("prep_running", prep_slurm_job_id="123")
+    result = tasks.run_deposition_job_syncer(job.id, "prep", "bruno", "123")
+    assert FakeSyncer.last_auth is None
+    assert result["status"] == "waiting"
+    assert len(patched) == 1
+    job.refresh_from_db()
+    assert job.state == "prep_running"

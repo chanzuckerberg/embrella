@@ -490,9 +490,10 @@ class JobStatusSyncer:
     # Terminal states that indicate job has finished
     TERMINAL_STATES = {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY", "NODE_FAIL", "PREEMPTED"}
 
-    def __init__(self, job_id: str, cluster_id: str = "czii"):
+    def __init__(self, job_id: str, cluster_id: str = "czii", auth=None):
         self.job_id = job_id
         self.cluster_id = cluster_id
+        self.auth = auth
         self._pipe_execution = None
 
     def setup(self):
@@ -515,7 +516,7 @@ class JobStatusSyncer:
 
         Returns None if job not found in sacct yet.
         """
-        auth = clusterio.get_auth_service_user()
+        auth = self.auth or clusterio.get_auth_service_user()
 
         # Handle hetjob format (e.g., "9238+0" -> "9238")
         base_job_id = self.job_id.split("+")[0]

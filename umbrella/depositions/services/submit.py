@@ -2,6 +2,7 @@
 
 import logging
 
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from processes.services.cluster_resolver import cluster_id_for_run, get_default_cluster_id
@@ -9,11 +10,11 @@ from stores.paths import resolve_dir
 
 from common import clusterio
 from depositions import tasks
-from depositions.models import DatasetJob, DepositionAnnotation
+from depositions.models import DatasetJob, Deposition, DepositionAnnotation
 from depositions.services.dataprep_config import dataprep_config_yaml, dataset_is_ready, resolve_sync_destination
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
-from depositions.services.submission import apply_status, on_push_complete, start_push
+from depositions.services.submission import PREP_ACTIVE, apply_status, on_push_complete, start_push
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,14 @@ def _cluster_for_dataset(dataset):
     return cluster_id_for_run(session.msi_session.name, run_number)
 
 
-def submit_dataset_prep(dataset):
+def _user_auth(user, cluster_id):
+    auth, error = clusterio.get_auth_for_user(user, cluster_id)
+    if error or not auth:
+        raise SubmissionValidationError("The configured cluster is unavailable for submission.")
+    return auth
+
+
+def submit_dataset_prep(dataset, *, user):
     """Write the deposition config and launch this dataset's prep job. Returns the DatasetJob."""
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
@@ -43,27 +51,42 @@ def submit_dataset_prep(dataset):
             "Depositing annotations isn't supported yet; deselect them to submit this dataset."
         )
 
-    job, _ = DatasetJob.objects.get_or_create(dataset=dataset)
-    # Claim the row before any remote work so a double-submit can't launch two jobs.
-    claimed = DatasetJob.objects.filter(pk=job.pk, state__in=("pending", "failed")).update(
-        state="prep_submitted", prep_slurm_job_id="", error_message="", started_at=timezone.now()
-    )
-    if not claimed:
+    cluster_id = _cluster_for_dataset(dataset)
+    auth = _user_auth(user, cluster_id)
+    db = dataset._state.db
+    # Claim one queued/running prep per deposition before freezing the shared config.
+    # Otherwise an older queued job could overwrite a newer sibling's config.
+    with transaction.atomic(using=db):
+        Deposition.objects.using(db).select_for_update().get(pk=deposition.pk)
+        if (
+            DatasetJob.objects.using(db)
+            .filter(dataset__deposition=deposition, state__in=PREP_ACTIVE)
+            .exclude(dataset_id=dataset.pk)
+            .exists()
+        ):
+            raise SubmissionValidationError(
+                "Another dataset in this deposition is queued or running prep; wait for it to finish before submitting."
+            )
+        job, _ = DatasetJob.objects.using(db).get_or_create(dataset=dataset)
+        claimed = (
+            DatasetJob.objects.using(db)
+            .filter(pk=job.pk, state__in=("pending", "failed"))
+            .update(state="prep_submitted", prep_slurm_job_id="", error_message="", started_at=timezone.now())
+        )
+        if not claimed:
+            job.refresh_from_db()
+            raise SubmissionValidationError(f"Dataset is already {job.state}; it can't be submitted again.")
         job.refresh_from_db()
-        raise SubmissionValidationError(f"Dataset is already {job.state}; it can't be submitted again.")
-    job.refresh_from_db()
-    apply_status(job)
+        apply_status(job)
 
     slurm_job_id = None
-    cluster_id = None
     try:
         # Resolve paths inside the try so a resolution failure rolls the claim back, not strands it.
-        cluster_id = _cluster_for_dataset(dataset)
         output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
         config_path = f"{output_dir.rstrip('/')}/{CONFIG_FILENAME}"
-        clusterio.ensure_remote_dir(cluster_id, output_dir)
         required_siblings = set(
-            DatasetJob.objects.filter(dataset__deposition=deposition)
+            DatasetJob.objects.using(db)
+            .filter(dataset__deposition=deposition)
             .filter(Q(staged_at__isnull=False) | Q(state__in=DatasetJob.LOCKED_STATES))
             .values_list("dataset__dataset_id", flat=True)
         )
@@ -74,22 +97,23 @@ def submit_dataset_prep(dataset):
             sync_destination=resolve_sync_destination(cluster=cluster_id),
             required_dataset_ids=required_ids,
         )
-        # Atomic write so a concurrent dataset's sync never reads a half-rewritten config.
-        clusterio.write_remote_file_atomic(cluster_id, config_path, config_yaml)
         params = {
             "output_dir": output_dir,
             "config_path": config_path,
+            "config_yaml": config_yaml,
             "session_names": list(dataset.sessions.values_list("msi_session__name", flat=True)),
             "run_validate": False,
         }
         job_name = f"deposition_prep_{deposition.deposition_id}_{dataset.dataset_id}"
         slurm_job_id = launch_deposition_job(
-            processor_name="deposition-prep", params=params, cluster_id=cluster_id, job_name=job_name
+            processor_name="deposition-prep", params=params, cluster_id=cluster_id, job_name=job_name, auth=auth
         )
         if not slurm_job_id:
             raise LaunchError("Prep launch returned an empty SLURM job id.")
-        recorded = DatasetJob.objects.filter(pk=job.pk, state="prep_submitted", prep_slurm_job_id="").update(
-            prep_slurm_job_id=slurm_job_id, staged_at=timezone.now(), cluster_id=cluster_id
+        recorded = (
+            DatasetJob.objects.using(db)
+            .filter(pk=job.pk, state="prep_submitted", prep_slurm_job_id="")
+            .update(prep_slurm_job_id=slurm_job_id, staged_at=timezone.now(), cluster_id=cluster_id)
         )
         if not recorded:
             raise LaunchError("Lost the prep claim before the SLURM id could be recorded.")
@@ -98,14 +122,14 @@ def submit_dataset_prep(dataset):
         # Cancel the orphaned job, then fail the row so the user can retry.
         if slurm_job_id and cluster_id:
             try:
-                cancel_deposition_job(cluster_id=cluster_id, job_id=slurm_job_id)
+                cancel_deposition_job(cluster_id=cluster_id, job_id=slurm_job_id, auth=auth)
             except Exception:
                 # Can't confirm it stopped — leave it at prep_submitted for an operator, not retryable.
                 logger.exception(
                     "Couldn't cancel orphaned prep job %s on %s; leaving row for operator.", slurm_job_id, cluster_id
                 )
                 raise
-        DatasetJob.objects.filter(pk=job.pk, state="prep_submitted").update(
+        DatasetJob.objects.using(db).filter(pk=job.pk, state="prep_submitted").update(
             state="failed", error_message="Failed to submit the prep job.", completed_at=timezone.now()
         )
         job.refresh_from_db()
@@ -116,7 +140,7 @@ def submit_dataset_prep(dataset):
     return job
 
 
-def submit_dataset_push(dataset):
+def submit_dataset_push(dataset, *, user):
     """Launch this dataset's push (S3 upload) job from a prep_completed state. Returns the DatasetJob."""
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
@@ -128,6 +152,7 @@ def submit_dataset_push(dataset):
 
     # Use the cluster prep staged on, not one re-derived from (mutable) metadata.
     cluster_id = job.cluster_id or _cluster_for_dataset(dataset)
+    auth = _user_auth(user, cluster_id)
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     base = output_dir.rstrip("/")
     staged_dir = f"{base}/{dataset.dataset_id}"
@@ -140,10 +165,11 @@ def submit_dataset_push(dataset):
             params={"staged_dir": staged_dir, "s3_dest": s3_dest},
             cluster_id=cluster_id,
             job_name=job_name,
+            auth=auth,
         )
 
     def cancel(job_id):
-        cancel_deposition_job(cluster_id=cluster_id, job_id=job_id)
+        cancel_deposition_job(cluster_id=cluster_id, job_id=job_id, auth=auth)
 
     job = start_push(job, launch=launch, cancel=cancel)
     try:
@@ -151,7 +177,7 @@ def submit_dataset_push(dataset):
     except Exception:
         if job.push_slurm_job_id:
             try:
-                cancel_deposition_job(cluster_id=cluster_id, job_id=job.push_slurm_job_id)
+                cancel_deposition_job(cluster_id=cluster_id, job_id=job.push_slurm_job_id, auth=auth)
             except Exception:
                 logger.exception(
                     "Couldn't cancel orphaned push job %s on %s; leaving row for operator.",

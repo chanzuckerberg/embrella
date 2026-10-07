@@ -1097,3 +1097,27 @@ class TestPushEndpoint:
             r = client.post(f"{DATASETS}{ds['id']}/push/")
         assert r.status_code == 403
         m.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("phase", ["submit", "push"])
+def test_submission_requires_user_ssh_setup(auth_client, user, phase):
+    from accounts.cluster_usernames import MissingClusterCredentialsError
+
+    dep = _make_deposition(auth_client)
+    ds = _make_dataset(auth_client, dep["id"])
+    service = "prep" if phase == "submit" else "push"
+    with mock.patch(
+        f"depositions.services.submit.submit_dataset_{service}",
+        side_effect=MissingClusterCredentialsError(user.pk, "test-cluster"),
+    ) as submit:
+        response = auth_client.post(f"{DATASETS}{ds['id']}/{phase}/")
+    assert submit.call_args.kwargs["user"] == user
+    assert response.status_code == 403
+    assert response.json() == {
+        "success": False,
+        "error": "SSH key not set up for this user",
+        "detail": "Set up your SSH access for this cluster before submitting.",
+        "ssh_setup_required": True,
+        "cluster_id": "test-cluster",
+    }

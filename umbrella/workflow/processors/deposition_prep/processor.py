@@ -27,7 +27,7 @@ class DepositionPrepProcessor(BaseProcessor):
     hidden_from_list = True
 
     def validate_parameters(self, params: Dict[str, Any]) -> List[str]:
-        errors = [f"{key} is required" for key in ("output_dir", "config_path") if not params.get(key)]
+        errors = [f"{key} is required" for key in ("output_dir", "config_path", "config_yaml") if not params.get(key)]
         if params.get("copick_flags") and not (params.get("copick_config") and params.get("target_dir")):
             errors.append("copick_config and target_dir are required when annotations are selected")
         return errors
@@ -39,9 +39,15 @@ class DepositionPrepProcessor(BaseProcessor):
         prep_env = params.get("prep_env") or resolve_dir("dataportal_env", cluster=run_context.cluster_id)
         # Scope sync to this dataset's sessions; blank means process the whole config.
         session_flags = "".join(f" -s {shlex.quote(name)}" for name in params.get("session_names") or [])
+        config_yaml = params["config_yaml"]
+        config_delimiter = "END_CONFIG"
+        while config_delimiter in config_yaml.splitlines():
+            config_delimiter += "_"
         return template.render(
             output_dir=shlex.quote(params["output_dir"]),
             config_path=shlex.quote(params["config_path"]),
+            config_yaml=config_yaml,
+            config_delimiter=config_delimiter,
             copick_config=shlex.quote(params.get("copick_config", "")),
             target_dir=shlex.quote(params.get("target_dir", "")),
             copick_flags=params.get("copick_flags", ""),  # Caller must shell-quote each value.

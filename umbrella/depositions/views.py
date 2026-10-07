@@ -5,6 +5,7 @@ import logging
 import os
 import time
 
+from accounts.cluster_usernames import MissingClusterCredentialsError
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from processes.services.cluster_resolver import cluster_id_for_run
@@ -41,6 +42,19 @@ logger = logging.getLogger(__name__)
 
 # Wizard autosaves via PATCH only — no PUT full-replace.
 HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
+
+
+def _ssh_setup_required(cluster_id):
+    return Response(
+        {
+            "success": False,
+            "error": "SSH key not set up for this user",
+            "detail": "Set up your SSH access for this cluster before submitting.",
+            "ssh_setup_required": True,
+            "cluster_id": cluster_id,
+        },
+        status=status.HTTP_403_FORBIDDEN,
+    )
 
 
 def _not_implemented():
@@ -207,7 +221,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
         dataset = self.get_object()
         try:
-            job = submit_dataset_prep(dataset)
+            job = submit_dataset_prep(dataset, user=request.user)
+        except MissingClusterCredentialsError as error:
+            return _ssh_setup_required(error.cluster_id)
         except SubmissionValidationError as error:
             return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
@@ -227,7 +243,9 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
         dataset = self.get_object()
         try:
-            job = submit_dataset_push(dataset)
+            job = submit_dataset_push(dataset, user=request.user)
+        except MissingClusterCredentialsError as error:
+            return _ssh_setup_required(error.cluster_id)
         except SubmissionValidationError as error:
             return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
         except Exception:
