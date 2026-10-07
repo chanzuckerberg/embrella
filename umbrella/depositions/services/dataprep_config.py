@@ -7,15 +7,26 @@ Path resolution, remote writes, and launching jobs belong to the submit service.
 import logging
 from copy import deepcopy
 from pathlib import PurePosixPath
+from urllib.parse import urlsplit
 
 import yaml
+from stores.paths import resolve_dir
 
 from depositions.models import TiltseriesMetadata
 from depositions.services.exceptions import SubmissionValidationError
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SYNC_DESTINATION = "s3://cryoetportal-biohub-hpc-globus/CZII"
+
+def _validate_sync_destination(destination):
+    if not isinstance(destination, str) or not destination.startswith("s3://") or not urlsplit(destination).netloc:
+        raise SubmissionValidationError("sync_destination must be an S3 destination.")
+    return destination.rstrip("/")
+
+
+def resolve_sync_destination(*, cluster=None):
+    return _validate_sync_destination(resolve_dir("deposition_sync_destination", cluster=cluster))
+
 
 # These fields were mapped from init during autofill; current DB values take precedence.
 ACQUISITION_FIELDS = {
@@ -88,16 +99,15 @@ def _dataset_block(dataset):
     return {"dataset_id": dataset.dataset_id, "sessions": sessions}
 
 
-def build_dataprep_config(
-    deposition, *, output_dir, sync_destination=DEFAULT_SYNC_DESTINATION, required_dataset_ids=None
-):
+def build_dataprep_config(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):
     if deposition.deposition_id is None:
         raise SubmissionValidationError("Reserve the deposition_id before preparing.")
     output_dir = str(output_dir) if output_dir is not None else ""
     if not output_dir or not PurePosixPath(output_dir).is_absolute():
         raise SubmissionValidationError("output_dir must be an absolute cluster path.")
-    if not isinstance(sync_destination, str) or not sync_destination.startswith("s3://"):
-        raise SubmissionValidationError("sync_destination must be an S3 destination.")
+    sync_destination = (
+        resolve_sync_destination() if sync_destination is None else _validate_sync_destination(sync_destination)
+    )
 
     datasets = {}
     for dataset in deposition.datasets.order_by("dataset_id"):
@@ -128,9 +138,7 @@ def build_dataprep_config(
     }
 
 
-def dataprep_config_yaml(
-    deposition, *, output_dir, sync_destination=DEFAULT_SYNC_DESTINATION, required_dataset_ids=None
-):
+def dataprep_config_yaml(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):
     """Render the prep deployment config as YAML for a later remote write."""
     config = build_dataprep_config(
         deposition, output_dir=output_dir, sync_destination=sync_destination, required_dataset_ids=required_dataset_ids

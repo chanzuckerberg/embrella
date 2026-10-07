@@ -4,11 +4,11 @@ from copy import deepcopy
 
 import pytest
 import yaml
+from stores.models import PathType
 from tem.models import MsiSession
 
 from depositions.models import Dataset, Deposition, DepositionSession, TiltseriesMetadata, TomogramMetadata
 from depositions.services.dataprep_config import (
-    DEFAULT_SYNC_DESTINATION,
     build_dataprep_config,
     dataprep_config_yaml,
 )
@@ -65,7 +65,7 @@ def test_builds_deployment_config_with_reserved_ids(dataset):
     config = _build(dataset)
     assert config["output_dir"] == "/staging/101"
     assert config["deposition_id"] == 101
-    assert config["sync_destination"] == DEFAULT_SYNC_DESTINATION
+    assert config["sync_destination"] == "s3://cryoetportal-biohub-hpc-globus/CZII"
     assert config["datasets"]["dataset_202"]["dataset_id"] == 202
     assert _session(config) == RAW_SESSION
 
@@ -252,7 +252,22 @@ def test_rejects_invalid_output_dir(dataset, output_dir):
         build_dataprep_config(dataset.deposition, output_dir=output_dir)
 
 
-@pytest.mark.parametrize("destination", [None, "", "/local/path"])
+@pytest.mark.parametrize("destination", ["", "/local/path", "s3://", "s3:///missing-bucket"])
 def test_rejects_invalid_destination(dataset, destination):
     with pytest.raises(SubmissionValidationError, match="S3 destination"):
         _build(dataset, sync_destination=destination)
+
+
+def test_config_uses_institution_destination_from_pathtype(dataset):
+    PathType.objects.filter(data_kind__data_type="deposition_sync_destination", cluster=None).update(
+        overlay_path="s3://another-institution/depositions/"
+    )
+    assert _build(dataset)["sync_destination"] == "s3://another-institution/depositions"
+
+
+def test_invalid_configured_destination_is_rejected(dataset):
+    PathType.objects.filter(data_kind__data_type="deposition_sync_destination", cluster=None).update(
+        overlay_path="/local/path"
+    )
+    with pytest.raises(SubmissionValidationError, match="S3 destination"):
+        _build(dataset)

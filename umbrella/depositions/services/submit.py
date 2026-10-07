@@ -4,30 +4,29 @@ import logging
 
 from django.db.models import Q
 from django.utils import timezone
-from processes.services.cluster_resolver import cluster_id_for_run
+from processes.services.cluster_resolver import cluster_id_for_run, get_default_cluster_id
 from stores.paths import resolve_dir
 
 from common import clusterio
 from depositions import tasks
 from depositions.models import DatasetJob, DepositionAnnotation
-from depositions.services.dataprep_config import DEFAULT_SYNC_DESTINATION, dataprep_config_yaml, dataset_is_ready
+from depositions.services.dataprep_config import dataprep_config_yaml, dataset_is_ready, resolve_sync_destination
 from depositions.services.exceptions import SubmissionValidationError
 from depositions.services.launch import LaunchError, cancel_deposition_job, launch_deposition_job
 from depositions.services.submission import apply_status, on_push_complete, start_push
 
 logger = logging.getLogger(__name__)
 
-DEPOSITION_DEFAULT_CLUSTER_ID = "bruno"
 CONFIG_FILENAME = "dataprep_config.yaml"
 
 
 def _cluster_for_dataset(dataset):
     session = dataset.sessions.select_related("msi_session").order_by("msi_session__name").first()
     if session is None:
-        return DEPOSITION_DEFAULT_CLUSTER_ID
+        return get_default_cluster_id()
     run = session.aretomo_run_name or ""
     run_number = run if run.startswith("run") else f"run{run}"
-    return cluster_id_for_run(session.msi_session.name, run_number, default=DEPOSITION_DEFAULT_CLUSTER_ID)
+    return cluster_id_for_run(session.msi_session.name, run_number)
 
 
 def submit_dataset_prep(dataset):
@@ -69,7 +68,12 @@ def submit_dataset_prep(dataset):
             .values_list("dataset__dataset_id", flat=True)
         )
         required_ids = required_siblings | {dataset.dataset_id}
-        config_yaml = dataprep_config_yaml(deposition, output_dir=output_dir, required_dataset_ids=required_ids)
+        config_yaml = dataprep_config_yaml(
+            deposition,
+            output_dir=output_dir,
+            sync_destination=resolve_sync_destination(cluster=cluster_id),
+            required_dataset_ids=required_ids,
+        )
         # Atomic write so a concurrent dataset's sync never reads a half-rewritten config.
         clusterio.write_remote_file_atomic(cluster_id, config_path, config_yaml)
         params = {
@@ -127,7 +131,7 @@ def submit_dataset_push(dataset):
     output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
     base = output_dir.rstrip("/")
     staged_dir = f"{base}/{dataset.dataset_id}"
-    s3_dest = f"{DEFAULT_SYNC_DESTINATION.rstrip('/')}/{deposition.deposition_id}/{dataset.dataset_id}"
+    s3_dest = f"{resolve_sync_destination(cluster=cluster_id)}/{deposition.deposition_id}/{dataset.dataset_id}"
 
     def launch(_job):
         job_name = f"deposition_push_{deposition.deposition_id}_{dataset.dataset_id}"

@@ -2,6 +2,7 @@
 
 import pytest
 from django.utils import timezone
+from stores.models import Cluster, DataKind, PathType
 
 from depositions.models import (
     Dataset,
@@ -41,7 +42,8 @@ def mocks(monkeypatch):
     monkeypatch.setattr(submit.clusterio, "ensure_remote_dir", lambda *a: calls.__setitem__("mkdir", a))
     monkeypatch.setattr(submit.clusterio, "write_remote_file_atomic", write)
 
-    def config_yaml(deposition, *, output_dir, required_dataset_ids=None):
+    def config_yaml(deposition, *, output_dir, sync_destination=None, required_dataset_ids=None):
+        calls["sync_destination"] = sync_destination
         calls["required_ids"] = required_dataset_ids
         return "yaml-text"
 
@@ -245,3 +247,34 @@ class TestSubmitDatasetPush:
         with pytest.raises(SubmissionValidationError, match="hasn't been prepared"):
             submit.submit_dataset_push(dataset)
         assert mocks["launched"] is None
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("cluster_override", [False, True])
+def test_prep_and_push_use_same_configured_destination(dataset, mocks, cluster_override):
+    destination = "s3://another-institution/depositions"
+    kind = DataKind.objects.get(data_type="deposition_sync_destination")
+    if cluster_override:
+        cluster, _ = Cluster.objects.get_or_create(cluster_id="bruno")
+        PathType.objects.create(data_kind=kind, cluster=cluster, overlay_path=destination + "/")
+    else:
+        PathType.objects.filter(data_kind=kind, cluster=None).update(overlay_path=destination + "/")
+
+    job = submit.submit_dataset_prep(dataset)
+    assert mocks["sync_destination"] == destination
+    DatasetJob.objects.filter(pk=job.pk).update(state="prep_completed")
+    dataset.refresh_from_db()
+    submit.submit_dataset_push(dataset)
+    assert mocks["launched"]["params"]["s3_dest"] == destination + "/1/2"
+
+
+@pytest.mark.django_db
+def test_push_rejects_invalid_configured_destination(dataset, mocks):
+    PathType.objects.filter(data_kind__data_type="deposition_sync_destination", cluster=None).update(
+        overlay_path="/not-s3"
+    )
+    DatasetJob.objects.create(dataset=dataset, state="prep_completed", prep_slurm_job_id="p1")
+    with pytest.raises(SubmissionValidationError, match="S3 destination"):
+        submit.submit_dataset_push(dataset)
+    assert mocks["launched"] is None
+    assert DatasetJob.objects.get(dataset=dataset).state == "prep_completed"
