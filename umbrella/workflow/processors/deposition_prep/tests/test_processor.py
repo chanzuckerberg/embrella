@@ -6,6 +6,7 @@ from workflow.processors.deposition_prep.processor import DepositionPrepProcesso
 
 PARAMS = {
     "output_dir": "/staged/dep_1/ds_2",
+    "config_yaml": "deposition_id: 1\n",
     "config_path": "/staged/dep_1/ds_2/dataprep_config.yaml",
     "copick_config": "/staged/dep_1/ds_2/copick.json",
     "target_dir": "/staged/dep_1/ds_2",
@@ -25,6 +26,20 @@ def test_runs_sync_deposit_and_dry_run_push():
     assert "copick deposit --config /staged/dep_1/ds_2/copick.json" in script
     assert '--picks "VLP:relionrefine/2"' in script
     assert "cryoetportalprep push /staged/dep_1/ds_2/dataprep_config.yaml --dry-run" in script
+
+
+def test_session_filter_scopes_sync_to_this_datasets_sessions():
+    script = _render(session_names=["24nov10", "24nov11"])
+    assert "cryoetportalprep sync /staged/dep_1/ds_2/dataprep_config.yaml -s 24nov10 -s 24nov11" in script
+
+
+def test_no_session_filter_syncs_the_whole_config():
+    # Blank session_names leaves the bare sync (processes every dataset in the config).
+    assert "cryoetportalprep sync /staged/dep_1/ds_2/dataprep_config.yaml\n" in _render(session_names=[])
+
+
+def test_validate_can_be_skipped_for_a_per_dataset_job():
+    assert "--dry-run" not in _render(run_validate=False)
 
 
 def test_prep_never_uploads_or_inits():
@@ -67,3 +82,73 @@ def test_copick_flags_require_config_and_target():
     proc = DepositionPrepProcessor()
     errors = proc.validate_parameters({"output_dir": "/o", "config_path": "/c", "copick_flags": '--picks "x"'})
     assert any("copick_config and target_dir" in e for e in errors)
+
+
+def test_script_writes_config_without_shell_expansion_and_preserves_group_access(tmp_path):
+    import stat
+    import subprocess
+
+    output_dir = tmp_path / "deposition with spaces"
+    config_path = output_dir / "dataprep_config.yaml"
+    unwanted = tmp_path / "expanded"
+    payload = f'END_CONFIG\n$(touch "{unwanted}")\n`touch "{unwanted}"`\n$HOME'
+    script = _render(
+        output_dir=str(output_dir),
+        config_path=str(config_path),
+        config_yaml=payload,
+        copick_flags="",
+        run_validate=False,
+    )
+    stubs = 'ml() { :; }; conda() { :; }; cryoetportalprep() { test -r "$2"; };\n'
+    result = subprocess.run(["bash"], input=stubs + script, text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    assert config_path.read_text() == payload + "\n"
+    assert not unwanted.exists()
+    assert stat.S_IMODE(config_path.stat().st_mode) & 0o060 == 0o060
+    assert list(output_dir.glob("*.tmp.*")) == []
+
+
+def test_directory_creation_failure_stops_before_sync(tmp_path):
+    import subprocess
+
+    blocked_parent = tmp_path / "not-a-directory"
+    blocked_parent.write_text("blocked")
+    synced = tmp_path / "sync-ran"
+    script = _render(
+        output_dir=str(blocked_parent / "deposition"),
+        config_path=str(blocked_parent / "deposition/dataprep_config.yaml"),
+        copick_flags="",
+        run_validate=False,
+    )
+    stubs = f'ml() {{ :; }}; conda() {{ :; }}; cryoetportalprep() {{ touch "{synced}"; }};\n'
+    result = subprocess.run(["bash"], input=stubs + script, text=True, capture_output=True)
+    assert result.returncode != 0
+    assert not synced.exists()
+
+
+def test_staging_permission_denied_stops_before_sync(tmp_path):
+    import os
+    import subprocess
+
+    import pytest
+
+    if os.geteuid() == 0:
+        pytest.skip("Root bypasses directory write permissions")
+    parent = tmp_path / "restricted"
+    parent.mkdir()
+    parent.chmod(0o500)
+    synced = tmp_path / "sync-ran"
+    script = _render(
+        output_dir=str(parent / "deposition"),
+        config_path=str(parent / "deposition/dataprep_config.yaml"),
+        copick_flags="",
+        run_validate=False,
+    )
+    stubs = f'ml() {{ :; }}; conda() {{ :; }}; cryoetportalprep() {{ touch "{synced}"; }};\n'
+    try:
+        result = subprocess.run(["bash"], input=stubs + script, text=True, capture_output=True)
+    finally:
+        parent.chmod(0o700)
+    assert result.returncode != 0
+    assert "Permission denied" in result.stderr
+    assert not synced.exists()

@@ -3,6 +3,7 @@ import os
 import shlex
 import stat
 import subprocess
+import uuid
 from fnmatch import fnmatch
 from functools import lru_cache
 
@@ -176,6 +177,40 @@ def write_remote_file(cluster_id, remote_path, content, auth=None):
                 remote_file.write(content.encode("utf-8"))
         finally:
             sftp.close()
+    finally:
+        ssh.close()
+
+
+def ensure_remote_dir(cluster_id, remote_dir, auth=None):
+    """Create `remote_dir` (and parents) on the cluster; no error if it already exists."""
+    ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
+    try:
+        _, stdout, stderr = ssh.exec_command(f"mkdir -p {shlex.quote(remote_dir)}")
+        exit_status = stdout.channel.recv_exit_status()
+        if exit_status != 0:
+            error = stderr.read().decode("utf-8", "replace").strip()
+            raise OSError(f"mkdir -p {remote_dir} failed on {cluster_id} (exit {exit_status}): {error}")
+    finally:
+        ssh.close()
+
+
+def write_remote_file_atomic(cluster_id, remote_path, content, auth=None):
+    """Write to a unique temp in the same directory, then `mv` - so a reader never sees a partial file."""
+    tmp_path = f"{remote_path}.tmp.{uuid.uuid4().hex}"
+    ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
+    try:
+        sftp = ssh.open_sftp()
+        try:
+            with sftp.file(tmp_path, "w") as remote_file:
+                remote_file.write(content.encode("utf-8"))
+        finally:
+            sftp.close()
+        _, stdout, stderr = ssh.exec_command(f"mv -f {shlex.quote(tmp_path)} {shlex.quote(remote_path)}")
+        exit_status = stdout.channel.recv_exit_status()
+        if exit_status != 0:
+            error = stderr.read().decode("utf-8", "replace").strip()
+            ssh.exec_command(f"rm -f {shlex.quote(tmp_path)}")  # best-effort cleanup of the leftover temp
+            raise OSError(f"atomic write to {remote_path} failed on {cluster_id} (exit {exit_status}): {error}")
     finally:
         ssh.close()
 

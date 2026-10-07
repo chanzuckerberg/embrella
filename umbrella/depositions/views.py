@@ -5,6 +5,7 @@ import logging
 import os
 import time
 
+from accounts.cluster_usernames import MissingClusterCredentialsError
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from processes.services.cluster_resolver import cluster_id_for_run
@@ -35,13 +36,25 @@ from .services.autofill import (
     map_session_to_metadata,
     run_autofill_init,
 )
+from .services.exceptions import SubmissionValidationError
 
 logger = logging.getLogger(__name__)
 
-DEPOSITION_DEFAULT_CLUSTER_ID = "bruno"
-
 # Wizard autosaves via PATCH only — no PUT full-replace.
 HTTP_METHODS_NO_PUT = ["get", "post", "patch", "delete", "head", "options"]
+
+
+def _ssh_setup_required(cluster_id):
+    return Response(
+        {
+            "success": False,
+            "error": "SSH key not set up for this user",
+            "detail": "Set up your SSH access for this cluster before submitting.",
+            "ssh_setup_required": True,
+            "cluster_id": cluster_id,
+        },
+        status=status.HTTP_403_FORBIDDEN,
+    )
 
 
 def _not_implemented():
@@ -204,7 +217,47 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
-        return _not_implemented()  # TODO: trigger DepositionPrepProcessor (per dataset)
+        from .services.submit import submit_dataset_prep
+
+        dataset = self.get_object()
+        try:
+            job = submit_dataset_prep(dataset, user=request.user)
+        except MissingClusterCredentialsError as error:
+            return _ssh_setup_required(error.cluster_id)
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Dataset %s prep submit failed to reach the cluster", pk)
+            return Response(
+                {"detail": "Couldn't reach the cluster to submit. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response(
+            {"state": job.state, "dataset_status": job.dataset_status},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+    @action(detail=True, methods=["post"])
+    def push(self, request, pk=None):
+        from .services.submit import submit_dataset_push
+
+        dataset = self.get_object()
+        try:
+            job = submit_dataset_push(dataset, user=request.user)
+        except MissingClusterCredentialsError as error:
+            return _ssh_setup_required(error.cluster_id)
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("Dataset %s push failed to reach the cluster", pk)
+            return Response(
+                {"detail": "Couldn't reach the cluster to push. Please try again."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        return Response(
+            {"state": job.state, "dataset_status": job.dataset_status},
+            status=status.HTTP_202_ACCEPTED,
+        )
 
     @action(detail=True, methods=["get"], url_path="job-status")
     def job_status(self, request, pk=None):
@@ -306,7 +359,7 @@ class DepositionSessionViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixi
         )
 
         msi_session = session.msi_session
-        cluster_id = cluster_id_for_run(msi_session.name, run_number, default=DEPOSITION_DEFAULT_CLUSTER_ID)
+        cluster_id = cluster_id_for_run(msi_session.name, run_number)
         try:
             cluster = Cluster.objects.get(cluster_id=cluster_id, is_active=True)
         except Cluster.DoesNotExist:

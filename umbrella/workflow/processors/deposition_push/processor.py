@@ -57,7 +57,7 @@ class DepositionPushProcessor(BaseProcessor):
         )
 
     def on_job_submit(self, run_context: RunContext, job_id: str) -> None:
-        # TODO: start the DatasetJob syncer.
+        # Unused for deposition jobs: the submit service starts the DatasetJob syncer after launch.
         logger.info("Deposition push job %s submitted", job_id)
 
     def on_job_complete(self, run_context: RunContext, success: bool) -> None:
