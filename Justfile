@@ -383,7 +383,6 @@ populatedbexamples script="": initenv
         uv run ./manage.py runscript "$name"
     else
         uv run ./manage.py runscript 001_init
-        uv run ./manage.py runscript 002_permission
         uv run ./manage.py runscript 003_init_multigrid
         uv run ./manage.py runscript 004_init_processes
         uv run ./manage.py runscript 005_init_pytom_pick
