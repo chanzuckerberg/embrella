@@ -12,7 +12,7 @@ export const isActiveJobState = (state?: JobState | null): boolean => !!state &&
 
 /**
  * Live view of a dataset's submission: polls while a prep/push job is running and exposes
- * submit (prep) and push mutations that refresh the dataset + submissions list on completion.
+ * submit (prep) and push mutations that refresh the dataset + submissions list once they settle.
  */
 export function useSubmitFlow(initial: Dataset) {
   const queryClient = useQueryClient();
@@ -28,11 +28,11 @@ export function useSubmitFlow(initial: Dataset) {
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: depositionKeys.dataset(id) });
-    queryClient.invalidateQueries({ queryKey: depositionKeys.submissions() });
+    queryClient.invalidateQueries({ queryKey: depositionKeys.submissionsRoot() });
   };
 
-  const submit = useMutation({ mutationFn: () => submitDataset(id), onSuccess: refresh });
-  const push = useMutation({ mutationFn: () => pushDataset(id), onSuccess: refresh });
+  const submit = useMutation({ mutationFn: () => submitDataset(id), onSettled: refresh });
+  const push = useMutation({ mutationFn: () => pushDataset(id), onSettled: refresh });
 
   return { dataset: query.data ?? initial, submit, push };
 }

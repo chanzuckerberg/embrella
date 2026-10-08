@@ -1,13 +1,29 @@
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { SubmitStep } from './SubmitStep';
 import { useSubmitFlow } from '../../hooks/useSubmitFlow';
+import { checkSshSetup } from '../../services/depositionApi';
 import type { Dataset, DatasetJob } from '../../types';
 
 jest.mock('../../hooks/useSubmitFlow', () => ({ useSubmitFlow: jest.fn() }));
+jest.mock('../../services/depositionApi', () => ({
+  ...jest.requireActual('../../services/depositionApi'),
+  checkSshSetup: jest.fn().mockResolvedValue({ username: 'alice' }),
+}));
+// Stub the modal with a button that fires onSuccess, so we can assert the post-setup retry.
+jest.mock('@app/common/components/SSHSetupModal', () => ({
+  SSHSetupModal: ({ onSuccess }: { onSuccess: () => void }) => (
+    <button type="button" onClick={onSuccess}>
+      confirm-ssh
+    </button>
+  ),
+}));
+
+const sshError = () => Object.assign(new Error('ssh not set up'), { sshSetupRequired: true, clusterId: 'czii' });
 
 const mockFlow = useSubmitFlow as jest.Mock;
+const mockCheckSsh = checkSshSetup as jest.Mock;
 
 function setup(job: DatasetJob | null, { readOnly = false } = {}) {
   const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
@@ -101,6 +117,79 @@ it('blocks submit on a failing validation', () => {
   });
   expect(screen.getByText('Validation found blocking issues')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /submit deposition/i })).toBeDisabled();
+});
+
+it('opens the SSH setup modal on a 403 and keeps it out of the error banner', async () => {
+  const err = sshError();
+  const submit = {
+    mutate: jest.fn((_v, opts) => opts?.onError?.(err)),
+    reset: jest.fn(),
+    isPending: false,
+    isError: true,
+    error: err,
+  };
+  const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
+  const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job: null } as Dataset;
+  mockFlow.mockReturnValue({ dataset, submit, push });
+  render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
+
+  // Auto-start hits the 403 → resolve the cluster username → open the shared setup modal.
+  await waitFor(() => expect(mockCheckSsh).toHaveBeenCalledWith('czii'));
+  // The SSH error is handled by the modal, not duplicated in the error banner.
+  expect(screen.queryByText('ssh not set up')).toBeNull();
+});
+
+it('retries prep (not push) after SSH setup for a prep launch', async () => {
+  const err = sshError();
+  let calls = 0;
+  const submit = {
+    mutate: jest.fn((_v, opts) => {
+      calls += 1;
+      if (calls === 1) opts?.onError?.(err); // only the first (auto-start) launch is rejected
+    }),
+    reset: jest.fn(),
+    isPending: false,
+    isError: true,
+    error: err,
+  };
+  const push = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
+  const dataset = { id: 1, title: 'DS', dataset_id: 2, status: 'draft', job: null } as Dataset;
+  mockFlow.mockReturnValue({ dataset, submit, push });
+  render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
+
+  fireEvent.click(await screen.findByText('confirm-ssh'));
+  expect(submit.mutate).toHaveBeenCalledTimes(2);
+  expect(push.mutate).not.toHaveBeenCalled();
+});
+
+it('retries push (not prep) after SSH setup for a push launch', async () => {
+  const err = sshError();
+  let pushCalls = 0;
+  const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
+  const push = {
+    mutate: jest.fn((_v, opts) => {
+      pushCalls += 1;
+      if (pushCalls === 1) opts?.onError?.(err);
+    }),
+    reset: jest.fn(),
+    isPending: false,
+    isError: true,
+    error: err,
+  };
+  const dataset = {
+    id: 1,
+    title: 'DS',
+    dataset_id: 2,
+    status: 'draft',
+    job: { id: 1, state: 'prep_completed' },
+  } as Dataset;
+  mockFlow.mockReturnValue({ dataset, submit, push });
+  render(<SubmitStep dataset={dataset} readOnly={false} reportSave={jest.fn()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: /submit deposition/i }));
+  fireEvent.click(await screen.findByText('confirm-ssh'));
+  expect(push.mutate).toHaveBeenCalledTimes(2);
+  expect(submit.mutate).not.toHaveBeenCalled();
 });
 
 it('recovers a failed push by restarting prep, not re-pushing', () => {
