@@ -1,6 +1,5 @@
 import json
 
-from cryo_grids.serializers import ProjectSerializer
 from django.core.serializers import serialize
 from django.http import JsonResponse
 from drf_spectacular.types import OpenApiTypes
@@ -9,6 +8,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from projects.serializers import ProjectSerializer
 
 from .models import Project
 
