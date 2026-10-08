@@ -57,7 +57,7 @@ export const AddProjectDialog: React.FC<AddProjectDialogProps> = ({
 
     if (result) {
       if (onSave) {
-        onSave(result.project.id);
+        onSave(result.id);
       }
       // Reset form
       setFormData({

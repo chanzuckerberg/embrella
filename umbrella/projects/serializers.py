@@ -75,19 +75,19 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id"]
 
-    def get_project_leader_name(self, obj):
+    def get_project_leader_name(self, obj) -> str | None:
         """Get project leader's username"""
         if obj.project_leader:
             return obj.project_leader.username
         return None
 
-    def get_documentation_space_name(self, obj):
+    def get_documentation_space_name(self, obj) -> str | None:
         """Get documentation space name"""
         if obj.documentation_space:
             return obj.documentation_space.name
         return None
 
-    def get_documentation_space_url(self, obj):
+    def get_documentation_space_url(self, obj) -> str | None:
         """Get documentation space URL"""
         if obj.documentation_space:
             return obj.documentation_space.url
