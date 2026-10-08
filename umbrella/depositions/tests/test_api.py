@@ -2,12 +2,16 @@
 
 import itertools
 import json
+from types import SimpleNamespace
 from unittest import mock
 
 import pytest
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
+
+from depositions.services.exceptions import SubmissionValidationError
+from depositions.services.launch import LaunchError
 
 DEPOSITIONS = "/depositions/v1/depositions/"
 DATASETS = "/depositions/v1/datasets/"
@@ -1003,3 +1007,117 @@ class TestPreparationSources:
         response = auth_client.get(f"{DATASETS}{owned_session.dataset_id}/")
         assert response.status_code == 200
         assert response.json()["preparation_sources"] == []
+
+
+@pytest.mark.django_db
+class TestSubmitEndpoint:
+    """View-layer behaviour of POST .../submit/ (service logic is covered in test_submit.py)."""
+
+    SERVICE = "depositions.services.submit.submit_dataset_prep"
+
+    def _owned_dataset(self, client):
+        dep = _make_deposition(client)
+        return _make_dataset(client, dep["id"])
+
+    def test_submit_returns_202_with_state(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        job = SimpleNamespace(state="prep_submitted", dataset_status="syncing")
+        with mock.patch(self.SERVICE, return_value=job) as m:
+            r = auth_client.post(f"{DATASETS}{ds['id']}/submit/")
+        assert r.status_code == 202, r.content
+        assert r.json() == {"state": "prep_submitted", "dataset_status": "syncing"}
+        m.assert_called_once()
+
+    def test_validation_error_maps_to_400(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, side_effect=SubmissionValidationError("not ready")):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/submit/")
+        assert r.status_code == 400
+        assert r.json()["detail"] == "not ready"
+
+    @pytest.mark.parametrize("error_type", [OSError, ValueError, LaunchError])
+    def test_unexpected_error_maps_to_generic_502(self, auth_client, error_type):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, side_effect=error_type("sensitive cluster diagnostics")):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/submit/")
+        assert r.status_code == 502
+        assert r.json() == {"detail": "Couldn't reach the cluster to submit. Please try again."}
+
+    def test_non_owner_is_forbidden(self, auth_client, db):
+        ds = self._owned_dataset(auth_client)
+        other = User.objects.create_user(username="bob@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        with mock.patch(self.SERVICE) as m:
+            r = client.post(f"{DATASETS}{ds['id']}/submit/")
+        assert r.status_code == 403
+        m.assert_not_called()  # permission check runs before the service
+
+
+@pytest.mark.django_db
+class TestPushEndpoint:
+    """View-layer behaviour of POST .../push/ (service logic is covered in test_submit.py)."""
+
+    SERVICE = "depositions.services.submit.submit_dataset_push"
+
+    def _owned_dataset(self, client):
+        dep = _make_deposition(client)
+        return _make_dataset(client, dep["id"])
+
+    def test_push_returns_202_with_state(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        job = SimpleNamespace(state="push_submitted", dataset_status="syncing")
+        with mock.patch(self.SERVICE, return_value=job) as m:
+            r = auth_client.post(f"{DATASETS}{ds['id']}/push/")
+        assert r.status_code == 202, r.content
+        assert r.json() == {"state": "push_submitted", "dataset_status": "syncing"}
+        m.assert_called_once()
+
+    def test_push_validation_error_maps_to_400(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, side_effect=SubmissionValidationError("push can only start from prep_completed")):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/push/")
+        assert r.status_code == 400
+        assert r.json() == {"detail": "push can only start from prep_completed"}
+
+    @pytest.mark.parametrize("error_type", [OSError, ValueError, LaunchError])
+    def test_push_unexpected_error_maps_to_generic_502(self, auth_client, error_type):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, side_effect=error_type("sensitive cluster diagnostics")):
+            r = auth_client.post(f"{DATASETS}{ds['id']}/push/")
+        assert r.status_code == 502
+        assert r.json() == {"detail": "Couldn't reach the cluster to push. Please try again."}
+
+    def test_push_non_owner_is_forbidden(self, auth_client, db):
+        ds = self._owned_dataset(auth_client)
+        other = User.objects.create_user(username="grace@example.com", password="pw")
+        client = APIClient()
+        client.force_login(other)
+        with mock.patch(self.SERVICE) as m:
+            r = client.post(f"{DATASETS}{ds['id']}/push/")
+        assert r.status_code == 403
+        m.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("phase", ["submit", "push"])
+def test_submission_requires_user_ssh_setup(auth_client, user, phase):
+    from accounts.cluster_usernames import MissingClusterCredentialsError
+
+    dep = _make_deposition(auth_client)
+    ds = _make_dataset(auth_client, dep["id"])
+    service = "prep" if phase == "submit" else "push"
+    with mock.patch(
+        f"depositions.services.submit.submit_dataset_{service}",
+        side_effect=MissingClusterCredentialsError(user.pk, "test-cluster"),
+    ) as submit:
+        response = auth_client.post(f"{DATASETS}{ds['id']}/{phase}/")
+    assert submit.call_args.kwargs["user"] == user
+    assert response.status_code == 403
+    assert response.json() == {
+        "success": False,
+        "error": "SSH key not set up for this user",
+        "detail": "Set up your SSH access for this cluster before submitting.",
+        "ssh_setup_required": True,
+        "cluster_id": "test-cluster",
+    }

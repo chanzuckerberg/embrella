@@ -6,6 +6,8 @@ from django.utils import timezone
 
 from depositions.models import Dataset, DatasetJob, Deposition
 from depositions.services import submission
+from depositions.services.exceptions import SubmissionValidationError
+from depositions.services.launch import LaunchError
 
 
 def _job(state):
@@ -122,7 +124,7 @@ class TestStartPush:
     def test_rejects_wrong_state_and_does_not_launch(self):
         job = _job("pending")
         launched = []
-        with pytest.raises(ValueError):
+        with pytest.raises(SubmissionValidationError):
             submission.start_push(job, launch=lambda j: launched.append(j) or "x")
         job.refresh_from_db()
         assert job.state == "pending"
@@ -133,7 +135,7 @@ class TestStartPush:
         calls = []
         submission.start_push(job, launch=lambda j: calls.append(j) or "slurm-1")
         # Row is now push_submitted; a second Submit click must not launch again.
-        with pytest.raises(ValueError):
+        with pytest.raises(SubmissionValidationError):
             submission.start_push(job, launch=lambda j: calls.append(j) or "slurm-2")
         assert len(calls) == 1
 
@@ -192,7 +194,7 @@ class TestStartPush:
     @pytest.mark.parametrize("empty_id", [None, ""])
     def test_empty_launch_id_marks_job_failed(self, empty_id):
         job = _job("prep_completed")
-        with pytest.raises(ValueError, match="empty SLURM job id"):
+        with pytest.raises(LaunchError, match="empty SLURM job id"):
             submission.start_push(job, launch=lambda j: empty_id)
         job.refresh_from_db()
         assert job.state == "failed"
@@ -217,6 +219,54 @@ class TestStartPush:
         assert job.state == "push_submitted"
         assert job.push_slurm_job_id == ""
         assert not job.error_message
+
+    def test_id_persistence_failure_with_cancel_cancels_and_fails(self, monkeypatch):
+        job = _job("prep_completed")
+        original_update = QuerySet.update
+
+        def fail_id_update(qs, **fields):
+            if set(fields) == {"push_slurm_job_id", "updated_at"}:
+                raise RuntimeError("id save failed")
+            return original_update(qs, **fields)
+
+        monkeypatch.setattr(QuerySet, "update", fail_id_update)
+        cancelled = []
+        with pytest.raises(RuntimeError, match="id save failed"):
+            submission.start_push(job, launch=lambda j: "slurm-9", cancel=lambda jid: cancelled.append(jid))
+        job.refresh_from_db()
+        assert cancelled == ["slurm-9"]  # orphan cancelled before failing the row
+        assert job.state == "failed"
+
+    def test_id_persistence_failure_leaves_row_if_cancel_fails(self, monkeypatch):
+        job = _job("prep_completed")
+        original_update = QuerySet.update
+
+        def fail_id_update(qs, **fields):
+            if set(fields) == {"push_slurm_job_id", "updated_at"}:
+                raise RuntimeError("id save failed")
+            return original_update(qs, **fields)
+
+        monkeypatch.setattr(QuerySet, "update", fail_id_update)
+
+        def bad_cancel(jid):
+            raise OSError("scancel failed")
+
+        with pytest.raises(OSError, match="scancel failed"):
+            submission.start_push(job, launch=lambda j: "slurm-9", cancel=bad_cancel)
+        job.refresh_from_db()
+        assert job.state == "push_submitted"  # unconfirmed cancel: left for operator, not failed
+
+    def test_lost_claim_before_id_recorded_cancels_orphan(self):
+        job = _job("prep_completed")
+        cancelled = []
+
+        def launch_then_steal(j):
+            DatasetJob.objects.filter(pk=j.pk).update(push_slurm_job_id="other")
+            return "slurm-9"
+
+        with pytest.raises(LaunchError, match="Lost the push claim"):
+            submission.start_push(job, launch=launch_then_steal, cancel=lambda jid: cancelled.append(jid))
+        assert cancelled == ["slurm-9"]
 
 
 @pytest.mark.django_db
