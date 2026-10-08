@@ -28,19 +28,43 @@ export interface PersonUpdate {
 
 const url = (path: string): string => `${DJANGO_URL}${path}`;
 
+export interface ApiError extends Error {
+  status?: number;
+  sshSetupRequired?: boolean;
+  clusterId?: string;
+}
+
+export function isSshSetupRequired(e: unknown): e is ApiError & { clusterId: string } {
+  return !!e && typeof e === 'object' && (e as ApiError).sshSetupRequired === true;
+}
+
 async function parse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let message = '';
+    let body: Record<string, unknown> = {};
     try {
-      const body = (await response.json()) as { detail?: unknown };
-      message = typeof body?.detail === 'string' ? body.detail : JSON.stringify(body);
+      body = (await response.json()) as Record<string, unknown>;
+      message = typeof body.detail === 'string' ? body.detail : JSON.stringify(body);
     } catch {
       /* no body */
     }
-    throw new Error(message || `Something went wrong (${response.status}). Please try again.`);
+    const error = new Error(message || `Something went wrong (${response.status}). Please try again.`) as ApiError;
+    error.status = response.status;
+    if (response.status === 403 && body.ssh_setup_required) {
+      error.sshSetupRequired = true;
+      error.clusterId = typeof body.cluster_id === 'string' ? body.cluster_id : '';
+    }
+    throw error;
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+export async function checkSshSetup(clusterId: string): Promise<{ username: string }> {
+  const data = await parse<{ username?: string }>(
+    await postResource(url(API.SSH_CHECK_SETUP), { cluster_id: clusterId })
+  );
+  return { username: typeof data.username === 'string' ? data.username : '' };
 }
 
 export async function createPerson(data: Partial<Person>): Promise<Person> {
