@@ -71,7 +71,14 @@ def submit_dataset_prep(dataset, *, user):
         claimed = (
             DatasetJob.objects.using(db)
             .filter(pk=job.pk, state__in=("pending", "failed"))
-            .update(state="prep_submitted", prep_slurm_job_id="", error_message="", started_at=timezone.now())
+            # Clear the prior push attempt so a re-failed prep doesn't surface the old upload log.
+            .update(
+                state="prep_submitted",
+                prep_slurm_job_id="",
+                push_slurm_job_id="",
+                error_message="",
+                started_at=timezone.now(),
+            )
         )
         if not claimed:
             job.refresh_from_db()
@@ -141,7 +148,7 @@ def submit_dataset_prep(dataset, *, user):
 
 
 def submit_dataset_push(dataset, *, user):
-    """Launch this dataset's push (S3 upload) job from a prep_completed state. Returns the DatasetJob."""
+    """Launch this dataset's push job from a prep_completed state"""
     deposition = dataset.deposition
     if deposition.deposition_id is None or dataset.dataset_id is None:
         raise SubmissionValidationError("Reserve deposition_id and dataset_id before pushing.")
@@ -188,3 +195,28 @@ def submit_dataset_push(dataset, *, user):
         on_push_complete(job, False, job_id=job.push_slurm_job_id, error_message="Failed to start the push monitor.")
         raise
     return job
+
+
+def preview_config_yaml(dataset):
+    """Render the dataprep_config.yaml submit would upload for THIS dataset (download endpoint).
+    Uses submit's required_dataset_ids so it includes this dataset.
+    """
+    deposition = dataset.deposition
+    if deposition.deposition_id is None or dataset.dataset_id is None:
+        raise SubmissionValidationError("Reserve deposition_id and dataset_id before downloading the config.")
+    db = dataset._state.db
+    job = getattr(dataset, "job", None)
+    cluster_id = (job.cluster_id if job else "") or _cluster_for_dataset(dataset)
+    output_dir = resolve_dir("deposition_staging", cluster=cluster_id, deposition_id=deposition.deposition_id)
+    required_siblings = set(
+        DatasetJob.objects.using(db)
+        .filter(dataset__deposition=deposition)
+        .filter(Q(staged_at__isnull=False) | Q(state__in=DatasetJob.LOCKED_STATES))
+        .values_list("dataset__dataset_id", flat=True)
+    )
+    return dataprep_config_yaml(
+        deposition,
+        output_dir=output_dir,
+        sync_destination=resolve_sync_destination(cluster=cluster_id),
+        required_dataset_ids=required_siblings | {dataset.dataset_id},
+    )

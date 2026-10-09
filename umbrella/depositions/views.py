@@ -6,6 +6,7 @@ import os
 import time
 
 from accounts.cluster_usernames import MissingClusterCredentialsError
+from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from processes.services.cluster_resolver import cluster_id_for_run
@@ -25,6 +26,7 @@ from .models import (
 )
 from .permissions import IsDepositionOwnerOrReadOnly
 from .serializers import (
+    DatasetJobSerializer,
     DatasetSerializer,
     DepositionSerializer,
     DepositionSessionSerializer,
@@ -54,13 +56,6 @@ def _ssh_setup_required(cluster_id):
             "cluster_id": cluster_id,
         },
         status=status.HTTP_403_FORBIDDEN,
-    )
-
-
-def _not_implemented():
-    return Response(
-        {"detail": "Not implemented yet - lands with the processor/auto-fill."},
-        status=status.HTTP_501_NOT_IMPLEMENTED,
     )
 
 
@@ -261,15 +256,30 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="job-status")
     def job_status(self, request, pk=None):
-        return _not_implemented()  # TODO: read DatasetJob state
+        dataset = self.get_object()
+        job = getattr(dataset, "job", None)
+        if job is None:
+            return Response({"detail": "This dataset hasn't been submitted yet."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(DatasetJobSerializer(job).data)
 
     @action(detail=True, methods=["get"])
     def logs(self, request, pk=None):
-        return _not_implemented()  # TODO: fetch_job_logs
+        from .services.logs import fetch_job_logs
+
+        return Response(fetch_job_logs(self.get_object(), user=request.user))
 
     @action(detail=True, methods=["get"], url_path="config.yaml")
     def config_yaml(self, request, pk=None):
-        return _not_implemented()  # TODO: config_yaml serializer
+        from .services.submit import preview_config_yaml
+
+        dataset = self.get_object()
+        try:
+            text = preview_config_yaml(dataset)
+        except SubmissionValidationError as error:
+            return Response({"detail": error.public_message}, status=status.HTTP_400_BAD_REQUEST)
+        response = HttpResponse(text, content_type="application/x-yaml")
+        response["Content-Disposition"] = 'attachment; filename="dataprep_config.yaml"'
+        return response
 
 
 @extend_schema_view(

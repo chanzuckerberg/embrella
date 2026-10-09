@@ -128,6 +128,14 @@ class TestSubmitDatasetPrep:
         assert job.state == "prep_submitted"
         assert not job.error_message
 
+    def test_restart_clears_prior_push_attempt(self, dataset, mocks):
+        # A prep restart after a failed push must drop the stale push id so the log reader
+        # doesn't surface the old upload log if this prep also fails.
+        DatasetJob.objects.create(dataset=dataset, state="failed", push_slurm_job_id="999", error_message="push boom")
+        job = submit.submit_dataset_prep(dataset, user=mocks["user"])
+        assert job.state == "prep_submitted"
+        assert job.push_slurm_job_id == ""
+
     def test_path_resolution_failure_fails_row_without_launching(self, dataset, mocks, monkeypatch):
         def boom(*a, **k):
             raise RuntimeError("no deposition_staging PathType")
@@ -404,3 +412,23 @@ def test_unconfirmed_cancellation_keeps_deposition_blocked(dataset, mocks, monke
         submit.submit_dataset_prep(second, user=mocks["user"])
     assert mocks["launched"] is first_launch
     assert DatasetJob.objects.get(dataset=dataset).state == "prep_submitted"
+
+
+@pytest.mark.django_db
+class TestPreviewConfigYaml:
+    """Download must be the file submit would upload: this dataset + staged siblings required."""
+
+    def test_marks_this_dataset_and_staged_siblings_required(self, dataset, mocks):
+        sibling = Dataset.objects.create(deposition=dataset.deposition, title="Sib", dataset_id=3)
+        DatasetJob.objects.create(dataset=sibling, state="pending", staged_at=timezone.now())
+        assert submit.preview_config_yaml(dataset) == "yaml-text"
+        assert mocks["required_ids"] == {2, 3}
+
+    def test_includes_this_dataset_even_with_no_siblings(self, dataset, mocks):
+        submit.preview_config_yaml(dataset)
+        assert mocks["required_ids"] == {2}
+
+    def test_rejects_unreserved_ids(self, dataset, mocks):
+        dataset.dataset_id = None
+        with pytest.raises(SubmissionValidationError, match="Reserve"):
+            submit.preview_config_yaml(dataset)

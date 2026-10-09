@@ -1121,3 +1121,79 @@ def test_submission_requires_user_ssh_setup(auth_client, user, phase):
         "ssh_setup_required": True,
         "cluster_id": "test-cluster",
     }
+
+
+@pytest.mark.django_db
+class TestJobStatusEndpoint:
+    """GET .../job-status/ reads the DatasetJob row."""
+
+    def _owned_dataset(self, client):
+        dep = _make_deposition(client)
+        return _make_dataset(client, dep["id"])
+
+    def test_404_before_any_submission(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        r = auth_client.get(f"{DATASETS}{ds['id']}/job-status/")
+        assert r.status_code == 404
+
+    def test_returns_job_state(self, auth_client):
+        from depositions.models import Dataset, DatasetJob
+
+        ds = self._owned_dataset(auth_client)
+        DatasetJob.objects.create(dataset=Dataset.objects.get(pk=ds["id"]), state="prep_running")
+        r = auth_client.get(f"{DATASETS}{ds['id']}/job-status/")
+        assert r.status_code == 200, r.content
+        body = r.json()
+        assert body["state"] == "prep_running"
+        assert body["dataset"] == ds["id"]
+
+
+@pytest.mark.django_db
+class TestLogsEndpoint:
+    """GET .../logs/ — live tail is covered in test_logs.py; here we check the view wiring."""
+
+    def _owned_dataset(self, client):
+        dep = _make_deposition(client)
+        return _make_dataset(client, dep["id"])
+
+    def test_no_job_returns_empty(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        r = auth_client.get(f"{DATASETS}{ds['id']}/logs/")
+        assert r.status_code == 200, r.content
+        assert r.json() == {"logs": "", "state": None, "source": "none"}
+
+    def test_falls_back_to_stored_excerpt_without_a_slurm_id(self, auth_client):
+        from depositions.models import Dataset, DatasetJob
+
+        ds = self._owned_dataset(auth_client)
+        DatasetJob.objects.create(dataset=Dataset.objects.get(pk=ds["id"]), state="pending", log_excerpt="line1\nline2")
+        r = auth_client.get(f"{DATASETS}{ds['id']}/logs/")
+        assert r.status_code == 200, r.content
+        assert r.json() == {"logs": "line1\nline2", "state": "pending", "phase": "prep", "source": "stored"}
+
+
+@pytest.mark.django_db
+class TestConfigYamlEndpoint:
+    """GET .../config.yaml/ streams the built dataprep config as a download."""
+
+    SERVICE = "depositions.services.submit.preview_config_yaml"
+
+    def _owned_dataset(self, client):
+        dep = _make_deposition(client)
+        return _make_dataset(client, dep["id"])
+
+    def test_downloads_yaml(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, return_value="output_dir: /x\n"):
+            r = auth_client.get(f"{DATASETS}{ds['id']}/config.yaml/")
+        assert r.status_code == 200, r.content
+        assert r["Content-Type"] == "application/x-yaml"
+        assert r["Content-Disposition"] == 'attachment; filename="dataprep_config.yaml"'
+        assert r.content == b"output_dir: /x\n"
+
+    def test_validation_error_maps_to_400(self, auth_client):
+        ds = self._owned_dataset(auth_client)
+        with mock.patch(self.SERVICE, side_effect=SubmissionValidationError("Reserve the deposition_id first.")):
+            r = auth_client.get(f"{DATASETS}{ds['id']}/config.yaml/")
+        assert r.status_code == 400
+        assert r.json() == {"detail": "Reserve the deposition_id first."}
