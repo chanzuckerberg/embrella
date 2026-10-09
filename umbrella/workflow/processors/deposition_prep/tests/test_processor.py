@@ -60,6 +60,12 @@ def test_slurm_directives_and_env_rendered():
     assert "conda activate /hpc/projects/group.czii/dataportalenv" in script
 
 
+def test_requests_slurm_notifications_for_the_submitting_hpc_account():
+    script = _render()
+    assert "#SBATCH --mail-type=END,FAIL" in script
+    assert "--mail-user" not in script
+
+
 def test_validate_parameters_requires_output_and_config():
     proc = DepositionPrepProcessor()
     assert proc.validate_parameters(PARAMS) == []

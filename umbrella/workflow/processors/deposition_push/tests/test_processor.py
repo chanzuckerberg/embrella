@@ -64,6 +64,12 @@ def test_slurm_directives_and_qos():
     assert "--qos=embrella" in _render(cluster_id="czii")
 
 
+def test_requests_slurm_notifications_for_the_submitting_hpc_account():
+    script = _render()
+    assert "#SBATCH --mail-type=END,FAIL" in script
+    assert "--mail-user" not in script
+
+
 def test_paths_with_spaces_are_shell_quoted():
     assert "aws s3 sync '/staged/my dep'" in _render(staged_dir="/staged/my dep")
 
