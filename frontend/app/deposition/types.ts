@@ -23,13 +23,54 @@ export type JobState =
   | 'completed'
   | 'failed';
 
+export interface SyncChecklistItem {
+  label: string;
+  done: number;
+  total: number;
+}
+
+export interface SyncProgress {
+  done: number;
+  total: number;
+  eta?: string | null;
+  items?: SyncChecklistItem[];
+}
+
+export interface SyncSummary {
+  objects: number;
+  size?: string | null;
+  duration?: string | null;
+}
+
+export interface ValidationWarning {
+  message: string;
+  path?: string | null;
+}
+
+export interface JobValidation {
+  passed: boolean;
+  warnings: ValidationWarning[];
+}
+
 export interface DatasetJob {
   id: number;
   state: JobState;
   prep_slurm_job_id?: string | null;
   push_slurm_job_id?: string | null;
   error_message?: string | null;
+  log_excerpt?: string | null;
+  sync_command?: string | null;
+  push_command?: string | null;
+  sync_progress?: SyncProgress | null;
+  sync_summary?: SyncSummary | null;
+  validation?: JobValidation | null;
 }
+
+export interface SubmitResponse {
+  state: JobState;
+  dataset_status: DatasetStatus;
+}
+
 export interface Institution {
   id: number;
   name: string;

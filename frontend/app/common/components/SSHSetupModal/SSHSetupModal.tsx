@@ -10,8 +10,7 @@ interface SSHSetupModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  // TODO: cluster list from config or constants.
-  cluster: 'czii' | 'bruno';
+  cluster: string;
   defaultUsername?: string;
   purpose?: 'submission' | 'management';
 }

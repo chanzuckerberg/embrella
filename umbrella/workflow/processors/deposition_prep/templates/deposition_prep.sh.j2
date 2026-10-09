@@ -1,6 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=deposition_prep
+#SBATCH --mail-type=END,FAIL
 {% for directive in slurm_directives -%}
 {% if directive.directive.startswith('-') and not directive.directive.startswith('--') -%}
 #SBATCH {{ directive.directive }} {{ directive.value }}

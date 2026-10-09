@@ -223,6 +223,16 @@ class TestSubmitDatasetPrep:
 
 @pytest.mark.django_db
 class TestSubmitDatasetPush:
+    def test_push_keeps_notifications_with_hpc_account_not_app_email(self, dataset, mocks):
+        DatasetJob.objects.create(dataset=dataset, state="prep_completed", prep_slurm_job_id="p1")
+        mocks["user"].email = "app-only@example.org"
+
+        submit.submit_dataset_push(dataset, user=mocks["user"])
+
+        launched = mocks["launched"]
+        assert launched["auth"] is mocks["auth"]
+        assert set(launched["params"]) == {"staged_dir", "s3_dest"}
+
     def test_push_happy_path(self, dataset, mocks):
         DatasetJob.objects.create(dataset=dataset, state="prep_completed", prep_slurm_job_id="p1")
         job = submit.submit_dataset_push(dataset, user=mocks["user"])
