@@ -157,6 +157,42 @@ def read_remote_file(cluster_id, remote_path, auth=None):
         ssh.close()
 
 
+def read_remote_file_tail(cluster_id, remote_path, *, max_bytes, auth=None):
+    """Read a bounded file tail over SFTP, closing both SFTP and SSH afterward.
+
+    Args:
+        cluster_id: Target cluster (e.g., 'czii', 'bruno').
+        remote_path: Absolute path to the remote file.
+        max_bytes: Positive byte limit; seek to the tail if the file is larger.
+        auth: Optional SSH auth dict; defaults to cached service-user auth.
+
+    Returns:
+        UTF-8 text from at most max_bytes. Invalid bytes are replaced because
+        the tail may begin partway through a multibyte character.
+
+    Raises:
+        ValueError: if max_bytes is not positive.
+        FileNotFoundError: if the remote file does not exist.
+    """
+    if max_bytes <= 0:
+        raise ValueError("max_bytes must be positive")
+    ssh = get_cluster_ssh_connection(cluster_id=cluster_id, auth=auth)
+    try:
+        sftp = ssh.open_sftp()
+        try:
+            size = sftp.stat(remote_path).st_size
+            with sftp.file(remote_path, "r") as handle:
+                if size > max_bytes:
+                    handle.seek(size - max_bytes)
+                # Bound the read even if the file grows after stat().
+                data = handle.read(max_bytes)
+            return data.decode("utf-8", "replace")
+        finally:
+            sftp.close()
+    finally:
+        ssh.close()
+
+
 def write_remote_file(cluster_id, remote_path, content, auth=None):
     """Overwrite a file on a cluster over SFTP with UTF-8 content.
 
