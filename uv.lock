@@ -277,6 +277,7 @@ dependencies = [
     { name = "django-allauth", extra = ["socialaccount"] },
     { name = "django-cors-headers" },
     { name = "django-extensions" },
+    { name = "django-guardian" },
     { name = "django-jazzmin" },
     { name = "django-q2" },
     { name = "djangorestframework" },
@@ -318,6 +319,7 @@ requires-dist = [
     { name = "django-allauth", extras = ["socialaccount"], specifier = ">=65,<66" },
     { name = "django-cors-headers", specifier = ">=4.9.0" },
     { name = "django-extensions", specifier = "==4.1" },
+    { name = "django-guardian", specifier = ">=3" },
     { name = "django-jazzmin", specifier = ">=3.0" },
     { name = "django-q2", specifier = ">=1.8.0" },
     { name = "djangorestframework", specifier = "==3.17.2" },
@@ -448,6 +450,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6d/b3/ed0f54ed706ec0b54fd251cc0364a249c6cd6c6ec97f04dc34be5e929eac/django_extensions-4.1.tar.gz", hash = "sha256:7b70a4d28e9b840f44694e3f7feb54f55d495f8b3fa6c5c0e5e12bcb2aa3cdeb", size = 283078, upload-time = "2025-04-11T01:15:39.617Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/64/96/d967ca440d6a8e3861120f51985d8e5aec79b9a8bdda16041206adfe7adc/django_extensions-4.1-py3-none-any.whl", hash = "sha256:0699a7af28f2523bf8db309a80278519362cd4b6e1fd0a8cd4bf063e1e023336", size = 232980, upload-time = "2025-04-11T01:15:37.701Z" },
+]
+
+[[package]]
+name = "django-guardian"
+version = "3.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/63/36/0d3eb841f9d6404fc74fdbc3b4d74b9217a0fcede406ab26cc9840506bf5/django_guardian-3.5.0.tar.gz", hash = "sha256:d80b8ab86c28f92adef816996f4341fbea6790aa1f09006c5afc1ef0ea394871", size = 115602, upload-time = "2026-09-12T18:03:27.082Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/89/c7/57463fa92db5d472d5be9209b255c901f7e64e4631ebf16818cb04ad0ac4/django_guardian-3.5.0-py3-none-any.whl", hash = "sha256:926eb17caf4991d467fd75d412a3040857bc4e111fc70bfe42e1c021826727e4", size = 151912, upload-time = "2026-09-12T18:03:25.045Z" },
 ]
 
 [[package]]
