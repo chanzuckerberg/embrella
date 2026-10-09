@@ -2,17 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Button, Icon } from '@czi-sds/components';
-import {
-  Alert,
-  Box,
-  Checkbox,
-  CircularProgress,
-  FormControlLabel,
-  LinearProgress,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, CircularProgress, LinearProgress, Stack, Typography } from '@mui/material';
 
 import type {
   JobState,
@@ -476,29 +466,16 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
           {actionError && <Alert severity="error">{actionError}</Alert>}
         </Stack>
 
-        {/* Right: live log + email */}
+        {/* Right: live log */}
         <Stack spacing={2}>
           <LiveLog text={job?.log_excerpt} />
-          <Tooltip title="Email notifications aren't wired up yet.">
-            <FormControlLabel
-              control={<Checkbox checked disabled />}
-              label={
-                <Box>
-                  <Typography variant="body2">Email me when this finishes</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    You can close this tab - sync, validation and push keep running.
-                  </Typography>
-                </Box>
-              }
-            />
-          </Tooltip>
         </Stack>
       </Box>
 
       {ssh && (
         <SSHSetupModal
           open
-          cluster={ssh.cluster as 'czii' | 'bruno'}
+          cluster={ssh.cluster}
           defaultUsername={ssh.username}
           onClose={() => setSsh(null)}
           onSuccess={() => {
