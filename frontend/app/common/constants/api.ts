@@ -119,7 +119,7 @@ export enum API {
   GRID_BOX_AVAILABLE_POSITIONS = '/cryo_grids/v1/grid-boxes/available_positions/',
 
   // Projects
-  PROJECTS_LIST = '/projects/project_list/',
+  PROJECTS = '/projects/v1/projects/',
 
   // External Resources (Documentation Links)
   EXTERNAL_RESOURCES = '/api/external-resources/',
@@ -146,7 +146,7 @@ export enum POST_API {
   CREATE_GRID = '/cryo_grids/v1/grids/',
   CREATE_SAMPLE = '/api/list/samples/',
   CREATE_SPECIMEN = '/api/list/specimens/',
-  CREATE_PROJECT = '/projects/create_project/',
+  CREATE_PROJECT = '/projects/v1/projects/',
   UPDATE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/update/',
   MOVE_GRID_BOX = '/api/list/pucks/grid-box/grid_box_id/move/',
   MOVE_GRID = '/cryo_grids/v1/grids/grid_id/move/',

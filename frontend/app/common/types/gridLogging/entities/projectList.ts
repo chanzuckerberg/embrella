@@ -1,13 +1,10 @@
 export interface Project {
-  pk: number;
-  model: string;
-  fields: {
-    name: string;
-    description: string;
-    project_leader: number | null;
-    confluence_space: number | null;
-    google_drive_folder: number | null;
-  };
+  id: number;
+  name: string;
+  description: string;
+  project_leader: number | null;
+  confluence_space: number | null;
+  google_drive_folder: number | null;
 }
 
 export type ProjectListResponse = Array<Project>;
@@ -40,25 +37,22 @@ export interface CreateProjectData {
 }
 
 export interface ProjectCreateResponse {
-  message: string;
-  project: {
-    id: number;
-    name: string;
-    description: string;
-    project_leader: number | null;
-    project_leader_name: string | null;
-    confluence_space: number | null;
-    confluence_space_name: string | null;
-    google_drive_folder: number | null;
-    google_drive_folder_name: string | null;
-  };
+  id: number;
+  name: string;
+  description: string;
+  project_leader: number | null;
+  project_leader_name: string | null;
+  confluence_space: number | null;
+  confluence_space_name: string | null;
+  google_drive_folder: number | null;
+  google_drive_folder_name: string | null;
 }
 
 export const transformProject = (project: Project): ProjectData => ({
-  id: project.pk,
-  name: project.fields.name,
-  description: project.fields.description,
-  projectLeader: project.fields.project_leader,
-  confluenceSpace: project.fields.confluence_space,
-  googleDriveFolder: project.fields.google_drive_folder,
+  id: project.id,
+  name: project.name,
+  description: project.description,
+  projectLeader: project.project_leader,
+  confluenceSpace: project.confluence_space,
+  googleDriveFolder: project.google_drive_folder,
 });

@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "django_q",
+    "guardian",
 ]
 
 MIDDLEWARE = [
@@ -330,7 +331,13 @@ FILESERVER_INTERNAL_BASE_URL = os.environ.get("FILESERVER_INTERNAL_BASE_URL", ""
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
+    # Object-level permissions only; never authenticates.
+    "guardian.backends.ObjectPermissionBackend",
 ]
+
+# Skip guardian's AnonymousUser row; LoginRequiredMiddleware blocks anonymous access.
+ANONYMOUS_USER_NAME = None
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
