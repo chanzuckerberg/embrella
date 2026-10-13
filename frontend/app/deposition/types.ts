@@ -52,6 +52,15 @@ export interface JobValidation {
   warnings: ValidationWarning[];
 }
 
+export type JobLogsSource = 'live' | 'stored' | 'unavailable' | 'none';
+export interface JobLogs {
+  logs: string;
+  source: JobLogsSource;
+  state?: JobState | null;
+  phase?: 'prep' | 'push';
+  job_id?: string;
+}
+
 export interface DatasetJob {
   id: number;
   state: JobState;

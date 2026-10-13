@@ -5,6 +5,8 @@ import { Button, Icon } from '@czi-sds/components';
 import { Alert, Box, CircularProgress, LinearProgress, Stack, Typography } from '@mui/material';
 
 import type {
+  JobLogs,
+  JobLogsSource,
   JobState,
   JobValidation,
   SyncChecklistItem,
@@ -13,7 +15,8 @@ import type {
   ValidationWarning,
 } from '../../types';
 import type { StepProps } from '../wizardTypes';
-import { useSubmitFlow } from '../../hooks/useSubmitFlow';
+import { isActiveJobState, useSubmitFlow } from '../../hooks/useSubmitFlow';
+import { useDatasetLogs } from '../../hooks/useDatasetLogs';
 import { checkSshSetup, isSshSetupRequired } from '../../services/depositionApi';
 import { SSHSetupModal } from '@app/common/components/SSHSetupModal';
 
@@ -218,8 +221,20 @@ function WarningsList({ warnings, blocking }: { warnings: ValidationWarning[]; b
   );
 }
 
-function LiveLog({ text }: { text?: string | null }) {
-  const lines = (text ?? '').split('\n').filter(Boolean);
+function logNote(source: JobLogsSource | undefined, hasLines: boolean, active: boolean): string {
+  // Only promise a retry while still polling.
+  if (source === 'unavailable') {
+    return active ? "Couldn't read the live log right now — retrying." : "Couldn't read the log.";
+  }
+  if (hasLines) return '';
+  if (!source || source === 'none') return 'No log yet — it appears once the job starts.';
+  return 'No output yet.';
+}
+
+function LiveLog({ data, active }: { data?: JobLogs; active: boolean }) {
+  const text = data?.logs ?? '';
+  const lines = text.split('\n').filter(Boolean);
+  const note = logNote(data?.source, lines.length > 0, active);
   const copy = () => {
     if (text && navigator.clipboard) navigator.clipboard.writeText(text).catch(() => undefined);
   };
@@ -234,11 +249,12 @@ function LiveLog({ text }: { text?: string | null }) {
         </Button>
       </Box>
       <Box sx={{ fontFamily: 'monospace', fontSize: 12, color: 'grey.300', whiteSpace: 'pre-wrap' }}>
-        {lines.length ? (
-          lines.map((line, i) => <div key={i}>{line}</div>)
-        ) : (
+        {lines.map((line, i) => (
+          <div key={i}>{line}</div>
+        ))}
+        {note && (
           <Typography variant="caption" sx={{ color: 'grey.500' }}>
-            Live log streaming isn&apos;t available yet - it will appear here once the backend streams it.
+            {note}
           </Typography>
         )}
       </Box>
@@ -255,6 +271,9 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
   const job = dataset.job;
   const state = job?.state;
   const hasPushId = !!job?.push_slurm_job_id;
+
+  // Live log tail; polls while active.
+  const logs = useDatasetLogs(dataset.id, { state, enabled: !!job });
 
   const sync = syncStatus(state, hasPushId);
 
@@ -468,7 +487,7 @@ export function SubmitStep({ dataset: initial, readOnly }: StepProps) {
 
         {/* Right: live log */}
         <Stack spacing={2}>
-          <LiveLog text={job?.log_excerpt} />
+          <LiveLog data={logs.data} active={isActiveJobState(state)} />
         </Stack>
       </Box>
 

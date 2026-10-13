@@ -2,11 +2,16 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { SubmitStep } from './SubmitStep';
-import { useSubmitFlow } from '../../hooks/useSubmitFlow';
+import { isActiveJobState, useSubmitFlow } from '../../hooks/useSubmitFlow';
+import { useDatasetLogs } from '../../hooks/useDatasetLogs';
 import { checkSshSetup } from '../../services/depositionApi';
-import type { Dataset, DatasetJob } from '../../types';
+import type { Dataset, DatasetJob, JobLogs } from '../../types';
 
-jest.mock('../../hooks/useSubmitFlow', () => ({ useSubmitFlow: jest.fn() }));
+jest.mock('../../hooks/useSubmitFlow', () => ({
+  useSubmitFlow: jest.fn(),
+  isActiveJobState: jest.fn(() => false),
+}));
+jest.mock('../../hooks/useDatasetLogs', () => ({ useDatasetLogs: jest.fn(() => ({ data: undefined })) }));
 jest.mock('../../services/depositionApi', () => ({
   ...jest.requireActual('../../services/depositionApi'),
   checkSshSetup: jest.fn().mockResolvedValue({ username: 'alice' }),
@@ -23,7 +28,13 @@ jest.mock('@app/common/components/SSHSetupModal', () => ({
 const sshError = () => Object.assign(new Error('ssh not set up'), { sshSetupRequired: true, clusterId: 'czii' });
 
 const mockFlow = useSubmitFlow as jest.Mock;
+const mockLogs = useDatasetLogs as jest.Mock;
+const mockActive = isActiveJobState as jest.Mock;
 const mockCheckSsh = checkSshSetup as jest.Mock;
+
+function setLogs(data: JobLogs | undefined) {
+  mockLogs.mockReturnValue({ data });
+}
 
 function setup(job: DatasetJob | null, { readOnly = false } = {}) {
   const submit = { mutate: jest.fn(), reset: jest.fn(), isPending: false, isError: false, error: null };
@@ -34,7 +45,11 @@ function setup(job: DatasetJob | null, { readOnly = false } = {}) {
   return { submit, push };
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockLogs.mockReturnValue({ data: undefined });
+  mockActive.mockReturnValue(false);
+});
 
 it('auto-starts sync on arrival with no manual start button', () => {
   const { submit } = setup(null);
@@ -199,4 +214,26 @@ it('recovers a failed push by restarting prep, not re-pushing', () => {
   fireEvent.click(retry);
   expect(submit.mutate).toHaveBeenCalled();
   expect(push.mutate).not.toHaveBeenCalled();
+});
+
+it('shows the live log tail from the logs endpoint', () => {
+  setLogs({ logs: '[14:08] re-synced run002\n[14:12] skipping tomo_001.mrc', source: 'live' });
+  setup({ id: 1, state: 'prep_running' });
+  expect(screen.getByText('[14:08] re-synced run002')).toBeInTheDocument();
+  expect(screen.getByText('[14:12] skipping tomo_001.mrc')).toBeInTheDocument();
+});
+
+it('promises a retry when an active job log is temporarily unavailable', () => {
+  mockActive.mockReturnValue(true);
+  setLogs({ logs: '', source: 'unavailable' });
+  setup({ id: 1, state: 'prep_running' });
+  expect(screen.getByText(/retrying/i)).toBeInTheDocument();
+});
+
+it('does not promise a retry once a finished job log is unavailable', () => {
+  mockActive.mockReturnValue(false);
+  setLogs({ logs: '', source: 'unavailable' });
+  setup({ id: 1, state: 'failed' });
+  expect(screen.queryByText(/retrying/i)).toBeNull();
+  expect(screen.getByText(/couldn.t read the log/i)).toBeInTheDocument();
 });
