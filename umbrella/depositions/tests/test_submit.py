@@ -128,6 +128,21 @@ class TestSubmitDatasetPrep:
         assert job.state == "prep_submitted"
         assert not job.error_message
 
+    def test_restart_clears_prior_push_attempt(self, dataset, mocks):
+        # A prep restart after a failed push must drop the stale push id so the log reader
+        # doesn't surface the old upload log if this prep also fails.
+        DatasetJob.objects.create(
+            dataset=dataset,
+            state="failed",
+            push_slurm_job_id="999",
+            error_message="push boom",
+            log_excerpt="old upload log",
+        )
+        job = submit.submit_dataset_prep(dataset, user=mocks["user"])
+        assert job.state == "prep_submitted"
+        assert job.push_slurm_job_id == ""
+        assert job.log_excerpt == ""  # old attempt's output cleared too
+
     def test_path_resolution_failure_fails_row_without_launching(self, dataset, mocks, monkeypatch):
         def boom(*a, **k):
             raise RuntimeError("no deposition_staging PathType")
@@ -404,3 +419,40 @@ def test_unconfirmed_cancellation_keeps_deposition_blocked(dataset, mocks, monke
         submit.submit_dataset_prep(second, user=mocks["user"])
     assert mocks["launched"] is first_launch
     assert DatasetJob.objects.get(dataset=dataset).state == "prep_submitted"
+
+
+@pytest.mark.django_db
+class TestPreviewConfigYaml:
+    """Download must be the file submit would upload: this dataset + staged siblings required."""
+
+    def test_marks_this_dataset_and_staged_siblings_required(self, dataset, mocks):
+        sibling = Dataset.objects.create(deposition=dataset.deposition, title="Sib", dataset_id=3)
+        DatasetJob.objects.create(dataset=sibling, state="pending", staged_at=timezone.now())
+        assert submit.preview_config_yaml(dataset) == "yaml-text"
+        assert mocks["required_ids"] == {2, 3}
+
+    def test_includes_this_dataset_even_with_no_siblings(self, dataset, mocks):
+        submit.preview_config_yaml(dataset)
+        assert mocks["required_ids"] == {2}
+
+    def test_editable_job_previews_the_resubmit_cluster_not_the_stale_stored_one(self, dataset, mocks, monkeypatch):
+        # A failed job's stored cluster can be stale; preview must derive it like a resubmit would.
+        DatasetJob.objects.create(dataset=dataset, state="failed", cluster_id="stale-cluster")
+        seen = {}
+        monkeypatch.setattr(submit, "resolve_dir", lambda *a, cluster, **k: seen.update(cluster=cluster) or "/staged")
+        monkeypatch.setattr(submit, "resolve_sync_destination", lambda *, cluster: "s3://x")
+        submit.preview_config_yaml(dataset)
+        assert seen["cluster"] == "bruno"  # derived via _cluster_for_dataset, not "stale-cluster"
+
+    def test_locked_job_previews_the_staged_cluster(self, dataset, mocks, monkeypatch):
+        DatasetJob.objects.create(dataset=dataset, state="prep_running", cluster_id="staged-cluster")
+        seen = {}
+        monkeypatch.setattr(submit, "resolve_dir", lambda *a, cluster, **k: seen.update(cluster=cluster) or "/staged")
+        monkeypatch.setattr(submit, "resolve_sync_destination", lambda *, cluster: "s3://x")
+        submit.preview_config_yaml(dataset)
+        assert seen["cluster"] == "staged-cluster"  # locked → show what was actually staged
+
+    def test_rejects_unreserved_ids(self, dataset, mocks):
+        dataset.dataset_id = None
+        with pytest.raises(SubmissionValidationError, match="Reserve"):
+            submit.preview_config_yaml(dataset)

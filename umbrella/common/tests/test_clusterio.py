@@ -80,6 +80,63 @@ class TestGetAuthForUser:
         assert cached["username"] == "service-user"
 
 
+@patch("common.clusterio.get_cluster_ssh_connection")
+class TestReadRemoteFileTail:
+    @pytest.mark.parametrize("size", [10, 100000])
+    def test_bounded_read_and_cleanup(self, mock_conn, size):
+        ssh = mock_conn.return_value
+        sftp = ssh.open_sftp.return_value
+        sftp.stat.return_value.st_size = size
+        handle = sftp.file.return_value.__enter__.return_value
+        handle.read.return_value = b"x" * 65536
+        auth = {"username": "alice"}
+
+        result = clusterio.read_remote_file_tail("bruno", "/log.out", max_bytes=65536, auth=auth)
+
+        mock_conn.assert_called_once_with(cluster_id="bruno", auth=auth)
+        sftp.file.assert_called_once_with("/log.out", "r")
+        handle.read.assert_called_once_with(65536)
+        if size > 65536:
+            handle.seek.assert_called_once_with(size - 65536)
+        else:
+            handle.seek.assert_not_called()
+        assert len(result) == 65536
+        sftp.close.assert_called_once()
+        ssh.close.assert_called_once()
+
+    def test_tail_replaces_partial_utf8_character(self, mock_conn):
+        sftp = mock_conn.return_value.open_sftp.return_value
+        sftp.stat.return_value.st_size = 100
+        handle = sftp.file.return_value.__enter__.return_value
+        # The tail starts on the last byte of a three-byte UTF-8 character.
+        handle.read.return_value = b"\xac log\n"
+
+        result = clusterio.read_remote_file_tail("bruno", "/log.out", max_bytes=6)
+
+        handle.seek.assert_called_once_with(94)
+        assert result == "\ufffd log\n"
+
+    def test_missing_file_closes_connections(self, mock_conn):
+        ssh = mock_conn.return_value
+        sftp = ssh.open_sftp.return_value
+        sftp.stat.side_effect = FileNotFoundError("/log.out")
+
+        with pytest.raises(FileNotFoundError):
+            clusterio.read_remote_file_tail("bruno", "/log.out", max_bytes=65536)
+
+        sftp.close.assert_called_once()
+        ssh.close.assert_called_once()
+
+    def test_sftp_open_failure_closes_ssh(self, mock_conn):
+        ssh = mock_conn.return_value
+        ssh.open_sftp.side_effect = OSError("SFTP unavailable")
+
+        with pytest.raises(OSError, match="SFTP unavailable"):
+            clusterio.read_remote_file_tail("bruno", "/log.out", max_bytes=65536)
+
+        ssh.close.assert_called_once()
+
+
 def _entry(name, *, is_dir=False, size=100, mtime=1700000000):
     """A paramiko SFTPAttributes stand-in."""
     entry = MagicMock()
