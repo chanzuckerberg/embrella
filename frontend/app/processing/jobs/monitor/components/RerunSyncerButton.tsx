@@ -4,12 +4,16 @@ import { useState } from 'react';
 import { IconButton, Alert, CircularProgress, Tooltip } from '@mui/material';
 import { Dialog, DialogTitle, DialogContent, Button } from '@czi-sds/components';
 import { Replay as ReplayIcon } from '@mui/icons-material';
-import { Job, SyncerStatus, SyncerRerunResponse } from '../types';
+import { Job, JobStatus, SyncerStatus, SyncerRerunResponse } from '../types';
 import { DJANGO_URL, POST_API } from '@app/common/constants/api';
 import { postResource } from '@app/common/queries/fetchResource';
 
 // Processors that support syncer re-run
 const SYNCER_SUPPORTED_PROCESSORS = ['aretomo3', 'denoiset'];
+
+// TODO: refactor and use backend's can_rerun logic instead of frontend logic here.
+// Job statuses after which a syncer re-run is allowed (mirrors backend FINISHED_JOB_STATUSES)
+const FINISHED_JOB_STATUSES: JobStatus[] = ['Completed', 'Failed', 'Cancelled', 'Timeout'];
 
 interface RerunSyncerButtonProps {
   job: Job;
@@ -33,7 +37,7 @@ export const RerunSyncerButton: React.FC<RerunSyncerButtonProps> = ({
   // - For running jobs: only show if syncer stopped unexpectedly
   // - For completed/failed jobs: show unless syncer is currently running
   const isRunning = ['Running', 'Pending'].includes(job.status);
-  const isCompleted = ['Completed', 'Failed'].includes(job.status);
+  const isCompleted = FINISHED_JOB_STATUSES.includes(job.status);
   const supportssyncer = job.processor && SYNCER_SUPPORTED_PROCESSORS.includes(job.processor);
   const syncerIsRunning = syncerStatus?.status === 'running';
 
