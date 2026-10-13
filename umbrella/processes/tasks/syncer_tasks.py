@@ -20,6 +20,11 @@ SACCT_NOT_YET_LISTED_DELAY = timedelta(seconds=30)
 SACCT_ERROR_BACKOFF = timedelta(seconds=120)
 
 
+def _syncer_task_name(session_name, run_id, job_id):
+    # One schedule per job: AreTomo + Denoise share session/run (e.g. syncer_26oct07a_run001_14017)
+    return f"syncer_{session_name}_{run_id}_{job_id}"
+
+
 def _run_later(func, args, name, delay, timeout=None):
     # Django-Q2 has no per-task eta; a plain async_task would run again
     # immediately. A one-shot Schedule fires once at next_run, then deletes itself.
@@ -156,7 +161,7 @@ def run_syncer_iteration(syncer_class_path, base_path, session_name, run_id, job
         _run_later(
             "processes.tasks.run_syncer_iteration",
             (syncer_class_path, base_path, session_name, run_id, job_id),
-            name=f"syncer_{session_name}_{run_id}",
+            name=_syncer_task_name(session_name, run_id, job_id),
             delay=OUTPUT_SYNC_INTERVAL,
             timeout=300,  # 5 minute timeout
         )
@@ -232,7 +237,7 @@ def start_syncer_monitoring(syncer_class_path, base_path, session_name, run_id, 
         session_name,
         run_id,
         job_id,
-        task_name=f"syncer_{session_name}_{run_id}",
+        task_name=_syncer_task_name(session_name, run_id, job_id),
         timeout=300,  # 5 minute timeout
     )
 
