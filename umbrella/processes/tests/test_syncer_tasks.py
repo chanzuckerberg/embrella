@@ -18,6 +18,7 @@ FAKE_TASK_ID = "0123456789abcdef0123456789abcdef"
 SESSION = "26jun09a"
 RUN = "run102"
 JOB = "13765"
+DOWNSTREAM_JOB = "13766"
 FAKE_SYNCER = f"{__name__}.FakeSyncer"
 
 
@@ -49,9 +50,9 @@ def pipe_exec(session_plan):
     return PipeExecution.objects.create(proc_run=run, pipe_in_plan=pip, job_id=JOB)
 
 
-def run_iteration(job_active):
+def run_iteration(job_active, job_id=JOB):
     with patch("processes.tasks.syncer_tasks.check_job_status", return_value=job_active):
-        return syncer_tasks.run_syncer_iteration(FAKE_SYNCER, "/base", SESSION, RUN, JOB)
+        return syncer_tasks.run_syncer_iteration(FAKE_SYNCER, "/base", SESSION, RUN, job_id)
 
 
 @pytest.mark.django_db
@@ -60,7 +61,21 @@ def test_iteration_syncs_then_reschedules_while_job_runs(pipe_exec):
 
     assert result["action"] == "synced_and_rescheduled"
     assert FakeSyncer.passes == 1
-    assert Schedule.objects.filter(name=f"syncer_{SESSION}_{RUN}").exists()
+    assert Schedule.objects.filter(name=f"syncer_{SESSION}_{RUN}_{JOB}").exists()
+
+
+@pytest.mark.django_db
+def test_jobs_on_same_run_keep_own_schedule(pipe_exec):
+    # AreTomo + downstream Denoise share session/run; neither may delete the other's schedule.
+    upstream = pipe_exec.pipe_in_plan
+    downstream = PipeInPlan.objects.create(name="fixture-downstream", plan=upstream.plan, pipe=upstream.pipe)
+    PipeExecution.objects.create(proc_run=pipe_exec.proc_run, pipe_in_plan=downstream, job_id=DOWNSTREAM_JOB)
+
+    run_iteration(job_active=True)
+    run_iteration(job_active=True, job_id=DOWNSTREAM_JOB)
+
+    for job_id in (JOB, DOWNSTREAM_JOB):
+        assert Schedule.objects.filter(name=f"syncer_{SESSION}_{RUN}_{job_id}").exists()
 
 
 @pytest.mark.django_db
@@ -70,7 +85,7 @@ def test_iteration_syncs_once_more_before_stopping(pipe_exec):
 
     assert result["action"] == "stopped"
     assert FakeSyncer.passes == 1
-    assert not Schedule.objects.filter(name=f"syncer_{SESSION}_{RUN}").exists()
+    assert not Schedule.objects.filter(name=f"syncer_{SESSION}_{RUN}_{JOB}").exists()
 
 
 def run_scheduler():

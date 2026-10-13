@@ -916,6 +916,9 @@ SYNCER_TYPES = {
 }
 SYNCER_CLASS_PATH = "workflow.processors.{processor}.syncer.{cls}"
 
+# Job statuses after which a syncer re-run is allowed
+FINISHED_JOB_STATUSES = ("completed", "failed", "cancelled")
+
 
 def _get_syncer_status_for_job(job_id: str, pipe_execution: PipeExecution = None):
     """
@@ -940,7 +943,7 @@ def _get_syncer_status_for_job(job_id: str, pipe_execution: PipeExecution = None
             supports_syncer = processor_name in SYNCER_TYPES
             if supports_syncer:
                 # No syncer process exists but job supports it
-                job_completed = pipe_execution.status in ["completed", "failed"]
+                job_completed = pipe_execution.status in FINISHED_JOB_STATUSES
                 return {
                     "status": None,
                     "last_heartbeat": None,
@@ -953,7 +956,7 @@ def _get_syncer_status_for_job(job_id: str, pipe_execution: PipeExecution = None
     can_rerun = False
     if pipe_execution:
         job_running = pipe_execution.status in ["submitted", "running"]
-        job_completed = pipe_execution.status in ["completed", "failed"]
+        job_completed = pipe_execution.status in FINISHED_JOB_STATUSES
 
         if job_running:
             # For running jobs: show if syncer stopped unexpectedly
