@@ -14,6 +14,7 @@ import type {
   Deposition,
   DepositionSession,
   Institution,
+  JobLogs,
   Person,
   SubmissionList,
   SubmitResponse,
@@ -145,6 +146,10 @@ export async function pushDataset(id: number): Promise<SubmitResponse> {
 
 export async function fetchDatasetJobStatus(id: number): Promise<unknown> {
   return parse(await fetchResource(url(`${API.DEPOSITION_DATASETS}${id}/job-status/`)));
+}
+
+export async function fetchDatasetLogs(id: number): Promise<JobLogs> {
+  return parse(await fetchResource(url(`${API.DEPOSITION_DATASETS}${id}/logs/`)));
 }
 
 export async function fetchSession(id: number): Promise<DepositionSession> {

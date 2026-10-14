@@ -35,6 +35,7 @@ function newClient() {
 beforeEach(() => {
   jest.resetAllMocks();
   (api.fetchDataset as jest.Mock).mockResolvedValue(dataset);
+  (api.fetchDatasetLogs as jest.Mock).mockResolvedValue({ logs: '', source: 'none' });
 });
 
 it('shows recovery after a failed upload, then starts preparation with the real hook', async () => {
